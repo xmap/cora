@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_7af18110da5154fc_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-16 00:15 +0000
+            created at 2026-05-16 06:18 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -121,7 +121,7 @@
     <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">     on the cora_app role) makes "peer vanished from the event</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="str">     store" structurally impossible in production.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="str">  2. Pre-7e registration via 7c's existence guard</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t"><span class="str">     (`DerivedFromDatasetsNotFoundError`) prevents creating a</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t"><span class="str">     (`DerivedFromDatasetsMissingError`) prevents creating a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t"><span class="str">     Dataset whose derived_from references a non-existent stream</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t"><span class="str">     in the first place.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -229,7 +229,7 @@
     <p class="run"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">                    <span class="nam">derived_from_loaded</span><span class="op">[</span><span class="nam">derived_id</span><span class="op">]</span> <span class="op">=</span> <span class="nam">loaded</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">                <span class="com"># Missing derived_from refs are not fatal at promotion</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">                <span class="com"># time: they would have been validated at registration</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">                <span class="com"># via DerivedFromDatasetsNotFoundError. If a peer was</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">                <span class="com"># via DerivedFromDatasetsMissingError. If a peer was</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">                <span class="com"># later discarded but kept its event stream (the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">                <span class="com"># immutability guarantee preserves all events), it</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">                <span class="com"># loads cleanly here with status=DISCARDED. The decider</span>&nbsp;</span><span class="r"></span></p>
@@ -283,7 +283,7 @@
             <a class="nav" href="z_7af18110da5154fc_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-16 00:15 +0000
+            created at 2026-05-16 06:18 +0000
         </p>
     </div>
 </footer>

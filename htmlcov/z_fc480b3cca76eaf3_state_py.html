@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_997d5225defdb113___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-16 00:15 +0000
+            created at 2026-05-16 06:18 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -473,7 +473,7 @@
     <p class="pln"><span class="n"><a id="t389" href="#t389">389</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t390" href="#t390">390</a></span><span class="t"><span class="str">    Eventual-consistency: the decider does NOT verify the referenced</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t391" href="#t391">391</a></span><span class="t"><span class="str">    Capability id refers to a real Capability stream. Same precedent</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t392" href="#t392">392</a></span><span class="t"><span class="str">    as Trust Conduit zone refs (3b) and Method.needs_capabilities</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t392" href="#t392">392</a></span><span class="t"><span class="str">    as Trust Conduit zone refs (3b) and Method.needed_capabilities</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t393" href="#t393">393</a></span><span class="t"><span class="str">    (6a).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t394" href="#t394">394</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t395" href="#t395">395</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -598,7 +598,7 @@
     <p class="pln"><span class="n"><a id="t514" href="#t514">514</a></span><span class="t"><span class="str">    `add_asset_capability` when commissioning a new technique on the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t515" href="#t515">515</a></span><span class="t"><span class="str">    asset, remove via `remove_asset_capability` when retiring one.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t516" href="#t516">516</a></span><span class="t"><span class="str">    Used at Plan binding time (6e) for the structural check</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t517" href="#t517">517</a></span><span class="t"><span class="str">    `asset.capabilities &#8839; method.needs_capabilities`. Eventual-</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t517" href="#t517">517</a></span><span class="t"><span class="str">    `asset.capabilities &#8839; method.needed_capabilities`. Eventual-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t518" href="#t518">518</a></span><span class="t"><span class="str">    consistency: each Capability id is NOT verified against the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t519" href="#t519">519</a></span><span class="t"><span class="str">    Capability stream at decide time. Defaults to empty so prior</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t520" href="#t520">520</a></span><span class="t"><span class="str">    `AssetRegistered`-only streams fold cleanly without an upcaster</span>&nbsp;</span><span class="r"></span></p>
@@ -643,7 +643,7 @@
     <p class="pln"><span class="n"><a id="t559" href="#t559">559</a></span><span class="t">    <span class="com"># `frozenset` as default_factory triggers reportUnknownVariableType</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t560" href="#t560">560</a></span><span class="t">    <span class="com"># under pyright strict because the empty frozenset has no element</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t561" href="#t561">561</a></span><span class="t">    <span class="com"># type to infer. The parametrized form gives pyright the type</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t562" href="#t562">562</a></span><span class="t">    <span class="com"># without runtime cost. Same trick used in Method.needs_capabilities.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t562" href="#t562">562</a></span><span class="t">    <span class="com"># without runtime cost. Same trick used in Method.needed_capabilities.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t563" href="#t563">563</a></span><span class="t">    <span class="nam">capabilities</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t564" href="#t564">564</a></span><span class="t">    <span class="com"># dict[str, Any] for runtime-typed operator-supplied settings.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t565" href="#t565">565</a></span><span class="t">    <span class="com"># Same default_factory pattern as capabilities &#8212; the empty dict</span>&nbsp;</span><span class="r"></span></p>
@@ -662,7 +662,7 @@
             <a class="nav" href="z_997d5225defdb113___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-16 00:15 +0000
+            created at 2026-05-16 06:18 +0000
         </p>
     </div>
 </footer>
