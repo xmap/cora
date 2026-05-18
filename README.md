@@ -522,7 +522,7 @@
 | src/cora/infrastructure/idempotency.py                                       |       97 |        2 |       38 |        1 |     97.8% |115, 138, 324-\>exit |
 | src/cora/infrastructure/idempotency\_pruner.py                               |       34 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/infrastructure/json\_merge\_patch.py                                |       13 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/infrastructure/json\_schema\_subset.py                              |       20 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/infrastructure/json\_schema\_subset.py                              |       76 |        9 |       38 |        8 |     85.1% |164, 176-\>173, 186-\>196, 219-223, 247-252, 258-262, 269, 271 |
 | src/cora/infrastructure/json\_schema\_validation.py                          |       80 |        4 |       34 |        1 |     95.6% |141, 258-260 |
 | src/cora/infrastructure/kernel.py                                            |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/list\_query.py                                       |       89 |        0 |       28 |        0 |    100.0% |           |
@@ -646,7 +646,7 @@
 | src/cora/recipe/aggregates/method/evolver.py                                 |       24 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/method/parameters\_validation.py                  |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/method/read.py                                    |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/recipe/aggregates/method/state.py                                   |       55 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/recipe/aggregates/method/state.py                                   |       61 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/plan/\_\_init\_\_.py                              |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/plan/events.py                                    |       59 |        0 |       22 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/plan/evolver.py                                   |       32 |        0 |       12 |        0 |    100.0% |           |
@@ -760,8 +760,8 @@
 | src/cora/recipe/features/remove\_plan\_wire/tool.py                          |       15 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/recipe/features/update\_method\_parameters\_schema/\_\_init\_\_.py  |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/recipe/features/update\_method\_parameters\_schema/command.py       |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/recipe/features/update\_method\_parameters\_schema/decider.py       |       11 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/recipe/features/update\_method\_parameters\_schema/handler.py       |       11 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/recipe/features/update\_method\_parameters\_schema/decider.py       |       20 |        1 |       10 |        1 |     93.3% |        77 |
+| src/cora/recipe/features/update\_method\_parameters\_schema/handler.py       |       37 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/recipe/features/update\_method\_parameters\_schema/route.py         |       15 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/recipe/features/update\_method\_parameters\_schema/tool.py          |       14 |        2 |        0 |        0 |     85.7% |     48-49 |
 | src/cora/recipe/features/update\_plan\_default\_parameters/\_\_init\_\_.py   |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -1180,7 +1180,7 @@
 | src/cora/trust/routes.py                                                     |       35 |        4 |        6 |        0 |     90.2% |94-95, 109-110 |
 | src/cora/trust/tools.py                                                      |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                       |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                    | **20640** |  **214** | **2552** |   **53** | **98.7%** |           |
+| **TOTAL**                                                                    | **20737** |  **224** | **2588** |   **62** | **98.6%** |           |
 
 
 ## Setup coverage badge
