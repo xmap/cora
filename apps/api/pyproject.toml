@@ -15,7 +15,7 @@ dependencies = [
     "mcp>=1.27.1,<2",
     "uvicorn[standard]>=0.46.0",
     "structlog>=25.0.0",
-    "uuid-utils>=0.15.0",
+    "uuid-utils>=0.16.0",
     "prometheus-client>=0.21.0,<1",
     "prometheus-fastapi-instrumentator>=7.0.0,<8",
     # OpenTelemetry: api/sdk are 1.x stable; instrumentations and semconv
@@ -35,7 +35,7 @@ dependencies = [
     # No other code imports this; subscribers + tests use the port +
     # `FakeLLMAdapter`. Pin <1 to flag a future major SDK shift in CI
     # before it lands silently.
-    "anthropic>=0.79.0,<1",
+    "anthropic>=0.103.1,<1",
     # PyJWT (Phase C Iter A): the one library dependency for the edge-auth
     # JWT path — used by `JWTVerifier` for `Authorization: Bearer <JWT>`
     # signature verification + JWKS rotation. `[crypto]` extra pulls in
@@ -53,7 +53,7 @@ dev = [
     "pytest-cov>=7.1.0,<8",
     "coverage[toml]>=7.14.0,<8",
     "diff-cover>=9.5.0,<10",
-    "ruff>=0.15.12,<0.16",
+    "ruff>=0.15.13,<0.16",
     "pyright>=1.1.409,<2",
     "httpx>=0.28.0",
     "asgi-lifespan>=2.1.0,<3",
