@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for src/cora/agent/subscribers/caution_drafter.py: 88.8%</title>
+    <title>Coverage for src/cora/agent/subscribers/caution_drafter.py: 100.0%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;agent&#8201;/&#8201;subscribers&#8201;/&#8201;caution_drafter.py</b>:
-            <span class="pc_cov">88.8%</span>
+            <span class="pc_cov">100.0%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -56,10 +56,10 @@
         </aside>
         <h2>
             <span class="text">126 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">115<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">11<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">126<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">7<span class="text"> excluded</span></button>
-            <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">6<span class="text"> partial</span></button>
+            <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
         </h2>
         <p class="text">
             <a id="prevFileLink" class="nav" href="z_efaacc4ad3192138__terminal_run_helpers_py.html">&#xab; prev</a> &nbsp; &nbsp;
@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_efaacc4ad3192138_run_debrief_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-18 18:33 +0000
+            created at 2026-05-20 02:52 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -287,9 +287,9 @@
     <p class="pln"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t">        <span class="com"># Load Run aggregate.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t">        <span class="nam">run</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">load_run</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">event_store</span><span class="op">,</span> <span class="nam">run_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t">        <span class="key">if</span> <span class="nam">run</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">206&#x202F;&#x219B;&#x202F;207</span><span class="annotate long">line 206 didn't jump to line 207 because the condition on line 206 was never true</span></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t207" href="#t207">207</a></span><span class="t">            <span class="nam">log</span><span class="op">.</span><span class="nam">warning</span><span class="op">(</span><span class="str">"caution_drafter.skip.run_missing"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t208" href="#t208">208</a></span><span class="t">            <span class="key">return</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t">        <span class="key">if</span> <span class="nam">run</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t207" href="#t207">207</a></span><span class="t">            <span class="nam">log</span><span class="op">.</span><span class="nam">warning</span><span class="op">(</span><span class="str">"caution_drafter.skip.run_missing"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t208" href="#t208">208</a></span><span class="t">            <span class="key">return</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t209" href="#t209">209</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t210" href="#t210">210</a></span><span class="t">        <span class="com"># Pre-load Plan for candidate Asset ids. The Plan's</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t211" href="#t211">211</a></span><span class="t">        <span class="com"># `asset_ids` is the v1 candidate-target set; v1 does NOT</span>&nbsp;</span><span class="r"></span></p>
@@ -625,15 +625,15 @@
     <p class="pln"><span class="n"><a id="t541" href="#t541">541</a></span><span class="t"><span class="str">    non-string / unparseable / unknown -> False. Caller falls back</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t542" href="#t542">542</a></span><span class="t"><span class="str">    to NoAction-deferred on a False return.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t543" href="#t543">543</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t544" href="#t544">544</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">proposed</span><span class="op">,</span> <span class="nam">dict</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">544&#x202F;&#x219B;&#x202F;545</span><span class="annotate long">line 544 didn't jump to line 545 because the condition on line 544 was never true</span></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t545" href="#t545">545</a></span><span class="t">        <span class="key">return</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t544" href="#t544">544</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">proposed</span><span class="op">,</span> <span class="nam">dict</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t545" href="#t545">545</a></span><span class="t">        <span class="key">return</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t546" href="#t546">546</a></span><span class="t">    <span class="nam">raw</span> <span class="op">=</span> <span class="nam">proposed</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"target_id"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t547" href="#t547">547</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">raw</span><span class="op">,</span> <span class="nam">str</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">547&#x202F;&#x219B;&#x202F;548</span><span class="annotate long">line 547 didn't jump to line 548 because the condition on line 547 was never true</span></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t548" href="#t548">548</a></span><span class="t">        <span class="key">return</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t547" href="#t547">547</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">raw</span><span class="op">,</span> <span class="nam">str</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t548" href="#t548">548</a></span><span class="t">        <span class="key">return</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t549" href="#t549">549</a></span><span class="t">    <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t550" href="#t550">550</a></span><span class="t">        <span class="nam">parsed</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="nam">raw</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t551" href="#t551">551</a></span><span class="t">    <span class="key">except</span> <span class="op">(</span><span class="nam">ValueError</span><span class="op">,</span> <span class="nam">TypeError</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t552" href="#t552">552</a></span><span class="t">        <span class="key">return</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t551" href="#t551">551</a></span><span class="t">    <span class="key">except</span> <span class="op">(</span><span class="nam">ValueError</span><span class="op">,</span> <span class="nam">TypeError</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t552" href="#t552">552</a></span><span class="t">        <span class="key">return</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t553" href="#t553">553</a></span><span class="t">    <span class="key">return</span> <span class="nam">parsed</span> <span class="key">in</span> <span class="nam">valid_target_ids</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t554" href="#t554">554</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t555" href="#t555">555</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -644,9 +644,9 @@
     <p class="pln"><span class="n"><a id="t560" href="#t560">560</a></span><span class="t"><span class="str">    UUIDs from the LLM arrive as strings (per schema); kept as</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t561" href="#t561">561</a></span><span class="t"><span class="str">    strings in the Decision payload so the round-trip is byte-stable.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t562" href="#t562">562</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t563" href="#t563">563</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">proposed</span><span class="op">,</span> <span class="nam">dict</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">563&#x202F;&#x219B;&#x202F;564</span><span class="annotate long">line 563 didn't jump to line 564 because the condition on line 563 was never true</span></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t564" href="#t564">564</a></span><span class="t">        <span class="nam">msg</span> <span class="op">=</span> <span class="fst">f"</span><span class="fst">proposed_caution must be a dict, got </span><span class="op">{</span><span class="nam">type</span><span class="op">(</span><span class="nam">proposed</span><span class="op">)</span><span class="op">.</span><span class="nam">__name__</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t565" href="#t565">565</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t563" href="#t563">563</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">proposed</span><span class="op">,</span> <span class="nam">dict</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t564" href="#t564">564</a></span><span class="t">        <span class="nam">msg</span> <span class="op">=</span> <span class="fst">f"</span><span class="fst">proposed_caution must be a dict, got </span><span class="op">{</span><span class="nam">type</span><span class="op">(</span><span class="nam">proposed</span><span class="op">)</span><span class="op">.</span><span class="nam">__name__</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t565" href="#t565">565</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t566" href="#t566">566</a></span><span class="t">    <span class="nam">coerced</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t567" href="#t567">567</a></span><span class="t">        <span class="str">"target_kind"</span><span class="op">:</span> <span class="nam">str</span><span class="op">(</span><span class="nam">proposed</span><span class="op">[</span><span class="str">"target_kind"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t568" href="#t568">568</a></span><span class="t">        <span class="str">"target_id"</span><span class="op">:</span> <span class="nam">str</span><span class="op">(</span><span class="nam">proposed</span><span class="op">[</span><span class="str">"target_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -656,8 +656,8 @@
     <p class="run run2"><span class="n"><a id="t572" href="#t572">572</a></span><span class="t">        <span class="str">"body"</span><span class="op">:</span> <span class="nam">str</span><span class="op">(</span><span class="nam">proposed</span><span class="op">[</span><span class="str">"body"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t573" href="#t573">573</a></span><span class="t">        <span class="str">"tags"</span><span class="op">:</span> <span class="op">[</span><span class="nam">str</span><span class="op">(</span><span class="nam">t</span><span class="op">)</span> <span class="key">for</span> <span class="nam">t</span> <span class="key">in</span> <span class="nam">proposed</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"tags"</span><span class="op">,</span> <span class="op">[</span><span class="op">]</span><span class="op">)</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t574" href="#t574">574</a></span><span class="t">    <span class="op">}</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t575" href="#t575">575</a></span><span class="t">    <span class="key">if</span> <span class="nam">proposed</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"supersedes_caution_id"</span><span class="op">)</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">575&#x202F;&#x219B;&#x202F;576</span><span class="annotate long">line 575 didn't jump to line 576 because the condition on line 575 was never true</span></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t576" href="#t576">576</a></span><span class="t">        <span class="nam">coerced</span><span class="op">[</span><span class="str">"supersedes_caution_id"</span><span class="op">]</span> <span class="op">=</span> <span class="nam">str</span><span class="op">(</span><span class="nam">proposed</span><span class="op">[</span><span class="str">"supersedes_caution_id"</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t575" href="#t575">575</a></span><span class="t">    <span class="key">if</span> <span class="nam">proposed</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"supersedes_caution_id"</span><span class="op">)</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t576" href="#t576">576</a></span><span class="t">        <span class="nam">coerced</span><span class="op">[</span><span class="str">"supersedes_caution_id"</span><span class="op">]</span> <span class="op">=</span> <span class="nam">str</span><span class="op">(</span><span class="nam">proposed</span><span class="op">[</span><span class="str">"supersedes_caution_id"</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t577" href="#t577">577</a></span><span class="t">    <span class="key">return</span> <span class="nam">coerced</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t578" href="#t578">578</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t579" href="#t579">579</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -670,12 +670,12 @@
     <p class="pln"><span class="n"><a id="t586" href="#t586">586</a></span><span class="t"><span class="str">    circuits with a warning so this only fires for misconfigured</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t587" href="#t587">587</a></span><span class="t"><span class="str">    callers that bypass that shim.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t588" href="#t588">588</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t589" href="#t589">589</a></span><span class="t">    <span class="key">if</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">llm</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">589&#x202F;&#x219B;&#x202F;590</span><span class="annotate long">line 589 didn't jump to line 590 because the condition on line 589 was never true</span></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t590" href="#t590">590</a></span><span class="t">        <span class="nam">msg</span> <span class="op">=</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t591" href="#t591">591</a></span><span class="t">            <span class="str">"CautionDrafterSubscriber requires kernel.llm to be set; "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t592" href="#t592">592</a></span><span class="t">            <span class="str">"configure ANTHROPIC_API_KEY or inject a FakeLLMAdapter."</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t593" href="#t593">593</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t594" href="#t594">594</a></span><span class="t">        <span class="key">raise</span> <span class="nam">RuntimeError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t589" href="#t589">589</a></span><span class="t">    <span class="key">if</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">llm</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t590" href="#t590">590</a></span><span class="t">        <span class="nam">msg</span> <span class="op">=</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t591" href="#t591">591</a></span><span class="t">            <span class="str">"CautionDrafterSubscriber requires kernel.llm to be set; "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t592" href="#t592">592</a></span><span class="t">            <span class="str">"configure ANTHROPIC_API_KEY or inject a FakeLLMAdapter."</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t593" href="#t593">593</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t594" href="#t594">594</a></span><span class="t">        <span class="key">raise</span> <span class="nam">RuntimeError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t595" href="#t595">595</a></span><span class="t">    <span class="key">return</span> <span class="nam">CautionDrafterSubscriber</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t596" href="#t596">596</a></span><span class="t">        <span class="nam">event_store</span><span class="op">=</span><span class="nam">deps</span><span class="op">.</span><span class="nam">event_store</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t597" href="#t597">597</a></span><span class="t">        <span class="nam">llm</span><span class="op">=</span><span class="nam">deps</span><span class="op">.</span><span class="nam">llm</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -696,7 +696,7 @@
             <a class="nav" href="z_efaacc4ad3192138_run_debrief_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-18 18:33 +0000
+            created at 2026-05-20 02:52 +0000
         </p>
     </div>
 </footer>
