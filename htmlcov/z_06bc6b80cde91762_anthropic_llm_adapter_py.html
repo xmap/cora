@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f1ac8c6ddb1dc2b2___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-20 02:52 +0000
+            created at 2026-05-20 04:24 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -82,7 +82,7 @@
     </div>
 </header>
 <main id="source">
-    <p class="exc show_exc"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Anthropic implementation of `LLMPort`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Anthropic implementation of `LLM`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Phase 8f-b iter 2a. Lives under `cora.agent.adapters` per the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">cross-BC adapter-ownership convention (Safety BC owns</span>&nbsp;</span><span class="r"></span></p>
@@ -132,7 +132,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="str">## Error translation</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t"><span class="str">After the SDK exhausts inner retries, any remaining SDK error is</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="str">translated to the `LLMPort` taxonomy so consumers depend only on</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="str">translated to the `LLM` taxonomy so consumers depend only on</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t"><span class="str">the port-level error classes. Mapping:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">  - `AuthenticationError` (401 / 403) -> `LLMAuthenticationError`</span>&nbsp;</span><span class="r"></span></p>
@@ -203,7 +203,7 @@
     <p class="pln"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t"><span class="key">class</span> <span class="nam">AnthropicLLMAdapter</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="str">"""Production `LLMPort` implementation backed by `anthropic.AsyncAnthropic`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="str">"""Production `LLM` implementation backed by `anthropic.AsyncAnthropic`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t"><span class="str">    Constructor accepts `api_key` directly (read from `Settings.anthropic_api_key`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t"><span class="str">    by the Kernel factory) rather than implicitly via the SDK's env-var</span>&nbsp;</span><span class="r"></span></p>
@@ -454,7 +454,7 @@
             <a class="nav" href="z_f1ac8c6ddb1dc2b2___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-20 02:52 +0000
+            created at 2026-05-20 04:24 +0000
         </p>
     </div>
 </footer>

@@ -561,9 +561,9 @@
 | src/cora/equipment/wire.py                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/\_\_init\_\_.py                                      |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/\_\_init\_\_.py                                 |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/auth/bearer\_middleware.py                           |       46 |        1 |       12 |        1 |     96.6% |       218 |
+| src/cora/infrastructure/auth/bearer\_middleware.py                           |       49 |        4 |       12 |        1 |     91.8% |185-201, 240 |
 | src/cora/infrastructure/auth/config.py                                       |       56 |        0 |       12 |        0 |    100.0% |           |
-| src/cora/infrastructure/auth/exception\_handlers.py                          |       32 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/auth/exception\_handlers.py                          |       43 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/idp\_registry.py                                |       48 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/introspection\_verifier.py                      |      126 |        7 |       44 |        5 |     92.9% |257-258, 277-\>279, 333, 338, 352, 354-355 |
 | src/cora/infrastructure/auth/jwt\_verifier.py                                |       79 |        6 |       16 |        0 |     93.7% |171, 196-199, 247 |
@@ -584,7 +584,7 @@
 | src/cora/infrastructure/logbook.py                                           |       31 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/logging.py                                           |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/memory/\_\_init\_\_.py                               |        0 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/memory/event\_store.py                               |       59 |        0 |       18 |        0 |    100.0% |           |
+| src/cora/infrastructure/memory/event\_store.py                               |       60 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/infrastructure/memory/idempotency.py                                |       67 |        2 |       18 |        2 |     95.3% |  121, 138 |
 | src/cora/infrastructure/observability/\_\_init\_\_.py                        |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/observability/correlation.py                         |        9 |        0 |        2 |        0 |    100.0% |           |
@@ -595,17 +595,17 @@
 | src/cora/infrastructure/ports/\_\_init\_\_.py                                |       12 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/authorize.py                                   |       14 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/caution\_lookup.py                             |       14 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/ports/clearance\_lookup.py                           |       12 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/ports/clock.py                                       |       13 |        1 |        0 |        0 |     92.3% |        30 |
-| src/cora/infrastructure/ports/event\_publisher.py                            |        3 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/ports/event\_store.py                                |       27 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/ports/id\_generator.py                               |       15 |        2 |        2 |        1 |     82.4% |     47-48 |
+| src/cora/infrastructure/ports/clearance\_lookup.py                           |       13 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/ports/clock.py                                       |       15 |        2 |        0 |        0 |     86.7% |    37, 40 |
+| src/cora/infrastructure/ports/event\_publisher.py                            |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/ports/event\_store.py                                |       28 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/ports/id\_generator.py                               |       16 |        2 |        2 |        1 |     83.3% |     58-59 |
 | src/cora/infrastructure/ports/idempotency.py                                 |       41 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/llm.py                                         |       56 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/logbook\_mirror.py                             |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/token\_verifier.py                             |       24 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/postgres/\_\_init\_\_.py                             |        0 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/postgres/event\_store.py                             |       50 |        2 |       14 |        2 |     93.8% |  118, 171 |
+| src/cora/infrastructure/postgres/event\_store.py                             |       51 |        2 |       14 |        2 |     93.8% |  119, 172 |
 | src/cora/infrastructure/postgres/idempotency.py                              |       40 |        2 |       12 |        2 |     92.3% |  127, 153 |
 | src/cora/infrastructure/postgres/pool.py                                     |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/\_\_init\_\_.py                           |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -617,7 +617,7 @@
 | src/cora/infrastructure/projection/registry.py                               |       30 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/wakeup.py                                 |       49 |        1 |       10 |        3 |     93.2% |98, 99-\>101, 127-\>131 |
 | src/cora/infrastructure/projection/worker.py                                 |       58 |        6 |        8 |        0 |     90.9% |   194-214 |
-| src/cora/infrastructure/routing.py                                           |       44 |        2 |       12 |        2 |     92.9% |  135, 149 |
+| src/cora/infrastructure/routing.py                                           |       46 |        1 |       12 |        1 |     96.6% |       160 |
 | src/cora/infrastructure/update\_handler.py                                   |       12 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/\_\_init\_\_.py                                           |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/\_bootstrap.py                                            |        2 |        0 |        0 |        0 |    100.0% |           |
@@ -1258,7 +1258,7 @@
 | src/cora/trust/routes.py                                                     |       39 |        4 |        6 |        0 |     91.1% |98-99, 113-114 |
 | src/cora/trust/tools.py                                                      |       24 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                       |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                    | **23237** |  **204** | **2892** |   **64** | **98.9%** |           |
+| **TOTAL**                                                                    | **23261** |  **207** | **2898** |   **63** | **98.9%** |           |
 
 
 ## Setup coverage badge

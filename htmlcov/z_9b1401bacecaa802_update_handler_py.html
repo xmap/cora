@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1164eecb97aa37cc___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-20 02:52 +0000
+            created at 2026-05-20 04:24 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -193,7 +193,7 @@
     <p class="pln"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t"><span class="str">    `surface_id` (Phase B Iter C-2a): additive with nil default so</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t"><span class="str">    routes that don't pass it yet keep working. Iter C-2b sweeps</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t"><span class="str">    route layers to inject the real `Depends(get_surface_id)` value;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t"><span class="str">    handlers forward whatever they receive to `deps.authorize`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t"><span class="str">    handlers forward whatever they receive to `deps.authz.authorize`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">    <span class="key">async</span> <span class="key">def</span> <span class="nam">__call__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -249,7 +249,7 @@
     <p class="exc show_exc"><span class="n"><a id="t165" href="#t165">165</a></span><span class="t">            <span class="nam">causation_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">causation_id</span><span class="op">)</span> <span class="key">if</span> <span class="nam">causation_id</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">else</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t167" href="#t167">167</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t168" href="#t168">168</a></span><span class="t">        <span class="nam">decision</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">authorize</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t168" href="#t168">168</a></span><span class="t">        <span class="nam">decision</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">authz</span><span class="op">.</span><span class="nam">authorize</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t169" href="#t169">169</a></span><span class="t">            <span class="nam">principal_id</span><span class="op">=</span><span class="nam">principal_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t170" href="#t170">170</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="nam">command_name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t171" href="#t171">171</a></span><span class="t">            <span class="nam">conduit_id</span><span class="op">=</span><span class="nam">NIL_SENTINEL_ID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -324,7 +324,7 @@
             <a class="nav" href="z_1164eecb97aa37cc___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-20 02:52 +0000
+            created at 2026-05-20 04:24 +0000
         </p>
     </div>
 </footer>

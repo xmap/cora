@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1f1cd5df6fb88adf_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-20 02:52 +0000
+            created at 2026-05-20 04:24 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -166,7 +166,7 @@
     <p class="pln"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="str">facility scale and the Actor.is_active hop closes the same</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="str">revoke-the-agent operator gesture.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="str">## LogbookMirrorPort</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="str">## LogbookMirror</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t"><span class="str">If `kernel.logbook_mirror` is set (no production implementor at</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t"><span class="str">8f-b), the subscriber calls `mirror_decision` AFTER the Decision</span>&nbsp;</span><span class="r"></span></p>
@@ -239,7 +239,7 @@
     <p class="exc show_exc"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="key">if</span> <span class="nam">TYPE_CHECKING</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">    <span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">access</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">actor</span> <span class="key">import</span> <span class="nam">Actor</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">    <span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">kernel</span> <span class="key">import</span> <span class="nam">Kernel</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">    <span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span> <span class="key">import</span> <span class="nam">LLMPort</span><span class="op">,</span> <span class="nam">LogbookMirrorPort</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">    <span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span> <span class="key">import</span> <span class="nam">LLM</span><span class="op">,</span> <span class="nam">LogbookMirror</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">    <span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span><span class="op">.</span><span class="nam">event_store</span> <span class="key">import</span> <span class="nam">EventStore</span><span class="op">,</span> <span class="nam">StoredEvent</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">    <span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">projection</span><span class="op">.</span><span class="nam">handler</span> <span class="key">import</span> <span class="nam">ConnectionLike</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -339,8 +339,8 @@
     <p class="run run2"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t">        <span class="nam">self</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t">        <span class="op">*</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t">        <span class="nam">event_store</span><span class="op">:</span> <span class="nam">EventStore</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t">        <span class="nam">llm</span><span class="op">:</span> <span class="nam">LLMPort</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t">        <span class="nam">logbook_mirror</span><span class="op">:</span> <span class="nam">LogbookMirrorPort</span> <span class="op">|</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t">        <span class="nam">llm</span><span class="op">:</span> <span class="nam">LLM</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t">        <span class="nam">logbook_mirror</span><span class="op">:</span> <span class="nam">LogbookMirror</span> <span class="op">|</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t260" href="#t260">260</a></span><span class="t">    <span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t261" href="#t261">261</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">event_store</span> <span class="op">=</span> <span class="nam">event_store</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t262" href="#t262">262</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">llm</span> <span class="op">=</span> <span class="nam">llm</span>&nbsp;</span><span class="r"></span></p>
@@ -675,7 +675,7 @@
             <a class="nav" href="z_1f1cd5df6fb88adf_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-20 02:52 +0000
+            created at 2026-05-20 04:24 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_e6d6f96cbf6457bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-20 02:52 +0000
+            created at 2026-05-20 04:24 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -82,7 +82,7 @@
     </div>
 </header>
 <main id="source">
-    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Agent BC's `LLMPortFactory` for the composition root.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Agent BC's `LLMFactory` for the composition root.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Phase 8f-b iter 2a. Bound from `cora.api.main` into `build_kernel`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">the same way `cora.trust.authorize_factory.build_authorize` is</span>&nbsp;</span><span class="r"></span></p>
@@ -101,11 +101,11 @@
     <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">agent</span><span class="op">.</span><span class="nam">adapters</span><span class="op">.</span><span class="nam">anthropic_llm_adapter</span> <span class="key">import</span> <span class="nam">AnthropicLLMAdapter</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">config</span> <span class="key">import</span> <span class="nam">Settings</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span> <span class="key">import</span> <span class="nam">LLMPort</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span> <span class="key">import</span> <span class="nam">LLM</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="key">def</span> <span class="nam">build_llm</span><span class="op">(</span><span class="nam">settings</span><span class="op">:</span> <span class="nam">Settings</span><span class="op">)</span> <span class="op">-></span> <span class="nam">LLMPort</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">    <span class="str">"""Construct the production LLMPort or return `None` when unconfigured.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="key">def</span> <span class="nam">build_llm</span><span class="op">(</span><span class="nam">settings</span><span class="op">:</span> <span class="nam">Settings</span><span class="op">)</span> <span class="op">-></span> <span class="nam">LLM</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">    <span class="str">"""Construct the production LLM or return `None` when unconfigured.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">    Today this branches on `settings.anthropic_api_key`; a future</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">    multi-provider deployment would branch on a `settings.llm_provider`</span>&nbsp;</span><span class="r"></span></p>
@@ -132,7 +132,7 @@
             <a class="nav" href="z_e6d6f96cbf6457bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-20 02:52 +0000
+            created at 2026-05-20 04:24 +0000
         </p>
     </div>
 </footer>
