@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_8a8554aac8c92457_events_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -84,9 +84,9 @@
 <main id="source">
     <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""DecisionReasoning entry: per-AI-trace observation row.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Phase 8c-a's first concrete entry type for the Decision BC.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">Mirrors the Conduit BC's `ConduitTraversal` precedent (6f-5a) and</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">the per-category writer pattern locked there.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">The Decision BC's first concrete entry type. Mirrors the Conduit</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">BC's `ConduitTraversal` precedent and the per-category writer</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">pattern locked there.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">Each entry captures one OpenTelemetry GenAI semantic-convention</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">event: an LLM call, a tool invocation, or an agent span. The</span>&nbsp;</span><span class="r"></span></p>
@@ -182,7 +182,7 @@
     <p class="pln"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t"><span class="str">    cross-BC convention; UNIQUE at the table level for at-least-once</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="str">    dedup). `correlation_id` and `causation_id` thread through from</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t"><span class="str">    the originating command's envelope for full audit traceability</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t"><span class="str">    (gate-review G7 lock from 6f-5a).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t"><span class="str">    (gate-review G7 lock).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">    <span class="com"># --- CORA infra (entry envelope) ---</span>&nbsp;</span><span class="r"></span></p>
@@ -282,9 +282,9 @@
     <p class="run"><span class="n"><a id="t198" href="#t198">198</a></span><span class="t"><span class="key">class</span> <span class="nam">ReasoningStore</span><span class="op">(</span><span class="nam">Protocol</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t">    <span class="str">"""Per-category port for DecisionReasoning entry writes.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t"><span class="str">    Mirrors `TraversalStore` from the Conduit BC's 6f-5a entries</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t"><span class="str">    Mirrors `TraversalStore` from the Conduit BC's entries</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t"><span class="str">    module. Two implementations: `PostgresReasoningStore`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t"><span class="str">    (production; landing in 8c-b) and `InMemoryReasoningStore`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t"><span class="str">    (production) and `InMemoryReasoningStore`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t"><span class="str">    (tests / `app_env=test`). Both honor at-least-once: callers</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t"><span class="str">    may retry the same `event_id`, the store dedups via the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t"><span class="str">    table's PK constraint (Postgres) or the in-memory dict</span>&nbsp;</span><span class="r"></span></p>
@@ -410,7 +410,7 @@
     <p class="pln"><span class="n"><a id="t326" href="#t326">326</a></span><span class="t"><span class="str">    `all()` accessor for tests inspecting written rows. Mirrors</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t327" href="#t327">327</a></span><span class="t"><span class="str">    `InMemoryTraversalStore` (plain class with explicit __init__,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t328" href="#t328">328</a></span><span class="t"><span class="str">    not dataclass; matches the per-category writer pattern locked</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t329" href="#t329">329</a></span><span class="t"><span class="str">    at gate-review L8 from 6f-5a).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t329" href="#t329">329</a></span><span class="t"><span class="str">    at gate-review L8).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t330" href="#t330">330</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t331" href="#t331">331</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t332" href="#t332">332</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span><span class="nam">self</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -448,7 +448,7 @@
             <a class="nav" href="z_8a8554aac8c92457_events_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

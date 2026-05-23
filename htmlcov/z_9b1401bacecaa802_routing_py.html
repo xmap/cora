@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_9b1401bacecaa802_update_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -93,7 +93,7 @@
     <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">  - `get_principal_id` &#8212; FastAPI Depends that extracts the calling</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">    principal's UUID from the `X-Principal-Id` header (Pydantic</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">    UUID-validates -> 422 on malformed). When</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">    `Settings.require_authenticated_principal` is False (Phase 1</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">    `Settings.require_authenticated_principal` is False (legacy</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">    dev / test default), an absent header falls back to</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">    `SYSTEM_PRINCIPAL_ID`. When True (production posture), an</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">    absent header raises HTTP 401 instead. See the "Production</span>&nbsp;</span><span class="r"></span></p>
@@ -103,7 +103,7 @@
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">    of error responses.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">Also exposes `SYSTEM_PRINCIPAL_ID`, the canonical fallback principal</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">UUID. Post Phase 8f-d (2026-05-20), MCP tools resolve principals via</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">UUID. MCP tools resolve principals via</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">`cora.infrastructure.mcp_principal.get_mcp_principal_id(ctx)` instead</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">of importing this constant directly; the architecture fitness</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">`test_no_system_principal_id_in_mcp_tool_principal_kwarg` enforces</span>&nbsp;</span><span class="r"></span></p>
@@ -134,7 +134,7 @@
     <p class="run"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t"><span class="str">"""Fallback principal used when no `X-Principal-Id` header is supplied.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t"><span class="str">Used only when `Settings.require_authenticated_principal` is False</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t"><span class="str">(Phase 1 dev / test posture). Production deployments behind an auth</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t"><span class="str">(legacy dev / test posture). Production deployments behind an auth</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">proxy set the header on every request and turn the setting on so</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="str">header-absent requests are rejected at the boundary instead of</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="str">silently running as SYSTEM. Under `TrustAuthorize` with a real</span>&nbsp;</span><span class="r"></span></p>
@@ -155,9 +155,9 @@
     <p class="run run2"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t"><span class="str">Previously declared as `_NIL_SENTINEL_ID` / `_CONDUIT_DEFAULT_ID`</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t"><span class="str">per-file in ~80 slice handlers + 3 cross-BC factories. Consolidated</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="str">here in Phase B Iter C-2c (post-sweep) so a single canonical name</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t"><span class="str">covers both axes &#8212; the prior `_CONDUIT_DEFAULT_ID` reading was a</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="str">future-reader trap when used as a `surface_id` default."""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="str">here so a single canonical name covers both axes &#8212; the prior</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t"><span class="str">`_CONDUIT_DEFAULT_ID` reading was a future-reader trap when used as</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="str">a `surface_id` default."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="nam">SYSTEM_HTTP_SURFACE_ID</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="str">"00000000-0000-0000-0000-000000000020"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -211,11 +211,11 @@
     <p class="run"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t"><span class="key">def</span> <span class="nam">_bearer_principal_id</span><span class="op">(</span><span class="nam">request</span><span class="op">:</span> <span class="nam">Request</span><span class="op">)</span> <span class="op">-></span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">    <span class="str">"""Return `request.state.principal.principal_id` if set, else None.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t"><span class="str">    `BearerAuthMiddleware` (Phase C Iter C-2) populates</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t"><span class="str">    `request.state.principal` when an `Authorization: Bearer` header</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t"><span class="str">    verified successfully. `get_principal_id` reads through this</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t"><span class="str">    Depends so the existing in-isolation unit tests for</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t"><span class="str">    `get_principal_id` keep working without a Request object.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t"><span class="str">    `BearerAuthMiddleware` populates `request.state.principal` when</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t"><span class="str">    an `Authorization: Bearer` header verified successfully.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t"><span class="str">    `get_principal_id` reads through this Depends so the existing</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t"><span class="str">    in-isolation unit tests for `get_principal_id` keep working</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t"><span class="str">    without a Request object.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t"><span class="str">    Gate-review SEC S2: `isinstance(principal, VerifiedPrincipal)`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t"><span class="str">    guard. Today only BearerAuthMiddleware writes to</span>&nbsp;</span><span class="r"></span></p>
@@ -255,10 +255,10 @@
     <p class="run run2"><span class="n"><a id="t171" href="#t171">171</a></span><span class="t">        <span class="nam">Header</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t172" href="#t172">172</a></span><span class="t">            <span class="nam">alias</span><span class="op">=</span><span class="str">"X-Principal-Id"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t173" href="#t173">173</a></span><span class="t">            <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t174" href="#t174">174</a></span><span class="t">                <span class="str">"Legacy principal-id header (Phase 1 trust-the-proxy shape). "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t">                <span class="str">"When IDENTITY_PROVIDERS is configured (bearer-auth mode, "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t176" href="#t176">176</a></span><span class="t">                <span class="str">"Phase C Iter C+), this header is IGNORED and the verified "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t177" href="#t177">177</a></span><span class="t">                <span class="str">"bearer token from `BearerAuthMiddleware` (Authorization: "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t174" href="#t174">174</a></span><span class="t">                <span class="str">"Legacy principal-id header (trust-the-proxy shape). "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t">                <span class="str">"When IDENTITY_PROVIDERS is configured (bearer-auth mode), "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t176" href="#t176">176</a></span><span class="t">                <span class="str">"this header is IGNORED and the verified bearer token "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t177" href="#t177">177</a></span><span class="t">                <span class="str">"from `BearerAuthMiddleware` (Authorization: "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t178" href="#t178">178</a></span><span class="t">                <span class="str">"Bearer) sets the principal. When no IdPs are configured "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t179" href="#t179">179</a></span><span class="t">                <span class="str">"(legacy mode), the application TRUSTS this header (no "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t180" href="#t180">180</a></span><span class="t">                <span class="str">"cryptographic verification) -- production deployments in "</span>&nbsp;</span><span class="r"></span></p>
@@ -287,9 +287,9 @@
     <p class="pln"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t"><span class="str">    Three modes, in priority order:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t"><span class="str">      1. **Bearer-auth mode + valid bearer**:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t"><span class="str">         `BearerAuthMiddleware` (Phase C Iter C-2) verified an</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t207" href="#t207">207</a></span><span class="t"><span class="str">         `Authorization: Bearer &lt;token>` and stashed the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t208" href="#t208">208</a></span><span class="t"><span class="str">         `VerifiedPrincipal` on `request.state.principal`. Return its</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t"><span class="str">         `BearerAuthMiddleware` verified an `Authorization: Bearer</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t207" href="#t207">207</a></span><span class="t"><span class="str">         &lt;token>` and stashed the `VerifiedPrincipal` on</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t208" href="#t208">208</a></span><span class="t"><span class="str">         `request.state.principal`. Return its</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t209" href="#t209">209</a></span><span class="t"><span class="str">         `principal_id`. X-Principal-Id is silently IGNORED in this</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t210" href="#t210">210</a></span><span class="t"><span class="str">         mode (cleartext header is unauthenticated; honoring it</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t211" href="#t211">211</a></span><span class="t"><span class="str">         would defeat the bearer gate).</span>&nbsp;</span><span class="r"></span></p>
@@ -305,7 +305,7 @@
     <p class="pln"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t"><span class="str">         - X-Principal-Id present -> use it.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t"><span class="str">         - Absent + `require_authenticated_principal=True` -> 401.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t"><span class="str">         - Absent + `require_authenticated_principal=False` -></span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t224" href="#t224">224</a></span><span class="t"><span class="str">           SYSTEM_PRINCIPAL_ID fallback (Phase 1 dev / test).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t224" href="#t224">224</a></span><span class="t"><span class="str">           SYSTEM_PRINCIPAL_ID fallback (legacy dev / test).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t225" href="#t225">225</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t">    <span class="com"># Mode 1: bearer-verified principal wins unconditionally.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t227" href="#t227">227</a></span><span class="t">    <span class="key">if</span> <span class="nam">bearer_principal_id</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -330,7 +330,7 @@
     <p class="run run2"><span class="n"><a id="t246" href="#t246">246</a></span><span class="t">            <span class="nam">headers</span><span class="op">=</span><span class="op">{</span><span class="str">"WWW-Authenticate"</span><span class="op">:</span> <span class="nam">missing_bearer_challenge</span><span class="op">(</span><span class="op">)</span><span class="op">}</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t247" href="#t247">247</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t248" href="#t248">248</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t249" href="#t249">249</a></span><span class="t">    <span class="com"># Mode 3: legacy X-Principal-Id path (unchanged from Phase 1).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t249" href="#t249">249</a></span><span class="t">    <span class="com"># Mode 3: legacy X-Principal-Id path.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t250" href="#t250">250</a></span><span class="t">    <span class="key">if</span> <span class="nam">x_principal_id</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t251" href="#t251">251</a></span><span class="t">        <span class="key">if</span> <span class="nam">require_authenticated</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t252" href="#t252">252</a></span><span class="t">            <span class="key">raise</span> <span class="nam">HTTPException</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -348,11 +348,11 @@
     <p class="pln"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">    <span class="str">"""Resolve the arrival Surface for an HTTP request.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t265" href="#t265">265</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t266" href="#t266">266</a></span><span class="t"><span class="str">    v1: static return. Process-derived (no client-asserted header /</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t"><span class="str">    query param) per Phase B Iter C-2 AH1. Phase C extends the body</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t"><span class="str">    to validate the bearer token's `aud` claim against the Surface's</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t"><span class="str">    query param). A future revision extends the body to</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t"><span class="str">    validate the bearer token's `aud` claim against the Surface's</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t"><span class="str">    expected audience before returning &#8212; `request: Request` is in</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t"><span class="str">    the signature today so Phase C extends the body without changing</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t"><span class="str">    the dependency API.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t"><span class="str">    the signature today so the body can extend without changing the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t"><span class="str">    dependency API.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t272" href="#t272">272</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t273" href="#t273">273</a></span><span class="t">    <span class="nam">_</span> <span class="op">=</span> <span class="nam">request</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t274" href="#t274">274</a></span><span class="t">    <span class="key">return</span> <span class="nam">SYSTEM_HTTP_SURFACE_ID</span>&nbsp;</span><span class="r"></span></p>
@@ -370,7 +370,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t286" href="#t286">286</a></span><span class="t"><span class="str">    If stdio shipping is added later, pin the surface id on a</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t"><span class="str">    closure parameter at tool-registration time</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t288" href="#t288">288</a></span><span class="t"><span class="str">    (`register(mcp, *, surface_id=...)`) rather than inspecting</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t"><span class="str">    `ctx` &#8212; AH1 (no client-asserted surface) is preserved either</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t"><span class="str">    `ctx` &#8212; no client-asserted surface is preserved either</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t"><span class="str">    way. GR3 RISK-1 + RISK-4.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t">    <span class="key">return</span> <span class="nam">SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID</span>&nbsp;</span><span class="r"></span></p>
@@ -397,7 +397,7 @@
             <a class="nav" href="z_9b1401bacecaa802_update_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

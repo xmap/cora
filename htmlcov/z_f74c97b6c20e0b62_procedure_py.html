@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1164eecb97aa37cc_routes_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -104,7 +104,7 @@
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">status-change timestamp + optional reason); per-event arms differ only</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">in which status string + which payload fields they pull. A future</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">parameterized `_UPDATE_STATUS_SQL` hoist (mirroring proj_supply_summary's</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">post-10a-b cleanup) becomes worthwhile when a 5th status-change arm</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">later cleanup) becomes worthwhile when a 5th status-change arm</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">lands -- today the 4 arms keep the dispatch readable.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">All branches idempotent. The CHECK constraint on `status` is locked</span>&nbsp;</span><span class="r"></span></p>
@@ -236,8 +236,8 @@
     <p class="run"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">        <span class="key">if</span> <span class="nam">event</span><span class="op">.</span><span class="nam">event_type</span> <span class="op">==</span> <span class="str">"ProcedureTruncated"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">            <span class="com"># Strict indexing matches the evolver's `from_stored` posture:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">            <span class="com"># interrupted_at is required-on-the-payload (None | datetime),</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">            <span class="com"># not future-additive optional. Any pre-10c-c stream lacking</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">            <span class="com"># the key is malformed, not legacy. Mirrors evolver fold.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">            <span class="com"># not future-additive optional. Any stream lacking the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">            <span class="com"># key is malformed, not legacy. Mirrors evolver fold.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">            <span class="nam">raw_interrupted_at</span> <span class="op">=</span> <span class="nam">event</span><span class="op">.</span><span class="nam">payload</span><span class="op">[</span><span class="str">"interrupted_at"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">            <span class="nam">interrupted_at</span> <span class="op">=</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">                <span class="nam">datetime</span><span class="op">.</span><span class="nam">fromisoformat</span><span class="op">(</span><span class="nam">raw_interrupted_at</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -276,7 +276,7 @@
             <a class="nav" href="z_1164eecb97aa37cc_routes_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

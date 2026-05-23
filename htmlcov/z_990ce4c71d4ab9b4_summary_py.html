@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_2d66eef80dcc3f9e_routes_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -99,14 +99,14 @@
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">trail of "what was the producing Run / Subject / cited calibrations</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">for this discarded Dataset" stays visible in the projection.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">`used_calibrations` (Phase 12c-2) surfaces the AsShot citation set</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">`used_calibrations` surfaces the AsShot citation set</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">on the read model so downstream consumers (operator dashboards,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">future Decision-derived advisories, agent subscribers) can query</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">"which reconstructions cited CalibrationRevision X" via the GIN-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">indexed `@>` operator without folding the Dataset stream.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">`.get("used_calibrations", [])` returns `[]` so legacy pre-12c</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">`.get("used_calibrations", [])` returns `[]` so legacy</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">rows backfill cleanly to an empty UUID array (additive-state</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">pattern mirroring Run.pinned_calibrations Phase 12b-2 precedent).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">pattern mirroring Run.pinned_calibrations precedent).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="com"># pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false</span>&nbsp;</span><span class="r"></span></p>
@@ -150,7 +150,7 @@
     <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">                    <span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"producing_run_id"</span><span class="op">]</span><span class="op">)</span> <span class="key">if</span> <span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"producing_run_id"</span><span class="op">)</span> <span class="key">else</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">                <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">                <span class="nam">subject_id</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"subject_id"</span><span class="op">]</span><span class="op">)</span> <span class="key">if</span> <span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"subject_id"</span><span class="op">)</span> <span class="key">else</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">                <span class="com"># Forward-compat: pre-12c DatasetRegistered payloads have</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">                <span class="com"># Forward-compat: legacy DatasetRegistered payloads have</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">                <span class="com"># no used_calibrations key; .get(..., []) returns [] so</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">                <span class="com"># legacy rows land with an empty UUID array.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">                <span class="nam">used_calibrations</span> <span class="op">=</span> <span class="op">[</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">c</span><span class="op">)</span> <span class="key">for</span> <span class="nam">c</span> <span class="key">in</span> <span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"used_calibrations"</span><span class="op">,</span> <span class="op">[</span><span class="op">]</span><span class="op">)</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
@@ -183,7 +183,7 @@
             <a class="nav" href="z_2d66eef80dcc3f9e_routes_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

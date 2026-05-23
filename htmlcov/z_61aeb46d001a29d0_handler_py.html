@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_61aeb46d001a29d0_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -99,7 +99,7 @@
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">Loads run sequentially (Practice must complete before Method's id</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">is known; Asset loads are independent of each other but kept</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">sequential for 6e-1 simplicity &#8212; `asyncio.gather` is a future</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">sequential for simplicity, `asyncio.gather` is a future</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">optimization if profiling shows it matters).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">The handler does NOT validate the loaded entities' state (Practice</span>&nbsp;</span><span class="r"></span></p>
@@ -241,12 +241,12 @@
     <p class="run"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">                <span class="key">raise</span> <span class="nam">AssetNotFoundError</span><span class="op">(</span><span class="nam">asset_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">            <span class="nam">assets</span><span class="op">[</span><span class="nam">asset_id</span><span class="op">]</span> <span class="op">=</span> <span class="nam">asset</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">        <span class="com"># Phase 6l.B cross-BC affordance-cover guard: when the bound</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">        <span class="com"># cross-BC affordance-cover guard: when the bound</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">        <span class="com"># Method points at a Capability template, load the Capability +</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t">        <span class="com"># every Family referenced by any bound Asset so the decider can</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">        <span class="com"># union Family.affordances and verify coverage of</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t164" href="#t164">164</a></span><span class="t">        <span class="com"># Capability.required_affordances. SKIPPED when method.capability_id</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t165" href="#t165">165</a></span><span class="t">        <span class="com"># is None (pre-6l-strict shape) &#8212; no extra loads, no guard.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t165" href="#t165">165</a></span><span class="t">        <span class="com"># is None (legacy shape), no extra loads, no guard.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">        <span class="nam">capability</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t167" href="#t167">167</a></span><span class="t">        <span class="nam">family_affordances</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">UUID</span><span class="op">,</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">Affordance</span><span class="op">]</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t168" href="#t168">168</a></span><span class="t">        <span class="key">if</span> <span class="nam">method</span><span class="op">.</span><span class="nam">capability_id</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -323,7 +323,7 @@
             <a class="nav" href="z_61aeb46d001a29d0_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

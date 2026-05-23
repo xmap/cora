@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1a455d4af5dd2e5a_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -176,11 +176,11 @@
     <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">        <span class="nam">conforms_to</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">conforms_to</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">    <span class="nam">derived_from</span> <span class="op">=</span> <span class="nam">validate_derived_from</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">derived_from</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">    <span class="com"># Phase 12c: cardinality-only check on the AsShot citation set.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">    <span class="com"># cardinality-only check on the AsShot citation set.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">    <span class="com"># NO cross-BC existence check (revision-cited atomic-ID model;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">    <span class="com"># eventual-consistency stance per [[project_calibration_design]]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">    <span class="com"># anti-hook #3; mirrors Run.pinned_calibrations Phase 12b</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="com"># decider-time treatment exactly).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">    <span class="com"># anti-hook #3; mirrors Run.pinned_calibrations decider-time</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="com"># treatment exactly).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">    <span class="nam">used_calibrations</span> <span class="op">=</span> <span class="nam">validate_used_calibrations</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">used_calibrations</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">    <span class="com"># Cross-aggregate checks (existence-only per Q2 lock B).</span>&nbsp;</span><span class="r"></span></p>
@@ -212,7 +212,7 @@
     <p class="run"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">    <span class="key">if</span> <span class="nam">discarded_derived</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">        <span class="key">raise</span> <span class="nam">DerivedFromDatasetsDiscardedError</span><span class="op">(</span><span class="nam">discarded_derived</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">    <span class="com"># Phase 7e: capture producing Run's terminal status at registration</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">    <span class="com"># capture producing Run's terminal status at registration</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">    <span class="com"># (per non-determinism principle: capture, don't recompute). The</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t">    <span class="com"># Run is in some end state by the time a Dataset references it</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">    <span class="com"># &#8212; production scenario expects Completed, but the Run may be</span>&nbsp;</span><span class="r"></span></p>
@@ -241,8 +241,8 @@
     <p class="run run2"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">            <span class="nam">producing_run_end_state</span><span class="op">=</span><span class="nam">producing_run_end_state</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">            <span class="com"># intent defaults to "Trial" on the dataclass; promotion is a</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">            <span class="com"># separate explicit slice (promote_dataset).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">            <span class="com"># Phase 12c: sort before emit so the event-payload bytes are</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">            <span class="com"># deterministic (matches Run.pinned_calibrations Phase 12b</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">            <span class="com"># sort before emit so the event-payload bytes are</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">            <span class="com"># deterministic (matches Run.pinned_calibrations</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t">            <span class="com"># decider-time treatment + the derived_from sorted-list</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">            <span class="com"># precedent on the same payload).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t164" href="#t164">164</a></span><span class="t">            <span class="nam">used_calibrations</span><span class="op">=</span><span class="nam">tuple</span><span class="op">(</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">used_calibrations</span><span class="op">)</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -257,7 +257,7 @@
             <a class="nav" href="z_1a455d4af5dd2e5a_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

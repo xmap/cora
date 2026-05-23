@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_8438b06f8d95618d_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -262,7 +262,7 @@
     <p class="run"><span class="n"><a id="t178" href="#t178">178</a></span><span class="t">            <span class="key">if</span> <span class="nam">subject</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t179" href="#t179">179</a></span><span class="t">                <span class="key">raise</span> <span class="nam">SubjectNotFoundError</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">subject_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t180" href="#t180">180</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t181" href="#t181">181</a></span><span class="t">        <span class="com"># Phase 6i-c: if the caller wants the Run to land as a Campaign</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t181" href="#t181">181</a></span><span class="t">        <span class="com"># if the caller wants the Run to land as a Campaign</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t182" href="#t182">182</a></span><span class="t">        <span class="com"># member at start time, pre-load the Campaign + its stream</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t183" href="#t183">183</a></span><span class="t">        <span class="com"># version. The decider gates on Campaign status; the handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t184" href="#t184">184</a></span><span class="t">        <span class="com"># writes the inverse CampaignRunAdded event to the Campaign</span>&nbsp;</span><span class="r"></span></p>
@@ -284,7 +284,7 @@
     <p class="pln"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t">        <span class="com"># into the decider + the genesis event.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t">        <span class="nam">new_id</span> <span class="op">=</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">id_generator</span><span class="op">.</span><span class="nam">new_id</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">        <span class="com"># Phase 11a-c-3 cross-BC clearance gate: query Safety's</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">        <span class="com"># cross-BC clearance gate: query Safety's</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t">        <span class="com"># clearance projection for every clearance whose bindings</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t">        <span class="com"># reference this Run's scope. Decider partitions on Active.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t">        <span class="nam">referencing_clearances</span> <span class="op">=</span> <span class="nam">tuple</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -295,7 +295,7 @@
     <p class="run run2"><span class="n"><a id="t211" href="#t211">211</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t212" href="#t212">212</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">        <span class="com"># Phase 11b-c cross-BC caution snapshot: query the Caution</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">        <span class="com"># cross-BC caution snapshot: query the Caution</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">        <span class="com"># projection for Active cautions referencing the Run's scope.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">        <span class="com"># NON-BLOCKING by construction (anti-pattern #5: cautions</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">        <span class="com"># WARN, never BLOCK; that authority belongs to Safety BC</span>&nbsp;</span><span class="r"></span></p>
@@ -355,7 +355,7 @@
     <p class="run run2"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t">        <span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t272" href="#t272">272</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t273" href="#t273">273</a></span><span class="t">        <span class="key">if</span> <span class="nam">decision</span><span class="op">.</span><span class="nam">campaign_events</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t274" href="#t274">274</a></span><span class="t">            <span class="com"># Phase 6i-c: cross-aggregate atomic write. The decider built</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t274" href="#t274">274</a></span><span class="t">            <span class="com"># cross-aggregate atomic write. The decider built</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t275" href="#t275">275</a></span><span class="t">            <span class="com"># both event lists (FCIS: cross-aggregate event construction</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t276" href="#t276">276</a></span><span class="t">            <span class="com"># belongs in the pure decider per the amend_clearance</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t277" href="#t277">277</a></span><span class="t">            <span class="com"># precedent + N9 gate-review nit). Handler routes them to</span>&nbsp;</span><span class="r"></span></p>
@@ -429,7 +429,7 @@
             <a class="nav" href="z_8438b06f8d95618d_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

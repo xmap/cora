@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_0b3c5bf3db898e06_routes_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -87,13 +87,13 @@
     <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">that backs `GET /families`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">Subscribed events (BOTH new + legacy names per Marten/Axon dual-match</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">contract &#8212; Phase 5i renamed `Capability` &#8594; `Family`, but legacy</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">`Capability*` events stay in the log forever; the projection must</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">subscribe to both so a replay-from-zero on a deployment with</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">contract &#8212; the aggregate was renamed `Capability` &#8594; `Family`, but</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">legacy `Capability*` events stay in the log forever; the projection</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">must subscribe to both so a replay-from-zero on a deployment with</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">historical data produces a correct summary table. The apply path</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">reads `family_id` from new payloads and `capability_id` from legacy</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">payloads. See [[project_family_affordance_design]] DLM-A "Locks"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">section + [[project_capability_research]] dual-match anti-hooks.):</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">payloads. See [[project_family_affordance_design]] "Locks" section</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">+ [[project_capability_research]] dual-match anti-hooks.):</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">  - FamilyDefined / CapabilityDefined        -> INSERT</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">        (status=Defined, version_tag=NULL,</span>&nbsp;</span><span class="r"></span></p>
@@ -107,7 +107,7 @@
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">  - FamilySettingsSchemaUpdated /</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">    CapabilitySettingsSchemaUpdated          -> UPDATE</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">        settings_schema_present (TRUE if settings_schema is</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">        non-NULL; FALSE if cleared via NULL; Phase 5g-a)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">        non-NULL; FALSE if cleared via NULL)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">All branches idempotent. `version_tag` lands in the projection ONLY</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">on Versioned events; the Defined INSERT leaves it NULL and the</span>&nbsp;</span><span class="r"></span></p>
@@ -159,9 +159,9 @@
     <p class="pln"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t"><span class="key">def</span> <span class="nam">_id</span><span class="op">(</span><span class="nam">payload</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">object</span><span class="op">]</span><span class="op">)</span> <span class="op">-></span> <span class="nam">UUID</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="str">"""Read the aggregate id from either the new `family_id` payload</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="str">    key (post-5i) or the legacy `capability_id` key (pre-5i). Dual-</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t"><span class="str">    key fallback mirrors the dual-match in `family/events.from_stored`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="str">"""Read the aggregate id from either the current `family_id`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="str">    payload key or the legacy `capability_id` key. Dual-key</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t"><span class="str">    fallback mirrors the dual-match in `family/events.from_stored`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">    <span class="nam">raw</span> <span class="op">=</span> <span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"family_id"</span><span class="op">)</span> <span class="key">or</span> <span class="nam">payload</span><span class="op">[</span><span class="str">"capability_id"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">    <span class="key">return</span> <span class="nam">UUID</span><span class="op">(</span><span class="nam">str</span><span class="op">(</span><span class="nam">raw</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -173,12 +173,12 @@
     <p class="run"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">    <span class="nam">name</span> <span class="op">=</span> <span class="str">"proj_equipment_family_summary"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">    <span class="nam">subscribed_event_types</span> <span class="op">=</span> <span class="nam">frozenset</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">        <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">            <span class="com"># Current event type names (post-5i)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">            <span class="com"># Current event type names</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">            <span class="str">"FamilyDefined"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">            <span class="str">"FamilyVersioned"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">            <span class="str">"FamilyDeprecated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">            <span class="str">"FamilySettingsSchemaUpdated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">            <span class="com"># Legacy event type names (pre-5i; stay forever per</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">            <span class="com"># Legacy event type names (stay forever per</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">            <span class="com"># Marten/Axon dual-match contract). Without these, a</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">            <span class="com"># projection replay on a deployment with historical data</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">            <span class="com"># would silently skip legacy events and produce an</span>&nbsp;</span><span class="r"></span></p>
@@ -236,7 +236,7 @@
             <a class="nav" href="z_0b3c5bf3db898e06_routes_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

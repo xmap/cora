@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_9b1401bacecaa802_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -93,10 +93,10 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">holds those.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">Extracted from per-aggregate `events.py` modules (Actor, Zone,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">Conduit) once a third byte-identical copy appeared in Phase 3b. Each</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">aggregate's `events.py` now owns just the genuinely aggregate-</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">specific pieces: the event classes, the `&lt;Aggregate>Event` union,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">`event_type_name`, `to_payload`, and `from_stored`. Handlers wire the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">Conduit) once a third byte-identical copy appeared. Each aggregate's</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">`events.py` now owns just the genuinely aggregate-specific pieces:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">the event classes, the `&lt;Aggregate>Event` union, `event_type_name`,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">`to_payload`, and `from_stored`. Handlers wire the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">two together at the persistence step:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">    new_events = [</span>&nbsp;</span><span class="r"></span></p>
@@ -151,11 +151,11 @@
     <p class="pln"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t"><span class="str">    `principal_id` carries the UUID of the entity that pulled the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t"><span class="str">    trigger for the command that produced this event (the same value</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t"><span class="str">    the handler received as its `principal_id` kwarg). Required as of</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t"><span class="str">    Phase 9b-c: the day-1 ReBAC hook is now contract-enforced at the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t"><span class="str">    application layer (the `events.principal_id` DB column stays</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t"><span class="str">    nullable so historical pre-hook rows remain valid). Day-1 hook</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="str">    for the future ReBAC graph projection (see project_authz_future).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t"><span class="str">    the handler received as its `principal_id` kwarg). Required by</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t"><span class="str">    the day-1 ReBAC hook, contract-enforced at the application layer</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t"><span class="str">    (the `events.principal_id` DB column stays nullable so historical</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t"><span class="str">    pre-hook rows remain valid). Day-1 hook for the future ReBAC</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="str">    graph projection (see project_authz_future).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="key">return</span> <span class="nam">NewEvent</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">        <span class="nam">event_id</span><span class="op">=</span><span class="nam">event_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -177,7 +177,7 @@
             <a class="nav" href="z_9b1401bacecaa802_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

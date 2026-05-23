@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1f1cd5df6fb88adf_routes_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -88,7 +88,7 @@
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="com"># broken across lines. Splitting these would either change the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="com"># prompt bytes (cache-key drift) or introduce implicit-concat string</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="com"># stitching that's harder to read.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">"""RunDebrief prompt template (Phase 8f-b iter 2b).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">"""RunDebrief prompt template.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">Builds the `LLMChatRequest` for the RunDebrief agent's per-Run</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">debrief call. The output is a structured Decision payload with a</span>&nbsp;</span><span class="r"></span></p>
@@ -175,7 +175,7 @@
     <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t"><span class="nam">RUN_DEBRIEF_PROMPT_TEMPLATE_ID</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="str">"01900000-0000-7000-8000-0000aaaa0001"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t"><span class="com"># Default model for the RunDebrief agent at iter 2b. Wired via the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t"><span class="com"># Default model for the RunDebriefer agent. Wired via the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t"><span class="com"># Agent.model_ref aggregate field at bootstrap; this is the value the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="com"># bootstrap helper passes. Haiku 4.5 is the cost/latency floor for an</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t"><span class="com"># agent that runs once per terminal Run with no tool-use loop.</span>&nbsp;</span><span class="r"></span></p>
@@ -186,7 +186,7 @@
     <p class="pln"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t"><span class="com"># 6-value closed choice set. Sourced from Decision BC's canonical</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t"><span class="com"># `RUN_DEBRIEF_CHOICES` constant (iter 1) so there's one declaration</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t"><span class="com"># `RUN_DEBRIEF_CHOICES` constant so there's one declaration</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t"><span class="com"># and one rename surface. The frozenset is sorted for stable JSON</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t"><span class="com"># Schema output ordering (the LLM's enum-list ordering can subtly</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t"><span class="com"># affect tool-use behavior; sort-then-tuple is reproducible).</span>&nbsp;</span><span class="r"></span></p>
@@ -241,7 +241,7 @@
     <p class="pln"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t"><span class="com"># System prompt: cached at 1h TTL. Bytes are FIXED across every</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t"><span class="com"># RunDebrief invocation in a deployment so the cache hit rate is</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t"><span class="com"># RunDebriefer invocation in a deployment so the cache hit rate is</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t"><span class="com"># bound only by the cache TTL + workspace isolation. Anthropic</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t"><span class="com"># caches everything from request start up to and including the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t"><span class="com"># block marked with `cache_control`.</span>&nbsp;</span><span class="r"></span></p>
@@ -253,7 +253,7 @@
     <p class="pln"><span class="n"><a id="t169" href="#t169">169</a></span><span class="t"><span class="com"># in tests/architecture/test_run_debrief_prompt_size.py to catch</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t170" href="#t170">170</a></span><span class="t"><span class="com"># accidental edits that drop the prefix below the cache threshold.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t171" href="#t171">171</a></span><span class="t"><span class="nam">RUN_DEBRIEF_SYSTEM_PROMPT</span> <span class="op">=</span> <span class="str">"""\</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t172" href="#t172">172</a></span><span class="t"><span class="str">You are RunDebrief, an advisory agent embedded in CORA, a research-facility</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t172" href="#t172">172</a></span><span class="t"><span class="str">You are RunDebriefer, an advisory agent embedded in CORA, a research-facility</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t173" href="#t173">173</a></span><span class="t"><span class="str">orchestration platform. Your single job is to write a short retrospective</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t174" href="#t174">174</a></span><span class="t"><span class="str">narrative for one experiment Run that just ended, and pick one verdict from a</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t"><span class="str">closed list. You do not control any equipment. You do not approve or reject</span>&nbsp;</span><span class="r"></span></p>
@@ -436,7 +436,7 @@
     <p class="run run2"><span class="n"><a id="t352" href="#t352">352</a></span><span class="t">    <span class="nam">model_ref</span><span class="op">:</span> <span class="nam">ModelRef</span> <span class="op">=</span> <span class="nam">DEFAULT_RUN_DEBRIEF_MODEL</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t353" href="#t353">353</a></span><span class="t">    <span class="nam">max_output_tokens</span><span class="op">:</span> <span class="nam">int</span> <span class="op">=</span> <span class="num">1024</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t354" href="#t354">354</a></span><span class="t"><span class="op">)</span> <span class="op">-></span> <span class="nam">LLMChatRequest</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t355" href="#t355">355</a></span><span class="t">    <span class="str">"""Build the `LLMChatRequest` for one RunDebrief call.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t355" href="#t355">355</a></span><span class="t">    <span class="str">"""Build the `LLMChatRequest` for one RunDebriefer call.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t356" href="#t356">356</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t357" href="#t357">357</a></span><span class="t"><span class="str">    The system prompt is wrapped in ONE `LLMContentBlock` with a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t358" href="#t358">358</a></span><span class="t"><span class="str">    1h cache breakpoint so the adapter sets `cache_control` on</span>&nbsp;</span><span class="r"></span></p>
@@ -509,7 +509,7 @@
             <a class="nav" href="z_1f1cd5df6fb88adf_routes_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

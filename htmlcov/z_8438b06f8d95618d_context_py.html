@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_8438b06f8d95618d_decider_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -108,7 +108,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">    Decider rejects if any is Decommissioned, and re-validates</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">    capability superset against current Asset state (drift since</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">    Plan-bind is real; Run is the last gate).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">  - `referencing_clearances` (Phase 11a-c-3): every Safety clearance</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">  - `referencing_clearances`: every Safety clearance</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">    whose bindings reference this Run's scope (run_id, subject_id,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">    asset_ids), regardless of status. Loaded by the handler via</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">    `deps.clearance_lookup.find_referencing_run(...)` against the</span>&nbsp;</span><span class="r"></span></p>
@@ -116,7 +116,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">    on `status == "Active"` to distinguish "no clearance at all"</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">    (`RunRequiresActiveClearanceError`) from "clearance exists but</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="str">    none Active" (`RunClearanceCoverageMismatchError`).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">  - `active_cautions` (Phase 11b-c): every Active Caution whose</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">  - `active_cautions`: every Active Caution whose</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">    target references the Run's scope (asset_ids + a future</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">    procedure_ids when a procedure-driven run shape lands). Loaded</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="str">    by the handler via</span>&nbsp;</span><span class="r"></span></p>
@@ -155,9 +155,9 @@
     <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t"><span class="str">    status; the decider applies the Active-coverage check.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t"><span class="str">    `active_cautions` carries every Active Caution attached to the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t"><span class="str">    Run's scope; the decider does NOT gate on this field, only</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="str">    embeds it on the `RunStarted` event payload (Phase 11b-c).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="str">    embeds it on the `RunStarted` event payload.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="str">    `campaign` (Phase 6i-c) is None unless `StartRun.campaign_id` was</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="str">    `campaign` is None unless `StartRun.campaign_id` was</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t"><span class="str">    provided. When non-None the decider gates on `campaign.status`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t"><span class="str">    being in `{Planned, Active, Held}` (else</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="str">    `RunCannotJoinCampaignError`) and embeds the campaign_id on the</span>&nbsp;</span><span class="r"></span></p>
@@ -181,7 +181,7 @@
             <a class="nav" href="z_8438b06f8d95618d_decider_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

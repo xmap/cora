@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_8438b06f8d95618d_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -86,7 +86,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Cross-aggregate validation: this is the second decider in the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">codebase that takes upstream aggregate state as input (after Plan's</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">`define_plan` from 6e-1). Per gate-review Q2, the handler pre-loads</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">`define_plan`). Per gate-review Q2, the handler pre-loads</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">Plan + Subject (if subject_id given) + each bound Asset, hands the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">loaded entities to this decider as a `RunStartContext`. The decider</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">treats them as opaque domain data and validates without any I/O.</span>&nbsp;</span><span class="r"></span></p>
@@ -206,7 +206,7 @@
     <p class="pln"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t"><span class="str">    Mirrors `amend_clearance`'s `AmendmentEvents`: the decider owns</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t"><span class="str">    cross-aggregate event construction (FCIS), the handler owns I/O</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t"><span class="str">    routing. Phase 6i gate-review N9.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t"><span class="str">    routing.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">    <span class="nam">run_events</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">RunStarted</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
@@ -236,15 +236,15 @@
     <p class="pln"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t"><span class="str">    `method_parameters_schema` is the Method's parameters_schema</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t"><span class="str">    (None if Method declares no contract). The decider validates</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t"><span class="str">    `effective_parameters` against the schema; STRICT when the schema</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="str">    is None &#8212; non-empty effective rejected (post-6g audit reversal,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t"><span class="str">    mirrors 5g-c's "no Capabilities + non-empty settings &#8594; reject"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="str">    is None &#8212; non-empty effective rejected (per audit reversal,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t"><span class="str">    mirrors the "no Capabilities + non-empty settings &#8594; reject"</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t"><span class="str">    anchor). Emits RunStarted carrying BOTH the operator's overrides</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t"><span class="str">    AND the resolved effective set.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">    <span class="key">if</span> <span class="nam">state</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">        <span class="key">raise</span> <span class="nam">RunAlreadyExistsError</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">    <span class="com"># Phase 11a-c-3 cross-BC clearance gate: at least one Safety</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">    <span class="com"># cross-BC clearance gate: at least one Safety</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t164" href="#t164">164</a></span><span class="t">    <span class="com"># Clearance must be Active AND reference this Run's scope. The</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t165" href="#t165">165</a></span><span class="t">    <span class="com"># handler pre-loaded every clearance whose bindings reference</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">    <span class="com"># the Run/Subject/Asset ids via deps.clearance_lookup. Partition</span>&nbsp;</span><span class="r"></span></p>
@@ -295,7 +295,7 @@
     <p class="pln"><span class="n"><a id="t211" href="#t211">211</a></span><span class="t">    <span class="com"># 6g-c: validate the resolved (defaults + overrides) parameter set</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t212" href="#t212">212</a></span><span class="t">    <span class="com"># against the owning Method's parameters_schema. Strict when the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t">    <span class="com"># schema is None: non-empty effective parameters are rejected</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">    <span class="com"># (post-6g audit reversal; mirrors 5g-c's "no Capabilities + non-</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">    <span class="com"># (per audit reversal; mirrors the "no Capabilities + non-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">    <span class="com"># empty settings &#8594; reject" anchor; see</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">    <span class="com"># [[project_schema_validated_values_pattern]]).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">    <span class="nam">validate_effective_parameters_against_method_schema</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -318,7 +318,7 @@
     <p class="run run2"><span class="n"><a id="t234" href="#t234">234</a></span><span class="t">            <span class="nam">assets_by_id</span><span class="op">=</span><span class="nam">context</span><span class="op">.</span><span class="nam">assets</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t235" href="#t235">235</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t236" href="#t236">236</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">    <span class="com"># Phase 6i-c: if the caller supplied campaign_id, the handler pre-</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">    <span class="com"># if the caller supplied campaign_id, the handler pre-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t238" href="#t238">238</a></span><span class="t">    <span class="com"># loaded the Campaign into the context. Verify the Campaign is in a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">    <span class="com"># membership-eligible status (Planned / Active / Held); reject</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t240" href="#t240">240</a></span><span class="t">    <span class="com"># terminal Campaigns (Closed / Abandoned) per the design memo</span>&nbsp;</span><span class="r"></span></p>
@@ -343,14 +343,14 @@
     <p class="pln"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t260" href="#t260">260</a></span><span class="t">    <span class="nam">name</span> <span class="op">=</span> <span class="nam">RunName</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">name</span><span class="op">)</span>  <span class="com"># validates + trims; raises InvalidRunNameError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t261" href="#t261">261</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t262" href="#t262">262</a></span><span class="t">    <span class="com"># Phase 12b-5: cardinality cap on the AsShot pin set. NO cross-BC</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t262" href="#t262">262</a></span><span class="t">    <span class="com"># cardinality cap on the AsShot pin set. NO cross-BC</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t263" href="#t263">263</a></span><span class="t">    <span class="com"># existence check (revision-cited atomic-ID model; eventual-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">    <span class="com"># consistency stance per [[project_calibration_design]] anti-hook</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t265" href="#t265">265</a></span><span class="t">    <span class="com"># #3). Mirrors Data BC's register_dataset decider-time treatment</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t266" href="#t266">266</a></span><span class="t">    <span class="com"># for Dataset.used_calibrations exactly.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t">    <span class="nam">pinned_calibrations</span> <span class="op">=</span> <span class="nam">validate_pinned_calibrations</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">pinned_calibrations</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t">    <span class="com"># Phase 11b-c: build the acknowledged_cautions snapshot for the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t">    <span class="com"># build the acknowledged_cautions snapshot for the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t">    <span class="com"># RunStarted event payload. Per the Caution design memo, this</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t">    <span class="com"># snapshot IS the ack (anti-pattern #7: ack lives on the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t272" href="#t272">272</a></span><span class="t">    <span class="com"># consumption event, never per-operator on the Caution</span>&nbsp;</span><span class="r"></span></p>
@@ -387,7 +387,7 @@
     <p class="run run2"><span class="n"><a id="t303" href="#t303">303</a></span><span class="t">            <span class="nam">acknowledged_cautions</span><span class="op">=</span><span class="nam">acknowledged_cautions</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t304" href="#t304">304</a></span><span class="t">            <span class="nam">campaign_id</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">campaign_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t305" href="#t305">305</a></span><span class="t">            <span class="nam">decided_by_decision_id</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">decided_by_decision_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t">            <span class="com"># Phase 12b: sort for deterministic byte-form on the event</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t">            <span class="com"># sort for deterministic byte-form on the event</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t">            <span class="com"># payload (frozenset has no inherent order). The cardinality</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t">            <span class="com"># check ran earlier via validate_pinned_calibrations (12b-5).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t309" href="#t309">309</a></span><span class="t">            <span class="nam">pinned_calibrations</span><span class="op">=</span><span class="nam">tuple</span><span class="op">(</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">pinned_calibrations</span><span class="op">)</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -395,7 +395,7 @@
     <p class="run run2"><span class="n"><a id="t311" href="#t311">311</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t">    <span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t">    <span class="com"># Phase 6i-c FCIS: when campaign_id is set, the decider also emits</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t">    <span class="com"># FCIS: when campaign_id is set, the decider also emits</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t315" href="#t315">315</a></span><span class="t">    <span class="com"># the inverse `CampaignRunAdded` event for the Campaign stream. The</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t316" href="#t316">316</a></span><span class="t">    <span class="com"># handler hands both lists to `EventStore.append_streams` as a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t317" href="#t317">317</a></span><span class="t">    <span class="com"># single atomic batch. When campaign_id is None, this list is empty</span>&nbsp;</span><span class="r"></span></p>
@@ -420,7 +420,7 @@
             <a class="nav" href="z_8438b06f8d95618d_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

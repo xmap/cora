@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_bd2d50bd5f5bc3b9_llm_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -93,17 +93,17 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">without re-executing the command.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">The cache namespace is `(principal_id, key, surface_id)` per IETF</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">&#167;5 server-side composite-key recommendation. `surface_id` joined the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">tuple in Phase B Iter C-2c: under V2 per-surface policies a retry</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">from a different Surface must re-authorize, so each Surface gets an</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">&#167;5 server-side composite-key recommendation. `surface_id` belongs</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">in the tuple because under V2 per-surface policies a retry from a</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">different Surface must re-authorize, so each Surface gets an</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">independent cache slot. The decorator threads surface_id from the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">HTTP/MCP resolver (`get_surface_id` / `get_mcp_surface_id`) all the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">way down to `claim()`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">## Phase 9a: two-phase claim + 4xx error caching</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">## Two-phase claim + 4xx error caching</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">Replaces Phase 2d's single-phase `get + put` with a richer surface</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">that captures the full claim lifecycle:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">The richer surface captures the full claim lifecycle (vs a naive</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">single-phase `get + put`):</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">  - `claim()` is the only entry point. Atomically tries to win the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">    in-flight lock for `(principal_id, key)`. Returns one of five</span>&nbsp;</span><span class="r"></span></p>
@@ -345,7 +345,7 @@
             <a class="nav" href="z_bd2d50bd5f5bc3b9_llm_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

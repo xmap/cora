@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_197a16dea10f9119_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -104,10 +104,10 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">`target_asset_ids` and `parent_run_id` are NOT validated for</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">existence here per the eventual-consistency stance (precedent: Trust</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">Conduit zone refs from 3b, Asset parent refs from 5b, Method's</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">needed_families from 6a). Existence + Decommissioned-lifecycle</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">gating happens at start_procedure time in 10c-b via</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">`ProcedureStartContext` (mirrors `RunStartContext` from Run 6f-1).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">Conduit zone refs, Asset parent refs, Method's needed_families).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">Existence + Decommissioned-lifecycle gating happens at</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">start_procedure time via `ProcedureStartContext` (mirrors</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">`RunStartContext` from the Run BC).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">Initial status is implicit `Defined` (event type IS the state-</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">change indicator; the genesis evolver hardcodes the mapping). Per</span>&nbsp;</span><span class="r"></span></p>
@@ -146,8 +146,8 @@
     <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="op">)</span> <span class="op">-></span> <span class="nam">list</span><span class="op">[</span><span class="nam">ProcedureRegistered</span><span class="op">]</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="str">"""Decide the events produced by registering a new procedure.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t"><span class="str">    Phase 10d-additive adds optional `capability` parameter: the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="str">    loaded Capability state for `command.capability_id` (loaded by</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t"><span class="str">    Optional `capability` parameter (additive): the loaded</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="str">    Capability state for `command.capability_id` (loaded by</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t"><span class="str">    the handler via the cross-BC port; None when command.capability_id</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t"><span class="str">    is None). When command.capability_id is supplied, the decider</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t"><span class="str">    validates:</span>&nbsp;</span><span class="r"></span></p>
@@ -199,7 +199,7 @@
             <a class="nav" href="z_197a16dea10f9119_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

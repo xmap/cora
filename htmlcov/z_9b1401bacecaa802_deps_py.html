@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_9b1401bacecaa802_event_envelope_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -224,12 +224,12 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t"><span class="str">    inject `FakeLLMAdapter` explicitly.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t"><span class="str">    `logbook_mirror` defaults to `None`; no production implementor</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t"><span class="str">    exists at 8f-b. Subscribers short-circuit on `None`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t"><span class="str">    exists yet. Subscribers short-circuit on `None`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t"><span class="str">    `token_verifier` (Phase C Iter C) defaults to `None`; production</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t"><span class="str">    `build_kernel` constructs it from `settings.identity_providers`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t"><span class="str">    when that list is non-empty. Integration tests override only when</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t"><span class="str">    exercising the bearer-auth path.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t"><span class="str">    `token_verifier` defaults to `None`; production `build_kernel`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t"><span class="str">    constructs it from `settings.identity_providers` when that list</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t"><span class="str">    is non-empty. Integration tests override only when exercising</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t"><span class="str">    the bearer-auth path.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">    <span class="key">return</span> <span class="nam">Kernel</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">        <span class="nam">settings</span><span class="op">=</span><span class="nam">settings</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -298,13 +298,13 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t"><span class="str">    explicitly.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t"><span class="str">    `logbook_mirror` defaults to `None`; no production implementor</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t"><span class="str">    at 8f-b. Subscriber tests inject a `FakeLogbookMirror` (when</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t218" href="#t218">218</a></span><span class="t"><span class="str">    they care) or leave `None`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t"><span class="str">    yet. Subscriber tests inject a `FakeLogbookMirror` (when they</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t218" href="#t218">218</a></span><span class="t"><span class="str">    care) or leave `None`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t220" href="#t220">220</a></span><span class="t"><span class="str">    `token_verifier` (Phase C Iter C) defaults to `None`; only</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t"><span class="str">    bearer-auth contract tests inject a verifier (a programmable</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t"><span class="str">    test stub or a real `IdentityProviderRegistry` against a fake</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t"><span class="str">    JWKS server). Production wiring lives in `build_kernel`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t220" href="#t220">220</a></span><span class="t"><span class="str">    `token_verifier` defaults to `None`; only bearer-auth contract</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t"><span class="str">    tests inject a verifier (a programmable test stub or a real</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t"><span class="str">    `IdentityProviderRegistry` against a fake JWKS server).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t"><span class="str">    Production wiring lives in `build_kernel`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t224" href="#t224">224</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t225" href="#t225">225</a></span><span class="t">    <span class="key">return</span> <span class="nam">Kernel</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t">        <span class="nam">settings</span><span class="op">=</span><span class="nam">settings</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -331,11 +331,11 @@
     <p class="run"><span class="n"><a id="t247" href="#t247">247</a></span><span class="t"><span class="key">class</span> <span class="nam">ClearanceLookupFactory</span><span class="op">(</span><span class="nam">Protocol</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t248" href="#t248">248</a></span><span class="t">    <span class="str">"""Builds the production ClearanceLookup port for the Kernel.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t249" href="#t249">249</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t250" href="#t250">250</a></span><span class="t"><span class="str">    Phase 11a-c-3: Safety BC's `cora.safety.adapters.PostgresClearanceLookup`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t251" href="#t251">251</a></span><span class="t"><span class="str">    is the production factory; `cora.api.main` binds it. Same factory-</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t252" href="#t252">252</a></span><span class="t"><span class="str">    injection shape as `AuthorizeFactory` so `cora.infrastructure.deps`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t253" href="#t253">253</a></span><span class="t"><span class="str">    doesn't import from any BC (tach module rule:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t254" href="#t254">254</a></span><span class="t"><span class="str">    `cora.infrastructure depends_on = []`).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t250" href="#t250">250</a></span><span class="t"><span class="str">    Safety BC's `cora.safety.adapters.PostgresClearanceLookup` is</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t251" href="#t251">251</a></span><span class="t"><span class="str">    the production factory; `cora.api.main` binds it. Same</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t252" href="#t252">252</a></span><span class="t"><span class="str">    factory-injection shape as `AuthorizeFactory` so</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t253" href="#t253">253</a></span><span class="t"><span class="str">    `cora.infrastructure.deps` doesn't import from any BC (tach</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t254" href="#t254">254</a></span><span class="t"><span class="str">    module rule: `cora.infrastructure depends_on = []`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t"><span class="str">    `pool` is `None` only when `app_env=test`; the production factory</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t"><span class="str">    requires a real pool. Test mode falls back to</span>&nbsp;</span><span class="r"></span></p>
@@ -351,29 +351,29 @@
     <p class="run"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t"><span class="key">class</span> <span class="nam">CautionLookupFactory</span><span class="op">(</span><span class="nam">Protocol</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t">    <span class="str">"""Builds the production CautionLookup port for the Kernel.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t"><span class="str">    Phase 11b-c: Caution BC's `cora.caution.adapters.PostgresCautionLookup`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t"><span class="str">    is the production factory; `cora.api.main` binds it. Same factory-</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t272" href="#t272">272</a></span><span class="t"><span class="str">    injection shape as `AuthorizeFactory` / `ClearanceLookupFactory` so</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t273" href="#t273">273</a></span><span class="t"><span class="str">    `cora.infrastructure.deps` doesn't import from any BC (tach module</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t274" href="#t274">274</a></span><span class="t"><span class="str">    rule: `cora.infrastructure depends_on = []`).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t275" href="#t275">275</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t276" href="#t276">276</a></span><span class="t"><span class="str">    `pool` is `None` only when `app_env=test`; the production factory</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t277" href="#t277">277</a></span><span class="t"><span class="str">    requires a real pool. Test mode falls back to</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t278" href="#t278">278</a></span><span class="t"><span class="str">    `AlwaysQuietCautionLookup` automatically.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t279" href="#t279">279</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t280" href="#t280">280</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t281" href="#t281">281</a></span><span class="t">    <span class="key">def</span> <span class="nam">__call__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t282" href="#t282">282</a></span><span class="t">        <span class="nam">self</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t283" href="#t283">283</a></span><span class="t">        <span class="nam">pool</span><span class="op">:</span> <span class="nam">asyncpg</span><span class="op">.</span><span class="nam">Pool</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t284" href="#t284">284</a></span><span class="t">    <span class="op">)</span> <span class="op">-></span> <span class="nam">CautionLookup</span><span class="op">:</span> <span class="op">...</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t285" href="#t285">285</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t"><span class="str">    Caution BC's `cora.caution.adapters.PostgresCautionLookup` is</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t"><span class="str">    the production factory; `cora.api.main` binds it. Same</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t272" href="#t272">272</a></span><span class="t"><span class="str">    factory-injection shape as `AuthorizeFactory` /</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t273" href="#t273">273</a></span><span class="t"><span class="str">    `ClearanceLookupFactory` so `cora.infrastructure.deps` doesn't</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t274" href="#t274">274</a></span><span class="t"><span class="str">    import from any BC (tach module rule:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t275" href="#t275">275</a></span><span class="t"><span class="str">    `cora.infrastructure depends_on = []`).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t276" href="#t276">276</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t277" href="#t277">277</a></span><span class="t"><span class="str">    `pool` is `None` only when `app_env=test`; the production factory</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t278" href="#t278">278</a></span><span class="t"><span class="str">    requires a real pool. Test mode falls back to</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t279" href="#t279">279</a></span><span class="t"><span class="str">    `AlwaysQuietCautionLookup` automatically.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t280" href="#t280">280</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t281" href="#t281">281</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t282" href="#t282">282</a></span><span class="t">    <span class="key">def</span> <span class="nam">__call__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t283" href="#t283">283</a></span><span class="t">        <span class="nam">self</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t284" href="#t284">284</a></span><span class="t">        <span class="nam">pool</span><span class="op">:</span> <span class="nam">asyncpg</span><span class="op">.</span><span class="nam">Pool</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t285" href="#t285">285</a></span><span class="t">    <span class="op">)</span> <span class="op">-></span> <span class="nam">CautionLookup</span><span class="op">:</span> <span class="op">...</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t286" href="#t286">286</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t"><span class="key">class</span> <span class="nam">LLMFactory</span><span class="op">(</span><span class="nam">Protocol</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t288" href="#t288">288</a></span><span class="t">    <span class="str">"""Builds the production LLM for the Kernel.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t"><span class="str">    Phase 8f-b iter 2a: Agent BC's</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t"><span class="str">    `cora.agent.adapters.AnthropicLLMAdapter` is the only production</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t"><span class="str">    factory today; `cora.api.main` binds it when</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t288" href="#t288">288</a></span><span class="t"><span class="key">class</span> <span class="nam">LLMFactory</span><span class="op">(</span><span class="nam">Protocol</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t">    <span class="str">"""Builds the production LLM for the Kernel.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t"><span class="str">    Agent BC's `cora.agent.adapters.AnthropicLLMAdapter` is the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t"><span class="str">    only production factory today; `cora.api.main` binds it when</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t293" href="#t293">293</a></span><span class="t"><span class="str">    `Settings.anthropic_api_key` is set. Same factory-injection</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t294" href="#t294">294</a></span><span class="t"><span class="str">    shape as `AuthorizeFactory` / `ClearanceLookupFactory` /</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t295" href="#t295">295</a></span><span class="t"><span class="str">    `CautionLookupFactory` so `cora.infrastructure.deps` doesn't</span>&nbsp;</span><span class="r"></span></p>
@@ -405,19 +405,19 @@
     <p class="run run2"><span class="n"><a id="t321" href="#t321">321</a></span><span class="t"><span class="op">)</span> <span class="op">-></span> <span class="nam">tuple</span><span class="op">[</span><span class="nam">Kernel</span><span class="op">,</span> <span class="nam">Teardown</span><span class="op">]</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t322" href="#t322">322</a></span><span class="t">    <span class="str">"""Construct the kernel. Called once from the FastAPI lifespan.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t323" href="#t323">323</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t324" href="#t324">324</a></span><span class="t"><span class="str">    `llm_factory` (Phase 8f-b iter 2a): when provided, called with</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t325" href="#t325">325</a></span><span class="t"><span class="str">    `Settings` and the result wired into `kernel.llm`. When `None`,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t326" href="#t326">326</a></span><span class="t"><span class="str">    `kernel.llm` is `None` and Agent BC subscribers that depend on</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t327" href="#t327">327</a></span><span class="t"><span class="str">    it fail-fast at registration. Test mode (`app_env=test`) does</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t328" href="#t328">328</a></span><span class="t"><span class="str">    NOT call the factory; tests inject `FakeLLMAdapter` directly</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t329" href="#t329">329</a></span><span class="t"><span class="str">    via `make_inmemory_kernel(..., llm=...)`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t324" href="#t324">324</a></span><span class="t"><span class="str">    `llm_factory`: when provided, called with `Settings` and the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t325" href="#t325">325</a></span><span class="t"><span class="str">    result wired into `kernel.llm`. When `None`, `kernel.llm` is</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t326" href="#t326">326</a></span><span class="t"><span class="str">    `None` and Agent BC subscribers that depend on it fail-fast at</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t327" href="#t327">327</a></span><span class="t"><span class="str">    registration. Test mode (`app_env=test`) does NOT call the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t328" href="#t328">328</a></span><span class="t"><span class="str">    factory; tests inject `FakeLLMAdapter` directly via</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t329" href="#t329">329</a></span><span class="t"><span class="str">    `make_inmemory_kernel(..., llm=...)`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t330" href="#t330">330</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t331" href="#t331">331</a></span><span class="t"><span class="str">    `settings` is an optional injection point for tests that need</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t332" href="#t332">332</a></span><span class="t"><span class="str">    to override env-var-loaded config (e.g. Phase C edge-auth</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t333" href="#t333">333</a></span><span class="t"><span class="str">    contract tests overriding `identity_providers`). Production</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t334" href="#t334">334</a></span><span class="t"><span class="str">    callers pass nothing; Settings reads from env / .env as usual.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t332" href="#t332">332</a></span><span class="t"><span class="str">    to override env-var-loaded config (e.g. edge-auth contract</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t333" href="#t333">333</a></span><span class="t"><span class="str">    tests overriding `identity_providers`). Production callers pass</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t334" href="#t334">334</a></span><span class="t"><span class="str">    nothing; Settings reads from env / .env as usual.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t335" href="#t335">335</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t336" href="#t336">336</a></span><span class="t"><span class="str">    `token_verifier` (Phase C Iter C) is constructed from</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t336" href="#t336">336</a></span><span class="t"><span class="str">    `token_verifier` is constructed from</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t337" href="#t337">337</a></span><span class="t"><span class="str">    `settings.identity_providers` via `build_idp_registry`. Empty</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t338" href="#t338">338</a></span><span class="t"><span class="str">    list -> `None` -> middleware falls through to the legacy</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t339" href="#t339">339</a></span><span class="t"><span class="str">    `X-Principal-Id` path. Non-empty -> a `TokenVerifier` that</span>&nbsp;</span><span class="r"></span></p>
@@ -543,33 +543,32 @@
     <p class="pln"><span class="n"><a id="t459" href="#t459">459</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t460" href="#t460">460</a></span><span class="t"><span class="str">    Catches `Exception` (NOT `BaseException`) so `asyncio.CancelledError`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t461" href="#t461">461</a></span><span class="t"><span class="str">    + `KeyboardInterrupt` + `SystemExit` propagate through the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t462" href="#t462">462</a></span><span class="t"><span class="str">    teardown chain as intended (architecture gate-review P1#2 of</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t463" href="#t463">463</a></span><span class="t"><span class="str">    8f-b iter 2b).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t464" href="#t464">464</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t465" href="#t465">465</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t466" href="#t466">466</a></span><span class="t">    <span class="key">async</span> <span class="key">def</span> <span class="nam">composed</span><span class="op">(</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t467" href="#t467">467</a></span><span class="t">        <span class="nam">first_exc</span><span class="op">:</span> <span class="nam">Exception</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t468" href="#t468">468</a></span><span class="t">        <span class="key">for</span> <span class="nam">td</span> <span class="key">in</span> <span class="nam">teardowns</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t469" href="#t469">469</a></span><span class="t">            <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t470" href="#t470">470</a></span><span class="t">                <span class="key">await</span> <span class="nam">td</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t471" href="#t471">471</a></span><span class="t">            <span class="key">except</span> <span class="nam">Exception</span> <span class="key">as</span> <span class="nam">exc</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t472" href="#t472">472</a></span><span class="t">                <span class="key">if</span> <span class="nam">first_exc</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">472&#x202F;&#x219B;&#x202F;468</span><span class="annotate long">line 472 didn't jump to line 468 because the condition on line 472 was always true</span></span></p>
-    <p class="run"><span class="n"><a id="t473" href="#t473">473</a></span><span class="t">                    <span class="nam">first_exc</span> <span class="op">=</span> <span class="nam">exc</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t474" href="#t474">474</a></span><span class="t">        <span class="key">if</span> <span class="nam">first_exc</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t475" href="#t475">475</a></span><span class="t">            <span class="key">raise</span> <span class="nam">first_exc</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t476" href="#t476">476</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t477" href="#t477">477</a></span><span class="t">    <span class="key">return</span> <span class="nam">composed</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t462" href="#t462">462</a></span><span class="t"><span class="str">    teardown chain as intended (architecture gate-review).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t463" href="#t463">463</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t464" href="#t464">464</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t465" href="#t465">465</a></span><span class="t">    <span class="key">async</span> <span class="key">def</span> <span class="nam">composed</span><span class="op">(</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t466" href="#t466">466</a></span><span class="t">        <span class="nam">first_exc</span><span class="op">:</span> <span class="nam">Exception</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t467" href="#t467">467</a></span><span class="t">        <span class="key">for</span> <span class="nam">td</span> <span class="key">in</span> <span class="nam">teardowns</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t468" href="#t468">468</a></span><span class="t">            <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t469" href="#t469">469</a></span><span class="t">                <span class="key">await</span> <span class="nam">td</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t470" href="#t470">470</a></span><span class="t">            <span class="key">except</span> <span class="nam">Exception</span> <span class="key">as</span> <span class="nam">exc</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="par run show_par"><span class="n"><a id="t471" href="#t471">471</a></span><span class="t">                <span class="key">if</span> <span class="nam">first_exc</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">471&#x202F;&#x219B;&#x202F;467</span><span class="annotate long">line 471 didn't jump to line 467 because the condition on line 471 was always true</span></span></p>
+    <p class="run"><span class="n"><a id="t472" href="#t472">472</a></span><span class="t">                    <span class="nam">first_exc</span> <span class="op">=</span> <span class="nam">exc</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t473" href="#t473">473</a></span><span class="t">        <span class="key">if</span> <span class="nam">first_exc</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t474" href="#t474">474</a></span><span class="t">            <span class="key">raise</span> <span class="nam">first_exc</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t475" href="#t475">475</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t476" href="#t476">476</a></span><span class="t">    <span class="key">return</span> <span class="nam">composed</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t477" href="#t477">477</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t478" href="#t478">478</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t479" href="#t479">479</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t480" href="#t480">480</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t481" href="#t481">481</a></span><span class="t">    <span class="str">"AuthorizeFactory"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t482" href="#t482">482</a></span><span class="t">    <span class="str">"CautionLookupFactory"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t483" href="#t483">483</a></span><span class="t">    <span class="str">"ClearanceLookupFactory"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t484" href="#t484">484</a></span><span class="t">    <span class="str">"LLMFactory"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t485" href="#t485">485</a></span><span class="t">    <span class="str">"build_kernel"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t486" href="#t486">486</a></span><span class="t">    <span class="str">"make_inmemory_kernel"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t487" href="#t487">487</a></span><span class="t">    <span class="str">"make_postgres_kernel"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t488" href="#t488">488</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t479" href="#t479">479</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t480" href="#t480">480</a></span><span class="t">    <span class="str">"AuthorizeFactory"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t481" href="#t481">481</a></span><span class="t">    <span class="str">"CautionLookupFactory"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t482" href="#t482">482</a></span><span class="t">    <span class="str">"ClearanceLookupFactory"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t483" href="#t483">483</a></span><span class="t">    <span class="str">"LLMFactory"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t484" href="#t484">484</a></span><span class="t">    <span class="str">"build_kernel"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t485" href="#t485">485</a></span><span class="t">    <span class="str">"make_inmemory_kernel"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t486" href="#t486">486</a></span><span class="t">    <span class="str">"make_postgres_kernel"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t487" href="#t487">487</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -579,7 +578,7 @@
             <a class="nav" href="z_9b1401bacecaa802_event_envelope_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

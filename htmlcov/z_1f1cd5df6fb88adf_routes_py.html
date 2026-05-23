@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1f1cd5df6fb88adf_seed_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -232,7 +232,7 @@
     <p class="run"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">re_debrief_run</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">promote_caution_proposal</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">    <span class="com"># 400 validation handlers: Invalid&lt;X> family + AgentToolsExceedsLimit</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">    <span class="com"># cardinality guard + 8f-c iter 1 cross-aggregate guards</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">    <span class="com"># cardinality guard + cross-aggregate guards</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">    <span class="com"># (AgentNotSeededError + AgentDeactivatedError from this BC;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">    <span class="com"># ParentDecisionAgentMismatchError + ParentDecisionRunMismatchError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">    <span class="com"># from Decision BC's state). Loop-collapsed per the cross-BC</span>&nbsp;</span><span class="r"></span></p>
@@ -260,7 +260,7 @@
     <p class="run run2"><span class="n"><a id="t176" href="#t176">176</a></span><span class="t">        <span class="nam">AgentDeactivatedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t177" href="#t177">177</a></span><span class="t">        <span class="nam">ParentDecisionAgentMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t178" href="#t178">178</a></span><span class="t">        <span class="nam">ParentDecisionRunMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t179" href="#t179">179</a></span><span class="t">        <span class="com"># Phase 8f-c iter 3: promote_caution_proposal validation errors.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t179" href="#t179">179</a></span><span class="t">        <span class="com"># promote_caution_proposal validation errors.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t180" href="#t180">180</a></span><span class="t">        <span class="nam">DecisionNotCautionProposalError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t181" href="#t181">181</a></span><span class="t">        <span class="nam">CautionProposalNotActionableError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t182" href="#t182">182</a></span><span class="t">        <span class="nam">CautionProposalMalformedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -281,7 +281,7 @@
     <p class="run run2"><span class="n"><a id="t197" href="#t197">197</a></span><span class="t">    <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t198" href="#t198">198</a></span><span class="t">        <span class="nam">app</span><span class="op">.</span><span class="nam">add_exception_handler</span><span class="op">(</span><span class="nam">cannot_transition_cls</span><span class="op">,</span> <span class="nam">_handle_cannot_transition</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">add_exception_handler</span><span class="op">(</span><span class="nam">UnauthorizedError</span><span class="op">,</span> <span class="nam">_handle_unauthorized</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t">    <span class="com"># Phase A.2: provenance gate on promote_caution_proposal. Treated</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t">    <span class="com"># provenance gate on promote_caution_proposal. Treated</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t">    <span class="com"># as an authorization failure (403) because the caller is not</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t">    <span class="com"># authorized to promote a Decision they did not originate</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">    <span class="com"># through a CautionDrafter agent.</span>&nbsp;</span><span class="r"></span></p>
@@ -295,7 +295,7 @@
             <a class="nav" href="z_1f1cd5df6fb88adf_seed_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

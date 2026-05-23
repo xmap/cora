@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_9b53b210195ad72e_exception_handlers_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -82,7 +82,7 @@
     </div>
 </header>
 <main id="source">
-    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Settings-loadable schema for Phase C edge-auth identity providers.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Settings-loadable schema for edge-auth identity providers.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Defines the typed shape that `Settings.identity_providers` carries</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">(loaded from env vars in `cora.infrastructure.config.Settings`).</span>&nbsp;</span><span class="r"></span></p>
@@ -90,12 +90,12 @@
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">for CORA &#8212; Globus Auth (introspection-only), Microsoft Entra (JWT),</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">etc.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">Also defines `StaticSubjectMapper`, the Iter B-1 SubjectMapper</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">implementation. Holds a fixed `(issuer, subject) &#8594; (principal_id, kind)`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">dict &#8212; sufficient for small deployments (single beamline, ~10 humans</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">+ 1-2 service accounts). Iter B-2 ships the projection-backed</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">`ActorIdpBindingsSubjectMapper` for larger deployments that mint</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">Actors at runtime.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">Also defines `StaticSubjectMapper`, a SubjectMapper that holds a</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">fixed `(issuer, subject) &#8594; (principal_id, kind)` dict &#8212; sufficient</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">for small deployments (single beamline, ~10 humans + 1-2 service</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">accounts). The projection-backed `ActorIdpBindingsSubjectMapper`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">is the alternative for larger deployments that mint Actors at</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">runtime.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">## Why two mappers (precedent)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -250,7 +250,7 @@
     <p class="run run2"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t167" href="#t167">167</a></span><span class="t">            <span class="str">"JWT signature algorithms accepted by the JWTVerifier. "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t168" href="#t168">168</a></span><span class="t">            <span class="str">"Default ['RS256', 'ES256'] covers every mature OIDC IdP. "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t169" href="#t169">169</a></span><span class="t">            <span class="str">"Per AH4 the constructor rejects 'none' in any case."</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t169" href="#t169">169</a></span><span class="t">            <span class="str">"The constructor rejects 'none' in any case (no-alg-none invariant)."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t170" href="#t170">170</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t171" href="#t171">171</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t172" href="#t172">172</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -271,7 +271,7 @@
     <p class="run run2"><span class="n"><a id="t187" href="#t187">187</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t188" href="#t188">188</a></span><span class="t">            <span class="str">"Per-token introspection cache lifetime. Lower for stronger "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t189" href="#t189">189</a></span><span class="t">            <span class="str">"revocation, higher for less IdP load (gate-review tradeoff). "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t190" href="#t190">190</a></span><span class="t">            <span class="str">"AH12 forbids 0."</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t190" href="#t190">190</a></span><span class="t">            <span class="str">"Zero is forbidden (no introspection without a per-token cache)."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t191" href="#t191">191</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t193" href="#t193">193</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -370,7 +370,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t286" href="#t286">286</a></span><span class="t"><span class="str">    humans + 1-2 service accounts) where the Actor set is fixed at</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t"><span class="str">    deployment time and rarely changes.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t288" href="#t288">288</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t"><span class="str">    Iter B-2 ships `ActorIdpBindingsSubjectMapper` which queries an</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t"><span class="str">    `ActorIdpBindingsSubjectMapper` is the sibling that queries an</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t"><span class="str">    access-projection table for deployments with dynamic Actor</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t"><span class="str">    registration. Both satisfy the SubjectMapper protocol; the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t"><span class="str">    registry doesn't care.</span>&nbsp;</span><span class="r"></span></p>
@@ -477,7 +477,7 @@
             <a class="nav" href="z_9b53b210195ad72e_exception_handlers_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>

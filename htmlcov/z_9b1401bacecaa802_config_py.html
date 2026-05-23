@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_9b1401bacecaa802_deps_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -146,13 +146,13 @@
     <p class="pln"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="com"># Authorization &#8212; Trust BC wiring</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="com"># When None, `build_kernel` wires `AllowAllAuthorize` and every</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="com"># command is permitted (Phase 1 default; matches dev/test). When</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="com"># command is permitted (legacy default; matches dev/test). When</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">    <span class="com"># set to a UUID, `TrustAuthorize` is wired and gates every command</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">    <span class="com"># through that single Policy aggregate. Multi-policy resolution</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">    <span class="com"># via projections lands in a later phase; until then this is one</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">    <span class="com"># policy per deployment.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">    <span class="com">#</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="com"># Phase A (2026-05-18) seeded the System Bootstrap Policy at a</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="com"># The 2026-05-18 bootstrap migration seeded the System Bootstrap Policy at a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">    <span class="com"># fixed UUID so production deployments can enable real authz with</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">    <span class="com"># a single env var instead of the old 3-step dance:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="com">#</span>&nbsp;</span><span class="r"></span></p>
@@ -171,7 +171,7 @@
     <p class="pln"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">    <span class="com"># `X-Principal-Id` should set this true: requests without the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">    <span class="com"># header are then rejected with 401 instead of silently falling</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">    <span class="com"># back to `SYSTEM_PRINCIPAL_ID`. Default false matches the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">    <span class="com"># Phase 1 dev / test posture where the fallback is convenient.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">    <span class="com"># dev / test posture where the fallback is convenient.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">    <span class="com"># The startup check in `create_app()` refuses to boot when</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">    <span class="com"># `app_env in {"prod", "production"}` and this is False, so a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">    <span class="com"># production deployment cannot accidentally launch with the</span>&nbsp;</span><span class="r"></span></p>
@@ -196,16 +196,16 @@
     <p class="pln"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">    <span class="com"># 0.1s prevents accidental tight-loop misconfiguration.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">    <span class="nam">projection_poll_interval_seconds</span><span class="op">:</span> <span class="nam">float</span> <span class="op">=</span> <span class="num">5.0</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">    <span class="com"># LLM provider &#8212; Agent BC wiring (Phase 8f-b iter 2a)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">    <span class="com"># LLM provider &#8212; Agent BC wiring</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">    <span class="com"># When None, `build_kernel` wires no LLM and the Kernel</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">    <span class="com"># carries `llm=None`; subscribers that depend on the LLM (the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">    <span class="com"># 8f-b RunDebrief subscriber) raise / log-and-skip when they</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">    <span class="com"># RunDebriefer subscriber) raise / log-and-skip when they</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="com"># try to use it. The dev / test default of None matches the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">    <span class="com"># `AllowAllAuthorize` / `AlwaysCoveredClearanceLookup` test-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">    <span class="com"># bypass convention: tests don't need real API credentials.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="com"># Production deployments that ship RunDebrief MUST set this;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="com"># the `8f-b iter 2b` wire-up adds a startup gate that refuses</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="com"># to register `run_debrief_subscriber` when this is unset (so</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="com"># Production deployments that ship RunDebriefer MUST set this;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="com"># the wire-up adds a startup gate that refuses</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="com"># to register `run_debriefer_subscriber` when this is unset (so</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">    <span class="com"># the agent never runs blind).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="com">#</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="com"># Read from `ANTHROPIC_API_KEY` env var (case-insensitive per</span>&nbsp;</span><span class="r"></span></p>
@@ -220,7 +220,7 @@
     <p class="pln"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">    <span class="com"># whole Settings surface is repr-safe.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">    <span class="nam">anthropic_api_key</span><span class="op">:</span> <span class="nam">SecretStr</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t138" href="#t138">138</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">    <span class="com"># Idempotency (Phase 9a)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">    <span class="com"># Idempotency</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t">    <span class="com"># `idempotency_ttl_hours` is read by the pruner background task</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t">    <span class="com"># which periodically deletes idempotency_keys rows older than this.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">    <span class="com"># Stripe's industry default is 24h; clients are expected to retry</span>&nbsp;</span><span class="r"></span></p>
@@ -236,11 +236,11 @@
     <p class="pln"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">    <span class="com"># locked rows recover within a minute.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">    <span class="nam">idempotency_lock_stale_seconds</span><span class="op">:</span> <span class="nam">int</span> <span class="op">=</span> <span class="num">60</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">    <span class="com"># Edge auth (Phase C)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">    <span class="com"># Edge auth</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">    <span class="com"># `identity_providers` is the list of IdPs CORA accepts tokens</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">    <span class="com"># from. Empty (default) keeps the legacy X-Principal-Id-with-</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">    <span class="com"># SYSTEM-fallback shape; Iter C wires the middleware to use this</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">    <span class="com"># list when populated. Production deployments set this via env</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">    <span class="com"># SYSTEM-fallback shape; the bearer middleware uses this list</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">    <span class="com"># when populated. Production deployments set this via env</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">    <span class="com"># var as JSON, e.g.:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">    <span class="com">#</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t">    <span class="com">#   IDENTITY_PROVIDERS='[{"issuer":"https://idp.example.com",</span>&nbsp;</span><span class="r"></span></p>
@@ -319,7 +319,7 @@
             <a class="nav" href="z_9b1401bacecaa802_deps_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 01:17 +0000
+            created at 2026-05-23 08:37 +0000
         </p>
     </div>
 </footer>
