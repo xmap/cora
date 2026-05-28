@@ -4,14 +4,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Coverage for src/cora/safety/aggregates/clearance/state.py: 100.0%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
-    <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;safety&#8201;/&#8201;aggregates&#8201;/&#8201;clearance&#8201;/&#8201;state.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>safety<span class="sep">/</span>aggregates<span class="sep">/</span>clearance<span class="sep">/</span>state.py</b>:
             <span class="pc_cov">100.0%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_3043c56568059678_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -471,12 +471,12 @@
     <p class="pln"><span class="n"><a id="t387" href="#t387">387</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t388" href="#t388">388</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t389" href="#t389">389</a></span><span class="t"><span class="key">class</span> <span class="nam">ClearanceCannotStartReviewError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t390" href="#t390">390</a></span><span class="t">    <span class="str">"""Attempted `start_review_clearance` from a disqualifying status."""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t390" href="#t390">390</a></span><span class="t">    <span class="str">"""Attempted `start_clearance_review` from a disqualifying status."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t391" href="#t391">391</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t392" href="#t392">392</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">clearance_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span> <span class="nam">current_status</span><span class="op">:</span> <span class="str">"ClearanceStatus"</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t393" href="#t393">393</a></span><span class="t">        <span class="nam">super</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">__init__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t394" href="#t394">394</a></span><span class="t">            <span class="fst">f"</span><span class="fst">Clearance </span><span class="op">{</span><span class="nam">clearance_id</span><span class="op">}</span><span class="fst"> cannot start review: currently in status </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t395" href="#t395">395</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">current_status</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">, start_review_clearance requires </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t395" href="#t395">395</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">current_status</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">, start_clearance_review requires </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t396" href="#t396">396</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">ClearanceStatus</span><span class="op">.</span><span class="nam">SUBMITTED</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t397" href="#t397">397</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t398" href="#t398">398</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">clearance_id</span> <span class="op">=</span> <span class="nam">clearance_id</span>&nbsp;</span><span class="r"></span></p>
@@ -819,8 +819,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_3043c56568059678_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
     </div>
 </footer>

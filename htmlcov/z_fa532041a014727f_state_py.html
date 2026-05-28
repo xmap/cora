@@ -4,14 +4,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Coverage for src/cora/recipe/aggregates/capability/state.py: 100.0%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
-    <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;recipe&#8201;/&#8201;aggregates&#8201;/&#8201;capability&#8201;/&#8201;state.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>recipe<span class="sep">/</span>aggregates<span class="sep">/</span>capability<span class="sep">/</span>state.py</b>:
             <span class="pc_cov">100.0%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_8d17445d5f5b5e9d___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -137,7 +137,7 @@
     <p class="pln"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t"><span class="str">- `required_affordances: frozenset[Affordance]` &#8212; REQUIRED at define</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">  time per Pattern P. Empty set valid (parameter-driven Capabilities</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="str">  like `energy_change` may have no affordance requirement).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="str">- `parameter_schema: dict | None` &#8212; optional JSON Schema declaring</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="str">- `parameters_schema: dict | None`: optional JSON Schema declaring</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="str">  the parameter contract. Method.parameters_schema MUST validate as</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t"><span class="str">  subset at define_method time per STRICT cross-BC anchor.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t"><span class="str">- `executor_shapes: frozenset[ExecutorShape]` &#8212; REQUIRED non-empty</span>&nbsp;</span><span class="r"></span></p>
@@ -391,7 +391,7 @@
     <p class="pln"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t"><span class="str">    empty frozenset valid + explicit. Replaced wholesale by</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t"><span class="str">    version_capability.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t309" href="#t309">309</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t310" href="#t310">310</a></span><span class="t"><span class="str">    `parameter_schema` (optional JSON Schema): the declarative</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t310" href="#t310">310</a></span><span class="t"><span class="str">    `parameters_schema` (optional JSON Schema): the declarative</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t311" href="#t311">311</a></span><span class="t"><span class="str">    parameter contract. Method.parameters_schema (6g) MUST validate</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t"><span class="str">    as subset at define_method time per [[project-asset-settings-design]]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t"><span class="str">    5g-c STRICT cross-BC anchor.</span>&nbsp;</span><span class="r"></span></p>
@@ -415,7 +415,7 @@
     <p class="run"><span class="n"><a id="t331" href="#t331">331</a></span><span class="t">    <span class="nam">description</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t332" href="#t332">332</a></span><span class="t">    <span class="nam">required_affordances</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">Affordance</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">Affordance</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t333" href="#t333">333</a></span><span class="t">    <span class="nam">executor_shapes</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">ExecutorShape</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">ExecutorShape</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t334" href="#t334">334</a></span><span class="t">    <span class="nam">parameter_schema</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t334" href="#t334">334</a></span><span class="t">    <span class="nam">parameters_schema</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t335" href="#t335">335</a></span><span class="t">    <span class="nam">replaced_by_capability_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
@@ -425,8 +425,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_8d17445d5f5b5e9d___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
     </div>
 </footer>

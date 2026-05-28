@@ -4,14 +4,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Coverage for src/cora/recipe/features/version_capability/decider.py: 91.7%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
-    <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;recipe&#8201;/&#8201;features&#8201;/&#8201;version_capability&#8201;/&#8201;decider.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>recipe<span class="sep">/</span>features<span class="sep">/</span>version_capability<span class="sep">/</span>decider.py</b>:
             <span class="pc_cov">91.7%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_576c6f40976ba426_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -103,8 +103,8 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">    -> InvalidCapabilityDescriptionError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">  - command.executor_shapes must be non-empty</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">    -> InvalidExecutorShapesError</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">  - command.parameter_schema (when supplied) must be a valid</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">    in-subset JSON Schema -> InvalidCapabilityParameterSchemaError</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">  - command.parameters_schema (when supplied) must be a valid</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">    in-subset JSON Schema -> InvalidCapabilityParametersSchemaError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">  - State.status must be in {Defined, Versioned}</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">    -> CapabilityCannotVersionError(current_status=...)</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
@@ -120,7 +120,7 @@
     <p class="run run2"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">    <span class="nam">InvalidCapabilityVersionTagError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="nam">RecipeCapabilityVersioned</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="nam">validate_capability_description</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="nam">validate_capability_parameter_schema</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="nam">validate_capability_parameters_schema</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">    <span class="nam">validate_executor_shapes</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">recipe</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">version_capability</span><span class="op">.</span><span class="nam">command</span> <span class="key">import</span> <span class="nam">VersionCapability</span>&nbsp;</span><span class="r"></span></p>
@@ -145,8 +145,8 @@
     <p class="run"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">        <span class="key">raise</span> <span class="nam">InvalidCapabilityVersionTagError</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">version_tag</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">    <span class="nam">description</span> <span class="op">=</span> <span class="nam">validate_capability_description</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">description</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="nam">executor_shapes</span> <span class="op">=</span> <span class="nam">validate_executor_shapes</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">executor_shapes</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="key">if</span> <span class="nam">command</span><span class="op">.</span><span class="nam">parameter_schema</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">64&#x202F;&#x219B;&#x202F;65</span><span class="annotate long">line 64 didn't jump to line 65 because the condition on line 64 was never true</span></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">        <span class="nam">validate_capability_parameter_schema</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">parameter_schema</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="par run show_par"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="key">if</span> <span class="nam">command</span><span class="op">.</span><span class="nam">parameters_schema</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">64&#x202F;&#x219B;&#x202F;65</span><span class="annotate long">line 64 didn't jump to line 65 because the condition on line 64 was never true</span></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">        <span class="nam">validate_capability_parameters_schema</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">parameters_schema</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">    <span class="key">if</span> <span class="nam">state</span><span class="op">.</span><span class="nam">status</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">_VERSIONABLE_STATUSES</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">        <span class="key">raise</span> <span class="nam">CapabilityCannotVersionError</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">current_status</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">status</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">    <span class="key">return</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
@@ -156,7 +156,7 @@
     <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">            <span class="nam">description</span><span class="op">=</span><span class="nam">description</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">            <span class="nam">required_affordances</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">required_affordances</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">            <span class="nam">executor_shapes</span><span class="op">=</span><span class="nam">executor_shapes</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">            <span class="nam">parameter_schema</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">parameter_schema</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">            <span class="nam">parameters_schema</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">parameters_schema</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">            <span class="nam">occurred_at</span><span class="op">=</span><span class="nam">now</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="op">]</span>&nbsp;</span><span class="r"></span></p>
@@ -168,8 +168,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_576c6f40976ba426_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
     </div>
 </footer>

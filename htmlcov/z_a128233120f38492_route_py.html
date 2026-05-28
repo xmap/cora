@@ -4,14 +4,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Coverage for src/cora/calibration/features/define_calibration/route.py: 100.0%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
-    <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;calibration&#8201;/&#8201;features&#8201;/&#8201;define_calibration&#8201;/&#8201;route.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>calibration<span class="sep">/</span>features<span class="sep">/</span>define_calibration<span class="sep">/</span>route.py</b>:
             <span class="pc_cov">100.0%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_a128233120f38492_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -114,11 +114,11 @@
     <p class="run"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="key">class</span> <span class="nam">DefineCalibrationRequest</span><span class="op">(</span><span class="nam">BaseModel</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">    <span class="str">"""Body for `POST /calibrations`."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">    <span class="nam">subsystem_or_asset_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">    <span class="nam">target_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">        <span class="op">...</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">            <span class="str">"What this calibration is OF (typically the Asset id whose "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">            <span class="str">"behavior is being measured &#8212; for example, the rotary stage "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">            <span class="str">"behavior is being measured, for example the rotary stage "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">            <span class="str">"whose rotation-axis center is being tracked). Bare UUID "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">            <span class="str">"reference; existence NOT verified at the write path per "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">            <span class="str">"the cross-BC eventual-consistency stance."</span>&nbsp;</span><span class="r"></span></p>
@@ -137,11 +137,11 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">        <span class="op">...</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">            <span class="str">"JSON-shaped dict describing the operating regime "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">            <span class="str">"(energy_keV, optics_config, etc.). Validated STRICT against "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">            <span class="str">"(energy, optics_config, etc.). Validated STRICT against "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">            <span class="str">"the quantity's operating_point_schema "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">            <span class="str">"(`additionalProperties: False`; primitive types only). "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">            <span class="str">"Identity-tuple uniqueness "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">            <span class="str">"`(subsystem_or_asset_id, quantity, operating_point)` "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">            <span class="str">"`(target_id, quantity, operating_point)` "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">            <span class="str">"enforced via Postgres jsonb UNIQUE on the projection (Q6 "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">            <span class="str">"lock: key-order normalized + numeric value-equality "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">            <span class="str">"`25 == 25.0`)."</span>&nbsp;</span><span class="r"></span></p>
@@ -195,7 +195,7 @@
     <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">            <span class="str">"model"</span><span class="op">:</span> <span class="nam">ErrorResponse</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">            <span class="str">"description"</span><span class="op">:</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">                <span class="str">"Calibration with the same "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">                <span class="str">"(subsystem_or_asset_id, quantity, operating_point) "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">                <span class="str">"(target_id, quantity, operating_point) "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">                <span class="str">"identity already exists (Postgres jsonb UNIQUE on "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">                <span class="str">"proj_calibration_summary). Operators querying for an "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">                <span class="str">"existing calibration should use GET /calibrations with "</span>&nbsp;</span><span class="r"></span></p>
@@ -204,7 +204,7 @@
     <p class="run run2"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">        <span class="op">}</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">        <span class="nam">status</span><span class="op">.</span><span class="nam">HTTP_422_UNPROCESSABLE_CONTENT</span><span class="op">:</span> <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">            <span class="str">"description"</span><span class="op">:</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">                <span class="str">"Request body failed schema validation (e.g. unknown "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">                <span class="str">"Request body failed schema validation (for example unknown "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">                <span class="str">"CalibrationQuantity enum value) OR Idempotency-Key "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">                <span class="str">"was reused with a different request body."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">            <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -232,7 +232,7 @@
     <p class="run run2"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t"><span class="op">)</span> <span class="op">-></span> <span class="nam">DefineCalibrationResponse</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">    <span class="nam">calibration_id</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">handler</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">        <span class="nam">DefineCalibration</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">            <span class="nam">subsystem_or_asset_id</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">subsystem_or_asset_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">            <span class="nam">target_id</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">target_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">            <span class="nam">quantity</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">quantity</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">            <span class="nam">operating_point</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">operating_point</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">            <span class="nam">description</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">description</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -251,8 +251,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_a128233120f38492_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
     </div>
 </footer>

@@ -4,14 +4,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Coverage for src/cora/infrastructure/list_query.py: 100.0%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
-    <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;infrastructure&#8201;/&#8201;list_query.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>infrastructure<span class="sep">/</span>list_query.py</b>:
             <span class="pc_cov">100.0%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_9b1401bacecaa802_logbook_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -162,9 +162,9 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t"><span class="str">## Per-slice inputs</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t"><span class="str">  - `query_name: str` &#8212; canonical PascalCase query name</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="str">    (e.g. `"ListRuns"`). Used in `authorize` and log lines.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="str">    (for example `"ListRuns"`). Used in `authorize` and log lines.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="str">  - `log_prefix: str` &#8212; slice name used for log-line prefixes</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="str">    (e.g. `"list_runs"` -> `list_runs.start` / `.denied` /</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="str">    (for example `"list_runs"` -> `list_runs.start` / `.denied` /</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t"><span class="str">    `.no_pool` / `.success`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="str">  - `unauthorized_error: type[Exception]` &#8212; BC-local</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t"><span class="str">    `UnauthorizedError` raised on `Deny`. Per-BC (not hoisted) per</span>&nbsp;</span><span class="r"></span></p>
@@ -180,12 +180,12 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="str">    Typically `"created_at"`; supplies / procedures / clearances</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t"><span class="str">    use `"registered_at"` per their domain naming.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t"><span class="str">  - `id_column: str` &#8212; the projection's primary-key column used</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="str">    in `ORDER BY` and the cursor predicate (e.g. `"run_id"`).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="str">    in `ORDER BY` and the cursor predicate (for example `"run_id"`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t"><span class="str">  - `filters: Sequence[FilterSpec]` &#8212; declarative filter list,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t"><span class="str">    one `ScalarFilter` or `ArrayContainsFilter` per filter the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t"><span class="str">    query exposes. Order matters: it defines the asyncpg</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t"><span class="str">    parameter order ($2 .. $N) and the log-field order. Empty</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t"><span class="str">    sequence is fine (e.g. `list_zones`).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t"><span class="str">    sequence is fine (for example `list_zones`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t"><span class="str">  - `row_to_item: Callable[[Any], Item]` &#8212; maps an asyncpg</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t"><span class="str">    `Record` to the slice's `Item` dataclass.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t"><span class="str">  - `item_cursor_at: Callable[[Item], datetime]` /</span>&nbsp;</span><span class="r"></span></p>
@@ -196,7 +196,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t"><span class="str">    and the optional `next_cursor`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t"><span class="str">  - `extract_log_fields: Callable[[Q], dict[str, Any]] | None` &#8212;</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t"><span class="str">    OPTIONAL extractor for per-slice fields on the `.start` line</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t"><span class="str">    (e.g. `status`, `plan_id` for `list_runs`). The returned dict</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t"><span class="str">    (for example `status`, `plan_id` for `list_runs`). The returned dict</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t"><span class="str">    is merged between `limit` and `has_cursor` so existing log</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t"><span class="str">    consumers see the same field order. Default `None` means no</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t"><span class="str">    extras (matches slices with only `limit + cursor`).</span>&nbsp;</span><span class="r"></span></p>
@@ -283,7 +283,7 @@
     <p class="pln"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t">    <span class="str">"""Array-membership filter: emits `WHERE $N = ANY(&lt;column>)`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t"><span class="str">    when the query attribute is non-None; emits nothing when None.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t"><span class="str">    Used for projection columns that are arrays (e.g.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t"><span class="str">    Used for projection columns that are arrays (for example,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t"><span class="str">    `target_asset_ids` on Procedure, the four `*_binding_ids` on</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t"><span class="str">    Clearance). The query field is typically singular (the value</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t"><span class="str">    to search for); the column is plural (the array to search in).</span>&nbsp;</span><span class="r"></span></p>
@@ -303,7 +303,7 @@
     <p class="pln"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t"><span class="str">    Used for "filter by one-of these acceptable values" patterns</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t220" href="#t220">220</a></span><span class="t"><span class="str">    against scalar columns. Inverse direction of `ArrayContainsFilter`:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t"><span class="str">    here the column is scalar and the parameter is the list of</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t"><span class="str">    candidates. The route layer translates user-facing UX (e.g. a</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t"><span class="str">    candidates. The route layer translates user-facing UX (for example a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t"><span class="str">    min_severity ladder, a multi-select status filter) into the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t224" href="#t224">224</a></span><span class="t"><span class="str">    canonical list before constructing the query dataclass.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t225" href="#t225">225</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -567,8 +567,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_9b1401bacecaa802_logbook_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
     </div>
 </footer>

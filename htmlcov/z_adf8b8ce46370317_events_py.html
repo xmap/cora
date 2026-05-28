@@ -4,14 +4,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Coverage for src/cora/trust/aggregates/policy/events.py: 100.0%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
-    <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;trust&#8201;/&#8201;aggregates&#8201;/&#8201;policy&#8201;/&#8201;events.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>trust<span class="sep">/</span>aggregates<span class="sep">/</span>policy<span class="sep">/</span>events.py</b>:
             <span class="pc_cov">100.0%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -58,7 +58,7 @@
             <span class="text">29 statements &nbsp;</span>
             <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">29<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
-            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">2<span class="text"> excluded</span></button>
+            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">4<span class="text"> excluded</span></button>
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
         </h2>
         <p class="text">
@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_adf8b8ce46370317_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -120,8 +120,8 @@
     <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">    <span class="nam">policy_id</span><span class="op">:</span> <span class="nam">UUID</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="nam">name</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="nam">conduit_id</span><span class="op">:</span> <span class="nam">UUID</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="nam">permitted_principals</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">    <span class="nam">permitted_commands</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">str</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="nam">permitted_principals</span><span class="op">:</span> <span class="nam">tuple</span><span class="op">[</span><span class="nam">UUID</span><span class="op">,</span> <span class="op">...</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">    <span class="nam">permitted_commands</span><span class="op">:</span> <span class="nam">tuple</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="op">...</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">    <span class="nam">occurred_at</span><span class="op">:</span> <span class="nam">datetime</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t">    <span class="nam">surface_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">=</span> <span class="nam">NIL_SENTINEL_ID</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -176,8 +176,8 @@
     <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">                    <span class="nam">policy_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"policy_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">                    <span class="nam">name</span><span class="op">=</span><span class="nam">payload</span><span class="op">[</span><span class="str">"name"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">                    <span class="nam">conduit_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"conduit_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">                    <span class="nam">permitted_principals</span><span class="op">=</span><span class="op">[</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">p</span><span class="op">)</span> <span class="key">for</span> <span class="nam">p</span> <span class="key">in</span> <span class="nam">payload</span><span class="op">[</span><span class="str">"permitted_principals"</span><span class="op">]</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">                    <span class="nam">permitted_commands</span><span class="op">=</span><span class="nam">list</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"permitted_commands"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">                    <span class="nam">permitted_principals</span><span class="op">=</span><span class="nam">tuple</span><span class="op">(</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">p</span><span class="op">)</span> <span class="key">for</span> <span class="nam">p</span> <span class="key">in</span> <span class="nam">payload</span><span class="op">[</span><span class="str">"permitted_principals"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">                    <span class="nam">permitted_commands</span><span class="op">=</span><span class="nam">tuple</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"permitted_commands"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">                    <span class="nam">occurred_at</span><span class="op">=</span><span class="nam">datetime</span><span class="op">.</span><span class="nam">fromisoformat</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"occurred_at"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">                    <span class="com"># surface_id is post-Phase-B-Iter-B-additive; V1 events</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">                    <span class="com"># on disk lack it. `.get` with nil default preserves</span>&nbsp;</span><span class="r"></span></p>
@@ -207,8 +207,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_adf8b8ce46370317_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
     </div>
 </footer>

@@ -4,14 +4,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Coverage for src/cora/decision/aggregates/decision/state.py: 100.0%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
-    <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;decision&#8201;/&#8201;aggregates&#8201;/&#8201;decision&#8201;/&#8201;state.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>decision<span class="sep">/</span>aggregates<span class="sep">/</span>decision<span class="sep">/</span>state.py</b>:
             <span class="pc_cov">100.0%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_fd3cd1c5409f6931_catalog_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -101,7 +101,7 @@
     <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">    behind a state change; the state change itself lives on the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">    target aggregate's stream.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">  - Not a free-form audit log. Reasoning text is captured but</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">    `decision_rule` + `confidence_source` + `override_kind` etc.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">    `rule` + `confidence_source` + `override_kind` etc.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">    keep the structure scannable.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">  - Not a place for token-by-token AI traces. Those go to a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">    `reasoning` logbook on the Decision aggregate (cross-BC</span>&nbsp;</span><span class="r"></span></p>
@@ -110,8 +110,8 @@
     <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">Genesis aggregate: id + actor_id + context + choice + reasoning +</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">confidence + confidence_source + parent_id + decision_rule +</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">decision_inputs + alternatives + override_kind + reasoning_signature</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">confidence + confidence_source + parent_id + rule +</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">inputs + alternatives + override_kind + reasoning_signature</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">+ occurred_at. Single event (DecisionRegistered); read side; REST +</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">MCP. Cross-aggregate validation in the handler (Actor exists; if</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">parent_id set, parent Decision exists).</span>&nbsp;</span><span class="r"></span></p>
@@ -126,8 +126,8 @@
     <p class="pln"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t"><span class="str">  - **NIST AI RMF + ISO/IEC 42001 + EU AI Act Article 12**: event</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t"><span class="str">    sourcing on INSERT-only Postgres satisfies the automatic</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t"><span class="str">    immutable record-keeping mandate for free.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t"><span class="str">  - **ISO 17025 Clause 7.1.3**: `decision_rule` field carries the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t"><span class="str">    documented rule; `decision_inputs` carries the measured value</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t"><span class="str">  - **ISO 17025 Clause 7.1.3**: `rule` field carries the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t"><span class="str">    documented rule; `inputs` carries the measured value</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t"><span class="str">    + uncertainty that fed the rule (per ILAC-G8:09/2019).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="str">  - **OPA Decision Logs**: the `PolicyGrant` context's payload is</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t"><span class="str">    isomorphic to OPA's `{decision_id, input, result, timestamp,</span>&nbsp;</span><span class="r"></span></p>
@@ -183,7 +183,7 @@
     <p class="pln"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="str">channel; rating accrual does NOT change decision</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t"><span class="str">facts and is folded latest-per-actor wins into the aggregate</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t"><span class="str">state. The atomic-immutability stance applies to the choice /</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t"><span class="str">reasoning / confidence / decision_inputs fields; ratings are an</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t"><span class="str">reasoning / confidence / inputs fields; ratings are an</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t"><span class="str">orthogonal additive annotation.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t"><span class="str">## Thirteenth bounded-name VO</span>&nbsp;</span><span class="r"></span></p>
@@ -475,7 +475,7 @@
     <p class="pln"><span class="n"><a id="t391" href="#t391">391</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t392" href="#t392">392</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t393" href="#t393">393</a></span><span class="t"><span class="key">class</span> <span class="nam">InvalidDecisionRuleError</span><span class="op">(</span><span class="nam">ValueError</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t394" href="#t394">394</a></span><span class="t">    <span class="str">"""The supplied decision_rule is empty, whitespace-only, or too long."""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t394" href="#t394">394</a></span><span class="t">    <span class="str">"""The supplied rule is empty, whitespace-only, or too long."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t395" href="#t395">395</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t396" href="#t396">396</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">value</span><span class="op">:</span> <span class="nam">str</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t397" href="#t397">397</a></span><span class="t">        <span class="nam">super</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">__init__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -515,10 +515,10 @@
     <p class="pln"><span class="n"><a id="t431" href="#t431">431</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t432" href="#t432">432</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t433" href="#t433">433</a></span><span class="t"><span class="key">class</span> <span class="nam">InvalidDecisionInputsError</span><span class="op">(</span><span class="nam">ValueError</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t434" href="#t434">434</a></span><span class="t">    <span class="str">"""The supplied decision_inputs dict is too large, has an</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t434" href="#t434">434</a></span><span class="t">    <span class="str">"""The supplied inputs dict is too large, has an</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t435" href="#t435">435</a></span><span class="t"><span class="str">    invalid key, or carries a non-JSON-roundtrippable value.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t436" href="#t436">436</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t437" href="#t437">437</a></span><span class="t"><span class="str">    Optional dict for the `decision_rule`'s input values (per ISO</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t437" href="#t437">437</a></span><span class="t"><span class="str">    Optional dict for the `rule`'s input values (per ISO</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t438" href="#t438">438</a></span><span class="t"><span class="str">    17025 Clause 7.1.3 + ILAC-G8:09/2019: a rule without its</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t439" href="#t439">439</a></span><span class="t"><span class="str">    inputs is unauditable). Each key must be 1-100 chars after</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t440" href="#t440">440</a></span><span class="t"><span class="str">    trim; values must be JSON-roundtrippable. Cap is 64 entries.</span>&nbsp;</span><span class="r"></span></p>
@@ -561,7 +561,7 @@
     <p class="run"><span class="n"><a id="t477" href="#t477">477</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">decision_id</span> <span class="op">=</span> <span class="nam">decision_id</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t478" href="#t478">478</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t479" href="#t479">479</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t480" href="#t480">480</a></span><span class="t"><span class="key">class</span> <span class="nam">DeciderActorMissingError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t480" href="#t480">480</a></span><span class="t"><span class="key">class</span> <span class="nam">DeciderActorNotFoundError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t481" href="#t481">481</a></span><span class="t">    <span class="str">"""The Actor referenced by `actor_id` does not exist.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t482" href="#t482">482</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t483" href="#t483">483</a></span><span class="t"><span class="str">    Cross-aggregate validation at registration: the handler pre-</span>&nbsp;</span><span class="r"></span></p>
@@ -576,7 +576,7 @@
     <p class="run"><span class="n"><a id="t492" href="#t492">492</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">actor_id</span> <span class="op">=</span> <span class="nam">actor_id</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t493" href="#t493">493</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t494" href="#t494">494</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t495" href="#t495">495</a></span><span class="t"><span class="key">class</span> <span class="nam">ParentDecisionMissingError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t495" href="#t495">495</a></span><span class="t"><span class="key">class</span> <span class="nam">ParentDecisionNotFoundError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t496" href="#t496">496</a></span><span class="t">    <span class="str">"""The parent Decision referenced by `parent_id` does not exist.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t497" href="#t497">497</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t498" href="#t498">498</a></span><span class="t"><span class="str">    Cross-aggregate validation at registration: when `parent_id` is</span>&nbsp;</span><span class="r"></span></p>
@@ -597,7 +597,7 @@
     <p class="pln"><span class="n"><a id="t513" href="#t513">513</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t514" href="#t514">514</a></span><span class="t"><span class="str">    Hoisted to Decision aggregate state.py per cross-BC convention:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t515" href="#t515">515</a></span><span class="t"><span class="str">    cross-aggregate-load-state errors live with the relevant</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t516" href="#t516">516</a></span><span class="t"><span class="str">    aggregate (mirrors `DeciderActorMissingError` precedent above).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t516" href="#t516">516</a></span><span class="t"><span class="str">    aggregate (mirrors `DeciderActorNotFoundError` precedent above).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t517" href="#t517">517</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t518" href="#t518">518</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t519" href="#t519">519</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">parent_decision_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span> <span class="nam">parent_run_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -734,7 +734,7 @@
     <p class="pln"><span class="n"><a id="t650" href="#t650">650</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t651" href="#t651">651</a></span><span class="t"><span class="str">    Per ISO 17025 Clause 7.1.3, the decision rule must be</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t652" href="#t652">652</a></span><span class="t"><span class="str">    documented and agreed before the test/calibration; reports</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t653" href="#t653">653</a></span><span class="t"><span class="str">    must cite it. The BC accepts `decision_rule = None` for any</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t653" href="#t653">653</a></span><span class="t"><span class="str">    must cite it. The BC accepts `rule = None` for any</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t654" href="#t654">654</a></span><span class="t"><span class="str">    context: context-conditional requiredness ("ProcedureExecution</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t655" href="#t655">655</a></span><span class="t"><span class="str">    must carry a rule", "RecipeApproval must carry one") is a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t656" href="#t656">656</a></span><span class="t"><span class="str">    projection-time audit-policy concern, not a domain invariant.</span>&nbsp;</span><span class="r"></span></p>
@@ -821,8 +821,8 @@
     <p class="exc show_exc"><span class="n"><a id="t737" href="#t737">737</a></span><span class="t">    <span class="key">return</span> <span class="nam">tuple</span><span class="op">(</span><span class="nam">trimmed</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t738" href="#t738">738</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t739" href="#t739">739</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t740" href="#t740">740</a></span><span class="t"><span class="key">def</span> <span class="nam">validate_decision_inputs</span><span class="op">(</span><span class="nam">value</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span><span class="op">)</span> <span class="op">-></span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t741" href="#t741">741</a></span><span class="t">    <span class="str">"""Validate optional decision_inputs dict.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t740" href="#t740">740</a></span><span class="t"><span class="key">def</span> <span class="nam">validate_inputs</span><span class="op">(</span><span class="nam">value</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span><span class="op">)</span> <span class="op">-></span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t741" href="#t741">741</a></span><span class="t">    <span class="str">"""Validate optional inputs dict.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t742" href="#t742">742</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t743" href="#t743">743</a></span><span class="t"><span class="str">    Three checks: cardinality (max 64 keys), per-key shape (1-100</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t744" href="#t744">744</a></span><span class="t"><span class="str">    chars after trim, non-empty), per-value JSON-roundtrippability.</span>&nbsp;</span><span class="r"></span></p>
@@ -984,12 +984,12 @@
     <p class="pln"><span class="n"><a id="t900" href="#t900">900</a></span><span class="t">    <span class="nam">choice</span><span class="op">:</span> <span class="nam">DecisionChoice</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t901" href="#t901">901</a></span><span class="t">    <span class="nam">parent_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t902" href="#t902">902</a></span><span class="t">    <span class="nam">override_kind</span><span class="op">:</span> <span class="nam">DecisionOverrideKind</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t903" href="#t903">903</a></span><span class="t">    <span class="nam">decision_rule</span><span class="op">:</span> <span class="nam">DecisionRule</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t903" href="#t903">903</a></span><span class="t">    <span class="nam">rule</span><span class="op">:</span> <span class="nam">DecisionRule</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t904" href="#t904">904</a></span><span class="t">    <span class="nam">reasoning</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t905" href="#t905">905</a></span><span class="t">    <span class="nam">confidence</span><span class="op">:</span> <span class="nam">float</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t906" href="#t906">906</a></span><span class="t">    <span class="nam">confidence_source</span><span class="op">:</span> <span class="nam">DecisionConfidenceSource</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t907" href="#t907">907</a></span><span class="t">    <span class="nam">alternatives</span><span class="op">:</span> <span class="nam">tuple</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="op">...</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">tuple</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="op">...</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t908" href="#t908">908</a></span><span class="t">    <span class="nam">decision_inputs</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t908" href="#t908">908</a></span><span class="t">    <span class="nam">inputs</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t909" href="#t909">909</a></span><span class="t">    <span class="nam">reasoning_signature</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t910" href="#t910">910</a></span><span class="t">    <span class="com"># 8c: logbooks attached to this Decision, keyed by kind. Today</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t911" href="#t911">911</a></span><span class="t">    <span class="com"># the only kind is `LOGBOOK_KIND_REASONING` (AI-decider trace</span>&nbsp;</span><span class="r"></span></p>
@@ -1011,8 +1011,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_fd3cd1c5409f6931_catalog_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
     </div>
 </footer>

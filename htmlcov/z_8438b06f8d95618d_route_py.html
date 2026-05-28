@@ -4,14 +4,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Coverage for src/cora/run/features/start_run/route.py: 100.0%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
-    <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;run&#8201;/&#8201;features&#8201;/&#8201;start_run&#8201;/&#8201;route.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>run<span class="sep">/</span>features<span class="sep">/</span>start_run<span class="sep">/</span>route.py</b>:
             <span class="pc_cov">100.0%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_8438b06f8d95618d_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -164,7 +164,7 @@
     <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">            <span class="str">"and ensure Plan defaults are empty)."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">    <span class="nam">triggered_by</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">    <span class="nam">trigger_source</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">        <span class="nam">default</span><span class="op">=</span><span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">        <span class="nam">max_length</span><span class="op">=</span><span class="num">500</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -297,7 +297,7 @@
     <p class="run run2"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t">            <span class="nam">subject_id</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">subject_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">            <span class="nam">raid</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">raid</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">            <span class="nam">override_parameters</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">override_parameters</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">            <span class="nam">triggered_by</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">triggered_by</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">            <span class="nam">trigger_source</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">trigger_source</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">            <span class="nam">campaign_id</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">campaign_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t218" href="#t218">218</a></span><span class="t">            <span class="nam">decided_by_decision_id</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">decided_by_decision_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t">            <span class="nam">pinned_calibrations</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">body</span><span class="op">.</span><span class="nam">pinned_calibrations</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -316,8 +316,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_8438b06f8d95618d_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
     </div>
 </footer>

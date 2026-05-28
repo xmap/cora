@@ -4,14 +4,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Coverage for src/cora/infrastructure/auth/config.py: 100.0%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
-    <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;infrastructure&#8201;/&#8201;auth&#8201;/&#8201;config.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>infrastructure<span class="sep">/</span>auth<span class="sep">/</span>config.py</b>:
             <span class="pc_cov">100.0%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -62,12 +62,12 @@
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
         </h2>
         <p class="text">
-            <a id="prevFileLink" class="nav" href="z_9b53b210195ad72e_bearer_middleware_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a id="prevFileLink" class="nav" href="z_9b53b210195ad72e_build_idp_registry_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_9b53b210195ad72e_exception_handlers_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -134,7 +134,7 @@
     <p class="pln"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="str">    `kind` is optional: when `None` (default), the merge step</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t"><span class="str">    inherits the enclosing IdP's `principal_kind`. Set explicitly</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t"><span class="str">    only to override that default for an individual subject &#8212; useful</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t"><span class="str">    only to override that default for an individual subject; useful</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">    when an IdP serves both humans and service accounts and a few</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="str">    bindings need to disagree with the IdP-wide default.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -147,9 +147,9 @@
     <p class="exc show_exc"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="nam">subject</span><span class="op">:</span> <span class="nam">str</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">        <span class="op">...</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">            <span class="str">"Raw `sub` claim string from the IdP &#8212; exact match. For "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">            <span class="str">"Raw `sub` claim string from the IdP, exact match. For "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">            <span class="str">"OIDC humans this is typically the IdP's stable user id "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">            <span class="str">"(e.g. an Entra GUID); for client_credentials service "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">            <span class="str">"(for example an Entra GUID); for client_credentials service "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">            <span class="str">"accounts it's the OAuth client id."</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -190,7 +190,7 @@
     <p class="exc show_exc"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">    <span class="nam">issuer</span><span class="op">:</span> <span class="nam">str</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">        <span class="op">...</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">            <span class="str">"OIDC issuer URL &#8212; exact match against the 'iss' claim on "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">            <span class="str">"OIDC issuer URL, exact match against the 'iss' claim on "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">            <span class="str">"every token. Must match the IdP's published metadata; "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">            <span class="str">"trailing-slash lenient matching is NOT performed (matches "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">            <span class="str">"RFC 9068 &#167;4 expectation that iss is exact-match)."</span>&nbsp;</span><span class="r"></span></p>
@@ -212,7 +212,7 @@
     <p class="run run2"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">            <span class="str">"RFC 7662 introspection endpoint URL. Required for IdPs that "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">            <span class="str">"issue opaque tokens (Globus Auth) or when revocation must "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">            <span class="str">"be checked per-request. Triggers the IntrospectionVerifier "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">            <span class="str">"be checked per-request. Triggers the IntrospectionTokenVerifier "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">            <span class="str">"adapter path."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -248,7 +248,7 @@
     <p class="run"><span class="n"><a id="t164" href="#t164">164</a></span><span class="t">    <span class="nam">algorithms_allowed</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">str</span><span class="op">]</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t165" href="#t165">165</a></span><span class="t">        <span class="nam">default_factory</span><span class="op">=</span><span class="key">lambda</span><span class="op">:</span> <span class="op">[</span><span class="str">"RS256"</span><span class="op">,</span> <span class="str">"ES256"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t167" href="#t167">167</a></span><span class="t">            <span class="str">"JWT signature algorithms accepted by the JWTVerifier. "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t167" href="#t167">167</a></span><span class="t">            <span class="str">"JWT signature algorithms accepted by the JwtTokenVerifier. "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t168" href="#t168">168</a></span><span class="t">            <span class="str">"Default ['RS256', 'ES256'] covers every mature OIDC IdP. "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t169" href="#t169">169</a></span><span class="t">            <span class="str">"The constructor rejects 'none' in any case (no-alg-none invariant)."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t170" href="#t170">170</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -260,7 +260,7 @@
     <p class="run run2"><span class="n"><a id="t176" href="#t176">176</a></span><span class="t">            <span class="str">"IdP-wide default kind. Applied to any "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t177" href="#t177">177</a></span><span class="t">            <span class="str">"`IdpSubjectBinding` whose own `kind` is unset (the "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t178" href="#t178">178</a></span><span class="t">            <span class="str">"common case). Set to `service_account` for IdPs that "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t179" href="#t179">179</a></span><span class="t">            <span class="str">"issue only client-credentials tokens (e.g. a CI-only "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t179" href="#t179">179</a></span><span class="t">            <span class="str">"issue only client-credentials tokens (for example a CI-only "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t180" href="#t180">180</a></span><span class="t">            <span class="str">"IdP) so individual bindings can stay terse."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t181" href="#t181">181</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t182" href="#t182">182</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -300,7 +300,7 @@
     <p class="run run2"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">            <span class="str">"composition root merges these across all IdPs into a "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">            <span class="str">"single `StaticSubjectMapper` keyed on `(issuer, subject)`. "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t218" href="#t218">218</a></span><span class="t">            <span class="str">"Empty (default) is valid for IdPs that ship before any "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t">            <span class="str">"Actor is mapped &#8212; every bearer token from this IdP then "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t">            <span class="str">"Actor is mapped: every bearer token from this IdP then "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t220" href="#t220">220</a></span><span class="t">            <span class="str">"fails with `unknown_subject` until an operator adds "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t">            <span class="str">"bindings. A future projection-backed mapper will replace "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t">            <span class="str">"this for deployments that mint Actors at runtime; the "</span>&nbsp;</span><span class="r"></span></p>
@@ -472,12 +472,12 @@
 <footer>
     <div class="content">
         <p>
-            <a class="nav" href="z_9b53b210195ad72e_bearer_middleware_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a class="nav" href="z_9b53b210195ad72e_build_idp_registry_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_9b53b210195ad72e_exception_handlers_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
     </div>
 </footer>

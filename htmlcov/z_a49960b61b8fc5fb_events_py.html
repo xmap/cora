@@ -4,14 +4,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Coverage for src/cora/run/aggregates/run/events.py: 100.0%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
-    <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;cora&#8201;/&#8201;run&#8201;/&#8201;aggregates&#8201;/&#8201;run&#8201;/&#8201;events.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>run<span class="sep">/</span>aggregates<span class="sep">/</span>run<span class="sep">/</span>events.py</b>:
             <span class="pc_cov">100.0%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_a49960b61b8fc5fb_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -229,10 +229,10 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t"><span class="str">    Both default to `{}` and forward-compat: `from_stored` reads</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t"><span class="str">    each key with `payload.get(..., {})` so legacy streams replay.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t"><span class="str">    `triggered_by` is operator-supplied free text</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t"><span class="str">    `trigger_source` is operator-supplied free text</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t"><span class="str">    capturing what initiated this Run (operator-manual, scheduler</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t"><span class="str">    id, prior-run id, automation id). Optional (None when omitted).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t"><span class="str">    Forward-compat via `payload.get("triggered_by")`. Future</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t"><span class="str">    Forward-compat via `payload.get("trigger_source")`. Future</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t"><span class="str">    Decision-BC integration may populate this from</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t"><span class="str">    `DecisionReasoning.entries` references.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
@@ -245,7 +245,7 @@
     <p class="run"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">    <span class="nam">raid</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t">    <span class="nam">override_parameters</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">    <span class="nam">effective_parameters</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t164" href="#t164">164</a></span><span class="t">    <span class="nam">triggered_by</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t164" href="#t164">164</a></span><span class="t">    <span class="nam">trigger_source</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t165" href="#t165">165</a></span><span class="t">    <span class="com"># anti-corruption refs to upstream-deferred concepts</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">    <span class="com"># (proposal / btr / lab_visit / session). Each entry is a dict</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t167" href="#t167">167</a></span><span class="t">    <span class="com"># `{"scheme": str, "id": str}` mirroring Safety BC's ExternalBinding</span>&nbsp;</span><span class="r"></span></p>
@@ -516,7 +516,7 @@
     <p class="pln"><span class="n"><a id="t432" href="#t432">432</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t433" href="#t433">433</a></span><span class="t"><span class="str">    Source-state guard `{Running, Held}` applied at the decider. The</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t434" href="#t434">434</a></span><span class="t"><span class="str">    Run identity / Subject / Plan / Method / Asset binding /</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t435" href="#t435">435</a></span><span class="t"><span class="str">    `triggered_by` / `external_refs` / `campaign_id` are NOT touched</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t435" href="#t435">435</a></span><span class="t"><span class="str">    `trigger_source` / `external_refs` / `campaign_id` are NOT touched</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t436" href="#t436">436</a></span><span class="t"><span class="str">    by adjust: they remain the audit identity of the scientific</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t437" href="#t437">437</a></span><span class="t"><span class="str">    activity. Operators wanting to change those force abort + restart</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t438" href="#t438">438</a></span><span class="t"><span class="str">    per the design lock.</span>&nbsp;</span><span class="r"></span></p>
@@ -602,7 +602,7 @@
     <p class="run run2"><span class="n"><a id="t518" href="#t518">518</a></span><span class="t">            <span class="nam">raid</span><span class="op">=</span><span class="nam">raid</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t519" href="#t519">519</a></span><span class="t">            <span class="nam">override_parameters</span><span class="op">=</span><span class="nam">override_parameters</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t520" href="#t520">520</a></span><span class="t">            <span class="nam">effective_parameters</span><span class="op">=</span><span class="nam">effective_parameters</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t521" href="#t521">521</a></span><span class="t">            <span class="nam">triggered_by</span><span class="op">=</span><span class="nam">triggered_by</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t521" href="#t521">521</a></span><span class="t">            <span class="nam">trigger_source</span><span class="op">=</span><span class="nam">trigger_source</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t522" href="#t522">522</a></span><span class="t">            <span class="nam">external_refs</span><span class="op">=</span><span class="nam">external_refs</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t523" href="#t523">523</a></span><span class="t">            <span class="nam">acknowledged_cautions</span><span class="op">=</span><span class="nam">acknowledged_cautions</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t524" href="#t524">524</a></span><span class="t">            <span class="nam">campaign_id</span><span class="op">=</span><span class="nam">campaign_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -618,7 +618,7 @@
     <p class="run run2"><span class="n"><a id="t534" href="#t534">534</a></span><span class="t">                <span class="str">"raid"</span><span class="op">:</span> <span class="nam">raid</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t535" href="#t535">535</a></span><span class="t">                <span class="str">"override_parameters"</span><span class="op">:</span> <span class="nam">override_parameters</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t536" href="#t536">536</a></span><span class="t">                <span class="str">"effective_parameters"</span><span class="op">:</span> <span class="nam">effective_parameters</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t537" href="#t537">537</a></span><span class="t">                <span class="str">"triggered_by"</span><span class="op">:</span> <span class="nam">triggered_by</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t537" href="#t537">537</a></span><span class="t">                <span class="str">"trigger_source"</span><span class="op">:</span> <span class="nam">trigger_source</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t538" href="#t538">538</a></span><span class="t">                <span class="str">"external_refs"</span><span class="op">:</span> <span class="nam">list</span><span class="op">(</span><span class="nam">external_refs</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t539" href="#t539">539</a></span><span class="t">                <span class="str">"acknowledged_cautions"</span><span class="op">:</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t540" href="#t540">540</a></span><span class="t">                    <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
@@ -762,7 +762,7 @@
     <p class="run"><span class="n"><a id="t678" href="#t678">678</a></span><span class="t">                <span class="nam">raw_subject</span> <span class="op">=</span> <span class="nam">payload</span><span class="op">[</span><span class="str">"subject_id"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t679" href="#t679">679</a></span><span class="t">                <span class="com"># Forward-compat additive evolution: `raid`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t680" href="#t680">680</a></span><span class="t">                <span class="com"># `override_parameters` / `effective_parameters` /</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t681" href="#t681">681</a></span><span class="t">                <span class="com"># `triggered_by`, `external_refs`,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t681" href="#t681">681</a></span><span class="t">                <span class="com"># `trigger_source`, `external_refs`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t682" href="#t682">682</a></span><span class="t">                <span class="com"># `acknowledged_cautions`, `campaign_id`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t683" href="#t683">683</a></span><span class="t">                <span class="com"># `decided_by_decision_id` (Decision&#8594;Run linkage),</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t684" href="#t684">684</a></span><span class="t">                <span class="com"># `pinned_calibrations` (Calibration AsShot anchor)</span>&nbsp;</span><span class="r"></span></p>
@@ -779,7 +779,7 @@
     <p class="run run2"><span class="n"><a id="t695" href="#t695">695</a></span><span class="t">                    <span class="nam">raid</span><span class="op">=</span><span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"raid"</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t696" href="#t696">696</a></span><span class="t">                    <span class="nam">override_parameters</span><span class="op">=</span><span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"override_parameters"</span><span class="op">,</span> <span class="op">{</span><span class="op">}</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t697" href="#t697">697</a></span><span class="t">                    <span class="nam">effective_parameters</span><span class="op">=</span><span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"effective_parameters"</span><span class="op">,</span> <span class="op">{</span><span class="op">}</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t698" href="#t698">698</a></span><span class="t">                    <span class="nam">triggered_by</span><span class="op">=</span><span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"triggered_by"</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t698" href="#t698">698</a></span><span class="t">                    <span class="nam">trigger_source</span><span class="op">=</span><span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"trigger_source"</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t699" href="#t699">699</a></span><span class="t">                    <span class="nam">external_refs</span><span class="op">=</span><span class="nam">tuple</span><span class="op">(</span><span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"external_refs"</span><span class="op">,</span> <span class="op">[</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t700" href="#t700">700</a></span><span class="t">                    <span class="nam">acknowledged_cautions</span><span class="op">=</span><span class="nam">tuple</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t701" href="#t701">701</a></span><span class="t">                        <span class="nam">CautionAcknowledgement</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -960,8 +960,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_a49960b61b8fc5fb_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-23 08:37 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
+            created at 2026-05-28 17:06 +0000
         </p>
     </div>
 </footer>
