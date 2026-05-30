@@ -667,7 +667,8 @@
 | src/cora/operation/aggregates/procedure/evolver.py                           |       30 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/procedure/read.py                              |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/procedure/state.py                             |      124 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/errors.py                                                 |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/conductor.py                                              |       96 |        0 |       12 |        0 |    100.0% |           |
+| src/cora/operation/errors.py                                                 |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/\_\_init\_\_.py                                  |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/abort\_procedure/\_\_init\_\_.py                 |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/abort\_procedure/command.py                      |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -1408,7 +1409,7 @@
 | src/cora/trust/routes.py                                                     |       68 |        2 |       12 |        0 |     97.5% |   139-140 |
 | src/cora/trust/tools.py                                                      |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                       |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                    | **26339** |  **372** | **3422** |  **100** | **98.3%** |           |
+| **TOTAL**                                                                    | **26439** |  **372** | **3434** |  **100** | **98.3%** |           |
 
 
 ## Setup coverage badge
