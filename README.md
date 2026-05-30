@@ -1250,7 +1250,7 @@
 | src/cora/trust/aggregates/surface/state.py                                   |       25 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/surface/surface\_kind.py                           |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/visit/\_\_init\_\_.py                              |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/aggregates/visit/events.py                                    |      155 |       38 |       50 |        1 |     81.0% |381-383, 399-401, 409-411, 418-420, 427-429, 437-439, 447-449, 457-459, 468-470, 478-480, 488-490, 492-500 |
+| src/cora/trust/aggregates/visit/events.py                                    |      155 |       38 |       50 |        1 |     81.0% |377-379, 395-397, 405-407, 414-416, 423-425, 433-435, 443-445, 453-455, 464-466, 474-476, 484-486, 488-496 |
 | src/cora/trust/aggregates/visit/evolver.py                                   |       51 |        0 |       24 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/visit/read.py                                      |       20 |        7 |        2 |        0 |     59.1% |34-36, 64-74 |
 | src/cora/trust/aggregates/visit/state.py                                     |       87 |        0 |        0 |        0 |    100.0% |           |
