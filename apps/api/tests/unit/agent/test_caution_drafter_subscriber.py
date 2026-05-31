@@ -885,7 +885,7 @@ class _RaisingSigner:
         event_type: str,
         payload: Any,
         actor_id: UUID,
-    ) -> tuple[bytes, str]:
+    ) -> tuple[bytes, str, str]:
         _ = (event_type, payload, actor_id)
         raise self._exc
 

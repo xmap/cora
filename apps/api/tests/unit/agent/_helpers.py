@@ -246,8 +246,8 @@ class Ed25519FakeSigner:
         event_type: str,
         payload: Mapping[str, object],
         actor_id: UUID,
-    ) -> tuple[bytes, str]:
+    ) -> tuple[bytes, str, str]:
         self.received_actor_ids.append(actor_id)
         body = canonical_body_bytes(payload)
         pae = pae_bytes(event_type_to_payload_type(event_type), body)
-        return self._key.sign(pae), self._kid
+        return self._key.sign(pae), self._kid, "cora/v1"

@@ -23,10 +23,14 @@ verification-side bytes.
 
 ## What `sign` returns
 
-A tuple `(signature, kid)`. `signature` is the raw 64-byte Ed25519
-output (`alg=EdDSA` per the design lock); `kid` is the key identifier
-that lets the verifier resolve the matching public key. The semantics
-of `kid` vary by adapter:
+A tuple `(signature, kid, signing_version)`. `signature` is the raw
+64-byte Ed25519 output (`alg=EdDSA` per the design lock); `kid` is
+the key identifier that lets the verifier resolve the matching public
+key; `signing_version` is the signing-recipe identifier per
+[[project_canonicalization_port_design]] (the v1 default is
+`"cora/v1"`), recorded so the verifier can dispatch to the matching
+SigningPort adapter via the SigningRegistry. The semantics of `kid`
+vary by adapter:
 
   - Sigstore Fulcio: cert serial of the short-lived OIDC-bound cert
   - SPIFFE / SVID: the SVID's SPIFFE ID
@@ -124,8 +128,8 @@ class Signer(Protocol):
     Implementations (none ship today; see module docstring for the
     planned set) resolve a private key for the actor, canonicalize the
     payload using the shared content-hash pipeline, wrap with DSSE PAE,
-    and sign. Return value is `(signature, kid)` for the handler to
-    persist alongside the event row.
+    and sign. Return value is `(signature, kid, signing_version)` for
+    the handler to persist alongside the event row.
 
     Every method is async because the production adapters (Sigstore
     Fulcio, KMS) are network-bound. In-process adapters (local
@@ -138,7 +142,7 @@ class Signer(Protocol):
         event_type: str,
         payload: Mapping[str, Any],
         actor_id: UUID,
-    ) -> tuple[bytes, str]:
+    ) -> tuple[bytes, str, str]:
         """Produce a signature over the canonicalized + PAE-wrapped payload.
 
         `event_type` is the unbracketed event-type name (for example
@@ -158,9 +162,16 @@ class Signer(Protocol):
         shares a row with an Actor.id per [[project_agent_bc_design]]).
         The adapter uses this to look up the private key.
 
-        Returns `(signature, kid)`. `signature` is raw bytes (64 bytes
-        for Ed25519). `kid` is the adapter-specific key identifier the
-        verifier passes to its public-key resolver.
+        Returns `(signature, kid, signing_version)`. `signature` is raw
+        bytes (64 bytes for Ed25519). `kid` is the adapter-specific key
+        identifier the verifier passes to its public-key resolver.
+        `signing_version` is the signing-recipe identifier
+        (`"cora/v1"` for the shipped Ed25519-over-DSSE-PAE recipe);
+        the verifier dispatches to the matching SigningPort adapter
+        via the SigningRegistry. Adapters MUST return the version
+        string that names their signing recipe; the matched-pair
+        invariant is enforced row-by-row by an architecture-fitness
+        test.
 
         Failure modes:
           - `SignerKeyNotFoundError`: actor has no registered key
