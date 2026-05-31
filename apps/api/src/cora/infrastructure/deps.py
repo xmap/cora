@@ -43,6 +43,12 @@ from typing import Protocol
 
 import asyncpg
 
+from cora.infrastructure.adapters.canonicalization_registry import (
+    CanonicalizationRegistry,
+)
+from cora.infrastructure.adapters.default_canonicalization_adapter import (
+    DefaultCanonicalizationAdapter,
+)
 from cora.infrastructure.adapters.in_memory_credential_lookup import InMemoryCredentialLookup
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.adapters.in_memory_idempotency_store import InMemoryIdempotencyStore
@@ -50,6 +56,7 @@ from cora.infrastructure.adapters.in_memory_profile_store import InMemoryProfile
 from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
 from cora.infrastructure.adapters.postgres_idempotency_store import PostgresIdempotencyStore
 from cora.infrastructure.adapters.postgres_profile_store import PostgresProfileStore
+from cora.infrastructure.adapters.signing_registry import SigningRegistry
 from cora.infrastructure.auth import build_idp_registry, build_static_subject_mapper
 from cora.infrastructure.config import Settings
 from cora.infrastructure.kernel import Kernel, Teardown
@@ -94,6 +101,21 @@ class AuthorizeFactory(Protocol):
         clock: Clock,
         id_generator: IdGenerator,
     ) -> Authorize: ...
+
+
+def _build_default_canonicalization_registry() -> CanonicalizationRegistry:
+    """Return a CanonicalizationRegistry with the v1 default adapter registered.
+
+    The v1 adapter MUST be registered in every CORA deployment per
+    project_canonicalization_port_design.md; the default version is
+    set to "cora/v1" so write-side call sites resolve via the
+    deployment-wide default. Future v2+ adapters register alongside
+    via configuration without dislodging v1.
+    """
+    registry = CanonicalizationRegistry()
+    registry.register("cora/v1", DefaultCanonicalizationAdapter())
+    registry.set_default("cora/v1")
+    return registry
 
 
 def make_postgres_kernel(
@@ -191,6 +213,8 @@ def make_postgres_kernel(
             credential_lookup if credential_lookup is not None else InMemoryCredentialLookup()
         ),
         profile_store=(profile_store if profile_store is not None else PostgresProfileStore(pool)),
+        canonicalization_registry=_build_default_canonicalization_registry(),
+        signing_registry=SigningRegistry(),
         pool=pool,
         llm=llm,
         logbook_mirror=logbook_mirror,
@@ -286,6 +310,8 @@ def make_inmemory_kernel(
             credential_lookup if credential_lookup is not None else InMemoryCredentialLookup()
         ),
         profile_store=profile_store if profile_store is not None else InMemoryProfileStore(),
+        canonicalization_registry=_build_default_canonicalization_registry(),
+        signing_registry=SigningRegistry(),
         # pool is intentionally typed `object | None` on this factory's
         # signature (per the docstring: idempotency-pruner tests pass a
         # non-None sentinel without standing up real asyncpg). Kernel.pool
