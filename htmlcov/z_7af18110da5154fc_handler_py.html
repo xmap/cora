@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_7af18110da5154fc_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 09:22 +0000
+            created at 2026-05-31 21:41 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -98,7 +98,7 @@
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">  1. Authorize the principal for the `PromoteDataset` command.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">  2. Load the Dataset stream and fold to current state.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">  3. If `state.derived_from` is non-empty, load each peer Dataset</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">     into the `PromotionContext`. Skipped (empty context) when</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">     into the `DatasetPromotionContext`. Skipped (empty context) when</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">     state has no derived_from references.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">  4. Pass state + context into the pure decider.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">  5. Persist the resulting events.</span>&nbsp;</span><span class="r"></span></p>
@@ -113,7 +113,7 @@
     <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">If `load_dataset` returns None for a peer that's referenced in</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">`state.derived_from`, the handler silently drops the peer from</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">`PromotionContext.derived_from`. The decider then iterates only</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">`DatasetPromotionContext.derived_from`. The decider then iterates only</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">the LOADED peers &#8212; meaning a peer that vanished from the event</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="str">store is NOT flagged. Two reasons this is operationally safe:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -144,7 +144,7 @@
     <p class="run run2"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">data</span><span class="op">.</span><span class="nam">errors</span> <span class="key">import</span> <span class="nam">UnauthorizedError</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">data</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">promote_dataset</span><span class="op">.</span><span class="nam">command</span> <span class="key">import</span> <span class="nam">PromoteDataset</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">data</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">promote_dataset</span><span class="op">.</span><span class="nam">context</span> <span class="key">import</span> <span class="nam">PromotionContext</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">data</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">promote_dataset</span><span class="op">.</span><span class="nam">context</span> <span class="key">import</span> <span class="nam">DatasetPromotionContext</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">data</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">promote_dataset</span><span class="op">.</span><span class="nam">decider</span> <span class="key">import</span> <span class="nam">decide</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">event_envelope</span> <span class="key">import</span> <span class="nam">to_new_event</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">kernel</span> <span class="key">import</span> <span class="nam">Kernel</span>&nbsp;</span><span class="r"></span></p>
@@ -241,7 +241,7 @@
     <p class="pln"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">                <span class="com"># since promotion happens before discard in normal</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">                <span class="com"># workflows).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">        <span class="nam">context</span> <span class="op">=</span> <span class="nam">PromotionContext</span><span class="op">(</span><span class="nam">derived_from</span><span class="op">=</span><span class="nam">derived_from_loaded</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">        <span class="nam">context</span> <span class="op">=</span> <span class="nam">DatasetPromotionContext</span><span class="op">(</span><span class="nam">derived_from</span><span class="op">=</span><span class="nam">derived_from_loaded</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t">        <span class="nam">domain_events</span> <span class="op">=</span> <span class="nam">decide</span><span class="op">(</span><span class="nam">state</span><span class="op">=</span><span class="nam">state</span><span class="op">,</span> <span class="nam">command</span><span class="op">=</span><span class="nam">command</span><span class="op">,</span> <span class="nam">context</span><span class="op">=</span><span class="nam">context</span><span class="op">,</span> <span class="nam">now</span><span class="op">=</span><span class="nam">now</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -286,7 +286,7 @@
             <a class="nav" href="z_7af18110da5154fc_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 09:22 +0000
+            created at 2026-05-31 21:41 +0000
         </p>
     </div>
 </footer>

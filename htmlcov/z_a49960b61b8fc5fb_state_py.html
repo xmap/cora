@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 09:22 +0000
+            created at 2026-05-31 21:41 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -1139,8 +1139,8 @@
     <p class="pln"><span class="n"><a id="t1055" href="#t1055">1055</a></span><span class="t">    <span class="com"># optional Campaign membership. None means the Run is</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1056" href="#t1056">1056</a></span><span class="t">    <span class="com"># standalone (not part of any Campaign). Set on RunStarted (when</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1057" href="#t1057">1057</a></span><span class="t">    <span class="com"># `StartRun.campaign_id` was provided) or via the post-hoc</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1058" href="#t1058">1058</a></span><span class="t">    <span class="com"># `add_run_to_campaign` slice (RunCampaignAssigned event); cleared</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1059" href="#t1059">1059</a></span><span class="t">    <span class="com"># by `remove_run_from_campaign` (RunCampaignUnassigned event). One</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1058" href="#t1058">1058</a></span><span class="t">    <span class="com"># `add_run_to_campaign` slice (RunAddedToCampaign event); cleared</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1059" href="#t1059">1059</a></span><span class="t">    <span class="com"># by `remove_run_from_campaign` (RunRemovedFromCampaign event). One</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1060" href="#t1060">1060</a></span><span class="t">    <span class="com"># Campaign per Run invariant: never N (per</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1061" href="#t1061">1061</a></span><span class="t">    <span class="com"># [[project_campaign_design]] lock). Forward-compat additive field;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1062" href="#t1062">1062</a></span><span class="t">    <span class="com"># legacy streams without the field fold via `payload.get("campaign_id")`</span>&nbsp;</span><span class="r"></span></p>
@@ -1161,7 +1161,7 @@
     <p class="pln"><span class="n"><a id="t1077" href="#t1077">1077</a></span><span class="t">    <span class="com"># IMMUTABLE after start_run by aggregate-level invariant &#8212; every</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1078" href="#t1078">1078</a></span><span class="t">    <span class="com"># transition arm in the evolver (RunHeld / RunResumed /</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1079" href="#t1079">1079</a></span><span class="t">    <span class="com"># RunCompleted / RunAborted / RunStopped / RunTruncated /</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1080" href="#t1080">1080</a></span><span class="t">    <span class="com"># RunAdjusted / RunCampaignAssigned / RunCampaignUnassigned /</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1080" href="#t1080">1080</a></span><span class="t">    <span class="com"># RunAdjusted / RunAddedToCampaign / RunRemovedFromCampaign /</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1081" href="#t1081">1081</a></span><span class="t">    <span class="com"># RunReadingLogbookOpened) preserves `prior.pinned_calibrations`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1082" href="#t1082">1082</a></span><span class="t">    <span class="com"># verbatim. The AsShot anchor lets downstream consumers (Dataset</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1083" href="#t1083">1083</a></span><span class="t">    <span class="com"># reconstruction in the Data BC, RunDebriefer AI advisories) answer "what</span>&nbsp;</span><span class="r"></span></p>
@@ -1320,7 +1320,7 @@
             <a class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 09:22 +0000
+            created at 2026-05-31 21:41 +0000
         </p>
     </div>
 </footer>

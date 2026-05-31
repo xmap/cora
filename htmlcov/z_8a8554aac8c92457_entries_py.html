@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_8a8554aac8c92457_events_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 09:22 +0000
+            created at 2026-05-31 21:41 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -112,13 +112,13 @@
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">"one trace at a time" case. Locked at gate-review G4 for the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">entry-store pattern. Empty lists are a no-op.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">## Why `messages_jsonb` is the only jsonb column</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">## Why `messages` is the only jsonb column</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">OTel itself models prompt / completion message bodies as a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="str">separate **event** payload (gated for PII), not span attributes.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">Following that split: typed columns hold the high-signal</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">attributes (one row = one client/agent span); a single optional</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">`messages_jsonb` carries the variable-shape message-body</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">`messages` carries the variable-shape message-body</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="str">payload when the producer opts in (PII / large prompts are</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="str">opt-in, not always-on).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -138,7 +138,7 @@
     <p class="pln"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">  - `prompt_tokens` / `completion_tokens` are **deprecated**;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="str">    we use `input_tokens` / `output_tokens`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="str">  - `gen_ai.prompt` / `gen_ai.completion` span attrs are</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="str">    **deprecated**; message bodies go in `messages_jsonb`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="str">    **deprecated**; message bodies go in `messages`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t"><span class="com"># pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false</span>&nbsp;</span><span class="r"></span></p>
@@ -160,12 +160,12 @@
     <p class="pln"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="com"># OTel gen_ai.operation.name well-known values per v1.38. Open</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t"><span class="com"># string at the storage layer; new operation names from future OTel</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t"><span class="com"># spec versions arrive without schema changes.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="nam">DECISION_REASONING_OP_CHAT</span> <span class="op">=</span> <span class="str">"chat"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t"><span class="nam">DECISION_REASONING_OP_TEXT_COMPLETION</span> <span class="op">=</span> <span class="str">"text_completion"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="nam">DECISION_REASONING_OP_EMBEDDINGS</span> <span class="op">=</span> <span class="str">"embeddings"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="nam">DECISION_REASONING_OP_EXECUTE_TOOL</span> <span class="op">=</span> <span class="str">"execute_tool"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="nam">DECISION_REASONING_OP_INVOKE_AGENT</span> <span class="op">=</span> <span class="str">"invoke_agent"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t"><span class="nam">DECISION_REASONING_OP_CREATE_AGENT</span> <span class="op">=</span> <span class="str">"create_agent"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="nam">DECISION_REASONING_OPERATION_CHAT</span> <span class="op">=</span> <span class="str">"chat"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t"><span class="nam">DECISION_REASONING_OPERATION_TEXT_COMPLETION</span> <span class="op">=</span> <span class="str">"text_completion"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="nam">DECISION_REASONING_OPERATION_EMBEDDINGS</span> <span class="op">=</span> <span class="str">"embeddings"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="nam">DECISION_REASONING_OPERATION_EXECUTE_TOOL</span> <span class="op">=</span> <span class="str">"execute_tool"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="nam">DECISION_REASONING_OPERATION_INVOKE_AGENT</span> <span class="op">=</span> <span class="str">"invoke_agent"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t"><span class="nam">DECISION_REASONING_OPERATION_CREATE_AGENT</span> <span class="op">=</span> <span class="str">"create_agent"</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t"><span class="op">@</span><span class="nam">dataclass</span><span class="op">(</span><span class="nam">frozen</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -218,7 +218,7 @@
     <p class="pln"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">    <span class="nam">tool_call_id</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span>  <span class="com"># gen_ai.tool.call.id</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">    <span class="nam">tool_type</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span>  <span class="com"># gen_ai.tool.type</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">    <span class="com"># --- OTel event payload (PII-gated; opt-in by producer) ---</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">    <span class="nam">messages_jsonb</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">    <span class="nam">messages</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t138" href="#t138">138</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t"><span class="com"># Schema declared on DecisionLogbookOpened payloads when a</span>&nbsp;</span><span class="r"></span></p>
@@ -274,7 +274,7 @@
     <p class="run run2"><span class="n"><a id="t190" href="#t190">190</a></span><span class="t">        <span class="str">"AI-decider reasoning trace per OpenTelemetry GenAI semantic conventions "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t191" href="#t191">191</a></span><span class="t">        <span class="str">"v1.38 (gen_ai.* attribute family). One entry = one LLM client span / "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t">        <span class="str">"agent span / tool invocation. Message bodies (prompt + completion) are "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t193" href="#t193">193</a></span><span class="t">        <span class="str">"gated to an optional messages_jsonb event-payload column for PII control."</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t193" href="#t193">193</a></span><span class="t">        <span class="str">"gated to an optional messages event-payload column for PII control."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t194" href="#t194">194</a></span><span class="t">    <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t195" href="#t195">195</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t196" href="#t196">196</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -307,7 +307,7 @@
     <p class="run run2"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t"><span class="str">    input_tokens, output_tokens,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t224" href="#t224">224</a></span><span class="t"><span class="str">    agent_id, agent_name, agent_description, conversation_id,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t225" href="#t225">225</a></span><span class="t"><span class="str">    tool_name, tool_call_id, tool_type,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t"><span class="str">    messages_jsonb</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t"><span class="str">    messages</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t227" href="#t227">227</a></span><span class="t"><span class="str">) VALUES (</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t228" href="#t228">228</a></span><span class="t"><span class="str">    $1, $2, $3, $4, $5,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t229" href="#t229">229</a></span><span class="t"><span class="str">    $6, $7,</span>&nbsp;</span><span class="r"></span></p>
@@ -339,7 +339,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t"><span class="str">    `INSERT ... VALUES (...), (...)` statement.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t"><span class="str">    Deferred-with-trigger.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t"><span class="str">    `messages_jsonb` is pre-encoded to a JSON string via</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t"><span class="str">    `messages` is pre-encoded to a JSON string via</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t"><span class="str">    `json.dumps(...)` rather than relying on asyncpg's auto</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t260" href="#t260">260</a></span><span class="t"><span class="str">    dict -> jsonb codec. Defensive: asyncpg's codec registration</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t261" href="#t261">261</a></span><span class="t"><span class="str">    varies across versions; explicit pre-encoding is version-</span>&nbsp;</span><span class="r"></span></p>
@@ -360,7 +360,7 @@
     <p class="exc show_exc"><span class="n"><a id="t276" href="#t276">276</a></span><span class="t">            <span class="key">return</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t277" href="#t277">277</a></span><span class="t">        <span class="com"># asyncpg encodes Python list -> Postgres array natively;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t278" href="#t278">278</a></span><span class="t">        <span class="com"># finish_reasons is text[] (matches the column type).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t279" href="#t279">279</a></span><span class="t">        <span class="com"># messages_jsonb gets json.dumps()-encoded by the connection</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t279" href="#t279">279</a></span><span class="t">        <span class="com"># messages gets json.dumps()-encoded by the connection</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t280" href="#t280">280</a></span><span class="t">        <span class="com"># via a registered codec or by passing as JSON-encoded string.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t281" href="#t281">281</a></span><span class="t">        <span class="com"># We pre-encode to be explicit and avoid asyncpg-version drift.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t282" href="#t282">282</a></span><span class="t">        <span class="key">import</span> <span class="nam">json</span>&nbsp;</span><span class="r"></span></p>
@@ -396,7 +396,7 @@
     <p class="run run2"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t">                        <span class="nam">row</span><span class="op">.</span><span class="nam">tool_name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t">                        <span class="nam">row</span><span class="op">.</span><span class="nam">tool_call_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t">                        <span class="nam">row</span><span class="op">.</span><span class="nam">tool_type</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t315" href="#t315">315</a></span><span class="t">                        <span class="nam">json</span><span class="op">.</span><span class="nam">dumps</span><span class="op">(</span><span class="nam">row</span><span class="op">.</span><span class="nam">messages_jsonb</span><span class="op">)</span> <span class="key">if</span> <span class="nam">row</span><span class="op">.</span><span class="nam">messages_jsonb</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">else</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t315" href="#t315">315</a></span><span class="t">                        <span class="nam">json</span><span class="op">.</span><span class="nam">dumps</span><span class="op">(</span><span class="nam">row</span><span class="op">.</span><span class="nam">messages</span><span class="op">)</span> <span class="key">if</span> <span class="nam">row</span><span class="op">.</span><span class="nam">messages</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">else</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t316" href="#t316">316</a></span><span class="t">                    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t317" href="#t317">317</a></span><span class="t">                    <span class="key">for</span> <span class="nam">row</span> <span class="key">in</span> <span class="nam">rows</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t318" href="#t318">318</a></span><span class="t">                <span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -426,12 +426,12 @@
     <p class="pln"><span class="n"><a id="t342" href="#t342">342</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t343" href="#t343">343</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t344" href="#t344">344</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t345" href="#t345">345</a></span><span class="t">    <span class="str">"DECISION_REASONING_OP_CHAT"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t346" href="#t346">346</a></span><span class="t">    <span class="str">"DECISION_REASONING_OP_CREATE_AGENT"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t347" href="#t347">347</a></span><span class="t">    <span class="str">"DECISION_REASONING_OP_EMBEDDINGS"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t348" href="#t348">348</a></span><span class="t">    <span class="str">"DECISION_REASONING_OP_EXECUTE_TOOL"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t349" href="#t349">349</a></span><span class="t">    <span class="str">"DECISION_REASONING_OP_INVOKE_AGENT"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t350" href="#t350">350</a></span><span class="t">    <span class="str">"DECISION_REASONING_OP_TEXT_COMPLETION"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t345" href="#t345">345</a></span><span class="t">    <span class="str">"DECISION_REASONING_OPERATION_CHAT"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t346" href="#t346">346</a></span><span class="t">    <span class="str">"DECISION_REASONING_OPERATION_CREATE_AGENT"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t347" href="#t347">347</a></span><span class="t">    <span class="str">"DECISION_REASONING_OPERATION_EMBEDDINGS"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t348" href="#t348">348</a></span><span class="t">    <span class="str">"DECISION_REASONING_OPERATION_EXECUTE_TOOL"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t349" href="#t349">349</a></span><span class="t">    <span class="str">"DECISION_REASONING_OPERATION_INVOKE_AGENT"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t350" href="#t350">350</a></span><span class="t">    <span class="str">"DECISION_REASONING_OPERATION_TEXT_COMPLETION"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t351" href="#t351">351</a></span><span class="t">    <span class="str">"REASONING_LOGBOOK_SCHEMA"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t352" href="#t352">352</a></span><span class="t">    <span class="str">"DecisionReasoning"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t353" href="#t353">353</a></span><span class="t">    <span class="str">"DecisionReasoningToolType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -448,7 +448,7 @@
             <a class="nav" href="z_8a8554aac8c92457_events_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 09:22 +0000
+            created at 2026-05-31 21:41 +0000
         </p>
     </div>
 </footer>

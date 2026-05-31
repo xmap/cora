@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1164eecb97aa37cc_conductor_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 09:22 +0000
+            created at 2026-05-31 21:41 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -273,7 +273,7 @@
     <p class="pln"><span class="n"><a id="t189" href="#t189">189</a></span><span class="t"><span class="str">                          review (future Decision BC integration).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t190" href="#t190">190</a></span><span class="t"><span class="str">                          Cannot accept step events yet.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t191" href="#t191">191</a></span><span class="t"><span class="str">      - `Running`     -- post-start_procedure. Step events accepted</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t"><span class="str">                          via append_procedure_step.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t"><span class="str">                          via append_procedure_steps.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t193" href="#t193">193</a></span><span class="t"><span class="str">      - `Completed`   -- happy path via complete_procedure.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t194" href="#t194">194</a></span><span class="t"><span class="str">                          Strict-not-idempotent.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t195" href="#t195">195</a></span><span class="t"><span class="str">      - `Aborted`     -- emergency exit via abort_procedure.</span>&nbsp;</span><span class="r"></span></p>
@@ -579,7 +579,7 @@
     <p class="pln"><span class="n"><a id="t495" href="#t495">495</a></span><span class="t"><span class="str">    Per [[project_operation_design]] the Procedure FSM's terminals</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t496" href="#t496">496</a></span><span class="t"><span class="str">    (Completed | Aborted | Truncated) implicitly close the steps</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t497" href="#t497">497</a></span><span class="t"><span class="str">    logbook; no explicit `ProcedureStepsLogbookClosed` event is</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t498" href="#t498">498</a></span><span class="t"><span class="str">    emitted. The `append_procedure_step` handler raises this when</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t498" href="#t498">498</a></span><span class="t"><span class="str">    emitted. The `append_procedure_steps` handler raises this when</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t499" href="#t499">499</a></span><span class="t"><span class="str">    a writer attempts to append after the Procedure has terminated.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t500" href="#t500">500</a></span><span class="t"><span class="str">    Mirrors `RunReadingLogbookClosedError` from Run BC. Mapped to</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t501" href="#t501">501</a></span><span class="t"><span class="str">    HTTP 409.</span>&nbsp;</span><span class="r"></span></p>
@@ -734,7 +734,7 @@
     <p class="run"><span class="n"><a id="t650" href="#t650">650</a></span><span class="t">    <span class="nam">status</span><span class="op">:</span> <span class="nam">ProcedureStatus</span> <span class="op">=</span> <span class="nam">ProcedureStatus</span><span class="op">.</span><span class="nam">DEFINED</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t651" href="#t651">651</a></span><span class="t">    <span class="nam">parent_run_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t652" href="#t652">652</a></span><span class="t">    <span class="nam">steps_logbook_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t653" href="#t653">653</a></span><span class="t">    <span class="str">"""Lazy-opened on first `append_procedure_step`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t653" href="#t653">653</a></span><span class="t">    <span class="str">"""Lazy-opened on first `append_procedure_steps`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t654" href="#t654">654</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t655" href="#t655">655</a></span><span class="t"><span class="str">    None until the first step is appended; populated by the</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t656" href="#t656">656</a></span><span class="t"><span class="str">    `ProcedureStepsLogbookOpened` envelope event the handler emits</span>&nbsp;</span><span class="r"></span></p>
@@ -760,7 +760,7 @@
             <a class="nav" href="z_1164eecb97aa37cc_conductor_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 09:22 +0000
+            created at 2026-05-31 21:41 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1164eecb97aa37cc_wire_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 09:22 +0000
+            created at 2026-05-31 21:41 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -96,7 +96,7 @@
     <p class="run"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="key">from</span> <span class="nam">mcp</span><span class="op">.</span><span class="nam">server</span><span class="op">.</span><span class="nam">fastmcp</span> <span class="key">import</span> <span class="nam">FastMCP</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">abort_procedure</span> <span class="key">import</span> <span class="nam">tool</span> <span class="key">as</span> <span class="nam">abort_procedure_tool</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">append_procedure_step</span> <span class="key">import</span> <span class="nam">tool</span> <span class="key">as</span> <span class="nam">append_procedure_step_tool</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">append_procedure_steps</span> <span class="key">import</span> <span class="nam">tool</span> <span class="key">as</span> <span class="nam">append_procedure_steps_tool</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">complete_procedure</span> <span class="key">import</span> <span class="nam">tool</span> <span class="key">as</span> <span class="nam">complete_procedure_tool</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">get_procedure</span> <span class="key">import</span> <span class="nam">tool</span> <span class="key">as</span> <span class="nam">get_procedure_tool</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">list_procedures</span> <span class="key">import</span> <span class="nam">tool</span> <span class="key">as</span> <span class="nam">list_procedures_tool</span>&nbsp;</span><span class="r"></span></p>
@@ -133,9 +133,9 @@
     <p class="run run2"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">        <span class="nam">mcp</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">        <span class="nam">get_handler</span><span class="op">=</span><span class="key">lambda</span><span class="op">:</span> <span class="nam">get_handlers</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">truncate_procedure</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="nam">append_procedure_step_tool</span><span class="op">.</span><span class="nam">register</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="nam">append_procedure_steps_tool</span><span class="op">.</span><span class="nam">register</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">        <span class="nam">mcp</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">        <span class="nam">get_handler</span><span class="op">=</span><span class="key">lambda</span><span class="op">:</span> <span class="nam">get_handlers</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">append_procedure_step</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">        <span class="nam">get_handler</span><span class="op">=</span><span class="key">lambda</span><span class="op">:</span> <span class="nam">get_handlers</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">append_procedure_steps</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">    <span class="nam">get_procedure_tool</span><span class="op">.</span><span class="nam">register</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">        <span class="nam">mcp</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -158,7 +158,7 @@
             <a class="nav" href="z_1164eecb97aa37cc_wire_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 09:22 +0000
+            created at 2026-05-31 21:41 +0000
         </p>
     </div>
 </footer>
