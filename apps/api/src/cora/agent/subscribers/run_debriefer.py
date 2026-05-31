@@ -581,12 +581,17 @@ class RunDebrieferSubscriber:
         """
         if self.signer is None or new_event.event_type not in SIGNED_EVENT_TYPES:
             return new_event
-        signature, kid, _signing_version = await self.signer.sign(
+        signature, kid, signing_version = await self.signer.sign(
             event_type=new_event.event_type,
             payload=new_event.payload,
             actor_id=actor.id,
         )
-        return replace(new_event, signature=signature, signature_kid=kid)
+        return replace(
+            new_event,
+            signature=signature,
+            signature_kid=kid,
+            signature_version=signing_version,
+        )
 
 
 def make_run_debriefer_subscriber(deps: Kernel) -> RunDebrieferSubscriber:

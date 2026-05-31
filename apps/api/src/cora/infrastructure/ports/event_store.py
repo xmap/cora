@@ -94,6 +94,7 @@ class NewEvent:
     principal_id: UUID | None = field(kw_only=True)
     signature: bytes | None = field(default=None, kw_only=True)
     signature_kid: str | None = field(default=None, kw_only=True)
+    signature_version: str | None = field(default=None, kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -141,6 +142,7 @@ class StoredEvent:
     principal_id: UUID | None = None
     signature: bytes | None = None
     signature_kid: str | None = None
+    signature_version: str | None = None
 
 
 class ConcurrencyError(Exception):
