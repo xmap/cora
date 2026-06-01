@@ -77,6 +77,22 @@ from cora.equipment.aggregates.frame import (
     InvalidFrameRevisionError,
     InvalidFrameRootError,
 )
+from cora.equipment.aggregates.model import (
+    InvalidDeclaredFamiliesError,
+    InvalidManufacturerIdentifierError,
+    InvalidManufacturerIdentifierPairingError,
+    InvalidManufacturerNameError,
+    InvalidModelDeprecationReasonError,
+    InvalidModelNameError,
+    InvalidModelVersionTagError,
+    InvalidPartNumberError,
+    ModelAlreadyExistsError,
+    ModelCannotDeprecateError,
+    ModelCannotVersionError,
+    ModelFamilyAlreadyPresentError,
+    ModelFamilyNotPresentError,
+    ModelNotFoundError,
+)
 from cora.equipment.aggregates.mount import (
     AssetAlreadyInstalledElsewhereError,
     AssetNotFoundForMountError,
@@ -238,6 +254,14 @@ def register_equipment_routes(app: FastAPI) -> None:
         InvalidPlacementError,
         InvalidDrawingError,
         InvalidSlotCodeError,
+        InvalidModelNameError,
+        InvalidPartNumberError,
+        InvalidManufacturerNameError,
+        InvalidManufacturerIdentifierError,
+        InvalidManufacturerIdentifierPairingError,
+        InvalidModelVersionTagError,
+        InvalidModelDeprecationReasonError,
+        InvalidDeclaredFamiliesError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     for not_found_cls in (
@@ -246,6 +270,7 @@ def register_equipment_routes(app: FastAPI) -> None:
         FrameNotFoundError,
         MountNotFoundError,
         AssetNotFoundForMountError,
+        ModelNotFoundError,
     ):
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for already_exists_cls in (
@@ -253,6 +278,7 @@ def register_equipment_routes(app: FastAPI) -> None:
         AssetAlreadyExistsError,
         FrameAlreadyExistsError,
         MountAlreadyExistsError,
+        ModelAlreadyExistsError,
     ):
         app.add_exception_handler(already_exists_cls, _handle_already_exists)
     for cannot_transition_cls in (
@@ -279,6 +305,10 @@ def register_equipment_routes(app: FastAPI) -> None:
         MountIsEmptyError,
         AssetNotInstallableError,
         AssetAlreadyInstalledElsewhereError,
+        ModelCannotVersionError,
+        ModelCannotDeprecateError,
+        ModelFamilyAlreadyPresentError,
+        ModelFamilyNotPresentError,
     ):
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)
     app.add_exception_handler(UnauthorizedError, _handle_unauthorized)
