@@ -59,6 +59,7 @@ from cora.equipment.features import (
     relocate_asset,
     remove_asset_family,
     remove_asset_port,
+    remove_model_family,
     restore_asset,
     uninstall_asset,
     update_asset_settings,
@@ -92,6 +93,7 @@ class EquipmentHandlers:
     version_model: version_model.Handler
     deprecate_model: deprecate_model.Handler
     add_model_family: add_model_family.Handler
+    remove_model_family: remove_model_family.Handler
     get_family: get_family.Handler
     version_family: version_family.Handler
     deprecate_family: deprecate_family.Handler
@@ -166,6 +168,11 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
         add_model_family=with_tracing(
             add_model_family.bind(deps),
             command_name="AddModelFamily",
+            bc=_BC,
+        ),
+        remove_model_family=with_tracing(
+            remove_model_family.bind(deps),
+            command_name="RemoveModelFamily",
             bc=_BC,
         ),
         get_family=with_tracing(

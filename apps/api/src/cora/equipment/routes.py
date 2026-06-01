@@ -136,6 +136,7 @@ from cora.equipment.features import (
     relocate_asset,
     remove_asset_family,
     remove_asset_port,
+    remove_model_family,
     restore_asset,
     uninstall_asset,
     update_asset_settings,
@@ -216,6 +217,7 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(version_model.router)
     app.include_router(deprecate_model.router)
     app.include_router(add_model_family.router)
+    app.include_router(remove_model_family.router)
     app.include_router(get_family.router)
     app.include_router(version_family.router)
     app.include_router(deprecate_family.router)

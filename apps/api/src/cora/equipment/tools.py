@@ -48,6 +48,7 @@ from cora.equipment.features.remove_asset_family import (
     tool as remove_asset_family_tool,
 )
 from cora.equipment.features.remove_asset_port import tool as remove_asset_port_tool
+from cora.equipment.features.remove_model_family import tool as remove_model_family_tool
 from cora.equipment.features.restore_asset import tool as restore_asset_tool
 from cora.equipment.features.uninstall_asset import tool as uninstall_asset_tool
 from cora.equipment.features.update_asset_settings import (
@@ -88,6 +89,10 @@ def register_equipment_tools(
     add_model_family_tool.register(
         mcp,
         get_handler=lambda: get_handlers().add_model_family,
+    )
+    remove_model_family_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().remove_model_family,
     )
     get_family_tool.register(
         mcp,
