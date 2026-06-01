@@ -50,7 +50,7 @@ class InMemoryPermitLookup(PermitLookup):
         permit_id: UUID,
         status: str = "Active",
         abi_tier_floor: str = "Stable",
-        current_version: int = 1,
+        current_version: int = 0,
     ) -> PermitLookupResult:
         """Convenience: seed an outbound permit; returns the seeded result for assertions."""
         result = PermitLookupResult(
@@ -77,7 +77,7 @@ class InMemoryPermitLookup(PermitLookup):
         permit_id: UUID,
         status: str = "Active",
         abi_tier_floor: str = "Stable",
-        current_version: int = 1,
+        current_version: int = 0,
     ) -> PermitLookupResult:
         """Convenience: seed an inbound permit; returns the seeded result for assertions."""
         result = PermitLookupResult(

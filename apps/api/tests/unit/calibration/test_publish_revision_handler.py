@@ -128,8 +128,9 @@ def _command(
     )
 
 
-def test_bind_raises_when_publish_deps_not_wired_on_kernel() -> None:
+def test_bind_raises_when_all_publish_deps_explicitly_unset_on_kernel() -> None:
     deps = build_deps()
+    deps = replace(deps, publish_port=None, signature_port=None, permit_lookup=None)
     with pytest.raises(PublishPortNotWiredError) as exc_info:
         bind(deps)
     assert set(exc_info.value.missing) == {
@@ -139,9 +140,9 @@ def test_bind_raises_when_publish_deps_not_wired_on_kernel() -> None:
     }
 
 
-def test_bind_with_only_some_deps_wired_lists_only_the_missing_ones() -> None:
+def test_bind_with_only_some_deps_unset_lists_only_the_missing_ones() -> None:
     deps = build_deps()
-    deps = replace(deps, publish_port=InMemoryPublishPort())
+    deps = replace(deps, signature_port=None, permit_lookup=None)
     with pytest.raises(PublishPortNotWiredError) as exc_info:
         bind(deps)
     assert "publish_port" not in exc_info.value.missing

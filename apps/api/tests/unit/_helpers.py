@@ -149,6 +149,15 @@ def build_deps(
     """
     if authz is None:
         authz = DenyAllAuthorize() if deny else AllowAllAuthorize()
+    # Wire the publish-side InMemory federation adapters by default so
+    # tests that exercise wire_calibration (which binds publish_revision)
+    # do not hit PublishPortNotWiredError at startup. Tests that want
+    # to assert the misconfiguration surface explicitly null them via
+    # dataclasses.replace.
+    from cora.federation.adapters.in_memory_permit_lookup import InMemoryPermitLookup
+    from cora.federation.adapters.in_memory_publish_port import InMemoryPublishPort
+    from cora.federation.adapters.in_memory_signature_port import InMemorySignaturePort
+
     return make_inmemory_kernel(
         settings=Settings(app_env="test"),  # type: ignore[call-arg]
         clock=FakeClock(now or DEFAULT_NOW),
@@ -158,6 +167,9 @@ def build_deps(
         llm=llm,
         profile_store=profile_store,
         credential_lookup=credential_lookup,
+        publish_port=InMemoryPublishPort(),
+        signature_port=InMemorySignaturePort(),
+        permit_lookup=InMemoryPermitLookup(),
     )
 
 

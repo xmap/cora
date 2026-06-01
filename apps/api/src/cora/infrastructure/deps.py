@@ -39,9 +39,18 @@ in exactly two function bodies (the two primitives) instead of every
 test file individually.
 """
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import asyncpg
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from cora.infrastructure.ports.federation import (
+        PermitLookup,
+        PublishPort,
+        SignaturePort,
+    )
 
 from cora.infrastructure.adapters.canonicalization_registry import (
     CanonicalizationRegistry,
@@ -135,6 +144,9 @@ def make_postgres_kernel(
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
     token_verifier: TokenVerifier | None = None,
+    publish_port: "PublishPort | None" = None,
+    signature_port: "SignaturePort | None" = None,
+    permit_lookup: "PermitLookup | None" = None,
 ) -> Kernel:
     """Postgres-backed Kernel primitive.
 
@@ -215,6 +227,9 @@ def make_postgres_kernel(
         profile_store=(profile_store if profile_store is not None else PostgresProfileStore(pool)),
         canonicalization_registry=_build_default_canonicalization_registry(),
         signing_registry=SigningRegistry(),
+        publish_port=publish_port,
+        signature_port=signature_port,
+        permit_lookup=permit_lookup,
         pool=pool,
         llm=llm,
         logbook_mirror=logbook_mirror,
@@ -238,6 +253,9 @@ def make_inmemory_kernel(
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
     token_verifier: TokenVerifier | None = None,
+    publish_port: "PublishPort | None" = None,
+    signature_port: "SignaturePort | None" = None,
+    permit_lookup: "PermitLookup | None" = None,
     pool: object | None = None,
 ) -> Kernel:
     """In-memory Kernel primitive.
@@ -312,6 +330,9 @@ def make_inmemory_kernel(
         profile_store=profile_store if profile_store is not None else InMemoryProfileStore(),
         canonicalization_registry=_build_default_canonicalization_registry(),
         signing_registry=SigningRegistry(),
+        publish_port=publish_port,
+        signature_port=signature_port,
+        permit_lookup=permit_lookup,
         # pool is intentionally typed `object | None` on this factory's
         # signature (per the docstring: idempotency-pruner tests pass a
         # non-None sentinel without standing up real asyncpg). Kernel.pool
@@ -437,6 +458,9 @@ async def build_kernel(
     caution_lookup_factory: CautionLookupFactory | None = None,
     supply_lookup_factory: SupplyLookupFactory | None = None,
     credential_lookup_factory: CredentialLookupFactory | None = None,
+    publish_port_factory: "Callable[[], PublishPort] | None" = None,
+    signature_port_factory: "Callable[[], SignaturePort] | None" = None,
+    permit_lookup_factory: "Callable[[], PermitLookup] | None" = None,
     llm_factory: LLMFactory | None = None,
     settings: Settings | None = None,
 ) -> tuple[Kernel, Teardown]:
@@ -492,6 +516,9 @@ async def build_kernel(
             event_store=event_store,
             idempotency_store=idempotency_store,
             token_verifier=token_verifier,
+            publish_port=publish_port_factory() if publish_port_factory is not None else None,
+            signature_port=signature_port_factory() if signature_port_factory is not None else None,
+            permit_lookup=permit_lookup_factory() if permit_lookup_factory is not None else None,
         )
         return kernel, _noop_teardown
 
@@ -544,6 +571,9 @@ async def build_kernel(
         credential_lookup=credential_lookup,
         llm=llm,
         token_verifier=token_verifier,
+        publish_port=publish_port_factory() if publish_port_factory is not None else None,
+        signature_port=signature_port_factory() if signature_port_factory is not None else None,
+        permit_lookup=permit_lookup_factory() if permit_lookup_factory is not None else None,
     )
     return kernel, _compose_teardowns([_maybe_llm_teardown(llm), _make_pool_teardown(pool)])
 

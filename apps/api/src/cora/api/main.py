@@ -110,6 +110,9 @@ from cora.federation import (
     wire_federation,
 )
 from cora.federation.adapters import PostgresCredentialLookup
+from cora.federation.adapters.in_memory_permit_lookup import InMemoryPermitLookup
+from cora.federation.adapters.in_memory_publish_port import InMemoryPublishPort
+from cora.federation.adapters.in_memory_signature_port import InMemorySignaturePort
 from cora.infrastructure.auth.bearer_auth_middleware import BearerAuthMiddleware
 from cora.infrastructure.auth.exception_handlers import register_auth_exception_handlers
 from cora.infrastructure.config import Settings
@@ -395,6 +398,15 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 caution_lookup_factory=PostgresCautionLookup,
                 supply_lookup_factory=PostgresSupplyLookup,
                 credential_lookup_factory=PostgresCredentialLookup,
+                # publish_revision slice deps: in-memory adapters
+                # wired by default until the rule-of-two trigger
+                # fires per project_federation_port_design.md.
+                # Production deployments will override these with
+                # the DSSE+Sigstore + COSE+SCITT wire-tier adapters
+                # when the wire-tier work lands.
+                publish_port_factory=InMemoryPublishPort,
+                signature_port_factory=InMemorySignaturePort,
+                permit_lookup_factory=InMemoryPermitLookup,
                 llm_factory=build_llm,
                 # Pass the create_app-time Settings through so tests
                 # overriding identity_providers / require_auth / etc.
