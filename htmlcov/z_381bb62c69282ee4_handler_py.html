@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_381bb62c69282ee4_query_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -130,7 +130,7 @@
     <p class="run run2"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t"><span class="str">SELECT permit_id, peer_facility_id, direction,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t"><span class="str">       allowed_credentials, allowed_payload_types, allowed_artifact_kinds,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="str">       abi_tier_floor, expires_at, defined_by_actor_id, status, terms_kind,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t"><span class="str">       read_scope, onward_action_scope, scope_set,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t"><span class="str">       read_scope, onward_action_scope, scopes,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t"><span class="str">       accepted_canonicalization_versions, required_receipt_kinds,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="str">       publisher_grant_correlation_handle, inbound_allowed_artifact_kinds,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t"><span class="str">       defined_at, activated_at, suspended_at, resumed_at, revoked_at</span>&nbsp;</span><span class="r"></span></p>
@@ -162,7 +162,7 @@
     <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="nam">terms_kind</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">    <span class="nam">read_scope</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="nam">onward_action_scope</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">    <span class="nam">scope_set</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">    <span class="nam">scopes</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">    <span class="nam">accepted_canonicalization_versions</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">str</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">    <span class="nam">required_receipt_kinds</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">str</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">    <span class="nam">publisher_grant_correlation_handle</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
@@ -205,7 +205,7 @@
     <p class="mis mis2 show_mis"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">        <span class="nam">terms_kind</span><span class="op">=</span><span class="nam">row</span><span class="op">[</span><span class="str">"terms_kind"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">        <span class="nam">read_scope</span><span class="op">=</span><span class="nam">row</span><span class="op">[</span><span class="str">"read_scope"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">        <span class="nam">onward_action_scope</span><span class="op">=</span><span class="nam">row</span><span class="op">[</span><span class="str">"onward_action_scope"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">        <span class="nam">scope_set</span><span class="op">=</span><span class="nam">_jsonb_to_list</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"scope_set"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">        <span class="nam">scopes</span><span class="op">=</span><span class="nam">_jsonb_to_list</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"scopes"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">        <span class="nam">accepted_canonicalization_versions</span><span class="op">=</span><span class="nam">_jsonb_to_list</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">            <span class="nam">row</span><span class="op">[</span><span class="str">"accepted_canonicalization_versions"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -313,7 +313,7 @@
             <a class="nav" href="z_381bb62c69282ee4_query_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
     </div>
 </footer>

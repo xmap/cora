@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_d4b29a50abc4563f_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -199,7 +199,7 @@
     <p class="run run2"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">            <span class="str">"adjust_run.start"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="nam">_COMMAND_NAME</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">            <span class="nam">run_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">run_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">            <span class="nam">patch_key_count</span><span class="op">=</span><span class="nam">len</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">parameter_patch</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">            <span class="nam">patch_key_count</span><span class="op">=</span><span class="nam">len</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">parameters_patch</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">            <span class="nam">decided_by_decision_id</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">                <span class="nam">str</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">decided_by_decision_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">                <span class="key">if</span> <span class="nam">command</span><span class="op">.</span><span class="nam">decided_by_decision_id</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
@@ -284,7 +284,7 @@
     <p class="run run2"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="nam">_COMMAND_NAME</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t">            <span class="nam">run_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">run_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t">            <span class="nam">method_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">method</span><span class="op">.</span><span class="nam">id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">            <span class="nam">patch_key_count</span><span class="op">=</span><span class="nam">len</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">parameter_patch</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">            <span class="nam">patch_key_count</span><span class="op">=</span><span class="nam">len</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">parameters_patch</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t">            <span class="nam">effective_key_count</span><span class="op">=</span><span class="nam">len</span><span class="op">(</span><span class="nam">events</span><span class="op">[</span><span class="num">0</span><span class="op">]</span><span class="op">.</span><span class="nam">effective_parameters</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t">            <span class="nam">schema_present</span><span class="op">=</span><span class="nam">method</span><span class="op">.</span><span class="nam">parameters_schema</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t">            <span class="nam">decided_by_decision_id</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -308,7 +308,7 @@
             <a class="nav" href="z_d4b29a50abc4563f_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
     </div>
 </footer>

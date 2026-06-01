@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_ffca527979e30870_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -136,7 +136,7 @@
     <p class="pln"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="str">"""JSON wire shape for `OutboundTerms`."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">    <span class="nam">kind</span><span class="op">:</span> <span class="nam">Literal</span><span class="op">[</span><span class="str">"Outbound"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="nam">scope_set</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">_ScopeRefRequest</span><span class="op">]</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span><span class="op">...</span><span class="op">,</span> <span class="nam">min_length</span><span class="op">=</span><span class="num">1</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="nam">scopes</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">_ScopeRefRequest</span><span class="op">]</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span><span class="op">...</span><span class="op">,</span> <span class="nam">min_length</span><span class="op">=</span><span class="num">1</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">    <span class="nam">read_scope</span><span class="op">:</span> <span class="nam">ReadScope</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">    <span class="nam">onward_action_scope</span><span class="op">:</span> <span class="nam">OnwardActionScope</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -206,7 +206,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">        <span class="op">...</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">            <span class="str">"Direction-specific contractual fields. Discriminated by `kind`: "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">            <span class="str">"`Outbound` carries `scope_set` + `read_scope` + "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">            <span class="str">"`Outbound` carries `scopes` + `read_scope` + "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">            <span class="str">"`onward_action_scope`; `Inbound` carries "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">            <span class="str">"`inbound_allowed_artifact_kinds` + optional canonicalization / receipt "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">            <span class="str">"config."</span>&nbsp;</span><span class="r"></span></p>
@@ -230,8 +230,8 @@
     <p class="run"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t"><span class="key">def</span> <span class="nam">_build_terms</span><span class="op">(</span><span class="nam">body</span><span class="op">:</span> <span class="nam">_TermsRequest</span><span class="op">)</span> <span class="op">-></span> <span class="nam">OutboundTerms</span> <span class="op">|</span> <span class="nam">InboundTerms</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">    <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">body</span><span class="op">,</span> <span class="nam">_OutboundTermsRequest</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">        <span class="key">return</span> <span class="nam">OutboundTerms</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">            <span class="nam">scope_set</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">                <span class="nam">ScopeRef</span><span class="op">(</span><span class="nam">kind</span><span class="op">=</span><span class="nam">s</span><span class="op">.</span><span class="nam">kind</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="nam">s</span><span class="op">.</span><span class="nam">name</span><span class="op">,</span> <span class="nam">qualifier</span><span class="op">=</span><span class="nam">s</span><span class="op">.</span><span class="nam">qualifier</span><span class="op">)</span> <span class="key">for</span> <span class="nam">s</span> <span class="key">in</span> <span class="nam">body</span><span class="op">.</span><span class="nam">scope_set</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">            <span class="nam">scopes</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">                <span class="nam">ScopeRef</span><span class="op">(</span><span class="nam">kind</span><span class="op">=</span><span class="nam">s</span><span class="op">.</span><span class="nam">kind</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="nam">s</span><span class="op">.</span><span class="nam">name</span><span class="op">,</span> <span class="nam">qualifier</span><span class="op">=</span><span class="nam">s</span><span class="op">.</span><span class="nam">qualifier</span><span class="op">)</span> <span class="key">for</span> <span class="nam">s</span> <span class="key">in</span> <span class="nam">body</span><span class="op">.</span><span class="nam">scopes</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">            <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">            <span class="nam">read_scope</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">read_scope</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">            <span class="nam">onward_action_scope</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">onward_action_scope</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -335,7 +335,7 @@
             <a class="nav" href="z_ffca527979e30870_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
     </div>
 </footer>

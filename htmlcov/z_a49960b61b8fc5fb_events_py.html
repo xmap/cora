@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_a49960b61b8fc5fb_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -524,7 +524,7 @@
     <p class="pln"><span class="n"><a id="t440" href="#t440">440</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t441" href="#t441">441</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t442" href="#t442">442</a></span><span class="t">    <span class="nam">run_id</span><span class="op">:</span> <span class="nam">UUID</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t443" href="#t443">443</a></span><span class="t">    <span class="nam">parameter_patch</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t443" href="#t443">443</a></span><span class="t">    <span class="nam">parameters_patch</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t444" href="#t444">444</a></span><span class="t">    <span class="nam">effective_parameters</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t445" href="#t445">445</a></span><span class="t">    <span class="nam">reason</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t446" href="#t446">446</a></span><span class="t">    <span class="nam">occurred_at</span><span class="op">:</span> <span class="nam">datetime</span>&nbsp;</span><span class="r"></span></p>
@@ -693,7 +693,7 @@
     <p class="run run2"><span class="n"><a id="t609" href="#t609">609</a></span><span class="t">            <span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t610" href="#t610">610</a></span><span class="t">        <span class="key">case</span> <span class="nam">RunAdjusted</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t611" href="#t611">611</a></span><span class="t">            <span class="nam">run_id</span><span class="op">=</span><span class="nam">run_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t612" href="#t612">612</a></span><span class="t">            <span class="nam">parameter_patch</span><span class="op">=</span><span class="nam">parameter_patch</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t612" href="#t612">612</a></span><span class="t">            <span class="nam">parameters_patch</span><span class="op">=</span><span class="nam">parameters_patch</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t613" href="#t613">613</a></span><span class="t">            <span class="nam">effective_parameters</span><span class="op">=</span><span class="nam">effective_parameters</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t614" href="#t614">614</a></span><span class="t">            <span class="nam">reason</span><span class="op">=</span><span class="nam">reason</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t615" href="#t615">615</a></span><span class="t">            <span class="nam">decided_by_decision_id</span><span class="op">=</span><span class="nam">decided_by_decision_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -701,7 +701,7 @@
     <p class="run run2"><span class="n"><a id="t617" href="#t617">617</a></span><span class="t">        <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t618" href="#t618">618</a></span><span class="t">            <span class="key">return</span> <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t619" href="#t619">619</a></span><span class="t">                <span class="str">"run_id"</span><span class="op">:</span> <span class="nam">str</span><span class="op">(</span><span class="nam">run_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t620" href="#t620">620</a></span><span class="t">                <span class="str">"parameter_patch"</span><span class="op">:</span> <span class="nam">parameter_patch</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t620" href="#t620">620</a></span><span class="t">                <span class="str">"parameters_patch"</span><span class="op">:</span> <span class="nam">parameters_patch</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t621" href="#t621">621</a></span><span class="t">                <span class="str">"effective_parameters"</span><span class="op">:</span> <span class="nam">effective_parameters</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t622" href="#t622">622</a></span><span class="t">                <span class="str">"reason"</span><span class="op">:</span> <span class="nam">reason</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t623" href="#t623">623</a></span><span class="t">                <span class="str">"decided_by_decision_id"</span><span class="op">:</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -878,12 +878,12 @@
     <p class="pln"><span class="n"><a id="t794" href="#t794">794</a></span><span class="t">                <span class="com"># `decided_by_decision_id` is optional on the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t795" href="#t795">795</a></span><span class="t">                <span class="com"># event payload. Forward-compat additive: synthetic / future</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t796" href="#t796">796</a></span><span class="t">                <span class="com"># callers omitting the key (None semantically) deserialize</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t797" href="#t797">797</a></span><span class="t">                <span class="com"># as decided_by_decision_id=None. `parameter_patch` and</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t797" href="#t797">797</a></span><span class="t">                <span class="com"># as decided_by_decision_id=None. `parameters_patch` and</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t798" href="#t798">798</a></span><span class="t">                <span class="com"># `effective_parameters` are always carried (never optional).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t799" href="#t799">799</a></span><span class="t">                <span class="nam">raw_decision_id</span> <span class="op">=</span> <span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"decided_by_decision_id"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t800" href="#t800">800</a></span><span class="t">                <span class="key">return</span> <span class="nam">RunAdjusted</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t801" href="#t801">801</a></span><span class="t">                    <span class="nam">run_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"run_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t802" href="#t802">802</a></span><span class="t">                    <span class="nam">parameter_patch</span><span class="op">=</span><span class="nam">payload</span><span class="op">[</span><span class="str">"parameter_patch"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t802" href="#t802">802</a></span><span class="t">                    <span class="nam">parameters_patch</span><span class="op">=</span><span class="nam">payload</span><span class="op">[</span><span class="str">"parameters_patch"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t803" href="#t803">803</a></span><span class="t">                    <span class="nam">effective_parameters</span><span class="op">=</span><span class="nam">payload</span><span class="op">[</span><span class="str">"effective_parameters"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t804" href="#t804">804</a></span><span class="t">                    <span class="nam">reason</span><span class="op">=</span><span class="nam">payload</span><span class="op">[</span><span class="str">"reason"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t805" href="#t805">805</a></span><span class="t">                    <span class="nam">decided_by_decision_id</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -955,7 +955,7 @@
             <a class="nav" href="z_a49960b61b8fc5fb_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
     </div>
 </footer>

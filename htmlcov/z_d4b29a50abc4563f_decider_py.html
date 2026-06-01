@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_d4b29a50abc4563f_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -100,7 +100,7 @@
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">  1. State must not be None -> `RunNotFoundError` (reused from Run BC).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">  2. State.status must be in `_ADJUSTABLE_STATUSES` (RUNNING | HELD)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">     -> `RunCannotAdjustError(run_id, current_status)`.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">  3. `parameter_patch` must be non-empty (len > 0)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">  3. `parameters_patch` must be non-empty (len > 0)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">     -> `InvalidRunAdjustPatchError("must contain at least one change")`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">  4. `reason` length 1-500 chars after trim</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">     -> `InvalidRunAdjustReasonError`.</span>&nbsp;</span><span class="r"></span></p>
@@ -111,7 +111,7 @@
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">     schemaless Methods skip validation here). Delegates to</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">     `parameters_validation.validate_adjusted_parameters_against_method_schema`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">     -> `InvalidRunAdjustSchemaError(detail)` on violation.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">  6. Emit `RunAdjusted(run_id, parameter_patch, effective_parameters=merged,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">  6. Emit `RunAdjusted(run_id, parameters_patch, effective_parameters=merged,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">     reason=trimmed, decided_by_decision_id, occurred_at=now)`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">The merged effective set is emitted on the payload (alongside the</span>&nbsp;</span><span class="r"></span></p>
@@ -178,7 +178,7 @@
     <p class="pln"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t"><span class="str">    Invariants:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t"><span class="str">      - State must not be None -> RunNotFoundError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="str">      - Current status must be Running or Held -> RunCannotAdjustError</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t"><span class="str">      - parameter_patch must be non-empty</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t"><span class="str">      - parameters_patch must be non-empty</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t"><span class="str">        -> InvalidRunAdjustPatchError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="str">      - Reason must be 1-RUN_ADJUST_REASON_MAX_LENGTH chars after</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t"><span class="str">        trim -> InvalidRunAdjustReasonError</span>&nbsp;</span><span class="r"></span></p>
@@ -200,18 +200,18 @@
     <p class="run"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">    <span class="key">if</span> <span class="nam">state</span><span class="op">.</span><span class="nam">status</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">_ADJUSTABLE_STATUSES</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">        <span class="key">raise</span> <span class="nam">RunCannotAdjustError</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">current_status</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">status</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">command</span><span class="op">.</span><span class="nam">parameter_patch</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">command</span><span class="op">.</span><span class="nam">parameters_patch</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">        <span class="key">raise</span> <span class="nam">InvalidRunAdjustPatchError</span><span class="op">(</span><span class="str">"must contain at least one change"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="nam">trimmed_reason</span> <span class="op">=</span> <span class="nam">_validate_reason</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">reason</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="nam">merged</span> <span class="op">=</span> <span class="nam">merge_patch</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">effective_parameters</span><span class="op">,</span> <span class="nam">command</span><span class="op">.</span><span class="nam">parameter_patch</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="nam">merged</span> <span class="op">=</span> <span class="nam">merge_patch</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">effective_parameters</span><span class="op">,</span> <span class="nam">command</span><span class="op">.</span><span class="nam">parameters_patch</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">    <span class="nam">validate_adjusted_parameters_against_method_schema</span><span class="op">(</span><span class="nam">merged</span><span class="op">,</span> <span class="nam">context</span><span class="op">.</span><span class="nam">method_parameters_schema</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="key">return</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">        <span class="nam">RunAdjusted</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">            <span class="nam">run_id</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">            <span class="nam">parameter_patch</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">parameter_patch</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">            <span class="nam">parameters_patch</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">parameters_patch</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">            <span class="nam">effective_parameters</span><span class="op">=</span><span class="nam">merged</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">            <span class="nam">reason</span><span class="op">=</span><span class="nam">trimmed_reason</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t">            <span class="nam">decided_by_decision_id</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">decided_by_decision_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -227,7 +227,7 @@
             <a class="nav" href="z_d4b29a50abc4563f_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
     </div>
 </footer>

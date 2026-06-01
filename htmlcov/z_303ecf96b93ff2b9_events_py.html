@@ -55,8 +55,8 @@
             </div>
         </aside>
         <h2>
-            <span class="text">61 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">61<span class="text"> run</span></button>
+            <span class="text">59 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">59<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">5<span class="text"> excluded</span></button>
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_303ecf96b93ff2b9_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -135,7 +135,7 @@
     <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">    <span class="nam">CautionTarget</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="nam">ProcedureTarget</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">event_payload</span> <span class="key">import</span> <span class="nam">deserialize_or_raise</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">event_payload</span> <span class="key">import</span> <span class="nam">deserialize_or_raise</span><span class="op">,</span> <span class="nam">deserialize_vo_or_raise</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span><span class="op">.</span><span class="nam">event_store</span> <span class="key">import</span> <span class="nam">StoredEvent</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="com"># ---------------------------------------------------------------------------</span>&nbsp;</span><span class="r"></span></p>
@@ -170,19 +170,19 @@
     <p class="pln"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t"><span class="str">    callers don't see leaked low-level exceptions). Mirrors Safety's</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t"><span class="str">    `deserialize_binding` defensive shape.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">    <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">        <span class="nam">kind</span> <span class="op">=</span> <span class="nam">payload</span><span class="op">[</span><span class="str">"kind"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">        <span class="key">match</span> <span class="nam">kind</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">            <span class="key">case</span> <span class="str">"Asset"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">                <span class="key">return</span> <span class="nam">AssetTarget</span><span class="op">(</span><span class="nam">asset_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"id"</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">            <span class="key">case</span> <span class="str">"Procedure"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">                <span class="key">return</span> <span class="nam">ProcedureTarget</span><span class="op">(</span><span class="nam">procedure_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"id"</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">            <span class="key">case</span> <span class="nam">_</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">                <span class="nam">msg</span> <span class="op">=</span> <span class="fst">f"</span><span class="fst">Unknown CautionTarget kind: </span><span class="op">{</span><span class="nam">kind</span><span class="op">!</span><span class="nam">r</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">                <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="key">except</span> <span class="op">(</span><span class="nam">KeyError</span><span class="op">,</span> <span class="nam">TypeError</span><span class="op">,</span> <span class="nam">AttributeError</span><span class="op">)</span> <span class="key">as</span> <span class="nam">exc</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">        <span class="nam">msg</span> <span class="op">=</span> <span class="fst">f"</span><span class="fst">Malformed CautionTarget payload </span><span class="op">{</span><span class="nam">payload</span><span class="op">!</span><span class="nam">r</span><span class="op">}</span><span class="fst">: </span><span class="op">{</span><span class="nam">exc</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span> <span class="key">from</span> <span class="nam">exc</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">    <span class="key">def</span> <span class="nam">_build</span><span class="op">(</span><span class="op">)</span> <span class="op">-></span> <span class="nam">CautionTarget</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">        <span class="nam">kind</span> <span class="op">=</span> <span class="nam">payload</span><span class="op">[</span><span class="str">"kind"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">        <span class="key">match</span> <span class="nam">kind</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">            <span class="key">case</span> <span class="str">"Asset"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">                <span class="key">return</span> <span class="nam">AssetTarget</span><span class="op">(</span><span class="nam">asset_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"id"</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">            <span class="key">case</span> <span class="str">"Procedure"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">                <span class="key">return</span> <span class="nam">ProcedureTarget</span><span class="op">(</span><span class="nam">procedure_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"id"</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">            <span class="key">case</span> <span class="nam">_</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">                <span class="nam">msg</span> <span class="op">=</span> <span class="fst">f"</span><span class="fst">Unknown CautionTarget kind: </span><span class="op">{</span><span class="nam">kind</span><span class="op">!</span><span class="nam">r</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">                <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">    <span class="key">return</span> <span class="nam">deserialize_vo_or_raise</span><span class="op">(</span><span class="str">"CautionTarget"</span><span class="op">,</span> <span class="nam">_build</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t"><span class="com"># ---------------------------------------------------------------------------</span>&nbsp;</span><span class="r"></span></p>
@@ -426,7 +426,7 @@
             <a class="nav" href="z_303ecf96b93ff2b9_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
     </div>
 </footer>

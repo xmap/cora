@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_ffca527979e30870_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -115,10 +115,10 @@
     <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">  - direction must mirror type(command.terms): OUTBOUND with</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">    OutboundTerms, INBOUND with InboundTerms</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">    -> InvalidPermitScopeError</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="str">  - When terms is OutboundTerms: scope_set non-empty; read_scope</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="str">  - When terms is OutboundTerms: scopes non-empty; read_scope</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">    and onward_action_scope not None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">    -> PermitScopeCollapseError for the read / onward collapse</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">    matrix; InvalidPermitScopeError for empty scope_set.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">    matrix; InvalidPermitScopeError for empty scope set.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="str">Initial status is implicit `Defined` (event type IS the state-change</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t"><span class="str">indicator; the genesis evolver hardcodes the mapping).</span>&nbsp;</span><span class="r"></span></p>
@@ -166,7 +166,7 @@
     <p class="pln"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="str">        non-empty after trim -> InvalidPermitScopeError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="str">      - direction must mirror type(terms) (OUTBOUND with OutboundTerms,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t"><span class="str">        INBOUND with InboundTerms) -> InvalidPermitScopeError</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="str">      - OutboundTerms.scope_set must be non-empty</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="str">      - OutboundTerms.scopes must be non-empty</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t"><span class="str">        -> InvalidPermitScopeError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t"><span class="str">      - OutboundTerms read_scope=ListMetadataOnly with</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t"><span class="str">        onward_action_scope=MayExportOffPlatform collapses the matrix</span>&nbsp;</span><span class="r"></span></p>
@@ -237,8 +237,8 @@
     <p class="pln"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="key">def</span> <span class="nam">_validate_outbound_terms</span><span class="op">(</span><span class="nam">terms</span><span class="op">:</span> <span class="nam">OutboundTerms</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">terms</span><span class="op">.</span><span class="nam">scope_set</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">        <span class="key">raise</span> <span class="nam">InvalidPermitScopeError</span><span class="op">(</span><span class="str">"OutboundTerms.scope_set must be non-empty"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">terms</span><span class="op">.</span><span class="nam">scopes</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">        <span class="key">raise</span> <span class="nam">InvalidPermitScopeError</span><span class="op">(</span><span class="str">"OutboundTerms.scopes must be non-empty"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">    <span class="key">if</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">        <span class="nam">terms</span><span class="op">.</span><span class="nam">read_scope</span> <span class="key">is</span> <span class="nam">ReadScope</span><span class="op">.</span><span class="nam">LIST_METADATA_ONLY</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">        <span class="key">and</span> <span class="nam">terms</span><span class="op">.</span><span class="nam">onward_action_scope</span> <span class="key">is</span> <span class="nam">OnwardActionScope</span><span class="op">.</span><span class="nam">MAY_EXPORT_OFF_PLATFORM</span>&nbsp;</span><span class="r"></span></p>
@@ -259,7 +259,7 @@
             <a class="nav" href="z_ffca527979e30870_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 10:36 +0000
+            created at 2026-06-01 14:17 +0000
         </p>
     </div>
 </footer>
