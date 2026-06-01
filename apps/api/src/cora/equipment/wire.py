@@ -35,6 +35,7 @@ from cora.equipment.features import (
     activate_asset,
     add_asset_family,
     add_asset_port,
+    add_model_family,
     decommission_asset,
     decommission_frame,
     decommission_mount,
@@ -90,6 +91,7 @@ class EquipmentHandlers:
     define_model: define_model.IdempotentHandler
     version_model: version_model.Handler
     deprecate_model: deprecate_model.Handler
+    add_model_family: add_model_family.Handler
     get_family: get_family.Handler
     version_family: version_family.Handler
     deprecate_family: deprecate_family.Handler
@@ -159,6 +161,11 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
         deprecate_model=with_tracing(
             deprecate_model.bind(deps),
             command_name="DeprecateModel",
+            bc=_BC,
+        ),
+        add_model_family=with_tracing(
+            add_model_family.bind(deps),
+            command_name="AddModelFamily",
             bc=_BC,
         ),
         get_family=with_tracing(

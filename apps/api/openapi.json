@@ -274,6 +274,22 @@
         "title": "AddAssetPortRequest",
         "type": "object"
       },
+      "AddModelFamilyRequest": {
+        "description": "Body for `POST /models/{model_id}/families`.",
+        "properties": {
+          "family_id": {
+            "description": "Family id to add to the Model.declared_families set.",
+            "format": "uuid",
+            "title": "Family Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "family_id"
+        ],
+        "title": "AddModelFamilyRequest",
+        "type": "object"
+      },
       "AddPlanWireRequest": {
         "description": "Body for `POST /plans/{plan_id}/add-wire`.\n\nAll four fields are required. Pydantic enforces non-empty port\nnames at the boundary; the `Wire` VO then trims and re-validates\nlength within the decider. Direction + signal_type validation\nhappens in the decider against the loaded Asset.ports.",
         "properties": {
@@ -23494,6 +23510,106 @@
           }
         },
         "summary": "Mark an existing Model as deprecated",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/models/{model_id}/families": {
+      "post": {
+        "operationId": "post_models_add_family_models__model_id__families_post",
+        "parameters": [
+          {
+            "description": "Target model's id.",
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "description": "Target model's id.",
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddModelFamilyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No model exists with the given id, OR the supplied family_id does not resolve to a registered Family."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Model is in `Deprecated` status (mutation requires `Defined` or `Versioned`), OR the family_id is already in the Model's declared_families set, OR a concurrent write to the same model stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Add a Family to an existing Model's declared_families set",
         "tags": [
           "equipment"
         ]

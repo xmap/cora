@@ -16,6 +16,7 @@ from cora.equipment.features.add_asset_family import (
     tool as add_asset_family_tool,
 )
 from cora.equipment.features.add_asset_port import tool as add_asset_port_tool
+from cora.equipment.features.add_model_family import tool as add_model_family_tool
 from cora.equipment.features.decommission_asset import tool as decommission_asset_tool
 from cora.equipment.features.decommission_frame import tool as decommission_frame_tool
 from cora.equipment.features.decommission_mount import tool as decommission_mount_tool
@@ -83,6 +84,10 @@ def register_equipment_tools(
     deprecate_model_tool.register(
         mcp,
         get_handler=lambda: get_handlers().deprecate_model,
+    )
+    add_model_family_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().add_model_family,
     )
     get_family_tool.register(
         mcp,
