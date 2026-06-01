@@ -173,10 +173,6 @@ EXEMPT_FROM_MCP_CONTRACT: frozenset[str] = frozenset(
 
 EXEMPT_FROM_HANDLER_UNIT: frozenset[str] = frozenset(
     {
-        # First per-BC publish slice canary: handler + unit test land
-        # in the follow-up commit per the planning workflow's
-        # 3d1 -> 3d2 -> 3d3 split.
-        "cora.calibration.features.publish_revision",
         # --- TODO: real gaps to fill -----------------------------------
         # Query handlers compose the `list_query` factory and a thin
         # adapter call — they're covered transitively by integration

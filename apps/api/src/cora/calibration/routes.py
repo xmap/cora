@@ -46,6 +46,7 @@ from cora.calibration.features import (
     define_calibration,
     get_calibration,
     list_calibrations,
+    publish_revision,
 )
 
 
@@ -113,6 +114,7 @@ def register_calibration_routes(app: FastAPI) -> None:
     """Attach Calibration slice routers and exception handlers to the FastAPI app."""
     app.include_router(define_calibration.router)
     app.include_router(append_calibration_revision.router)
+    app.include_router(publish_revision.router)
     app.include_router(get_calibration.router)
     app.include_router(list_calibrations.router)
     for validation_cls in (

@@ -17,6 +17,7 @@ from cora.calibration.features.append_calibration_revision import (
 from cora.calibration.features.define_calibration import tool as define_calibration_tool
 from cora.calibration.features.get_calibration import tool as get_calibration_tool
 from cora.calibration.features.list_calibrations import tool as list_calibrations_tool
+from cora.calibration.features.publish_revision import tool as publish_revision_tool
 from cora.calibration.wire import CalibrationHandlers
 
 
@@ -33,6 +34,10 @@ def register_calibration_tools(
     append_calibration_revision_tool.register(
         mcp,
         get_handler=lambda: get_handlers().append_calibration_revision,
+    )
+    publish_revision_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().publish_revision,
     )
     get_calibration_tool.register(
         mcp,

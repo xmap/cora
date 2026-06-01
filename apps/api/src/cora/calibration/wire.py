@@ -34,6 +34,7 @@ from cora.calibration.features import (
     define_calibration,
     get_calibration,
     list_calibrations,
+    publish_revision,
 )
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
@@ -48,6 +49,7 @@ class CalibrationHandlers:
 
     define_calibration: define_calibration.IdempotentHandler
     append_calibration_revision: append_calibration_revision.IdempotentHandler
+    publish_revision: publish_revision.IdempotentHandler
     get_calibration: get_calibration.Handler
     list_calibrations: list_calibrations.Handler
 
@@ -77,6 +79,18 @@ def wire_calibration(deps: Kernel) -> CalibrationHandlers:
                 lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
             ),
             command_name="AppendCalibrationRevision",
+            bc=_BC,
+        ),
+        publish_revision=with_tracing(
+            with_idempotency(
+                publish_revision.bind(deps),
+                deps.idempotency_store,
+                command_name="PublishCalibrationRevision",
+                serialize_result=str,
+                deserialize_result=UUID,
+                lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
+            ),
+            command_name="PublishCalibrationRevision",
             bc=_BC,
         ),
         get_calibration=with_tracing(

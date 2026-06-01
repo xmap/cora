@@ -7384,6 +7384,36 @@
         "title": "PromoteDatasetRequest",
         "type": "object"
       },
+      "PublishCalibrationRevisionRequest": {
+        "description": "Body for `POST /calibrations/{id}/revisions/{revision_id}/publish`.",
+        "properties": {
+          "peer_facility_id": {
+            "description": "Opaque id of the peer facility this publication is targeted at. Resolved at the handler via PermitLookup to locate the matching Active outbound Permit; missing or inactive permits raise 409.",
+            "title": "Peer Facility Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "peer_facility_id"
+        ],
+        "title": "PublishCalibrationRevisionRequest",
+        "type": "object"
+      },
+      "PublishCalibrationRevisionResponse": {
+        "description": "Response body for the publish action.",
+        "properties": {
+          "receipt_id": {
+            "format": "uuid",
+            "title": "Receipt Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "receipt_id"
+        ],
+        "title": "PublishCalibrationRevisionResponse",
+        "type": "object"
+      },
       "RateDecisionRequest": {
         "description": "Body for `POST /decisions/{decision_id}/ratings`.",
         "properties": {
@@ -15685,6 +15715,138 @@
           }
         },
         "summary": "Append a new revision to an existing Calibration",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
+    "/calibrations/{calibration_id}/revisions/{revision_id}/publish": {
+      "post": {
+        "operationId": "post_publish_calibration_revision_calibrations__calibration_id__revisions__revision_id__publish_post",
+        "parameters": [
+          {
+            "description": "Target calibration's id.",
+            "in": "path",
+            "name": "calibration_id",
+            "required": true,
+            "schema": {
+              "description": "Target calibration's id.",
+              "format": "uuid",
+              "title": "Calibration Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Revision on that calibration to publish.",
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "description": "Revision on that calibration to publish.",
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishCalibrationRevisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishCalibrationRevisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the publish command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No calibration or no revision exists with the given ids."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Publish-time FSM rejection: revision lacks content_hash, or no Active outbound Permit authorizes publishing this artifact to the peer."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish an existing Calibration revision to a peer facility",
         "tags": [
           "calibration"
         ]

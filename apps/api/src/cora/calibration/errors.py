@@ -20,3 +20,21 @@ class UnauthorizedError(Exception):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
+
+
+class PublishPortNotWiredError(RuntimeError):
+    """The publish-time Kernel deps (publish_port + signature_port + permit_lookup)
+    are not all wired.
+
+    Raised by the publish_revision handler's bind() at startup so a
+    misconfigured deployment surfaces immediately instead of failing
+    silently mid-request. BC-application-layer error (lives here, not
+    on the aggregate kernel) because the failure mode is wiring, not
+    a domain invariant.
+    """
+
+    def __init__(self, missing: tuple[str, ...]) -> None:
+        super().__init__(
+            f"publish_revision handler requires Kernel deps {missing!r} to be non-None"
+        )
+        self.missing = missing
