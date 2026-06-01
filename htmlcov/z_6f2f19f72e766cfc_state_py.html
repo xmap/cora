@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_6f2f19f72e766cfc_wires_validation_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 22:16 +0000
+            created at 2026-06-01 07:26 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -135,7 +135,7 @@
     <p class="pln"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="str">  - Method not Deprecated &#8594; `MethodDeprecatedError`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t"><span class="str">  - No bound Asset is Decommissioned &#8594; `AssetDecommissionedError`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t"><span class="str">  - `union(asset.families) &#8839; method.needed_families` &#8594;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">    `PlanCapabilitiesNotSatisfiedError`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">    `PlanFamiliesNotSatisfiedError`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="str">Handler-side load misses become `PracticeNotFoundError` /</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="str">`MethodNotFoundError` / `AssetNotFoundError` (defined on the</span>&nbsp;</span><span class="r"></span></p>
@@ -360,7 +360,7 @@
     <p class="run"><span class="n"><a id="t276" href="#t276">276</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">value</span> <span class="op">=</span> <span class="nam">value</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t277" href="#t277">277</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t278" href="#t278">278</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t279" href="#t279">279</a></span><span class="t"><span class="key">class</span> <span class="nam">PlanCapabilitiesNotSatisfiedError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t279" href="#t279">279</a></span><span class="t"><span class="key">class</span> <span class="nam">PlanFamiliesNotSatisfiedError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t280" href="#t280">280</a></span><span class="t">    <span class="str">"""The bound Assets' families don't cover the Method's needs.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t281" href="#t281">281</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t282" href="#t282">282</a></span><span class="t"><span class="str">    Carries the missing family ids &#8212; those required by the</span>&nbsp;</span><span class="r"></span></p>
@@ -388,7 +388,7 @@
     <p class="pln"><span class="n"><a id="t304" href="#t304">304</a></span><span class="t"><span class="str">    Method.capability.required_affordances contract.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t305" href="#t305">305</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t"><span class="str">    Cross-BC affordance-cover guard. Layered on top of the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t"><span class="str">    family-id check (PlanCapabilitiesNotSatisfiedError): even when</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t"><span class="str">    family-id check (PlanFamiliesNotSatisfiedError): even when</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t"><span class="str">    every needed Family is present, the union of those Families'</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t309" href="#t309">309</a></span><span class="t"><span class="str">    `affordances` must still cover the bound Method's</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t310" href="#t310">310</a></span><span class="t"><span class="str">    `capability.required_affordances` contract. Mapped to HTTP 409</span>&nbsp;</span><span class="r"></span></p>
@@ -828,7 +828,7 @@
             <a class="nav" href="z_6f2f19f72e766cfc_wires_validation_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 22:16 +0000
+            created at 2026-06-01 07:26 +0000
         </p>
     </div>
 </footer>

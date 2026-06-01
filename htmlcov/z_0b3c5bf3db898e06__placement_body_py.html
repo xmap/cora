@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_0b3c5bf3db898e06__projections_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 22:16 +0000
+            created at 2026-06-01 07:26 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -141,11 +141,11 @@
     <p class="exc show_exc"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">    <span class="nam">rx</span><span class="op">:</span> <span class="nam">float</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span><span class="op">...</span><span class="op">,</span> <span class="nam">description</span><span class="op">=</span><span class="str">"Rotation around x (rad in SI_mm_rad)."</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">    <span class="nam">ry</span><span class="op">:</span> <span class="nam">float</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span><span class="op">...</span><span class="op">,</span> <span class="nam">description</span><span class="op">=</span><span class="str">"Rotation around y."</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">    <span class="nam">rz</span><span class="op">:</span> <span class="nam">float</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span><span class="op">...</span><span class="op">,</span> <span class="nam">description</span><span class="op">=</span><span class="str">"Rotation around z."</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">    <span class="nam">parent_frame</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">    <span class="nam">parent_frame_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">        <span class="op">...</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">            <span class="str">"The Frame whose origin these coordinates are measured "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">            <span class="str">"against. For a child Frame's placement_relative_to_parent, "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">            <span class="str">"against. For a child Frame's placement, "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">            <span class="str">"this MUST equal the owning Frame's parent_frame_id."</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -179,7 +179,7 @@
     <p class="mis mis2 show_mis"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">            <span class="nam">rx</span><span class="op">=</span><span class="nam">self</span><span class="op">.</span><span class="nam">rx</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">            <span class="nam">ry</span><span class="op">=</span><span class="nam">self</span><span class="op">.</span><span class="nam">ry</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">            <span class="nam">rz</span><span class="op">=</span><span class="nam">self</span><span class="op">.</span><span class="nam">rz</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">            <span class="nam">parent_frame</span><span class="op">=</span><span class="nam">self</span><span class="op">.</span><span class="nam">parent_frame</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">            <span class="nam">parent_frame_id</span><span class="op">=</span><span class="nam">self</span><span class="op">.</span><span class="nam">parent_frame_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">            <span class="nam">reference_surface</span><span class="op">=</span><span class="nam">self</span><span class="op">.</span><span class="nam">reference_surface</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">            <span class="nam">tol_x</span><span class="op">=</span><span class="nam">self</span><span class="op">.</span><span class="nam">tol_x</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">            <span class="nam">tol_y</span><span class="op">=</span><span class="nam">self</span><span class="op">.</span><span class="nam">tol_y</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -201,7 +201,7 @@
             <a class="nav" href="z_0b3c5bf3db898e06__projections_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 22:16 +0000
+            created at 2026-06-01 07:26 +0000
         </p>
     </div>
 </footer>

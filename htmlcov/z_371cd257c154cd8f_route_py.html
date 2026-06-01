@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_371cd257c154cd8f_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 22:16 +0000
+            created at 2026-06-01 07:26 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -117,7 +117,7 @@
     <p class="exc show_exc"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">    <span class="nam">asset_ids</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span><span class="op">...</span><span class="op">,</span> <span class="nam">min_length</span><span class="op">=</span><span class="num">1</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="key">class</span> <span class="nam">WiredAssetBindingItem</span><span class="op">(</span><span class="nam">BaseModel</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="key">class</span> <span class="nam">WiredAssetItem</span><span class="op">(</span><span class="nam">BaseModel</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="str">"""Per-wired-Asset binding contribution on the wire.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="str">    `family_ids` and `contributed_affordances` are sorted for</span>&nbsp;</span><span class="r"></span></p>
@@ -136,7 +136,7 @@
     <p class="pln"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="str">"""Per-Asset candidate for a missing affordance on the wire.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">    `contributing_family_ids` is deliberately named to differ from</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="str">    `WiredAssetBindingItem.family_ids`: it lists ONLY the candidate's</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="str">    `WiredAssetItem.family_ids`: it lists ONLY the candidate's</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="str">    Families that declare the parent missing affordance, not the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="str">    candidate's full Family set. Other state (condition, lifecycle)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t"><span class="str">    is unfiltered so the operator can see Faulted / Decommissioned</span>&nbsp;</span><span class="r"></span></p>
@@ -152,7 +152,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">            <span class="str">"Subset of the candidate's Families that declare the parent "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">            <span class="str">"missing affordance, NOT the candidate's full Family set. "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">            <span class="str">"Naming distinguishes this from WiredAssetBindingItem.family_ids "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">            <span class="str">"Naming distinguishes this from WiredAssetItem.family_ids "</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">            <span class="str">"(the full set) so SDK consumers don't naively union the two."</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -191,7 +191,7 @@
     <p class="pln"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">    <span class="nam">capability_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">    <span class="nam">method_needed_families</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">    <span class="nam">capability_required_affordances</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">str</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="nam">wired_assets</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">WiredAssetBindingItem</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="nam">wired_assets</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">WiredAssetItem</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">    <span class="nam">missing_families</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">    <span class="nam">missing_affordances</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">str</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">    <span class="nam">missing_affordance_candidates</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">MissingAffordanceCandidatesItem</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
@@ -246,7 +246,7 @@
     <p class="run run2"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t">            <span class="nam">a</span><span class="op">.</span><span class="nam">value</span> <span class="key">for</span> <span class="nam">a</span> <span class="key">in</span> <span class="nam">view</span><span class="op">.</span><span class="nam">capability_required_affordances</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t164" href="#t164">164</a></span><span class="t">        <span class="nam">wired_assets</span><span class="op">=</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t165" href="#t165">165</a></span><span class="t">            <span class="nam">WiredAssetBindingItem</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t165" href="#t165">165</a></span><span class="t">            <span class="nam">WiredAssetItem</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">                <span class="nam">asset_id</span><span class="op">=</span><span class="nam">item</span><span class="op">.</span><span class="nam">asset_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t167" href="#t167">167</a></span><span class="t">                <span class="nam">asset_name</span><span class="op">=</span><span class="nam">item</span><span class="op">.</span><span class="nam">asset_name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t168" href="#t168">168</a></span><span class="t">                <span class="nam">condition</span><span class="op">=</span><span class="nam">item</span><span class="op">.</span><span class="nam">condition</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -285,7 +285,7 @@
             <a class="nav" href="z_371cd257c154cd8f_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 22:16 +0000
+            created at 2026-06-01 07:26 +0000
         </p>
     </div>
 </footer>

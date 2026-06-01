@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f1ac8c6ddb1dc2b2_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 22:16 +0000
+            created at 2026-06-01 07:26 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -158,8 +158,8 @@
     <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">            <span class="nam">capabilities</span><span class="op">=</span><span class="nam">capabilities</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">            <span class="nam">occurred_at</span><span class="op">=</span><span class="nam">_</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">            <span class="nam">tools</span><span class="op">=</span><span class="nam">tools</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">            <span class="nam">budget_monthly_usd_cap</span><span class="op">=</span><span class="nam">budget_monthly_usd_cap</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">            <span class="nam">budget_daily_token_cap</span><span class="op">=</span><span class="nam">budget_daily_token_cap</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">            <span class="nam">monthly_usd_cap</span><span class="op">=</span><span class="nam">monthly_usd_cap</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">            <span class="nam">daily_token_cap</span><span class="op">=</span><span class="nam">daily_token_cap</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">        <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">            <span class="nam">_</span> <span class="op">=</span> <span class="nam">state</span>  <span class="com"># AgentDefined is the genesis event; prior state ignored</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">            <span class="com"># Path C: `defined_at` no longer on state &#8212; folded into</span>&nbsp;</span><span class="r"></span></p>
@@ -178,7 +178,7 @@
     <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">                <span class="nam">capabilities</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">AgentCapability</span><span class="op">(</span><span class="nam">c</span><span class="op">)</span> <span class="key">for</span> <span class="nam">c</span> <span class="key">in</span> <span class="nam">capabilities</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">                <span class="nam">status</span><span class="op">=</span><span class="nam">AgentStatus</span><span class="op">.</span><span class="nam">DEFINED</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">                <span class="nam">tools</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">ToolName</span><span class="op">(</span><span class="nam">t</span><span class="op">)</span> <span class="key">for</span> <span class="nam">t</span> <span class="key">in</span> <span class="nam">tools</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">                <span class="nam">budget</span><span class="op">=</span><span class="nam">_decode_budget</span><span class="op">(</span><span class="nam">budget_monthly_usd_cap</span><span class="op">,</span> <span class="nam">budget_daily_token_cap</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">                <span class="nam">budget</span><span class="op">=</span><span class="nam">_decode_budget</span><span class="op">(</span><span class="nam">monthly_usd_cap</span><span class="op">,</span> <span class="nam">daily_token_cap</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">        <span class="key">case</span> <span class="nam">AgentVersioned</span><span class="op">(</span><span class="nam">occurred_at</span><span class="op">=</span><span class="nam">_</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">            <span class="nam">prior</span> <span class="op">=</span> <span class="nam">require_state</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="str">"AgentVersioned"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -375,7 +375,7 @@
             <a class="nav" href="z_f1ac8c6ddb1dc2b2_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-05-31 22:16 +0000
+            created at 2026-06-01 07:26 +0000
         </p>
     </div>
 </footer>
