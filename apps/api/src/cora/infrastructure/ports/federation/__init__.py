@@ -29,6 +29,10 @@ from cora.infrastructure.ports.federation.errors import (
     FederationSignerUntrustedError,
     NoAdapterForFacilityError,
 )
+from cora.infrastructure.ports.federation.permit_lookup import (
+    PermitLookup,
+    PermitLookupResult,
+)
 from cora.infrastructure.ports.federation.publish_port import PublishPort
 from cora.infrastructure.ports.federation.pull_port import PullPort
 from cora.infrastructure.ports.federation.signature_port import SignaturePort
@@ -83,6 +87,8 @@ __all__ = [
     "FederationTrustContext",
     "FetchProvenance",
     "NoAdapterForFacilityError",
+    "PermitLookup",
+    "PermitLookupResult",
     "PublicationStatus",
     "PublishPort",
     "PublishReceipt",

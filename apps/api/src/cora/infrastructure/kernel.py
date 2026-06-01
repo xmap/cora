@@ -54,6 +54,11 @@ from cora.infrastructure.ports import (
     SupplyLookup,
     TokenVerifier,
 )
+from cora.infrastructure.ports.federation import (
+    PermitLookup,
+    PublishPort,
+    SignaturePort,
+)
 
 
 @dataclass(frozen=True)
@@ -180,6 +185,9 @@ class Kernel:
     logbook_mirror: LogbookMirror | None = None
     token_verifier: TokenVerifier | None = None
     signer: Signer | None = None
+    publish_port: PublishPort | None = None
+    signature_port: SignaturePort | None = None
+    permit_lookup: PermitLookup | None = None
 
 
 Teardown = Callable[[], Awaitable[None]]
