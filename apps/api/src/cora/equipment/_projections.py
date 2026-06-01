@@ -15,6 +15,7 @@ from cora.equipment.projections import (
     FrameChildrenProjection,
     FrameConsumersProjection,
     FrameSummaryProjection,
+    ModelSummaryProjection,
     MountChildrenProjection,
     MountLookupProjection,
     MountSummaryProjection,
@@ -32,6 +33,7 @@ def register_equipment_projections(
     registry.register(AssetSummaryProjection())
     registry.register(AssetFamilyMembershipProjection())
     registry.register(FamilySummaryProjection())
+    registry.register(ModelSummaryProjection())
     registry.register(FrameSummaryProjection())
     registry.register(FrameChildrenProjection())
     registry.register(FrameConsumersProjection())

@@ -37,6 +37,7 @@ from cora.equipment.features.get_asset_integration_view import (
     tool as get_asset_integration_view_tool,
 )
 from cora.equipment.features.get_family import tool as get_family_tool
+from cora.equipment.features.get_model import tool as get_model_tool
 from cora.equipment.features.install_asset import tool as install_asset_tool
 from cora.equipment.features.list_assets import tool as list_assets_tool
 from cora.equipment.features.list_families import tool as list_families_tool
@@ -97,6 +98,10 @@ def register_equipment_tools(
     get_family_tool.register(
         mcp,
         get_handler=lambda: get_handlers().get_family,
+    )
+    get_model_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().get_model,
     )
     version_family_tool.register(
         mcp,

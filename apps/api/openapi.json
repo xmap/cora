@@ -5654,6 +5654,44 @@
         "title": "ManufacturerIdentifierType",
         "type": "string"
       },
+      "ManufacturerResponse": {
+        "description": "Nested DTO for a model's manufacturer.\n\n`name` is required; `identifier` and `identifier_type` are both\nset or both null (pairing invariant enforced by the domain VO).\n`identifier_type` is the closed-StrEnum scheme string value\n(ROR / GRID / ISNI) when present.",
+        "properties": {
+          "identifier": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier"
+          },
+          "identifier_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier Type"
+          },
+          "name": {
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ManufacturerResponse",
+        "type": "object"
+      },
       "MarkSupplyAvailableRequest": {
         "description": "Body for `POST /supplies/{supply_id}/mark-available`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb)\nexplaining the first-observation declaration. Examples:\n\"operator walkdown confirms LN2 dewar pressure nominal\", \"control\nroom reports beam delivered after morning startup\", \"first-time\ncommissioning verified by ops\".",
         "properties": {
@@ -5967,6 +6005,63 @@
           "model"
         ],
         "title": "ModelRefResponse",
+        "type": "object"
+      },
+      "ModelResponse": {
+        "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. Decouples the wire format\nfrom the domain model so the two can evolve independently.\n`status` is the StrEnum's string value (Defined / Versioned /\nDeprecated). `version_tag` is the operator-supplied label of the\nmost recent version_model call (null until first version).\n`declared_families` serializes as a sorted list of Family UUIDs\n(frozenset semantics in domain state, list at the JSON boundary;\nsorted by UUID string form for response determinism).",
+        "properties": {
+          "declared_families": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Declared Families",
+            "type": "array"
+          },
+          "manufacturer": {
+            "$ref": "#/components/schemas/ManufacturerResponse"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "part_number": {
+            "maxLength": 100,
+            "title": "Part Number",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Tag"
+          }
+        },
+        "required": [
+          "model_id",
+          "name",
+          "manufacturer",
+          "part_number",
+          "declared_families",
+          "status",
+          "version_tag"
+        ],
+        "title": "ModelResponse",
         "type": "object"
       },
       "MountSubjectRequest": {
@@ -23410,6 +23505,83 @@
           }
         },
         "summary": "Define a new vendor-catalog Model",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/models/{model_id}": {
+      "get": {
+        "operationId": "get_models_models__model_id__get",
+        "parameters": [
+          {
+            "description": "Target model's id.",
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "description": "Target model's id.",
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the query."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No model exists with the given id."
+          },
+          "422": {
+            "description": "Path parameter failed schema validation."
+          }
+        },
+        "summary": "Get a model by id",
         "tags": [
           "equipment"
         ]
