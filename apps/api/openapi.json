@@ -4666,6 +4666,23 @@
         "title": "DeprecateCapabilityRequest",
         "type": "object"
       },
+      "DeprecateModelRequest": {
+        "description": "Body for `POST /models/{model_id}/deprecation`.\n\n`reason` is operator free text recording why the catalog entry is\nbeing retired (for example \"superseded by part RV120CCHL\", \"vendor\nEOL 2026\"). Trimmed and length-validated at the\n`ModelDeprecationReason` VO; whitespace-only is rejected as a\ndomain invariant violation (400).",
+        "properties": {
+          "reason": {
+            "description": "Operator-supplied rationale for retiring this Model (for example 'superseded by RV120CCHL', 'vendor EOL 2026'). Free text; trimmed server-side.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DeprecateModelRequest",
+        "type": "object"
+      },
       "DeregisterSupplyRequest": {
         "description": "Body for `POST /supplies/{supply_id}/deregister`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb)\nexplaining why the supply is being deregistered. Examples:\n\"typo on scope at registration; re-registering correctly\",\n\"beamline retired\", \"duplicate of supply <id>\".",
         "properties": {
@@ -23377,6 +23394,106 @@
           }
         },
         "summary": "Define a new vendor-catalog Model",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/models/{model_id}/deprecation": {
+      "post": {
+        "operationId": "post_models_deprecation_models__model_id__deprecation_post",
+        "parameters": [
+          {
+            "description": "Target model's id.",
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "description": "Target model's id.",
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeprecateModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (for example whitespace-only reason after trimming)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No model exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Model is already in `Deprecated` status (deprecate requires `Defined` or `Versioned`), OR a concurrent write to the same model stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Mark an existing Model as deprecated",
         "tags": [
           "equipment"
         ]

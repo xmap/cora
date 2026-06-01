@@ -119,6 +119,7 @@ from cora.equipment.features import (
     define_model,
     degrade_asset,
     deprecate_family,
+    deprecate_model,
     enter_maintenance,
     exit_maintenance,
     fault_asset,
@@ -212,6 +213,7 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(define_family.router)
     app.include_router(define_model.router)
     app.include_router(version_model.router)
+    app.include_router(deprecate_model.router)
     app.include_router(get_family.router)
     app.include_router(version_family.router)
     app.include_router(deprecate_family.router)
