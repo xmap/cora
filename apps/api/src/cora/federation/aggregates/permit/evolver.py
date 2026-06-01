@@ -25,6 +25,7 @@ from cora.federation.aggregates.permit.events import (
     PermitResumed,
     PermitRevoked,
     PermitSuspended,
+    PublicationReceiptRecorded,
 )
 from cora.federation.aggregates.permit.state import Permit, PermitStatus
 from cora.infrastructure.evolver import require_state
@@ -70,6 +71,9 @@ def evolve(state: Permit | None, event: PermitEvent) -> Permit:
         case PermitRevoked():
             prior = require_state(state, "PermitRevoked")
             return _replace_status(prior, PermitStatus.REVOKED)
+        case PublicationReceiptRecorded():
+            prior = require_state(state, "PublicationReceiptRecorded")
+            return prior
         case _:  # pragma: no cover
             assert_never(event)
 

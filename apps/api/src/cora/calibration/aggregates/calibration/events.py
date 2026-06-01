@@ -214,8 +214,64 @@ class CalibrationRevisionAppended:
     content_hash: str | None = None
 
 
+@dataclass(frozen=True)
+class CalibrationRevisionPublished:
+    """A revision was published to the federation surface under an outbound permit.
+
+    Cross-BC iter-b federation event. Records the publication action
+    on the Calibration stream; the matching `PublicationReceiptRecorded`
+    on the Permit stream (Federation BC) lands atomically via the
+    handler's `EventStore.append_streams` call per cross-BC append-
+    streams discipline.
+
+    Per [[project_federation_port_design]]:
+      - `signature_envelope_kind` is the SignatureEnvelope union
+        discriminator at port-tier; one of "dsse_static_jwks",
+        "dsse_sigstore_keyless", "cose_sign1_scitt" today.
+      - `signing_version` is the signing-recipe identifier per
+        [[project_canonicalization_port_design]] (the v1 default
+        is "cora/v1"); the verifier dispatches to the matching
+        SigningPort adapter via the SigningRegistry.
+      - `signature_bytes_hex` is the raw signature bytes encoded as
+        hex string for jsonb storage; the verifier decodes with
+        `bytes.fromhex(...)`.
+      - `signature_kid` is the adapter-specific key identifier.
+      - `receipt_id` is the UUID minted by the PublishPort adapter
+        (the cross-BC `PublicationReceiptRecorded` on the Permit
+        stream carries the same receipt_id for join purposes).
+      - `published_by_actor_id` is the envelope `principal_id` of
+        the publish-slice caller (for human-initiated publish);
+        AI agent publication goes through `promote_*_publication`
+        per the propose-then-promote pattern, and the handler
+        resolves the human promoter's actor_id.
+      - `publication_status` is the FSM position at publish time;
+        "Live" today. Yanked / Withdrawn transitions land in a
+        follow-up iteration.
+
+    State-folding posture (Stage 3d2 canary): the evolver records
+    this event as a no-op fold on Calibration state today; the
+    publication block on `CalibrationRevision` is deferred to
+    Stage 3d3 alongside the projection write-path. The event is
+    the source of truth; aggregate read-back of publication
+    metadata lands when the projection materializes.
+    """
+
+    calibration_id: UUID
+    revision_id: UUID
+    outbound_permit_id: UUID
+    signature_envelope_kind: str
+    signing_version: str
+    signature_bytes_hex: str
+    signature_kid: str
+    receipt_id: UUID
+    published_at: datetime
+    published_by_actor_id: UUID
+    publication_status: str
+    occurred_at: datetime
+
+
 # Discriminated union of every event the Calibration aggregate emits.
-CalibrationEvent = CalibrationDefined | CalibrationRevisionAppended
+CalibrationEvent = CalibrationDefined | CalibrationRevisionAppended | CalibrationRevisionPublished
 
 
 def event_type_name(event: CalibrationEvent) -> str:
@@ -289,6 +345,34 @@ def to_payload(event: CalibrationEvent) -> dict[str, Any]:
             if content_hash is not None:
                 payload["content_hash"] = content_hash
             return payload
+        case CalibrationRevisionPublished(
+            calibration_id=calibration_id,
+            revision_id=revision_id,
+            outbound_permit_id=outbound_permit_id,
+            signature_envelope_kind=signature_envelope_kind,
+            signing_version=signing_version,
+            signature_bytes_hex=signature_bytes_hex,
+            signature_kid=signature_kid,
+            receipt_id=receipt_id,
+            published_at=published_at,
+            published_by_actor_id=published_by_actor_id,
+            publication_status=publication_status,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "calibration_id": str(calibration_id),
+                "revision_id": str(revision_id),
+                "outbound_permit_id": str(outbound_permit_id),
+                "signature_envelope_kind": signature_envelope_kind,
+                "signing_version": signing_version,
+                "signature_bytes_hex": signature_bytes_hex,
+                "signature_kid": signature_kid,
+                "receipt_id": str(receipt_id),
+                "published_at": published_at.isoformat(),
+                "published_by_actor_id": str(published_by_actor_id),
+                "publication_status": publication_status,
+                "occurred_at": occurred_at.isoformat(),
+            }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 
@@ -346,6 +430,29 @@ def from_stored(stored: StoredEvent) -> CalibrationEvent:
                 _build_revision_appended,
                 extra=(ValueError,),
             )
+        case "CalibrationRevisionPublished":
+
+            def _build_revision_published() -> CalibrationRevisionPublished:
+                return CalibrationRevisionPublished(
+                    calibration_id=UUID(payload["calibration_id"]),
+                    revision_id=UUID(payload["revision_id"]),
+                    outbound_permit_id=UUID(payload["outbound_permit_id"]),
+                    signature_envelope_kind=payload["signature_envelope_kind"],
+                    signing_version=payload["signing_version"],
+                    signature_bytes_hex=payload["signature_bytes_hex"],
+                    signature_kid=payload["signature_kid"],
+                    receipt_id=UUID(payload["receipt_id"]),
+                    published_at=datetime.fromisoformat(payload["published_at"]),
+                    published_by_actor_id=UUID(payload["published_by_actor_id"]),
+                    publication_status=payload["publication_status"],
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                )
+
+            return deserialize_or_raise(
+                "CalibrationRevisionPublished",
+                _build_revision_published,
+                extra=(ValueError,),
+            )
         case unknown:
             msg = f"Unknown Calibration event type: {unknown!r}"
             raise ValueError(msg)
@@ -355,6 +462,7 @@ __all__ = [
     "CalibrationDefined",
     "CalibrationEvent",
     "CalibrationRevisionAppended",
+    "CalibrationRevisionPublished",
     "deserialize_source",
     "event_type_name",
     "from_stored",

@@ -81,6 +81,7 @@ _DOMAIN_NOUN_ALLOWLIST: frozenset[str] = frozenset(
         "permission",  # Trust: list_permissions
         "event",  # Agent: dismiss_event_in_reaction
         "reaction",  # Agent: dismiss_event_in_reaction (Reaction = subscriber class)
+        "revision",  # Calibration: publish_revision (cross-BC federation slice)
     }
 )
 

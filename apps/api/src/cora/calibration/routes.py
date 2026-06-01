@@ -28,13 +28,16 @@ from fastapi.responses import JSONResponse
 
 from cora.calibration.aggregates.calibration import (
     CalibrationAlreadyExistsError,
+    CalibrationCannotPublishRevisionError,
     CalibrationIdentityAlreadyExistsError,
     CalibrationNotFoundError,
+    CalibrationRevisionNotFoundError,
     InvalidCalibrationDescriptionError,
     InvalidCalibrationQuantityError,
     InvalidCalibrationSourceError,
     InvalidCalibrationValueError,
     InvalidOperatingPointError,
+    OutboundPermitNotActiveError,
     SupersedesRevisionNotFoundError,
 )
 from cora.calibration.errors import UnauthorizedError
@@ -73,6 +76,22 @@ async def _handle_not_found(request: Request, exc: Exception) -> JSONResponse:
     )
 
 
+async def _handle_conflict(request: Request, exc: Exception) -> JSONResponse:
+    """409 handler for publish-time FSM-rejection errors.
+
+    Covers OutboundPermitNotActiveError and
+    CalibrationCannotPublishRevisionError: the publish slice cannot
+    proceed because the permit is not Active or the revision lacks
+    a content_hash. Distinct from 422 because the request shape is
+    valid; the state of the world does not allow the action.
+    """
+    _ = request
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
 async def _handle_already_exists(request: Request, exc: Exception) -> JSONResponse:
     """Defensive 409 handler.
 
@@ -105,11 +124,19 @@ def register_calibration_routes(app: FastAPI) -> None:
         SupersedesRevisionNotFoundError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
-    for not_found_cls in (CalibrationNotFoundError,):
+    for not_found_cls in (
+        CalibrationNotFoundError,
+        CalibrationRevisionNotFoundError,
+    ):
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for already_exists_cls in (
         CalibrationAlreadyExistsError,
         CalibrationIdentityAlreadyExistsError,
     ):
         app.add_exception_handler(already_exists_cls, _handle_already_exists)
+    for conflict_cls in (
+        CalibrationCannotPublishRevisionError,
+        OutboundPermitNotActiveError,
+    ):
+        app.add_exception_handler(conflict_cls, _handle_conflict)
     app.add_exception_handler(UnauthorizedError, _handle_unauthorized)

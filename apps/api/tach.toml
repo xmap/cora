@@ -223,7 +223,17 @@ depends_on = ["cora.infrastructure", "cora.caution.aggregates"]
 # lives additively on the consumer BCs, not here.
 [[modules]]
 path = "cora.calibration"
-depends_on = ["cora.infrastructure", "cora.calibration.aggregates"]
+depends_on = [
+    "cora.infrastructure",
+    "cora.calibration.aggregates",
+    # publish_revision slice emits a cross-BC event pair
+    # (CalibrationRevisionPublished on Calibration; PublicationReceiptRecorded
+    # on the matching outbound Permit) atomically via
+    # EventStore.append_streams per project_federation_port_design.md
+    # cross-BC discipline. The decider imports the federation event class
+    # to construct the typed payload.
+    "cora.federation.aggregates",
+]
 
 # Federation BC owns the Permit (unified, OutboundTerms | InboundTerms
 # tagged union) / Credential / Seal aggregates per

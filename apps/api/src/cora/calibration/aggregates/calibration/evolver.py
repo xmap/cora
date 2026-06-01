@@ -32,6 +32,7 @@ from cora.calibration.aggregates.calibration.events import (
     CalibrationDefined,
     CalibrationEvent,
     CalibrationRevisionAppended,
+    CalibrationRevisionPublished,
     deserialize_source,
 )
 from cora.calibration.aggregates.calibration.state import (
@@ -114,6 +115,9 @@ def evolve(state: Calibration | None, event: CalibrationEvent) -> Calibration:
                 revisions=(*prior.revisions, revision),
                 defined_by_actor_id=prior.defined_by_actor_id,
             )
+        case CalibrationRevisionPublished():
+            prior = require_state(state, "CalibrationRevisionPublished")
+            return prior
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 

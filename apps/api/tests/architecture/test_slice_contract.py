@@ -62,7 +62,17 @@ _NO_DECIDER_SLICES: frozenset[str] = _ENTRY_APPEND_SLICES | _ORCHESTRATION_SLICE
 
 # Slices currently in flight. Each entry MUST cite the phase that
 # will close it; reviewers should reject additions that don't.
-WIP_SLICES: frozenset[str] = frozenset()
+WIP_SLICES: frozenset[str] = frozenset(
+    {
+        # First per-BC publish slice canary; event shapes + pure
+        # decider landed first so the cross-BC PublishedArtifact
+        # contract is provable before any handler IO lands. The
+        # handler + route + tool + arch fitness for ai-cannot-sign-off
+        # + cross-BC dual-stream land in the follow-up commit per
+        # the planning workflow's 3d1 -> 3d2 -> 3d3 split.
+        "cora.calibration.features.publish_revision",
+    }
+)
 
 
 def _qualified(slice_dir: Path) -> str:

@@ -85,6 +85,12 @@ _CREATE_VERBS: frozenset[str] = frozenset({"define", "register", "add"})
 
 EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
     {
+        # First per-BC publish slice canary: event shapes + pure
+        # decider landed first so the cross-BC PublishedArtifact
+        # contract is provable before any handler IO lands. Route +
+        # endpoint contract test land in the follow-up commit per
+        # the planning workflow's 3d1 -> 3d2 -> 3d3 split.
+        "cora.calibration.features.publish_revision",
         # Safety clearance lifecycle: covered by URL-only FSM-walk tests
         # in `test_clearance_fsm_walk_endpoints.py`, which walks the full
         # FSM via HTTP calls (no slice-name imports or string mentions).
@@ -124,6 +130,10 @@ EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
 
 EXEMPT_FROM_MCP_CONTRACT: frozenset[str] = frozenset(
     {
+        # First per-BC publish slice canary: MCP tool + MCP contract
+        # test land in the follow-up commit per the planning workflow's
+        # 3d1 -> 3d2 -> 3d3 split.
+        "cora.calibration.features.publish_revision",
         # Agent lifecycle: all 5 slices covered by the bundled
         # `test_iter2_mcp_tools.py`.
         "cora.agent.features.grant_tool_to_agent",
@@ -163,6 +173,10 @@ EXEMPT_FROM_MCP_CONTRACT: frozenset[str] = frozenset(
 
 EXEMPT_FROM_HANDLER_UNIT: frozenset[str] = frozenset(
     {
+        # First per-BC publish slice canary: handler + unit test land
+        # in the follow-up commit per the planning workflow's
+        # 3d1 -> 3d2 -> 3d3 split.
+        "cora.calibration.features.publish_revision",
         # --- TODO: real gaps to fill -----------------------------------
         # Query handlers compose the `list_query` factory and a thin
         # adapter call — they're covered transitively by integration

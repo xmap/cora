@@ -161,7 +161,48 @@ class PermitRevoked:
     reason: str | None = None
 
 
-PermitEvent = PermitDefined | PermitActivated | PermitSuspended | PermitResumed | PermitRevoked
+@dataclass(frozen=True, slots=True)
+class PublicationReceiptRecorded:
+    """A per-BC publish slice recorded a receipt against this outbound permit.
+
+    Cross-BC iter-b federation event. The matching home-aggregate
+    event (`<Artifact>Published` on the home BC stream) lands
+    atomically via the handler's `EventStore.append_streams` call
+    per cross-BC append-streams discipline.
+
+    `content_hash` is the artifact's port-tier content hash
+    (recomputed via the matching CanonicalizationPort adapter on
+    the verify side); `home_stream_type` + `home_stream_id` +
+    `home_artifact_id` denorm the cross-stream join so audit
+    queries do not require a separate index lookup. `receipt_id`
+    is the UUID minted by the PublishPort adapter and matches the
+    receipt_id on the home-BC published event.
+
+    No status transition: the Permit FSM is `Defined / Active /
+    Suspended / Revoked`; recording a receipt is orthogonal to
+    those positions. The decider enforces the Active-only
+    invariant before emitting this event (publishing under a
+    Suspended or Revoked permit is rejected).
+    """
+
+    permit_id: UUID
+    content_hash: str
+    home_stream_type: str
+    home_stream_id: UUID
+    home_artifact_id: UUID
+    receipt_id: UUID
+    recorded_at: datetime
+    occurred_at: datetime
+
+
+PermitEvent = (
+    PermitDefined
+    | PermitActivated
+    | PermitSuspended
+    | PermitResumed
+    | PermitRevoked
+    | PublicationReceiptRecorded
+)
 
 
 def event_type_name(event: PermitEvent) -> str:
@@ -241,6 +282,26 @@ def to_payload(event: PermitEvent) -> dict[str, Any]:
                 "occurred_at": occurred_at.isoformat(),
                 "reason": reason,
             }
+        case PublicationReceiptRecorded(
+            permit_id=permit_id,
+            content_hash=content_hash,
+            home_stream_type=home_stream_type,
+            home_stream_id=home_stream_id,
+            home_artifact_id=home_artifact_id,
+            receipt_id=receipt_id,
+            recorded_at=recorded_at,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "permit_id": str(permit_id),
+                "content_hash": content_hash,
+                "home_stream_type": home_stream_type,
+                "home_stream_id": str(home_stream_id),
+                "home_artifact_id": str(home_artifact_id),
+                "receipt_id": str(receipt_id),
+                "recorded_at": recorded_at.isoformat(),
+                "occurred_at": occurred_at.isoformat(),
+            }
         case _:  # pragma: no cover
             assert_never(event)
 
@@ -312,6 +373,20 @@ def from_stored(stored: StoredEvent) -> PermitEvent:
                     reason=payload.get("reason"),
                 ),
             )
+        case "PublicationReceiptRecorded":
+            return deserialize_or_raise(
+                "PublicationReceiptRecorded",
+                lambda: PublicationReceiptRecorded(
+                    permit_id=UUID(payload["permit_id"]),
+                    content_hash=payload["content_hash"],
+                    home_stream_type=payload["home_stream_type"],
+                    home_stream_id=UUID(payload["home_stream_id"]),
+                    home_artifact_id=UUID(payload["home_artifact_id"]),
+                    receipt_id=UUID(payload["receipt_id"]),
+                    recorded_at=datetime.fromisoformat(payload["recorded_at"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
         case unknown:
             msg = f"Unknown Permit event type: {unknown!r}"
             raise ValueError(msg)
@@ -324,6 +399,7 @@ __all__ = [
     "PermitResumed",
     "PermitRevoked",
     "PermitSuspended",
+    "PublicationReceiptRecorded",
     "deserialize_terms",
     "event_type_name",
     "from_stored",
