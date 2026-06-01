@@ -141,6 +141,7 @@ from cora.equipment.features import (
     update_frame_placement,
     update_mount_placement,
     version_family,
+    version_model,
 )
 
 
@@ -210,6 +211,7 @@ def register_equipment_routes(app: FastAPI) -> None:
     """Attach Equipment slice routers and exception handlers to the FastAPI app."""
     app.include_router(define_family.router)
     app.include_router(define_model.router)
+    app.include_router(version_model.router)
     app.include_router(get_family.router)
     app.include_router(version_family.router)
     app.include_router(deprecate_family.router)

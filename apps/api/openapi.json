@@ -10830,6 +10830,55 @@
         "title": "VersionMethodRequest",
         "type": "object"
       },
+      "VersionModelRequest": {
+        "description": "Body for `POST /models/{model_id}/versions`.\n\nA new version IS a new declaration: every field REPLACES the prior\nvalue wholesale (no diff/merge semantics). `version_tag` is\nREQUIRED here, unlike `define_model` where it is optional.",
+        "properties": {
+          "declared_families": {
+            "description": "Replacement Family ids the catalog entry satisfies at this version. At least one required; deduplicated server-side.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Declared Families",
+            "type": "array"
+          },
+          "manufacturer": {
+            "$ref": "#/components/schemas/ManufacturerBody",
+            "description": "Replacement vendor identity (name plus optional ROR/GRID/ISNI identifier)."
+          },
+          "name": {
+            "description": "Replacement display name for the Model at this version.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "part_number": {
+            "description": "Replacement vendor SKU; case-sensitive (RV120CCHL and rv120cchl are different Newport entries).",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Part Number",
+            "type": "string"
+          },
+          "version_tag": {
+            "description": "Operator-supplied label for this revision (for example 'rev-B', '2026-Q3'). Free text; institution-specific.",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Version Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "manufacturer",
+          "part_number",
+          "declared_families",
+          "version_tag"
+        ],
+        "title": "VersionModelRequest",
+        "type": "object"
+      },
       "VersionPlanRequest": {
         "description": "Body for `POST /plans/{plan_id}/version`.",
         "properties": {
@@ -23328,6 +23377,106 @@
           }
         },
         "summary": "Define a new vendor-catalog Model",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/models/{model_id}/versions": {
+      "post": {
+        "operationId": "post_models_versions_models__model_id__versions_post",
+        "parameters": [
+          {
+            "description": "Target model's id.",
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "description": "Target model's id.",
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (for example whitespace-only name, whitespace-only part_number, whitespace-only version_tag, or empty declared_families)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No model exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Model is in `Deprecated` status (version requires `Defined` or `Versioned`), OR a concurrent write to the same model stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Issue a new version declaration for an existing Model",
         "tags": [
           "equipment"
         ]

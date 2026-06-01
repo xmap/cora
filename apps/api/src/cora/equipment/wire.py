@@ -64,6 +64,7 @@ from cora.equipment.features import (
     update_frame_placement,
     update_mount_placement,
     version_family,
+    version_model,
 )
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
@@ -86,6 +87,7 @@ class EquipmentHandlers:
 
     define_family: define_family.IdempotentHandler
     define_model: define_model.IdempotentHandler
+    version_model: version_model.Handler
     get_family: get_family.Handler
     version_family: version_family.Handler
     deprecate_family: deprecate_family.Handler
@@ -145,6 +147,11 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
                 lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
             ),
             command_name="DefineModel",
+            bc=_BC,
+        ),
+        version_model=with_tracing(
+            version_model.bind(deps),
+            command_name="VersionModel",
             bc=_BC,
         ),
         get_family=with_tracing(
