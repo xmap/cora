@@ -4174,6 +4174,76 @@
         "title": "DefineMethodResponse",
         "type": "object"
       },
+      "DefineModelRequest": {
+        "description": "Body for `POST /models`.",
+        "properties": {
+          "declared_families": {
+            "description": "Family ids the catalog entry satisfies. At least one required; deduplicated server-side.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Declared Families",
+            "type": "array"
+          },
+          "manufacturer": {
+            "$ref": "#/components/schemas/ManufacturerBody",
+            "description": "Vendor identity (name plus optional ROR/GRID/ISNI identifier)."
+          },
+          "name": {
+            "description": "Display name for the new Model.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "part_number": {
+            "description": "Vendor SKU; case-sensitive (RV120CCHL and rv120cchl are different Newport entries).",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Part Number",
+            "type": "string"
+          },
+          "version_tag": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional initial revision label (e.g., 'rev-A').",
+            "title": "Version Tag"
+          }
+        },
+        "required": [
+          "name",
+          "manufacturer",
+          "part_number",
+          "declared_families"
+        ],
+        "title": "DefineModelRequest",
+        "type": "object"
+      },
+      "DefineModelResponse": {
+        "description": "Response body for `POST /models`.",
+        "properties": {
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id"
+        ],
+        "title": "DefineModelResponse",
+        "type": "object"
+      },
       "DefinePermitRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /federation/permits`.",
@@ -5498,6 +5568,58 @@
         ],
         "title": "ListPermissionsResponse",
         "type": "object"
+      },
+      "ManufacturerBody": {
+        "description": "Pydantic mirror of the Manufacturer VO for the request body.\n\n`identifier` and `identifier_type` are both optional but must be\nsupplied together or both omitted (the pairing invariant is\nenforced at the VO constructor; a bare identifier with no scheme\ncannot be resolved).",
+        "properties": {
+          "identifier": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional opaque identifier value. If supplied, `identifier_type` is required (and vice versa).",
+            "title": "Identifier"
+          },
+          "identifier_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ManufacturerIdentifierType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Closed scheme for the optional manufacturer identifier."
+          },
+          "name": {
+            "description": "Display name of the manufacturer.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ManufacturerBody",
+        "type": "object"
+      },
+      "ManufacturerIdentifierType": {
+        "description": "Closed scheme for the optional manufacturer identifier.\n\nThree members ship in v1: ROR (Research Organization Registry),\nGRID (Global Research Identifier Database; subsumed by ROR but\nstill in active use at many facilities), ISNI (International\nStandard Name Identifier). Adding a fourth scheme is an additive\nenum change.",
+        "enum": [
+          "ROR",
+          "GRID",
+          "ISNI"
+        ],
+        "title": "ManufacturerIdentifierType",
+        "type": "string"
       },
       "MarkSupplyAvailableRequest": {
         "description": "Body for `POST /supplies/{supply_id}/mark-available`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb)\nexplaining the first-observation declaration. Examples:\n\"operator walkdown confirms LN2 dewar pressure nominal\", \"control\nroom reports beam delivered after morning startup\", \"first-time\ncommissioning verified by ops\".",
@@ -23105,6 +23227,109 @@
         "summary": "Issue a new version label for an existing method",
         "tags": [
           "recipe"
+        ]
+      }
+    },
+    "/models": {
+      "post": {
+        "operationId": "post_models_models_post",
+        "parameters": [
+          {
+            "description": "Optional client-supplied unique key per logical request. Retries with the same key + same body return the cached response instead of re-creating the model.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional client-supplied unique key per logical request. Retries with the same key + same body return the cached response instead of re-creating the model.",
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefineModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefineModelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (for example whitespace-only name)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "One or more declared families does not resolve to a registered Family."
+          },
+          "422": {
+            "description": "Request body failed schema validation OR Idempotency-Key was reused with a different request body."
+          }
+        },
+        "summary": "Define a new vendor-catalog Model",
+        "tags": [
+          "equipment"
         ]
       }
     },

@@ -39,6 +39,7 @@ from cora.equipment.features import (
     decommission_frame,
     decommission_mount,
     define_family,
+    define_model,
     degrade_asset,
     deprecate_family,
     enter_maintenance,
@@ -84,6 +85,7 @@ class EquipmentHandlers:
     """
 
     define_family: define_family.IdempotentHandler
+    define_model: define_model.IdempotentHandler
     get_family: get_family.Handler
     version_family: version_family.Handler
     deprecate_family: deprecate_family.Handler
@@ -131,6 +133,18 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
                 lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
             ),
             command_name="DefineFamily",
+            bc=_BC,
+        ),
+        define_model=with_tracing(
+            with_idempotency(
+                define_model.bind(deps),
+                deps.idempotency_store,
+                command_name="DefineModel",
+                serialize_result=str,
+                deserialize_result=UUID,
+                lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
+            ),
+            command_name="DefineModel",
             bc=_BC,
         ),
         get_family=with_tracing(

@@ -90,16 +90,22 @@ ORDER BY family_id::text
 """
 
 
-async def list_family_ids(pool: asyncpg.Pool) -> list[UUID]:
+async def list_family_ids(pool: asyncpg.Pool | None) -> list[UUID]:
     """Read every non-Deprecated Family id from the summary projection.
 
-    Used by `inspect_plan_binding`'s candidate enumeration: callers
+    Used by `inspect_plan_binding`'s candidate enumeration and by
+    `define_model`'s cross-BC family_lookup precondition. Callers
     iterate every Family, load its aggregate state via `load_family`,
     and filter by `Family.affordances` membership. Deprecated
     Families are excluded at the SQL layer so they're not offered
     as candidate sources (operator can still see Deprecated Families
     when they're directly wired into a Plan; this is discovery-side
     only).
+
+    Returns `[]` when `pool is None` (test / no-database app_env),
+    mirroring the `load_asset_lifecycle` / `load_asset_location`
+    null-pool short-circuit. Tests that need a populated lookup
+    must wire a real pool.
 
     The summary projection doesn't carry an affordances column today
     (5j deferred it); when the first caller demands affordance-
@@ -109,6 +115,8 @@ async def list_family_ids(pool: asyncpg.Pool) -> list[UUID]:
     `inspect_plan_binding` crosses 200ms. Pilot scale (~9 Families)
     keeps the load-all-then-filter approach cheap.
     """
+    if pool is None:
+        return []
     async with pool.acquire() as conn:
         rows = await conn.fetch(_SELECT_FAMILY_IDS_SQL)
     return [row["family_id"] for row in rows]

@@ -116,6 +116,7 @@ from cora.equipment.features import (
     decommission_frame,
     decommission_mount,
     define_family,
+    define_model,
     degrade_asset,
     deprecate_family,
     enter_maintenance,
@@ -208,6 +209,7 @@ async def _handle_cannot_transition(request: Request, exc: Exception) -> JSONRes
 def register_equipment_routes(app: FastAPI) -> None:
     """Attach Equipment slice routers and exception handlers to the FastAPI app."""
     app.include_router(define_family.router)
+    app.include_router(define_model.router)
     app.include_router(get_family.router)
     app.include_router(version_family.router)
     app.include_router(deprecate_family.router)
