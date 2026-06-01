@@ -96,13 +96,13 @@
 | src/cora/agent/features/promote\_caution\_proposal/handler.py                |       75 |        0 |       14 |        0 |    100.0% |           |
 | src/cora/agent/features/promote\_caution\_proposal/route.py                  |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/promote\_caution\_proposal/tool.py                   |       17 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/agent/features/re\_debrief\_run/\_\_init\_\_.py                     |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/agent/features/re\_debrief\_run/command.py                          |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/agent/features/re\_debrief\_run/context.py                          |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/agent/features/re\_debrief\_run/decider.py                          |       21 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/agent/features/re\_debrief\_run/handler.py                          |       82 |        4 |       22 |        2 |     94.2% |295, 298, 301-302 |
-| src/cora/agent/features/re\_debrief\_run/route.py                            |       21 |        1 |        2 |        1 |     91.3% |        61 |
-| src/cora/agent/features/re\_debrief\_run/tool.py                             |       17 |        2 |        0 |        0 |     88.2% |     60-69 |
+| src/cora/agent/features/regenerate\_run\_debrief/\_\_init\_\_.py             |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/agent/features/regenerate\_run\_debrief/command.py                  |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/agent/features/regenerate\_run\_debrief/context.py                  |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/agent/features/regenerate\_run\_debrief/decider.py                  |       21 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/agent/features/regenerate\_run\_debrief/handler.py                  |       82 |        4 |       22 |        2 |     94.2% |296, 299, 302-303 |
+| src/cora/agent/features/regenerate\_run\_debrief/route.py                    |       21 |        1 |        2 |        1 |     91.3% |        61 |
+| src/cora/agent/features/regenerate\_run\_debrief/tool.py                     |       17 |        2 |        0 |        0 |     88.2% |     60-69 |
 | src/cora/agent/features/resume\_agent/\_\_init\_\_.py                        |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/resume\_agent/command.py                             |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/resume\_agent/decider.py                             |        9 |        0 |        4 |        0 |    100.0% |           |
@@ -145,7 +145,7 @@
 | src/cora/agent/subscribers/\_terminal\_run\_helpers.py                       |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/subscribers/caution\_drafter.py                               |      135 |        0 |       28 |        0 |    100.0% |           |
 | src/cora/agent/subscribers/run\_debriefer.py                                 |      105 |        2 |       14 |        1 |     97.5% |   593-597 |
-| src/cora/agent/tools.py                                                      |       32 |        1 |        2 |        1 |     94.1% |        96 |
+| src/cora/agent/tools.py                                                      |       32 |        1 |        2 |        1 |     94.1% |        98 |
 | src/cora/agent/wire.py                                                       |       14 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/api/\_\_init\_\_.py                                                 |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/main.py                                                         |      207 |        0 |       12 |        2 |     99.1% |255-\>254, 497-\>500 |
@@ -163,12 +163,12 @@
 | src/cora/calibration/aggregates/calibration/state.py                         |       90 |        1 |       10 |        2 |     97.0% |305, 415-\>418 |
 | src/cora/calibration/errors.py                                               |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/features/\_\_init\_\_.py                                |        0 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/calibration/features/append\_revision/\_\_init\_\_.py               |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/calibration/features/append\_revision/command.py                    |        8 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/calibration/features/append\_revision/decider.py                    |       34 |        0 |       10 |        1 |     97.7% |162-\>exit |
-| src/cora/calibration/features/append\_revision/handler.py                    |       36 |        2 |        4 |        1 |     92.5% |   114-123 |
-| src/cora/calibration/features/append\_revision/route.py                      |       21 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/calibration/features/append\_revision/tool.py                       |       19 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/calibration/features/append\_calibration\_revision/\_\_init\_\_.py  |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/calibration/features/append\_calibration\_revision/command.py       |        8 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/calibration/features/append\_calibration\_revision/decider.py       |       34 |        0 |       10 |        1 |     97.7% |164-\>exit |
+| src/cora/calibration/features/append\_calibration\_revision/handler.py       |       36 |        2 |        4 |        1 |     92.5% |   116-125 |
+| src/cora/calibration/features/append\_calibration\_revision/route.py         |       21 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/calibration/features/append\_calibration\_revision/tool.py          |       19 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/features/define\_calibration/\_\_init\_\_.py            |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/features/define\_calibration/command.py                 |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/features/define\_calibration/decider.py                 |       25 |        0 |        6 |        0 |    100.0% |           |
@@ -925,6 +925,11 @@
 | src/cora/operation/features/complete\_procedure/handler.py                   |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/complete\_procedure/route.py                     |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/complete\_procedure/tool.py                      |       15 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_procedure/\_\_init\_\_.py               |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_procedure/command.py                    |        9 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_procedure/handler.py                    |       23 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_procedure/route.py                      |       57 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_procedure/tool.py                       |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/get\_procedure/\_\_init\_\_.py                   |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/get\_procedure/handler.py                        |       23 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/operation/features/get\_procedure/query.py                          |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -941,11 +946,6 @@
 | src/cora/operation/features/register\_procedure/handler.py                   |       33 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/operation/features/register\_procedure/route.py                     |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/register\_procedure/tool.py                      |       18 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/run\_procedure/\_\_init\_\_.py                   |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/run\_procedure/command.py                        |        9 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/run\_procedure/handler.py                        |       23 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/operation/features/run\_procedure/route.py                          |       57 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/operation/features/run\_procedure/tool.py                           |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/start\_procedure/\_\_init\_\_.py                 |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/start\_procedure/command.py                      |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/start\_procedure/context.py                      |        8 |        0 |        0 |        0 |    100.0% |           |
