@@ -63,12 +63,12 @@ def test_post_assemblies_returns_201_with_slots_and_wires() -> None:
                 "required_slots": [
                     {
                         "slot_name": "camera",
-                        "required_families": [str(camera_family)],
+                        "required_family_ids": [str(camera_family)],
                         "cardinality": "Exactly1",
                     },
                     {
                         "slot_name": "trigger_source",
-                        "required_families": [str(trigger_family)],
+                        "required_family_ids": [str(trigger_family)],
                         "cardinality": "Exactly1",
                     },
                 ],
@@ -113,7 +113,7 @@ def test_post_assemblies_returns_404_when_slot_required_family_missing() -> None
                 "required_slots": [
                     {
                         "slot_name": "camera",
-                        "required_families": [str(uuid4())],
+                        "required_family_ids": [str(uuid4())],
                         "cardinality": "Exactly1",
                     }
                 ],
@@ -154,7 +154,7 @@ def test_post_assemblies_returns_400_when_wire_references_unknown_slot() -> None
                 "required_slots": [
                     {
                         "slot_name": "camera",
-                        "required_families": [str(camera_family)],
+                        "required_family_ids": [str(camera_family)],
                         "cardinality": "Exactly1",
                     }
                 ],
@@ -185,7 +185,7 @@ def test_post_assemblies_returns_400_for_degenerate_full_self_loop_wire() -> Non
                 "required_slots": [
                     {
                         "slot_name": "lut",
-                        "required_families": [str(lut_family)],
+                        "required_family_ids": [str(lut_family)],
                         "cardinality": "Exactly1",
                     }
                 ],
@@ -238,7 +238,7 @@ def test_post_assemblies_returns_422_for_unknown_cardinality() -> None:
                 "required_slots": [
                     {
                         "slot_name": "camera",
-                        "required_families": [str(family_id)],
+                        "required_family_ids": [str(family_id)],
                         "cardinality": "Bogus",
                     }
                 ],
@@ -249,7 +249,7 @@ def test_post_assemblies_returns_422_for_unknown_cardinality() -> None:
 
 
 @pytest.mark.contract
-def test_post_assemblies_returns_422_for_empty_required_families() -> None:
+def test_post_assemblies_returns_422_for_empty_required_family_ids() -> None:
     with TestClient(create_app()) as client:
         family_id = _define_family(client)
         response = client.post(
@@ -260,7 +260,7 @@ def test_post_assemblies_returns_422_for_empty_required_families() -> None:
                 "required_slots": [
                     {
                         "slot_name": "orphan",
-                        "required_families": [],
+                        "required_family_ids": [],
                         "cardinality": "ZeroOrMore",
                     }
                 ],

@@ -146,7 +146,7 @@ def test_post_assembly_version_returns_400_when_wire_references_unknown_slot() -
                 "required_slots": [
                     {
                         "slot_name": "camera",
-                        "required_families": [str(camera_family)],
+                        "required_family_ids": [str(camera_family)],
                         "cardinality": "Exactly1",
                     }
                 ],
@@ -210,12 +210,12 @@ def test_post_assembly_version_replaces_structural_fields() -> None:
                 "required_slots": [
                     {
                         "slot_name": "camera",
-                        "required_families": [str(camera_family)],
+                        "required_family_ids": [str(camera_family)],
                         "cardinality": "Exactly1",
                     },
                     {
                         "slot_name": "scintillator",
-                        "required_families": [str(scintillator_family)],
+                        "required_family_ids": [str(scintillator_family)],
                         "cardinality": "Exactly1",
                     },
                 ],

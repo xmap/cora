@@ -117,7 +117,7 @@ router = APIRouter(tags=["equipment"])
             "description": (
                 "Assembly with the given assembly_id does not exist, "
                 "OR a referenced FamilyId (presents_as_family_id or "
-                "any slot's required_families member) does not resolve "
+                "any slot's required_family_ids member) does not resolve "
                 "to a defined Family."
             ),
         },

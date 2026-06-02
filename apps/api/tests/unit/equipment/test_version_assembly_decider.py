@@ -33,7 +33,7 @@ _NOW = datetime(2026, 6, 2, 13, 0, 0, tzinfo=UTC)
 def _slot(name: str = "camera", family_id: object = None) -> TemplateSlot:
     return TemplateSlot(
         slot_name=SlotName(name),
-        required_families=frozenset({family_id or uuid4()}),  # type: ignore[arg-type]
+        required_family_ids=frozenset({family_id or uuid4()}),  # type: ignore[arg-type]
         cardinality=SlotCardinality.EXACTLY_1,
     )
 

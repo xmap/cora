@@ -10850,14 +10850,14 @@
             "description": "Optional template defaults applied at instantiation unless overridden by the instantiator.",
             "title": "Default Settings"
           },
-          "required_families": {
+          "required_family_ids": {
             "description": "Set of FamilyIds an instantiated Asset must include at least one of. MUST be non-empty.",
             "items": {
               "format": "uuid",
               "type": "string"
             },
             "minItems": 1,
-            "title": "Required Families",
+            "title": "Required Family Ids",
             "type": "array",
             "uniqueItems": true
           },
@@ -10871,7 +10871,7 @@
         },
         "required": [
           "slot_name",
-          "required_families",
+          "required_family_ids",
           "cardinality"
         ],
         "title": "TemplateSlotBody",
@@ -13807,7 +13807,7 @@
                 }
               }
             },
-            "description": "A referenced FamilyId (presents_as_family_id or any slot's required_families member) does not resolve to a defined Family."
+            "description": "A referenced FamilyId (presents_as_family_id or any slot's required_family_ids member) does not resolve to a defined Family."
           },
           "409": {
             "content": {
@@ -13907,7 +13907,7 @@
                 }
               }
             },
-            "description": "Assembly with the given assembly_id does not exist, OR a referenced FamilyId (presents_as_family_id or any slot's required_families member) does not resolve to a defined Family."
+            "description": "Assembly with the given assembly_id does not exist, OR a referenced FamilyId (presents_as_family_id or any slot's required_family_ids member) does not resolve to a defined Family."
           },
           "409": {
             "content": {

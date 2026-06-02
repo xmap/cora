@@ -12,7 +12,7 @@ by the handler from infrastructure ports or computed pre-emit.
 Slots and wires arrive as fully-constructed domain VOs (the route
 layer's TemplateSlotBody / TemplateWireBody call .to_domain() before
 the command is built); structural VO-level invariants (slot-name
-length, cardinality enum membership, non-empty required_families,
+length, cardinality enum membership, non-empty required_family_ids,
 wire-port-name length, degenerate-full-self-loop rejection, wire-
 endpoints-reference-declared-slots closure via Assembly.__post_init__
 when state is constructed in the evolver) all fire at VO construction
@@ -20,7 +20,7 @@ or evolver-fold time, NOT inside the decider.
 
 Cross-aggregate references checked by the handler before the decider:
   - presents_as_family_id must resolve to a defined Family.
-  - Every FamilyId in every slot's required_families must resolve.
+  - Every FamilyId in every slot's required_family_ids must resolve.
 
 Cross-aggregate references NOT checked:
   - Asset existence (Assembly is a template; the Assets do not exist

@@ -128,12 +128,12 @@ def test_mcp_define_assembly_tool_succeeds_with_slot_and_wire() -> None:
                         "required_slots": [
                             {
                                 "slot_name": "camera",
-                                "required_families": [str(camera_family)],
+                                "required_family_ids": [str(camera_family)],
                                 "cardinality": "Exactly1",
                             },
                             {
                                 "slot_name": "trigger_source",
-                                "required_families": [str(trigger_family)],
+                                "required_family_ids": [str(trigger_family)],
                                 "cardinality": "Exactly1",
                             },
                         ],

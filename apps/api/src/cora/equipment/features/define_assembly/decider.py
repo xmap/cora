@@ -23,7 +23,7 @@ the Clock and IdGenerator ports.
     validator).
 
 Structural VO invariants on `required_slots` / `required_wires`
-(slot-name length, cardinality enum, non-empty required_families,
+(slot-name length, cardinality enum, non-empty required_family_ids,
 wire-port-name length, full-self-loop rejection) fire at VO
 construction time in the route / tool layers, never inside the
 decider. Internal closure (every wire endpoint references a declared

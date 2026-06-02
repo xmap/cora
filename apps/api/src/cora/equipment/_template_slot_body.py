@@ -8,7 +8,7 @@ domain VO (which may raise `InvalidSlotNameError`,
 `InvalidPlacementError` during construction).
 
 Pydantic enforces field-shape rules at the API boundary; domain
-invariants (non-empty `required_families`, closed-enum
+invariants (non-empty `required_family_ids`, closed-enum
 `cardinality`, NaN-rejecting `default_placement`) surface from the
 domain VO constructors and map to HTTP 400 through the BC's
 exception handler.
@@ -44,7 +44,7 @@ class TemplateSlotBody(BaseModel):
             "(e.g., 'camera', 'rotary', 'trigger_source')."
         ),
     )
-    required_families: frozenset[UUID] = Field(
+    required_family_ids: frozenset[UUID] = Field(
         ...,
         min_length=1,
         description=(
@@ -75,7 +75,7 @@ class TemplateSlotBody(BaseModel):
         """Convert this wire body to the domain TemplateSlot VO."""
         return TemplateSlot(
             slot_name=SlotName(self.slot_name),
-            required_families=self.required_families,
+            required_family_ids=self.required_family_ids,
             cardinality=self.cardinality,
             default_settings=self.default_settings,
             default_placement=(

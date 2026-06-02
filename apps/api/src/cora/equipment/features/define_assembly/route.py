@@ -128,7 +128,7 @@ router = APIRouter(tags=["equipment"])
             "model": ErrorResponse,
             "description": (
                 "A referenced FamilyId (presents_as_family_id or any "
-                "slot's required_families member) does not resolve to "
+                "slot's required_family_ids member) does not resolve to "
                 "a defined Family."
             ),
         },

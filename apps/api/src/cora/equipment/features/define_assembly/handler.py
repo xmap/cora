@@ -5,7 +5,7 @@ loads N cross-aggregate references BEFORE calling the decider):
 
   1. Authz check (Deny -> UnauthorizedError).
   2. Load Family aggregate for `presents_as_family_id` + every
-     FamilyId across the slot set's required_families; collect the
+     FamilyId across the slot set's required_family_ids; collect the
      missing ones into context.
   3. Call pure decider with state=None + context + command +
      now + new_id.
@@ -71,13 +71,13 @@ class IdempotentHandler(Protocol):
 def _referenced_family_ids(command: DefineAssembly) -> frozenset[UUID]:
     """Collect every FamilyId the Assembly references at define time.
 
-    Union of `presents_as_family_id` and every slot's required_families.
+    Union of `presents_as_family_id` and every slot's required_family_ids.
     Returned as a frozenset so handler loads are de-duplicated when
     multiple slots share a Family.
     """
     ids: set[UUID] = {command.presents_as_family_id}
     for slot in command.required_slots:
-        ids.update(slot.required_families)
+        ids.update(slot.required_family_ids)
     return frozenset(ids)
 
 

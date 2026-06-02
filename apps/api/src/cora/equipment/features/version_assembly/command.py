@@ -11,7 +11,7 @@ re-architected Assembly may stand in for a different Family
 (e.g., DCM-revisited may move from `Monochromator` to a wider
 `BeamConditioning` Family). The handler re-checks Family existence
 for every referenced FamilyId (presents_as_family_id + every slot's
-required_families).
+required_family_ids).
 
 Multi-source FSM transition: Defined -> Versioned AND
 Versioned -> Versioned are both valid; only Deprecated rejects.
