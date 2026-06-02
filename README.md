@@ -1661,8 +1661,8 @@
 | src/cora/trust/features/register\_visit/\_\_init\_\_.py                          |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/register\_visit/command.py                               |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/register\_visit/context.py                               |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/register\_visit/decider.py                               |       16 |        0 |       10 |        0 |    100.0% |           |
-| src/cora/trust/features/register\_visit/handler.py                               |       34 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/trust/features/register\_visit/decider.py                               |       15 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/trust/features/register\_visit/handler.py                               |       33 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/trust/features/register\_visit/route.py                                 |       23 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/register\_visit/tool.py                                  |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/release\_control\_of\_surface/\_\_init\_\_.py            |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -1707,7 +1707,7 @@
 | src/cora/trust/routes.py                                                         |       68 |        2 |       12 |        0 |     97.5% |   147-148 |
 | src/cora/trust/tools.py                                                          |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                           |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                        | **31628** |  **529** | **4146** |  **137** | **97.9%** |           |
+| **TOTAL**                                                                        | **31626** |  **529** | **4146** |  **137** | **97.9%** |           |
 
 
 ## Setup coverage badge

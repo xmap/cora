@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_3e023ec9a13b04cc_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -92,16 +92,16 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">version_family and decommission_asset). The decider validates the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">bounded-text VOs defensively (`ModelName`, `PartNumber`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">`ModelVersionTag`) so direct in-process callers get the same</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">protection as API-boundary callers. `declared_families` cardinality</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">protection as API-boundary callers. `declared_family_ids` cardinality</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">is checked here (must be non-empty); the `Manufacturer` pairing</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">invariant is enforced by the `Manufacturer` dataclass itself before</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">the command reaches the decider (raises</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">`InvalidManufacturerIdentifierPairingError`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">The handler does NOT cross-BC-validate `declared_families` here:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">The handler does NOT cross-BC-validate `declared_family_ids` here:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">per the design memo Lock, full-set re-validation at version time is</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">deferred to incremental `add_model_family` edits. `version_model`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">accepts whatever `declared_families` the caller passes; downstream</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">accepts whatever `declared_family_ids` the caller passes; downstream</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">slices catch stale family references at their own boundaries.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">## Deliberate divergence from strict-not-idempotent</span>&nbsp;</span><span class="r"></span></p>
@@ -121,7 +121,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">  - State must not be None -> ModelNotFoundError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="str">  - State.status must be in {Defined, Versioned}, i.e., not Deprecated</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="str">    -> ModelCannotVersionError(current_status=...)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t"><span class="str">  - declared_families must be non-empty -> InvalidDeclaredFamiliesError</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t"><span class="str">  - declared_family_ids must be non-empty -> InvalidDeclaredFamiliesError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t"><span class="str">  - Name must be valid -> InvalidModelNameError (via ModelName VO)</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t"><span class="str">  - Part number must be valid -> InvalidPartNumberError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t"><span class="str">    (via PartNumber VO)</span>&nbsp;</span><span class="r"></span></p>
@@ -161,7 +161,7 @@
     <p class="run"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ModelNotFoundError</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">model_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="key">if</span> <span class="nam">state</span><span class="op">.</span><span class="nam">status</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">_VERSIONABLE_STATUSES</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ModelCannotVersionError</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">current_status</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">status</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">command</span><span class="op">.</span><span class="nam">declared_families</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">command</span><span class="op">.</span><span class="nam">declared_family_ids</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">        <span class="key">raise</span> <span class="nam">InvalidDeclaredFamiliesError</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">    <span class="nam">name</span> <span class="op">=</span> <span class="nam">ModelName</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">name</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">    <span class="nam">part_number</span> <span class="op">=</span> <span class="nam">PartNumber</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">part_number</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -172,7 +172,7 @@
     <p class="run run2"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">            <span class="nam">name</span><span class="op">=</span><span class="nam">name</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">            <span class="nam">manufacturer</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">manufacturer</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">            <span class="nam">part_number</span><span class="op">=</span><span class="nam">part_number</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">            <span class="nam">declared_families</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">declared_families</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">            <span class="nam">declared_family_ids</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">declared_family_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">            <span class="nam">version_tag</span><span class="op">=</span><span class="nam">version_tag</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">            <span class="nam">occurred_at</span><span class="op">=</span><span class="nam">now</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -186,7 +186,7 @@
             <a class="nav" href="z_3e023ec9a13b04cc_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
     </div>
 </footer>

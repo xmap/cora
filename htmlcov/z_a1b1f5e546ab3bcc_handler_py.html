@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_a1b1f5e546ab3bcc_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -92,7 +92,7 @@
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">Cross-BC concern: this handler loads `list_all_family_ids` from the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">Family read repo before invoking the decider, and verifies every</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">element of `command.declared_families` resolves to a registered</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">element of `command.declared_family_ids` resolves to a registered</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">Family (including Deprecated). On miss, raises `FamilyNotFoundError`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">(404) carrying the FIRST missing Family id. Operators iterating</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">through a multi-family catalog entry get a single missing id at</span>&nbsp;</span><span class="r"></span></p>
@@ -205,7 +205,7 @@
     <p class="pln"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">        <span class="com"># Trigger to switch to per-id load: facility Family count crosses</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">        <span class="com"># ~500 OR p95 of define_model crosses 200ms.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">        <span class="nam">known_family_ids</span> <span class="op">=</span> <span class="nam">set</span><span class="op">(</span><span class="key">await</span> <span class="nam">list_all_family_ids</span><span class="op">(</span><span class="nam">deps</span><span class="op">.</span><span class="nam">pool</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">        <span class="nam">missing</span> <span class="op">=</span> <span class="nam">command</span><span class="op">.</span><span class="nam">declared_families</span> <span class="op">-</span> <span class="nam">known_family_ids</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">        <span class="nam">missing</span> <span class="op">=</span> <span class="nam">command</span><span class="op">.</span><span class="nam">declared_family_ids</span> <span class="op">-</span> <span class="nam">known_family_ids</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">        <span class="key">if</span> <span class="nam">missing</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">            <span class="com"># Sorted for deterministic error ordering across runs; surface</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">            <span class="com"># the first missing id (operators get one at a time).</span>&nbsp;</span><span class="r"></span></p>
@@ -271,7 +271,7 @@
             <a class="nav" href="z_a1b1f5e546ab3bcc_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
     </div>
 </footer>

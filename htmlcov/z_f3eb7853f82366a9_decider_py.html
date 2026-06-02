@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f3eb7853f82366a9_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -84,7 +84,7 @@
 <main id="source">
     <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Pure decider for the `AddModelFamily` command.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Targeted mutation of `Model.declared_families`, not a lifecycle</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Targeted mutation of `Model.declared_family_ids`, not a lifecycle</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">transition. Status is preserved (`Defined` stays `Defined`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">`Versioned` stays `Versioned`); only `Deprecated` is rejected, on</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">the same "deprecated catalog entry is frozen" rationale that drives</span>&nbsp;</span><span class="r"></span></p>
@@ -107,7 +107,7 @@
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">Invariants:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">  - State must not be None -> ModelNotFoundError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">  - State.status must not be Deprecated -> ModelCannotAddFamilyError</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">  - family_id must not already be in state.declared_families</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">  - family_id must not already be in state.declared_family_ids</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">    (strict-not-idempotent) -> ModelFamilyAlreadyPresentError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -135,7 +135,7 @@
     <p class="run"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ModelNotFoundError</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">model_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="key">if</span> <span class="nam">state</span><span class="op">.</span><span class="nam">status</span> <span class="key">is</span> <span class="nam">ModelStatus</span><span class="op">.</span><span class="nam">DEPRECATED</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ModelCannotAddFamilyError</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">current_status</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">status</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">    <span class="key">if</span> <span class="nam">command</span><span class="op">.</span><span class="nam">family_id</span> <span class="key">in</span> <span class="nam">state</span><span class="op">.</span><span class="nam">declared_families</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">    <span class="key">if</span> <span class="nam">command</span><span class="op">.</span><span class="nam">family_id</span> <span class="key">in</span> <span class="nam">state</span><span class="op">.</span><span class="nam">declared_family_ids</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ModelFamilyAlreadyPresentError</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">command</span><span class="op">.</span><span class="nam">family_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">    <span class="key">return</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">        <span class="nam">ModelFamilyAdded</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -153,7 +153,7 @@
             <a class="nav" href="z_f3eb7853f82366a9_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
     </div>
 </footer>

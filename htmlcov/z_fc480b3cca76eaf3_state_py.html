@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -684,9 +684,9 @@
     <p class="pln"><span class="n"><a id="t600" href="#t600">600</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t601" href="#t601">601</a></span><span class="t"><span class="str">    Cross-BC subset invariant: when an Asset is bound to a Model via</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t602" href="#t602">602</a></span><span class="t"><span class="str">    `model_id`, the Asset's `family_ids` must be a superset of the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t603" href="#t603">603</a></span><span class="t"><span class="str">    Model's `declared_families`. The check fires at `add_asset_family`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t603" href="#t603">603</a></span><span class="t"><span class="str">    Model's `declared_family_ids`. The check fires at `add_asset_family`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t604" href="#t604">604</a></span><span class="t"><span class="str">    against a freshly loaded Model snapshot; if the post-add families</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t605" href="#t605">605</a></span><span class="t"><span class="str">    set is not a superset of `declared_families`, this error is raised</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t605" href="#t605">605</a></span><span class="t"><span class="str">    set is not a superset of `declared_family_ids`, this error is raised</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t606" href="#t606">606</a></span><span class="t"><span class="str">    and no event is emitted.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t607" href="#t607">607</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t608" href="#t608">608</a></span><span class="t"><span class="str">    The message lists both sets verbatim so operators reading the API</span>&nbsp;</span><span class="r"></span></p>
@@ -704,17 +704,17 @@
     <p class="run run2"><span class="n"><a id="t620" href="#t620">620</a></span><span class="t">        <span class="nam">self</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t621" href="#t621">621</a></span><span class="t">        <span class="nam">asset_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t622" href="#t622">622</a></span><span class="t">        <span class="nam">model_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t623" href="#t623">623</a></span><span class="t">        <span class="nam">declared_families</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t623" href="#t623">623</a></span><span class="t">        <span class="nam">declared_family_ids</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t624" href="#t624">624</a></span><span class="t">        <span class="nam">asset_family_ids</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t625" href="#t625">625</a></span><span class="t">    <span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t626" href="#t626">626</a></span><span class="t">        <span class="nam">super</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">__init__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t627" href="#t627">627</a></span><span class="t">            <span class="fst">f"</span><span class="fst">Asset </span><span class="op">{</span><span class="nam">asset_id</span><span class="op">}</span><span class="fst"> bound to Model </span><span class="op">{</span><span class="nam">model_id</span><span class="op">}</span><span class="fst"> which declares families </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t628" href="#t628">628</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">declared_families</span><span class="op">)</span><span class="op">}</span><span class="fst">, but Asset families would be </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t628" href="#t628">628</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">declared_family_ids</span><span class="op">)</span><span class="op">}</span><span class="fst">, but Asset families would be </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t629" href="#t629">629</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">asset_family_ids</span><span class="op">)</span><span class="op">}</span><span class="fst"> after this transition</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t630" href="#t630">630</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t631" href="#t631">631</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">asset_id</span> <span class="op">=</span> <span class="nam">asset_id</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t632" href="#t632">632</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">model_id</span> <span class="op">=</span> <span class="nam">model_id</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t633" href="#t633">633</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">declared_families</span> <span class="op">=</span> <span class="nam">declared_families</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t633" href="#t633">633</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">declared_family_ids</span> <span class="op">=</span> <span class="nam">declared_family_ids</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t634" href="#t634">634</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">asset_family_ids</span> <span class="op">=</span> <span class="nam">asset_family_ids</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t635" href="#t635">635</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t636" href="#t636">636</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -824,7 +824,7 @@
     <p class="pln"><span class="n"><a id="t740" href="#t740">740</a></span><span class="t"><span class="str">    ladder). Set ONCE at `register_asset` time per the model-binding</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t741" href="#t741">741</a></span><span class="t"><span class="str">    design memo (Lock A); rebind path is decommission + re-register.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t742" href="#t742">742</a></span><span class="t"><span class="str">    Carries the cross-BC subset invariant</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t743" href="#t743">743</a></span><span class="t"><span class="str">    `Model.declared_families &#8838; Asset.family_ids`, enforced at</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t743" href="#t743">743</a></span><span class="t"><span class="str">    `Model.declared_family_ids &#8838; Asset.family_ids`, enforced at</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t744" href="#t744">744</a></span><span class="t"><span class="str">    `add_asset_family` against a freshly loaded Model snapshot.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t745" href="#t745">745</a></span><span class="t"><span class="str">    Defaults to None; legacy AssetRegistered streams without the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t746" href="#t746">746</a></span><span class="t"><span class="str">    model_id field fold cleanly via the additive-state pattern.</span>&nbsp;</span><span class="r"></span></p>
@@ -885,7 +885,7 @@
             <a class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_ea092756bf255b9e_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -92,7 +92,7 @@
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">Response carries the vendor-catalog state: the `manufacturer` is a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">nested `ManufacturerResponse` (required name plus optional opaque</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">identifier and closed-enum scheme), `declared_families` is the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">identifier and closed-enum scheme), `declared_family_ids` is the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">sorted list of Family ids the catalog entry satisfies, `status` is</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">the StrEnum string value (Defined / Versioned / Deprecated), and</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">`version_tag` is the operator-supplied label of the most recent</span>&nbsp;</span><span class="r"></span></p>
@@ -143,7 +143,7 @@
     <p class="pln"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t"><span class="str">    `status` is the StrEnum's string value (Defined / Versioned /</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t"><span class="str">    Deprecated). `version_tag` is the operator-supplied label of the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t"><span class="str">    most recent version_model call (null until first version).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="str">    `declared_families` serializes as a sorted list of Family UUIDs</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="str">    `declared_family_ids` serializes as a sorted list of Family UUIDs</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t"><span class="str">    (frozenset semantics in domain state, list at the JSON boundary;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="str">    sorted by UUID string form for response determinism).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
@@ -152,7 +152,7 @@
     <p class="exc show_exc"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">    <span class="nam">name</span><span class="op">:</span> <span class="nam">str</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span><span class="op">...</span><span class="op">,</span> <span class="nam">max_length</span><span class="op">=</span><span class="nam">MODEL_NAME_MAX_LENGTH</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">    <span class="nam">manufacturer</span><span class="op">:</span> <span class="nam">ManufacturerResponse</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">    <span class="nam">part_number</span><span class="op">:</span> <span class="nam">str</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span><span class="op">...</span><span class="op">,</span> <span class="nam">max_length</span><span class="op">=</span><span class="nam">MODEL_PART_NUMBER_MAX_LENGTH</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="nam">declared_families</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="nam">declared_family_ids</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">    <span class="nam">status</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">    <span class="nam">version_tag</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -218,7 +218,7 @@
     <p class="run run2"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">            <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">        <span class="nam">part_number</span><span class="op">=</span><span class="nam">model</span><span class="op">.</span><span class="nam">part_number</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">        <span class="nam">declared_families</span><span class="op">=</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">model</span><span class="op">.</span><span class="nam">declared_families</span><span class="op">,</span> <span class="nam">key</span><span class="op">=</span><span class="nam">str</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">        <span class="nam">declared_family_ids</span><span class="op">=</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">model</span><span class="op">.</span><span class="nam">declared_family_ids</span><span class="op">,</span> <span class="nam">key</span><span class="op">=</span><span class="nam">str</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t138" href="#t138">138</a></span><span class="t">        <span class="nam">status</span><span class="op">=</span><span class="nam">model</span><span class="op">.</span><span class="nam">status</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">        <span class="nam">version_tag</span><span class="op">=</span><span class="nam">model</span><span class="op">.</span><span class="nam">version</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -231,7 +231,7 @@
             <a class="nav" href="z_ea092756bf255b9e_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f3eb7853f82366a9_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -86,7 +86,7 @@
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Targeted-mutation endpoint at `POST /models/{model_id}/families`. Body</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">carries a single `family_id` that is added to the Model's</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">`declared_families` set. 204 No Content on success. Status (`Defined`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">`declared_family_ids` set. 204 No Content on success. Status (`Defined`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">or `Versioned`) is preserved; `Deprecated` rejects the mutation. No</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">`Idempotency-Key` (update-style, mirrors `version_model`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
@@ -112,7 +112,7 @@
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">    <span class="nam">family_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">        <span class="op">...</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="str">"Family id to add to the Model.declared_families set."</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="str">"Family id to add to the Model.declared_family_ids set."</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -148,7 +148,7 @@
     <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">            <span class="str">"description"</span><span class="op">:</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">                <span class="str">"Model is in `Deprecated` status (mutation requires "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">                <span class="str">"`Defined` or `Versioned`), OR the family_id is already "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">                <span class="str">"in the Model's declared_families set, OR a concurrent "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">                <span class="str">"in the Model's declared_family_ids set, OR a concurrent "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">                <span class="str">"write to the same model stream conflicted (optimistic "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">                <span class="str">"concurrency)."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">            <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -157,7 +157,7 @@
     <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">            <span class="str">"description"</span><span class="op">:</span> <span class="str">"Path parameter or request body failed schema validation."</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">        <span class="op">}</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="op">}</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="nam">summary</span><span class="op">=</span><span class="str">"Add a Family to an existing Model's declared_families set"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="nam">summary</span><span class="op">=</span><span class="str">"Add a Family to an existing Model's declared_family_ids set"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t"><span class="key">async</span> <span class="key">def</span> <span class="nam">post_models_add_family</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">    <span class="nam">model_id</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span><span class="nam">UUID</span><span class="op">,</span> <span class="nam">Path</span><span class="op">(</span><span class="nam">description</span><span class="op">=</span><span class="str">"Target model's id."</span><span class="op">)</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -182,7 +182,7 @@
             <a class="nav" href="z_f3eb7853f82366a9_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 12:33 +0000
+            created at 2026-06-02 13:17 +0000
         </p>
     </div>
 </footer>
