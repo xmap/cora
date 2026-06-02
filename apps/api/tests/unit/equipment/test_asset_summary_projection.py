@@ -126,7 +126,7 @@ async def test_asset_registered_with_drawing_backfills_three_columns() -> None:
         {
             "asset_id": str(_ASSET_ID),
             "name": "Microscope-2BM-A",
-            "level": "Assembly",
+            "level": "Component",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "drawing": {
@@ -155,7 +155,7 @@ async def test_asset_registered_with_drawing_no_revision_keeps_revision_null() -
         {
             "asset_id": str(_ASSET_ID),
             "name": "Microscope-2BM-A",
-            "level": "Assembly",
+            "level": "Component",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "drawing": {"system": "EDMS", "number": "9001"},
@@ -182,7 +182,7 @@ async def test_asset_registered_with_model_id_populates_model_column() -> None:
         {
             "asset_id": str(_ASSET_ID),
             "name": "Microscope-2BM-A",
-            "level": "Assembly",
+            "level": "Component",
             "parent_id": str(_PARENT_ID),
             "model_id": str(_MODEL_ID),
             "occurred_at": _NOW.isoformat(),

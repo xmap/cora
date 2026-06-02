@@ -108,7 +108,7 @@ def test_post_assets_uses_max_length_constant_from_domain() -> None:
 def test_post_assets_rejects_unknown_level_with_422() -> None:
     """Pydantic StrEnum validation rejects unknown level strings before
     the decider runs. Pinned because the level vocabulary is closed
-    (Enterprise/Site/Area/Unit/Assembly/Device per BC map); typos and
+    (Enterprise/Site/Area/Unit/Component/Device per BC map); typos and
     legacy values must surface at the API boundary."""
     with TestClient(create_app()) as client:
         response = client.post(
@@ -151,7 +151,7 @@ def test_post_assets_rejects_enterprise_with_non_null_parent_with_400() -> None:
 @pytest.mark.contract
 @pytest.mark.parametrize(
     "level",
-    ["Site", "Area", "Unit", "Assembly", "Device"],
+    ["Site", "Area", "Unit", "Component", "Device"],
 )
 def test_post_assets_rejects_non_enterprise_with_null_parent_with_400(
     level: str,

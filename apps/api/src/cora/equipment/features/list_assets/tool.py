@@ -43,7 +43,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         name="list_assets",
         description=(
             "Cursor-paginated list of assets. Optional filters: "
-            "level (Enterprise/Site/Area/Unit/Assembly/Device), "
+            "level (Enterprise/Site/Area/Unit/Component/Device), "
             "lifecycle (Commissioned/Active/Maintenance/Decommissioned), "
             "parent_id (direct-children-of). Pass `cursor` from a "
             "previous page's `next_cursor` to fetch the next page."

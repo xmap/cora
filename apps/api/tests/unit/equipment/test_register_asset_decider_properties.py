@@ -49,7 +49,7 @@ _NON_ENTERPRISE_LEVELS = st.sampled_from(
         AssetLevel.SITE,
         AssetLevel.AREA,
         AssetLevel.UNIT,
-        AssetLevel.ASSEMBLY,
+        AssetLevel.COMPONENT,
         AssetLevel.DEVICE,
     ]
 )

@@ -77,7 +77,7 @@ def test_asset_level_has_all_six_isa88_levels() -> None:
         "Site",
         "Area",
         "Unit",
-        "Assembly",
+        "Component",
         "Device",
     }
 
@@ -88,7 +88,7 @@ def test_asset_level_values_are_pascal_case_strings() -> None:
     assert AssetLevel.SITE == "Site"
     assert AssetLevel.AREA == "Area"
     assert AssetLevel.UNIT == "Unit"
-    assert AssetLevel.ASSEMBLY == "Assembly"
+    assert AssetLevel.COMPONENT == "Component"
     assert AssetLevel.DEVICE == "Device"
 
 

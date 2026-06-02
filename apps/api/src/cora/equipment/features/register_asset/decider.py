@@ -11,7 +11,7 @@ the Clock and IdGenerator ports.
 
 Per the BC map's hierarchy semantics:
   - `Enterprise` is the root level — `parent_id` MUST be null.
-  - All other levels (Site / Area / Unit / Assembly / Device)
+  - All other levels (Site / Area / Unit / Component / Device)
     MUST have a non-null `parent_id`.
 
 Eventual-consistency stance: the decider does NOT verify the
@@ -22,7 +22,7 @@ worker era. The single-parent tree rule is enforced structurally
 (one `parent_id` field, can't be a list).
 
 **Levels are conventional, not enforced**: the decider does NOT
-check that a Device's parent is an Assembly (etc). Device-in-
+check that a Device's parent is a Component (etc). Device-in-
 Device is allowed when reality demands it (smart instruments
 with addressable sub-modules).
 

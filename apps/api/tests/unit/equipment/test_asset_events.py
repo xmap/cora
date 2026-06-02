@@ -203,7 +203,7 @@ def test_to_payload_includes_drawing_block_when_set() -> None:
     event = AssetRegistered(
         asset_id=uuid4(),
         name="Microscope-2BM-A",
-        level="Assembly",
+        level="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         drawing=Drawing(system=DrawingSystem.ICMS, number="P4105", revision="A"),
@@ -221,7 +221,7 @@ def test_from_stored_rebuilds_asset_registered_with_drawing() -> None:
         {
             "asset_id": str(asset_id),
             "name": "Microscope-2BM-A",
-            "level": "Assembly",
+            "level": "Component",
             "parent_id": str(parent_id),
             "occurred_at": _NOW.isoformat(),
             "drawing": {"system": "EDMS", "number": "9001", "revision": None},
@@ -231,7 +231,7 @@ def test_from_stored_rebuilds_asset_registered_with_drawing() -> None:
     assert rebuilt == AssetRegistered(
         asset_id=asset_id,
         name="Microscope-2BM-A",
-        level="Assembly",
+        level="Component",
         parent_id=parent_id,
         occurred_at=_NOW,
         drawing=Drawing(system=DrawingSystem.EDMS, number="9001", revision=None),
@@ -283,7 +283,7 @@ def test_to_payload_then_from_stored_round_trips_with_drawing() -> None:
     original = AssetRegistered(
         asset_id=uuid4(),
         name="Microscope-2BM-A",
-        level="Assembly",
+        level="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         drawing=Drawing(system=DrawingSystem.DOI, number="10.5281/zenodo.X", revision="v2"),
@@ -320,7 +320,7 @@ def test_to_payload_includes_model_id_when_set() -> None:
     event = AssetRegistered(
         asset_id=asset_id,
         name="Microscope-2BM-A",
-        level="Assembly",
+        level="Component",
         parent_id=parent_id,
         occurred_at=_NOW,
         model_id=model_id,
@@ -339,7 +339,7 @@ def test_from_stored_rebuilds_asset_registered_with_model_id() -> None:
         {
             "asset_id": str(asset_id),
             "name": "Microscope-2BM-A",
-            "level": "Assembly",
+            "level": "Component",
             "parent_id": str(parent_id),
             "occurred_at": _NOW.isoformat(),
             "model_id": str(model_id),
@@ -349,7 +349,7 @@ def test_from_stored_rebuilds_asset_registered_with_model_id() -> None:
     assert rebuilt == AssetRegistered(
         asset_id=asset_id,
         name="Microscope-2BM-A",
-        level="Assembly",
+        level="Component",
         parent_id=parent_id,
         occurred_at=_NOW,
         model_id=model_id,
@@ -402,7 +402,7 @@ def test_to_payload_then_from_stored_round_trips_with_model_id() -> None:
     original = AssetRegistered(
         asset_id=uuid4(),
         name="Microscope-2BM-A",
-        level="Assembly",
+        level="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         model_id=uuid4(),
@@ -418,7 +418,7 @@ def test_to_payload_then_from_stored_round_trips_with_drawing_and_model_id() -> 
     original = AssetRegistered(
         asset_id=uuid4(),
         name="Microscope-2BM-A",
-        level="Assembly",
+        level="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         drawing=Drawing(system=DrawingSystem.ICMS, number="P4105", revision="A"),
@@ -1127,7 +1127,7 @@ def test_to_payload_includes_alternate_identifiers_when_set() -> None:
     event = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Assembly",
+        level="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A}),
@@ -1147,7 +1147,7 @@ def test_to_payload_emits_alternate_identifiers_sorted_for_stable_bytes() -> Non
     event = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Assembly",
+        level="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_B, _SAMPLE_ALT_ID_A}),
@@ -1168,7 +1168,7 @@ def test_from_stored_rebuilds_asset_registered_with_alternate_identifiers() -> N
         {
             "asset_id": str(asset_id),
             "name": "X",
-            "level": "Assembly",
+            "level": "Component",
             "parent_id": str(parent_id),
             "occurred_at": _NOW.isoformat(),
             "alternate_identifiers": [
@@ -1181,7 +1181,7 @@ def test_from_stored_rebuilds_asset_registered_with_alternate_identifiers() -> N
     assert rebuilt == AssetRegistered(
         asset_id=asset_id,
         name="X",
-        level="Assembly",
+        level="Component",
         parent_id=parent_id,
         occurred_at=_NOW,
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A, _SAMPLE_ALT_ID_B}),
@@ -1234,7 +1234,7 @@ def test_to_payload_then_from_stored_round_trips_with_alternate_identifiers() ->
     original = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Assembly",
+        level="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A, _SAMPLE_ALT_ID_B}),

@@ -36,12 +36,12 @@ A `Family` is the device-class abstraction: "RotaryStage", "Camera", "Hexapod", 
 | `FamilyStatus` | closed StrEnum: `Defined` \| `Versioned` \| `Deprecated` | `Family.status` |
 | `Affordance` | closed StrEnum, 28 values in 3 patterns (motion, signal, lifecycle) | members of `Family.affordances` |
 | `AssetName` | trimmed string, 1-200 chars | `Asset.name` |
-| `AssetLevel` | closed StrEnum: `Enterprise` \| `Site` \| `Area` \| `Unit` \| `Assembly` \| `Device` | `Asset.level` |
+| `AssetLevel` | closed StrEnum: `Enterprise` \| `Site` \| `Area` \| `Unit` \| `Component` \| `Device` | `Asset.level` |
 | `AssetLifecycle` | closed StrEnum: `Commissioned` \| `Active` \| `Maintenance` \| `Decommissioned` | `Asset.lifecycle` |
 | `AssetCondition` | closed StrEnum: `Nominal` \| `Degraded` \| `Faulted` | `Asset.condition` |
 | `AssetPort` | `(name, direction, signal_type)` triple; direction is `Input` \| `Output`; signal_type is free text, 1-50 chars | members of `Asset.ports` |
 
-The six `AssetLevel` values are ISA-95-derived with single-word names. Levels are conventional: the decider checks that an Enterprise-level Asset has no parent and that every other level has one, but it does not enforce that a `Device` parents to an `Assembly`. Smart instruments with addressable sub-modules legitimately put a `Device` under another `Device`.
+The six `AssetLevel` values are ISA-95-derived with single-word names. Levels are conventional: the decider checks that an Enterprise-level Asset has no parent and that every other level has one, but it does not enforce that a `Device` parents to a `Component`. Smart instruments with addressable sub-modules legitimately put a `Device` under another `Device`.
 
 Whether a composite vendor unit is one Asset with a wide settings dict or a parent Asset with several child Assets follows three tests. Any one is sufficient to spawn a child Asset:
 
@@ -223,7 +223,7 @@ CREATE TABLE proj_equipment_asset_summary (
     asset_id    UUID        PRIMARY KEY,
     name        TEXT        NOT NULL,
     level       TEXT        NOT NULL CHECK (
-        level IN ('Enterprise', 'Site', 'Area', 'Unit', 'Assembly', 'Device')
+        level IN ('Enterprise', 'Site', 'Area', 'Unit', 'Component', 'Device')
     ),
     lifecycle   TEXT        NOT NULL CHECK (
         lifecycle IN ('Commissioned', 'Active', 'Maintenance', 'Decommissioned')

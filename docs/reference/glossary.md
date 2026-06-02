@@ -40,7 +40,7 @@ For anyone reading CORA. Each term defined once and used the same way in code, c
 
 *ISA, ISO/IEC, NIST, PROV-O, RAiD.*
 
-- **ISA-95.** Manufacturing operations hierarchy: Enterprise / Site / Area / Unit / Assembly / Device. Used for the Asset model.
+- **ISA-95.** Manufacturing operations hierarchy: Enterprise / Site / Area / Unit / Component / Device. Used for the Asset model.
 - **ISA-88.** Batch control. Basis for Track A (Method / Practice / Plan / Run).
 - **ISA-106.** Continuous-process operations. Basis for Track B.
 - **ISA-99 / IEC 62443.** Industrial cybersecurity. Basis for Track C: Zones, Conduits, Policies (`trust` BC).
@@ -69,7 +69,7 @@ Watch-only (not adopted as a glossary term, see [Deferred](../stack/deferred.md)
 
 *Assets, Families, Affordances. The device-classification side of Equipment BC.*
 
-- **Asset.** A physical equipment instance registered in the hierarchy (Enterprise / Site / Area / Unit / Device per ISA-95). Belongs to one or more Families.
+- **Asset.** A physical equipment instance registered in the hierarchy (Enterprise / Site / Area / Unit / Component / Device per ISA-95). Belongs to one or more Families.
 - **Asset two-axis state.** Asset carries two orthogonal state axes: `lifecycle` (`Commissioned` / `Active` / `Maintenance` / `Decommissioned` — is this device part of inventory and assignable) and `condition` (`Nominal` / `Degraded` / `Faulted` — is it actually working right now). The two move independently: a Decommissioned asset can be discovered Faulted on inventory check; an Active asset can be Degraded without being pulled out of service. The split is the deliberate design lock per the asset-condition memo; do not collapse `lifecycle` and `condition` into a single FSM. Matches PI-System asset-health (Good / Warning / Bad) and SEMI E10 productive-vs-unproductive-time orthogonality.
 - **Family.** A device-class abstraction: WHAT kind of equipment this is, device-agnostic. Examples: `RotaryStage`, `LinearStage`, `Camera`, `Scintillator`, `Hexapod`, `Mirror`. Earlier this aggregate was named `Capability`; the operations-layer Recipe BC `Capability` aggregate (separate concept; see below) landed 2026-05-18 and took that name over.
 - **Affordance.** A closed-enum primitive a Family declares it supports. Two patterns: operational affordances (`-able`/`-ible`/`-ing` suffix per Swift Guidelines, "device supports doing X" or "device performs X"; 27 items mixing 22 `-able`/`-ible` actions with 5 `-ing` role/flow gerunds — `Marking`, `Pulsing`, `Following`, `Leading`, `Recording`), and lifecycle affordances (noun, "device has lifecycle property X"; 1 item — `Consumable`). Cross-BC contract: at `define_plan` time, the union of every wired Asset's Families' affordances must cover the bound Method's Capability `required_affordances` (otherwise `PlanAffordancesNotSatisfiedError`, 409). See [Affordances reference](affordances.md) for the 28-item v1 list.

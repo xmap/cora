@@ -142,7 +142,7 @@ def test_decide_rejects_enterprise_with_non_null_parent() -> None:
         AssetLevel.SITE,
         AssetLevel.AREA,
         AssetLevel.UNIT,
-        AssetLevel.ASSEMBLY,
+        AssetLevel.COMPONENT,
         AssetLevel.DEVICE,
     ],
 )
@@ -169,7 +169,7 @@ def test_decide_carries_drawing_through_to_emitted_event() -> None:
         state=None,
         command=RegisterAsset(
             name="Microscope-2BM-A",
-            level=AssetLevel.ASSEMBLY,
+            level=AssetLevel.COMPONENT,
             parent_id=uuid4(),
             drawing=drawing,
         ),
@@ -205,7 +205,7 @@ def test_decide_propagates_model_id_to_emitted_event() -> None:
         state=None,
         command=RegisterAsset(
             name="Microscope-2BM-A",
-            level=AssetLevel.ASSEMBLY,
+            level=AssetLevel.COMPONENT,
             parent_id=uuid4(),
             model_id=model_id,
         ),

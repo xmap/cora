@@ -1098,13 +1098,13 @@
         "type": "object"
       },
       "AssetLevel": {
-        "description": "The hierarchical level of an Asset.\n\nPer the BC map (ISA-88-derived, single-word convention):\n  - `Enterprise`: root; the institution itself\n  - `Site`: a facility (for example, APS)\n  - `Area`: a section of a site (for example, the experimental hall)\n  - `Unit`: an operational unit (for example, a beamline)\n  - `Assembly`: a composed component (ISA-88 \"Equipment Module\")\n  - `Device`: an addressable control surface (ISA-88 \"Control Module\")\n\nCommon pattern is the strict ordering above, but Device-in-Device\nis allowed when reality demands it (smart instruments). Levels\nare conventional, not enforced: the decider does not check that\na Device's parent is an Assembly.",
+        "description": "The hierarchical level of an Asset.\n\nPer the BC map (ISA-88-derived, single-word convention):\n  - `Enterprise`: root; the institution itself\n  - `Site`: a facility (for example, APS)\n  - `Area`: a section of a site (for example, the experimental hall)\n  - `Unit`: an operational unit (for example, a beamline)\n  - `Component`: a composed sub-system (ISA-88 \"Equipment Module\" tier)\n  - `Device`: an addressable control surface (ISA-88 \"Control Module\")\n\nCommon pattern is the strict ordering above, but Device-in-Device\nis allowed when reality demands it (smart instruments). Levels\nare conventional, not enforced: the decider does not check that\na Device's parent is a Component.",
         "enum": [
           "Enterprise",
           "Site",
           "Area",
           "Unit",
-          "Assembly",
+          "Component",
           "Device"
         ],
         "title": "AssetLevel",
@@ -1253,7 +1253,7 @@
               "Site",
               "Area",
               "Unit",
-              "Assembly",
+              "Component",
               "Device"
             ],
             "title": "Level",
@@ -7783,7 +7783,7 @@
         "type": "object"
       },
       "RegisterAssetRequest": {
-        "description": "Body for `POST /assets`.\n\n`level` accepts the StrEnum's PascalCase string values\n(\"Enterprise\" / \"Site\" / \"Area\" / \"Unit\" / \"Assembly\" /\n\"Device\"); Pydantic rejects unknowns with 422.\n\n`parent_id` is required for non-Enterprise levels and must be\nnull for Enterprise; that's a domain invariant enforced by\nthe decider (raises InvalidAssetParentError \u2192 400), not by\nPydantic, since the rule is conditional on `level`.",
+        "description": "Body for `POST /assets`.\n\n`level` accepts the StrEnum's PascalCase string values\n(\"Enterprise\" / \"Site\" / \"Area\" / \"Unit\" / \"Component\" /\n\"Device\"); Pydantic rejects unknowns with 422.\n\n`parent_id` is required for non-Enterprise levels and must be\nnull for Enterprise; that's a domain invariant enforced by\nthe decider (raises InvalidAssetParentError \u2192 400), not by\nPydantic, since the rule is conditional on `level`.",
         "properties": {
           "alternate_identifiers": {
             "anyOf": [
@@ -7813,7 +7813,7 @@
           },
           "level": {
             "$ref": "#/components/schemas/AssetLevel",
-            "description": "Hierarchical level. One of: Enterprise (root, requires null parent_id), Site, Area, Unit, Assembly, Device."
+            "description": "Hierarchical level. One of: Enterprise (root, requires null parent_id), Site, Area, Unit, Component, Device."
           },
           "model_id": {
             "anyOf": [
@@ -13492,7 +13492,7 @@
                     "Site",
                     "Area",
                     "Unit",
-                    "Assembly",
+                    "Component",
                     "Device"
                   ],
                   "type": "string"

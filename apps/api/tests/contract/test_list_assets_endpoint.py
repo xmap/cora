@@ -23,7 +23,7 @@ def test_get_assets_returns_empty_page_with_no_data(client: TestClient) -> None:
 @pytest.mark.contract
 @pytest.mark.parametrize(
     "level",
-    ["Enterprise", "Site", "Area", "Unit", "Assembly", "Device"],
+    ["Enterprise", "Site", "Area", "Unit", "Component", "Device"],
 )
 def test_get_assets_accepts_each_level(client: TestClient, level: str) -> None:
     with client:

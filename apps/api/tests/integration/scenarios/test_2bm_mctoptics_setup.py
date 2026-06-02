@@ -572,7 +572,7 @@ _NEW_FAMILY_SCHEMAS: tuple[tuple[UUID, dict[str, Any]], ...] = (
 
 # (asset_id, parent_id, asset_name, level)
 _NEW_ASSET_REGISTRATIONS: tuple[tuple[UUID, UUID, str, AssetLevel], ...] = (
-    (_ASSET_MCTOPTICS_ID, _2BM_UNIT_ID, "MCTOptics", AssetLevel.ASSEMBLY),
+    (_ASSET_MCTOPTICS_ID, _2BM_UNIT_ID, "MCTOptics", AssetLevel.COMPONENT),
     (
         _ASSET_MCTOPTICS_OBJECTIVE_0_ID,
         _ASSET_MCTOPTICS_ID,

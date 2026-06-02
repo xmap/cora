@@ -56,7 +56,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             Field(
                 description=(
                     "Hierarchical level: Enterprise (root, requires "
-                    "null parent_id), Site, Area, Unit, Assembly, Device."
+                    "null parent_id), Site, Area, Unit, Component, Device."
                 ),
             ),
         ],

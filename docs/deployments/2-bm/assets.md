@@ -16,7 +16,7 @@ The Devices that hang off 2-BM. The 2-BM Asset itself sits at the Unit level and
 | `Sample_top_Pitch` | `Device` | `LinearStage` | `2-BM` |
 | `Hexapod_2BM` | `Device` | `Hexapod` | `2-BM` |
 | `Optique_Peter_focus_Z` | `Device` | `LinearStage` | `2-BM` (wired into `MCTOptics`) |
-| `MCTOptics` | `Assembly` | `Microscope` | `2-BM` |
+| `MCTOptics` | `Component` | `Microscope` | `2-BM` |
 | `MCTOptics_lens_turret` | `Device` | `RotaryStage` (pending) | `2-BM` (wired into `MCTOptics`) |
 | `MCTOptics_objective_0` | `Device` | `Objective` | `MCTOptics` |
 | `MCTOptics_objective_1` | `Device` | `Objective` | `MCTOptics` |
@@ -26,11 +26,11 @@ The Devices that hang off 2-BM. The 2-BM Asset itself sits at the Unit level and
 
 ### MCTOptics composition
 
-The Optique Peter detector at ~55 m from the source (controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py)) registers as a `Microscope`-Family Assembly with 5 Device children. The lens turret sits as a sibling under 2-BM (wired in, not a child), and the existing `Optique_Peter_focus_Z` linear stage is reused for shared focus.
+The Optique Peter detector at ~55 m from the source (controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py)) registers as a `Microscope`-Family Component with 5 Device children. The lens turret sits as a sibling under 2-BM (wired in, not a child), and the existing `Optique_Peter_focus_Z` linear stage is reused for shared focus.
 
 ```
 2-BM (Unit)
-+-- MCTOptics (Assembly)                  Family: Microscope
++-- MCTOptics (Component)                 Family: Microscope
 |   +-- MCTOptics_objective_0 (Device)    Family: Objective    10x
 |   +-- MCTOptics_objective_1 (Device)    Family: Objective     5x
 |   +-- MCTOptics_objective_2 (Device)    Family: Objective    1.1x

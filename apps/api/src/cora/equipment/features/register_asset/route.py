@@ -33,7 +33,7 @@ class RegisterAssetRequest(BaseModel):
     """Body for `POST /assets`.
 
     `level` accepts the StrEnum's PascalCase string values
-    ("Enterprise" / "Site" / "Area" / "Unit" / "Assembly" /
+    ("Enterprise" / "Site" / "Area" / "Unit" / "Component" /
     "Device"); Pydantic rejects unknowns with 422.
 
     `parent_id` is required for non-Enterprise levels and must be
@@ -52,7 +52,7 @@ class RegisterAssetRequest(BaseModel):
         ...,
         description=(
             "Hierarchical level. One of: Enterprise (root, requires "
-            "null parent_id), Site, Area, Unit, Assembly, Device."
+            "null parent_id), Site, Area, Unit, Component, Device."
         ),
     )
     parent_id: UUID | None = Field(

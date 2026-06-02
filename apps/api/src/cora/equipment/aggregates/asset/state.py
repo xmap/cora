@@ -3,7 +3,7 @@
 `Asset` is the physical equipment instance: a beamline, a detector,
 a sample changer, an HPC node. Hierarchical via `parent_id` (forms
 a tree, NOT a DAG — single-parent rule per BC map). Carries a
-`level` discriminator (Enterprise / Site / Area / Unit / Assembly /
+`level` discriminator (Enterprise / Site / Area / Unit / Component /
 Device, ISA-88-derived), a `lifecycle` FSM
 (Commissioned -> Active -> Maintenance -> Decommissioned), a
 `condition` enum (Nominal / Degraded / Faulted, 5g-b: orthogonal to
@@ -26,7 +26,7 @@ facets — `condition`, `settings`, `ports`, `owner`,
 
 Per the BC map:
   - `Enterprise` is the root level — `parent_id` MUST be null.
-  - All other levels (Site / Area / Unit / Assembly / Device) MUST
+  - All other levels (Site / Area / Unit / Component / Device) MUST
     have a `parent_id`.
 
 Eventual-consistency stance for the parent ref: the decider does
@@ -38,7 +38,7 @@ to projection-worker era. Single-parent tree is enforced
 structurally (one `parent_id` field, can't be a list).
 
 **Levels are conventional, not enforced** per the BC map: the
-decider does NOT check that a Device's parent is an Assembly.
+decider does NOT check that a Device's parent is a Component.
 `Device`-in-`Device` is allowed when reality demands it (smart
 instruments with addressable sub-modules).
 
@@ -84,20 +84,20 @@ class AssetLevel(StrEnum):
       - `Site`: a facility (for example, APS)
       - `Area`: a section of a site (for example, the experimental hall)
       - `Unit`: an operational unit (for example, a beamline)
-      - `Assembly`: a composed component (ISA-88 "Equipment Module")
+      - `Component`: a composed sub-system (ISA-88 "Equipment Module" tier)
       - `Device`: an addressable control surface (ISA-88 "Control Module")
 
     Common pattern is the strict ordering above, but Device-in-Device
     is allowed when reality demands it (smart instruments). Levels
     are conventional, not enforced: the decider does not check that
-    a Device's parent is an Assembly.
+    a Device's parent is a Component.
     """
 
     ENTERPRISE = "Enterprise"
     SITE = "Site"
     AREA = "Area"
     UNIT = "Unit"
-    ASSEMBLY = "Assembly"
+    COMPONENT = "Component"
     DEVICE = "Device"
 
 
@@ -408,7 +408,7 @@ class InvalidAssetParentError(ValueError):
       - Enterprise-level Asset supplied a non-null `parent_id`
         (Enterprise is the root; cannot have a parent)
       - Non-Enterprise-level Asset supplied a null `parent_id`
-        (Site / Area / Unit / Assembly / Device must have a parent)
+        (Site / Area / Unit / Component / Device must have a parent)
 
     Eventual-consistency stance: this decider rule does NOT check
     that the referenced parent Asset exists. Cycle detection

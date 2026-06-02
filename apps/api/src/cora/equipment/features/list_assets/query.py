@@ -15,7 +15,7 @@ AssetLevelFilter = Literal[
     "Site",
     "Area",
     "Unit",
-    "Assembly",
+    "Component",
     "Device",
 ]
 
