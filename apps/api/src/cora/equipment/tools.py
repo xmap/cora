@@ -71,10 +71,32 @@ def register_equipment_tools(
     get_handlers: Callable[[], EquipmentHandlers],
 ) -> None:
     """Register every Equipment slice's MCP tool on the FastMCP server."""
+    # Family aggregate
     define_family_tool.register(
         mcp,
         get_handler=lambda: get_handlers().define_family,
     )
+    version_family_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().version_family,
+    )
+    deprecate_family_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().deprecate_family,
+    )
+    update_family_settings_schema_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().update_family_settings_schema,
+    )
+    get_family_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().get_family,
+    )
+    list_families_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().list_families,
+    )
+    # Model aggregate
     define_model_tool.register(
         mcp,
         get_handler=lambda: get_handlers().define_model,
@@ -95,26 +117,11 @@ def register_equipment_tools(
         mcp,
         get_handler=lambda: get_handlers().remove_model_family,
     )
-    get_family_tool.register(
-        mcp,
-        get_handler=lambda: get_handlers().get_family,
-    )
     get_model_tool.register(
         mcp,
         get_handler=lambda: get_handlers().get_model,
     )
-    version_family_tool.register(
-        mcp,
-        get_handler=lambda: get_handlers().version_family,
-    )
-    deprecate_family_tool.register(
-        mcp,
-        get_handler=lambda: get_handlers().deprecate_family,
-    )
-    update_family_settings_schema_tool.register(
-        mcp,
-        get_handler=lambda: get_handlers().update_family_settings_schema,
-    )
+    # Asset aggregate
     register_asset_tool.register(
         mcp,
         get_handler=lambda: get_handlers().register_asset,
@@ -183,10 +190,7 @@ def register_equipment_tools(
         mcp,
         get_handler=lambda: get_handlers().list_assets,
     )
-    list_families_tool.register(
-        mcp,
-        get_handler=lambda: get_handlers().list_families,
-    )
+    # Frame aggregate
     register_frame_tool.register(
         mcp,
         get_handler=lambda: get_handlers().register_frame,
@@ -199,6 +203,7 @@ def register_equipment_tools(
         mcp,
         get_handler=lambda: get_handlers().decommission_frame,
     )
+    # Mount aggregate
     register_mount_tool.register(
         mcp,
         get_handler=lambda: get_handlers().register_mount,

@@ -7,13 +7,13 @@ of that bundle. New slices (commands or queries) add a new field
 on `EquipmentHandlers` and a single line in this factory.
 
 Cross-cutting decorators applied here mirror Access / Trust /
-Subject (composition order matters — innermost first):
+Subject (composition order matters, innermost first):
 
-1. `bind(deps)` — bare handler.
-2. `with_idempotency` (create-style commands only) — Idempotency-Key
+1. `bind(deps)` bare handler.
+2. `with_idempotency` (create-style commands only) Idempotency-Key
    support. Wrapped before tracing so cache-hits and cache-misses
    both attribute to the tracing span.
-3. `with_tracing` — OTel span around every handler call. Records
+3. `with_tracing` OTel span around every handler call. Records
    `cora.bc`, `cora.command` / `cora.query` attributes.
 
 Update-style transitions are not idempotency-wrapped: they're
@@ -81,25 +81,41 @@ _BC = "equipment"
 class EquipmentHandlers:
     """The Equipment BC's handler bundle, each closed over Kernel.
 
-    Two aggregates: `Family` (technique-class catalog; lifecycle
-    Defined → Versioned → Deprecated) and `Asset` (instance with
-    hierarchy + lifecycle + family-set + condition + settings + ports).
-    Genesis commands (`define_family`, `register_asset`) are
-    idempotency-wrapped; everything else is update-style with bare
-    Handler protocols.
+    Five aggregates:
+
+    - `Family`: technique-class catalog (lifecycle Defined,
+      Versioned, Deprecated) declaring Affordances + settings schema.
+    - `Model`: manufacturer-specific catalog entry under one or more
+      Families (lifecycle Defined, Versioned, Deprecated).
+    - `Asset`: physical or logical instance with hierarchy, lifecycle,
+      family-set, condition, settings, and typed ports.
+    - `Frame`: spatial reference frame anchored to a root surface with
+      a 6-DoF Placement.
+    - `Mount`: a slot on a Frame that can receive at most one Asset
+      via install / uninstall.
+
+    Genesis commands (`define_family`, `define_model`, `register_asset`,
+    `register_frame`, `register_mount`) are idempotency-wrapped;
+    everything else is update-style with bare Handler protocols.
     """
 
+    # Family aggregate
     define_family: define_family.IdempotentHandler
+    version_family: version_family.Handler
+    deprecate_family: deprecate_family.Handler
+    update_family_settings_schema: update_family_settings_schema.Handler
+    get_family: get_family.Handler
+    list_families: list_families.Handler
+
+    # Model aggregate
     define_model: define_model.IdempotentHandler
     version_model: version_model.Handler
     deprecate_model: deprecate_model.Handler
     add_model_family: add_model_family.Handler
     remove_model_family: remove_model_family.Handler
     get_model: get_model.Handler
-    get_family: get_family.Handler
-    version_family: version_family.Handler
-    deprecate_family: deprecate_family.Handler
-    update_family_settings_schema: update_family_settings_schema.Handler
+
+    # Asset aggregate
     register_asset: register_asset.IdempotentHandler
     activate_asset: activate_asset.Handler
     decommission_asset: decommission_asset.Handler
@@ -117,10 +133,13 @@ class EquipmentHandlers:
     get_asset: get_asset.Handler
     get_asset_integration_view: get_asset_integration_view.Handler
     list_assets: list_assets.Handler
-    list_families: list_families.Handler
+
+    # Frame aggregate
     register_frame: register_frame.IdempotentHandler
     update_frame_placement: update_frame_placement.Handler
     decommission_frame: decommission_frame.Handler
+
+    # Mount aggregate
     register_mount: register_mount.IdempotentHandler
     update_mount_placement: update_mount_placement.Handler
     decommission_mount: decommission_mount.Handler
@@ -131,6 +150,7 @@ class EquipmentHandlers:
 def wire_equipment(deps: Kernel) -> EquipmentHandlers:
     """Build the Equipment BC handlers from shared dependencies."""
     return EquipmentHandlers(
+        # Family aggregate
         define_family=with_tracing(
             with_idempotency(
                 define_family.bind(deps),
@@ -145,6 +165,34 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
             command_name="DefineFamily",
             bc=_BC,
         ),
+        version_family=with_tracing(
+            version_family.bind(deps),
+            command_name="VersionFamily",
+            bc=_BC,
+        ),
+        deprecate_family=with_tracing(
+            deprecate_family.bind(deps),
+            command_name="DeprecateFamily",
+            bc=_BC,
+        ),
+        update_family_settings_schema=with_tracing(
+            update_family_settings_schema.bind(deps),
+            command_name="UpdateFamilySettingsSchema",
+            bc=_BC,
+        ),
+        get_family=with_tracing(
+            get_family.bind(deps),
+            command_name="GetFamily",
+            bc=_BC,
+            kind="query",
+        ),
+        list_families=with_tracing(
+            list_families.bind(deps),
+            command_name="ListFamilies",
+            bc=_BC,
+            kind="query",
+        ),
+        # Model aggregate
         define_model=with_tracing(
             with_idempotency(
                 define_model.bind(deps),
@@ -183,27 +231,7 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
             bc=_BC,
             kind="query",
         ),
-        get_family=with_tracing(
-            get_family.bind(deps),
-            command_name="GetFamily",
-            bc=_BC,
-            kind="query",
-        ),
-        version_family=with_tracing(
-            version_family.bind(deps),
-            command_name="VersionFamily",
-            bc=_BC,
-        ),
-        deprecate_family=with_tracing(
-            deprecate_family.bind(deps),
-            command_name="DeprecateFamily",
-            bc=_BC,
-        ),
-        update_family_settings_schema=with_tracing(
-            update_family_settings_schema.bind(deps),
-            command_name="UpdateFamilySettingsSchema",
-            bc=_BC,
-        ),
+        # Asset aggregate
         register_asset=with_tracing(
             with_idempotency(
                 register_asset.bind(deps),
@@ -299,12 +327,7 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
             bc=_BC,
             kind="query",
         ),
-        list_families=with_tracing(
-            list_families.bind(deps),
-            command_name="ListFamilies",
-            bc=_BC,
-            kind="query",
-        ),
+        # Frame aggregate
         register_frame=with_tracing(
             with_idempotency(
                 register_frame.bind(deps),
@@ -327,6 +350,7 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
             command_name="DecommissionFrame",
             bc=_BC,
         ),
+        # Mount aggregate
         register_mount=with_tracing(
             with_idempotency(
                 register_mount.bind(deps),

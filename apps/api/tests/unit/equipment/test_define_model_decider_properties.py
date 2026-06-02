@@ -90,6 +90,25 @@ def _invalid_bounded_text(max_length: int) -> st.SearchStrategy[str]:
     )
 
 
+def _padded_text(inner_strategy: st.SearchStrategy[str]) -> st.SearchStrategy[str]:
+    """Wrap an inner text strategy in random leading + trailing whitespace.
+
+    Distinguishes "VO trims at construction" from "decider stores raw
+    command text": if the emitted event payload still carries the
+    untrimmed wrapper, the decider is leaking `command.<field>` instead
+    of the VO's `.value`.
+    """
+
+    @st.composite
+    def build(draw: st.DrawFn) -> str:
+        leading = draw(st.text(alphabet=" \t\n", max_size=10))
+        core = draw(inner_strategy)
+        trailing = draw(st.text(alphabet=" \t\n", max_size=10))
+        return leading + core + trailing
+
+    return build()
+
+
 @st.composite
 def _manufacturers(draw: st.DrawFn) -> Manufacturer:
     """Build a Manufacturer VO with optional paired identifier + type.
@@ -333,6 +352,46 @@ def test_define_model_with_invalid_version_tag_always_raises(
     )
     with pytest.raises(InvalidModelVersionTagError):
         define_model.decide(state=None, command=command, now=now, new_id=new_id)
+
+
+@pytest.mark.unit
+@given(
+    name=_padded_text(_NAME),
+    manufacturer=_manufacturers(),
+    part_number=_padded_text(_PART_NUMBER),
+    declared_families=_DECLARED_FAMILIES,
+    version_tag=st.one_of(st.none(), _VERSION_TAG),
+    now=aware_datetimes(),
+    new_id=st.uuids(),
+)
+def test_define_model_event_carries_trimmed_name_and_part_number(
+    name: str,
+    manufacturer: Manufacturer,
+    part_number: str,
+    declared_families: frozenset[UUID],
+    version_tag: str | None,
+    now: datetime,
+    new_id: UUID,
+) -> None:
+    """Padded input -> ModelDefined.name / .part_number carry the trimmed
+    value, never the raw command string with leading or trailing whitespace.
+
+    Closes a coverage gap in printable_ascii_text (which excludes
+    whitespace): without this property, the decider could emit
+    `command.name` raw and still pass every other PBT in this module.
+    """
+    command = _command(
+        name=name,
+        manufacturer=manufacturer,
+        part_number=part_number,
+        declared_families=declared_families,
+        version_tag=version_tag,
+    )
+    events = define_model.decide(state=None, command=command, now=now, new_id=new_id)
+    assert len(events) == 1
+    event = events[0]
+    assert event.name == event.name.strip()
+    assert event.part_number == event.part_number.strip()
 
 
 @pytest.mark.unit

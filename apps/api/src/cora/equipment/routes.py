@@ -16,10 +16,9 @@ does not re-register them.
 
 ## Loop-collapse pattern
 
-Equipment owns multiple aggregates (Family + Asset, with more
-slices to come). Three error families share the same response
-shape and get collapsed via Trust's `_handle_invalid_name`-style
-loop pattern:
+Equipment owns five aggregates (Family, Model, Asset, Frame, Mount).
+Three error families share the same response shape and get collapsed
+via Trust's `_handle_invalid_name`-style loop pattern:
 
   - 400 (validation): InvalidFamilyName, InvalidAssetName,
     InvalidAssetParent
@@ -215,18 +214,21 @@ async def _handle_cannot_transition(request: Request, exc: Exception) -> JSONRes
 
 def register_equipment_routes(app: FastAPI) -> None:
     """Attach Equipment slice routers and exception handlers to the FastAPI app."""
+    # Family aggregate
     app.include_router(define_family.router)
+    app.include_router(version_family.router)
+    app.include_router(deprecate_family.router)
+    app.include_router(update_family_settings_schema.router)
+    app.include_router(get_family.router)
+    app.include_router(list_families.router)
+    # Model aggregate
     app.include_router(define_model.router)
     app.include_router(version_model.router)
     app.include_router(deprecate_model.router)
     app.include_router(add_model_family.router)
     app.include_router(remove_model_family.router)
     app.include_router(get_model.router)
-    app.include_router(get_family.router)
-    app.include_router(version_family.router)
-    app.include_router(deprecate_family.router)
-    app.include_router(update_family_settings_schema.router)
-    app.include_router(list_families.router)
+    # Asset aggregate
     app.include_router(register_asset.router)
     app.include_router(activate_asset.router)
     app.include_router(decommission_asset.router)
@@ -244,9 +246,11 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(get_asset.router)
     app.include_router(get_asset_integration_view.router)
     app.include_router(list_assets.router)
+    # Frame aggregate
     app.include_router(register_frame.router)
     app.include_router(update_frame_placement.router)
     app.include_router(decommission_frame.router)
+    # Mount aggregate
     app.include_router(register_mount.router)
     app.include_router(update_mount_placement.router)
     app.include_router(decommission_mount.router)

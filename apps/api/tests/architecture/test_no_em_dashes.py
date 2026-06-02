@@ -164,7 +164,6 @@ EMDASH_ALLOWLIST: frozenset[str] = frozenset(
         "src/cora/equipment/features/version_family/decider.py",
         "src/cora/equipment/features/version_family/handler.py",
         "src/cora/equipment/routes.py",
-        "src/cora/equipment/wire.py",
         "src/cora/infrastructure/adapters/introspection_token_verifier.py",
         "src/cora/infrastructure/adapters/jwt_token_verifier.py",
         "src/cora/infrastructure/adapters/postgres_event_store.py",

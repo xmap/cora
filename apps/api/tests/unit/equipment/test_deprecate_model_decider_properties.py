@@ -67,6 +67,25 @@ def _invalid_reason() -> st.SearchStrategy[str]:
     )
 
 
+def _padded_text(inner_strategy: st.SearchStrategy[str]) -> st.SearchStrategy[str]:
+    """Wrap an inner text strategy in random leading + trailing whitespace.
+
+    Distinguishes "VO trims at construction" from "decider stores raw
+    command text": if the emitted event payload still carries the
+    untrimmed wrapper, the decider is leaking `command.<field>` instead
+    of the VO's `.value`.
+    """
+
+    @st.composite
+    def build(draw: st.DrawFn) -> str:
+        leading = draw(st.text(alphabet=" \t\n", max_size=10))
+        core = draw(inner_strategy)
+        trailing = draw(st.text(alphabet=" \t\n", max_size=10))
+        return leading + core + trailing
+
+    return build()
+
+
 def _model(model_id: UUID, *, status: ModelStatus) -> Model:
     return Model(
         id=model_id,
@@ -162,6 +181,35 @@ def test_deprecate_model_with_invalid_reason_always_raises(
     command = DeprecateModel(model_id=model_id, reason=reason)
     with pytest.raises(InvalidModelDeprecationReasonError):
         deprecate_model.decide(state=state, command=command, now=now)
+
+
+@pytest.mark.unit
+@given(
+    model_id=st.uuids(),
+    status=_DEPRECATABLE_STATUS,
+    reason=_padded_text(_REASON),
+    now=aware_datetimes(),
+)
+def test_deprecate_model_event_carries_trimmed_reason(
+    model_id: UUID,
+    status: ModelStatus,
+    reason: str,
+    now: datetime,
+) -> None:
+    """Padded input -> ModelDeprecated.reason carries the trimmed value,
+    never the raw command string with leading or trailing whitespace.
+
+    Closes a coverage gap in printable_ascii_text (which excludes
+    whitespace): without this property, the decider could emit
+    `command.reason` raw instead of `ModelDeprecationReason(...).value`
+    and still pass every other PBT in this module.
+    """
+    state = _model(model_id, status=status)
+    command = DeprecateModel(model_id=model_id, reason=reason)
+    events = deprecate_model.decide(state=state, command=command, now=now)
+    assert len(events) == 1
+    event = events[0]
+    assert event.reason == event.reason.strip()
 
 
 @pytest.mark.unit
