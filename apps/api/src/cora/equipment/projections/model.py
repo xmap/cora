@@ -42,12 +42,18 @@ events.
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
-import json
 from datetime import datetime
 from uuid import UUID
 
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.infrastructure.projection.handler import ConnectionLike
+
+# `declared_families` is bound as a Python list and lands as a real JSONB
+# array (the pool-wide asyncpg jsonb codec encodes it via `json.dumps`
+# exactly once before sending). Pre-encoding the list with `json.dumps`
+# in Python first would land a JSONB scalar string instead, which
+# `jsonb_array_elements_text` rejects with "cannot extract elements from
+# a scalar" on every ModelFamilyAdded / ModelFamilyRemoved replay.
 
 
 def _id(payload: dict[str, object]) -> UUID:
@@ -174,7 +180,7 @@ class ModelSummaryProjection:
                     identifier,
                     identifier_type,
                     event.payload["part_number"],
-                    json.dumps(declared_families),
+                    declared_families,
                     event.payload.get("version_tag"),
                     datetime.fromisoformat(event.payload["occurred_at"]),
                 )
@@ -189,7 +195,7 @@ class ModelSummaryProjection:
                     identifier,
                     identifier_type,
                     event.payload["part_number"],
-                    json.dumps(declared_families),
+                    declared_families,
                     event.payload["version_tag"],
                 )
             case "ModelDeprecated":

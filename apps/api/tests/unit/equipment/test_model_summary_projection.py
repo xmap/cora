@@ -97,8 +97,12 @@ async def test_model_defined_inserts_row_with_defined_status() -> None:
     assert args.args[4] is None
     assert args.args[5] is None
     assert args.args[6] == "ANT130-L"
-    # declared_families serialized as a JSON-string payload.
-    assert args.args[7] == f'["{_FAMILY_A_ID}"]'
+    # declared_families bound as a Python list; asyncpg's jsonb codec
+    # encodes via json.dumps at the connection layer, so we pass the
+    # raw list and let the codec do the encoding once (the previous
+    # double-encode landed the value as a JSONB scalar string, which
+    # broke jsonb_array_elements_text in the targeted-mutation SQL).
+    assert args.args[7] == [str(_FAMILY_A_ID)]
     # version_tag absent in payload -> None bound.
     assert args.args[8] is None
     assert args.args[9] == _NOW
