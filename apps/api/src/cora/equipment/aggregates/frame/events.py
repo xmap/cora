@@ -53,64 +53,25 @@ from datetime import datetime
 from typing import Any, assert_never
 from uuid import UUID
 
-from cora.equipment.aggregates._placement import Placement, ReferenceSurface, UnitSystem
+from cora.equipment.aggregates._placement import (
+    Placement,
+    placement_from_payload,
+    placement_to_payload,
+)
 from cora.equipment.aggregates.frame.state import FrameRevisionLink
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 
-
-def _placement_to_payload(placement: Placement) -> dict[str, Any]:
-    """Serialize a Placement VO to a JSON-friendly dict."""
-    return {
-        "x": placement.x,
-        "y": placement.y,
-        "z": placement.z,
-        "rx": placement.rx,
-        "ry": placement.ry,
-        "rz": placement.rz,
-        "parent_frame_id": str(placement.parent_frame_id),
-        "reference_surface": placement.reference_surface.value,
-        "tol_x": placement.tol_x,
-        "tol_y": placement.tol_y,
-        "tol_z": placement.tol_z,
-        "tol_rx": placement.tol_rx,
-        "tol_ry": placement.tol_ry,
-        "tol_rz": placement.tol_rz,
-        "units": placement.units.value,
-    }
-
-
-def _placement_from_payload(payload: dict[str, Any]) -> Placement:
-    """Reconstruct a Placement VO from its JSON payload.
-
-    Raises KeyError / TypeError / AttributeError on malformed input;
-    callers wrap these into tagged ValueError per the from_stored
-    convention.
-    """
-    return Placement(
-        x=payload["x"],
-        y=payload["y"],
-        z=payload["z"],
-        rx=payload["rx"],
-        ry=payload["ry"],
-        rz=payload["rz"],
-        parent_frame_id=UUID(payload["parent_frame_id"]),
-        reference_surface=ReferenceSurface(payload["reference_surface"]),
-        tol_x=payload["tol_x"],
-        tol_y=payload["tol_y"],
-        tol_z=payload["tol_z"],
-        tol_rx=payload["tol_rx"],
-        tol_ry=payload["tol_ry"],
-        tol_rz=payload["tol_rz"],
-        units=UnitSystem(payload["units"]),
-    )
+# Codec helpers (placement_to/from_payload) imported above from the
+# shared VO module per the codec-helper-duplication anti-hook in
+# project_mount_frame_design Watch items.
 
 
 def _frame_revision_link_to_payload(link: FrameRevisionLink) -> dict[str, Any]:
     """Serialize a FrameRevisionLink VO to a JSON-friendly dict."""
     return {
         "predecessor_frame_id": str(link.predecessor_frame_id),
-        "transform_from_predecessor": _placement_to_payload(link.transform_from_predecessor),
+        "transform_from_predecessor": placement_to_payload(link.transform_from_predecessor),
     }
 
 
@@ -123,7 +84,7 @@ def _frame_revision_link_from_payload(payload: dict[str, Any]) -> FrameRevisionL
     """
     return FrameRevisionLink(
         predecessor_frame_id=UUID(payload["predecessor_frame_id"]),
-        transform_from_predecessor=_placement_from_payload(payload["transform_from_predecessor"]),
+        transform_from_predecessor=placement_from_payload(payload["transform_from_predecessor"]),
     )
 
 
@@ -220,7 +181,7 @@ def to_payload(event: FrameEvent) -> dict[str, Any]:
                 "frame_id": str(frame_id),
                 "name": name,
                 "parent_frame_id": (str(parent_frame_id) if parent_frame_id is not None else None),
-                "placement": (_placement_to_payload(placement) if placement is not None else None),
+                "placement": (placement_to_payload(placement) if placement is not None else None),
                 "supersedes": (
                     _frame_revision_link_to_payload(supersedes) if supersedes is not None else None
                 ),
@@ -234,7 +195,7 @@ def to_payload(event: FrameEvent) -> dict[str, Any]:
         ):
             return {
                 "frame_id": str(frame_id),
-                "new_placement": _placement_to_payload(new_placement),
+                "new_placement": placement_to_payload(new_placement),
                 "survey": survey,
                 "occurred_at": occurred_at.isoformat(),
             }
@@ -274,9 +235,7 @@ def from_stored(stored: StoredEvent) -> FrameEvent:
                     name=payload["name"],
                     parent_frame_id=UUID(raw_parent) if raw_parent is not None else None,
                     placement=(
-                        _placement_from_payload(raw_placement)
-                        if raw_placement is not None
-                        else None
+                        placement_from_payload(raw_placement) if raw_placement is not None else None
                     ),
                     supersedes=(
                         _frame_revision_link_from_payload(raw_supersedes)
@@ -292,7 +251,7 @@ def from_stored(stored: StoredEvent) -> FrameEvent:
                 "FramePlacementUpdated",
                 lambda: FramePlacementUpdated(
                     frame_id=UUID(payload["frame_id"]),
-                    new_placement=_placement_from_payload(payload["new_placement"]),
+                    new_placement=placement_from_payload(payload["new_placement"]),
                     survey=payload.get("survey"),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),

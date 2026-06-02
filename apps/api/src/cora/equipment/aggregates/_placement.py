@@ -201,8 +201,64 @@ class Placement:
                 )
 
 
+def placement_to_payload(placement: Placement) -> dict[str, object]:
+    """Serialize a Placement VO to a JSON-friendly dict for jsonb storage.
+
+    Canonical codec shared by every aggregate event that carries a
+    Placement (Mount, Frame, Assembly). Sibling rebuilder is
+    `placement_from_payload`. Hoisted to the VO module to close the
+    duplication anti-hook flagged in `project_mount_frame_design`
+    Watch items.
+    """
+    return {
+        "x": placement.x,
+        "y": placement.y,
+        "z": placement.z,
+        "rx": placement.rx,
+        "ry": placement.ry,
+        "rz": placement.rz,
+        "parent_frame_id": str(placement.parent_frame_id),
+        "reference_surface": placement.reference_surface.value,
+        "tol_x": placement.tol_x,
+        "tol_y": placement.tol_y,
+        "tol_z": placement.tol_z,
+        "tol_rx": placement.tol_rx,
+        "tol_ry": placement.tol_ry,
+        "tol_rz": placement.tol_rz,
+        "units": placement.units.value,
+    }
+
+
+def placement_from_payload(payload: dict[str, object]) -> Placement:
+    """Reconstruct a Placement VO from its JSON payload.
+
+    Sibling of `placement_to_payload`. Round-trips losslessly with it.
+    Re-runs Placement.__post_init__ validation so on-disk corruption
+    (NaN, Inf, negative tolerance) surfaces at load time.
+    """
+    return Placement(
+        x=payload["x"],  # type: ignore[arg-type]
+        y=payload["y"],  # type: ignore[arg-type]
+        z=payload["z"],  # type: ignore[arg-type]
+        rx=payload["rx"],  # type: ignore[arg-type]
+        ry=payload["ry"],  # type: ignore[arg-type]
+        rz=payload["rz"],  # type: ignore[arg-type]
+        parent_frame_id=UUID(str(payload["parent_frame_id"])),
+        reference_surface=ReferenceSurface(str(payload["reference_surface"])),
+        tol_x=payload["tol_x"],  # type: ignore[arg-type]
+        tol_y=payload["tol_y"],  # type: ignore[arg-type]
+        tol_z=payload["tol_z"],  # type: ignore[arg-type]
+        tol_rx=payload["tol_rx"],  # type: ignore[arg-type]
+        tol_ry=payload["tol_ry"],  # type: ignore[arg-type]
+        tol_rz=payload["tol_rz"],  # type: ignore[arg-type]
+        units=UnitSystem(str(payload["units"])),
+    )
+
+
 __all__ = [
     "Placement",
     "ReferenceSurface",
     "UnitSystem",
+    "placement_from_payload",
+    "placement_to_payload",
 ]

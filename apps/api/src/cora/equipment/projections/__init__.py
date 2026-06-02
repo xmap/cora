@@ -5,6 +5,7 @@ this package. Add a new projection by creating a new module here +
 re-exporting its class + adding it to `register_equipment_projections`.
 """
 
+from cora.equipment.projections.assembly_summary import AssemblySummaryProjection
 from cora.equipment.projections.asset import AssetSummaryProjection
 from cora.equipment.projections.asset_family_membership import (
     AssetFamilyMembershipProjection,
@@ -20,6 +21,7 @@ from cora.equipment.projections.mount_slot_code import MountSlotCodeProjection
 from cora.equipment.projections.mount_summary import MountSummaryProjection
 
 __all__ = [
+    "AssemblySummaryProjection",
     "AssetFamilyMembershipProjection",
     "AssetLocationProjection",
     "AssetSummaryProjection",

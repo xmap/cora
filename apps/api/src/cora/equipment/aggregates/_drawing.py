@@ -157,9 +157,40 @@ class Drawing:
             object.__setattr__(self, "revision", trimmed_revision)
 
 
+def drawing_to_payload(drawing: Drawing) -> dict[str, object]:
+    """Serialize a Drawing VO to a JSON-friendly dict for jsonb storage.
+
+    Canonical codec shared by every aggregate event that carries a
+    Drawing (Mount, Asset, Assembly). Sibling rebuilder is
+    `drawing_from_payload`. Hoisted to the VO module to close the
+    duplication anti-hook flagged in `project_mount_frame_design`
+    Watch items.
+    """
+    return {
+        "system": drawing.system.value,
+        "number": drawing.number,
+        "revision": drawing.revision,
+    }
+
+
+def drawing_from_payload(payload: dict[str, object]) -> Drawing:
+    """Reconstruct a Drawing VO from its JSON payload.
+
+    Sibling of `drawing_to_payload`. Round-trips losslessly with it.
+    Re-runs Drawing.__post_init__ validation.
+    """
+    return Drawing(
+        system=DrawingSystem(str(payload["system"])),
+        number=str(payload["number"]),
+        revision=(str(payload["revision"]) if payload.get("revision") is not None else None),
+    )
+
+
 __all__ = [
     "DRAWING_NUMBER_MAX_LENGTH",
     "DRAWING_REVISION_MAX_LENGTH",
     "Drawing",
     "DrawingSystem",
+    "drawing_from_payload",
+    "drawing_to_payload",
 ]

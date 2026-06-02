@@ -47,74 +47,22 @@ from datetime import datetime
 from typing import Any, assert_never
 from uuid import UUID
 
-from cora.equipment.aggregates._drawing import Drawing, DrawingSystem
+from cora.equipment.aggregates._drawing import (
+    Drawing,
+    drawing_from_payload,
+    drawing_to_payload,
+)
 from cora.equipment.aggregates._placement import (
     Placement,
-    ReferenceSurface,
-    UnitSystem,
+    placement_from_payload,
+    placement_to_payload,
 )
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 
-
-def _placement_to_payload(placement: Placement) -> dict[str, Any]:
-    """Serialize a Placement VO to a JSON-friendly dict."""
-    return {
-        "x": placement.x,
-        "y": placement.y,
-        "z": placement.z,
-        "rx": placement.rx,
-        "ry": placement.ry,
-        "rz": placement.rz,
-        "parent_frame_id": str(placement.parent_frame_id),
-        "reference_surface": placement.reference_surface.value,
-        "tol_x": placement.tol_x,
-        "tol_y": placement.tol_y,
-        "tol_z": placement.tol_z,
-        "tol_rx": placement.tol_rx,
-        "tol_ry": placement.tol_ry,
-        "tol_rz": placement.tol_rz,
-        "units": placement.units.value,
-    }
-
-
-def _placement_from_payload(payload: dict[str, Any]) -> Placement:
-    """Reconstruct a Placement VO from its JSON payload."""
-    return Placement(
-        x=payload["x"],
-        y=payload["y"],
-        z=payload["z"],
-        rx=payload["rx"],
-        ry=payload["ry"],
-        rz=payload["rz"],
-        parent_frame_id=UUID(payload["parent_frame_id"]),
-        reference_surface=ReferenceSurface(payload["reference_surface"]),
-        tol_x=payload["tol_x"],
-        tol_y=payload["tol_y"],
-        tol_z=payload["tol_z"],
-        tol_rx=payload["tol_rx"],
-        tol_ry=payload["tol_ry"],
-        tol_rz=payload["tol_rz"],
-        units=UnitSystem(payload["units"]),
-    )
-
-
-def _drawing_to_payload(drawing: Drawing) -> dict[str, Any]:
-    """Serialize a Drawing VO to a JSON-friendly dict."""
-    return {
-        "system": drawing.system.value,
-        "number": drawing.number,
-        "revision": drawing.revision,
-    }
-
-
-def _drawing_from_payload(payload: dict[str, Any]) -> Drawing:
-    """Reconstruct a Drawing VO from its JSON payload."""
-    return Drawing(
-        system=DrawingSystem(payload["system"]),
-        number=payload["number"],
-        revision=payload.get("revision"),
-    )
+# Codec helpers (placement_to/from_payload, drawing_to/from_payload) are
+# imported above from the shared VO modules per the codec-helper-
+# duplication anti-hook in project_mount_frame_design Watch items.
 
 
 @dataclass(frozen=True)
@@ -244,8 +192,8 @@ def to_payload(event: MountEvent) -> dict[str, Any]:
                 "mount_id": str(mount_id),
                 "slot_code": slot_code,
                 "parent_mount_id": (str(parent_mount_id) if parent_mount_id is not None else None),
-                "placement": _placement_to_payload(placement),
-                "drawing": (_drawing_to_payload(drawing) if drawing is not None else None),
+                "placement": placement_to_payload(placement),
+                "drawing": (drawing_to_payload(drawing) if drawing is not None else None),
                 "occurred_at": occurred_at.isoformat(),
             }
         case MountDecommissioned(
@@ -266,7 +214,7 @@ def to_payload(event: MountEvent) -> dict[str, Any]:
         ):
             return {
                 "mount_id": str(mount_id),
-                "new_placement": _placement_to_payload(new_placement),
+                "new_placement": placement_to_payload(new_placement),
                 "survey": survey,
                 "occurred_at": occurred_at.isoformat(),
             }
@@ -318,9 +266,9 @@ def from_stored(stored: StoredEvent) -> MountEvent:
                     mount_id=UUID(payload["mount_id"]),
                     slot_code=payload["slot_code"],
                     parent_mount_id=UUID(raw_parent) if raw_parent is not None else None,
-                    placement=_placement_from_payload(payload["placement"]),
+                    placement=placement_from_payload(payload["placement"]),
                     drawing=(
-                        _drawing_from_payload(raw_drawing) if raw_drawing is not None else None
+                        drawing_from_payload(raw_drawing) if raw_drawing is not None else None
                     ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
@@ -340,7 +288,7 @@ def from_stored(stored: StoredEvent) -> MountEvent:
                 "MountPlacementUpdated",
                 lambda: MountPlacementUpdated(
                     mount_id=UUID(payload["mount_id"]),
-                    new_placement=_placement_from_payload(payload["new_placement"]),
+                    new_placement=placement_from_payload(payload["new_placement"]),
                     survey=payload.get("survey"),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),

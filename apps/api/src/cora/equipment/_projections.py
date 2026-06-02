@@ -8,6 +8,7 @@ projection module under `cora.equipment.projections`.
 """
 
 from cora.equipment.projections import (
+    AssemblySummaryProjection,
     AssetFamilyMembershipProjection,
     AssetLocationProjection,
     AssetSummaryProjection,
@@ -41,6 +42,7 @@ def register_equipment_projections(
     registry.register(MountSlotCodeProjection())
     registry.register(MountChildrenProjection())
     registry.register(AssetLocationProjection())
+    registry.register(AssemblySummaryProjection())
 
 
 __all__ = ["register_equipment_projections"]

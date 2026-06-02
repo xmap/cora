@@ -1,0 +1,628 @@
+"""Assembly aggregate state, value objects, status enum, and domain errors.
+
+An `Assembly` is a content-addressed composition blueprint for a
+reusable cluster of Assets (e.g., the MCTOptics fixture at APS 2-BM:
+microscope + 3 objectives + camera + scintillator, wired together).
+Declares `required_slots` (Family-typed, cardinality-annotated,
+optionally pre-Placed) and `required_wires` (slot-keyed 4-tuples).
+Exposes a stable `presents_as_family_id` so other aggregates
+(Method.needed_families, Capability bindings) can treat an
+instantiated Assembly as one typed unit at the same level as a
+single Asset.
+
+See `project_assembly_aggregate_design` for the locked design memo.
+
+## Identity
+
+`id` is the opaque UUID (CORA's standard internal id) used for
+event-store stream keying. `name` is a human-readable AssemblyName
+(non-unique). `content_hash` is the structural fingerprint
+(SHA-256 hex over the canonical subset
+`{name, presents_as_family_id, required_slots, required_wires,
+parameter_overrides_schema}`); two operators independently authoring
+the same Assembly converge on the same hash.
+
+## Slot keying
+
+`required_slots: frozenset[TemplateSlot]` and `required_wires:
+frozenset[TemplateWire]` BOTH key by `slot_name` (string), NOT by
+Asset UUID. Reason: an Assembly is a template; the Assets it
+references do not exist at template-definition time. Slot-to-asset
+translation happens at `instantiate_assembly` time.
+This inverts the timing of Plan.wires validation, which has access
+to concrete Asset.ports and so enforces direction + signal-type +
+fan-in at write time.
+
+## Internal closure
+
+`Assembly.__post_init__` enforces that every `TemplateWire`'s
+endpoints reference a slot present in `required_slots`. This is the
+structural well-formedness check; direction / signal_type / fan-in
+rules live at instantiate time when concrete Assets are bound.
+
+## Revision lineage
+
+`status` is the AssemblyStatus FSM (Defined / Versioned /
+Deprecated). `version` is an operator-curated free-form label
+(no SemVer enforcement). Multiple AssemblyVersioned events on the
+same stream are permitted; each writes a fresh content_hash
+snapshot. Mirrors CalibrationRevision's append-only revisions.
+
+## Drawing
+
+`drawing` is the optional engineering reference for the assembly
+itself (ICMS or DOI). Excluded from the content_hash canonical
+subset because it is operator-curatorial metadata, not structural
+identity: two Assemblies with identical structure but different
+drawings collide on content_hash, which is the intended semantic.
+
+## Bounded VOs
+
+`AssemblyName` is trimmed 1-200 chars (matches Family/Mount).
+`SlotName` is trimmed 1-100 chars (matches Wire port-name bound).
+Both raise dedicated InvalidXError classes on violation.
+"""
+
+import json
+from dataclasses import dataclass, field
+from enum import StrEnum
+from typing import Any
+from uuid import UUID
+
+from cora.equipment.aggregates._drawing import Drawing
+from cora.equipment.aggregates._placement import Placement
+from cora.infrastructure.bounded_text import validate_bounded_text
+
+ASSEMBLY_NAME_MAX_LENGTH = 200
+SLOT_NAME_MAX_LENGTH = 100
+WIRE_PORT_NAME_MAX_LENGTH = 100
+
+
+class AssemblyStatus(StrEnum):
+    """The Assembly's lifecycle state.
+
+    Template-shaped FSM matching CalibrationRevision and the six
+    template aggregates per project_template_aggregate_timestamps.
+    """
+
+    DEFINED = "Defined"
+    VERSIONED = "Versioned"
+    DEPRECATED = "Deprecated"
+
+
+class SlotCardinality(StrEnum):
+    """How many Assets can fill a slot at instantiation time.
+
+    Closed enum: adding a fifth member is a deliberate widen, not
+    an additive default. Numeric bounds (`AtLeast2`, `AtMost3`) are
+    explicitly out of scope to keep the closed-enum discipline.
+    """
+
+    EXACTLY_1 = "Exactly1"
+    ZERO_OR_ONE = "ZeroOrOne"
+    ONE_OR_MORE = "OneOrMore"
+    ZERO_OR_MORE = "ZeroOrMore"
+
+
+class InvalidAssemblyNameError(ValueError):
+    """The supplied Assembly name is empty, whitespace-only, or too long."""
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Assembly name must be 1-{ASSEMBLY_NAME_MAX_LENGTH} chars after trimming "
+            f"(got: {value!r})"
+        )
+        self.value = value
+
+
+class InvalidSlotNameError(ValueError):
+    """The supplied slot name is empty, whitespace-only, or too long."""
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"TemplateSlot slot_name must be 1-{SLOT_NAME_MAX_LENGTH} chars after trimming "
+            f"(got: {value!r})"
+        )
+        self.value = value
+
+
+class InvalidSlotCardinalityError(ValueError):
+    """The supplied cardinality is not a SlotCardinality member.
+
+    Closed enum violation; mapped to HTTP 400 by the BC exception
+    handler. The boundary Pydantic layer rejects 422 before this
+    fires; the domain error exists for in-code constructors.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"TemplateSlot cardinality must be one of "
+            f"{[c.value for c in SlotCardinality]} (got: {value!r})"
+        )
+        self.value = value
+
+
+class InvalidWireSpecError(ValueError):
+    """A TemplateWire is structurally malformed.
+
+    Failure modes:
+      - Any of the 4 string fields fails the trim-and-bound check
+        (1-100 chars after trimming).
+      - The degenerate full-loop case: same slot AND same port on
+        both endpoints (mirrors PlanWireSelfLoopError). Self-slot
+        with DIFFERENT ports is allowed (PandABox LUT pattern).
+
+    Direction, signal_type, and fan-in are NOT checked here; those
+    fire at `instantiate_assembly` time against materialized
+    Asset.ports.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"Invalid TemplateWire: {reason}")
+        self.reason = reason
+
+
+class InvalidTemplateSlotError(ValueError):
+    """A TemplateSlot is structurally malformed.
+
+    Failure modes:
+      - `required_family_ids` is empty (a slot must require at least
+        one Family for instantiation-time validation to mean anything).
+
+    Distinct from InvalidWireSpecError so the route's exception
+    handler can diverge if needed; today both map to HTTP 400.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"Invalid TemplateSlot: {reason}")
+        self.reason = reason
+
+
+class WireReferencesUnknownSlotError(ValueError):
+    """A TemplateWire endpoint names a slot absent from `required_slots`.
+
+    Structural well-formedness internal to the Assembly definition.
+    The slot-name set is closed by the same construction call, so a
+    missing reference is a typo or design mistake, not a cross-aggregate
+    eventual-consistency case.
+    """
+
+    def __init__(self, slot_name: str) -> None:
+        super().__init__(
+            f"TemplateWire references slot {slot_name!r}, not present in required_slots"
+        )
+        self.slot_name = slot_name
+
+
+class InvalidParameterOverridesSchemaError(ValueError):
+    """The supplied parameter_overrides_schema is not a valid JSON
+    Schema in CORA's constrained subset.
+
+    Mapped to HTTP 422 by the BC exception handler.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"Invalid Assembly parameter_overrides_schema: {reason}")
+        self.reason = reason
+
+
+class AssemblyAlreadyExistsError(Exception):
+    """Attempted to define an assembly whose stream already has events."""
+
+    def __init__(self, assembly_id: UUID) -> None:
+        super().__init__(f"Assembly {assembly_id} already exists")
+        self.assembly_id = assembly_id
+
+
+class AssemblyNotFoundError(Exception):
+    """Attempted an operation on an assembly whose stream has no events."""
+
+    def __init__(self, assembly_id: UUID) -> None:
+        super().__init__(f"Assembly {assembly_id} not found")
+        self.assembly_id = assembly_id
+
+
+class AssemblyCannotVersionError(Exception):
+    """Attempted to version a Deprecated assembly.
+
+    New revisions of a Deprecated Assembly must fork via
+    `define_assembly` with a fresh id; the existing stream stays
+    terminal.
+    """
+
+    def __init__(self, assembly_id: UUID, reason: str) -> None:
+        super().__init__(f"Assembly {assembly_id} cannot be versioned: {reason}")
+        self.assembly_id = assembly_id
+        self.reason = reason
+
+
+class AssemblyCannotDeprecateError(Exception):
+    """Attempted to deprecate an already-Deprecated assembly.
+
+    Strict-not-idempotent; the second call raises. Mirrors
+    MountCannotDecommissionError.
+    """
+
+    def __init__(self, assembly_id: UUID, reason: str) -> None:
+        super().__init__(f"Assembly {assembly_id} cannot be deprecated: {reason}")
+        self.assembly_id = assembly_id
+        self.reason = reason
+
+
+class AssemblyCannotInstantiateError(Exception):
+    """Attempted to instantiate a Deprecated assembly."""
+
+    def __init__(self, assembly_id: UUID, reason: str) -> None:
+        super().__init__(f"Assembly {assembly_id} cannot be instantiated: {reason}")
+        self.assembly_id = assembly_id
+        self.reason = reason
+
+
+class FamilyNotFoundForAssemblyError(Exception):
+    """A FamilyId referenced by `presents_as_family_id` or by a
+    TemplateSlot's `required_family_ids` does not resolve to a defined
+    Family.
+
+    Handler-side projection check (mirrors Plan binding's existence
+    checks). Distinct from the Recipe BC's FamilyNotFoundError so the
+    route mapping can diverge if needed; today both map to 404.
+    """
+
+    def __init__(self, family_id: UUID) -> None:
+        super().__init__(f"Family {family_id} not found")
+        self.family_id = family_id
+
+
+class AssemblyInstantiationMappingIncompleteError(Exception):
+    """`instantiate_assembly`'s slot_to_asset_mapping does not satisfy
+    the required cardinality of one or more slots.
+
+    Example failure modes:
+      - An `Exactly1` slot has zero or two mapped Assets.
+      - A `OneOrMore` slot has zero mapped Assets.
+    """
+
+    def __init__(self, slot_name: str, reason: str) -> None:
+        super().__init__(f"Slot {slot_name!r} cardinality not satisfied at instantiation: {reason}")
+        self.slot_name = slot_name
+        self.reason = reason
+
+
+class AssemblyInstantiationAssetFamilyMismatchError(Exception):
+    """A mapped Asset's `families` do not intersect the TemplateSlot's
+    `required_family_ids`."""
+
+    def __init__(self, slot_name: str, asset_id: UUID) -> None:
+        super().__init__(
+            f"Asset {asset_id} mapped to slot {slot_name!r} does not carry "
+            f"any of the slot's required_family_ids"
+        )
+        self.slot_name = slot_name
+        self.asset_id = asset_id
+
+
+class AssemblyInstantiationParameterOverridesInvalidError(Exception):
+    """`instantiate_assembly`'s parameter_overrides dict fails the
+    Assembly's parameter_overrides_schema validation."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"Assembly parameter_overrides invalid: {reason}")
+        self.reason = reason
+
+
+@dataclass(frozen=True)
+class AssemblyName:
+    """A trimmed-bounded-text VO for the Assembly's display name.
+
+    1-200 chars after trimming. Non-unique; the UUID is the storage
+    identity and the content_hash is the structural fingerprint.
+    """
+
+    value: str
+
+    def __post_init__(self) -> None:
+        trimmed = validate_bounded_text(
+            self.value,
+            max_length=ASSEMBLY_NAME_MAX_LENGTH,
+            error_class=InvalidAssemblyNameError,
+        )
+        object.__setattr__(self, "value", trimmed)
+
+
+@dataclass(frozen=True)
+class SlotName:
+    """A trimmed-bounded-text VO for a TemplateSlot's slot_name.
+
+    1-100 chars after trimming. Bound mirrors Wire port-name to keep
+    a single max-length convention across slot-keyed shapes.
+    """
+
+    value: str
+
+    def __post_init__(self) -> None:
+        trimmed = validate_bounded_text(
+            self.value,
+            max_length=SLOT_NAME_MAX_LENGTH,
+            error_class=InvalidSlotNameError,
+        )
+        object.__setattr__(self, "value", trimmed)
+
+
+@dataclass(frozen=True)
+class TemplateSlot:
+    """One slot in an Assembly's composition blueprint.
+
+    `slot_name` is the canonical slot identity within this Assembly
+    (string, 1-100 chars). `required_family_ids` is the non-empty set
+    of FamilyIds any instantiated Asset must include at least one of.
+    `cardinality` says how many Assets can fill this slot
+    (Exactly1 / ZeroOrOne / OneOrMore / ZeroOrMore). `default_settings`
+    and `default_placement` are optional template defaults applied
+    at instantiation unless overridden.
+
+    `default_settings` validation against the intersection of all
+    required_family_ids' settings schemas runs at define_assembly time
+    (handler-side, not in __post_init__) because it requires loading
+    Family records. The VO's __post_init__ only enforces structural
+    well-formedness.
+    """
+
+    slot_name: SlotName
+    required_family_ids: frozenset[UUID]
+    cardinality: SlotCardinality
+    default_settings: dict[str, Any] | None = None
+    default_placement: Placement | None = None
+
+    def __post_init__(self) -> None:
+        # Defensive: cardinality is annotated as SlotCardinality but
+        # nothing in Python stops a caller from passing a raw string
+        # at construction. Catching it here surfaces a typed domain
+        # error rather than a downstream AttributeError on .value.
+        if not isinstance(self.cardinality, SlotCardinality):  # pyright: ignore[reportUnnecessaryIsInstance]
+            raise InvalidSlotCardinalityError(str(self.cardinality))
+        if not self.required_family_ids:
+            raise InvalidTemplateSlotError(
+                f"TemplateSlot {self.slot_name.value!r} requires at least one Family"
+            )
+
+    def __hash__(self) -> int:
+        # TemplateSlot is frozen but its `default_settings` field is a
+        # dict (unhashable by Python default). Required because every
+        # Assembly carries `required_slots: frozenset[TemplateSlot]`.
+        # Hash canonicalizes the dict portion via stdlib json sort-keys
+        # to give a stable, deterministic hash independent of insertion
+        # order; full-record __eq__ stays dataclass-generated.
+        settings_key = (
+            json.dumps(self.default_settings, sort_keys=True, separators=(",", ":"))
+            if self.default_settings is not None
+            else None
+        )
+        return hash(
+            (
+                self.slot_name,
+                self.required_family_ids,
+                self.cardinality,
+                settings_key,
+                self.default_placement,
+            )
+        )
+
+
+@dataclass(frozen=True)
+class TemplateWire:
+    """A typed slot-to-slot connection in an Assembly's blueprint.
+
+    Tuple `(source_slot_name, source_port_name, target_slot_name,
+    target_port_name)` describes one connection. The 4-tuple IS the
+    identity; `frozenset[TemplateWire]` deduplicates on the tuple.
+
+    Mirrors `Wire` (the Plan-tier signal-routing VO) in shape but
+    keys by slot_name strings rather than Asset UUIDs because an
+    Assembly cannot reference Assets that do not exist yet at
+    template-definition time.
+
+    Validation rules at instantiation time (NOT here):
+      - source port must have `direction=OUTPUT`
+      - target port must have `direction=INPUT`
+      - `source_port.signal_type == target_port.signal_type`
+      - target port is the destination of at most one Wire (fan-in
+        forbidden); fan-out (one source to many targets) is allowed
+
+    `__post_init__` enforces structural shape only: each of the four
+    string fields trims and bounds 1-100 chars, and the degenerate
+    full-loop case (same slot AND same port on both endpoints) is
+    rejected. Self-slot wires with different port names are allowed
+    (PandABox LUT pattern, mirroring the Plan invariant).
+
+    Cross-wire closure (every slot_name must exist in the parent
+    Assembly's `required_slots`) is enforced at the Assembly level
+    via `WireReferencesUnknownSlotError`, not here.
+    """
+
+    source_slot_name: str
+    source_port_name: str
+    target_slot_name: str
+    target_port_name: str
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("source_slot_name", self.source_slot_name),
+            ("source_port_name", self.source_port_name),
+            ("target_slot_name", self.target_slot_name),
+            ("target_port_name", self.target_port_name),
+        ):
+            trimmed = value.strip()
+            if not trimmed:
+                raise InvalidWireSpecError(f"{label} cannot be empty after trimming")
+            if len(trimmed) > WIRE_PORT_NAME_MAX_LENGTH:
+                raise InvalidWireSpecError(
+                    f"{label} must be 1-{WIRE_PORT_NAME_MAX_LENGTH} chars after trimming "
+                    f"(got: {value!r})"
+                )
+            object.__setattr__(self, label, trimmed)
+        if (
+            self.source_slot_name == self.target_slot_name
+            and self.source_port_name == self.target_port_name
+        ):
+            raise InvalidWireSpecError(
+                f"degenerate full self-loop on slot {self.source_slot_name!r} "
+                f"port {self.source_port_name!r}"
+            )
+
+
+@dataclass(frozen=True)
+class Assembly:
+    """Aggregate root: a reusable composition blueprint.
+
+    `id` is the opaque UUID stream key; `name` is the human-readable
+    AssemblyName. `presents_as_family_id` is the FamilyId the
+    instantiated Assembly looks like to Method.needed_families and
+    Plan binding (one Asset-shaped unit).
+
+    `required_slots` and `required_wires` together describe the
+    composition: slots declare what kinds of Assets fill which roles,
+    wires declare how those Assets connect. Both key by slot_name
+    (not by Asset UUID) since Assets do not exist at template time.
+
+    `parameter_overrides_schema` is an optional JSON Schema subset
+    declaring the shape of parameter_overrides accepted at
+    instantiation. `drawing` is the optional engineering reference.
+
+    `status` transitions Defined -> Versioned (multiple times) ->
+    Deprecated. `version` is an operator-curated label. `content_hash`
+    is the SHA-256 hex fingerprint of the canonical subset
+    `{name, presents_as_family_id, required_slots, required_wires,
+    parameter_overrides_schema}` (excludes id / drawing / version /
+    status, which are not structural identity per the design memo).
+
+    `__post_init__` enforces internal closure: every TemplateWire's
+    source_slot_name and target_slot_name MUST appear in
+    `required_slots`. Cross-aggregate references (FamilyId existence,
+    schema validation) live in handler-side projection checks.
+    """
+
+    id: UUID
+    name: AssemblyName
+    presents_as_family_id: UUID
+    required_slots: frozenset[TemplateSlot] = field(default_factory=frozenset[TemplateSlot])
+    required_wires: frozenset[TemplateWire] = field(default_factory=frozenset[TemplateWire])
+    parameter_overrides_schema: dict[str, Any] | None = None
+    drawing: Drawing | None = None
+    status: AssemblyStatus = AssemblyStatus.DEFINED
+    version: str | None = None
+    content_hash: str | None = None
+
+    def __post_init__(self) -> None:
+        slot_names = {slot.slot_name.value for slot in self.required_slots}
+        for wire in self.required_wires:
+            if wire.source_slot_name not in slot_names:
+                raise WireReferencesUnknownSlotError(wire.source_slot_name)
+            if wire.target_slot_name not in slot_names:
+                raise WireReferencesUnknownSlotError(wire.target_slot_name)
+
+    def content_subset(self) -> dict[str, object]:
+        """Canonical content subset hashed into `content_hash`.
+
+        Pins identity per `project_content_addressed_identity_design`:
+        `name + presents_as_family_id + required_slots + required_wires +
+        parameter_overrides_schema`. Excluded: `id` (identity, not
+        content), `status` and `version` (lifecycle, derived in evolver
+        from event type and version label), `drawing` (operator-
+        curatorial metadata per the design memo's content_hash
+        composition lock), `content_hash` itself (cannot self-contain).
+
+        Delegates to `canonical_assembly_subset` so the helper used by
+        `compute_assembly_content_hash` (raw-args path) and this
+        method (state path) materialize the same shape. Field
+        addition lands in ONE place; drift between the two paths
+        becomes structurally impossible.
+        """
+        return canonical_assembly_subset(
+            name=self.name,
+            presents_as_family_id=self.presents_as_family_id,
+            required_slots=self.required_slots,
+            required_wires=self.required_wires,
+            parameter_overrides_schema=self.parameter_overrides_schema,
+        )
+
+
+def canonical_assembly_subset(
+    *,
+    name: "AssemblyName | str",
+    presents_as_family_id: UUID,
+    required_slots: frozenset[TemplateSlot],
+    required_wires: frozenset[TemplateWire],
+    parameter_overrides_schema: dict[str, object] | None,
+) -> dict[str, object]:
+    """Materialize the canonical content subset of an Assembly.
+
+    Single source of truth for the structural-identity body. Called by
+    both `Assembly.content_subset()` (state path) and
+    `compute_assembly_content_hash` (raw-args path); the round-trip
+    equivalence between the two is pinned in tests.
+
+    Slots render as a list of dicts sorted by slot_name; wires render
+    as sorted 4-tuples-of-strings for canonical-sort determinism.
+    UUIDs render as strings. Adding a new identity-bearing field
+    requires editing this one function plus the content_hash
+    differs-test corpus.
+    """
+    name_value = name.value if isinstance(name, AssemblyName) else name
+    return {
+        "name": name_value,
+        "presents_as_family_id": str(presents_as_family_id),
+        "required_slots": sorted(
+            (
+                {
+                    "slot_name": slot.slot_name.value,
+                    "required_family_ids": sorted(str(f) for f in slot.required_family_ids),
+                    "cardinality": slot.cardinality.value,
+                    "default_settings": slot.default_settings,
+                    "default_placement": (
+                        canonical_placement_subset(slot.default_placement)
+                        if slot.default_placement is not None
+                        else None
+                    ),
+                }
+                for slot in required_slots
+            ),
+            key=lambda d: str(d["slot_name"]),
+        ),
+        "required_wires": sorted(
+            (
+                wire.source_slot_name,
+                wire.source_port_name,
+                wire.target_slot_name,
+                wire.target_port_name,
+            )
+            for wire in required_wires
+        ),
+        "parameter_overrides_schema": parameter_overrides_schema,
+    }
+
+
+def canonical_placement_subset(placement: Placement) -> dict[str, object]:
+    """Canonical dict form of a Placement for content_hash inclusion.
+
+    Distinct from `placement_to_payload` (which is the JSON-storage
+    codec on the Placement VO module): the canonical-subset form
+    excludes nothing today but reserves the freedom to drop or rename
+    fields without disturbing the at-rest event schema.
+    """
+    return {
+        "x": placement.x,
+        "y": placement.y,
+        "z": placement.z,
+        "rx": placement.rx,
+        "ry": placement.ry,
+        "rz": placement.rz,
+        "parent_frame_id": str(placement.parent_frame_id),
+        "reference_surface": placement.reference_surface.value,
+        "tol_x": placement.tol_x,
+        "tol_y": placement.tol_y,
+        "tol_z": placement.tol_z,
+        "tol_rx": placement.tol_rx,
+        "tol_ry": placement.tol_ry,
+        "tol_rz": placement.tol_rz,
+        "units": placement.units.value,
+    }

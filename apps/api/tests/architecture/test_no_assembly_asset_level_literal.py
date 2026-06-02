@@ -46,6 +46,24 @@ _SYMBOLIC_REFERENCE = "AssetLevel.ASSEMBLY"
 _ALLOW_RELATIVE_PATHS: frozenset[str] = frozenset(
     {
         "apps/api/tests/architecture/test_no_assembly_asset_level_literal.py",
+        # The Assembly aggregate legitimately carries the "Assembly"
+        # token in event_type discriminators (`case "AssemblyDefined":`),
+        # docstrings, and class names. Added at v1 ship of the
+        # aggregate; widen the list as new sites land at gate review.
+        "apps/api/src/cora/equipment/aggregates/_assembly_content_hash.py",
+        "apps/api/src/cora/equipment/aggregates/assembly/__init__.py",
+        "apps/api/src/cora/equipment/aggregates/assembly/events.py",
+        "apps/api/src/cora/equipment/aggregates/assembly/evolver.py",
+        "apps/api/src/cora/equipment/aggregates/assembly/read.py",
+        "apps/api/src/cora/equipment/aggregates/assembly/state.py",
+        "apps/api/src/cora/equipment/projections/assembly_summary.py",
+        "apps/api/tests/unit/equipment/test_assembly_content_hash.py",
+        "apps/api/tests/unit/equipment/test_assembly_events.py",
+        "apps/api/tests/unit/equipment/test_assembly_evolver.py",
+        "apps/api/tests/unit/equipment/test_assembly_state.py",
+        "apps/api/tests/unit/equipment/test_assembly_summary_projection.py",
+        "apps/api/tests/unit/equipment/test_assembly_template_slot.py",
+        "apps/api/tests/unit/equipment/test_assembly_template_wire.py",
     }
 )
 
