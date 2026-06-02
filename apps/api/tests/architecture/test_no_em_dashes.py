@@ -144,7 +144,6 @@ EMDASH_ALLOWLIST: frozenset[str] = frozenset(
         "src/cora/equipment/features/get_family/query.py",
         "src/cora/equipment/features/get_family/tool.py",
         "src/cora/equipment/features/list_assets/query.py",
-        "src/cora/equipment/features/register_asset/command.py",
         "src/cora/equipment/features/register_asset/decider.py",
         "src/cora/equipment/features/register_asset/handler.py",
         "src/cora/equipment/features/relocate_asset/command.py",

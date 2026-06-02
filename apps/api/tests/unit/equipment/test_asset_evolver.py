@@ -1603,3 +1603,209 @@ def test_evolve_port_removed_preserves_drawing() -> None:
     )
     state = evolve(prior, AssetPortRemoved(asset_id=prior.id, port_name="x", occurred_at=_NOW))
     assert state.drawing == _SAMPLE_DRAWING
+
+
+# ---------- model_id genesis + preservation across transitions ----------
+
+
+@pytest.mark.unit
+def test_evolve_register_with_model_id_carries_model_id_into_state() -> None:
+    """Genesis: AssetRegistered with model_id set lands the binding on
+    Asset.model_id. Lock A: model_id is set ONCE at register_asset time."""
+    asset_id = uuid4()
+    model_id = uuid4()
+    state = evolve(
+        None,
+        AssetRegistered(
+            asset_id=asset_id,
+            name="X",
+            level="Unit",
+            parent_id=uuid4(),
+            occurred_at=_NOW,
+            model_id=model_id,
+        ),
+    )
+    assert state.model_id == model_id
+
+
+@pytest.mark.unit
+def test_evolve_register_without_model_id_yields_none() -> None:
+    """Additive-state pattern: registration without model_id yields
+    Asset.model_id=None (permissive default)."""
+    state = evolve(
+        None,
+        AssetRegistered(
+            asset_id=uuid4(),
+            name="X",
+            level="Unit",
+            parent_id=uuid4(),
+            occurred_at=_NOW,
+        ),
+    )
+    assert state.model_id is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("name", "transition"),
+    [
+        ("activate", AssetActivated),
+        ("decommission", AssetDecommissioned),
+        ("enter_maintenance", AssetMaintenanceEntered),
+        ("exit_maintenance", AssetMaintenanceExited),
+    ],
+)
+def test_evolve_lifecycle_transition_preserves_model_id(
+    name: str,
+    transition: type,
+) -> None:
+    """Critical pin: every lifecycle transition arm MUST carry model_id
+    through from prior state. model_id is set ONCE at registration per
+    Lock A and never changes post-genesis, but transition arms still
+    must carry it forward like any other Asset field."""
+    _ = name
+    model_id = uuid4()
+    prior = Asset(
+        id=uuid4(),
+        name=AssetName("X"),
+        level=AssetLevel.UNIT,
+        parent_id=uuid4(),
+        lifecycle=(
+            AssetLifecycle.COMMISSIONED
+            if transition is AssetActivated
+            else AssetLifecycle.ACTIVE
+            if transition is AssetMaintenanceEntered
+            else AssetLifecycle.MAINTENANCE
+            if transition is AssetMaintenanceExited
+            else AssetLifecycle.ACTIVE
+        ),
+        model_id=model_id,
+    )
+    state = evolve(prior, transition(asset_id=prior.id, occurred_at=_NOW))
+    assert state.model_id == model_id
+
+
+@pytest.mark.unit
+def test_evolve_relocate_preserves_model_id() -> None:
+    """Hierarchy mutation also must preserve model_id."""
+    old_parent = uuid4()
+    new_parent = uuid4()
+    model_id = uuid4()
+    prior = Asset(
+        id=uuid4(),
+        name=AssetName("X"),
+        level=AssetLevel.UNIT,
+        parent_id=old_parent,
+        model_id=model_id,
+    )
+    state = evolve(
+        prior,
+        AssetRelocated(
+            asset_id=prior.id,
+            from_parent_id=old_parent,
+            to_parent_id=new_parent,
+            reason="moved",
+            occurred_at=_NOW,
+        ),
+    )
+    assert state.model_id == model_id
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("name", "transition", "kwargs"),
+    [
+        ("family_added", AssetFamilyAdded, {"family_id": uuid4()}),
+        ("family_removed", AssetFamilyRemoved, {"family_id": uuid4()}),
+        ("degraded", AssetDegraded, {"reason": "x"}),
+        ("faulted", AssetFaulted, {"reason": "x"}),
+        ("restored", AssetRestored, {"reason": "x"}),
+        ("settings_updated", AssetSettingsUpdated, {"settings": {"a": 1}}),
+    ],
+)
+def test_evolve_mutation_preserves_model_id(
+    name: str,
+    transition: type,
+    kwargs: dict[str, object],
+) -> None:
+    """Mirror of test_evolve_mutation_preserves_drawing: every mutation
+    arm carries model_id forward."""
+    _ = name
+    model_id = uuid4()
+    prior = Asset(
+        id=uuid4(),
+        name=AssetName("X"),
+        level=AssetLevel.UNIT,
+        parent_id=uuid4(),
+        model_id=model_id,
+    )
+    state = evolve(prior, transition(asset_id=prior.id, occurred_at=_NOW, **kwargs))
+    assert state.model_id == model_id
+
+
+@pytest.mark.unit
+def test_evolve_port_added_preserves_model_id() -> None:
+    model_id = uuid4()
+    prior = Asset(
+        id=uuid4(),
+        name=AssetName("X"),
+        level=AssetLevel.DEVICE,
+        parent_id=uuid4(),
+        model_id=model_id,
+    )
+    state = evolve(
+        prior,
+        AssetPortAdded(
+            asset_id=prior.id,
+            port_name="x",
+            direction="Input",
+            signal_type="TTL",
+            occurred_at=_NOW,
+        ),
+    )
+    assert state.model_id == model_id
+
+
+@pytest.mark.unit
+def test_evolve_port_removed_preserves_model_id() -> None:
+    port = AssetPort(name="x", direction=PortDirection.INPUT, signal_type="TTL")
+    model_id = uuid4()
+    prior = Asset(
+        id=uuid4(),
+        name=AssetName("X"),
+        level=AssetLevel.DEVICE,
+        parent_id=uuid4(),
+        ports=frozenset({port}),
+        model_id=model_id,
+    )
+    state = evolve(prior, AssetPortRemoved(asset_id=prior.id, port_name="x", occurred_at=_NOW))
+    assert state.model_id == model_id
+
+
+@pytest.mark.unit
+def test_fold_register_with_model_id_then_lifecycle_transitions_preserves_model_id() -> None:
+    """End-to-end fold: register with model_id, then activate + enter
+    maintenance + exit maintenance + decommission. The model_id binding
+    survives the entire lifecycle path."""
+    asset_id = uuid4()
+    parent_id = uuid4()
+    model_id = uuid4()
+    state = fold(
+        [
+            AssetRegistered(
+                asset_id=asset_id,
+                name="APS-2BM",
+                level="Unit",
+                parent_id=parent_id,
+                occurred_at=_NOW,
+                model_id=model_id,
+            ),
+            AssetActivated(asset_id=asset_id, occurred_at=_NOW),
+            AssetMaintenanceEntered(asset_id=asset_id, occurred_at=_NOW),
+            AssetMaintenanceExited(asset_id=asset_id, occurred_at=_NOW),
+            AssetDecommissioned(asset_id=asset_id, occurred_at=_NOW),
+        ]
+    )
+    assert state is not None
+    assert state.model_id == model_id
+    assert state.lifecycle is AssetLifecycle.DECOMMISSIONED

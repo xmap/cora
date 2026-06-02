@@ -7714,6 +7714,19 @@
             "$ref": "#/components/schemas/AssetLevel",
             "description": "Hierarchical level. One of: Enterprise (root, requires null parent_id), Site, Area, Unit, Assembly, Device."
           },
+          "model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional reference to the Model catalog entry this Asset is an instance of (Family -> Model -> Assembly -> Asset ladder). Set ONCE at registration; rebind path is decommission + re-register. The handler verifies the Model stream exists before invoking the decider (404 if missing); no subset check at register time because the genesis Asset families set is empty.",
+            "title": "Model Id"
+          },
           "name": {
             "description": "Display name for the new asset.",
             "maxLength": 200,
@@ -13433,6 +13446,16 @@
               }
             },
             "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "model_id was supplied but the referenced Model stream does not exist (ModelNotFoundError)."
           },
           "422": {
             "description": "Request body failed schema validation (unknown level, missing fields, malformed UUID) OR Idempotency-Key was reused with a different request body."

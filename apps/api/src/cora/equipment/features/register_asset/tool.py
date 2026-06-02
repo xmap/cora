@@ -80,6 +80,19 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 ),
             ),
         ] = None,
+        model_id: Annotated[
+            UUID | None,
+            Field(
+                default=None,
+                description=(
+                    "Optional reference to the Model catalog entry "
+                    "this Asset is an instance of. Set ONCE at "
+                    "registration; rebind path is decommission + "
+                    "re-register. Raises 404 if the Model stream "
+                    "does not exist."
+                ),
+            ),
+        ] = None,
     ) -> RegisterAssetOutput:
         handler = get_handler()
         asset_id = await handler(
@@ -88,6 +101,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 level=level,
                 parent_id=parent_id,
                 drawing=drawing.to_domain() if drawing is not None else None,
+                model_id=model_id,
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

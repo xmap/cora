@@ -11,6 +11,14 @@ from cora.equipment.aggregates.asset import (
     InvalidAssetNameError,
     InvalidAssetParentError,
 )
+from cora.equipment.aggregates.model import (
+    Manufacturer,
+    ManufacturerName,
+    Model,
+    ModelName,
+    ModelNotFoundError,
+    PartNumber,
+)
 from cora.equipment.features import register_asset
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
@@ -224,6 +232,107 @@ def test_wire_equipment_includes_register_asset() -> None:
     # earlier-phase handlers still wired (regression guards)
     assert callable(handlers.define_family)
     assert callable(handlers.get_family)
+
+
+@pytest.mark.unit
+async def test_handler_raises_model_not_found_when_model_stream_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When command.model_id is supplied but the Model stream returns
+    None, the handler raises ModelNotFoundError BEFORE appending the
+    AssetRegistered event. The 404 mapping is wired at the BC route
+    layer (`_handle_not_found`)."""
+    unknown_model_id = UUID("01900000-0000-7000-8000-000000def001")
+    store = InMemoryEventStore()
+    deps = _build_deps(event_store=store)
+
+    async def _load_none(event_store: object, model_id: UUID) -> Model | None:
+        _ = (event_store, model_id)
+        return None
+
+    monkeypatch.setattr("cora.equipment.features.register_asset.handler.load_model", _load_none)
+
+    handler = register_asset.bind(deps)
+    with pytest.raises(ModelNotFoundError) as exc_info:
+        await handler(
+            RegisterAsset(
+                name="APS-2BM",
+                level=AssetLevel.UNIT,
+                parent_id=_PARENT_ID,
+                model_id=unknown_model_id,
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.model_id == unknown_model_id
+
+    events, version = await store.load("Asset", _NEW_ID)
+    assert events == []
+    assert version == 0
+
+
+@pytest.mark.unit
+async def test_handler_proceeds_when_model_id_resolves(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Happy path: when load_model returns a Model snapshot, the
+    handler appends AssetRegistered carrying the model_id verbatim."""
+    model_id = UUID("01900000-0000-7000-8000-000000ade001")
+    store = InMemoryEventStore()
+    deps = _build_deps(event_store=store)
+
+    async def _load_model(event_store: object, requested_id: UUID) -> Model | None:
+        _ = event_store
+        assert requested_id == model_id
+        return Model(
+            id=requested_id,
+            name=ModelName("EigerX-9M"),
+            manufacturer=Manufacturer(name=ManufacturerName("Dectris")),
+            part_number=PartNumber("EX9M-001"),
+            declared_families=frozenset({UUID("01900000-0000-7000-8000-000000fa1001")}),
+        )
+
+    monkeypatch.setattr("cora.equipment.features.register_asset.handler.load_model", _load_model)
+
+    handler = register_asset.bind(deps)
+    await handler(
+        RegisterAsset(
+            name="APS-2BM-Det",
+            level=AssetLevel.DEVICE,
+            parent_id=_PARENT_ID,
+            model_id=model_id,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    events, version = await store.load("Asset", _NEW_ID)
+    assert version == 1
+    assert events[0].event_type == "AssetRegistered"
+    assert events[0].payload["model_id"] == str(model_id)
+
+
+@pytest.mark.unit
+async def test_handler_omits_model_id_payload_key_when_command_has_none() -> None:
+    """When command.model_id is None the handler must NOT attempt a
+    Model load (no monkeypatch needed) and the emitted payload must
+    omit the `model_id` key entirely (mirrors the `drawing` omit-when-
+    None convention locked in events.py)."""
+    store = InMemoryEventStore()
+    deps = _build_deps(event_store=store)
+
+    handler = register_asset.bind(deps)
+    await handler(
+        RegisterAsset(
+            name="APS-2BM",
+            level=AssetLevel.UNIT,
+            parent_id=_PARENT_ID,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    events, _ = await store.load("Asset", _NEW_ID)
+    assert "model_id" not in events[0].payload
 
 
 @pytest.mark.unit

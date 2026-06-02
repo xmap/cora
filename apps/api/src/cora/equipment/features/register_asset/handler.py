@@ -7,12 +7,21 @@ locked cross-BC create-style command pattern (now 7th instance).
 The cross-BC create-style template extraction stays parked per the
 post-domain-audit (defer hoisting until divergence pressure or
 ~10 instances; we're at 7).
+
+When `command.model_id is not None` the handler loads the Model
+stream via `load_model` BEFORE invoking the decider and raises
+`ModelNotFoundError` (mapped to HTTP 404 by the BC's exception
+handler tuple) when the stream returns no state. This is a load-
+only cross-BC dependency; no Model snapshot is threaded into the
+decider because the subset invariant is vacuously satisfied at
+register-time per Lock B of the model-binding design memo.
 """
 
 from typing import Protocol
 from uuid import UUID
 
 from cora.equipment.aggregates.asset import event_type_name, to_payload
+from cora.equipment.aggregates.model import ModelNotFoundError, load_model
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.register_asset.command import RegisterAsset
 from cora.equipment.features.register_asset.decider import decide
@@ -98,6 +107,19 @@ def bind(deps: Kernel) -> Handler:
                 reason=decision.reason,
             )
             raise UnauthorizedError(decision.reason)
+
+        if command.model_id is not None:
+            model = await load_model(deps.event_store, command.model_id)
+            if model is None:
+                _log.info(
+                    "register_asset.model_not_found",
+                    command_name=_COMMAND_NAME,
+                    principal_id=str(principal_id),
+                    correlation_id=str(correlation_id),
+                    causation_id=str(causation_id) if causation_id is not None else None,
+                    model_id=str(command.model_id),
+                )
+                raise ModelNotFoundError(command.model_id)
 
         new_id = deps.id_generator.new_id()
         now = deps.clock.now()

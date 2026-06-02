@@ -193,6 +193,42 @@ def test_decide_defaults_drawing_to_none_when_omitted() -> None:
 
 
 @pytest.mark.unit
+def test_decide_propagates_model_id_to_emitted_event() -> None:
+    """Happy path: an optional model_id supplied on the command rides
+    the AssetRegistered event verbatim. The decider does NOT load the
+    Model snapshot per Lock B; the handler is the seam that enforces
+    existence."""
+    model_id = uuid4()
+    events = register_asset.decide(
+        state=None,
+        command=RegisterAsset(
+            name="Microscope-2BM-A",
+            level=AssetLevel.ASSEMBLY,
+            parent_id=uuid4(),
+            model_id=model_id,
+        ),
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert events[0].model_id == model_id
+
+
+@pytest.mark.unit
+def test_decide_defaults_model_id_to_none_when_omitted() -> None:
+    events = register_asset.decide(
+        state=None,
+        command=RegisterAsset(
+            name="APS",
+            level=AssetLevel.SITE,
+            parent_id=uuid4(),
+        ),
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert events[0].model_id is None
+
+
+@pytest.mark.unit
 def test_decide_is_pure_same_inputs_same_outputs() -> None:
     new_id = uuid4()
     parent_id = uuid4()

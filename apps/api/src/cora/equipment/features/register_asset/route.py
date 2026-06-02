@@ -70,6 +70,18 @@ class RegisterAssetRequest(BaseModel):
             "Captured at registration only; not mutable in v1."
         ),
     )
+    model_id: UUID | None = Field(
+        None,
+        description=(
+            "Optional reference to the Model catalog entry this Asset "
+            "is an instance of (Family -> Model -> Assembly -> Asset "
+            "ladder). Set ONCE at registration; rebind path is "
+            "decommission + re-register. The handler verifies the "
+            "Model stream exists before invoking the decider (404 if "
+            "missing); no subset check at register time because the "
+            "genesis Asset families set is empty."
+        ),
+    )
 
 
 class RegisterAssetResponse(BaseModel):
@@ -103,6 +115,13 @@ router = APIRouter(tags=["equipment"])
         status.HTTP_403_FORBIDDEN: {
             "model": ErrorResponse,
             "description": "Authorize port denied the command.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "model_id was supplied but the referenced Model stream "
+                "does not exist (ModelNotFoundError)."
+            ),
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
             "description": (
@@ -138,6 +157,7 @@ async def post_assets(
             level=body.level,
             parent_id=body.parent_id,
             drawing=body.drawing.to_domain() if body.drawing is not None else None,
+            model_id=body.model_id,
         ),
         principal_id=principal_id,
         correlation_id=cid,

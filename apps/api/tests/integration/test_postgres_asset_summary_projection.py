@@ -19,6 +19,8 @@ Pins:
     other two populated
   - CHECK constraint on drawing_system rejects unknown values when
     written directly via SQL (defense-in-depth pin)
+  - AssetRegistered with model_id in the payload lands in the new
+    model_id column; legacy events without the key fold to NULL
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -33,7 +35,9 @@ from cora.equipment.aggregates._drawing import Drawing, DrawingSystem
 from cora.equipment.aggregates.asset import AssetLevel
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_asset import bind as bind_register_asset
+from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.ports.event_store import NewEvent
 from tests.integration._equipment_helpers import drain_equipment_projections
 from tests.integration._helpers import build_postgres_deps
 
@@ -153,3 +157,90 @@ async def test_check_constraint_rejects_unknown_drawing_system(
                 "'UnknownSystem', '123', NULL, now())",
                 asset_id,
             )
+
+
+async def _append_asset_registered(
+    pool: asyncpg.Pool,
+    *,
+    asset_id: UUID,
+    payload_extra: dict[str, object],
+) -> None:
+    """Append a synthetic AssetRegistered event directly to the event
+    store. Bypasses the register_asset handler so the model_id payload
+    key can be exercised at the projection layer ahead of the
+    register_asset slice landing model_id in the command + decider."""
+    store = PostgresEventStore(pool)
+    payload: dict[str, object] = {
+        "asset_id": str(asset_id),
+        "name": "synthetic-asset",
+        "level": "Device",
+        "parent_id": str(uuid4()),
+        "occurred_at": _NOW.isoformat(),
+    }
+    payload.update(payload_extra)
+    await store.append(
+        "Asset",
+        asset_id,
+        0,
+        [
+            NewEvent(
+                event_id=uuid4(),
+                event_type="AssetRegistered",
+                schema_version=1,
+                payload=payload,
+                occurred_at=_NOW,
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                metadata={},
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
+    )
+    await drain_equipment_projections(pool)
+
+
+@pytest.mark.integration
+async def test_asset_registered_with_model_id_populates_model_column(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """An AssetRegistered event carrying the optional model_id key
+    lands in the proj_equipment_asset_summary.model_id column after
+    projection drain."""
+    asset_id = uuid4()
+    model_id = uuid4()
+    await _append_asset_registered(
+        db_pool,
+        asset_id=asset_id,
+        payload_extra={"model_id": str(model_id)},
+    )
+
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT model_id FROM proj_equipment_asset_summary WHERE asset_id = $1",
+            asset_id,
+        )
+    assert row is not None
+    assert row["model_id"] == model_id
+
+
+@pytest.mark.integration
+async def test_asset_registered_without_model_id_leaves_model_column_null(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Legacy AssetRegistered events (and unbound genesis registrations)
+    omit the model_id payload key; the new column folds to NULL via the
+    additive-payload pattern."""
+    asset_id = uuid4()
+    await _append_asset_registered(
+        db_pool,
+        asset_id=asset_id,
+        payload_extra={},
+    )
+
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT model_id FROM proj_equipment_asset_summary WHERE asset_id = $1",
+            asset_id,
+        )
+    assert row is not None
+    assert row["model_id"] is None

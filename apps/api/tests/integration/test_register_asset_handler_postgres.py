@@ -4,6 +4,13 @@ Two scenarios cover both genesis paths of the hierarchy rule:
 Enterprise root (parent_id=None) and Site-with-parent. Pinned
 because the payload's nullable parent_id round-trip through
 Postgres jsonb is one of the structural guarantees Asset relies on.
+
+A third scenario seeds a Model via `define_model` then registers an
+Asset bound to it via `command.model_id`, verifying the
+AssetRegistered payload carries `model_id` and the folded Asset
+state round-trips it. The Model load-and-confirm-exists step happens
+inside the register_asset handler against the real Postgres event
+store.
 """
 
 from datetime import UTC, datetime
@@ -12,14 +19,23 @@ from uuid import UUID
 import asyncpg
 import pytest
 
+from cora.equipment._projections import register_equipment_projections
 from cora.equipment.aggregates.asset import (
     AssetLevel,
     AssetLifecycle,
     AssetName,
     load_asset,
 )
-from cora.equipment.features import register_asset
+from cora.equipment.aggregates.model import (
+    Manufacturer,
+    ManufacturerName,
+    ModelNotFoundError,
+)
+from cora.equipment.features import define_family, define_model, register_asset
+from cora.equipment.features.define_family import DefineFamily
+from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.register_asset import RegisterAsset
+from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -92,3 +108,120 @@ async def test_register_asset_persists_site_with_parent_to_postgres(
     assert state.parent_id == parent_id
     assert state.level is AssetLevel.SITE
     assert state.lifecycle is AssetLifecycle.COMMISSIONED
+
+
+async def _drain_equipment_projections(db_pool: asyncpg.Pool) -> None:
+    """Pump Equipment-owned projections so cross-BC reads see fresh writes.
+
+    `define_model.handler` queries `proj_equipment_family_summary` via
+    `list_family_ids`; the upstream `define_family` event must be
+    drained into the projection before the Model definition runs.
+    """
+    registry = ProjectionRegistry()
+    register_equipment_projections(registry)
+    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+
+
+@pytest.mark.integration
+async def test_register_asset_persists_model_binding_to_postgres(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Seed a Family + Model, then register an Asset bound to that
+    Model via `command.model_id`. The handler's Model existence check
+    runs against the real Postgres event store; AssetRegistered payload
+    carries `model_id` as a string; folded Asset state round-trips it."""
+    family_id = UUID("01900000-0000-7000-8000-000000054e01")
+    family_event_id = UUID("01900000-0000-7000-8000-000000054e0e")
+    model_id = UUID("01900000-0000-7000-8000-00000054ec01")
+    model_event_id = UUID("01900000-0000-7000-8000-00000054ec0e")
+    asset_id = UUID("01900000-0000-7000-8000-00000054ed01")
+    asset_event_id = UUID("01900000-0000-7000-8000-00000054ed0e")
+    parent_id = UUID("01900000-0000-7000-8000-00000054ed00")
+
+    deps = build_postgres_deps(
+        db_pool,
+        now=_NOW,
+        ids=[
+            family_id,
+            family_event_id,
+            model_id,
+            model_event_id,
+            asset_id,
+            asset_event_id,
+        ],
+    )
+    await define_family.bind(deps)(
+        DefineFamily(name="ContinuousRotationTomography", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain_equipment_projections(db_pool)
+    await define_model.bind(deps)(
+        DefineModel(
+            name="EigerX-9M",
+            manufacturer=Manufacturer(name=ManufacturerName("Dectris")),
+            part_number="EX9M-001",
+            declared_families=frozenset({family_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    returned_asset_id = await register_asset.bind(deps)(
+        RegisterAsset(
+            name="APS-2BM-Det",
+            level=AssetLevel.DEVICE,
+            parent_id=parent_id,
+            model_id=model_id,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert returned_asset_id == asset_id
+
+    events, version = await deps.event_store.load("Asset", asset_id)
+    assert version == 1
+    stored = events[0]
+    assert stored.event_type == "AssetRegistered"
+    assert stored.payload["model_id"] == str(model_id)
+    assert stored.payload["asset_id"] == str(asset_id)
+    assert stored.payload["level"] == "Device"
+    assert stored.payload["parent_id"] == str(parent_id)
+
+    state = await load_asset(deps.event_store, asset_id)
+    assert state is not None
+    assert state.id == asset_id
+    assert state.name == AssetName("APS-2BM-Det")
+    assert state.model_id == model_id
+    assert state.lifecycle is AssetLifecycle.COMMISSIONED
+
+
+@pytest.mark.integration
+async def test_register_asset_raises_model_not_found_on_unknown_model_id(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """When `command.model_id` references a Model stream that does not
+    exist, the handler raises ModelNotFoundError BEFORE appending any
+    Asset event."""
+    asset_id = UUID("01900000-0000-7000-8000-00000054ef01")
+    asset_event_id = UUID("01900000-0000-7000-8000-00000054ef0e")
+    unknown_model_id = UUID("01900000-0000-7000-8000-00000bad7e57")
+    parent_id = UUID("01900000-0000-7000-8000-00000054ef00")
+
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[asset_id, asset_event_id])
+
+    with pytest.raises(ModelNotFoundError) as exc_info:
+        await register_asset.bind(deps)(
+            RegisterAsset(
+                name="APS-2BM",
+                level=AssetLevel.UNIT,
+                parent_id=parent_id,
+                model_id=unknown_model_id,
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.model_id == unknown_model_id
+
+    _, version = await deps.event_store.load("Asset", asset_id)
+    assert version == 0

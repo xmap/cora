@@ -18,11 +18,13 @@ from uuid import UUID
 
 from cora.equipment.aggregates.asset import (
     AssetEvent,
+    AssetModelMismatch,
     event_type_name,
     fold,
     from_stored,
     to_payload,
 )
+from cora.equipment.aggregates.model import ModelNotFoundError, load_model
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.add_asset_family.command import AddAssetFamily
 from cora.equipment.features.add_asset_family.decider import decide
@@ -100,6 +102,28 @@ def bind(deps: Kernel) -> Handler:
         )
         history: list[AssetEvent] = [from_stored(s) for s in stored]
         state = fold(history)
+
+        # Cross-BC subset gate: when the Asset is bound to a Model
+        # via model_id, the post-add family set must be a superset
+        # of the Model's declared families. Lives in the handler
+        # (not the decider) because the Model snapshot is loaded
+        # at decide time from a stream the Asset aggregate does not
+        # own. Same precedent as `update_asset_settings` loading
+        # Family streams to validate against schemas. Single-stream
+        # write discipline preserved: load Model read-only, append
+        # only to the Asset stream.
+        if state is not None and state.model_id is not None:
+            model = await load_model(deps.event_store, state.model_id)
+            if model is None:
+                raise ModelNotFoundError(state.model_id)
+            post_add_family_ids = state.family_ids | {command.family_id}
+            if not model.declared_families.issubset(post_add_family_ids):
+                raise AssetModelMismatch(
+                    asset_id=state.id,
+                    model_id=state.model_id,
+                    declared_families=model.declared_families,
+                    asset_family_ids=post_add_family_ids,
+                )
 
         domain_events = decide(state=state, command=command, now=now)
 

@@ -3,14 +3,28 @@
 Same cross-BC `with_idempotency` decorator as the other create-style
 slices. Test keys are short to stay below the gitleaks generic-API-
 key entropy threshold.
+
+The `model_id`-related cases monkeypatch the `load_model` symbol
+imported into the `register_asset.handler` module: a stub that
+returns a fully-formed Model snapshot pins the happy path (no need
+to seed the upstream Model stream via `POST /models` first), and
+a stub that always returns `None` pins the 404 path.
 """
 
+from collections.abc import Iterator
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.equipment.aggregates.model import (
+    Manufacturer,
+    ManufacturerName,
+    Model,
+    ModelName,
+    PartNumber,
+)
 
 
 def _body(name: str = "APS-2BM", level: str = "Unit") -> dict[str, object]:
@@ -79,3 +93,106 @@ def test_post_assets_cached_response_returns_valid_uuid() -> None:
     UUID(r1.json()["asset_id"])  # parses
     UUID(r2.json()["asset_id"])  # parses
     assert r1.json()["asset_id"] == r2.json()["asset_id"]
+
+
+# ---------- model_id body field (asset-model binding slice) ----------
+
+
+_KNOWN_MODEL_ID = UUID("01900000-0000-7000-8000-00000000ad01")
+_KNOWN_FAMILY_ID = UUID("01900000-0000-7000-8000-00000000fa11")
+
+
+@pytest.fixture
+def accept_model(monkeypatch: pytest.MonkeyPatch) -> Iterator[UUID]:
+    """Stub `load_model` so `_KNOWN_MODEL_ID` resolves to a real Model.
+
+    The register_asset handler imports `load_model` by name at module
+    load, so we patch the binding in the handler's namespace (the one
+    it actually calls). Mirrors the `accept_family` pattern in
+    `test_define_model_contract.py`.
+    """
+
+    async def _stub(_event_store: object, requested_id: UUID) -> Model | None:
+        if requested_id == _KNOWN_MODEL_ID:
+            return Model(
+                id=requested_id,
+                name=ModelName("EigerX-9M"),
+                manufacturer=Manufacturer(name=ManufacturerName("Dectris")),
+                part_number=PartNumber("EX9M-001"),
+                declared_families=frozenset({_KNOWN_FAMILY_ID}),
+            )
+        return None
+
+    monkeypatch.setattr(
+        "cora.equipment.features.register_asset.handler.load_model",
+        _stub,
+    )
+    yield _KNOWN_MODEL_ID
+
+
+@pytest.mark.contract
+def test_post_assets_with_known_model_id_returns_201(accept_model: UUID) -> None:
+    """Happy path: body carries model_id resolving to a real Model;
+    handler appends AssetRegistered and returns 201 + new asset id."""
+    body: dict[str, object] = {
+        "name": "APS-2BM-Det",
+        "level": "Device",
+        "parent_id": str(uuid4()),
+        "model_id": str(accept_model),
+    }
+    with TestClient(create_app()) as client:
+        response = client.post("/assets", json=body)
+
+    assert response.status_code == 201
+    UUID(response.json()["asset_id"])  # parses
+
+
+@pytest.mark.contract
+def test_post_assets_with_unknown_model_id_returns_404(accept_model: UUID) -> None:
+    """Cross-BC 404: a model_id that does not resolve to a real Model
+    stream surfaces as ModelNotFoundError mapped to HTTP 404 by the
+    BC's `_handle_not_found` exception handler."""
+    _ = accept_model  # fixture's stub returns None for any other id
+    unknown_id = UUID("01900000-0000-7000-8000-00000000def0")
+    body: dict[str, object] = {
+        "name": "APS-2BM-Det",
+        "level": "Device",
+        "parent_id": str(uuid4()),
+        "model_id": str(unknown_id),
+    }
+    with TestClient(create_app()) as client:
+        response = client.post("/assets", json=body)
+
+    assert response.status_code == 404
+
+
+@pytest.mark.contract
+def test_post_assets_with_malformed_model_id_returns_422() -> None:
+    """Pydantic schema validation: a non-UUID string in `model_id`
+    fails request-body validation before the handler runs."""
+    body: dict[str, object] = {
+        "name": "APS-2BM",
+        "level": "Unit",
+        "parent_id": str(uuid4()),
+        "model_id": "not-a-uuid",
+    }
+    with TestClient(create_app()) as client:
+        response = client.post("/assets", json=body)
+
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_assets_without_model_id_still_returns_201() -> None:
+    """Forward-compat: omitting model_id from the body continues to
+    work (the field is optional, default None). Legacy clients that
+    do not know about the binding are unaffected."""
+    body: dict[str, object] = {
+        "name": "APS",
+        "level": "Site",
+        "parent_id": str(uuid4()),
+    }
+    with TestClient(create_app()) as client:
+        response = client.post("/assets", json=body)
+
+    assert response.status_code == 201

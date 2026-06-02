@@ -18,6 +18,7 @@ from cora.infrastructure.ports.event_store import StoredEvent
 _ASSET_ID = uuid4()
 _PARENT_ID = uuid4()
 _OTHER_PARENT_ID = uuid4()
+_MODEL_ID = uuid4()
 _EVENT_ID = uuid4()
 _CORRELATION_ID = uuid4()
 _NOW = datetime(2026, 5, 12, 14, 0, 0, tzinfo=UTC)
@@ -101,7 +102,9 @@ async def test_asset_registered_inserts_with_commissioned_lifecycle_and_parent()
     assert args.args[5] is None
     assert args.args[6] is None
     assert args.args[7] is None
-    assert args.args[8] == _NOW
+    # model_id omitted from payload: column folds to NULL.
+    assert args.args[8] is None
+    assert args.args[9] == _NOW
 
 
 @pytest.mark.unit
@@ -156,6 +159,56 @@ async def test_asset_registered_with_drawing_no_revision_keeps_revision_null() -
     assert args.args[5] == "EDMS"
     assert args.args[6] == "9001"
     assert args.args[7] is None
+
+
+@pytest.mark.unit
+async def test_asset_registered_with_model_id_populates_model_column() -> None:
+    """Bound Asset: AssetRegistered payload carries model_id; projection
+    parses to UUID and writes into the model_id column."""
+    proj = AssetSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(_ASSET_ID),
+            "name": "Microscope-2BM-A",
+            "level": "Assembly",
+            "parent_id": str(_PARENT_ID),
+            "model_id": str(_MODEL_ID),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[8] == _MODEL_ID
+
+
+@pytest.mark.unit
+async def test_asset_registered_without_model_id_leaves_model_column_null() -> None:
+    """Legacy AssetRegistered events (and genesis registrations with no
+    Model binding) omit the model_id payload key entirely; the column
+    folds to NULL via payload.get('model_id')."""
+    proj = AssetSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(_ASSET_ID),
+            "name": "unbound-asset",
+            "level": "Device",
+            "parent_id": str(_PARENT_ID),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[8] is None
 
 
 @pytest.mark.unit

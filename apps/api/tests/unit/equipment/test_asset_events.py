@@ -286,6 +286,142 @@ def test_to_payload_then_from_stored_round_trips_with_drawing() -> None:
     assert from_stored(stored) == original
 
 
+# ---------- AssetRegistered.model_id ----------
+
+
+@pytest.mark.unit
+def test_to_payload_omits_model_id_key_when_model_id_is_none() -> None:
+    """Omit-when-None convention (Lock G): legacy AssetRegistered shape
+    (no model_id) must serialize without the key so existing stream
+    readers can't accidentally observe a None value where they
+    previously saw the key missing. Mirrors the drawing precedent."""
+    event = AssetRegistered(
+        asset_id=uuid4(),
+        name="X",
+        level="Site",
+        parent_id=uuid4(),
+        occurred_at=_NOW,
+    )
+    payload = to_payload(event)
+    assert "model_id" not in payload
+
+
+@pytest.mark.unit
+def test_to_payload_includes_model_id_when_set() -> None:
+    asset_id = uuid4()
+    parent_id = uuid4()
+    model_id = uuid4()
+    event = AssetRegistered(
+        asset_id=asset_id,
+        name="Microscope-2BM-A",
+        level="Assembly",
+        parent_id=parent_id,
+        occurred_at=_NOW,
+        model_id=model_id,
+    )
+    payload = to_payload(event)
+    assert payload["model_id"] == str(model_id)
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_asset_registered_with_model_id() -> None:
+    asset_id = uuid4()
+    parent_id = uuid4()
+    model_id = uuid4()
+    stored = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(asset_id),
+            "name": "Microscope-2BM-A",
+            "level": "Assembly",
+            "parent_id": str(parent_id),
+            "occurred_at": _NOW.isoformat(),
+            "model_id": str(model_id),
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert rebuilt == AssetRegistered(
+        asset_id=asset_id,
+        name="Microscope-2BM-A",
+        level="Assembly",
+        parent_id=parent_id,
+        occurred_at=_NOW,
+        model_id=model_id,
+    )
+
+
+@pytest.mark.unit
+def test_from_stored_folds_legacy_payload_without_model_id_to_none() -> None:
+    """Backward-compat pin: existing AssetRegistered events written before
+    the model_id widen had no model_id key; they MUST fold to
+    model_id=None without raising. Mirrors the drawing legacy-fold
+    precedent."""
+    asset_id = uuid4()
+    stored = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(asset_id),
+            "name": "Pre-widen Asset",
+            "level": "Unit",
+            "parent_id": str(uuid4()),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, AssetRegistered)
+    assert rebuilt.model_id is None
+
+
+@pytest.mark.unit
+def test_to_payload_then_from_stored_round_trips_without_model_id_explicit() -> None:
+    """Pin the omit-then-rebuild path: model_id=None survives the
+    serialize+deserialize round-trip and emerges as model_id=None
+    (not as a missing attribute or something else)."""
+    original = AssetRegistered(
+        asset_id=uuid4(),
+        name="No-Model Asset",
+        level="Site",
+        parent_id=uuid4(),
+        occurred_at=_NOW,
+    )
+    stored = _stored("AssetRegistered", to_payload(original))
+    rebuilt = from_stored(stored)
+    assert rebuilt == original
+    assert isinstance(rebuilt, AssetRegistered)
+    assert rebuilt.model_id is None
+
+
+@pytest.mark.unit
+def test_to_payload_then_from_stored_round_trips_with_model_id() -> None:
+    original = AssetRegistered(
+        asset_id=uuid4(),
+        name="Microscope-2BM-A",
+        level="Assembly",
+        parent_id=uuid4(),
+        occurred_at=_NOW,
+        model_id=uuid4(),
+    )
+    stored = _stored("AssetRegistered", to_payload(original))
+    assert from_stored(stored) == original
+
+
+@pytest.mark.unit
+def test_to_payload_then_from_stored_round_trips_with_drawing_and_model_id() -> None:
+    """Both additive fields set: the two omit-when-None blocks must
+    compose cleanly and the round-trip preserves both."""
+    original = AssetRegistered(
+        asset_id=uuid4(),
+        name="Microscope-2BM-A",
+        level="Assembly",
+        parent_id=uuid4(),
+        occurred_at=_NOW,
+        drawing=Drawing(system=DrawingSystem.ICMS, number="P4105", revision="A"),
+        model_id=uuid4(),
+    )
+    stored = _stored("AssetRegistered", to_payload(original))
+    assert from_stored(stored) == original
+
+
 @pytest.mark.unit
 def test_from_stored_raises_on_unknown_event_type() -> None:
     """Foreign event_types in a stream must fail loud, not be silently dropped."""

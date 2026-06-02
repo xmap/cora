@@ -99,7 +99,6 @@ GRANDFATHERED_DECIDERS_WITHOUT_PBT: frozenset[str] = frozenset(
         "cora.equipment.features.exit_maintenance.decider",
         "cora.equipment.features.fault_asset.decider",
         "cora.equipment.features.install_asset.decider",
-        "cora.equipment.features.register_asset.decider",
         "cora.equipment.features.register_frame.decider",
         "cora.equipment.features.relocate_asset.decider",
         "cora.equipment.features.remove_asset_family.decider",

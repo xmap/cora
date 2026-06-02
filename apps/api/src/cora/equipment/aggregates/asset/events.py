@@ -78,6 +78,16 @@ class AssetRegistered:
     the engineering build-to spec for the physical specimen. Defaults
     to None so legacy AssetRegistered streams (no drawing in the
     payload) fold cleanly via the additive-payload pattern.
+
+    `model_id` is an optional reference to the Model catalog entry
+    this Asset is an instance of (Family -> Model -> Assembly ->
+    Asset ladder). Set at registration per the model-binding design
+    memo (Lock A); rebind path is decommission + re-register.
+    Defaults to None so legacy AssetRegistered streams (no model_id
+    in the payload) fold cleanly via the additive-payload pattern;
+    `to_payload` uses the omit-when-None convention (key absent
+    rather than serialized as JSON null) to mirror the `drawing`
+    precedent.
     """
 
     asset_id: UUID
@@ -86,6 +96,7 @@ class AssetRegistered:
     parent_id: UUID | None
     occurred_at: datetime
     drawing: Drawing | None = None
+    model_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -355,6 +366,7 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
             parent_id=parent_id,
             occurred_at=occurred_at,
             drawing=drawing,
+            model_id=model_id,
         ):
             payload: dict[str, Any] = {
                 "asset_id": str(asset_id),
@@ -369,6 +381,8 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
                     "number": drawing.number,
                     "revision": drawing.revision,
                 }
+            if model_id is not None:
+                payload["model_id"] = str(model_id)
             return payload
         case AssetActivated(asset_id=asset_id, occurred_at=occurred_at):
             return {
@@ -495,6 +509,8 @@ def from_stored(stored: StoredEvent) -> AssetEvent:
                     if raw_drawing is not None
                     else None
                 )
+                raw_model_id = payload.get("model_id")
+                model_id = UUID(raw_model_id) if raw_model_id is not None else None
                 return AssetRegistered(
                     asset_id=UUID(payload["asset_id"]),
                     name=payload["name"],
@@ -502,6 +518,7 @@ def from_stored(stored: StoredEvent) -> AssetEvent:
                     parent_id=UUID(raw_parent) if raw_parent is not None else None,
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     drawing=drawing,
+                    model_id=model_id,
                 )
 
             return deserialize_or_raise("AssetRegistered", _build_registered)

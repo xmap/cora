@@ -452,6 +452,45 @@ class AssetCannotRemovePortError(Exception):
         self.reason = reason
 
 
+class AssetModelMismatch(Exception):  # noqa: N818
+    """The Asset's families set does not satisfy the bound Model's declared families.
+
+    Cross-BC subset invariant: when an Asset is bound to a Model via
+    `model_id`, the Asset's `family_ids` must be a superset of the
+    Model's `declared_families`. The check fires at `add_asset_family`
+    against a freshly loaded Model snapshot; if the post-add families
+    set is not a superset of `declared_families`, this error is raised
+    and no event is emitted.
+
+    The message lists both sets verbatim so operators reading the API
+    error response see immediately which Families are missing on the
+    Asset (or, in the cascade case, which Families the Model has added
+    since the binding). Mapped to HTTP 409 via the
+    `cannot_transition_cls` tuple in `routes.py`.
+
+    Per the model-binding design memo (Lock E), this class lives in
+    the Asset BC per the per-BC error-class convention; the Model-side
+    equivalent does not exist because the binding is one-directional.
+    """
+
+    def __init__(
+        self,
+        asset_id: UUID,
+        model_id: UUID,
+        declared_families: frozenset[UUID],
+        asset_family_ids: frozenset[UUID],
+    ) -> None:
+        super().__init__(
+            f"Asset {asset_id} bound to Model {model_id} which declares families "
+            f"{sorted(declared_families)}, but Asset families would be "
+            f"{sorted(asset_family_ids)} after this transition"
+        )
+        self.asset_id = asset_id
+        self.model_id = model_id
+        self.declared_families = declared_families
+        self.asset_family_ids = asset_family_ids
+
+
 class AssetCannotRelocateError(Exception):
     """Attempted to relocate an asset under disqualifying conditions.
 
@@ -553,6 +592,16 @@ class Asset:
     AssetRegistered streams without the drawing field fold cleanly
     via the additive-state pattern.
 
+    `model_id`: optional reference to the Model catalog entry this
+    Asset is an instance of (Family -> Model -> Assembly -> Asset
+    ladder). Set ONCE at `register_asset` time per the model-binding
+    design memo (Lock A); rebind path is decommission + re-register.
+    Carries the cross-BC subset invariant
+    `Model.declared_families ⊆ Asset.family_ids`, enforced at
+    `add_asset_family` against a freshly loaded Model snapshot.
+    Defaults to None; legacy AssetRegistered streams without the
+    model_id field fold cleanly via the additive-state pattern.
+
     Future additive facets: `owner`, `persistent_id`. The state-
     level fields land with defaults for the same forward-
     compatibility reason.
@@ -579,3 +628,4 @@ class Asset:
     # Same parametrized-callable trick as family_ids.
     ports: frozenset[AssetPort] = field(default_factory=frozenset[AssetPort])
     drawing: Drawing | None = None
+    model_id: UUID | None = None
