@@ -239,7 +239,7 @@ def test_mcp_add_asset_family_tool_returns_iserror_when_already_present() -> Non
 def test_mcp_add_asset_family_tool_returns_iserror_when_asset_model_mismatch() -> None:
     """Cross-BC subset gate: an Asset bound to a Model whose
     `declared_families` are not satisfied by the post-add Asset
-    family set raises `AssetModelMismatch`, surfaced as
+    family set raises `AssetModelMismatchError`, surfaced as
     `isError: true` with the bound model_id in the error text."""
     asset_id = UUID("01900000-0000-7000-8000-0000000e0e01")
     model_id = UUID("01900000-0000-7000-8000-0000000e0e02")

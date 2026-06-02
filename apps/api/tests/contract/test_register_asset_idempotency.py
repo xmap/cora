@@ -196,3 +196,53 @@ def test_post_assets_without_model_id_still_returns_201() -> None:
         response = client.post("/assets", json=body)
 
     assert response.status_code == 201
+
+
+@pytest.mark.contract
+def test_post_assets_same_key_different_model_id_returns_422(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same Idempotency-Key + same body EXCEPT for model_id surfaces as 422.
+
+    Gate-review P1-2: the cross-BC `hash_command` includes model_id
+    (RegisterAsset is a frozen dataclass; canonical hash covers every
+    field). Two distinct Model bindings under the same Idempotency-Key
+    must surface as a key/body conflict, NOT silently return a cached
+    asset_id pointing at the wrong Model.
+
+    Patches `load_model` to accept either of two distinct Model ids so
+    both requests would otherwise reach the handler successfully; the
+    only differentiator on the cached-response check is the model_id
+    field in the body.
+    """
+    model_a = UUID("01900000-0000-7000-8000-00000000a001")
+    model_b = UUID("01900000-0000-7000-8000-00000000b002")
+    family_id = UUID("01900000-0000-7000-8000-00000000fa12")
+
+    async def _stub(_event_store: object, requested_id: UUID) -> Model | None:
+        if requested_id in {model_a, model_b}:
+            return Model(
+                id=requested_id,
+                name=ModelName("EigerX-9M"),
+                manufacturer=Manufacturer(name=ManufacturerName("Dectris")),
+                part_number=PartNumber("EX9M-001"),
+                declared_families=frozenset({family_id}),
+            )
+        return None
+
+    monkeypatch.setattr(
+        "cora.equipment.features.register_asset.handler.load_model",
+        _stub,
+    )
+
+    with TestClient(create_app()) as client:
+        headers = {"Idempotency-Key": "ak-model"}
+        body_a = {**_body(), "model_id": str(model_a)}
+        body_b = {**_body(), "model_id": str(model_b)}
+        r1 = client.post("/assets", json=body_a, headers=headers)
+        r2 = client.post("/assets", json=body_b, headers=headers)
+
+    assert r1.status_code == 201
+    assert r2.status_code == 422
+    detail = r2.json().get("detail", "").lower()
+    assert "idempotency-key" in detail

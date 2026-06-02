@@ -452,7 +452,7 @@ class AssetCannotRemovePortError(Exception):
         self.reason = reason
 
 
-class AssetModelMismatch(Exception):  # noqa: N818
+class AssetModelMismatchError(Exception):
     """The Asset's families set does not satisfy the bound Model's declared families.
 
     Cross-BC subset invariant: when an Asset is bound to a Model via

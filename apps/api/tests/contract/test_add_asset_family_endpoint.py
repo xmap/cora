@@ -240,7 +240,7 @@ def test_post_add_family_with_x_principal_id_header_succeeds() -> None:
 def test_post_add_family_returns_409_when_asset_model_mismatch() -> None:
     """Cross-BC subset gate: an Asset bound to a Model whose
     `declared_families` are not satisfied by the post-add Asset
-    family set raises `AssetModelMismatch`, mapped to 409 via the
+    family set raises `AssetModelMismatchError`, mapped to 409 via the
     `cannot_transition_cls` tuple in `routes.py`."""
     asset_id = UUID("01900000-0000-7000-8000-0000000e0d01")
     model_id = UUID("01900000-0000-7000-8000-0000000e0d02")

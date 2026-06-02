@@ -8,7 +8,7 @@ load+fold returns a state with the capability in the set.
 Plus the cross-BC subset gate (Asset.model_id binding): when the
 Asset is bound to a Model carrying `declared_families`, the
 `add_asset_family` handler loads the Model snapshot at decide time
-and raises `AssetModelMismatch` if the post-add Asset family set
+and raises `AssetModelMismatchError` if the post-add Asset family set
 is not a superset of the Model's declared families. The PG-backed
 test seeds Model + Asset events directly via the event store
 (register_asset does not yet accept a model_id) so the gate is
@@ -21,7 +21,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel, AssetModelMismatch, load_asset
+from cora.equipment.aggregates.asset import AssetLevel, AssetModelMismatchError, load_asset
 from cora.equipment.aggregates.asset.events import AssetRegistered
 from cora.equipment.aggregates.asset.events import (
     event_type_name as asset_event_type_name,
@@ -206,7 +206,7 @@ async def test_add_asset_family_raises_asset_model_mismatch_when_subset_is_viola
 ) -> None:
     """Asset bound to a Model whose `declared_families` is NOT
     satisfied by the post-add Asset family set: the cross-BC subset
-    gate raises `AssetModelMismatch`, no event is appended, the
+    gate raises `AssetModelMismatchError`, no event is appended, the
     Asset stream stays at version 1."""
     asset_id = UUID("01900000-0000-7000-8000-00000058fa01")
     model_id = UUID("01900000-0000-7000-8000-00000058fa02")
@@ -226,7 +226,7 @@ async def test_add_asset_family_raises_asset_model_mismatch_when_subset_is_viola
     )
     await _seed_asset_bound_to_model(deps, asset_id=asset_id, model_id=model_id)
 
-    with pytest.raises(AssetModelMismatch) as exc_info:
+    with pytest.raises(AssetModelMismatchError) as exc_info:
         await add_asset_family.bind(deps)(
             AddAssetFamily(asset_id=asset_id, family_id=declared_a),
             principal_id=_PRINCIPAL_ID,

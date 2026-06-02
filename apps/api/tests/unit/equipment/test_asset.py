@@ -8,7 +8,7 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetLevel,
     AssetLifecycle,
-    AssetModelMismatch,
+    AssetModelMismatchError,
     AssetName,
     InvalidAssetNameError,
 )
@@ -167,7 +167,7 @@ def test_asset_model_id_accepts_uuid() -> None:
     assert asset.model_id == model_id
 
 
-# ---------- AssetModelMismatch error class ----------
+# ---------- AssetModelMismatchError error class ----------
 
 
 @pytest.mark.unit
@@ -181,7 +181,7 @@ def test_asset_model_mismatch_carries_all_four_fields() -> None:
     fam_b = uuid4()
     declared = frozenset({fam_a, fam_b})
     on_asset = frozenset({fam_a})
-    error = AssetModelMismatch(
+    error = AssetModelMismatchError(
         asset_id=asset_id,
         model_id=model_id,
         declared_families=declared,
@@ -203,7 +203,7 @@ def test_asset_model_mismatch_message_lists_both_sets_verbatim() -> None:
     fam_b = uuid4()
     declared = frozenset({fam_a, fam_b})
     on_asset = frozenset({fam_a})
-    error = AssetModelMismatch(
+    error = AssetModelMismatchError(
         asset_id=asset_id,
         model_id=model_id,
         declared_families=declared,
@@ -221,7 +221,7 @@ def test_asset_model_mismatch_message_lists_both_sets_verbatim() -> None:
 def test_asset_model_mismatch_is_exception() -> None:
     """Subclass of Exception so it can be raised / caught in the
     cannot_transition_cls tuple in routes.py."""
-    error = AssetModelMismatch(
+    error = AssetModelMismatchError(
         asset_id=uuid4(),
         model_id=uuid4(),
         declared_families=frozenset(),

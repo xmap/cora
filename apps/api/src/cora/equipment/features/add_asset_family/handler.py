@@ -18,7 +18,7 @@ from uuid import UUID
 
 from cora.equipment.aggregates.asset import (
     AssetEvent,
-    AssetModelMismatch,
+    AssetModelMismatchError,
     event_type_name,
     fold,
     from_stored,
@@ -118,7 +118,7 @@ def bind(deps: Kernel) -> Handler:
                 raise ModelNotFoundError(state.model_id)
             post_add_family_ids = state.family_ids | {command.family_id}
             if not model.declared_families.issubset(post_add_family_ids):
-                raise AssetModelMismatch(
+                raise AssetModelMismatchError(
                     asset_id=state.id,
                     model_id=state.model_id,
                     declared_families=model.declared_families,

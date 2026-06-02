@@ -8,7 +8,7 @@ and the wire-equipment smoke.
 Also covers the cross-BC subset gate (Model binding): when an Asset
 carries a `model_id`, the handler loads the Model stream snapshot,
 asserts `Model.declared_families` is a subset of the post-add Asset
-families, and raises `AssetModelMismatch` otherwise. The Model load
+families, and raises `AssetModelMismatchError` otherwise. The Model load
 is monkeypatched per the model-binding design memo precedent (same
 shape as `update_asset_settings` Family-stream loads).
 """
@@ -22,7 +22,7 @@ from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
     AssetCannotAddFamilyError,
     AssetLevel,
-    AssetModelMismatch,
+    AssetModelMismatchError,
     AssetNotFoundError,
 )
 from cora.equipment.aggregates.asset.events import AssetRegistered
@@ -344,7 +344,7 @@ async def test_handler_raises_asset_model_mismatch_when_subset_is_violated_post_
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Asset bound to Model; post-add family set still missing one of
-    `Model.declared_families`. Subset gate fails; AssetModelMismatch
+    `Model.declared_families`. Subset gate fails; AssetModelMismatchError
     raised, no event appended, Asset stream stays at version 1."""
     asset_id = UUID("01900000-0000-7000-8000-0000000c0d11")
     store = InMemoryEventStore()
@@ -360,7 +360,7 @@ async def test_handler_raises_asset_model_mismatch_when_subset_is_violated_post_
 
     monkeypatch.setattr(add_asset_family_handler, "load_model", fake_load_model)
 
-    with pytest.raises(AssetModelMismatch) as exc_info:
+    with pytest.raises(AssetModelMismatchError) as exc_info:
         await add_asset_family.bind(deps)(
             AddAssetFamily(asset_id=asset_id, family_id=_CAP_EXTRA),
             principal_id=_PRINCIPAL_ID,
