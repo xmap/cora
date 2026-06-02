@@ -3,7 +3,7 @@
 Shared MCP helpers live in `tests/contract/_mcp_helpers.py`.
 
 In-memory contract harness has no Postgres pool, so the cross-BC
-`list_family_ids` lookup returns `[]` and every `add_model_family`
+`list_all_family_ids` lookup returns `[]` and every `add_model_family`
 call surfaces `FamilyNotFoundError` before the decider runs. The
 happy path is pinned at the integration tier; this file pins the
 MCP-wire shape: tool registration, description spec, and the failure
@@ -119,7 +119,7 @@ def test_mcp_add_model_family_tool_returns_iserror_on_unknown_model(
         return [fake_family_id]
 
     monkeypatch.setattr(
-        "cora.equipment.features.add_model_family.handler.list_family_ids",
+        "cora.equipment.features.add_model_family.handler.list_all_family_ids",
         _stub,
     )
     missing_model_id = uuid4()

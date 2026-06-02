@@ -9,7 +9,7 @@ lookup, so the failure shapes pinned at the MCP wire are:
   - present model + absent family -> isError: true ("does not declare")
   - missing model stream -> isError: true ("not found")
 
-The seeding `define_model` call still needs `list_family_ids`
+The seeding `define_model` call still needs `list_all_family_ids`
 stubbed so we can seed a real model via REST in the same TestClient
 before invoking the MCP tool.
 """
@@ -33,7 +33,7 @@ def _stub_define_model_family_lookup(
         return list(family_ids)
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _stub,
     )
 

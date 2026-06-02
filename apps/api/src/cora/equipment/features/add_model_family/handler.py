@@ -3,7 +3,7 @@
 Update-style handler shape: load + fold + decide + append. Mirrors
 the `add_asset_family` and `version_model` precedents for the
 stream load + fold + decide + append spine, and the `define_model`
-precedent for the cross-BC `list_family_ids` lookup that resolves
+precedent for the cross-BC `list_all_family_ids` lookup that resolves
 `command.family_id` against the Family registry before the decider
 runs.
 
@@ -12,16 +12,19 @@ Not idempotency-wrapped: domain-idempotent via
 `add_asset_family`).
 
 Cross-BC concern: the referenced `family_id` must resolve to a
-registered Family stream. On miss the handler raises
-`FamilyNotFoundError(command.family_id)` (404) before the decider
-sees the command, matching the `define_model` operational pattern
-of surfacing missing-Family errors at the application boundary.
+registered Family stream (including Deprecated). On miss the
+handler raises `FamilyNotFoundError(command.family_id)` (404) before
+the decider sees the command, matching the `define_model`
+operational pattern of surfacing missing-Family errors at the
+application boundary. Family.deprecation is an authoring signal NOT
+a runtime gate per the Model aggregate's design memo; adding a
+Deprecated Family to a Model's declared set is permitted.
 """
 
 from typing import Protocol
 from uuid import UUID
 
-from cora.equipment.aggregates.family import FamilyNotFoundError, list_family_ids
+from cora.equipment.aggregates.family import FamilyNotFoundError, list_all_family_ids
 from cora.equipment.aggregates.model import (
     ModelEvent,
     event_type_name,
@@ -102,7 +105,7 @@ def bind(deps: Kernel) -> Handler:
         # Bulk single-query approach (cheap at pilot scale, <50 Families).
         # Trigger to switch to per-id load: facility Family count crosses
         # ~500 OR p95 of add_model_family crosses 200ms.
-        known_family_ids = set(await list_family_ids(deps.pool))
+        known_family_ids = set(await list_all_family_ids(deps.pool))
         if command.family_id not in known_family_ids:
             _log.info(
                 "add_model_family.family_not_found",

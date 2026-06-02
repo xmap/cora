@@ -2,7 +2,7 @@
 
 Mirrors `test_get_family_mcp_tool.py`. Shared MCP helpers live in
 `tests/contract/_mcp_helpers.py`. The Model upstream `define_model`
-tool enforces a cross-BC `list_family_ids` precondition that is
+tool enforces a cross-BC `list_all_family_ids` precondition that is
 pool-backed and returns `[]` in the in-memory harness; we
 monkeypatch the upstream handler's binding so the seed tool call
 succeeds.
@@ -26,7 +26,7 @@ def accept_family(monkeypatch: pytest.MonkeyPatch) -> Iterator[UUID]:
         return [_FIXED_FAMILY_ID]
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _stub,
     )
     yield _FIXED_FAMILY_ID

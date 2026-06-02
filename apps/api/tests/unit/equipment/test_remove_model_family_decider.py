@@ -3,8 +3,8 @@
 Targeted mutation of `Model.declared_families`, not a lifecycle
 transition. Status is preserved (`Defined` stays `Defined`,
 `Versioned` stays `Versioned`); only `Deprecated` is rejected via
-`ModelCannotVersionError` (Model's general "cannot mutate from
-Deprecated" gate, reused by the add/remove family slices).
+the per-verb `ModelCannotRemoveFamilyError` (mirrors
+`AssetCannotRemoveFamilyError`).
 
 Strict-not-idempotent: removing a family not in `declared_families`
 raises `ModelFamilyNotPresentError`, mirroring the
@@ -20,7 +20,7 @@ from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     Model,
-    ModelCannotVersionError,
+    ModelCannotRemoveFamilyError,
     ModelFamilyNotPresentError,
     ModelFamilyRemoved,
     ModelName,
@@ -83,7 +83,7 @@ def test_decide_emits_model_family_removed_from_versioned_state() -> None:
 
 
 @pytest.mark.unit
-def test_decide_raises_cannot_version_when_deprecated() -> None:
+def test_decide_raises_cannot_remove_family_when_deprecated() -> None:
     """Deprecated catalog entries are frozen; remove_model_family rejects."""
     existing = uuid4()
     state = _model(
@@ -91,7 +91,7 @@ def test_decide_raises_cannot_version_when_deprecated() -> None:
         version="v1",
         declared_families=frozenset({existing}),
     )
-    with pytest.raises(ModelCannotVersionError) as exc_info:
+    with pytest.raises(ModelCannotRemoveFamilyError) as exc_info:
         remove_model_family.decide(
             state=state,
             command=RemoveModelFamily(model_id=state.id, family_id=existing),

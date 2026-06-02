@@ -58,13 +58,13 @@ def _patch_known_families(
     family_ids: list[UUID],
     *,
     targets: tuple[str, ...] = (
-        "cora.equipment.features.define_model.handler.list_family_ids",
-        "cora.equipment.features.add_model_family.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
+        "cora.equipment.features.add_model_family.handler.list_all_family_ids",
     ),
 ) -> None:
-    """Stub `list_family_ids` as imported into upstream command handlers.
+    """Stub `list_all_family_ids` as imported into upstream command handlers.
 
-    `get_model` itself does NOT call `list_family_ids`; the stub is
+    `get_model` itself does NOT call `list_all_family_ids`; the stub is
     needed only for the upstream `define_model` and `add_model_family`
     calls that seed the stream this test reads back.
     """

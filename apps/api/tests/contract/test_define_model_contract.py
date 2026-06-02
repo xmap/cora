@@ -9,7 +9,7 @@ short to stay below the gitleaks generic-API-key entropy threshold.
 
 The Model handler enforces a cross-BC precondition: every entry in
 `declared_families` must resolve via the Family read repo's
-`list_family_ids`, which is pool-backed and returns `[]` in the
+`list_all_family_ids`, which is pool-backed and returns `[]` in the
 in-memory TestClient harness. We monkeypatch the symbol imported into
 the handler module to a fixed accept-all stub so the contract surface
 under test stays focused on HTTP shape + idempotency semantics (the
@@ -29,9 +29,9 @@ _FIXED_FAMILY_ID = UUID("01900000-0000-7000-8000-00000000fa01")
 
 @pytest.fixture
 def accept_family(monkeypatch: pytest.MonkeyPatch) -> Iterator[UUID]:
-    """Stub `list_family_ids` so `_FIXED_FAMILY_ID` always resolves.
+    """Stub `list_all_family_ids` so `_FIXED_FAMILY_ID` always resolves.
 
-    The handler imports `list_family_ids` by name at module load, so we
+    The handler imports `list_all_family_ids` by name at module load, so we
     patch the binding in the handler's namespace (the one it actually
     calls), mirroring the unit-test pattern in
     `tests/unit/equipment/test_define_model_handler.py`.
@@ -41,7 +41,7 @@ def accept_family(monkeypatch: pytest.MonkeyPatch) -> Iterator[UUID]:
         return [_FIXED_FAMILY_ID]
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _stub,
     )
     yield _FIXED_FAMILY_ID
@@ -111,7 +111,7 @@ def test_post_models_whitespace_only_name_returns_400(accept_family: UUID) -> No
 @pytest.mark.contract
 def test_post_models_unknown_declared_family_returns_404(accept_family: UUID) -> None:
     """Cross-BC precondition surfaces as 404 when a declared family does
-    not resolve against `list_family_ids`."""
+    not resolve against `list_all_family_ids`."""
     _ = accept_family
     with TestClient(create_app()) as client:
         body = _body()

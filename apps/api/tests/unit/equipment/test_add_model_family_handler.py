@@ -4,7 +4,7 @@ Update-style handler (mirrors `add_asset_family` and `version_model`):
 load + fold + decide + append. Not idempotency-wrapped.
 
 Cross-BC concern: the referenced `family_id` must resolve to a
-registered Family via `list_family_ids`. The unit harness has no
+registered Family via `list_all_family_ids`. The unit harness has no
 Postgres pool, so we monkeypatch the symbol imported into the
 handler module to a fixed accept-all stub (mirrors the
 `define_model` handler test pattern). The seeding `define_model`
@@ -14,7 +14,7 @@ reason.
 The Deprecated path seeds a `ModelDeprecated` event directly onto
 the in-memory store (no `deprecate_model` slice is exercised in
 this test file), then invokes the handler and expects
-`ModelCannotVersionError`.
+`ModelCannotAddFamilyError`.
 """
 
 from datetime import UTC, datetime
@@ -27,7 +27,7 @@ from cora.equipment.aggregates.family import FamilyNotFoundError
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
-    ModelCannotVersionError,
+    ModelCannotAddFamilyError,
     ModelDeprecated,
     ModelFamilyAlreadyPresentError,
     ModelNotFoundError,
@@ -72,10 +72,10 @@ def _patch_known_families(
     monkeypatch: pytest.MonkeyPatch,
     family_ids: list[UUID],
 ) -> None:
-    """Patch `list_family_ids` in both handler modules that look it up.
+    """Patch `list_all_family_ids` in both handler modules that look it up.
 
     The seeding `define_model` call AND the slice under test
-    (`add_model_family`) each import `list_family_ids` by name at module
+    (`add_model_family`) each import `list_all_family_ids` by name at module
     load. Patching the binding in each handler's namespace ensures both
     paths see the stub.
     """
@@ -84,11 +84,11 @@ def _patch_known_families(
         return list(family_ids)
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _fake_list_family_ids,
     )
     monkeypatch.setattr(
-        "cora.equipment.features.add_model_family.handler.list_family_ids",
+        "cora.equipment.features.add_model_family.handler.list_all_family_ids",
         _fake_list_family_ids,
     )
 
@@ -191,7 +191,7 @@ async def test_handler_raises_family_not_found_for_unregistered_family(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Cross-BC precondition: the family_id must resolve via
-    `list_family_ids`; an unregistered id raises `FamilyNotFoundError`
+    `list_all_family_ids`; an unregistered id raises `FamilyNotFoundError`
     before the decider is reached."""
     _patch_known_families(monkeypatch, [_FAMILY_A_ID, _FAMILY_B_ID])
     store = InMemoryEventStore()
@@ -249,7 +249,7 @@ async def test_handler_raises_already_present_on_duplicate_family(
 
 
 @pytest.mark.unit
-async def test_handler_raises_cannot_version_when_deprecated(
+async def test_handler_raises_cannot_add_family_when_deprecated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Deprecated Models cannot accept new family declarations."""
@@ -258,7 +258,7 @@ async def test_handler_raises_cannot_version_when_deprecated(
     deps = _build_deps(event_store=store)
     await _seed_deprecated_model(deps, store)
 
-    with pytest.raises(ModelCannotVersionError):
+    with pytest.raises(ModelCannotAddFamilyError):
         await add_model_family.bind(deps)(
             AddModelFamily(model_id=_MODEL_ID, family_id=_FAMILY_B_ID),
             principal_id=_PRINCIPAL_ID,

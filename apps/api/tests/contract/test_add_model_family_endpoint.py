@@ -4,7 +4,7 @@ Targeted-mutation endpoint adding a single Family to the Model's
 `declared_families` set. 204 No Content on success.
 
 In-memory contract harness has no Postgres pool, so the cross-BC
-`list_family_ids` lookup performed by both `define_model` (during
+`list_all_family_ids` lookup performed by both `define_model` (during
 seeding) and `add_model_family` (under test) returns `[]` by default.
 We stub the symbol in BOTH handler modules to a fixed accept-all set so
 we can seed a Model via `POST /models` and exercise
@@ -41,7 +41,7 @@ _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
 
 @pytest.fixture
 def accept_families(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[UUID]]:
-    """Stub `list_family_ids` in both handler modules so the seeding
+    """Stub `list_all_family_ids` in both handler modules so the seeding
     `define_model` call and the `add_model_family` call under test each
     accept the fixed family-id set."""
     known: list[UUID] = [_FIXED_FAMILY_ID, _OTHER_FAMILY_ID]
@@ -50,11 +50,11 @@ def accept_families(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[UUID]]:
         return list(known)
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _stub,
     )
     monkeypatch.setattr(
-        "cora.equipment.features.add_model_family.handler.list_family_ids",
+        "cora.equipment.features.add_model_family.handler.list_all_family_ids",
         _stub,
     )
     yield known
@@ -145,7 +145,7 @@ def test_post_add_model_family_returns_404_when_family_unregistered(
     accept_families: list[UUID],
 ) -> None:
     """Cross-BC precondition surfaces as 404 when the supplied family_id
-    does not resolve via `list_family_ids`."""
+    does not resolve via `list_all_family_ids`."""
     _ = accept_families
     unknown_family_id = str(uuid4())
     with TestClient(create_app()) as client:

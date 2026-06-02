@@ -245,6 +245,44 @@ class ModelCannotDeprecateError(Exception):
         self.current_status = current_status
 
 
+class ModelCannotAddFamilyError(Exception):
+    """Attempted to add a family to a model not in `Defined` or `Versioned`.
+
+    Mirrors `ModelCannotVersionError` and `ModelCannotDeprecateError`:
+    `add_model_family` accepts both `Defined` and `Versioned` source
+    states. Only `Deprecated` is rejected; the rejection rationale is
+    the same "deprecated catalog entry is frozen" guard that drives
+    version and deprecate.
+    """
+
+    def __init__(self, model_id: UUID, current_status: "ModelStatus") -> None:
+        super().__init__(
+            f"Model {model_id} cannot add family: currently in status "
+            f"{current_status.value}, add_model_family requires "
+            f"{ModelStatus.DEFINED.value} or {ModelStatus.VERSIONED.value}"
+        )
+        self.model_id = model_id
+        self.current_status = current_status
+
+
+class ModelCannotRemoveFamilyError(Exception):
+    """Attempted to remove a family from a model not in `Defined` or `Versioned`.
+
+    Mirrors `ModelCannotAddFamilyError`: `remove_model_family` accepts
+    both `Defined` and `Versioned` source states. Only `Deprecated`
+    is rejected on the same frozen-catalog-entry rationale.
+    """
+
+    def __init__(self, model_id: UUID, current_status: "ModelStatus") -> None:
+        super().__init__(
+            f"Model {model_id} cannot remove family: currently in status "
+            f"{current_status.value}, remove_model_family requires "
+            f"{ModelStatus.DEFINED.value} or {ModelStatus.VERSIONED.value}"
+        )
+        self.model_id = model_id
+        self.current_status = current_status
+
+
 class ModelFamilyAlreadyPresentError(Exception):
     """Attempted to add a family already present in `declared_families`."""
 

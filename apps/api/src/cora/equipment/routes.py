@@ -87,7 +87,9 @@ from cora.equipment.aggregates.model import (
     InvalidModelVersionTagError,
     InvalidPartNumberError,
     ModelAlreadyExistsError,
+    ModelCannotAddFamilyError,
     ModelCannotDeprecateError,
+    ModelCannotRemoveFamilyError,
     ModelCannotVersionError,
     ModelFamilyAlreadyPresentError,
     ModelFamilyNotPresentError,
@@ -319,6 +321,8 @@ def register_equipment_routes(app: FastAPI) -> None:
         AssetAlreadyInstalledElsewhereError,
         ModelCannotVersionError,
         ModelCannotDeprecateError,
+        ModelCannotAddFamilyError,
+        ModelCannotRemoveFamilyError,
         ModelFamilyAlreadyPresentError,
         ModelFamilyNotPresentError,
     ):

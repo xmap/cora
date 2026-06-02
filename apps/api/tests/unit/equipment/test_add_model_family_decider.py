@@ -3,8 +3,8 @@
 Targeted mutation of `Model.declared_families`, not a lifecycle
 transition. Status is preserved (`Defined` stays `Defined`,
 `Versioned` stays `Versioned`); only `Deprecated` is rejected via
-`ModelCannotVersionError` (Model's general "cannot mutate from
-Deprecated" gate, reused by the add/remove family slices).
+the per-verb `ModelCannotAddFamilyError` (mirrors
+`AssetCannotAddFamilyError`).
 
 Strict-not-idempotent: re-adding a present family raises
 `ModelFamilyAlreadyPresentError`, mirroring the `add_asset_family`
@@ -20,7 +20,7 @@ from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     Model,
-    ModelCannotVersionError,
+    ModelCannotAddFamilyError,
     ModelFamilyAdded,
     ModelFamilyAlreadyPresentError,
     ModelName,
@@ -79,10 +79,10 @@ def test_decide_emits_model_family_added_from_versioned_state() -> None:
 
 
 @pytest.mark.unit
-def test_decide_raises_cannot_version_when_deprecated() -> None:
+def test_decide_raises_cannot_add_family_when_deprecated() -> None:
     """Deprecated catalog entries are frozen; add_model_family rejects."""
     state = _model(status=ModelStatus.DEPRECATED, version="v1")
-    with pytest.raises(ModelCannotVersionError) as exc_info:
+    with pytest.raises(ModelCannotAddFamilyError) as exc_info:
         add_model_family.decide(
             state=state,
             command=AddModelFamily(model_id=state.id, family_id=uuid4()),

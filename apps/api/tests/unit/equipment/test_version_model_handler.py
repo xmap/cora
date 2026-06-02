@@ -64,9 +64,9 @@ def _patch_known_families(
     monkeypatch: pytest.MonkeyPatch,
     family_ids: list[UUID],
 ) -> None:
-    """Patch `list_family_ids` as imported into the define_model handler.
+    """Patch `list_all_family_ids` as imported into the define_model handler.
 
-    `version_model` does NOT call `list_family_ids`, but the
+    `version_model` does NOT call `list_all_family_ids`, but the
     seeding call to `define_model` does. We stub it accept-all so the
     seed succeeds in the in-memory harness.
     """
@@ -75,7 +75,7 @@ def _patch_known_families(
         return list(family_ids)
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _fake_list_family_ids,
     )
 

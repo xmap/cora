@@ -1,9 +1,9 @@
 """Property-based tests for `add_model_family.decide` (Equipment BC).
 
 Targeted mutation of `Model.declared_families`; status is preserved
-across the mutation and only `Deprecated` is rejected (via the shared
-`ModelCannotVersionError` gate). Universal claims across generated
-inputs:
+across the mutation and only `Deprecated` is rejected (via the
+per-verb `ModelCannotAddFamilyError` gate). Universal claims across
+generated inputs:
 
   - state in {Defined, Versioned} + family_id NOT in
     declared_families emits exactly one ModelFamilyAdded with the
@@ -12,7 +12,7 @@ inputs:
     ModelFamilyAlreadyPresentError carrying the model + family id.
   - state=None always raises ModelNotFoundError carrying the
     command's model_id.
-  - state.status==Deprecated always raises ModelCannotVersionError
+  - state.status==Deprecated always raises ModelCannotAddFamilyError
     carrying the Deprecated source status.
 """
 
@@ -28,7 +28,7 @@ from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     Model,
-    ModelCannotVersionError,
+    ModelCannotAddFamilyError,
     ModelFamilyAdded,
     ModelFamilyAlreadyPresentError,
     ModelName,
@@ -147,13 +147,13 @@ def test_add_model_family_on_empty_state_always_raises_not_found(
     family_id=st.uuids(),
     now=aware_datetimes(),
 )
-def test_add_model_family_on_deprecated_state_always_raises_cannot_version(
+def test_add_model_family_on_deprecated_state_always_raises_cannot_add_family(
     model_id: UUID,
     declared_families: frozenset[UUID],
     family_id: UUID,
     now: datetime,
 ) -> None:
-    """state.status==Deprecated -> ModelCannotVersionError, regardless of
+    """state.status==Deprecated -> ModelCannotAddFamilyError, regardless of
     whether family_id would have been a duplicate or a fresh add."""
     state = _model(
         model_id,
@@ -161,7 +161,7 @@ def test_add_model_family_on_deprecated_state_always_raises_cannot_version(
         declared_families=declared_families,
     )
     command = AddModelFamily(model_id=model_id, family_id=family_id)
-    with pytest.raises(ModelCannotVersionError) as exc:
+    with pytest.raises(ModelCannotAddFamilyError) as exc:
         add_model_family.decide(state=state, command=command, now=now)
     assert exc.value.model_id == model_id
     assert exc.value.current_status is ModelStatus.DEPRECATED

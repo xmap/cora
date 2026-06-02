@@ -2,12 +2,12 @@
 
 Mirrors the `define_family` handler test's shape (same Handler
 protocol, same authorize + event-store wiring, same Kernel deps).
-The Model-specific addition is the cross-BC `list_family_ids`
+The Model-specific addition is the cross-BC `list_all_family_ids`
 precondition: the handler resolves every element of
 `command.declared_families` against the Family read repo before
 invoking the decider, and raises `FamilyNotFoundError` on miss.
 
-`list_family_ids` reads from `proj_equipment_family_summary` and
+`list_all_family_ids` reads from `proj_equipment_family_summary` and
 returns `[]` when `pool is None` (the in-memory test default).
 Tests that need a populated Family set monkeypatch the symbol
 imported into `define_model.handler` rather than seeding a real
@@ -56,7 +56,7 @@ def _patch_known_families(
     monkeypatch: pytest.MonkeyPatch,
     family_ids: list[UUID],
 ) -> None:
-    """Patch `list_family_ids` as imported into the handler module.
+    """Patch `list_all_family_ids` as imported into the handler module.
 
     The handler does `from cora.equipment.aggregates.family import
     list_family_ids` at module load, so monkeypatching the source
@@ -69,7 +69,7 @@ def _patch_known_families(
         return list(family_ids)
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _fake_list_family_ids,
     )
 
@@ -143,7 +143,7 @@ async def test_handler_raises_family_not_found_for_unregistered_family(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Cross-BC precondition: declared_families containing an id that
-    doesn't resolve via `list_family_ids` raises `FamilyNotFoundError`."""
+    doesn't resolve via `list_all_family_ids` raises `FamilyNotFoundError`."""
     _patch_known_families(monkeypatch, [_FAMILY_A_ID])
     deps = _build_deps()
     handler = define_model.bind(deps)

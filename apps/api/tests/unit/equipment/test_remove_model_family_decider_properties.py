@@ -1,9 +1,9 @@
 """Property-based tests for `remove_model_family.decide` (Equipment BC).
 
 Targeted mutation of `Model.declared_families`; status is preserved
-across the mutation and only `Deprecated` is rejected (via the shared
-`ModelCannotVersionError` gate). Universal claims across generated
-inputs:
+across the mutation and only `Deprecated` is rejected (via the
+per-verb `ModelCannotRemoveFamilyError` gate). Universal claims
+across generated inputs:
 
   - state in {Defined, Versioned} + family_id IN declared_families
     emits exactly one ModelFamilyRemoved with the injected `now`
@@ -12,7 +12,7 @@ inputs:
     ModelFamilyNotPresentError carrying the model + family id.
   - state=None always raises ModelNotFoundError carrying the
     command's model_id.
-  - state.status==Deprecated always raises ModelCannotVersionError
+  - state.status==Deprecated always raises ModelCannotRemoveFamilyError
     carrying the Deprecated source status.
 """
 
@@ -28,7 +28,7 @@ from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     Model,
-    ModelCannotVersionError,
+    ModelCannotRemoveFamilyError,
     ModelFamilyNotPresentError,
     ModelFamilyRemoved,
     ModelName,
@@ -147,13 +147,13 @@ def test_remove_model_family_on_empty_state_always_raises_not_found(
     family_id=st.uuids(),
     now=aware_datetimes(),
 )
-def test_remove_model_family_on_deprecated_state_always_raises_cannot_version(
+def test_remove_model_family_on_deprecated_state_always_raises_cannot_remove_family(
     model_id: UUID,
     declared_families: frozenset[UUID],
     family_id: UUID,
     now: datetime,
 ) -> None:
-    """state.status==Deprecated -> ModelCannotVersionError, regardless of
+    """state.status==Deprecated -> ModelCannotRemoveFamilyError, regardless of
     whether family_id would have been a present remove or an absent one."""
     state = _model(
         model_id,
@@ -161,7 +161,7 @@ def test_remove_model_family_on_deprecated_state_always_raises_cannot_version(
         declared_families=declared_families,
     )
     command = RemoveModelFamily(model_id=model_id, family_id=family_id)
-    with pytest.raises(ModelCannotVersionError) as exc:
+    with pytest.raises(ModelCannotRemoveFamilyError) as exc:
         remove_model_family.decide(state=state, command=command, now=now)
     assert exc.value.model_id == model_id
     assert exc.value.current_status is ModelStatus.DEPRECATED

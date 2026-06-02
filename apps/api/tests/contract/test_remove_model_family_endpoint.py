@@ -8,7 +8,7 @@ Unlike `add_model_family`, the `remove_model_family` slice performs
 NO cross-BC Family lookup; removing a Family that has been deprecated
 or deleted from the Family registry still succeeds if it sits in
 `declared_families`. The seeding `define_model` call DOES still
-resolve `list_family_ids` cross-BC, so we stub that one symbol on
+resolve `list_all_family_ids` cross-BC, so we stub that one symbol on
 the `define_model` handler module.
 
 The 409-on-Deprecated path appends a `ModelDeprecated` event directly
@@ -41,7 +41,7 @@ _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
 
 @pytest.fixture
 def accept_families(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[UUID]]:
-    """Stub `list_family_ids` on the `define_model` handler so the
+    """Stub `list_all_family_ids` on the `define_model` handler so the
     seeding call accepts the fixed family-id set. The
     `remove_model_family` handler does NOT perform this lookup."""
     known: list[UUID] = [_FIXED_FAMILY_ID, _OTHER_FAMILY_ID]
@@ -50,7 +50,7 @@ def accept_families(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[UUID]]:
         return list(known)
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _stub,
     )
     yield known

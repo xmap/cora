@@ -23,10 +23,16 @@ from cora.equipment.aggregates.model import (
     fold,
     from_stored,
 )
-from cora.equipment.features import add_model_family, define_family, define_model
+from cora.equipment.features import (
+    add_model_family,
+    define_family,
+    define_model,
+    deprecate_family,
+)
 from cora.equipment.features.add_model_family import AddModelFamily
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_model import DefineModel
+from cora.equipment.features.deprecate_family import DeprecateFamily
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from tests.integration._helpers import build_postgres_deps
 
@@ -220,3 +226,86 @@ async def test_add_model_family_rejects_duplicate_family(
 
     _, version = await deps.event_store.load("Model", model_id)
     assert version == 1
+
+
+@pytest.mark.integration
+async def test_add_model_family_succeeds_when_family_is_deprecated(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Family.deprecation is an authoring signal NOT a runtime gate
+    per the Model aggregate's design memo. Seed two Families, deprecate
+    the second, define a Model declaring only the first, then add the
+    deprecated Family. The handler's cross-BC lookup goes through
+    `list_all_family_ids` which INCLUDES Deprecated rows, so the call
+    proceeds to event-write without raising `FamilyNotFoundError`."""
+    family_a_id = UUID("01900000-0000-7000-8000-00000062d001")
+    family_a_event_id = UUID("01900000-0000-7000-8000-00000062d00e")
+    family_b_id = UUID("01900000-0000-7000-8000-00000062d002")
+    family_b_event_id = UUID("01900000-0000-7000-8000-00000062d00f")
+    family_b_deprecate_event_id = UUID("01900000-0000-7000-8000-00000062d01a")
+    model_id = UUID("01900000-0000-7000-8000-00000062ca01")
+    define_event_id = UUID("01900000-0000-7000-8000-00000062ca0e")
+    added_event_id = UUID("01900000-0000-7000-8000-00000062ca1a")
+
+    deps = build_postgres_deps(
+        db_pool,
+        now=_NOW,
+        ids=[
+            family_a_id,
+            family_a_event_id,
+            family_b_id,
+            family_b_event_id,
+            family_b_deprecate_event_id,
+            model_id,
+            define_event_id,
+            added_event_id,
+        ],
+    )
+    await define_family.bind(deps)(
+        DefineFamily(name="ContinuousRotationTomography", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await define_family.bind(deps)(
+        DefineFamily(name="LegacyStepScan", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await deprecate_family.bind(deps)(
+        DeprecateFamily(family_id=family_b_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain_equipment_projections(db_pool)
+
+    await define_model.bind(deps)(
+        DefineModel(
+            name="Aerotech ANT130-L",
+            manufacturer=Manufacturer(name=ManufacturerName("Aerotech")),
+            part_number="ANT130-L",
+            declared_families=frozenset({family_a_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    await add_model_family.bind(deps)(
+        AddModelFamily(model_id=model_id, family_id=family_b_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    events, version = await deps.event_store.load("Model", model_id)
+    assert version == 2
+    assert [e.event_type for e in events] == ["ModelDefined", "ModelFamilyAdded"]
+    added = events[1]
+    assert added.payload == {
+        "model_id": str(model_id),
+        "family_id": str(family_b_id),
+        "occurred_at": _NOW.isoformat(),
+    }
+
+    history = [from_stored(s) for s in events]
+    state = fold(history)
+    assert state is not None
+    assert state.declared_families == frozenset({family_a_id, family_b_id})

@@ -8,16 +8,16 @@ lookup: removal only requires `family_id` to be present in
 `declared_families`. The Family may have been deprecated or deleted
 from the Family registry and removal still proceeds.
 
-The seeding `define_model` call DOES still resolve `list_family_ids`
+The seeding `define_model` call DOES still resolve `list_all_family_ids`
 cross-BC; the unit harness has no Postgres pool, so we monkeypatch
 that symbol on the `define_model` handler module to a fixed accept-
 all stub so the seed succeeds. The slice under test imports nothing
-from `list_family_ids`.
+from `list_all_family_ids`.
 
 The Deprecated path seeds a `ModelDeprecated` event directly onto
 the in-memory store (no `deprecate_model` slice is exercised in
 this test file), then invokes the handler and expects
-`ModelCannotVersionError`.
+`ModelCannotRemoveFamilyError`.
 """
 
 from datetime import UTC, datetime
@@ -29,7 +29,7 @@ from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
-    ModelCannotVersionError,
+    ModelCannotRemoveFamilyError,
     ModelDeprecated,
     ModelFamilyNotPresentError,
     ModelNotFoundError,
@@ -73,7 +73,7 @@ def _patch_seed_known_families(
     monkeypatch: pytest.MonkeyPatch,
     family_ids: list[UUID],
 ) -> None:
-    """Patch `list_family_ids` only on the `define_model` handler.
+    """Patch `list_all_family_ids` only on the `define_model` handler.
 
     The slice under test (`remove_model_family`) does NOT perform a
     cross-BC family lookup, so only the seeding `define_model` call
@@ -84,7 +84,7 @@ def _patch_seed_known_families(
         return list(family_ids)
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _fake_list_family_ids,
     )
 
@@ -221,7 +221,7 @@ async def test_handler_raises_not_present_on_absent_family(
 
 
 @pytest.mark.unit
-async def test_handler_raises_cannot_version_when_deprecated(
+async def test_handler_raises_cannot_remove_family_when_deprecated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Deprecated Models cannot accept family removals."""
@@ -230,7 +230,7 @@ async def test_handler_raises_cannot_version_when_deprecated(
     deps = _build_deps(event_store=store)
     await _seed_deprecated_model(deps, store)
 
-    with pytest.raises(ModelCannotVersionError):
+    with pytest.raises(ModelCannotRemoveFamilyError):
         await remove_model_family.bind(deps)(
             RemoveModelFamily(model_id=_MODEL_ID, family_id=_FAMILY_A_ID),
             principal_id=_PRINCIPAL_ID,

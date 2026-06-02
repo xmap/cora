@@ -29,9 +29,10 @@ from cora.equipment.aggregates.model import (
     ManufacturerIdentifierType,
     ManufacturerName,
 )
-from cora.equipment.features import define_family, define_model
+from cora.equipment.features import define_family, define_model, deprecate_family
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_model import DefineModel
+from cora.equipment.features.deprecate_family import DeprecateFamily
 from cora.equipment.wire import wire_equipment
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from tests.integration._helpers import build_postgres_deps
@@ -263,3 +264,61 @@ async def test_define_model_idempotency_key_replay_returns_same_model_id(
     # The "second" queued model_id was never written.
     _, second_version = await deps.event_store.load("Model", unused_replay_model_id)
     assert second_version == 0
+
+
+@pytest.mark.integration
+async def test_define_model_succeeds_when_declared_family_is_deprecated(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Family.deprecation is an authoring signal NOT a runtime gate
+    per the Model aggregate's design memo. A Family that has been
+    deprecated still resolves through `list_all_family_ids` (which
+    drops the `WHERE deprecated_at IS NULL` filter that
+    `list_family_ids` enforces for the discovery path), so
+    `define_model` proceeds to event-write without raising
+    `FamilyNotFoundError`."""
+    family_id = UUID("01900000-0000-7000-8000-000000054f01")
+    family_event_id = UUID("01900000-0000-7000-8000-000000054f0e")
+    deprecate_event_id = UUID("01900000-0000-7000-8000-000000054f1a")
+    model_id = UUID("01900000-0000-7000-8000-00000054ca04")
+    model_event_id = UUID("01900000-0000-7000-8000-00000054ca2a")
+
+    deps = build_postgres_deps(
+        db_pool,
+        now=_NOW,
+        ids=[
+            family_id,
+            family_event_id,
+            deprecate_event_id,
+            model_id,
+            model_event_id,
+        ],
+    )
+    await define_family.bind(deps)(
+        DefineFamily(name="LegacyTomography", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await deprecate_family.bind(deps)(
+        DeprecateFamily(family_id=family_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain_equipment_projections(db_pool)
+
+    returned_id = await define_model.bind(deps)(
+        DefineModel(
+            name="Aerotech ANT130-L",
+            manufacturer=Manufacturer(name=ManufacturerName("Aerotech")),
+            part_number="ANT130-L",
+            declared_families=frozenset({family_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert returned_id == model_id
+
+    events, version = await deps.event_store.load("Model", model_id)
+    assert version == 1
+    assert events[0].event_type == "ModelDefined"
+    assert events[0].payload["declared_families"] == [str(family_id)]

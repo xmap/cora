@@ -5,7 +5,7 @@ part_number, declared_families, version_tag). Multi-source guard
 (Defined | Versioned -> Versioned).
 
 In-memory contract harness has no Postgres pool, so the cross-BC
-`list_family_ids` lookup performed by `define_model` returns `[]` and
+`list_all_family_ids` lookup performed by `define_model` returns `[]` and
 every model-seeding call would fail. We stub the symbol to a
 fixed accept-all set so we can seed a Model via `POST /models` and
 exercise `POST /models/{model_id}/versions` end-to-end.
@@ -40,13 +40,13 @@ _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
 
 @pytest.fixture
 def accept_family(monkeypatch: pytest.MonkeyPatch) -> Iterator[UUID]:
-    """Stub `list_family_ids` so the seeding `define_model` succeeds."""
+    """Stub `list_all_family_ids` so the seeding `define_model` succeeds."""
 
     async def _stub(_pool: object) -> list[UUID]:
         return [_FIXED_FAMILY_ID, _OTHER_FAMILY_ID]
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _stub,
     )
     yield _FIXED_FAMILY_ID

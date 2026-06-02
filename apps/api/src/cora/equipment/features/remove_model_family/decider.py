@@ -7,13 +7,10 @@ the same "deprecated catalog entry is frozen" rationale that drives
 `ModelVersioned` and `ModelFamilyAdded` rejection from `Deprecated`
 in the events module.
 
-There is no dedicated `ModelCannotRemoveFamilyError` in the Model
-aggregate; the Model aggregate carries `ModelCannotVersionError`
-as its general "cannot mutate from Deprecated" gate (add and remove
-are conceptually version-like mutations of the declared-families
-set), so this slice reuses it. The diagnostic message stays
-accurate because `ModelCannotVersionError` already enumerates the
-allowed `Defined | Versioned` source states.
+The Deprecated gate raises a per-verb `ModelCannotRemoveFamilyError`
+mirroring `AssetCannotRemoveFamilyError`. The diagnostic message
+names the actual verb so operators see "cannot remove family"
+instead of the older shared "cannot be versioned" wording.
 
 The decider does NOT verify the referenced Family id resolves to a
 real Family stream; removal only requires that the id already sits
@@ -26,7 +23,7 @@ Strict-not-idempotent: removing an absent family raises
 
 Invariants:
   - State must not be None -> ModelNotFoundError
-  - State.status must not be Deprecated -> ModelCannotVersionError
+  - State.status must not be Deprecated -> ModelCannotRemoveFamilyError
   - family_id must already be in state.declared_families
     (strict-not-idempotent) -> ModelFamilyNotPresentError
 """
@@ -35,7 +32,7 @@ from datetime import datetime
 
 from cora.equipment.aggregates.model import (
     Model,
-    ModelCannotVersionError,
+    ModelCannotRemoveFamilyError,
     ModelFamilyNotPresentError,
     ModelFamilyRemoved,
     ModelNotFoundError,
@@ -54,7 +51,7 @@ def decide(
     if state is None:
         raise ModelNotFoundError(command.model_id)
     if state.status is ModelStatus.DEPRECATED:
-        raise ModelCannotVersionError(state.id, current_status=state.status)
+        raise ModelCannotRemoveFamilyError(state.id, current_status=state.status)
     if command.family_id not in state.declared_families:
         raise ModelFamilyNotPresentError(state.id, command.family_id)
     return [

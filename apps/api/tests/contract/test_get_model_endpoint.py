@@ -10,7 +10,7 @@ status, version_tag}` where `manufacturer` is the nested
 
 The Model upstream `define_model` slice enforces a cross-BC precondition:
 every entry in `declared_families` must resolve via the Family read
-repo's `list_family_ids`, which is pool-backed and returns `[]` in the
+repo's `list_all_family_ids`, which is pool-backed and returns `[]` in the
 in-memory TestClient harness. We monkeypatch the symbol imported into
 the upstream handler module so the seed `POST /models` call succeeds
 and we can exercise the read surface here.
@@ -29,13 +29,13 @@ _FIXED_FAMILY_ID = UUID("01900000-0000-7000-8000-00000000fa01")
 
 @pytest.fixture
 def accept_family(monkeypatch: pytest.MonkeyPatch) -> Iterator[UUID]:
-    """Stub `list_family_ids` so `_FIXED_FAMILY_ID` always resolves."""
+    """Stub `list_all_family_ids` so `_FIXED_FAMILY_ID` always resolves."""
 
     async def _stub(_pool: object) -> list[UUID]:
         return [_FIXED_FAMILY_ID]
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _stub,
     )
     yield _FIXED_FAMILY_ID

@@ -4,7 +4,7 @@ Action endpoint carrying a `reason` body. Multi-source guard
 (Defined | Versioned -> Deprecated). Strict-not-idempotent.
 
 In-memory contract harness has no Postgres pool, so the cross-BC
-`list_family_ids` lookup performed by `define_model` returns `[]` and
+`list_all_family_ids` lookup performed by `define_model` returns `[]` and
 every model-seeding call would fail. We stub the symbol to a fixed
 accept-all set so we can seed a Model via `POST /models` and exercise
 `POST /models/{model_id}/deprecation` end-to-end.
@@ -24,13 +24,13 @@ _REASON = "Vendor end-of-life 2026-Q3; replaced by ANT130-LZS"
 
 @pytest.fixture
 def accept_family(monkeypatch: pytest.MonkeyPatch) -> Iterator[UUID]:
-    """Stub `list_family_ids` so the seeding `define_model` succeeds."""
+    """Stub `list_all_family_ids` so the seeding `define_model` succeeds."""
 
     async def _stub(_pool: object) -> list[UUID]:
         return [_FIXED_FAMILY_ID]
 
     monkeypatch.setattr(
-        "cora.equipment.features.define_model.handler.list_family_ids",
+        "cora.equipment.features.define_model.handler.list_all_family_ids",
         _stub,
     )
     yield _FIXED_FAMILY_ID

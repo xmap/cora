@@ -22,6 +22,7 @@ from cora.equipment.aggregates.family.events import (
 from cora.equipment.aggregates.family.evolver import evolve, fold
 from cora.equipment.aggregates.family.read import (
     FamilyLifecycleTimestamps,
+    list_all_family_ids,
     list_asset_ids_in_families,
     list_family_ids,
     load_family,
@@ -70,6 +71,7 @@ __all__ = [
     "evolve",
     "fold",
     "from_stored",
+    "list_all_family_ids",
     "list_asset_ids_in_families",
     "list_family_ids",
     "load_family",
