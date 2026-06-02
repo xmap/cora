@@ -67,6 +67,7 @@ from cora.equipment.features.update_family_settings_schema import (
 )
 from cora.equipment.features.update_frame_placement import tool as update_frame_placement_tool
 from cora.equipment.features.update_mount_placement import tool as update_mount_placement_tool
+from cora.equipment.features.version_assembly import tool as version_assembly_tool
 from cora.equipment.features.version_family import tool as version_family_tool
 from cora.equipment.features.version_model import tool as version_model_tool
 from cora.equipment.wire import EquipmentHandlers
@@ -242,4 +243,8 @@ def register_equipment_tools(
     define_assembly_tool.register(
         mcp,
         get_handler=lambda: get_handlers().define_assembly,
+    )
+    version_assembly_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().version_assembly,
     )

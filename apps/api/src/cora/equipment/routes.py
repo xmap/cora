@@ -171,6 +171,7 @@ from cora.equipment.features import (
     update_family_settings_schema,
     update_frame_placement,
     update_mount_placement,
+    version_assembly,
     version_family,
     version_model,
 )
@@ -285,6 +286,7 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(install_asset.router)
     app.include_router(uninstall_asset.router)
     app.include_router(define_assembly.router)
+    app.include_router(version_assembly.router)
     for validation_cls in (
         InvalidAffordanceError,
         InvalidFamilyNameError,

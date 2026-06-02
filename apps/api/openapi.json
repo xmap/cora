@@ -11179,6 +11179,82 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VersionAssemblyRequest": {
+        "description": "Body for `POST /assemblies/{assembly_id}/versions`.",
+        "properties": {
+          "drawing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DrawingBody"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional engineering reference for this revision. Excluded from the content_hash."
+          },
+          "name": {
+            "description": "Display name for this revision snapshot. May change across revisions; non-unique.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "parameter_overrides_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional JSON Schema subset declaring the shape of parameter_overrides accepted at instantiation. Excluded if the revision keeps the previous schema unchanged.",
+            "title": "Parameter Overrides Schema"
+          },
+          "presents_as_family_id": {
+            "description": "FamilyId the instantiated Assembly stands in for. May change across revisions (e.g., DCM-revisited may move from Monochromator to a wider BeamConditioning Family).",
+            "format": "uuid",
+            "title": "Presents As Family Id",
+            "type": "string"
+          },
+          "required_slots": {
+            "description": "Full slot set for this revision (replace-on-version). Wire shape is a list; duplicates collapse when the route handler converts to the domain frozenset.",
+            "items": {
+              "$ref": "#/components/schemas/TemplateSlotBody"
+            },
+            "title": "Required Slots",
+            "type": "array"
+          },
+          "required_wires": {
+            "description": "Full wire set for this revision (replace-on-version). Endpoints must reference slots declared in required_slots.",
+            "items": {
+              "$ref": "#/components/schemas/TemplateWireBody"
+            },
+            "title": "Required Wires",
+            "type": "array"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Operator-curated free-form version label (no SemVer enforcement). Excluded from the content_hash.",
+            "title": "Version"
+          }
+        },
+        "required": [
+          "name",
+          "presents_as_family_id"
+        ],
+        "title": "VersionAssemblyRequest",
+        "type": "object"
+      },
       "VersionCapabilityRequest": {
         "description": "Body for `POST /capabilities/{capability_id}/version`.",
         "properties": {
@@ -13748,6 +13824,106 @@
           }
         },
         "summary": "Define a new Assembly composition blueprint",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/assemblies/{assembly_id}/versions": {
+      "post": {
+        "operationId": "post_assembly_version_assemblies__assembly_id__versions_post",
+        "parameters": [
+          {
+            "description": "The target Assembly's UUID.",
+            "in": "path",
+            "name": "assembly_id",
+            "required": true,
+            "schema": {
+              "description": "The target Assembly's UUID.",
+              "format": "uuid",
+              "title": "Assembly Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionAssemblyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated: whitespace-only name or slot_name, non-enum cardinality, malformed wire spec, wire references an unknown slot, or invalid parameter_overrides_schema subset."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assembly with the given assembly_id does not exist, OR a referenced FamilyId (presents_as_family_id or any slot's required_families member) does not resolve to a defined Family."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Assembly is in a status that cannot be versioned (Deprecated is terminal; new revisions must fork via POST /assemblies with a fresh id)."
+          },
+          "422": {
+            "description": "Request body failed schema validation."
+          }
+        },
+        "summary": "Publish a new revision snapshot of an existing Assembly",
         "tags": [
           "equipment"
         ]

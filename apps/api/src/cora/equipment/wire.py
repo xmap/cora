@@ -70,6 +70,7 @@ from cora.equipment.features import (
     update_family_settings_schema,
     update_frame_placement,
     update_mount_placement,
+    version_assembly,
     version_family,
     version_model,
 )
@@ -151,6 +152,7 @@ class EquipmentHandlers:
     install_asset: install_asset.Handler
     uninstall_asset: uninstall_asset.Handler
     define_assembly: define_assembly.IdempotentHandler
+    version_assembly: version_assembly.Handler
 
 
 def wire_equipment(deps: Kernel) -> EquipmentHandlers:
@@ -409,6 +411,11 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
                 lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
             ),
             command_name="DefineAssembly",
+            bc=_BC,
+        ),
+        version_assembly=with_tracing(
+            version_assembly.bind(deps),
+            command_name="VersionAssembly",
             bc=_BC,
         ),
     )

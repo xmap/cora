@@ -44,16 +44,19 @@ def _stored(event_type: str, payload: dict[str, Any]) -> StoredEvent:
 def test_projection_metadata() -> None:
     proj = AssemblySummaryProjection()
     assert proj.name == "proj_equipment_assembly_summary"
-    assert proj.subscribed_event_types == frozenset({"AssemblyDefined"})
+    assert proj.subscribed_event_types == frozenset(
+        {
+            "AssemblyDefined",
+            "AssemblyVersioned",
+        }
+    )
 
 
 @pytest.mark.unit
-def test_projection_does_not_subscribe_to_versioned_or_deprecated_in_v1() -> None:
-    """v1 ships AssemblyDefined arm only; the Versioned and Deprecated
-    arms land with their respective slices per the slice-per-commit
-    discipline."""
+def test_projection_does_not_subscribe_to_deprecated_yet() -> None:
+    """The Deprecated arm lands with the deprecate_assembly slice
+    per the slice-per-commit discipline."""
     proj = AssemblySummaryProjection()
-    assert "AssemblyVersioned" not in proj.subscribed_event_types
     assert "AssemblyDeprecated" not in proj.subscribed_event_types
 
 
@@ -112,6 +115,39 @@ async def test_assembly_defined_handles_null_version() -> None:
     args = conn.execute.await_args
     assert args is not None
     assert args.args[4] is None  # version
+
+
+@pytest.mark.unit
+async def test_assembly_versioned_updates_status_name_family_version_hash() -> None:
+    proj = AssemblySummaryProjection()
+    conn = AsyncMock()
+    new_family_id = uuid4()
+    event = _stored(
+        "AssemblyVersioned",
+        {
+            "assembly_id": str(_ASSEMBLY_ID),
+            "name": "MCTOptics-rev2",
+            "presents_as_family_id": str(new_family_id),
+            "required_slots": [],
+            "required_wires": [],
+            "parameter_overrides_schema": None,
+            "drawing": None,
+            "version": "v0.2.0",
+            "content_hash": "c" * 64,
+            "previous_content_hash": "a" * 64,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    args = conn.execute.await_args
+    assert args is not None
+    # Positional args after the SQL: assembly_id, name,
+    # presents_as_family_id, version, content_hash.
+    assert args.args[1] == _ASSEMBLY_ID
+    assert args.args[2] == "MCTOptics-rev2"
+    assert args.args[3] == new_family_id
+    assert args.args[4] == "v0.2.0"
+    assert args.args[5] == "c" * 64
 
 
 @pytest.mark.unit

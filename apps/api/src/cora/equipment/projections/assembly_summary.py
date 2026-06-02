@@ -1,16 +1,20 @@
 """AssemblySummaryProjection: folds the Assembly aggregate's lifecycle
 events into the `proj_equipment_assembly_summary` read model.
 
-v1 ships ONLY the `AssemblyDefined` arm. The `AssemblyVersioned`
-and `AssemblyDeprecated` arms land with their respective slices
-to keep the slice-per-commit gate-review discipline intact (no
-projector arms without a matching emitter slice).
+Subscribed events (per slice):
+  - AssemblyDefined  -> INSERT (status=Defined, version + content_hash
+                                from payload). Shipped with B.0
+                                scaffold.
+  - AssemblyVersioned -> UPDATE status=Versioned + name +
+                                presents_as_family_id + version +
+                                content_hash. Replace-on-version
+                                semantic mirrors the aggregate state.
+                                Shipped with version_assembly slice.
+  - AssemblyDeprecated -> UPDATE status=Deprecated (added with
+                                deprecate_assembly slice).
 
-Subscribed events (v1, scaffold):
-  - AssemblyDefined -> INSERT (status=Defined, version=NULL on
-                       payload absence; content_hash from payload)
-
-All branches idempotent (INSERT uses ON CONFLICT DO NOTHING).
+All branches idempotent (INSERT uses ON CONFLICT DO NOTHING; UPDATEs
+write fixed values per event type so re-application is a no-op).
 Mirrors FamilySummaryProjection's shape.
 """
 
@@ -35,12 +39,28 @@ VALUES ($1, $2, $3, 'Defined', $4, $5, $6)
 ON CONFLICT (assembly_id) DO NOTHING
 """
 
+_UPDATE_VERSIONED_SQL = """
+UPDATE proj_equipment_assembly_summary
+SET status = 'Versioned',
+    name = $2,
+    presents_as_family_id = $3,
+    version = $4,
+    content_hash = $5,
+    updated_at = now()
+WHERE assembly_id = $1
+"""
+
 
 class AssemblySummaryProjection:
     """Maintains the `proj_equipment_assembly_summary` read model."""
 
     name = "proj_equipment_assembly_summary"
-    subscribed_event_types = frozenset({"AssemblyDefined"})
+    subscribed_event_types = frozenset(
+        {
+            "AssemblyDefined",
+            "AssemblyVersioned",
+        }
+    )
 
     async def apply(
         self,
@@ -58,6 +78,16 @@ class AssemblySummaryProjection:
                     payload.get("version"),
                     payload["content_hash"],
                     datetime.fromisoformat(str(payload["occurred_at"])),
+                )
+            case "AssemblyVersioned":
+                payload = event.payload
+                await conn.execute(
+                    _UPDATE_VERSIONED_SQL,
+                    _id(payload),
+                    payload["name"],
+                    UUID(str(payload["presents_as_family_id"])),
+                    payload.get("version"),
+                    payload["content_hash"],
                 )
             case _:
                 pass
