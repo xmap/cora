@@ -58,16 +58,16 @@
             <span class="text">21 statements &nbsp;</span>
             <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">19<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">2<span class="text"> missing</span></button>
-            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">21<span class="text"> excluded</span></button>
+            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">16<span class="text"> excluded</span></button>
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">1<span class="text"> partial</span></button>
         </h2>
         <p class="text">
             <a id="prevFileLink" class="nav" href="z_f9e3f6973edcf194_model_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a id="nextFileLink" class="nav" href="z_f9e3f6973edcf194_mount_lookup_py.html">&#xbb; next</a>
+            <a id="nextFileLink" class="nav" href="z_f9e3f6973edcf194_mount_slot_code_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 08:13 +0000
+            created at 2026-06-02 09:32 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -170,7 +170,7 @@
     <p class="pln"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t"><span class="key">async</span> <span class="key">def</span> <span class="nam">load_active_mount_children</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">    <span class="nam">pool</span><span class="op">:</span> <span class="nam">asyncpg</span><span class="op">.</span><span class="nam">Pool</span> <span class="op">|</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">    <span class="nam">pool</span><span class="op">:</span> <span class="nam">asyncpg</span><span class="op">.</span><span class="nam">Pool</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">    <span class="nam">parent_mount_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t"><span class="op">)</span> <span class="op">-></span> <span class="nam">tuple</span><span class="op">[</span><span class="nam">UUID</span><span class="op">,</span> <span class="op">...</span><span class="op">]</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">    <span class="str">"""Return the currently-active child mount IDs of `parent_mount_id`.</span>&nbsp;</span><span class="r"></span></p>
@@ -178,24 +178,19 @@
     <p class="exc show_exc"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t"><span class="str">    Used by the decommission_mount handler as a projection</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t"><span class="str">    precondition: if the returned tuple is non-empty, the decider</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="str">    raises MountHasActiveChildrenError.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t"><span class="str">    Returns an empty tuple when `pool` is None (test environments</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="str">    that opt out of Postgres).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">    <span class="key">if</span> <span class="nam">pool</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">        <span class="key">return</span> <span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">    <span class="nam">rows</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">pool</span><span class="op">.</span><span class="nam">fetch</span><span class="op">(</span><span class="nam">_SELECT_ACTIVE_CHILDREN_SQL</span><span class="op">,</span> <span class="nam">parent_mount_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">    <span class="key">return</span> <span class="nam">tuple</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"child_mount_id"</span><span class="op">]</span> <span class="key">for</span> <span class="nam">row</span> <span class="key">in</span> <span class="nam">rows</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">    <span class="nam">rows</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">pool</span><span class="op">.</span><span class="nam">fetch</span><span class="op">(</span><span class="nam">_SELECT_ACTIVE_CHILDREN_SQL</span><span class="op">,</span> <span class="nam">parent_mount_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="key">return</span> <span class="nam">tuple</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"child_mount_id"</span><span class="op">]</span> <span class="key">for</span> <span class="nam">row</span> <span class="key">in</span> <span class="nam">rows</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
         <p>
             <a class="nav" href="z_f9e3f6973edcf194_model_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a class="nav" href="z_f9e3f6973edcf194_mount_lookup_py.html">&#xbb; next</a>
+            <a class="nav" href="z_f9e3f6973edcf194_mount_slot_code_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 08:13 +0000
+            created at 2026-06-02 09:32 +0000
         </p>
     </div>
 </footer>
