@@ -23,6 +23,7 @@ from cora.equipment.features.add_model_family import tool as add_model_family_to
 from cora.equipment.features.decommission_asset import tool as decommission_asset_tool
 from cora.equipment.features.decommission_frame import tool as decommission_frame_tool
 from cora.equipment.features.decommission_mount import tool as decommission_mount_tool
+from cora.equipment.features.define_assembly import tool as define_assembly_tool
 from cora.equipment.features.define_family import tool as define_family_tool
 from cora.equipment.features.define_model import tool as define_model_tool
 from cora.equipment.features.degrade_asset import tool as degrade_asset_tool
@@ -237,4 +238,8 @@ def register_equipment_tools(
     uninstall_asset_tool.register(
         mcp,
         get_handler=lambda: get_handlers().uninstall_asset,
+    )
+    define_assembly_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().define_assembly,
     )

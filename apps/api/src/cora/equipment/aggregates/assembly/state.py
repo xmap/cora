@@ -198,7 +198,9 @@ class InvalidParameterOverridesSchemaError(ValueError):
     """The supplied parameter_overrides_schema is not a valid JSON
     Schema in CORA's constrained subset.
 
-    Mapped to HTTP 422 by the BC exception handler.
+    Mapped to HTTP 400 by the BC exception handler, matching the
+    `InvalidFamilySettingsSchemaError` precedent (both flow through
+    `_handle_validation_error` in routes.py).
     """
 
     def __init__(self, reason: str) -> None:

@@ -40,6 +40,7 @@ from cora.equipment.features import (
     decommission_asset,
     decommission_frame,
     decommission_mount,
+    define_assembly,
     define_family,
     define_model,
     degrade_asset,
@@ -149,6 +150,7 @@ class EquipmentHandlers:
     decommission_mount: decommission_mount.Handler
     install_asset: install_asset.Handler
     uninstall_asset: uninstall_asset.Handler
+    define_assembly: define_assembly.IdempotentHandler
 
 
 def wire_equipment(deps: Kernel) -> EquipmentHandlers:
@@ -395,6 +397,18 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
         uninstall_asset=with_tracing(
             uninstall_asset.bind(deps),
             command_name="UninstallAsset",
+            bc=_BC,
+        ),
+        define_assembly=with_tracing(
+            with_idempotency(
+                define_assembly.bind(deps),
+                deps.idempotency_store,
+                command_name="DefineAssembly",
+                serialize_result=str,
+                deserialize_result=UUID,
+                lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
+            ),
+            command_name="DefineAssembly",
             bc=_BC,
         ),
     )

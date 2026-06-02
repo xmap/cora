@@ -141,6 +141,7 @@ from cora.equipment.features import (
     decommission_asset,
     decommission_frame,
     decommission_mount,
+    define_assembly,
     define_family,
     define_model,
     degrade_asset,
@@ -283,6 +284,7 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(decommission_mount.router)
     app.include_router(install_asset.router)
     app.include_router(uninstall_asset.router)
+    app.include_router(define_assembly.router)
     for validation_cls in (
         InvalidAffordanceError,
         InvalidFamilyNameError,
