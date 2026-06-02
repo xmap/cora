@@ -20,16 +20,19 @@ from cora.equipment.aggregates.asset import (
     AlternateIdentifier,
     AlternateIdentifierKind,
     AssetAlternateIdentifierNotPresentError,
+    AssetCannotAddAlternateIdentifierError,
     AssetLevel,
 )
 from cora.equipment.features import (
     add_asset_alternate_identifier,
+    decommission_asset,
     register_asset,
     remove_asset_alternate_identifier,
 )
 from cora.equipment.features.add_asset_alternate_identifier import (
     AddAssetAlternateIdentifier,
 )
+from cora.equipment.features.decommission_asset import DecommissionAsset
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.remove_asset_alternate_identifier import (
     RemoveAssetAlternateIdentifier,
@@ -43,6 +46,7 @@ _NEW_ID = UUID("01900000-0000-7000-8000-0000000a1d01")
 _REGISTER_EVENT_ID = UUID("01900000-0000-7000-8000-0000000a1d02")
 _ADD_EVENT_ID = UUID("01900000-0000-7000-8000-0000000a1d03")
 _REMOVE_EVENT_ID = UUID("01900000-0000-7000-8000-0000000a1d04")
+_DECOMMISSION_EVENT_ID = UUID("01900000-0000-7000-8000-0000000a1d08")
 _PARENT_ID = UUID("01900000-0000-7000-8000-0000000a1d05")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-0000000a1d06")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000a1d07")
@@ -56,7 +60,13 @@ def _build_deps(
     deny: bool = False,
 ) -> Kernel:
     return _build_deps_shared(
-        ids=[_NEW_ID, _REGISTER_EVENT_ID, _ADD_EVENT_ID, _REMOVE_EVENT_ID],
+        ids=[
+            _NEW_ID,
+            _REGISTER_EVENT_ID,
+            _ADD_EVENT_ID,
+            _REMOVE_EVENT_ID,
+            _DECOMMISSION_EVENT_ID,
+        ],
         now=_NOW,
         event_store=event_store,
         deny=deny,
@@ -161,6 +171,40 @@ async def test_handler_raises_not_present_when_pair_missing() -> None:
     events, version = await store.load("Asset", asset_id)
     assert version == 1
     assert events[0].event_type == "AssetRegistered"
+
+
+@pytest.mark.unit
+async def test_handler_raises_cannot_remove_when_asset_decommissioned() -> None:
+    """Lifecycle guard: a Decommissioned asset cannot mutate alternate
+    identifiers; the decider raises `AssetCannotAddAlternateIdentifierError`
+    (the shared lifecycle-guard class is used by BOTH add and remove)
+    before any append."""
+    store = InMemoryEventStore()
+    deps = _build_deps(event_store=store)
+    asset_id = await _register_asset_helper(deps)
+    await _add_identifier(deps, asset_id)
+
+    await decommission_asset.bind(deps)(
+        DecommissionAsset(asset_id=asset_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    with pytest.raises(AssetCannotAddAlternateIdentifierError):
+        await remove_asset_alternate_identifier.bind(deps)(
+            RemoveAssetAlternateIdentifier(asset_id=asset_id, alternate_identifier=_IDENTIFIER),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+    events, version = await store.load("Asset", asset_id)
+    # Register + Add + Decommission; the Remove raised before append.
+    assert version == 3
+    assert [e.event_type for e in events] == [
+        "AssetRegistered",
+        "AssetAlternateIdentifierAdded",
+        "AssetDecommissioned",
+    ]
 
 
 @pytest.mark.unit

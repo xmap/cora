@@ -49,8 +49,7 @@ def _add_identifier_via_tool(
                 "name": "add_asset_alternate_identifier",
                 "arguments": {
                     "asset_id": str(asset_id),
-                    "kind": kind,
-                    "value": value,
+                    "identifier": {"kind": kind, "value": value},
                 },
             },
         },
@@ -90,8 +89,7 @@ def test_mcp_remove_asset_alternate_identifier_succeeds_on_happy_path() -> None:
                     "name": "remove_asset_alternate_identifier",
                     "arguments": {
                         "asset_id": str(asset_id),
-                        "kind": "SerialNumber",
-                        "value": "XYZ-001",
+                        "identifier": {"kind": "SerialNumber", "value": "XYZ-001"},
                     },
                 },
             },
@@ -117,8 +115,7 @@ def test_mcp_remove_asset_alternate_identifier_returns_iserror_for_missing_pair(
                     "name": "remove_asset_alternate_identifier",
                     "arguments": {
                         "asset_id": str(asset_id),
-                        "kind": "SerialNumber",
-                        "value": "missing",
+                        "identifier": {"kind": "SerialNumber", "value": "missing"},
                     },
                 },
             },
@@ -126,3 +123,46 @@ def test_mcp_remove_asset_alternate_identifier_returns_iserror_for_missing_pair(
         )
     body = parse_sse_data(response.text)
     assert body["result"]["isError"] is True
+
+
+@pytest.mark.contract
+def test_mcp_remove_asset_alternate_identifier_returns_iserror_when_decommissioned() -> None:
+    """Lifecycle guard mirrors `remove_asset_port`: a Decommissioned
+    asset rejects identifier changes; surfaces as isError=true."""
+    with TestClient(create_app()) as client:
+        headers = open_session(client)
+        asset_id = _register_asset_via_tool(client, headers)
+        _add_identifier_via_tool(client, headers, asset_id)
+        decom = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "tools/call",
+                "params": {
+                    "name": "decommission_asset",
+                    "arguments": {"asset_id": str(asset_id)},
+                },
+            },
+            headers=headers,
+        )
+        assert parse_sse_data(decom.text)["result"]["isError"] is False
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 7,
+                "method": "tools/call",
+                "params": {
+                    "name": "remove_asset_alternate_identifier",
+                    "arguments": {
+                        "asset_id": str(asset_id),
+                        "identifier": {"kind": "SerialNumber", "value": "XYZ-001"},
+                    },
+                },
+            },
+            headers=headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is True
+    assert "Decommissioned" in body["result"]["content"][0]["text"]

@@ -60,8 +60,7 @@ def test_mcp_add_asset_alternate_identifier_succeeds_on_happy_path() -> None:
                     "name": "add_asset_alternate_identifier",
                     "arguments": {
                         "asset_id": str(asset_id),
-                        "kind": "SerialNumber",
-                        "value": "XYZ-001",
+                        "identifier": {"kind": "SerialNumber", "value": "XYZ-001"},
                     },
                 },
             },
@@ -85,8 +84,7 @@ def test_mcp_add_asset_alternate_identifier_returns_iserror_for_unknown_asset() 
                     "name": "add_asset_alternate_identifier",
                     "arguments": {
                         "asset_id": str(uuid4()),
-                        "kind": "SerialNumber",
-                        "value": "XYZ-001",
+                        "identifier": {"kind": "SerialNumber", "value": "XYZ-001"},
                     },
                 },
             },
@@ -95,3 +93,45 @@ def test_mcp_add_asset_alternate_identifier_returns_iserror_for_unknown_asset() 
     body = parse_sse_data(response.text)
     assert body["result"]["isError"] is True
     assert "not found" in body["result"]["content"][0]["text"].lower()
+
+
+@pytest.mark.contract
+def test_mcp_add_asset_alternate_identifier_returns_iserror_when_decommissioned() -> None:
+    """Lifecycle guard mirrors `add_asset_port`: a Decommissioned asset
+    rejects identifier changes; surfaces as isError=true."""
+    with TestClient(create_app()) as client:
+        headers = open_session(client)
+        asset_id = _register_asset_via_tool(client, headers)
+        decom = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "tools/call",
+                "params": {
+                    "name": "decommission_asset",
+                    "arguments": {"asset_id": str(asset_id)},
+                },
+            },
+            headers=headers,
+        )
+        assert parse_sse_data(decom.text)["result"]["isError"] is False
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 7,
+                "method": "tools/call",
+                "params": {
+                    "name": "add_asset_alternate_identifier",
+                    "arguments": {
+                        "asset_id": str(asset_id),
+                        "identifier": {"kind": "SerialNumber", "value": "XYZ-001"},
+                    },
+                },
+            },
+            headers=headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is True
+    assert "Decommissioned" in body["result"]["content"][0]["text"]

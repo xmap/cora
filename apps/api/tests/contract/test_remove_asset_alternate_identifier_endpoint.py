@@ -29,7 +29,7 @@ def _add_alternate_identifier(
 ) -> None:
     response = client.post(
         f"/assets/{asset_id}/add-alternate-identifier",
-        json={"kind": kind, "value": value},
+        json={"identifier": {"kind": kind, "value": value}},
     )
     assert response.status_code == 204, response.text
 
@@ -41,7 +41,7 @@ def test_post_remove_alternate_identifier_returns_204_on_happy_path() -> None:
         _add_alternate_identifier(client, asset_id)
         response = client.post(
             f"/assets/{asset_id}/remove-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "XYZ-001"},
+            json={"identifier": {"kind": "SerialNumber", "value": "XYZ-001"}},
         )
     assert response.status_code == 204
 
@@ -53,7 +53,7 @@ def test_post_remove_alternate_identifier_returns_409_when_pair_not_found() -> N
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/remove-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "XYZ-001"},
+            json={"identifier": {"kind": "SerialNumber", "value": "XYZ-001"}},
         )
     assert response.status_code == 409
 
@@ -66,16 +66,16 @@ def test_post_remove_alternate_identifier_returns_409_when_kind_differs() -> Non
         _add_alternate_identifier(client, asset_id, kind="SerialNumber", value="ABC-9")
         response = client.post(
             f"/assets/{asset_id}/remove-alternate-identifier",
-            json={"kind": "InventoryNumber", "value": "ABC-9"},
+            json={"identifier": {"kind": "InventoryNumber", "value": "ABC-9"}},
         )
     assert response.status_code == 409
 
 
 @pytest.mark.contract
-def test_post_remove_alternate_identifier_returns_204_when_asset_decommissioned() -> None:
-    """No lifecycle guard on alternate-identifier mutation: inventory
-    tags may be reconciled even after retirement (audit correction,
-    vendor RMA)."""
+def test_post_remove_alternate_identifier_returns_409_when_asset_decommissioned() -> None:
+    """Lifecycle guard mirrors `remove_asset_port`: a Decommissioned
+    asset is out of inventory; identifier changes are not allowed.
+    Uses the shared `AssetCannotAddAlternateIdentifierError` class."""
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
         _add_alternate_identifier(client, asset_id)
@@ -83,9 +83,10 @@ def test_post_remove_alternate_identifier_returns_204_when_asset_decommissioned(
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/remove-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "XYZ-001"},
+            json={"identifier": {"kind": "SerialNumber", "value": "XYZ-001"}},
         )
-    assert response.status_code == 204
+    assert response.status_code == 409
+    assert "Decommissioned" in response.json()["detail"]
 
 
 @pytest.mark.contract
@@ -94,7 +95,7 @@ def test_post_remove_alternate_identifier_returns_404_for_missing_asset() -> Non
     with TestClient(create_app()) as client:
         response = client.post(
             f"/assets/{missing}/remove-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "XYZ-001"},
+            json={"identifier": {"kind": "SerialNumber", "value": "XYZ-001"}},
         )
     assert response.status_code == 404
 
@@ -105,7 +106,7 @@ def test_post_remove_alternate_identifier_returns_422_for_missing_required_field
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/remove-alternate-identifier",
-            json={"kind": "SerialNumber"},  # missing value
+            json={"identifier": {"kind": "SerialNumber"}},  # missing value
         )
     assert response.status_code == 422
 
@@ -116,7 +117,7 @@ def test_post_remove_alternate_identifier_returns_422_for_invalid_kind() -> None
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/remove-alternate-identifier",
-            json={"kind": "ROR", "value": "XYZ-001"},  # ROR belongs to Manufacturer
+            json={"identifier": {"kind": "ROR", "value": "XYZ-001"}},  # ROR belongs to Manufacturer
         )
     assert response.status_code == 422
 
@@ -130,6 +131,6 @@ def test_post_remove_alternate_identifier_returns_400_for_whitespace_only_value(
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/remove-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "   "},
+            json={"identifier": {"kind": "SerialNumber", "value": "   "}},
         )
     assert response.status_code == 400

@@ -14,11 +14,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.equipment.aggregates.asset import (
-    ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
-    AlternateIdentifier,
-    AlternateIdentifierKind,
-)
+from cora.equipment._alternate_identifier_body import AlternateIdentifierBody
 from cora.equipment.features.add_asset_alternate_identifier.command import (
     AddAssetAlternateIdentifier,
 )
@@ -39,21 +35,12 @@ class AddAssetAlternateIdentifierRequest(BaseModel):
     length within the decider (the VO construction site).
     """
 
-    kind: AlternateIdentifierKind = Field(
+    identifier: AlternateIdentifierBody = Field(
         ...,
         description=(
-            "Identifier kind from the PIDINST v1.0 controlled vocabulary: "
-            "'SerialNumber', 'InventoryNumber', or 'Other'."
-        ),
-    )
-    value: str = Field(
-        ...,
-        min_length=1,
-        max_length=ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
-        description=(
-            "Identifier value (free text, trimmed, 1-200 chars). "
-            "Uniqueness keyed on the (kind, value) pair at the Asset "
-            "scope ONLY; cross-Asset duplicates are NOT rejected in v1."
+            "The alternate identifier to add. Uniqueness keyed on the "
+            "(kind, value) pair at the Asset scope ONLY; cross-Asset "
+            "duplicates are NOT rejected in v1."
         ),
     )
 
@@ -80,7 +67,7 @@ router = APIRouter(tags=["equipment"])
         },
         status.HTTP_403_FORBIDDEN: {
             "model": ErrorResponse,
-            "description": "Authorize port denied the command.",
+            "description": "Authorize policy denied the command.",
         },
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
@@ -90,11 +77,13 @@ router = APIRouter(tags=["equipment"])
             "model": ErrorResponse,
             "description": (
                 "Asset cannot accept the alternate identifier under "
-                "current conditions (asset is Decommissioned, OR an "
+                "current conditions: the asset is Decommissioned "
+                "(AssetCannotAddAlternateIdentifierError), OR an "
                 "alternate identifier with the same (kind, value) pair "
-                "already exists on the asset), OR a concurrent write "
-                "to the same asset stream conflicted (optimistic "
-                "concurrency)."
+                "already exists on the asset "
+                "(AssetAlternateIdentifierAlreadyPresentError), OR a "
+                "concurrent write to the same asset stream conflicted "
+                "(optimistic concurrency)."
             ),
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
@@ -117,7 +106,7 @@ async def post_assets_add_alternate_identifier(
     await handler(
         AddAssetAlternateIdentifier(
             asset_id=asset_id,
-            alternate_identifier=AlternateIdentifier(kind=body.kind, value=body.value),
+            alternate_identifier=body.identifier.to_domain(),
         ),
         principal_id=principal_id,
         correlation_id=cid,

@@ -14,11 +14,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.equipment.aggregates.asset import (
-    ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
-    AlternateIdentifier,
-    AlternateIdentifierKind,
-)
+from cora.equipment._alternate_identifier_body import AlternateIdentifierBody
 from cora.equipment.features.remove_asset_alternate_identifier.command import (
     RemoveAssetAlternateIdentifier,
 )
@@ -39,21 +35,12 @@ class RemoveAssetAlternateIdentifierRequest(BaseModel):
     length within the decider.
     """
 
-    kind: AlternateIdentifierKind = Field(
+    identifier: AlternateIdentifierBody = Field(
         ...,
         description=(
-            "Identifier kind from the PIDINST v1.0 controlled vocabulary: "
-            "'SerialNumber', 'InventoryNumber', or 'Other'."
-        ),
-    )
-    value: str = Field(
-        ...,
-        min_length=1,
-        max_length=ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
-        description=(
-            "Identifier value (free text, trimmed, 1-200 chars). "
-            "Matched against the asset's stored alternate identifiers "
-            "by exact (kind, value) pair."
+            "The alternate identifier to remove. Matched against the "
+            "asset's stored alternate identifiers by exact (kind, value) "
+            "pair."
         ),
     )
 
@@ -75,12 +62,12 @@ router = APIRouter(tags=["equipment"])
             "description": (
                 "Identifier value is empty / whitespace-only / exceeds "
                 "the configured max length after trimming "
-                "(InvalidAlternateIdentifierError)."
+                "(InvalidAlternateIdentifierValueError)."
             ),
         },
         status.HTTP_403_FORBIDDEN: {
             "model": ErrorResponse,
-            "description": "Authorize port denied the command.",
+            "description": "Authorize policy denied the command.",
         },
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
@@ -89,10 +76,15 @@ router = APIRouter(tags=["equipment"])
         status.HTTP_409_CONFLICT: {
             "model": ErrorResponse,
             "description": (
-                "No alternate identifier with the same (kind, value) "
-                "pair exists on the asset (strict-not-idempotent), OR "
-                "a concurrent write to the same asset stream "
-                "conflicted (optimistic concurrency)."
+                "Asset cannot remove the alternate identifier under "
+                "current conditions: the asset is Decommissioned "
+                "(AssetCannotAddAlternateIdentifierError; the shared "
+                "lifecycle-guard class is used by BOTH add and remove), "
+                "OR no alternate identifier with the same (kind, value) "
+                "pair exists on the asset (strict-not-idempotent, "
+                "AssetAlternateIdentifierNotPresentError), OR a "
+                "concurrent write to the same asset stream conflicted "
+                "(optimistic concurrency)."
             ),
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
@@ -115,7 +107,7 @@ async def post_assets_remove_alternate_identifier(
     await handler(
         RemoveAssetAlternateIdentifier(
             asset_id=asset_id,
-            alternate_identifier=AlternateIdentifier(kind=body.kind, value=body.value),
+            alternate_identifier=body.identifier.to_domain(),
         ),
         principal_id=principal_id,
         correlation_id=cid,

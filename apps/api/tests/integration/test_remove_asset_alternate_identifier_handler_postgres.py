@@ -14,17 +14,20 @@ import pytest
 from cora.equipment.aggregates.asset import (
     AlternateIdentifier,
     AlternateIdentifierKind,
+    AssetCannotAddAlternateIdentifierError,
     AssetLevel,
     load_asset,
 )
 from cora.equipment.features import (
     add_asset_alternate_identifier,
+    decommission_asset,
     register_asset,
     remove_asset_alternate_identifier,
 )
 from cora.equipment.features.add_asset_alternate_identifier import (
     AddAssetAlternateIdentifier,
 )
+from cora.equipment.features.decommission_asset import DecommissionAsset
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.remove_asset_alternate_identifier import (
     RemoveAssetAlternateIdentifier,
@@ -84,3 +87,55 @@ async def test_remove_asset_alternate_identifier_persists_event_and_drops_from_f
     state = await load_asset(deps.event_store, asset_id)
     assert state is not None
     assert state.alternate_identifiers == frozenset()
+
+
+@pytest.mark.integration
+async def test_remove_asset_alternate_identifier_rejects_when_decommissioned(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """End-to-end lifecycle guard: a Decommissioned asset rejects
+    identifier removals with `AssetCannotAddAlternateIdentifierError`
+    (the shared lifecycle-guard class is used by BOTH add and remove);
+    no Removed event is appended."""
+    asset_id = UUID("01900000-0000-7000-8000-00000a1d0c01")
+    register_event_id = UUID("01900000-0000-7000-8000-00000a1d0c0e")
+    add_event_id = UUID("01900000-0000-7000-8000-00000a1d0c0f")
+    decommission_event_id = UUID("01900000-0000-7000-8000-00000a1d0c10")
+    identifier = AlternateIdentifier(kind=AlternateIdentifierKind.SERIAL_NUMBER, value="XYZ-001")
+
+    deps = build_postgres_deps(
+        db_pool,
+        now=_NOW,
+        ids=[asset_id, register_event_id, add_event_id, decommission_event_id],
+    )
+
+    await register_asset.bind(deps)(
+        RegisterAsset(name="APS-2BM-Camera", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await add_asset_alternate_identifier.bind(deps)(
+        AddAssetAlternateIdentifier(asset_id=asset_id, alternate_identifier=identifier),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await decommission_asset.bind(deps)(
+        DecommissionAsset(asset_id=asset_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    with pytest.raises(AssetCannotAddAlternateIdentifierError):
+        await remove_asset_alternate_identifier.bind(deps)(
+            RemoveAssetAlternateIdentifier(asset_id=asset_id, alternate_identifier=identifier),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+    events, version = await deps.event_store.load("Asset", asset_id)
+    assert version == 3
+    assert [e.event_type for e in events] == [
+        "AssetRegistered",
+        "AssetAlternateIdentifierAdded",
+        "AssetDecommissioned",
+    ]

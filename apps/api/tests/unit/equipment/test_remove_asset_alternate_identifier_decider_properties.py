@@ -25,6 +25,7 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetAlternateIdentifierNotPresentError,
     AssetAlternateIdentifierRemoved,
+    AssetCannotAddAlternateIdentifierError,
     AssetLevel,
     AssetLifecycle,
     AssetName,
@@ -38,7 +39,9 @@ from cora.equipment.features.remove_asset_alternate_identifier import (
 if TYPE_CHECKING:
     from uuid import UUID
 
-_ANY_LIFECYCLE = st.sampled_from(list(AssetLifecycle))
+_NON_DECOMMISSIONED_LIFECYCLE = st.sampled_from(
+    [lc for lc in AssetLifecycle if lc is not AssetLifecycle.DECOMMISSIONED]
+)
 _KIND = st.sampled_from(list(AlternateIdentifierKind))
 _VALID_VALUE = st.text(
     alphabet=st.characters(min_codepoint=0x21, max_codepoint=0x7E),
@@ -73,7 +76,7 @@ def _asset(
 @given(
     asset_id=st.uuids(),
     identifier=_identifier(),
-    lifecycle=_ANY_LIFECYCLE,
+    lifecycle=_NON_DECOMMISSIONED_LIFECYCLE,
     seconds_offset=st.integers(min_value=0, max_value=10_000_000),
 )
 def test_removing_present_identifier_emits_one_event_with_injected_fields(
@@ -82,9 +85,9 @@ def test_removing_present_identifier_emits_one_event_with_injected_fields(
     lifecycle: AssetLifecycle,
     seconds_offset: int,
 ) -> None:
-    """Identifier present in any lifecycle -> single Removed event
-    carrying the same asset_id, identifier, and now=injected timestamp.
-    Confirms lifecycle-independence."""
+    """Identifier present in any non-Decommissioned lifecycle -> single
+    Removed event carrying the same asset_id, identifier, and
+    now=injected timestamp."""
     state = _asset(
         asset_id,
         lifecycle=lifecycle,
@@ -109,7 +112,7 @@ def test_removing_present_identifier_emits_one_event_with_injected_fields(
 @given(
     asset_id=st.uuids(),
     identifier=_identifier(),
-    lifecycle=_ANY_LIFECYCLE,
+    lifecycle=_NON_DECOMMISSIONED_LIFECYCLE,
     seconds_offset=st.integers(min_value=0, max_value=10_000_000),
 )
 def test_removing_absent_identifier_always_raises_not_present(
@@ -118,8 +121,9 @@ def test_removing_absent_identifier_always_raises_not_present(
     lifecycle: AssetLifecycle,
     seconds_offset: int,
 ) -> None:
-    """Strict-not-idempotent: empty set -> NotPresent regardless of
-    lifecycle or timestamp."""
+    """Strict-not-idempotent: empty set -> NotPresent in any non-
+    Decommissioned lifecycle (the lifecycle guard fires first when
+    Decommissioned and is covered by its own property)."""
     state = _asset(asset_id, lifecycle=lifecycle, alternate_identifiers=frozenset())
     now = _DT_BASE + timedelta(seconds=seconds_offset)
     with pytest.raises(AssetAlternateIdentifierNotPresentError) as exc:
@@ -132,6 +136,44 @@ def test_removing_absent_identifier_always_raises_not_present(
         )
     assert exc.value.asset_id == asset_id
     assert exc.value.identifier == identifier
+
+
+@pytest.mark.unit
+@given(
+    asset_id=st.uuids(),
+    identifier=_identifier(),
+    seconds_offset=st.integers(min_value=0, max_value=10_000_000),
+    present=st.booleans(),
+)
+def test_decommissioned_asset_always_raises_cannot_remove_regardless_of_presence(
+    asset_id: UUID,
+    identifier: AlternateIdentifier,
+    seconds_offset: int,
+    present: bool,
+) -> None:
+    """Lifecycle guard fires FIRST: in Decommissioned the decider raises
+    `AssetCannotAddAlternateIdentifierError` (the shared lifecycle-
+    guard class) whether the pair is present or absent. Mirrors
+    `remove_asset_port`."""
+    members: frozenset[AlternateIdentifier] = frozenset({identifier}) if present else frozenset()
+    state = _asset(
+        asset_id,
+        lifecycle=AssetLifecycle.DECOMMISSIONED,
+        alternate_identifiers=members,
+    )
+    now = _DT_BASE + timedelta(seconds=seconds_offset)
+    with pytest.raises(AssetCannotAddAlternateIdentifierError) as exc:
+        remove_asset_alternate_identifier.decide(
+            state=state,
+            command=RemoveAssetAlternateIdentifier(
+                asset_id=asset_id, alternate_identifier=identifier
+            ),
+            now=now,
+        )
+    assert exc.value.asset_id == asset_id
+    assert exc.value.kind is identifier.kind
+    assert exc.value.value == identifier.value
+    assert "Decommissioned" in exc.value.reason
 
 
 @pytest.mark.unit
@@ -163,7 +205,7 @@ def test_state_none_always_raises_asset_not_found(
     asset_id=st.uuids(),
     identifier=_identifier(),
     other=_identifier(),
-    lifecycle=_ANY_LIFECYCLE,
+    lifecycle=_NON_DECOMMISSIONED_LIFECYCLE,
     seconds_offset=st.integers(min_value=0, max_value=10_000_000),
 )
 def test_decide_is_pure_same_input_same_output(
@@ -174,7 +216,8 @@ def test_decide_is_pure_same_input_same_output(
     seconds_offset: int,
 ) -> None:
     """Two calls with identical (state, command, now) return identical
-    events; no hidden clock or id leakage."""
+    events; no hidden clock or id leakage. Restricted to non-
+    Decommissioned so the happy-path branch is exercised."""
     assume(identifier != other)
     state = _asset(
         asset_id,

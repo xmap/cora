@@ -11,6 +11,7 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetAlternateIdentifierNotPresentError,
     AssetAlternateIdentifierRemoved,
+    AssetCannotAddAlternateIdentifierError,
     AssetLevel,
     AssetLifecycle,
     AssetName,
@@ -131,20 +132,44 @@ def test_decide_removes_only_matched_pair_when_multiple_exist() -> None:
 
 
 @pytest.mark.unit
+def test_decide_rejects_decommissioned() -> None:
+    """Lifecycle guard mirrors `remove_asset_port`: a Decommissioned
+    asset is out of inventory; identifier changes are not allowed.
+    Uses the shared `AssetCannotAddAlternateIdentifierError` class
+    (same class as the add decider, per state.py:317-342)."""
+    identifier = AlternateIdentifier(kind=AlternateIdentifierKind.SERIAL_NUMBER, value="XYZ-001")
+    state = _asset(
+        lifecycle=AssetLifecycle.DECOMMISSIONED,
+        alternate_identifiers=frozenset({identifier}),
+    )
+    with pytest.raises(AssetCannotAddAlternateIdentifierError) as exc_info:
+        remove_asset_alternate_identifier.decide(
+            state=state,
+            command=RemoveAssetAlternateIdentifier(
+                asset_id=state.id, alternate_identifier=identifier
+            ),
+            now=_NOW,
+        )
+    assert exc_info.value.asset_id == state.id
+    assert exc_info.value.kind is AlternateIdentifierKind.SERIAL_NUMBER
+    assert exc_info.value.value == "XYZ-001"
+    assert "Decommissioned" in exc_info.value.reason
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "lifecycle",
     [
         AssetLifecycle.COMMISSIONED,
         AssetLifecycle.ACTIVE,
         AssetLifecycle.MAINTENANCE,
-        AssetLifecycle.DECOMMISSIONED,
     ],
 )
-def test_decide_succeeds_in_every_lifecycle_including_decommissioned(
+def test_decide_succeeds_for_every_non_decommissioned_lifecycle(
     lifecycle: AssetLifecycle,
 ) -> None:
-    """No lifecycle guard on alternate-identifier mutation; inventory
-    tags and serial numbers may be reconciled even after retirement."""
+    """Lifecycle-independence holds across every non-Decommissioned
+    state. Symmetric with `remove_asset_port`."""
     identifier = AlternateIdentifier(kind=AlternateIdentifierKind.SERIAL_NUMBER, value="x")
     state = _asset(lifecycle=lifecycle, alternate_identifiers=frozenset({identifier}))
     events = remove_asset_alternate_identifier.decide(

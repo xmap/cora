@@ -1,18 +1,20 @@
 """Pure decider for the `RemoveAssetAlternateIdentifier` command.
 
-Mirror of `add_asset_alternate_identifier.decide`. One disqualifying
-condition surfaces a dedicated error class:
+Mirror of `add_asset_alternate_identifier.decide`. Two
+disqualifying conditions surface as dedicated error classes:
 
+  - asset is `Decommissioned` (retired; no further identifier
+    changes) -> `AssetCannotAddAlternateIdentifierError`
+    (the shared lifecycle-guard class is used by BOTH add and
+    remove deciders, mirroring the symmetry of the guard)
   - no exact `(kind, value)` pair in `state.alternate_identifiers`
     (strict-not-idempotent; symmetric with add) ->
     `AssetAlternateIdentifierNotPresentError`
 
-Unlike `remove_asset_port`, alternate-identifier mutation is allowed
-in EVERY Asset lifecycle including Decommissioned: inventory tags
-and serial numbers may be reconciled even after retirement (audit
-correction, vendor RMA, etc.). The `routes.py` 409 mapping covers
-only the NotPresent and AlreadyPresent classes; no lifecycle-guard
-error is registered.
+The lifecycle guard mirrors `remove_asset_port` exactly: a
+Decommissioned asset is out of inventory, and identifier changes
+are not permitted. The `routes.py` 409 mapping covers the
+NotPresent and lifecycle-guard classes.
 """
 
 from datetime import datetime
@@ -21,6 +23,8 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetAlternateIdentifierNotPresentError,
     AssetAlternateIdentifierRemoved,
+    AssetCannotAddAlternateIdentifierError,
+    AssetLifecycle,
     AssetNotFoundError,
 )
 from cora.equipment.features.remove_asset_alternate_identifier.command import (
@@ -38,6 +42,9 @@ def decide(
 
     Invariants:
       - State must not be None -> AssetNotFoundError
+      - Asset must not be Decommissioned
+        -> AssetCannotAddAlternateIdentifierError (shared lifecycle
+        guard class; used by BOTH add and remove deciders)
       - `(kind, value)` pair must be in state.alternate_identifiers
         (strict-not-idempotent)
         -> AssetAlternateIdentifierNotPresentError
@@ -46,6 +53,17 @@ def decide(
         raise AssetNotFoundError(command.asset_id)
 
     identifier = command.alternate_identifier
+
+    if state.lifecycle is AssetLifecycle.DECOMMISSIONED:
+        raise AssetCannotAddAlternateIdentifierError(
+            state.id,
+            identifier.kind,
+            identifier.value,
+            reason=(
+                f"asset is currently {AssetLifecycle.DECOMMISSIONED.value} "
+                "(retired from service; alternate identifier changes are not allowed)"
+            ),
+        )
 
     if identifier not in state.alternate_identifiers:
         raise AssetAlternateIdentifierNotPresentError(state.id, identifier)

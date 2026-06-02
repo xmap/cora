@@ -25,6 +25,7 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetAlternateIdentifierAdded,
     AssetAlternateIdentifierAlreadyPresentError,
+    AssetCannotAddAlternateIdentifierError,
     AssetLevel,
     AssetLifecycle,
     AssetName,
@@ -38,7 +39,9 @@ from cora.equipment.features.add_asset_alternate_identifier import (
 if TYPE_CHECKING:
     from uuid import UUID
 
-_ANY_LIFECYCLE = st.sampled_from(list(AssetLifecycle))
+_NON_DECOMMISSIONED_LIFECYCLE = st.sampled_from(
+    [lc for lc in AssetLifecycle if lc is not AssetLifecycle.DECOMMISSIONED]
+)
 _KIND = st.sampled_from(list(AlternateIdentifierKind))
 _VALID_VALUE = st.text(
     alphabet=st.characters(min_codepoint=0x21, max_codepoint=0x7E),
@@ -73,7 +76,7 @@ def _asset(
 @given(
     asset_id=st.uuids(),
     identifier=_identifier(),
-    lifecycle=_ANY_LIFECYCLE,
+    lifecycle=_NON_DECOMMISSIONED_LIFECYCLE,
     seconds_offset=st.integers(min_value=0, max_value=10_000_000),
 )
 def test_adding_absent_identifier_emits_one_event_with_injected_fields(
@@ -82,9 +85,8 @@ def test_adding_absent_identifier_emits_one_event_with_injected_fields(
     lifecycle: AssetLifecycle,
     seconds_offset: int,
 ) -> None:
-    """Identifier absent from any non-Decommissioned (and Decommissioned
-    too: no lifecycle guard) state -> single Added event carrying the
-    injected timestamp and identifier."""
+    """Identifier absent from any non-Decommissioned state -> single
+    Added event carrying the injected timestamp and identifier."""
     state = _asset(asset_id, lifecycle=lifecycle, alternate_identifiers=frozenset())
     now = _DT_BASE + timedelta(seconds=seconds_offset)
     events = add_asset_alternate_identifier.decide(
@@ -105,7 +107,7 @@ def test_adding_absent_identifier_emits_one_event_with_injected_fields(
 @given(
     asset_id=st.uuids(),
     identifier=_identifier(),
-    lifecycle=_ANY_LIFECYCLE,
+    lifecycle=_NON_DECOMMISSIONED_LIFECYCLE,
     seconds_offset=st.integers(min_value=0, max_value=10_000_000),
 )
 def test_adding_present_identifier_always_raises_already_present(
@@ -115,7 +117,8 @@ def test_adding_present_identifier_always_raises_already_present(
     seconds_offset: int,
 ) -> None:
     """Strict-not-idempotent: pair already in state -> AlreadyPresent
-    regardless of lifecycle or timestamp."""
+    in any non-Decommissioned lifecycle (the lifecycle guard fires
+    first when Decommissioned and is covered by its own property)."""
     state = _asset(
         asset_id,
         lifecycle=lifecycle,
@@ -130,6 +133,40 @@ def test_adding_present_identifier_always_raises_already_present(
         )
     assert exc.value.asset_id == asset_id
     assert exc.value.identifier == identifier
+
+
+@pytest.mark.unit
+@given(
+    asset_id=st.uuids(),
+    identifier=_identifier(),
+    existing=_identifier(),
+    seconds_offset=st.integers(min_value=0, max_value=10_000_000),
+)
+def test_decommissioned_asset_always_raises_cannot_add_regardless_of_presence(
+    asset_id: UUID,
+    identifier: AlternateIdentifier,
+    existing: AlternateIdentifier,
+    seconds_offset: int,
+) -> None:
+    """Lifecycle guard fires FIRST: in Decommissioned the decider raises
+    `AssetCannotAddAlternateIdentifierError` whether the pair is
+    already present or absent. Mirrors `add_asset_port`."""
+    state = _asset(
+        asset_id,
+        lifecycle=AssetLifecycle.DECOMMISSIONED,
+        alternate_identifiers=frozenset({existing}),
+    )
+    now = _DT_BASE + timedelta(seconds=seconds_offset)
+    with pytest.raises(AssetCannotAddAlternateIdentifierError) as exc:
+        add_asset_alternate_identifier.decide(
+            state=state,
+            command=AddAssetAlternateIdentifier(asset_id=asset_id, alternate_identifier=identifier),
+            now=now,
+        )
+    assert exc.value.asset_id == asset_id
+    assert exc.value.kind is identifier.kind
+    assert exc.value.value == identifier.value
+    assert "Decommissioned" in exc.value.reason
 
 
 @pytest.mark.unit
@@ -159,7 +196,7 @@ def test_state_none_always_raises_asset_not_found(
     asset_id=st.uuids(),
     identifier=_identifier(),
     other=_identifier(),
-    lifecycle=_ANY_LIFECYCLE,
+    lifecycle=_NON_DECOMMISSIONED_LIFECYCLE,
     seconds_offset=st.integers(min_value=0, max_value=10_000_000),
 )
 def test_decide_is_pure_same_input_same_output(
@@ -170,7 +207,8 @@ def test_decide_is_pure_same_input_same_output(
     seconds_offset: int,
 ) -> None:
     """Two calls with identical (state, command, now) return identical
-    events; no hidden clock or id leakage."""
+    events; no hidden clock or id leakage. Restricted to non-
+    Decommissioned so the happy-path branch is exercised."""
     assume(identifier != other)
     state = _asset(
         asset_id,

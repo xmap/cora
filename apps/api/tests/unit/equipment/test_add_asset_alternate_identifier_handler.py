@@ -21,15 +21,18 @@ from cora.equipment.aggregates.asset import (
     AlternateIdentifier,
     AlternateIdentifierKind,
     AssetAlternateIdentifierAlreadyPresentError,
+    AssetCannotAddAlternateIdentifierError,
     AssetLevel,
 )
 from cora.equipment.features import (
     add_asset_alternate_identifier,
+    decommission_asset,
     register_asset,
 )
 from cora.equipment.features.add_asset_alternate_identifier import (
     AddAssetAlternateIdentifier,
 )
+from cora.equipment.features.decommission_asset import DecommissionAsset
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.kernel import Kernel
@@ -40,6 +43,7 @@ _NEW_ID = UUID("01900000-0000-7000-8000-0000000a1e01")
 _REGISTER_EVENT_ID = UUID("01900000-0000-7000-8000-0000000a1e02")
 _ADD_EVENT_ID_1 = UUID("01900000-0000-7000-8000-0000000a1e03")
 _ADD_EVENT_ID_2 = UUID("01900000-0000-7000-8000-0000000a1e04")
+_DECOMMISSION_EVENT_ID = UUID("01900000-0000-7000-8000-0000000a1e08")
 _PARENT_ID = UUID("01900000-0000-7000-8000-0000000a1e05")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-0000000a1e06")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000a1e07")
@@ -53,7 +57,13 @@ def _build_deps(
     deny: bool = False,
 ) -> Kernel:
     return _build_deps_shared(
-        ids=[_NEW_ID, _REGISTER_EVENT_ID, _ADD_EVENT_ID_1, _ADD_EVENT_ID_2],
+        ids=[
+            _NEW_ID,
+            _REGISTER_EVENT_ID,
+            _ADD_EVENT_ID_1,
+            _ADD_EVENT_ID_2,
+            _DECOMMISSION_EVENT_ID,
+        ],
         now=_NOW,
         event_store=event_store,
         deny=deny,
@@ -152,6 +162,36 @@ async def test_handler_raises_already_present_on_second_add() -> None:
     assert [e.event_type for e in events] == [
         "AssetRegistered",
         "AssetAlternateIdentifierAdded",
+    ]
+
+
+@pytest.mark.unit
+async def test_handler_raises_cannot_add_when_asset_decommissioned() -> None:
+    """Lifecycle guard: a Decommissioned asset cannot accept identifier
+    changes; the decider raises before any append."""
+    store = InMemoryEventStore()
+    deps = _build_deps(event_store=store)
+    asset_id = await _register_asset_helper(deps)
+
+    await decommission_asset.bind(deps)(
+        DecommissionAsset(asset_id=asset_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    with pytest.raises(AssetCannotAddAlternateIdentifierError):
+        await add_asset_alternate_identifier.bind(deps)(
+            AddAssetAlternateIdentifier(asset_id=asset_id, alternate_identifier=_IDENTIFIER),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+    events, version = await store.load("Asset", asset_id)
+    # Register + Decommission only; the Add raised before append.
+    assert version == 2
+    assert [e.event_type for e in events] == [
+        "AssetRegistered",
+        "AssetDecommissioned",
     ]
 
 

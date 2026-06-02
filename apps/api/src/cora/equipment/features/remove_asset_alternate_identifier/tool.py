@@ -7,11 +7,7 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
 
-from cora.equipment.aggregates.asset import (
-    ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
-    AlternateIdentifier,
-    AlternateIdentifierKind,
-)
+from cora.equipment._alternate_identifier_body import AlternateIdentifierBody
 from cora.equipment.features.remove_asset_alternate_identifier.command import (
     RemoveAssetAlternateIdentifier,
 )
@@ -39,30 +35,16 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             UUID,
             Field(description="Target asset's id."),
         ],
-        kind: Annotated[
-            AlternateIdentifierKind,
-            Field(
-                description=(
-                    "Identifier kind from the PIDINST v1.0 controlled "
-                    "vocabulary: 'SerialNumber', 'InventoryNumber', "
-                    "or 'Other'."
-                ),
-            ),
-        ],
-        value: Annotated[
-            str,
-            Field(
-                min_length=1,
-                max_length=ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
-                description=("Identifier value, trimmed and bounded 1-200 chars after trim."),
-            ),
+        identifier: Annotated[
+            AlternateIdentifierBody,
+            Field(description="The alternate identifier to remove."),
         ],
     ) -> None:
         handler = get_handler()
         await handler(
             RemoveAssetAlternateIdentifier(
                 asset_id=asset_id,
-                alternate_identifier=AlternateIdentifier(kind=kind, value=value),
+                alternate_identifier=identifier.to_domain(),
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

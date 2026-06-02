@@ -1,10 +1,10 @@
 """Contract tests for `POST /assets/{id}/add-alternate-identifier`.
 
 Mirror of `test_remove_asset_alternate_identifier_endpoint.py`.
-Verifies HTTP shape: 204 on happy path, 409 on
-strict-not-idempotent duplicate, 404 on missing asset, 422 on
-schema-validation failure, 400 on VO-validation failure. There is
-NO lifecycle guard, so the Decommissioned-asset case returns 204.
+Verifies HTTP shape: 204 on happy path, 409 on strict-not-
+idempotent duplicate, 409 when the asset is Decommissioned
+(lifecycle guard mirrors `add_asset_port`), 404 on missing asset,
+422 on schema-validation failure, 400 on VO-validation failure.
 """
 
 from uuid import uuid4
@@ -31,7 +31,7 @@ def test_post_add_alternate_identifier_returns_204_on_happy_path() -> None:
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/add-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "XYZ-001"},
+            json={"identifier": {"kind": "SerialNumber", "value": "XYZ-001"}},
         )
     assert response.status_code == 204
 
@@ -43,12 +43,12 @@ def test_post_add_alternate_identifier_returns_409_when_pair_already_present() -
         asset_id = _register_asset(client)
         first = client.post(
             f"/assets/{asset_id}/add-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "XYZ-001"},
+            json={"identifier": {"kind": "SerialNumber", "value": "XYZ-001"}},
         )
         assert first.status_code == 204
         second = client.post(
             f"/assets/{asset_id}/add-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "XYZ-001"},
+            json={"identifier": {"kind": "SerialNumber", "value": "XYZ-001"}},
         )
     assert second.status_code == 409
     assert "XYZ-001" in second.json()["detail"]
@@ -62,29 +62,30 @@ def test_post_add_alternate_identifier_allows_same_value_under_different_kind() 
         asset_id = _register_asset(client)
         first = client.post(
             f"/assets/{asset_id}/add-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "ABC-9"},
+            json={"identifier": {"kind": "SerialNumber", "value": "ABC-9"}},
         )
         assert first.status_code == 204
         second = client.post(
             f"/assets/{asset_id}/add-alternate-identifier",
-            json={"kind": "InventoryNumber", "value": "ABC-9"},
+            json={"identifier": {"kind": "InventoryNumber", "value": "ABC-9"}},
         )
     assert second.status_code == 204
 
 
 @pytest.mark.contract
-def test_post_add_alternate_identifier_returns_204_when_asset_decommissioned() -> None:
-    """No lifecycle guard: inventory tags may be added even after
-    retirement (audit correction, vendor RMA)."""
+def test_post_add_alternate_identifier_returns_409_when_asset_decommissioned() -> None:
+    """Lifecycle guard mirrors `add_asset_port`: a Decommissioned asset
+    is out of inventory; identifier changes are not allowed."""
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
         decom = client.post(f"/assets/{asset_id}/decommission")
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/add-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "XYZ-001"},
+            json={"identifier": {"kind": "SerialNumber", "value": "XYZ-001"}},
         )
-    assert response.status_code == 204
+    assert response.status_code == 409
+    assert "Decommissioned" in response.json()["detail"]
 
 
 @pytest.mark.contract
@@ -93,7 +94,7 @@ def test_post_add_alternate_identifier_returns_404_for_missing_asset() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/assets/{missing}/add-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "XYZ-001"},
+            json={"identifier": {"kind": "SerialNumber", "value": "XYZ-001"}},
         )
     assert response.status_code == 404
 
@@ -104,7 +105,7 @@ def test_post_add_alternate_identifier_returns_422_for_missing_required_field() 
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/add-alternate-identifier",
-            json={"kind": "SerialNumber"},  # missing value
+            json={"identifier": {"kind": "SerialNumber"}},  # missing value
         )
     assert response.status_code == 422
 
@@ -117,7 +118,7 @@ def test_post_add_alternate_identifier_returns_422_for_invalid_kind() -> None:
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/add-alternate-identifier",
-            json={"kind": "ROR", "value": "XYZ-001"},
+            json={"identifier": {"kind": "ROR", "value": "XYZ-001"}},
         )
     assert response.status_code == 422
 
@@ -131,6 +132,6 @@ def test_post_add_alternate_identifier_returns_400_for_whitespace_only_value() -
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/add-alternate-identifier",
-            json={"kind": "SerialNumber", "value": "   "},
+            json={"identifier": {"kind": "SerialNumber", "value": "   "}},
         )
     assert response.status_code == 400

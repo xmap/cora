@@ -226,21 +226,13 @@
       "AddAssetAlternateIdentifierRequest": {
         "description": "Body for `POST /assets/{asset_id}/add-alternate-identifier`.\n\nBoth fields required. Pydantic enforces non-empty value at the\nboundary; the `AlternateIdentifier` VO then trims and re-validates\nlength within the decider (the VO construction site).",
         "properties": {
-          "kind": {
-            "$ref": "#/components/schemas/AlternateIdentifierKind",
-            "description": "Identifier kind from the PIDINST v1.0 controlled vocabulary: 'SerialNumber', 'InventoryNumber', or 'Other'."
-          },
-          "value": {
-            "description": "Identifier value (free text, trimmed, 1-200 chars). Uniqueness keyed on the (kind, value) pair at the Asset scope ONLY; cross-Asset duplicates are NOT rejected in v1.",
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Value",
-            "type": "string"
+          "identifier": {
+            "$ref": "#/components/schemas/AlternateIdentifierBody",
+            "description": "The alternate identifier to add. Uniqueness keyed on the (kind, value) pair at the Asset scope ONLY; cross-Asset duplicates are NOT rejected in v1."
           }
         },
         "required": [
-          "kind",
-          "value"
+          "identifier"
         ],
         "title": "AddAssetAlternateIdentifierRequest",
         "type": "object"
@@ -8943,21 +8935,13 @@
       "RemoveAssetAlternateIdentifierRequest": {
         "description": "Body for `POST /assets/{asset_id}/remove-alternate-identifier`.\n\nBoth fields required. Pydantic enforces non-empty value at the\nboundary; the AlternateIdentifier VO then trims and re-validates\nlength within the decider.",
         "properties": {
-          "kind": {
-            "$ref": "#/components/schemas/AlternateIdentifierKind",
-            "description": "Identifier kind from the PIDINST v1.0 controlled vocabulary: 'SerialNumber', 'InventoryNumber', or 'Other'."
-          },
-          "value": {
-            "description": "Identifier value (free text, trimmed, 1-200 chars). Matched against the asset's stored alternate identifiers by exact (kind, value) pair.",
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Value",
-            "type": "string"
+          "identifier": {
+            "$ref": "#/components/schemas/AlternateIdentifierBody",
+            "description": "The alternate identifier to remove. Matched against the asset's stored alternate identifiers by exact (kind, value) pair."
           }
         },
         "required": [
-          "kind",
-          "value"
+          "identifier"
         ],
         "title": "RemoveAssetAlternateIdentifierRequest",
         "type": "object"
@@ -13780,7 +13764,7 @@
                 }
               }
             },
-            "description": "Authorize port denied the command."
+            "description": "Authorize policy denied the command."
           },
           "404": {
             "content": {
@@ -13800,7 +13784,7 @@
                 }
               }
             },
-            "description": "Asset cannot accept the alternate identifier under current conditions (asset is Decommissioned, OR an alternate identifier with the same (kind, value) pair already exists on the asset), OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
+            "description": "Asset cannot accept the alternate identifier under current conditions: the asset is Decommissioned (AssetCannotAddAlternateIdentifierError), OR an alternate identifier with the same (kind, value) pair already exists on the asset (AssetAlternateIdentifierAlreadyPresentError), OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
           },
           "422": {
             "description": "Path parameter or request body failed schema validation (missing field, invalid kind enum, etc.)."
@@ -14668,7 +14652,7 @@
                 }
               }
             },
-            "description": "Identifier value is empty / whitespace-only / exceeds the configured max length after trimming (InvalidAlternateIdentifierError)."
+            "description": "Identifier value is empty / whitespace-only / exceeds the configured max length after trimming (InvalidAlternateIdentifierValueError)."
           },
           "403": {
             "content": {
@@ -14678,7 +14662,7 @@
                 }
               }
             },
-            "description": "Authorize port denied the command."
+            "description": "Authorize policy denied the command."
           },
           "404": {
             "content": {
@@ -14698,7 +14682,7 @@
                 }
               }
             },
-            "description": "No alternate identifier with the same (kind, value) pair exists on the asset (strict-not-idempotent), OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
+            "description": "Asset cannot remove the alternate identifier under current conditions: the asset is Decommissioned (AssetCannotAddAlternateIdentifierError; the shared lifecycle-guard class is used by BOTH add and remove), OR no alternate identifier with the same (kind, value) pair exists on the asset (strict-not-idempotent, AssetAlternateIdentifierNotPresentError), OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
           },
           "422": {
             "description": "Path parameter or request body failed schema validation (missing field, invalid kind enum, etc.)."

@@ -11,6 +11,7 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetAlternateIdentifierAdded,
     AssetAlternateIdentifierAlreadyPresentError,
+    AssetCannotAddAlternateIdentifierError,
     AssetLevel,
     AssetLifecycle,
     AssetName,
@@ -117,21 +118,37 @@ def test_decide_propagates_invalid_value_error_from_vo() -> None:
 
 
 @pytest.mark.unit
+def test_decide_rejects_decommissioned() -> None:
+    """Lifecycle guard mirrors `add_asset_port`: a Decommissioned
+    asset is out of inventory; identifier changes are not allowed."""
+    identifier = AlternateIdentifier(kind=AlternateIdentifierKind.SERIAL_NUMBER, value="XYZ-001")
+    state = _asset(lifecycle=AssetLifecycle.DECOMMISSIONED)
+    with pytest.raises(AssetCannotAddAlternateIdentifierError) as exc_info:
+        add_asset_alternate_identifier.decide(
+            state=state,
+            command=AddAssetAlternateIdentifier(asset_id=state.id, alternate_identifier=identifier),
+            now=_NOW,
+        )
+    assert exc_info.value.asset_id == state.id
+    assert exc_info.value.kind is AlternateIdentifierKind.SERIAL_NUMBER
+    assert exc_info.value.value == "XYZ-001"
+    assert "Decommissioned" in exc_info.value.reason
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "lifecycle",
     [
         AssetLifecycle.COMMISSIONED,
         AssetLifecycle.ACTIVE,
         AssetLifecycle.MAINTENANCE,
-        AssetLifecycle.DECOMMISSIONED,
     ],
 )
-def test_decide_succeeds_in_every_lifecycle_including_decommissioned(
+def test_decide_succeeds_for_every_non_decommissioned_lifecycle(
     lifecycle: AssetLifecycle,
 ) -> None:
-    """No lifecycle guard on alternate-identifier mutation; inventory
-    tags and serial numbers may be reconciled even after retirement.
-    Symmetric with `remove_asset_alternate_identifier`."""
+    """Lifecycle-independence holds across every non-Decommissioned
+    state. Symmetric with `add_asset_port`."""
     identifier = AlternateIdentifier(kind=AlternateIdentifierKind.SERIAL_NUMBER, value="x")
     state = _asset(lifecycle=lifecycle)
     events = add_asset_alternate_identifier.decide(
