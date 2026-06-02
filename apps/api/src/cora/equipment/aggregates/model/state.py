@@ -14,7 +14,7 @@ deployed instance) in the Equipment ladder. Examples: an Aerotech
 ANT130-L rotary stage is one Model; the two PCO Edge 5.5 cameras
 mounted at 2-BM share a single Model. Asset gains an optional
 `model_id` pointer; if set, `Model.declared_families` must be a
-subset of `Asset.families` at `register_asset` and `add_asset_family`
+subset of `Asset.family_ids` at `register_asset` and `add_asset_family`
 time (cross-BC subset invariant).
 
 `declared_families: frozenset[UUID]` is REQUIRED at `define_model`
@@ -445,7 +445,7 @@ class Model:
     `version_model` (replace-on-version).
 
     Cross-BC subset invariant `Model.declared_families subset-of
-    Asset.families` evaluated by the Asset BC at `register_asset` and
+    Asset.family_ids` evaluated by the Asset BC at `register_asset` and
     `add_asset_family`; NOT enforced inside the Model aggregate.
     """
 
