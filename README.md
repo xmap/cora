@@ -1580,18 +1580,18 @@
 | src/cora/trust/features/cancel\_visit/handler.py                                 |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/cancel\_visit/route.py                                   |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/cancel\_visit/tool.py                                    |       18 |        1 |        0 |        0 |     94.4% |        55 |
-| src/cora/trust/features/check\_in\_to\_visit/\_\_init\_\_.py                     |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_in\_to\_visit/command.py                          |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_in\_to\_visit/decider.py                          |       12 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_in\_to\_visit/handler.py                          |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_in\_to\_visit/route.py                            |       16 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_in\_to\_visit/tool.py                             |       18 |        1 |        0 |        0 |     94.4% |        53 |
-| src/cora/trust/features/check\_out\_from\_visit/\_\_init\_\_.py                  |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_out\_from\_visit/command.py                       |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_out\_from\_visit/decider.py                       |       10 |        0 |        4 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_out\_from\_visit/handler.py                       |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_out\_from\_visit/route.py                         |       15 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_out\_from\_visit/tool.py                          |       17 |        1 |        0 |        0 |     94.1% |        48 |
+| src/cora/trust/features/check\_in\_visit/\_\_init\_\_.py                         |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_in\_visit/command.py                              |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_in\_visit/decider.py                              |       12 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_in\_visit/handler.py                              |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_in\_visit/route.py                                |       16 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_in\_visit/tool.py                                 |       18 |        1 |        0 |        0 |     94.4% |        53 |
+| src/cora/trust/features/check\_out\_visit/\_\_init\_\_.py                        |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_out\_visit/command.py                             |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_out\_visit/decider.py                             |       10 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_out\_visit/handler.py                             |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_out\_visit/route.py                               |       15 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_out\_visit/tool.py                                |       17 |        1 |        0 |        0 |     94.1% |        48 |
 | src/cora/trust/features/complete\_visit/\_\_init\_\_.py                          |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/complete\_visit/command.py                               |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/complete\_visit/decider.py                               |        9 |        0 |        4 |        0 |    100.0% |           |

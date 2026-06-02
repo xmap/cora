@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_309cde1d7a3d2246_profile_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 13:17 +0000
+            created at 2026-06-02 14:43 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -118,9 +118,9 @@
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">    <span class="com"># statement itself &#8212; so the pragma lives here, not on individual cases.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">    <span class="key">match</span> <span class="nam">event</span><span class="op">:</span>  <span class="com"># pragma: no mutate</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">        <span class="key">case</span> <span class="nam">ActorRegistered</span><span class="op">(</span><span class="nam">actor_id</span><span class="op">=</span><span class="nam">actor_id</span><span class="op">,</span> <span class="nam">kind</span><span class="op">=</span><span class="nam">kind</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">            <span class="com"># `is_active` defaults to True on `Actor` &#8212; omit the explicit</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">            <span class="com"># `active` defaults to True on `Actor` &#8212; omit the explicit</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">            <span class="com"># kwarg so mutmut can't generate a redundancy mutation. The</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">            <span class="com"># ActorDeactivated branch below passes `is_active=False`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">            <span class="com"># ActorDeactivated branch below passes `active=False`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">            <span class="com"># explicitly (NOT the default).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">            <span class="key">return</span> <span class="nam">Actor</span><span class="op">(</span><span class="nam">id</span><span class="op">=</span><span class="nam">actor_id</span><span class="op">,</span> <span class="nam">kind</span><span class="op">=</span><span class="nam">kind</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t">        <span class="key">case</span> <span class="nam">ActorDeactivated</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -131,7 +131,7 @@
     <p class="exc show_exc"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t">            <span class="key">if</span> <span class="nam">state</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>  <span class="com"># pragma: no cover  # pragma: no mutate</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t">                <span class="nam">msg</span> <span class="op">=</span> <span class="str">"ActorDeactivated cannot be applied to empty state"</span>  <span class="com"># pragma: no cover  # pragma: no mutate  # noqa: E501</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">                <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>  <span class="com"># pragma: no cover  # pragma: no mutate</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">            <span class="key">return</span> <span class="nam">Actor</span><span class="op">(</span><span class="nam">id</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">is_active</span><span class="op">=</span><span class="key">False</span><span class="op">,</span> <span class="nam">kind</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">kind</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">            <span class="key">return</span> <span class="nam">Actor</span><span class="op">(</span><span class="nam">id</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">active</span><span class="op">=</span><span class="key">False</span><span class="op">,</span> <span class="nam">kind</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">kind</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">        <span class="key">case</span> <span class="nam">ActorProfileForgotten</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">            <span class="com"># PII erasure event: aggregate state is unchanged. The</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">            <span class="com"># event records the audit fact ("operator scrubbed this</span>&nbsp;</span><span class="r"></span></p>
@@ -171,7 +171,7 @@
             <a class="nav" href="z_309cde1d7a3d2246_profile_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 13:17 +0000
+            created at 2026-06-02 14:43 +0000
         </p>
     </div>
 </footer>

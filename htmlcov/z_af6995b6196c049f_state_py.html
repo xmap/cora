@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_e5a9d973dbce43d7___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 13:17 +0000
+            created at 2026-06-02 14:43 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -501,7 +501,7 @@
     <p class="pln"><span class="n"><a id="t417" href="#t417">417</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t418" href="#t418">418</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t419" href="#t419">419</a></span><span class="t"><span class="key">class</span> <span class="nam">VisitCannotCheckInError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t420" href="#t420">420</a></span><span class="t">    <span class="str">"""check_in_to_visit guard failed: status is not in the permitted source set."""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t420" href="#t420">420</a></span><span class="t">    <span class="str">"""check_in_visit guard failed: status is not in the permitted source set."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t421" href="#t421">421</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t422" href="#t422">422</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t423" href="#t423">423</a></span><span class="t">        <span class="nam">self</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -656,8 +656,8 @@
     <p class="pln"><span class="n"><a id="t572" href="#t572">572</a></span><span class="t"><span class="str">    who actually checked in / out, in which mode (physical | remote),</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t573" href="#t573">573</a></span><span class="t"><span class="str">    and when. The Visit lifecycle FSM operates independently of</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t574" href="#t574">574</a></span><span class="t"><span class="str">    presence per V6 explicit-gesture lock: the operator can drive the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t575" href="#t575">575</a></span><span class="t"><span class="str">    full FSM without ever calling check_in_to_visit (and conversely,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t576" href="#t576">576</a></span><span class="t"><span class="str">    check_in_to_visit requires Visit.status in {Arrived, InProgress,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t575" href="#t575">575</a></span><span class="t"><span class="str">    full FSM without ever calling check_in_visit (and conversely,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t576" href="#t576">576</a></span><span class="t"><span class="str">    check_in_visit requires Visit.status in {Arrived, InProgress,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t577" href="#t577">577</a></span><span class="t"><span class="str">    OnHold} -- never auto-transitions Planned -> Arrived).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t578" href="#t578">578</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t579" href="#t579">579</a></span><span class="t"><span class="str">    No actor field on the aggregate beyond inherited</span>&nbsp;</span><span class="r"></span></p>
@@ -687,7 +687,7 @@
             <a class="nav" href="z_e5a9d973dbce43d7___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 13:17 +0000
+            created at 2026-06-02 14:43 +0000
         </p>
     </div>
 </footer>

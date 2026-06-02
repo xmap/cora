@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_9b1401bacecaa802_logbook_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 13:17 +0000
+            created at 2026-06-02 14:43 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -370,7 +370,7 @@
     <p class="run"><span class="n"><a id="t286" href="#t286">286</a></span><span class="t">    <span class="key">return</span> <span class="fst">f"</span><span class="op">{</span><span class="nam">column</span><span class="op">}</span><span class="fst"> = ANY($</span><span class="op">{</span><span class="nam">param_number</span><span class="op">}</span><span class="fst">)</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t288" href="#t288">288</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t"><span class="key">def</span> <span class="nam">_is_active_filter_value</span><span class="op">(</span><span class="nam">spec</span><span class="op">:</span> <span class="nam">FilterSpec</span><span class="op">,</span> <span class="nam">value</span><span class="op">:</span> <span class="nam">Any</span><span class="op">)</span> <span class="op">-></span> <span class="nam">bool</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t"><span class="key">def</span> <span class="nam">_active_filter_value</span><span class="op">(</span><span class="nam">spec</span><span class="op">:</span> <span class="nam">FilterSpec</span><span class="op">,</span> <span class="nam">value</span><span class="op">:</span> <span class="nam">Any</span><span class="op">)</span> <span class="op">-></span> <span class="nam">bool</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">    <span class="str">"""A filter is active iff the slice would emit a WHERE fragment.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t"><span class="str">    None is always inactive (matches the `getattr` default). For</span>&nbsp;</span><span class="r"></span></p>
@@ -500,7 +500,7 @@
     <p class="run"><span class="n"><a id="t416" href="#t416">416</a></span><span class="t">        <span class="nam">next_param</span> <span class="op">=</span> <span class="num">2</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t417" href="#t417">417</a></span><span class="t">        <span class="key">for</span> <span class="nam">spec</span> <span class="key">in</span> <span class="nam">filters</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t418" href="#t418">418</a></span><span class="t">            <span class="nam">value</span> <span class="op">=</span> <span class="nam">getattr</span><span class="op">(</span><span class="nam">query</span><span class="op">,</span> <span class="nam">spec</span><span class="op">.</span><span class="nam">attr</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t419" href="#t419">419</a></span><span class="t">            <span class="key">if</span> <span class="key">not</span> <span class="nam">_is_active_filter_value</span><span class="op">(</span><span class="nam">spec</span><span class="op">,</span> <span class="nam">value</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t419" href="#t419">419</a></span><span class="t">            <span class="key">if</span> <span class="key">not</span> <span class="nam">_active_filter_value</span><span class="op">(</span><span class="nam">spec</span><span class="op">,</span> <span class="nam">value</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t420" href="#t420">420</a></span><span class="t">                <span class="key">continue</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t421" href="#t421">421</a></span><span class="t">            <span class="nam">active_fragments</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">_render_filter_fragment</span><span class="op">(</span><span class="nam">spec</span><span class="op">,</span> <span class="nam">next_param</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t422" href="#t422">422</a></span><span class="t">            <span class="nam">filter_values</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">value</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -568,7 +568,7 @@
             <a class="nav" href="z_9b1401bacecaa802_logbook_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 13:17 +0000
+            created at 2026-06-02 14:43 +0000
         </p>
     </div>
 </footer>
