@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_31771e0763e066ad___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 10:03 +0000
+            created at 2026-06-02 10:46 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -128,8 +128,8 @@
     <p class="run run2"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t">    <span class="nam">degrade_asset</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t">    <span class="nam">deprecate_family</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t">    <span class="nam">deprecate_model</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t">    <span class="nam">enter_maintenance</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t">    <span class="nam">exit_maintenance</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t">    <span class="nam">enter_asset_maintenance</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t">    <span class="nam">exit_asset_maintenance</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">    <span class="nam">fault_asset</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">    <span class="nam">get_asset</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">    <span class="nam">get_asset_integration_view</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -204,8 +204,8 @@
     <p class="pln"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">    <span class="nam">activate_asset</span><span class="op">:</span> <span class="nam">activate_asset</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">    <span class="nam">decommission_asset</span><span class="op">:</span> <span class="nam">decommission_asset</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="nam">relocate_asset</span><span class="op">:</span> <span class="nam">relocate_asset</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="nam">enter_maintenance</span><span class="op">:</span> <span class="nam">enter_maintenance</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="nam">exit_maintenance</span><span class="op">:</span> <span class="nam">exit_maintenance</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="nam">enter_asset_maintenance</span><span class="op">:</span> <span class="nam">enter_asset_maintenance</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="nam">exit_asset_maintenance</span><span class="op">:</span> <span class="nam">exit_asset_maintenance</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">    <span class="nam">add_asset_family</span><span class="op">:</span> <span class="nam">add_asset_family</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="nam">remove_asset_family</span><span class="op">:</span> <span class="nam">remove_asset_family</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="nam">degrade_asset</span><span class="op">:</span> <span class="nam">degrade_asset</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
@@ -343,14 +343,14 @@
     <p class="run run2"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="str">"RelocateAsset"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t260" href="#t260">260</a></span><span class="t">            <span class="nam">bc</span><span class="op">=</span><span class="nam">_BC</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t261" href="#t261">261</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t262" href="#t262">262</a></span><span class="t">        <span class="nam">enter_maintenance</span><span class="op">=</span><span class="nam">with_tracing</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t263" href="#t263">263</a></span><span class="t">            <span class="nam">enter_maintenance</span><span class="op">.</span><span class="nam">bind</span><span class="op">(</span><span class="nam">deps</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="str">"EnterMaintenance"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t262" href="#t262">262</a></span><span class="t">        <span class="nam">enter_asset_maintenance</span><span class="op">=</span><span class="nam">with_tracing</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t263" href="#t263">263</a></span><span class="t">            <span class="nam">enter_asset_maintenance</span><span class="op">.</span><span class="nam">bind</span><span class="op">(</span><span class="nam">deps</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="str">"EnterAssetMaintenance"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t265" href="#t265">265</a></span><span class="t">            <span class="nam">bc</span><span class="op">=</span><span class="nam">_BC</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t266" href="#t266">266</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t">        <span class="nam">exit_maintenance</span><span class="op">=</span><span class="nam">with_tracing</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t">            <span class="nam">exit_maintenance</span><span class="op">.</span><span class="nam">bind</span><span class="op">(</span><span class="nam">deps</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="str">"ExitMaintenance"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t">        <span class="nam">exit_asset_maintenance</span><span class="op">=</span><span class="nam">with_tracing</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t">            <span class="nam">exit_asset_maintenance</span><span class="op">.</span><span class="nam">bind</span><span class="op">(</span><span class="nam">deps</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="str">"ExitAssetMaintenance"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t">            <span class="nam">bc</span><span class="op">=</span><span class="nam">_BC</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t272" href="#t272">272</a></span><span class="t">        <span class="nam">add_asset_family</span><span class="op">=</span><span class="nam">with_tracing</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -477,7 +477,7 @@
             <a class="nav" href="z_31771e0763e066ad___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 10:03 +0000
+            created at 2026-06-02 10:46 +0000
         </p>
     </div>
 </footer>

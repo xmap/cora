@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_0b3c5bf3db898e06_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 10:03 +0000
+            created at 2026-06-02 10:46 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -207,8 +207,8 @@
     <p class="run run2"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="nam">degrade_asset</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="nam">deprecate_family</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">    <span class="nam">deprecate_model</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="nam">enter_maintenance</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="nam">exit_maintenance</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="nam">enter_asset_maintenance</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="nam">exit_asset_maintenance</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">    <span class="nam">fault_asset</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">    <span class="nam">get_asset</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">    <span class="nam">get_asset_integration_view</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -318,8 +318,8 @@
     <p class="run"><span class="n"><a id="t234" href="#t234">234</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">activate_asset</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t235" href="#t235">235</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">decommission_asset</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t236" href="#t236">236</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">relocate_asset</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">enter_maintenance</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t238" href="#t238">238</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">exit_maintenance</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">enter_asset_maintenance</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t238" href="#t238">238</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">exit_asset_maintenance</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">add_asset_family</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t240" href="#t240">240</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">remove_asset_family</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t241" href="#t241">241</a></span><span class="t">    <span class="nam">app</span><span class="op">.</span><span class="nam">include_router</span><span class="op">(</span><span class="nam">degrade_asset</span><span class="op">.</span><span class="nam">router</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -427,7 +427,7 @@
             <a class="nav" href="z_0b3c5bf3db898e06_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 10:03 +0000
+            created at 2026-06-02 10:46 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 10:03 +0000
+            created at 2026-06-02 10:46 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -190,8 +190,8 @@
     <p class="pln"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t"><span class="str">    Transitions land per-slice:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t"><span class="str">      - 5c: Commissioned -> Active        (activate_asset)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t"><span class="str">      - 5c: (Commissioned | Active) -> Decommissioned   (decommission_asset)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t"><span class="str">      - 5e: Active -> Maintenance         (enter_maintenance)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t"><span class="str">      - 5e: Maintenance -> Active         (exit_maintenance)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t"><span class="str">      - 5e: Active -> Maintenance         (enter_asset_maintenance)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t"><span class="str">      - 5e: Maintenance -> Active         (exit_asset_maintenance)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t"><span class="str">      - 5e (extends 5c): decommission accepts Maintenance as third source</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t"><span class="str">    `Commissioned` is the genesis state set by `register_asset`. The</span>&nbsp;</span><span class="r"></span></p>
@@ -434,7 +434,7 @@
     <p class="run"><span class="n"><a id="t350" href="#t350">350</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">asset_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span> <span class="nam">current_lifecycle</span><span class="op">:</span> <span class="str">"AssetLifecycle"</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t351" href="#t351">351</a></span><span class="t">        <span class="nam">super</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">__init__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t352" href="#t352">352</a></span><span class="t">            <span class="fst">f"</span><span class="fst">Asset </span><span class="op">{</span><span class="nam">asset_id</span><span class="op">}</span><span class="fst"> cannot enter maintenance: currently in lifecycle </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t353" href="#t353">353</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">current_lifecycle</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">, enter_maintenance requires </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t353" href="#t353">353</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">current_lifecycle</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">, enter_asset_maintenance requires </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t354" href="#t354">354</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">AssetLifecycle</span><span class="op">.</span><span class="nam">ACTIVE</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t355" href="#t355">355</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t356" href="#t356">356</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">asset_id</span> <span class="op">=</span> <span class="nam">asset_id</span>&nbsp;</span><span class="r"></span></p>
@@ -452,7 +452,7 @@
     <p class="run"><span class="n"><a id="t368" href="#t368">368</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">asset_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span> <span class="nam">current_lifecycle</span><span class="op">:</span> <span class="str">"AssetLifecycle"</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t369" href="#t369">369</a></span><span class="t">        <span class="nam">super</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">__init__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t370" href="#t370">370</a></span><span class="t">            <span class="fst">f"</span><span class="fst">Asset </span><span class="op">{</span><span class="nam">asset_id</span><span class="op">}</span><span class="fst"> cannot exit maintenance: currently in lifecycle </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t371" href="#t371">371</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">current_lifecycle</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">, exit_maintenance requires </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t371" href="#t371">371</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">current_lifecycle</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">, exit_asset_maintenance requires </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t372" href="#t372">372</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">AssetLifecycle</span><span class="op">.</span><span class="nam">MAINTENANCE</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t373" href="#t373">373</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t374" href="#t374">374</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">asset_id</span> <span class="op">=</span> <span class="nam">asset_id</span>&nbsp;</span><span class="r"></span></p>
@@ -722,7 +722,7 @@
             <a class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 10:03 +0000
+            created at 2026-06-02 10:46 +0000
         </p>
     </div>
 </footer>
