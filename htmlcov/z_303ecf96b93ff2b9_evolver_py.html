@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_303ecf96b93ff2b9_invariants_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -160,7 +160,7 @@
     <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">                <span class="nam">status</span><span class="op">=</span><span class="nam">CautionStatus</span><span class="op">.</span><span class="nam">ACTIVE</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">                <span class="nam">parent_caution_id</span><span class="op">=</span><span class="nam">parent_caution_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">        <span class="key">case</span> <span class="nam">CautionSuperseded</span><span class="op">(</span><span class="nam">by_caution_id</span><span class="op">=</span><span class="nam">by_caution_id</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">        <span class="key">case</span> <span class="nam">CautionSuperseded</span><span class="op">(</span><span class="nam">superseded_by_caution_id</span><span class="op">=</span><span class="nam">superseded_by_caution_id</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">            <span class="nam">prior</span> <span class="op">=</span> <span class="nam">require_state</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="str">"CautionSuperseded"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">            <span class="key">return</span> <span class="nam">Caution</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">                <span class="nam">id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -175,7 +175,7 @@
     <p class="run run2"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">                <span class="nam">propagate_to_children</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">propagate_to_children</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">                <span class="nam">status</span><span class="op">=</span><span class="nam">CautionStatus</span><span class="op">.</span><span class="nam">SUPERSEDED</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">                <span class="nam">parent_caution_id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">parent_caution_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">                <span class="nam">superseded_by_caution_id</span><span class="op">=</span><span class="nam">by_caution_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">                <span class="nam">superseded_by_caution_id</span><span class="op">=</span><span class="nam">superseded_by_caution_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">                <span class="nam">retired_reason</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">retired_reason</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">        <span class="key">case</span> <span class="nam">CautionRetired</span><span class="op">(</span><span class="nam">reason</span><span class="op">=</span><span class="nam">reason</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -215,7 +215,7 @@
             <a class="nav" href="z_303ecf96b93ff2b9_invariants_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
     </div>
 </footer>

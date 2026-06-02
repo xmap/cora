@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_96cf3791c27a3672_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -102,7 +102,7 @@
     <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">conditional:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">  - If `command.parent_id` is set, `context.parent` must be</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">    non-None (handler raises `ParentDecisionNotFoundError`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">    non-None (handler raises `DecisionParentNotFoundError`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">    upstream; this branch is the decider-level statement of the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">    contract for the conditional case).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -144,9 +144,9 @@
     <p class="run run2"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">    <span class="nam">DecisionAlreadyExistsError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="nam">DecisionChoice</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">    <span class="nam">DecisionContext</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="nam">DecisionRegistered</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="nam">DecisionRule</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="nam">ParentDecisionNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="nam">DecisionParentNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="nam">DecisionRegistered</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="nam">DecisionRule</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">    <span class="nam">validate_alternatives</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">    <span class="nam">validate_confidence</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">    <span class="nam">validate_inputs</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -178,7 +178,7 @@
     <p class="pln"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t"><span class="str">        through the signed subscriber path)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t"><span class="str">        -> InvalidActorKindForDecisionError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="str">      - When parent_id is set, parent Decision must exist</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t"><span class="str">        -> ParentDecisionNotFoundError</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t"><span class="str">        -> DecisionParentNotFoundError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t"><span class="str">      - override_kind requires a parent_id</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="str">        -> OverrideKindRequiresParentError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t"><span class="str">      - Choice must be valid -> InvalidDecisionChoiceError</span>&nbsp;</span><span class="r"></span></p>
@@ -205,11 +205,11 @@
     <p class="run"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">    <span class="key">if</span> <span class="nam">context</span><span class="op">.</span><span class="nam">actor</span><span class="op">.</span><span class="nam">kind</span> <span class="op">==</span> <span class="nam">ActorKind</span><span class="op">.</span><span class="nam">AGENT</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">        <span class="key">raise</span> <span class="nam">InvalidActorKindForDecisionError</span><span class="op">(</span><span class="str">"agent"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="com"># Cross-agg parent guard (handler raises ParentDecisionNotFoundError</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="com"># Cross-agg parent guard (handler raises DecisionParentNotFoundError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">    <span class="com"># upstream; this branch is the decider-level statement of contract</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="com"># for the conditional case).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="key">if</span> <span class="nam">command</span><span class="op">.</span><span class="nam">parent_id</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">and</span> <span class="nam">context</span><span class="op">.</span><span class="nam">parent</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ParentDecisionNotFoundError</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">parent_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">        <span class="key">raise</span> <span class="nam">DecisionParentNotFoundError</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">parent_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">    <span class="com"># override_kind / parent_id consistency.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">    <span class="key">if</span> <span class="nam">command</span><span class="op">.</span><span class="nam">override_kind</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">and</span> <span class="nam">command</span><span class="op">.</span><span class="nam">parent_id</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -252,7 +252,7 @@
             <a class="nav" href="z_96cf3791c27a3672_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -468,7 +468,7 @@
     <p class="pln"><span class="n"><a id="t384" href="#t384">384</a></span><span class="t"><span class="str">    `reason` string that surfaces in the route's 409 body:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t385" href="#t385">385</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t386" href="#t386">386</a></span><span class="t"><span class="str">      - asset is `Decommissioned` (retired; no further family changes)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t387" href="#t387">387</a></span><span class="t"><span class="str">      - family already in `asset.families` (strict-not-idempotent;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t387" href="#t387">387</a></span><span class="t"><span class="str">      - family already in `asset.family_ids` (strict-not-idempotent;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t388" href="#t388">388</a></span><span class="t"><span class="str">        same precedent as activate / mount-second-call-raises)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t389" href="#t389">389</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t390" href="#t390">390</a></span><span class="t"><span class="str">    Eventual-consistency: the decider does NOT verify the referenced</span>&nbsp;</span><span class="r"></span></p>
@@ -490,7 +490,7 @@
     <p class="pln"><span class="n"><a id="t406" href="#t406">406</a></span><span class="t"><span class="str">    Mirrors `AssetCannotAddFamilyError`. Disqualifying conditions:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t407" href="#t407">407</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t408" href="#t408">408</a></span><span class="t"><span class="str">      - asset is `Decommissioned` (retired)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t409" href="#t409">409</a></span><span class="t"><span class="str">      - family not in `asset.families` (strict-not-idempotent)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t409" href="#t409">409</a></span><span class="t"><span class="str">      - family not in `asset.family_ids` (strict-not-idempotent)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t410" href="#t410">410</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t411" href="#t411">411</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t412" href="#t412">412</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">asset_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span> <span class="nam">family_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span> <span class="nam">reason</span><span class="op">:</span> <span class="nam">str</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -593,12 +593,12 @@
     <p class="pln"><span class="n"><a id="t509" href="#t509">509</a></span><span class="t"><span class="str">    `None` only when `level == Enterprise` (root). Mutable across</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t510" href="#t510">510</a></span><span class="t"><span class="str">    `AssetRelocated` events.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t511" href="#t511">511</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t512" href="#t512">512</a></span><span class="t"><span class="str">    `families` is the set of Family ids this asset belongs to.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t512" href="#t512">512</a></span><span class="t"><span class="str">    `family_ids` is the set of Family ids this asset belongs to.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t513" href="#t513">513</a></span><span class="t"><span class="str">    Operationally curated: operators add via `add_asset_family` when</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t514" href="#t514">514</a></span><span class="t"><span class="str">    commissioning a new device-class on the asset, remove via</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t515" href="#t515">515</a></span><span class="t"><span class="str">    `remove_asset_family` when retiring one. Used at Plan binding</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t516" href="#t516">516</a></span><span class="t"><span class="str">    time (6e) for the structural check</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t517" href="#t517">517</a></span><span class="t"><span class="str">    `asset.families &#8839; method.needed_family_ids`. Eventual-</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t517" href="#t517">517</a></span><span class="t"><span class="str">    `asset.family_ids &#8839; method.needed_family_ids`. Eventual-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t518" href="#t518">518</a></span><span class="t"><span class="str">    consistency: each Family id is NOT verified against the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t519" href="#t519">519</a></span><span class="t"><span class="str">    Family stream at decide time. Defaults to empty so prior</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t520" href="#t520">520</a></span><span class="t"><span class="str">    `AssetRegistered`-only streams fold cleanly without an upcaster</span>&nbsp;</span><span class="r"></span></p>
@@ -653,14 +653,14 @@
     <p class="pln"><span class="n"><a id="t569" href="#t569">569</a></span><span class="t">    <span class="com"># under pyright strict because the empty frozenset has no element</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t570" href="#t570">570</a></span><span class="t">    <span class="com"># type to infer. The parametrized form gives pyright the type</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t571" href="#t571">571</a></span><span class="t">    <span class="com"># without runtime cost. Same trick used in Method.needed_family_ids.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t572" href="#t572">572</a></span><span class="t">    <span class="nam">families</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t572" href="#t572">572</a></span><span class="t">    <span class="nam">family_ids</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t573" href="#t573">573</a></span><span class="t">    <span class="com"># dict[str, Any] for runtime-typed operator-supplied settings.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t574" href="#t574">574</a></span><span class="t">    <span class="com"># Same default_factory pattern as families &#8212; the empty dict</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t574" href="#t574">574</a></span><span class="t">    <span class="com"># Same default_factory pattern as family_ids &#8212; the empty dict</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t575" href="#t575">575</a></span><span class="t">    <span class="com"># has no element types for pyright to infer, so the parametrized</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t576" href="#t576">576</a></span><span class="t">    <span class="com"># `dict[str, Any]` callable is supplied as the factory.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t577" href="#t577">577</a></span><span class="t">    <span class="nam">settings</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t578" href="#t578">578</a></span><span class="t">    <span class="com"># frozenset[AssetPort] for typed connection points (5h).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t579" href="#t579">579</a></span><span class="t">    <span class="com"># Same parametrized-callable trick as families.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t579" href="#t579">579</a></span><span class="t">    <span class="com"># Same parametrized-callable trick as family_ids.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t580" href="#t580">580</a></span><span class="t">    <span class="nam">ports</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">AssetPort</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">AssetPort</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t581" href="#t581">581</a></span><span class="t">    <span class="nam">drawing</span><span class="op">:</span> <span class="nam">Drawing</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
 </main>
@@ -672,7 +672,7 @@
             <a class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
     </div>
 </footer>

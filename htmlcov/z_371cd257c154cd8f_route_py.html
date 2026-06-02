@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_371cd257c154cd8f_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -174,7 +174,7 @@
     <p class="run"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t"><span class="key">class</span> <span class="nam">InspectPlanBindingResponse</span><span class="op">(</span><span class="nam">BaseModel</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">    <span class="str">"""Wire-side diagnostic returned by the endpoint.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t"><span class="str">    `missing_families` and `missing_affordances` are sorted lists;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t"><span class="str">    `missing_family_ids` and `missing_affordances` are sorted lists;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t"><span class="str">    empty means that dimension is satisfied. `binding_status` is</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t"><span class="str">    the at-a-glance verdict (Satisfied / MissingFamilies /</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="str">    MissingAffordances / MissingCapability).</span>&nbsp;</span><span class="r"></span></p>
@@ -192,7 +192,7 @@
     <p class="pln"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">    <span class="nam">method_needed_family_ids</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">    <span class="nam">capability_required_affordances</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">str</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="nam">wired_assets</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">WiredAssetItem</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">    <span class="nam">missing_families</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">    <span class="nam">missing_family_ids</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">    <span class="nam">missing_affordances</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">str</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">    <span class="nam">missing_affordance_candidates</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">MissingAffordanceCandidatesItem</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">    <span class="nam">binding_status</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
@@ -256,7 +256,7 @@
     <p class="run run2"><span class="n"><a id="t172" href="#t172">172</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t173" href="#t173">173</a></span><span class="t">            <span class="key">for</span> <span class="nam">item</span> <span class="key">in</span> <span class="nam">view</span><span class="op">.</span><span class="nam">wired_assets</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t174" href="#t174">174</a></span><span class="t">        <span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t">        <span class="nam">missing_families</span><span class="op">=</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">view</span><span class="op">.</span><span class="nam">missing_families</span><span class="op">,</span> <span class="nam">key</span><span class="op">=</span><span class="nam">str</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t">        <span class="nam">missing_family_ids</span><span class="op">=</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">view</span><span class="op">.</span><span class="nam">missing_family_ids</span><span class="op">,</span> <span class="nam">key</span><span class="op">=</span><span class="nam">str</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t176" href="#t176">176</a></span><span class="t">        <span class="nam">missing_affordances</span><span class="op">=</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">a</span><span class="op">.</span><span class="nam">value</span> <span class="key">for</span> <span class="nam">a</span> <span class="key">in</span> <span class="nam">view</span><span class="op">.</span><span class="nam">missing_affordances</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t177" href="#t177">177</a></span><span class="t">        <span class="nam">missing_affordance_candidates</span><span class="op">=</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t178" href="#t178">178</a></span><span class="t">            <span class="nam">MissingAffordanceCandidatesItem</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -285,7 +285,7 @@
             <a class="nav" href="z_371cd257c154cd8f_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
     </div>
 </footer>

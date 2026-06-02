@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_60fefeb57b18d243_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -113,8 +113,8 @@
     <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">    InvalidSamplingProcedureError, InvalidRunExternalRefError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">  - 404 (load miss): RunNotFoundError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">  - 409 (defensive guard for AlreadyExists): RunAlreadyExistsError</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">  - 409 (Run-start binding-state guards): PlanDeprecatedError,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">    SubjectNotMountableError, RunAssetDecommissionedError,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">  - 409 (Run-start binding-state guards): RunBoundPlanDeprecatedError,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">    RunSubjectNotMountableError, RunPlanAssetDecommissionedError,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="str">    RunCapabilitiesNotSatisfiedError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">  - 409 (Run-start safety-clearance gate, 11a-c-3):</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">    RunRequiresActiveClearanceError, RunClearanceCoverageMismatchError</span>&nbsp;</span><span class="r"></span></p>
@@ -150,26 +150,26 @@
     <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">    <span class="nam">InvalidRunStopReasonError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">    <span class="nam">InvalidRunTruncateReasonError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">    <span class="nam">InvalidSamplingProcedureError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">    <span class="nam">PlanDeprecatedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">    <span class="nam">RunAlreadyAssignedToCampaignError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="nam">RunAlreadyExistsError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">    <span class="nam">RunAssetDecommissionedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">    <span class="nam">RunCannotAbortError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="nam">RunCannotAdjustError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="nam">RunCannotCompleteError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="nam">RunCannotHoldError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">    <span class="nam">RunCannotJoinCampaignError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="nam">RunCannotResumeError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">    <span class="nam">RunCannotStopError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="nam">RunCannotTruncateError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">    <span class="nam">RunCapabilitiesNotSatisfiedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">    <span class="nam">RunClearanceCoverageMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">    <span class="nam">RunNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">    <span class="nam">RunAlreadyAssignedToCampaignError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">    <span class="nam">RunAlreadyExistsError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="nam">RunBoundPlanDeprecatedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">    <span class="nam">RunCannotAbortError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">    <span class="nam">RunCannotAdjustError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="nam">RunCannotCompleteError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="nam">RunCannotHoldError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="nam">RunCannotJoinCampaignError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">    <span class="nam">RunCannotResumeError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="nam">RunCannotStopError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">    <span class="nam">RunCannotTruncateError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="nam">RunCapabilitiesNotSatisfiedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">    <span class="nam">RunClearanceCoverageMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">    <span class="nam">RunNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">    <span class="nam">RunPlanAssetDecommissionedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">    <span class="nam">RunReadingLogbookClosedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">    <span class="nam">RunRequiresActiveClearanceError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">    <span class="nam">RunRequiresAvailableSupplyError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">    <span class="nam">RunSupplyCoverageMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">    <span class="nam">SubjectNotMountableError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">    <span class="nam">RunSubjectNotMountableError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">    <span class="nam">RunSupplyCoverageMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">errors</span> <span class="key">import</span> <span class="nam">UnauthorizedError</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">features</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -284,9 +284,9 @@
     <p class="run"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t">        <span class="nam">app</span><span class="op">.</span><span class="nam">add_exception_handler</span><span class="op">(</span><span class="nam">already_exists_cls</span><span class="op">,</span> <span class="nam">_handle_already_exists</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t">    <span class="key">for</span> <span class="nam">cannot_transition_cls</span> <span class="key">in</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t">        <span class="com"># Run-start binding-state guards.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">        <span class="nam">PlanDeprecatedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t">        <span class="nam">SubjectNotMountableError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t">        <span class="nam">RunAssetDecommissionedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">        <span class="nam">RunBoundPlanDeprecatedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t">        <span class="nam">RunSubjectNotMountableError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t">        <span class="nam">RunPlanAssetDecommissionedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t">        <span class="nam">RunCapabilitiesNotSatisfiedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t207" href="#t207">207</a></span><span class="t">        <span class="com"># Run-start safety-clearance gate (11a-c-3).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t208" href="#t208">208</a></span><span class="t">        <span class="nam">RunRequiresActiveClearanceError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -323,7 +323,7 @@
             <a class="nav" href="z_60fefeb57b18d243_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
     </div>
 </footer>

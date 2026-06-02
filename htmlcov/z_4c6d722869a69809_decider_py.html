@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_4c6d722869a69809_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -90,7 +90,7 @@
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">  - Status must be Active -> MountCannotDecommissionError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">    (re-decommission rejected).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">  - Mount.installed_asset_id must be None (slot must be vacant)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">    -> MountHasInstalledAssetError (operator must uninstall first;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">    -> MountHasAssetInstalledError (operator must uninstall first;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">    no implicit eviction per the design anti-hook).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">  - context.active_child_mount_ids must be empty</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">    -> MountHasActiveChildrenError (no cascade-decommission per the</span>&nbsp;</span><span class="r"></span></p>
@@ -104,7 +104,7 @@
     <p class="run run2"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">    <span class="nam">MountCannotDecommissionError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t">    <span class="nam">MountDecommissioned</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t">    <span class="nam">MountHasActiveChildrenError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">    <span class="nam">MountHasInstalledAssetError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">    <span class="nam">MountHasAssetInstalledError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">    <span class="nam">MountNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t">    <span class="nam">MountStatus</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -129,7 +129,7 @@
     <p class="run run2"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t">        <span class="key">raise</span> <span class="nam">MountCannotDecommissionError</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t">    <span class="key">if</span> <span class="nam">state</span><span class="op">.</span><span class="nam">installed_asset_id</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t">        <span class="key">raise</span> <span class="nam">MountHasInstalledAssetError</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">state</span><span class="op">.</span><span class="nam">installed_asset_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t">        <span class="key">raise</span> <span class="nam">MountHasAssetInstalledError</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">state</span><span class="op">.</span><span class="nam">installed_asset_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">    <span class="key">if</span> <span class="nam">context</span><span class="op">.</span><span class="nam">active_child_mount_ids</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">        <span class="key">raise</span> <span class="nam">MountHasActiveChildrenError</span><span class="op">(</span><span class="nam">state</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span> <span class="nam">context</span><span class="op">.</span><span class="nam">active_child_mount_ids</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">    <span class="key">return</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
@@ -148,7 +148,7 @@
             <a class="nav" href="z_4c6d722869a69809_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
     </div>
 </footer>

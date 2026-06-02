@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_68d5adacaaaf47a1_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -128,7 +128,7 @@
     <p class="pln"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t"><span class="str">    from the domain model so the two can evolve independently.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t"><span class="str">    `level`, `lifecycle`, and `condition` are the StrEnum string</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t"><span class="str">    values (PascalCase per the BC map). `parent_id` is null only for</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t"><span class="str">    Enterprise-level roots. `families` serializes as a sorted list</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t"><span class="str">    Enterprise-level roots. `family_ids` serializes as a sorted list</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="str">    of UUIDs (frozenset semantics in domain state, list at the JSON</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t"><span class="str">    boundary; sorted by UUID string form for response determinism).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t"><span class="str">    `settings` is the operator-supplied dict (operationally typed by</span>&nbsp;</span><span class="r"></span></p>
@@ -142,7 +142,7 @@
     <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">    <span class="nam">parent_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">    <span class="nam">lifecycle</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">    <span class="nam">condition</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="nam">families</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="nam">family_ids</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">    <span class="nam">settings</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="nam">ports</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">AssetPortDTO</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -195,7 +195,7 @@
     <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">        <span class="nam">parent_id</span><span class="op">=</span><span class="nam">asset</span><span class="op">.</span><span class="nam">parent_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">        <span class="nam">lifecycle</span><span class="op">=</span><span class="nam">asset</span><span class="op">.</span><span class="nam">lifecycle</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">        <span class="nam">condition</span><span class="op">=</span><span class="nam">asset</span><span class="op">.</span><span class="nam">condition</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">        <span class="nam">families</span><span class="op">=</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">asset</span><span class="op">.</span><span class="nam">families</span><span class="op">,</span> <span class="nam">key</span><span class="op">=</span><span class="nam">str</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">        <span class="nam">family_ids</span><span class="op">=</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">asset</span><span class="op">.</span><span class="nam">family_ids</span><span class="op">,</span> <span class="nam">key</span><span class="op">=</span><span class="nam">str</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">        <span class="nam">settings</span><span class="op">=</span><span class="nam">asset</span><span class="op">.</span><span class="nam">settings</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">        <span class="nam">ports</span><span class="op">=</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">            <span class="nam">AssetPortDTO</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -215,7 +215,7 @@
             <a class="nav" href="z_68d5adacaaaf47a1_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
     </div>
 </footer>

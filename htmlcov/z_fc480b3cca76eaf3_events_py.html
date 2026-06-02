@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_fc480b3cca76eaf3_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -98,7 +98,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">forcing readers to walk the prior event), and the incremental</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">family-set mutations (`AssetFamilyAdded` / `AssetFamilyRemoved`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">each carrying a single `family_id` that the evolver folds into the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">`families` frozenset as new techniques are commissioned or retired).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">`family_ids` frozenset as new techniques are commissioned or retired).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">`AssetDecommissioned`'s source set accepts both ACTIVE and</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">MAINTENANCE so a faulted asset can be retired without first being</span>&nbsp;</span><span class="r"></span></p>
@@ -236,7 +236,7 @@
     <p class="pln"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t"><span class="str">    as operators commission new techniques on the asset; each event</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t"><span class="str">    captures a single addition for clean audit trails ("when did this</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t"><span class="str">    asset gain XRF Mapping?"). The evolver inserts the family_id</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="str">    into `state.families` (frozenset semantics &#8594; no-op on</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="str">    into `state.family_ids` (frozenset semantics &#8594; no-op on</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t"><span class="str">    duplicate at the evolver layer; the decider's strict-not-idempotent</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t"><span class="str">    guard is what enforces "must not already be present" at command</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t"><span class="str">    time).</span>&nbsp;</span><span class="r"></span></p>
@@ -256,7 +256,7 @@
     <p class="pln"><span class="n"><a id="t172" href="#t172">172</a></span><span class="t">    <span class="str">"""A Family was removed from an asset's family set.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t173" href="#t173">173</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t174" href="#t174">174</a></span><span class="t"><span class="str">    Mirror of `AssetFamilyAdded`. Single-family event; the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t"><span class="str">    evolver removes the family_id from `state.families`. The</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t"><span class="str">    evolver removes the family_id from `state.family_ids`. The</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t176" href="#t176">176</a></span><span class="t"><span class="str">    decider's strict-not-idempotent guard enforces "must currently be</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t177" href="#t177">177</a></span><span class="t"><span class="str">    present" at command time.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t178" href="#t178">178</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
@@ -740,7 +740,7 @@
             <a class="nav" href="z_fc480b3cca76eaf3_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
     </div>
 </footer>

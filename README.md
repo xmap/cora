@@ -1498,7 +1498,7 @@
 | src/cora/trust/aggregates/visit/events.py                                    |      106 |        1 |       50 |        1 |     98.7% |       478 |
 | src/cora/trust/aggregates/visit/evolver.py                                   |       51 |        0 |       24 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/visit/read.py                                      |       20 |        7 |        2 |        0 |     59.1% |34-36, 64-74 |
-| src/cora/trust/aggregates/visit/state.py                                     |       87 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/aggregates/visit/state.py                                     |       95 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/zone/\_\_init\_\_.py                               |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/zone/events.py                                     |       24 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/zone/evolver.py                                    |       14 |        0 |        2 |        0 |    100.0% |           |
@@ -1510,25 +1510,25 @@
 | src/cora/trust/features/\_\_init\_\_.py                                      |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/abort\_visit/\_\_init\_\_.py                         |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/abort\_visit/command.py                              |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/abort\_visit/decider.py                              |       13 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/trust/features/abort\_visit/decider.py                              |       12 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/trust/features/abort\_visit/handler.py                              |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/abort\_visit/route.py                                |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/abort\_visit/tool.py                                 |       18 |        1 |        0 |        0 |     94.4% |        55 |
 | src/cora/trust/features/arrive\_visit/\_\_init\_\_.py                        |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/arrive\_visit/command.py                             |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/arrive\_visit/decider.py                             |       10 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/trust/features/arrive\_visit/decider.py                             |        9 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/trust/features/arrive\_visit/handler.py                             |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/arrive\_visit/route.py                               |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/arrive\_visit/tool.py                                |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/cancel\_visit/\_\_init\_\_.py                        |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/cancel\_visit/command.py                             |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/cancel\_visit/decider.py                             |       13 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/trust/features/cancel\_visit/decider.py                             |       12 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/trust/features/cancel\_visit/handler.py                             |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/cancel\_visit/route.py                               |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/cancel\_visit/tool.py                                |       18 |        1 |        0 |        0 |     94.4% |        55 |
 | src/cora/trust/features/check\_in\_to\_visit/\_\_init\_\_.py                 |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/check\_in\_to\_visit/command.py                      |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/check\_in\_to\_visit/decider.py                      |       13 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/trust/features/check\_in\_to\_visit/decider.py                      |       12 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/trust/features/check\_in\_to\_visit/handler.py                      |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/check\_in\_to\_visit/route.py                        |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/check\_in\_to\_visit/tool.py                         |       18 |        1 |        0 |        0 |     94.4% |        53 |
@@ -1540,7 +1540,7 @@
 | src/cora/trust/features/check\_out\_from\_visit/tool.py                      |       17 |        1 |        0 |        0 |     94.1% |        48 |
 | src/cora/trust/features/complete\_visit/\_\_init\_\_.py                      |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/complete\_visit/command.py                           |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/complete\_visit/decider.py                           |       10 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/trust/features/complete\_visit/decider.py                           |        9 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/trust/features/complete\_visit/handler.py                           |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/complete\_visit/route.py                             |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/complete\_visit/tool.py                              |       17 |        1 |        0 |        0 |     94.1% |        44 |
@@ -1580,7 +1580,7 @@
 | src/cora/trust/features/get\_surface/tool.py                                 |       21 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/trust/features/hold\_visit/\_\_init\_\_.py                          |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/hold\_visit/command.py                               |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/hold\_visit/decider.py                               |       13 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/trust/features/hold\_visit/decider.py                               |       12 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/trust/features/hold\_visit/handler.py                               |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/hold\_visit/route.py                                 |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/hold\_visit/tool.py                                  |       18 |        1 |        0 |        0 |     94.4% |        55 |
@@ -1620,13 +1620,13 @@
 | src/cora/trust/features/release\_control\_of\_surface/tool.py                |       17 |        1 |        0 |        0 |     94.1% |        54 |
 | src/cora/trust/features/resume\_visit/\_\_init\_\_.py                        |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/resume\_visit/command.py                             |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/resume\_visit/decider.py                             |       10 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/trust/features/resume\_visit/decider.py                             |        9 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/trust/features/resume\_visit/handler.py                             |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/resume\_visit/route.py                               |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/resume\_visit/tool.py                                |       17 |        1 |        0 |        0 |     94.1% |        45 |
 | src/cora/trust/features/start\_visit/\_\_init\_\_.py                         |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/start\_visit/command.py                              |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/start\_visit/decider.py                              |       10 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/trust/features/start\_visit/decider.py                              |        9 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/trust/features/start\_visit/handler.py                              |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/start\_visit/route.py                                |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/start\_visit/tool.py                                 |       17 |        1 |        0 |        0 |     94.1% |        44 |
@@ -1639,7 +1639,7 @@
 | src/cora/trust/features/take\_control\_of\_surface/tool.py                   |       17 |        1 |        0 |        0 |     94.1% |        54 |
 | src/cora/trust/features/void\_visit/\_\_init\_\_.py                          |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/void\_visit/command.py                               |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/void\_visit/decider.py                               |       13 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/trust/features/void\_visit/decider.py                               |       12 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/trust/features/void\_visit/handler.py                               |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/void\_visit/route.py                                 |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/void\_visit/tool.py                                  |       18 |        1 |        0 |        0 |     94.4% |        56 |
@@ -1650,10 +1650,10 @@
 | src/cora/trust/projections/visit.py                                          |       43 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/trust/projections/visit\_presence.py                                |       23 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/trust/projections/zone.py                                           |       14 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/trust/routes.py                                                     |       68 |        2 |       12 |        0 |     97.5% |   139-140 |
+| src/cora/trust/routes.py                                                     |       68 |        2 |       12 |        0 |     97.5% |   147-148 |
 | src/cora/trust/tools.py                                                      |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                       |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                    | **30522** |  **527** | **4008** |  **136** | **97.8%** |           |
+| **TOTAL**                                                                    | **30521** |  **527** | **4008** |  **136** | **97.8%** |           |
 
 
 ## Setup coverage badge

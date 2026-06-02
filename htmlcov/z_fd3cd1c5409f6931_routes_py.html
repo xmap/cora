@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_fd3cd1c5409f6931_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -90,7 +90,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">  - 400 (validation): Invalid&lt;X>...Error family + OverrideKindRequiresParentError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">                      + InvalidActorKindForDecisionError</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">  - 404: DecisionNotFoundError, DeciderActorNotFoundError, ParentDecisionNotFoundError</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">  - 404: DecisionNotFoundError, DeciderActorNotFoundError, DecisionParentNotFoundError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">  - 409 (defensive AlreadyExists): DecisionAlreadyExistsError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">  - 409 (logbook FSM): DecisionLogbookAlreadyOpenError, DecisionLogbookNotOpenError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -113,18 +113,18 @@
     <p class="run run2"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">    <span class="nam">DecisionLogbookAlreadyOpenError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">    <span class="nam">DecisionLogbookNotOpenError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">    <span class="nam">DecisionNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">    <span class="nam">InvalidDecisionAlternativesError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">    <span class="nam">InvalidDecisionChoiceError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">    <span class="nam">InvalidDecisionConfidenceError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">    <span class="nam">InvalidDecisionContextError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">    <span class="nam">InvalidDecisionInputsError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="nam">InvalidDecisionRatingCommentError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="nam">InvalidDecisionReasoningError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="nam">InvalidDecisionRuleError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">    <span class="nam">InvalidReasoningSignatureError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">    <span class="nam">ParentDecisionAgentMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t">    <span class="nam">ParentDecisionNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t">    <span class="nam">ParentDecisionRunMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">    <span class="nam">DecisionParentAgentMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">    <span class="nam">DecisionParentNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">    <span class="nam">DecisionParentRunMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">    <span class="nam">InvalidDecisionAlternativesError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">    <span class="nam">InvalidDecisionChoiceError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="nam">InvalidDecisionConfidenceError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="nam">InvalidDecisionContextError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="nam">InvalidDecisionInputsError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">    <span class="nam">InvalidDecisionRatingCommentError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">    <span class="nam">InvalidDecisionReasoningError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t">    <span class="nam">InvalidDecisionRuleError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t">    <span class="nam">InvalidReasoningSignatureError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">decision</span><span class="op">.</span><span class="nam">errors</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t">    <span class="nam">InvalidActorKindForDecisionError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -180,7 +180,7 @@
     <p class="pln"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="str">    cross-aggregate Missing*Error family too. Per the locked error</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t"><span class="str">    taxonomy `&lt;X>NotFoundError` is the canonical name (and HTTP 404</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t"><span class="str">    the canonical mapping) for "the referenced thing doesn't exist";</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="str">    the renamed `DeciderActorNotFoundError` / `ParentDecisionNotFoundError`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="str">    the renamed `DeciderActorNotFoundError` / `DecisionParentNotFoundError`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t"><span class="str">    now route through `_handle_not_found`. The only remaining 409-mapped</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t"><span class="str">    family is the logbook state-transition guards, hence the rename.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t"><span class="str">    Same JSON shape as before.</span>&nbsp;</span><span class="r"></span></p>
@@ -216,8 +216,8 @@
     <p class="run run2"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">        <span class="com"># aggregates/decision/state.py) so the HTTP mapping lives here;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t">        <span class="com"># FastAPI's app-scoped handler catches regardless of which BC's</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">        <span class="com"># route raises them. Agent BC's routes.py does NOT re-register.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">        <span class="nam">ParentDecisionAgentMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">        <span class="nam">ParentDecisionRunMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">        <span class="nam">DecisionParentAgentMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">        <span class="nam">DecisionParentRunMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">    <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t138" href="#t138">138</a></span><span class="t">        <span class="nam">app</span><span class="op">.</span><span class="nam">add_exception_handler</span><span class="op">(</span><span class="nam">validation_cls</span><span class="op">,</span> <span class="nam">_handle_validation_error</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">    <span class="key">for</span> <span class="nam">not_found_cls</span> <span class="key">in</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -225,7 +225,7 @@
     <p class="run run2"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t">        <span class="com"># Cross-aggregate references; canonical 404 mapping per the</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">        <span class="com"># locked `&lt;X>NotFoundError` &#8594; 404 taxonomy.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">        <span class="nam">DeciderActorNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">        <span class="nam">ParentDecisionNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">        <span class="nam">DecisionParentNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">    <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">        <span class="nam">app</span><span class="op">.</span><span class="nam">add_exception_handler</span><span class="op">(</span><span class="nam">not_found_cls</span><span class="op">,</span> <span class="nam">_handle_not_found</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">    <span class="key">for</span> <span class="nam">already_exists_cls</span> <span class="key">in</span> <span class="op">(</span><span class="nam">DecisionAlreadyExistsError</span><span class="op">,</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -247,7 +247,7 @@
             <a class="nav" href="z_fd3cd1c5409f6931_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-02 04:37 +0000
+            created at 2026-06-02 07:21 +0000
         </p>
     </div>
 </footer>
