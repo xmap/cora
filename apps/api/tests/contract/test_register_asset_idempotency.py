@@ -246,3 +246,118 @@ def test_post_assets_same_key_different_model_id_returns_422(
     assert r2.status_code == 422
     detail = r2.json().get("detail", "").lower()
     assert "idempotency-key" in detail
+
+
+# ---------- alternate_identifiers body field ----------
+
+
+@pytest.mark.contract
+def test_post_assets_with_alternate_identifiers_returns_201() -> None:
+    """Happy path: body carries optional alternate_identifiers list of
+    (kind, value) tuples; handler appends AssetRegistered and returns 201."""
+    body: dict[str, object] = {
+        "name": "APS-2BM-RotaryStage",
+        "level": "Device",
+        "parent_id": str(uuid4()),
+        "alternate_identifiers": [
+            {"kind": "SerialNumber", "value": "ANT130L-12345"},
+            {"kind": "InventoryNumber", "value": "APS-2BM-RS-001"},
+        ],
+    }
+    with TestClient(create_app()) as client:
+        response = client.post("/assets", json=body)
+
+    assert response.status_code == 201
+    UUID(response.json()["asset_id"])  # parses
+
+
+@pytest.mark.contract
+def test_post_assets_with_invalid_alternate_identifier_kind_returns_422() -> None:
+    """Pydantic enum validation: an unknown kind value fails schema
+    validation before the handler runs. ROR / GRID / ISNI deliberately
+    belong on Model.manufacturer.identifier_type, NOT on Asset
+    alternate identifiers."""
+    body: dict[str, object] = {
+        "name": "APS",
+        "level": "Site",
+        "parent_id": str(uuid4()),
+        "alternate_identifiers": [{"kind": "ROR", "value": "01y2jtd41"}],
+    }
+    with TestClient(create_app()) as client:
+        response = client.post("/assets", json=body)
+
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_assets_with_missing_alternate_identifier_value_returns_422() -> None:
+    """Pydantic min_length: a body that omits `value` from one of the
+    alternate-identifier entries fails schema validation."""
+    body: dict[str, object] = {
+        "name": "APS",
+        "level": "Site",
+        "parent_id": str(uuid4()),
+        "alternate_identifiers": [{"kind": "SerialNumber"}],
+    }
+    with TestClient(create_app()) as client:
+        response = client.post("/assets", json=body)
+
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_assets_with_alternate_identifiers_same_key_and_body_returns_same_asset_id() -> None:
+    """Idempotency-Key retry with identical body (including the
+    alternate_identifiers list) returns the cached asset_id."""
+    body: dict[str, object] = {
+        "name": "APS-2BM-RotaryStage",
+        "level": "Device",
+        "parent_id": str(uuid4()),
+        "alternate_identifiers": [
+            {"kind": "SerialNumber", "value": "ANT130L-12345"},
+        ],
+    }
+    headers = {"Idempotency-Key": "ak-alt"}
+    with TestClient(create_app()) as client:
+        r1 = client.post("/assets", json=body, headers=headers)
+        r2 = client.post("/assets", json=body, headers=headers)
+
+    assert r1.status_code == 201
+    assert r2.status_code == 201
+    assert r1.json()["asset_id"] == r2.json()["asset_id"]
+
+
+@pytest.mark.contract
+def test_post_assets_same_key_different_alternate_identifiers_returns_422() -> None:
+    """Same Idempotency-Key + same body EXCEPT for `alternate_identifiers`
+    surfaces as 422. The cross-BC `hash_command` includes the field
+    (RegisterAsset is a frozen dataclass; canonical hash covers every
+    field). Two distinct identifier sets under the same Idempotency-Key
+    must surface as a key/body conflict."""
+    parent = str(uuid4())
+    base_body: dict[str, object] = {
+        "name": "APS-2BM-RotaryStage",
+        "level": "Device",
+        "parent_id": parent,
+    }
+    body_a = {
+        **base_body,
+        "alternate_identifiers": [
+            {"kind": "SerialNumber", "value": "ANT130L-AAAA"},
+        ],
+    }
+    body_b = {
+        **base_body,
+        "alternate_identifiers": [
+            {"kind": "SerialNumber", "value": "ANT130L-BBBB"},
+        ],
+    }
+    headers = {"Idempotency-Key": "ak-alt-diff"}
+    with TestClient(create_app()) as client:
+        r1 = client.post("/assets", json=body_a, headers=headers)
+        r2 = client.post("/assets", json=body_b, headers=headers)
+
+    assert r1.status_code == 201
+    assert r2.status_code == 422
+    detail = r2.json().get("detail", "").lower()
+    assert "idempotency-key" in detail

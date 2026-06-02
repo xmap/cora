@@ -1,19 +1,25 @@
 """AssetSummaryProjection: folds the Asset aggregate's lifecycle +
-hierarchy + condition events into the `proj_equipment_asset_summary`
-read model that backs `GET /assets`.
+hierarchy + condition + alternate-identifier events into the
+`proj_equipment_asset_summary` read model that backs `GET /assets`.
 
 Subscribed events:
-  - AssetRegistered            -> INSERT (lifecycle=Commissioned,
-                                  condition=Nominal; level + parent_id
-                                  from payload)
-  - AssetActivated             -> UPDATE lifecycle=Active
-  - AssetDecommissioned        -> UPDATE lifecycle=Decommissioned
-  - AssetMaintenanceEntered    -> UPDATE lifecycle=Maintenance
-  - AssetMaintenanceExited     -> UPDATE lifecycle=Active
-  - AssetRelocated             -> UPDATE parent_id=to_parent_id
-  - AssetDegraded              -> UPDATE condition=Degraded
-  - AssetFaulted               -> UPDATE condition=Faulted
-  - AssetRestored              -> UPDATE condition=Nominal
+  - AssetRegistered                   -> INSERT (lifecycle=Commissioned,
+                                         condition=Nominal; level + parent_id
+                                         + drawing trio + model_id +
+                                         alternate_identifiers from payload)
+  - AssetActivated                    -> UPDATE lifecycle=Active
+  - AssetDecommissioned               -> UPDATE lifecycle=Decommissioned
+  - AssetMaintenanceEntered           -> UPDATE lifecycle=Maintenance
+  - AssetMaintenanceExited            -> UPDATE lifecycle=Active
+  - AssetRelocated                    -> UPDATE parent_id=to_parent_id
+  - AssetDegraded                     -> UPDATE condition=Degraded
+  - AssetFaulted                      -> UPDATE condition=Faulted
+  - AssetRestored                     -> UPDATE condition=Nominal
+  - AssetAlternateIdentifierAdded     -> UPDATE append (kind, value) into
+                                         alternate_identifiers JSONB array,
+                                         de-duplicated and re-sorted
+  - AssetAlternateIdentifierRemoved   -> UPDATE remove (kind, value) from
+                                         alternate_identifiers JSONB array
 
 NOT subscribed:
   - AssetFamilyAdded / AssetFamilyRemoved: these describe
@@ -21,8 +27,12 @@ NOT subscribed:
     feed the sibling `AssetFamilyMembershipProjection`
     (`proj_equipment_asset_family_membership`).
 
-All branches idempotent (INSERT uses ON CONFLICT DO NOTHING; UPDATEs
-write fixed values per event type so re-application is a no-op).
+All branches idempotent. INSERT uses ON CONFLICT DO NOTHING. UPDATEs
+for lifecycle / condition / parent write fixed values per event type so
+re-application is a no-op. The alternate-identifier add path dedupes
+(uniqueness keyed on the JSONB element identity); the remove path
+filters by (kind, value) so re-application is a no-op once the row is
+gone.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -30,7 +40,7 @@ write fixed values per event type so re-application is a no-op).
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 if TYPE_CHECKING:
@@ -43,8 +53,9 @@ _INSERT_ASSET_SQL = """
 INSERT INTO proj_equipment_asset_summary
     (asset_id, name, level, lifecycle, condition, parent_id,
      drawing_system, drawing_number, drawing_revision, model_id,
-     created_at)
-VALUES ($1, $2, $3, 'Commissioned', 'Nominal', $4, $5, $6, $7, $8, $9)
+     alternate_identifiers, created_at)
+VALUES ($1, $2, $3, 'Commissioned', 'Nominal', $4, $5, $6, $7, $8,
+        $9, $10)
 ON CONFLICT (asset_id) DO NOTHING
 """
 
@@ -66,6 +77,48 @@ SET condition = $2, updated_at = now()
 WHERE asset_id = $1
 """
 
+# Append-and-re-sort in a single SQL statement: union the existing
+# array with the new singleton, deduplicate on (kind, value), and
+# re-aggregate in canonical (kind, value) order so the column stays
+# byte-stable across replays. The DISTINCT ON pair matches the
+# (kind, value) identity declared by the AlternateIdentifier VO.
+_UPDATE_ALTERNATE_IDENTIFIER_ADDED_SQL = """
+UPDATE proj_equipment_asset_summary
+SET alternate_identifiers = COALESCE(
+        (
+            SELECT jsonb_agg(elem ORDER BY elem->>'kind', elem->>'value')
+            FROM (
+                SELECT DISTINCT ON (elem->>'kind', elem->>'value') elem
+                FROM jsonb_array_elements(
+                    alternate_identifiers || jsonb_build_array(
+                        jsonb_build_object('kind', $2::text, 'value', $3::text)
+                    )
+                ) AS elem
+                ORDER BY elem->>'kind', elem->>'value'
+            ) AS dedup
+        ),
+        '[]'::jsonb
+    ),
+    updated_at = now()
+WHERE asset_id = $1
+"""
+
+# Filter-out the matching (kind, value) element. Empty result collapses
+# to `[]` via COALESCE so the NOT NULL constraint holds.
+_UPDATE_ALTERNATE_IDENTIFIER_REMOVED_SQL = """
+UPDATE proj_equipment_asset_summary
+SET alternate_identifiers = COALESCE(
+        (
+            SELECT jsonb_agg(elem ORDER BY elem->>'kind', elem->>'value')
+            FROM jsonb_array_elements(alternate_identifiers) AS elem
+            WHERE NOT (elem->>'kind' = $2::text AND elem->>'value' = $3::text)
+        ),
+        '[]'::jsonb
+    ),
+    updated_at = now()
+WHERE asset_id = $1
+"""
+
 
 class AssetSummaryProjection:
     """Maintains the `proj_equipment_asset_summary` read model."""
@@ -82,6 +135,8 @@ class AssetSummaryProjection:
             "AssetDegraded",
             "AssetFaulted",
             "AssetRestored",
+            "AssetAlternateIdentifierAdded",
+            "AssetAlternateIdentifierRemoved",
         }
     )
 
@@ -103,6 +158,9 @@ class AssetSummaryProjection:
                 drawing_revision = drawing.get("revision") if drawing is not None else None
                 model_id_raw = event.payload.get("model_id")
                 model_id = UUID(model_id_raw) if model_id_raw else None
+                alternate_identifiers_list = _canonical_alternate_identifiers_list(
+                    event.payload.get("alternate_identifiers")
+                )
                 await conn.execute(
                     _INSERT_ASSET_SQL,
                     UUID(event.payload["asset_id"]),
@@ -113,6 +171,7 @@ class AssetSummaryProjection:
                     drawing_number,
                     drawing_revision,
                     model_id,
+                    alternate_identifiers_list,
                     datetime.fromisoformat(event.payload["occurred_at"]),
                 )
             case "AssetActivated" | "AssetMaintenanceExited":
@@ -133,6 +192,22 @@ class AssetSummaryProjection:
                 await self._update_condition(event, conn, "Faulted")
             case "AssetRestored":
                 await self._update_condition(event, conn, "Nominal")
+            case "AssetAlternateIdentifierAdded":
+                identifier = event.payload["alternate_identifier"]
+                await conn.execute(
+                    _UPDATE_ALTERNATE_IDENTIFIER_ADDED_SQL,
+                    UUID(event.payload["asset_id"]),
+                    identifier["kind"],
+                    identifier["value"],
+                )
+            case "AssetAlternateIdentifierRemoved":
+                identifier = event.payload["alternate_identifier"]
+                await conn.execute(
+                    _UPDATE_ALTERNATE_IDENTIFIER_REMOVED_SQL,
+                    UUID(event.payload["asset_id"]),
+                    identifier["kind"],
+                    identifier["value"],
+                )
             case _:
                 pass
 
@@ -159,6 +234,34 @@ class AssetSummaryProjection:
             UUID(event.payload["asset_id"]),
             new_condition,
         )
+
+
+def _canonical_alternate_identifiers_list(
+    raw: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Serialize the AssetRegistered payload's alternate_identifiers
+    into a canonical list of dicts the asyncpg jsonb codec can encode.
+
+    Sorted by (kind, value) so the same logical set produces the same
+    byte sequence on disk regardless of payload insertion order. Empty
+    or missing payload key produces `[]`. The events.py to_payload
+    already sorts at write time per the design memo; the projection
+    re-sorts defensively so a hand-crafted replay-fixture event with
+    out-of-order entries still lands canonical.
+
+    Returns a Python `list[dict]` rather than a pre-serialized JSON
+    string: the asyncpg pool registers a jsonb codec that runs
+    `json.dumps` on every parameter bound to a jsonb column. Passing
+    an already-stringified `"[]"` would be wrapped a second time into
+    a JSON-string scalar, breaking the partial GIN index's
+    `jsonb_array_length(alternate_identifiers) > 0` predicate.
+    """
+    if not raw:
+        return []
+    return sorted(
+        ({"kind": str(item["kind"]), "value": str(item["value"])} for item in raw),
+        key=lambda item: (item["kind"], item["value"]),
+    )
 
 
 _SELECT_ASSET_LIFECYCLE_SQL = """

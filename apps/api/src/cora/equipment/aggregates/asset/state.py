@@ -73,6 +73,7 @@ from cora.equipment.aggregates._drawing import Drawing
 from cora.infrastructure.bounded_text import validate_bounded_text
 
 ASSET_NAME_MAX_LENGTH = 200
+ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH = 200
 
 
 class AssetLevel(StrEnum):
@@ -197,6 +198,148 @@ class AssetPort:
         # use object.__setattr__ to install trimmed values.
         object.__setattr__(self, "name", trimmed_name)
         object.__setattr__(self, "signal_type", trimmed_signal)
+
+
+class AlternateIdentifierKind(StrEnum):
+    """Closed vocabulary for an Asset's alternate-identifier kind.
+
+    Values are verbatim from PIDINST v1.0 spec page 8 (Table 1)
+    Property 13 `alternateIdentifierType` controlled vocabulary:
+    SerialNumber, InventoryNumber, Other. Operationally:
+
+      - `SerialNumber` is the manufacturer's per-unit identifier
+        (the value engraved on the chassis or printed on the QR
+        sticker; for example, an Aerotech ANT130-L's `12345-ABC`).
+      - `InventoryNumber` is the facility-issued asset tag (for
+        example, an APS-issued `APS-2BM-CAM-001`).
+      - `Other` is the catch-all for vendor-specific or
+        unconventional identifier schemes that don't fit the prior
+        two; resolution is operator-supplied free text in the
+        `value` field.
+
+    Adding a fourth member is an additive enum change at a future
+    migration boundary. The closed-enum stance mirrors
+    `ManufacturerIdentifierType` (Model BC) and the broader
+    [[project-family-affordance-design]] closed-vocabulary
+    precedent. See [[project-asset-alternate-identifiers-design]]
+    Lock B for the design rationale.
+    """
+
+    SERIAL_NUMBER = "SerialNumber"
+    INVENTORY_NUMBER = "InventoryNumber"
+    OTHER = "Other"
+
+
+class InvalidAlternateIdentifierValueError(ValueError):
+    """The supplied alternate-identifier value is empty, whitespace-only, or too long."""
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Alternate identifier value must be 1-{ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH} "
+            f"chars after trimming (got: {value!r})"
+        )
+        self.value = value
+
+
+@dataclass(frozen=True)
+class AlternateIdentifier:
+    """A flat (kind, value) tuple identifying an Asset under an alternate scheme.
+
+    PIDINST v1.0 Property 13: instance-tier alternate identifiers
+    distinct from the PID-tier persistent identifier. Examples:
+
+      - `(SerialNumber, "12345-ABC")` for a manufacturer's serial
+      - `(InventoryNumber, "APS-2BM-CAM-001")` for a facility asset tag
+      - `(Other, "RIC-99")` for a legacy or vendor-specific scheme
+
+    `value` is trimmed and length-bounded 1-200 chars via the shared
+    `validate_bounded_text` helper, matching the
+    `ManufacturerIdentifier` precedent in the Model BC. The VO is
+    FLAT (kind + value); no scheme URIs, namespaces, or labels per
+    [[project-asset-alternate-identifiers-design]] Lock C. Pairing
+    uniqueness across Assets is NOT enforced in v1 (Lock F).
+    """
+
+    kind: AlternateIdentifierKind
+    value: str
+
+    def __post_init__(self) -> None:
+        trimmed = validate_bounded_text(
+            self.value,
+            max_length=ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
+            error_class=InvalidAlternateIdentifierValueError,
+        )
+        # Frozen dataclasses block normal assignment in __post_init__;
+        # use object.__setattr__ to install the trimmed value.
+        object.__setattr__(self, "value", trimmed)
+
+
+class AssetAlternateIdentifierAlreadyPresentError(Exception):
+    """Attempted to add an AlternateIdentifier already in the asset's set.
+
+    Strict-not-idempotent: same precedent as
+    `AssetCannotAddPortError` and `ModelFamilyAlreadyPresentError`.
+    The full `AlternateIdentifier` VO (kind + value) is carried for
+    diagnostics; uniqueness is keyed on the (kind, value) tuple at
+    the Asset scope ONLY (per
+    [[project-asset-alternate-identifiers-design]] Lock F, no
+    cross-Asset uniqueness in v1).
+    """
+
+    def __init__(self, asset_id: UUID, identifier: AlternateIdentifier) -> None:
+        super().__init__(
+            f"Asset {asset_id} already has alternate identifier "
+            f"{identifier.kind.value}={identifier.value!r}; "
+            "add_asset_alternate_identifier is strict-not-idempotent"
+        )
+        self.asset_id = asset_id
+        self.identifier = identifier
+
+
+class AssetAlternateIdentifierNotPresentError(Exception):
+    """Attempted to remove an AlternateIdentifier not in the asset's set.
+
+    Mirror of `AssetAlternateIdentifierAlreadyPresentError`.
+    Strict-not-idempotent: the decider rejects rather than no-ops on
+    a missing identifier. Same shape as `AssetCannotRemovePortError`
+    and `ModelFamilyNotPresentError`.
+    """
+
+    def __init__(self, asset_id: UUID, identifier: AlternateIdentifier) -> None:
+        super().__init__(
+            f"Asset {asset_id} does not have alternate identifier "
+            f"{identifier.kind.value}={identifier.value!r}; nothing to remove"
+        )
+        self.asset_id = asset_id
+        self.identifier = identifier
+
+
+class AssetCannotAddAlternateIdentifierError(Exception):
+    """Attempted to add / remove an AlternateIdentifier under a disqualifying lifecycle.
+
+    Used by BOTH `add_asset_alternate_identifier` and
+    `remove_asset_alternate_identifier` deciders: the lifecycle guard
+    (asset is `Decommissioned`) is symmetric across the add and
+    remove transitions; mirrors `AssetCannotAddPortError`'s
+    reason-bearing pattern. Operationally: a Decommissioned asset is
+    out of inventory and identifier changes are not permitted.
+    """
+
+    def __init__(
+        self,
+        asset_id: UUID,
+        kind: AlternateIdentifierKind,
+        value: str,
+        *,
+        reason: str,
+    ) -> None:
+        super().__init__(
+            f"Asset {asset_id} cannot mutate alternate identifier {kind.value}={value!r}: {reason}"
+        )
+        self.asset_id = asset_id
+        self.kind = kind
+        self.value = value
+        self.reason = reason
 
 
 class AssetCondition(StrEnum):
@@ -602,6 +745,18 @@ class Asset:
     Defaults to None; legacy AssetRegistered streams without the
     model_id field fold cleanly via the additive-state pattern.
 
+    `alternate_identifiers`: frozenset of PIDINST v1.0 Property 13
+    alternate identifiers (serial numbers, inventory tags, vendor-
+    specific schemes). Each entry is a flat `AlternateIdentifier`
+    VO (kind + value). Updated incrementally via
+    `add_asset_alternate_identifier` /
+    `remove_asset_alternate_identifier` slices; the optional
+    `alternate_identifiers` parameter at `register_asset` time
+    seeds the initial set. Defaults to empty frozenset; legacy
+    AssetRegistered streams without the field fold cleanly via the
+    additive-state pattern. See
+    [[project-asset-alternate-identifiers-design]] Locks A, D, E.
+
     Future additive facets: `owner`, `persistent_id`. The state-
     level fields land with defaults for the same forward-
     compatibility reason.
@@ -629,3 +784,11 @@ class Asset:
     ports: frozenset[AssetPort] = field(default_factory=frozenset[AssetPort])
     drawing: Drawing | None = None
     model_id: UUID | None = None
+    # frozenset[AlternateIdentifier] for PIDINST v1.0 Property 13
+    # alternate-identifier tuples. Same parametrized-callable trick
+    # as family_ids / ports — empty frozenset has no element type for
+    # pyright to infer under strict, so the parametrized callable is
+    # supplied as the factory.
+    alternate_identifiers: frozenset[AlternateIdentifier] = field(
+        default_factory=frozenset[AlternateIdentifier]
+    )

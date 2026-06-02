@@ -5,11 +5,16 @@ from uuid import uuid4
 import pytest
 
 from cora.equipment.aggregates.asset import (
+    AlternateIdentifier,
+    AlternateIdentifierKind,
     Asset,
+    AssetAlternateIdentifierAlreadyPresentError,
+    AssetAlternateIdentifierNotPresentError,
     AssetLevel,
     AssetLifecycle,
     AssetModelMismatchError,
     AssetName,
+    InvalidAlternateIdentifierValueError,
     InvalidAssetNameError,
 )
 
@@ -228,3 +233,241 @@ def test_asset_model_mismatch_is_exception() -> None:
         asset_family_ids=frozenset(),
     )
     assert isinstance(error, Exception)
+
+
+# ---------- AlternateIdentifierKind enum ----------
+
+
+@pytest.mark.unit
+def test_alternate_identifier_kind_has_pidinst_v1_vocabulary() -> None:
+    """Pin the closed vocabulary from PIDINST v1.0 spec page 8 Table 1
+    (Property 13 alternateIdentifierType). Adding / removing values
+    should be a deliberate change visible here. See Lock B in the
+    design memo."""
+    assert {kind.value for kind in AlternateIdentifierKind} == {
+        "SerialNumber",
+        "InventoryNumber",
+        "Other",
+    }
+
+
+@pytest.mark.unit
+def test_alternate_identifier_kind_values_are_pascalcase_strings() -> None:
+    assert AlternateIdentifierKind.SERIAL_NUMBER == "SerialNumber"
+    assert AlternateIdentifierKind.INVENTORY_NUMBER == "InventoryNumber"
+    assert AlternateIdentifierKind.OTHER == "Other"
+
+
+@pytest.mark.unit
+def test_alternate_identifier_kind_is_str_enum() -> None:
+    """StrEnum so JSON serialization works naturally without `.value`
+    access: the wire format carries the StrEnum value."""
+    assert isinstance(AlternateIdentifierKind.SERIAL_NUMBER, str)
+    assert AlternateIdentifierKind.SERIAL_NUMBER == "SerialNumber"
+
+
+@pytest.mark.unit
+def test_alternate_identifier_kind_round_trips_from_string() -> None:
+    """The events from_stored path reconstructs the enum from
+    payload strings via `AlternateIdentifierKind(payload['kind'])`."""
+    for kind in AlternateIdentifierKind:
+        assert AlternateIdentifierKind(kind.value) == kind
+
+
+# ---------- AlternateIdentifier VO ----------
+
+
+@pytest.mark.unit
+def test_alternate_identifier_constructs_with_valid_inputs() -> None:
+    identifier = AlternateIdentifier(
+        kind=AlternateIdentifierKind.SERIAL_NUMBER,
+        value="12345-ABC",
+    )
+    assert identifier.kind is AlternateIdentifierKind.SERIAL_NUMBER
+    assert identifier.value == "12345-ABC"
+
+
+@pytest.mark.unit
+def test_alternate_identifier_trims_value() -> None:
+    identifier = AlternateIdentifier(
+        kind=AlternateIdentifierKind.INVENTORY_NUMBER,
+        value="  APS-2BM-CAM-001  ",
+    )
+    assert identifier.value == "APS-2BM-CAM-001"
+
+
+@pytest.mark.unit
+def test_alternate_identifier_rejects_empty_value() -> None:
+    with pytest.raises(InvalidAlternateIdentifierValueError):
+        AlternateIdentifier(kind=AlternateIdentifierKind.OTHER, value="")
+
+
+@pytest.mark.unit
+def test_alternate_identifier_rejects_whitespace_only_value() -> None:
+    with pytest.raises(InvalidAlternateIdentifierValueError):
+        AlternateIdentifier(kind=AlternateIdentifierKind.OTHER, value="   \t\n   ")
+
+
+@pytest.mark.unit
+def test_alternate_identifier_rejects_too_long_value() -> None:
+    """Bound mirrors ManufacturerIdentifier (200 chars)."""
+    with pytest.raises(InvalidAlternateIdentifierValueError):
+        AlternateIdentifier(
+            kind=AlternateIdentifierKind.SERIAL_NUMBER,
+            value="x" * 201,
+        )
+
+
+@pytest.mark.unit
+def test_alternate_identifier_accepts_max_length_value() -> None:
+    identifier = AlternateIdentifier(
+        kind=AlternateIdentifierKind.SERIAL_NUMBER,
+        value="x" * 200,
+    )
+    assert len(identifier.value) == 200
+
+
+@pytest.mark.unit
+def test_alternate_identifier_is_frozen_and_hashable() -> None:
+    """Pinned: AlternateIdentifier is a frozen dataclass (hashable) so
+    instances can live in a frozenset on Asset state."""
+    from dataclasses import FrozenInstanceError
+
+    identifier = AlternateIdentifier(
+        kind=AlternateIdentifierKind.SERIAL_NUMBER,
+        value="abc",
+    )
+    s = {identifier}
+    assert identifier in s
+    with pytest.raises(FrozenInstanceError):
+        identifier.value = "xyz"  # type: ignore[misc]
+
+
+@pytest.mark.unit
+def test_alternate_identifier_equality_is_value_based() -> None:
+    """Two AlternateIdentifiers with the same (kind, value) tuple are
+    equal regardless of incoming whitespace."""
+    a = AlternateIdentifier(kind=AlternateIdentifierKind.OTHER, value="abc")
+    b = AlternateIdentifier(kind=AlternateIdentifierKind.OTHER, value="  abc  ")
+    assert a == b
+
+
+@pytest.mark.unit
+def test_alternate_identifier_different_kind_is_not_equal() -> None:
+    a = AlternateIdentifier(kind=AlternateIdentifierKind.SERIAL_NUMBER, value="123")
+    b = AlternateIdentifier(kind=AlternateIdentifierKind.INVENTORY_NUMBER, value="123")
+    assert a != b
+
+
+# ---------- Asset.alternate_identifiers field ----------
+
+
+@pytest.mark.unit
+def test_asset_alternate_identifiers_defaults_to_empty_frozenset() -> None:
+    """Additive-state pattern: legacy AssetRegistered streams without
+    alternate_identifiers fold cleanly to empty frozenset."""
+    asset = Asset(
+        id=uuid4(),
+        name=AssetName("X"),
+        level=AssetLevel.UNIT,
+        parent_id=uuid4(),
+    )
+    assert asset.alternate_identifiers == frozenset()
+
+
+@pytest.mark.unit
+def test_asset_alternate_identifiers_accepts_non_empty_set() -> None:
+    ident1 = AlternateIdentifier(kind=AlternateIdentifierKind.SERIAL_NUMBER, value="12345")
+    ident2 = AlternateIdentifier(kind=AlternateIdentifierKind.INVENTORY_NUMBER, value="APS-001")
+    asset = Asset(
+        id=uuid4(),
+        name=AssetName("X"),
+        level=AssetLevel.UNIT,
+        parent_id=uuid4(),
+        alternate_identifiers=frozenset({ident1, ident2}),
+    )
+    assert asset.alternate_identifiers == frozenset({ident1, ident2})
+
+
+# ---------- AssetAlternateIdentifierAlreadyPresentError ----------
+
+
+@pytest.mark.unit
+def test_asset_alternate_identifier_already_present_carries_asset_id_and_identifier() -> None:
+    asset_id = uuid4()
+    identifier = AlternateIdentifier(kind=AlternateIdentifierKind.SERIAL_NUMBER, value="12345-ABC")
+    error = AssetAlternateIdentifierAlreadyPresentError(asset_id=asset_id, identifier=identifier)
+    assert error.asset_id == asset_id
+    assert error.identifier == identifier
+
+
+@pytest.mark.unit
+def test_asset_alternate_identifier_already_present_message_quotes_kind_and_value() -> None:
+    asset_id = uuid4()
+    identifier = AlternateIdentifier(kind=AlternateIdentifierKind.SERIAL_NUMBER, value="12345-ABC")
+    error = AssetAlternateIdentifierAlreadyPresentError(asset_id=asset_id, identifier=identifier)
+    message = str(error)
+    assert str(asset_id) in message
+    assert "SerialNumber" in message
+    assert "12345-ABC" in message
+
+
+@pytest.mark.unit
+def test_asset_alternate_identifier_already_present_is_exception() -> None:
+    """Subclass of Exception so it can be raised / caught in the
+    cannot_transition_cls tuple in routes.py (strict-not-idempotent
+    family)."""
+    error = AssetAlternateIdentifierAlreadyPresentError(
+        asset_id=uuid4(),
+        identifier=AlternateIdentifier(kind=AlternateIdentifierKind.OTHER, value="x"),
+    )
+    assert isinstance(error, Exception)
+
+
+# ---------- AssetAlternateIdentifierNotPresentError ----------
+
+
+@pytest.mark.unit
+def test_asset_alternate_identifier_not_present_carries_asset_id_and_identifier() -> None:
+    asset_id = uuid4()
+    identifier = AlternateIdentifier(
+        kind=AlternateIdentifierKind.INVENTORY_NUMBER, value="APS-2BM-001"
+    )
+    error = AssetAlternateIdentifierNotPresentError(asset_id=asset_id, identifier=identifier)
+    assert error.asset_id == asset_id
+    assert error.identifier == identifier
+
+
+@pytest.mark.unit
+def test_asset_alternate_identifier_not_present_message_quotes_kind_and_value() -> None:
+    asset_id = uuid4()
+    identifier = AlternateIdentifier(
+        kind=AlternateIdentifierKind.INVENTORY_NUMBER, value="APS-2BM-001"
+    )
+    error = AssetAlternateIdentifierNotPresentError(asset_id=asset_id, identifier=identifier)
+    message = str(error)
+    assert str(asset_id) in message
+    assert "InventoryNumber" in message
+    assert "APS-2BM-001" in message
+
+
+@pytest.mark.unit
+def test_asset_alternate_identifier_not_present_is_exception() -> None:
+    error = AssetAlternateIdentifierNotPresentError(
+        asset_id=uuid4(),
+        identifier=AlternateIdentifier(kind=AlternateIdentifierKind.OTHER, value="x"),
+    )
+    assert isinstance(error, Exception)
+
+
+# ---------- InvalidAlternateIdentifierValueError ----------
+
+
+@pytest.mark.unit
+def test_invalid_alternate_identifier_value_error_quotes_raw_value() -> None:
+    """Error message echoes the original (untrimmed) value so the
+    caller sees exactly what they sent."""
+    with pytest.raises(InvalidAlternateIdentifierValueError) as excinfo:
+        AlternateIdentifier(kind=AlternateIdentifierKind.OTHER, value="   ")
+    assert excinfo.value.value == "   "
+    assert "   " in str(excinfo.value)

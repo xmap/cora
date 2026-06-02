@@ -1,4 +1,4 @@
-h1:sLm0yu7jixQpmCLHCYI8oZI9PNP+sfCTHQb3ibvfDbA=
+h1:kYa+Bu6EU3l53HTP5Afiap7Us/tBIb6QQJ1rDbYfgfM=
 20260509120000_init_events.sql h1:GmgCZKfaqXu1m96/cKAks2vhaLWTdEaHTLkFtUo9FXg=
 20260509170000_init_idempotency.sql h1:Nbu8DIE4Sv1WiHw3G22+tYffPhKc5Jryw3PMK8wB2zY=
 20260510010000_add_event_id.sql h1:RbtYP6uMnOB20zhJ9dNXUi4YVqbmlEzf562pmygnRW8=
@@ -93,3 +93,4 @@ h1:sLm0yu7jixQpmCLHCYI8oZI9PNP+sfCTHQb3ibvfDbA=
 20260602100000_drop_proj_equipment_model_summary_vendor_key_unique.sql h1:3zElIH2cC7y2mOyOmRgU+Asf3bsvfLtekrVH9mYnBqM=
 20260602110000_add_asset_summary_model.sql h1:6JNrSeL/whEo/ZQ6IlZs21RJ79BGcl0bR35nH0IhTGc=
 20260602110000_rename_proj_equipment_mount_lookup_to_mount_slot_code.sql h1:AGBAc0XP1TXK04PIFKavYe0buGgonSFMbL9MxYyr7bk=
+20260603100000_add_asset_summary_alternate_identifiers.sql h1:AN5+vlPuBabUVWF+/nyPtqT7AnnSGIJRsqXxl1r4/Xk=

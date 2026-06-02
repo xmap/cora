@@ -39,7 +39,10 @@ from cora.equipment.aggregates._drawing import InvalidDrawingError
 from cora.equipment.aggregates._placement import InvalidPlacementError
 from cora.equipment.aggregates.asset import (
     AssetAlreadyExistsError,
+    AssetAlternateIdentifierAlreadyPresentError,
+    AssetAlternateIdentifierNotPresentError,
     AssetCannotActivateError,
+    AssetCannotAddAlternateIdentifierError,
     AssetCannotAddFamilyError,
     AssetCannotAddPortError,
     AssetCannotDecommissionError,
@@ -50,6 +53,7 @@ from cora.equipment.aggregates.asset import (
     AssetCannotRemovePortError,
     AssetModelMismatchError,
     AssetNotFoundError,
+    InvalidAlternateIdentifierValueError,
     InvalidAssetNameError,
     InvalidAssetParentError,
     InvalidAssetPortNameError,
@@ -112,6 +116,7 @@ from cora.equipment.aggregates.mount import (
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features import (
     activate_asset,
+    add_asset_alternate_identifier,
     add_asset_family,
     add_asset_port,
     add_model_family,
@@ -137,6 +142,7 @@ from cora.equipment.features import (
     register_frame,
     register_mount,
     relocate_asset,
+    remove_asset_alternate_identifier,
     remove_asset_family,
     remove_asset_port,
     remove_model_family,
@@ -244,6 +250,8 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(update_asset_settings.router)
     app.include_router(add_asset_port.router)
     app.include_router(remove_asset_port.router)
+    app.include_router(add_asset_alternate_identifier.router)
+    app.include_router(remove_asset_alternate_identifier.router)
     app.include_router(get_asset.router)
     app.include_router(get_asset_integration_view.router)
     app.include_router(list_assets.router)
@@ -267,6 +275,7 @@ def register_equipment_routes(app: FastAPI) -> None:
         InvalidAssetPortNameError,
         InvalidAssetPortSignalTypeError,
         InvalidAssetSettingsError,
+        InvalidAlternateIdentifierValueError,
         InvalidFrameNameError,
         InvalidFrameRevisionError,
         InvalidFrameRootError,
@@ -310,6 +319,9 @@ def register_equipment_routes(app: FastAPI) -> None:
         AssetCannotRemoveFamilyError,
         AssetCannotAddPortError,
         AssetCannotRemovePortError,
+        AssetAlternateIdentifierAlreadyPresentError,
+        AssetAlternateIdentifierNotPresentError,
+        AssetCannotAddAlternateIdentifierError,
         AssetModelMismatchError,
         FamilyCannotVersionError,
         FamilyCannotDeprecateError,

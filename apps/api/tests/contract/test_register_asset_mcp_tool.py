@@ -320,3 +320,69 @@ def test_mcp_register_asset_tool_omits_model_id_arg_remains_201_path() -> None:
     result = body["result"]
     assert result["isError"] is False
     UUID(result["structuredContent"]["asset_id"])  # parses
+
+
+# ---------- alternate_identifiers arg ----------
+
+
+@pytest.mark.contract
+def test_mcp_register_asset_tool_accepts_alternate_identifiers_arg() -> None:
+    """Happy path: alternate_identifiers arg with one (kind, value) entry
+    returns a structured asset_id. The MCP tool mirrors the REST body
+    schema; the closed-enum kind is enforced at the FastMCP arg layer."""
+    with TestClient(create_app()) as client:
+        session_headers = open_session(client)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 12,
+                "method": "tools/call",
+                "params": {
+                    "name": "register_asset",
+                    "arguments": {
+                        "name": "APS-2BM-RotaryStage",
+                        "level": "Device",
+                        "parent_id": str(uuid4()),
+                        "alternate_identifiers": [
+                            {"kind": "SerialNumber", "value": "ANT130L-12345"},
+                            {"kind": "InventoryNumber", "value": "APS-2BM-RS-001"},
+                        ],
+                    },
+                },
+            },
+            headers=session_headers,
+        )
+    body = parse_sse_data(response.text)
+    result = body["result"]
+    assert result["isError"] is False
+    UUID(result["structuredContent"]["asset_id"])  # parses
+
+
+@pytest.mark.contract
+def test_mcp_register_asset_tool_returns_iserror_on_invalid_alternate_identifier_kind() -> None:
+    """An unknown `kind` value (for example, ROR which lives on Model
+    not Asset) surfaces as isError before the handler runs. The closed
+    StrEnum vocabulary is enforced at the FastMCP arg layer."""
+    with TestClient(create_app()) as client:
+        session_headers = open_session(client)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 13,
+                "method": "tools/call",
+                "params": {
+                    "name": "register_asset",
+                    "arguments": {
+                        "name": "APS",
+                        "level": "Site",
+                        "parent_id": str(uuid4()),
+                        "alternate_identifiers": [{"kind": "ROR", "value": "01y2jtd41"}],
+                    },
+                },
+            },
+            headers=session_headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is True

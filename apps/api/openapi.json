@@ -223,6 +223,28 @@
         "title": "ActorSummaryDTO",
         "type": "object"
       },
+      "AddAssetAlternateIdentifierRequest": {
+        "description": "Body for `POST /assets/{asset_id}/add-alternate-identifier`.\n\nBoth fields required. Pydantic enforces non-empty value at the\nboundary; the `AlternateIdentifier` VO then trims and re-validates\nlength within the decider (the VO construction site).",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/AlternateIdentifierKind",
+            "description": "Identifier kind from the PIDINST v1.0 controlled vocabulary: 'SerialNumber', 'InventoryNumber', or 'Other'."
+          },
+          "value": {
+            "description": "Identifier value (free text, trimmed, 1-200 chars). Uniqueness keyed on the (kind, value) pair at the Asset scope ONLY; cross-Asset duplicates are NOT rejected in v1.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "AddAssetAlternateIdentifierRequest",
+        "type": "object"
+      },
       "AddAssetFamilyRequest": {
         "description": "Body for `POST /assets/{asset_id}/add-family`.\n\nEventual-consistency: `family_id` is NOT verified against the\nFamily stream at decide time; mismatch surfaces at Plan\nbinding (6e).",
         "properties": {
@@ -537,6 +559,38 @@
           "Deprecated"
         ],
         "title": "AgentStatus",
+        "type": "string"
+      },
+      "AlternateIdentifierBody": {
+        "description": "Wire format for an `AlternateIdentifier` value object.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/AlternateIdentifierKind",
+            "description": "Closed PIDINST v1.0 vocabulary: SerialNumber (manufacturer per-unit identifier), InventoryNumber (facility asset tag), or Other (vendor-specific or unconventional scheme)."
+          },
+          "value": {
+            "description": "Operator-supplied opaque string identifying the Asset under the given scheme. Trimmed at the domain boundary.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "AlternateIdentifierBody",
+        "type": "object"
+      },
+      "AlternateIdentifierKind": {
+        "description": "Closed vocabulary for an Asset's alternate-identifier kind.\n\nValues are verbatim from PIDINST v1.0 spec page 8 (Table 1)\nProperty 13 `alternateIdentifierType` controlled vocabulary:\nSerialNumber, InventoryNumber, Other. Operationally:\n\n  - `SerialNumber` is the manufacturer's per-unit identifier\n    (the value engraved on the chassis or printed on the QR\n    sticker; for example, an Aerotech ANT130-L's `12345-ABC`).\n  - `InventoryNumber` is the facility-issued asset tag (for\n    example, an APS-issued `APS-2BM-CAM-001`).\n  - `Other` is the catch-all for vendor-specific or\n    unconventional identifier schemes that don't fit the prior\n    two; resolution is operator-supplied free text in the\n    `value` field.\n\nAdding a fourth member is an additive enum change at a future\nmigration boundary. The closed-enum stance mirrors\n`ManufacturerIdentifierType` (Model BC) and the broader\n[[project-family-affordance-design]] closed-vocabulary\nprecedent. See [[project-asset-alternate-identifiers-design]]\nLock B for the design rationale.",
+        "enum": [
+          "SerialNumber",
+          "InventoryNumber",
+          "Other"
+        ],
+        "title": "AlternateIdentifierKind",
         "type": "string"
       },
       "AmendClearanceRequest": {
@@ -7699,6 +7753,21 @@
       "RegisterAssetRequest": {
         "description": "Body for `POST /assets`.\n\n`level` accepts the StrEnum's PascalCase string values\n(\"Enterprise\" / \"Site\" / \"Area\" / \"Unit\" / \"Assembly\" /\n\"Device\"); Pydantic rejects unknowns with 422.\n\n`parent_id` is required for non-Enterprise levels and must be\nnull for Enterprise; that's a domain invariant enforced by\nthe decider (raises InvalidAssetParentError \u2192 400), not by\nPydantic, since the rule is conditional on `level`.",
         "properties": {
+          "alternate_identifiers": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AlternateIdentifierBody"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional PIDINST v1.0 Property 13 alternate-identifier tuples (operator-supplied serial numbers, inventory tags, vendor-specific schemes) seeded at registration. Each entry is a flat (kind, value) pair; kind is closed vocabulary SerialNumber | InventoryNumber | Other. Cross-Asset uniqueness on (kind, value) is NOT enforced in v1.",
+            "title": "Alternate Identifiers"
+          },
           "drawing": {
             "anyOf": [
               {
@@ -8869,6 +8938,28 @@
           "reason"
         ],
         "title": "RelocateAssetRequest",
+        "type": "object"
+      },
+      "RemoveAssetAlternateIdentifierRequest": {
+        "description": "Body for `POST /assets/{asset_id}/remove-alternate-identifier`.\n\nBoth fields required. Pydantic enforces non-empty value at the\nboundary; the AlternateIdentifier VO then trims and re-validates\nlength within the decider.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/AlternateIdentifierKind",
+            "description": "Identifier kind from the PIDINST v1.0 controlled vocabulary: 'SerialNumber', 'InventoryNumber', or 'Other'."
+          },
+          "value": {
+            "description": "Identifier value (free text, trimmed, 1-200 chars). Matched against the asset's stored alternate identifiers by exact (kind, value) pair.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "RemoveAssetAlternateIdentifierRequest",
         "type": "object"
       },
       "RemoveAssetFamilyRequest": {
@@ -13435,7 +13526,7 @@
                 }
               }
             },
-            "description": "Domain invariant violated: whitespace-only name, hierarchy rule (Enterprise must have null parent_id; other levels must have non-null parent_id), or invalid Drawing (empty number, overlong revision, etc.)."
+            "description": "Domain invariant violated: whitespace-only name, hierarchy rule (Enterprise must have null parent_id; other levels must have non-null parent_id), invalid Drawing (empty number, overlong revision, etc.), or invalid AlternateIdentifier value (empty after trimming, exceeds 200 chars)."
           },
           "403": {
             "content": {
@@ -13616,6 +13707,106 @@
           }
         },
         "summary": "Activate an existing (Commissioned) asset, putting it into service",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/assets/{asset_id}/add-alternate-identifier": {
+      "post": {
+        "operationId": "post_assets_add_alternate_identifier_assets__asset_id__add_alternate_identifier_post",
+        "parameters": [
+          {
+            "description": "Target asset's id.",
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "description": "Target asset's id.",
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddAssetAlternateIdentifierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Identifier value is empty / whitespace-only / exceeds the configured max length after trimming (InvalidAlternateIdentifierValueError)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No asset exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Asset cannot accept the alternate identifier under current conditions (asset is Decommissioned, OR an alternate identifier with the same (kind, value) pair already exists on the asset), OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation (missing field, invalid kind enum, etc.)."
+          }
+        },
+        "summary": "Add an alternate identifier to an existing Asset's identifier set",
         "tags": [
           "equipment"
         ]
@@ -14414,6 +14605,106 @@
           }
         },
         "summary": "Move an existing asset under a new parent in the hierarchy",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/assets/{asset_id}/remove-alternate-identifier": {
+      "post": {
+        "operationId": "post_assets_remove_alternate_identifier_assets__asset_id__remove_alternate_identifier_post",
+        "parameters": [
+          {
+            "description": "Target asset's id.",
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "description": "Target asset's id.",
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveAssetAlternateIdentifierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Identifier value is empty / whitespace-only / exceeds the configured max length after trimming (InvalidAlternateIdentifierError)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No asset exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No alternate identifier with the same (kind, value) pair exists on the asset (strict-not-idempotent), OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation (missing field, invalid kind enum, etc.)."
+          }
+        },
+        "summary": "Remove an alternate identifier from an existing Asset's identifier set",
         "tags": [
           "equipment"
         ]

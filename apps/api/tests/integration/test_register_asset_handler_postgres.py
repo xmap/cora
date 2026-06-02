@@ -13,6 +13,8 @@ inside the register_asset handler against the real Postgres event
 store.
 """
 
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -21,6 +23,8 @@ import pytest
 
 from cora.equipment._projections import register_equipment_projections
 from cora.equipment.aggregates.asset import (
+    AlternateIdentifier,
+    AlternateIdentifierKind,
     AssetLevel,
     AssetLifecycle,
     AssetName,
@@ -194,6 +198,105 @@ async def test_register_asset_persists_model_binding_to_postgres(
     assert state.name == AssetName("APS-2BM-Det")
     assert state.model_id == model_id
     assert state.lifecycle is AssetLifecycle.COMMISSIONED
+
+
+@pytest.mark.integration
+async def test_register_asset_persists_alternate_identifiers_to_postgres(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Seed a Family + Model, then register an Asset bound to that Model
+    with two `alternate_identifiers` entries. The AssetRegistered payload
+    must carry the list (sorted by (kind, value) per the canonical wire
+    shape); the projection row must materialize the same list into the
+    `alternate_identifiers` JSONB column; folded Asset state must round-
+    trip the frozenset."""
+    family_id = UUID("01900000-0000-7000-8000-000000054fa1")
+    family_event_id = UUID("01900000-0000-7000-8000-000000054fae")
+    model_id = UUID("01900000-0000-7000-8000-00000054fb01")
+    model_event_id = UUID("01900000-0000-7000-8000-00000054fb0e")
+    asset_id = UUID("01900000-0000-7000-8000-00000054fc01")
+    asset_event_id = UUID("01900000-0000-7000-8000-00000054fc0e")
+    parent_id = UUID("01900000-0000-7000-8000-00000054fc00")
+
+    serial = AlternateIdentifier(kind=AlternateIdentifierKind.SERIAL_NUMBER, value="ANT130L-12345")
+    inventory = AlternateIdentifier(
+        kind=AlternateIdentifierKind.INVENTORY_NUMBER, value="APS-2BM-RS-001"
+    )
+    identifiers = frozenset({serial, inventory})
+
+    deps = build_postgres_deps(
+        db_pool,
+        now=_NOW,
+        ids=[
+            family_id,
+            family_event_id,
+            model_id,
+            model_event_id,
+            asset_id,
+            asset_event_id,
+        ],
+    )
+    await define_family.bind(deps)(
+        DefineFamily(name="ContinuousRotationTomography", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain_equipment_projections(db_pool)
+    await define_model.bind(deps)(
+        DefineModel(
+            name="ANT130L",
+            manufacturer=Manufacturer(name=ManufacturerName("Aerotech")),
+            part_number="ANT130L-G10",
+            declared_families=frozenset({family_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    returned_asset_id = await register_asset.bind(deps)(
+        RegisterAsset(
+            name="APS-2BM-RotaryStage",
+            level=AssetLevel.DEVICE,
+            parent_id=parent_id,
+            model_id=model_id,
+            alternate_identifiers=identifiers,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert returned_asset_id == asset_id
+
+    events, version = await deps.event_store.load("Asset", asset_id)
+    assert version == 1
+    stored = events[0]
+    assert stored.event_type == "AssetRegistered"
+    payload_alt_ids = stored.payload["alternate_identifiers"]
+    assert payload_alt_ids == [
+        {"kind": "InventoryNumber", "value": "APS-2BM-RS-001"},
+        {"kind": "SerialNumber", "value": "ANT130L-12345"},
+    ]
+
+    # Round-trip: load_asset folds back to the expected state.
+    state = await load_asset(deps.event_store, asset_id)
+    assert state is not None
+    assert state.alternate_identifiers == identifiers
+
+    # Projection: drain the AssetRegistered event into
+    # proj_equipment_asset_summary and verify the JSONB column carries
+    # the same canonical sorted list.
+    await _drain_equipment_projections(db_pool)
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT alternate_identifiers FROM proj_equipment_asset_summary WHERE asset_id = $1",
+            asset_id,
+        )
+    assert row is not None
+    # The pool init callback registers a jsonb codec that decodes the
+    # column straight to a Python list; no json.loads needed here.
+    assert row["alternate_identifiers"] == [
+        {"kind": "InventoryNumber", "value": "APS-2BM-RS-001"},
+        {"kind": "SerialNumber", "value": "ANT130L-12345"},
+    ]
 
 
 @pytest.mark.integration

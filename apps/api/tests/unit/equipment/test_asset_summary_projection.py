@@ -56,6 +56,8 @@ def test_projection_metadata() -> None:
             "AssetDegraded",
             "AssetFaulted",
             "AssetRestored",
+            "AssetAlternateIdentifierAdded",
+            "AssetAlternateIdentifierRemoved",
         }
     )
 
@@ -104,7 +106,15 @@ async def test_asset_registered_inserts_with_commissioned_lifecycle_and_parent()
     assert args.args[7] is None
     # model_id omitted from payload: column folds to NULL.
     assert args.args[8] is None
-    assert args.args[9] == _NOW
+    # alternate_identifiers omitted from payload: column folds to []
+    # (NOT NULL DEFAULT '[]'::jsonb on the column, but the projection
+    # writes the canonical empty list so the row's payload is
+    # explicit and replays remain deterministic). The asyncpg pool
+    # registers a jsonb codec that runs json.dumps on every parameter
+    # bound to a jsonb column, so the projection passes a Python list
+    # directly instead of a pre-serialized JSON string.
+    assert args.args[9] == []
+    assert args.args[10] == _NOW
 
 
 @pytest.mark.unit
@@ -396,3 +406,160 @@ async def test_condition_event_does_not_carry_reason_into_sql_args() -> None:
     args = conn.execute.await_args
     assert args is not None
     assert "long detailed reason" not in str(args.args)
+
+
+# ---------- alternate identifiers ----------
+
+
+@pytest.mark.unit
+async def test_asset_registered_with_alternate_identifiers_writes_sorted_list() -> None:
+    """AssetRegistered carrying alternate_identifiers in the payload
+    serializes to a canonical sorted list of dicts in the new column.
+    Sort key is (kind, value); the projection re-sorts defensively so
+    a hand-crafted out-of-order payload still lands canonical. The
+    asyncpg pool's jsonb codec turns the list into JSON at parameter
+    bind time, so the projection passes the Python list directly."""
+    proj = AssetSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(_ASSET_ID),
+            "name": "specimen-with-tags",
+            "level": "Device",
+            "parent_id": str(_PARENT_ID),
+            "occurred_at": _NOW.isoformat(),
+            # Intentionally out-of-order to exercise the defensive sort.
+            "alternate_identifiers": [
+                {"kind": "SerialNumber", "value": "SN-002"},
+                {"kind": "InventoryNumber", "value": "ANL-12345"},
+                {"kind": "SerialNumber", "value": "SN-001"},
+            ],
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[9] == [
+        {"kind": "InventoryNumber", "value": "ANL-12345"},
+        {"kind": "SerialNumber", "value": "SN-001"},
+        {"kind": "SerialNumber", "value": "SN-002"},
+    ]
+
+
+@pytest.mark.unit
+async def test_asset_registered_with_empty_alternate_identifiers_writes_empty_list() -> None:
+    """An explicit empty list in the payload still serializes to the
+    canonical empty Python list (matches the omit-the-key branch)."""
+    proj = AssetSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(_ASSET_ID),
+            "name": "specimen",
+            "level": "Device",
+            "parent_id": str(_PARENT_ID),
+            "occurred_at": _NOW.isoformat(),
+            "alternate_identifiers": [],
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[9] == []
+
+
+@pytest.mark.unit
+async def test_alternate_identifier_added_updates_jsonb_column() -> None:
+    """The Added event triggers a JSONB-array UPDATE that appends the
+    (kind, value) pair into the alternate_identifiers column. Dedupe +
+    re-sort happen server-side via the SQL statement; the projection
+    pulls kind + value out of the nested `alternate_identifier` payload
+    object (mirrors the events.py to_payload wire shape)."""
+    proj = AssetSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "AssetAlternateIdentifierAdded",
+        {
+            "asset_id": str(_ASSET_ID),
+            "alternate_identifier": {"kind": "SerialNumber", "value": "SN-007"},
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    conn.execute.assert_awaited_once()
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "UPDATE proj_equipment_asset_summary" in sql
+    assert "SET alternate_identifiers" in sql
+    # Dedupe (DISTINCT ON) + canonical sort (ORDER BY) are both in the
+    # statement so a re-replay folds to a no-op at the DB layer.
+    assert "DISTINCT ON" in sql
+    assert "ORDER BY" in sql
+    assert args.args[1] == _ASSET_ID
+    assert args.args[2] == "SerialNumber"
+    assert args.args[3] == "SN-007"
+
+
+@pytest.mark.unit
+async def test_alternate_identifier_removed_updates_jsonb_column() -> None:
+    """The Removed event filters out the matching (kind, value) element
+    from the alternate_identifiers JSONB array. The statement uses
+    COALESCE so an array that collapses to empty stays `[]` (NOT NULL
+    column)."""
+    proj = AssetSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "AssetAlternateIdentifierRemoved",
+        {
+            "asset_id": str(_ASSET_ID),
+            "alternate_identifier": {"kind": "InventoryNumber", "value": "ANL-12345"},
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    conn.execute.assert_awaited_once()
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "UPDATE proj_equipment_asset_summary" in sql
+    assert "SET alternate_identifiers" in sql
+    assert "COALESCE" in sql
+    assert args.args[1] == _ASSET_ID
+    assert args.args[2] == "InventoryNumber"
+    assert args.args[3] == "ANL-12345"
+
+
+@pytest.mark.unit
+async def test_alternate_identifier_added_with_other_kind_passes_through() -> None:
+    """`Other` is a valid third value in the AlternateIdentifierKind
+    closed StrEnum (verbatim from PIDINST v1.0 Table 1). The projection
+    is enum-agnostic: kind is just a string at this layer; the domain
+    side guards the closed set."""
+    proj = AssetSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "AssetAlternateIdentifierAdded",
+        {
+            "asset_id": str(_ASSET_ID),
+            "alternate_identifier": {"kind": "Other", "value": "operator-tag-2026-Q2"},
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[2] == "Other"
+    assert args.args[3] == "operator-tag-2026-Q2"

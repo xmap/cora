@@ -33,6 +33,7 @@ from uuid import UUID
 
 from cora.equipment.features import (
     activate_asset,
+    add_asset_alternate_identifier,
     add_asset_family,
     add_asset_port,
     add_model_family,
@@ -58,6 +59,7 @@ from cora.equipment.features import (
     register_frame,
     register_mount,
     relocate_asset,
+    remove_asset_alternate_identifier,
     remove_asset_family,
     remove_asset_port,
     remove_model_family,
@@ -130,6 +132,8 @@ class EquipmentHandlers:
     update_asset_settings: update_asset_settings.Handler
     add_asset_port: add_asset_port.Handler
     remove_asset_port: remove_asset_port.Handler
+    add_asset_alternate_identifier: add_asset_alternate_identifier.Handler
+    remove_asset_alternate_identifier: remove_asset_alternate_identifier.Handler
     get_asset: get_asset.Handler
     get_asset_integration_view: get_asset_integration_view.Handler
     list_assets: list_assets.Handler
@@ -307,6 +311,16 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
         remove_asset_port=with_tracing(
             remove_asset_port.bind(deps),
             command_name="RemoveAssetPort",
+            bc=_BC,
+        ),
+        add_asset_alternate_identifier=with_tracing(
+            add_asset_alternate_identifier.bind(deps),
+            command_name="AddAssetAlternateIdentifier",
+            bc=_BC,
+        ),
+        remove_asset_alternate_identifier=with_tracing(
+            remove_asset_alternate_identifier.bind(deps),
+            command_name="RemoveAssetAlternateIdentifier",
             bc=_BC,
         ),
         get_asset=with_tracing(

@@ -1,6 +1,6 @@
-"""End-to-end: the Asset.drawing additive widen lands in
-proj_equipment_asset_summary's drawing_system / drawing_number /
-drawing_revision columns against real Postgres.
+"""End-to-end: the Asset.drawing + Asset.model_id +
+Asset.alternate_identifiers additive widens land in
+proj_equipment_asset_summary against real Postgres.
 
 The Asset aggregate carries an optional Drawing VO captured at
 registration. The projection unfolds the Drawing into three nullable
@@ -11,9 +11,16 @@ simple WHERE. The migration is a pure ADD COLUMN with NULL default;
 legacy AssetRegistered events without the drawing payload key fold
 to all-NULL.
 
+The alternate_identifiers JSONB column carries PIDINST v1.0 Property 13
+identifiers (SerialNumber / InventoryNumber / Other; verbatim closed
+StrEnum). Stored as a sorted list of `{"kind", "value"}` objects with
+a partial GIN index for future find-by-serial lookups. The Added /
+Removed handlers mutate the array server-side via SQL so dedupe and
+canonical sort are guaranteed regardless of replay order.
+
 Pins:
-  - register_asset with NO drawing -> 3 columns NULL
-  - register_asset with drawing including revision -> 3 columns
+  - register_asset with NO drawing -> 3 drawing columns NULL
+  - register_asset with drawing including revision -> 3 drawing columns
     populated (system, number, revision)
   - register_asset with drawing omitting revision -> revision NULL,
     other two populated
@@ -21,6 +28,13 @@ Pins:
     written directly via SQL (defense-in-depth pin)
   - AssetRegistered with model_id in the payload lands in the new
     model_id column; legacy events without the key fold to NULL
+  - AssetRegistered with alternate_identifiers in the payload lands in
+    the JSONB column, sorted by (kind, value); legacy events without
+    the key fold to '[]' via the column default
+  - AssetAlternateIdentifierAdded appends + sorts + dedupes the JSONB
+    array; re-replay is a no-op (idempotency pin)
+  - AssetAlternateIdentifierRemoved filters out the matching element;
+    re-replay against a row missing that element is a no-op
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -244,3 +258,328 @@ async def test_asset_registered_without_model_id_leaves_model_column_null(
         )
     assert row is not None
     assert row["model_id"] is None
+
+
+# ---------- alternate identifiers ----------
+
+
+async def _append_alternate_identifier_event(
+    pool: asyncpg.Pool,
+    *,
+    asset_id: UUID,
+    expected_version: int,
+    event_type: str,
+    kind: str,
+    value: str,
+) -> int:
+    """Append a synthetic AssetAlternateIdentifier(Added|Removed) event
+    directly to the event store. Bypasses the slice handlers so the
+    projection can be exercised at the wire-shape boundary ahead of the
+    add/remove slice landing. Returns the new stream version so the
+    caller can chain subsequent appends."""
+    store = PostgresEventStore(pool)
+    await store.append(
+        "Asset",
+        asset_id,
+        expected_version,
+        [
+            NewEvent(
+                event_id=uuid4(),
+                event_type=event_type,
+                schema_version=1,
+                payload={
+                    "asset_id": str(asset_id),
+                    "alternate_identifier": {"kind": kind, "value": value},
+                    "occurred_at": _NOW.isoformat(),
+                },
+                occurred_at=_NOW,
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                metadata={},
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
+    )
+    await drain_equipment_projections(pool)
+    return expected_version + 1
+
+
+@pytest.mark.integration
+async def test_asset_registered_without_alternate_identifiers_defaults_to_empty_array(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Legacy AssetRegistered events omit the alternate_identifiers key;
+    the projection writes the canonical empty-array string, matching the
+    column default. The row reads back as an empty list."""
+    asset_id = uuid4()
+    await _append_asset_registered(
+        db_pool,
+        asset_id=asset_id,
+        payload_extra={},
+    )
+
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT alternate_identifiers FROM proj_equipment_asset_summary WHERE asset_id = $1",
+            asset_id,
+        )
+    assert row is not None
+    assert row["alternate_identifiers"] == "[]" or row["alternate_identifiers"] == []
+
+
+@pytest.mark.integration
+async def test_asset_registered_with_alternate_identifiers_writes_sorted_jsonb(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """AssetRegistered carrying alternate_identifiers in the payload
+    serializes to a sorted JSONB array in the column. The projection
+    re-sorts defensively; the persisted bytes match `(kind, value)`
+    canonical order."""
+    asset_id = uuid4()
+    await _append_asset_registered(
+        db_pool,
+        asset_id=asset_id,
+        # Out-of-order on purpose to exercise the defensive re-sort.
+        payload_extra={
+            "alternate_identifiers": [
+                {"kind": "SerialNumber", "value": "SN-002"},
+                {"kind": "InventoryNumber", "value": "ANL-12345"},
+                {"kind": "SerialNumber", "value": "SN-001"},
+            ],
+        },
+    )
+
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT alternate_identifiers::text AS payload "
+            "FROM proj_equipment_asset_summary WHERE asset_id = $1",
+            asset_id,
+        )
+    assert row is not None
+    assert row["payload"] == (
+        '[{"kind": "InventoryNumber", "value": "ANL-12345"}, '
+        '{"kind": "SerialNumber", "value": "SN-001"}, '
+        '{"kind": "SerialNumber", "value": "SN-002"}]'
+    )
+
+
+@pytest.mark.integration
+async def test_alternate_identifier_added_appends_to_jsonb_array(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """AssetAlternateIdentifierAdded appends the (kind, value) pair
+    into the JSONB column. Two successive Add events land both entries,
+    canonically sorted on disk."""
+    asset_id = uuid4()
+    await _append_asset_registered(
+        db_pool,
+        asset_id=asset_id,
+        payload_extra={},
+    )
+    # AssetRegistered consumed version 0 -> 1; the Add events chain
+    # from version 1.
+    version = await _append_alternate_identifier_event(
+        db_pool,
+        asset_id=asset_id,
+        expected_version=1,
+        event_type="AssetAlternateIdentifierAdded",
+        kind="SerialNumber",
+        value="SN-007",
+    )
+    await _append_alternate_identifier_event(
+        db_pool,
+        asset_id=asset_id,
+        expected_version=version,
+        event_type="AssetAlternateIdentifierAdded",
+        kind="InventoryNumber",
+        value="ANL-42",
+    )
+
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT alternate_identifiers::text AS payload "
+            "FROM proj_equipment_asset_summary WHERE asset_id = $1",
+            asset_id,
+        )
+    assert row is not None
+    assert row["payload"] == (
+        '[{"kind": "InventoryNumber", "value": "ANL-42"}, '
+        '{"kind": "SerialNumber", "value": "SN-007"}]'
+    )
+
+
+@pytest.mark.integration
+async def test_alternate_identifier_added_is_idempotent_under_re_replay(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Re-applying the projection to the same Added event is a no-op.
+    The SQL statement uses DISTINCT ON (kind, value) to fold duplicates,
+    so a row that already carries `SN-007` stays single-entry even when
+    the event_store position is replayed against an unbookmarked
+    projection."""
+    asset_id = uuid4()
+    await _append_asset_registered(
+        db_pool,
+        asset_id=asset_id,
+        payload_extra={},
+    )
+    version = await _append_alternate_identifier_event(
+        db_pool,
+        asset_id=asset_id,
+        expected_version=1,
+        event_type="AssetAlternateIdentifierAdded",
+        kind="SerialNumber",
+        value="SN-007",
+    )
+    # Replay path: directly invoke the projection apply() on the same
+    # event a second time. Mirrors the bookmark-rewind / full-rebuild
+    # operational scenario where the same event_store row crosses
+    # apply() more than once.
+    from cora.equipment.projections import AssetSummaryProjection
+    from cora.infrastructure.ports.event_store import StoredEvent
+
+    replay_event = StoredEvent(
+        position=99,
+        event_id=uuid4(),
+        stream_type="Asset",
+        stream_id=asset_id,
+        version=version,
+        event_type="AssetAlternateIdentifierAdded",
+        schema_version=1,
+        payload={
+            "asset_id": str(asset_id),
+            "alternate_identifier": {"kind": "SerialNumber", "value": "SN-007"},
+            "occurred_at": _NOW.isoformat(),
+        },
+        correlation_id=_CORRELATION_ID,
+        causation_id=None,
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+    )
+    proj = AssetSummaryProjection()
+    async with db_pool.acquire() as conn:
+        await proj.apply(replay_event, conn)
+        row = await conn.fetchrow(
+            "SELECT alternate_identifiers::text AS payload "
+            "FROM proj_equipment_asset_summary WHERE asset_id = $1",
+            asset_id,
+        )
+    assert row is not None
+    assert row["payload"] == '[{"kind": "SerialNumber", "value": "SN-007"}]'
+
+
+@pytest.mark.integration
+async def test_alternate_identifier_removed_drops_matching_entry(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """AssetAlternateIdentifierRemoved filters the matching (kind,
+    value) element out of the JSONB array. Other entries stay; the
+    array collapses to '[]' (not NULL) when the last element is
+    removed."""
+    asset_id = uuid4()
+    await _append_asset_registered(
+        db_pool,
+        asset_id=asset_id,
+        payload_extra={
+            "alternate_identifiers": [
+                {"kind": "InventoryNumber", "value": "ANL-42"},
+                {"kind": "SerialNumber", "value": "SN-007"},
+            ],
+        },
+    )
+    version = await _append_alternate_identifier_event(
+        db_pool,
+        asset_id=asset_id,
+        expected_version=1,
+        event_type="AssetAlternateIdentifierRemoved",
+        kind="InventoryNumber",
+        value="ANL-42",
+    )
+
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT alternate_identifiers::text AS payload "
+            "FROM proj_equipment_asset_summary WHERE asset_id = $1",
+            asset_id,
+        )
+    assert row is not None
+    assert row["payload"] == '[{"kind": "SerialNumber", "value": "SN-007"}]'
+
+    # Remove the last entry: the array MUST collapse to '[]', not NULL
+    # (NOT NULL column; COALESCE in the projection's UPDATE statement).
+    await _append_alternate_identifier_event(
+        db_pool,
+        asset_id=asset_id,
+        expected_version=version,
+        event_type="AssetAlternateIdentifierRemoved",
+        kind="SerialNumber",
+        value="SN-007",
+    )
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT alternate_identifiers::text AS payload "
+            "FROM proj_equipment_asset_summary WHERE asset_id = $1",
+            asset_id,
+        )
+    assert row is not None
+    assert row["payload"] == "[]"
+
+
+@pytest.mark.integration
+async def test_alternate_identifier_removed_is_idempotent_under_re_replay(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Re-applying the projection to the same Removed event is a no-op
+    at the DB layer. After the first apply the matching entry is gone;
+    the second apply's filter finds nothing to drop and the row stays
+    identical."""
+    asset_id = uuid4()
+    await _append_asset_registered(
+        db_pool,
+        asset_id=asset_id,
+        payload_extra={
+            "alternate_identifiers": [
+                {"kind": "SerialNumber", "value": "SN-007"},
+            ],
+        },
+    )
+    version = await _append_alternate_identifier_event(
+        db_pool,
+        asset_id=asset_id,
+        expected_version=1,
+        event_type="AssetAlternateIdentifierRemoved",
+        kind="SerialNumber",
+        value="SN-007",
+    )
+
+    from cora.equipment.projections import AssetSummaryProjection
+    from cora.infrastructure.ports.event_store import StoredEvent
+
+    replay_event = StoredEvent(
+        position=99,
+        event_id=uuid4(),
+        stream_type="Asset",
+        stream_id=asset_id,
+        version=version,
+        event_type="AssetAlternateIdentifierRemoved",
+        schema_version=1,
+        payload={
+            "asset_id": str(asset_id),
+            "alternate_identifier": {"kind": "SerialNumber", "value": "SN-007"},
+            "occurred_at": _NOW.isoformat(),
+        },
+        correlation_id=_CORRELATION_ID,
+        causation_id=None,
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+    )
+    proj = AssetSummaryProjection()
+    async with db_pool.acquire() as conn:
+        await proj.apply(replay_event, conn)
+        row = await conn.fetchrow(
+            "SELECT alternate_identifiers::text AS payload "
+            "FROM proj_equipment_asset_summary WHERE asset_id = $1",
+            asset_id,
+        )
+    assert row is not None
+    assert row["payload"] == "[]"

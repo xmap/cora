@@ -38,6 +38,18 @@ enforces Model existence (raises `ModelNotFoundError` -> 404)
 before invoking decide; the first meaningful subset enforcement
 fires at the first `add_asset_family` call against the bound
 Asset.
+
+## Alternate identifiers (Lock D + Lock F + Lock I)
+
+`command.alternate_identifiers` flows through to the emitted
+AssetRegistered event verbatim. The decider does NOT validate
+`(kind, value)` uniqueness across other Assets in v1 (Lock F):
+PIDINST itself admits "should be unique", same-vendor serial
+schemes legitimately reappear across facilities, and CORA stays
+format-opaque about provenance of the string. Frozenset semantics
+on the field structurally forbid duplicate `(kind, value)` pairs
+on the same Asset. No cross-BC IO fires on this field's behalf
+(Lock I); the handler does not load any external stream.
 """
 
 from datetime import datetime
@@ -97,5 +109,6 @@ def decide(
             occurred_at=now,
             drawing=command.drawing,
             model_id=command.model_id,
+            alternate_identifiers=command.alternate_identifiers,
         )
     ]

@@ -7,6 +7,8 @@ state and event types.
 
 from cora.equipment.aggregates.asset.events import (
     AssetActivated,
+    AssetAlternateIdentifierAdded,
+    AssetAlternateIdentifierRemoved,
     AssetDecommissioned,
     AssetDegraded,
     AssetEvent,
@@ -28,12 +30,18 @@ from cora.equipment.aggregates.asset.events import (
 from cora.equipment.aggregates.asset.evolver import evolve, fold
 from cora.equipment.aggregates.asset.read import load_asset
 from cora.equipment.aggregates.asset.state import (
+    ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
     ASSET_NAME_MAX_LENGTH,
     PORT_NAME_MAX_LENGTH,
     PORT_SIGNAL_TYPE_MAX_LENGTH,
+    AlternateIdentifier,
+    AlternateIdentifierKind,
     Asset,
     AssetAlreadyExistsError,
+    AssetAlternateIdentifierAlreadyPresentError,
+    AssetAlternateIdentifierNotPresentError,
     AssetCannotActivateError,
+    AssetCannotAddAlternateIdentifierError,
     AssetCannotAddFamilyError,
     AssetCannotAddPortError,
     AssetCannotDecommissionError,
@@ -49,6 +57,7 @@ from cora.equipment.aggregates.asset.state import (
     AssetName,
     AssetNotFoundError,
     AssetPort,
+    InvalidAlternateIdentifierValueError,
     InvalidAssetNameError,
     InvalidAssetParentError,
     InvalidAssetPortNameError,
@@ -58,13 +67,21 @@ from cora.equipment.aggregates.asset.state import (
 )
 
 __all__ = [
+    "ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH",
     "ASSET_NAME_MAX_LENGTH",
     "PORT_NAME_MAX_LENGTH",
     "PORT_SIGNAL_TYPE_MAX_LENGTH",
+    "AlternateIdentifier",
+    "AlternateIdentifierKind",
     "Asset",
     "AssetActivated",
     "AssetAlreadyExistsError",
+    "AssetAlternateIdentifierAdded",
+    "AssetAlternateIdentifierAlreadyPresentError",
+    "AssetAlternateIdentifierNotPresentError",
+    "AssetAlternateIdentifierRemoved",
     "AssetCannotActivateError",
+    "AssetCannotAddAlternateIdentifierError",
     "AssetCannotAddFamilyError",
     "AssetCannotAddPortError",
     "AssetCannotDecommissionError",
@@ -94,6 +111,7 @@ __all__ = [
     "AssetRelocated",
     "AssetRestored",
     "AssetSettingsUpdated",
+    "InvalidAlternateIdentifierValueError",
     "InvalidAssetNameError",
     "InvalidAssetParentError",
     "InvalidAssetPortNameError",
