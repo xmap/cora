@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_a5aa8e22ac40e040_query_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -122,7 +122,7 @@
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="nam">permit_id</span><span class="op">:</span> <span class="nam">UUID</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="nam">peer_facility_id</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">    <span class="nam">direction</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">    <span class="nam">allowed_credentials</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">Any</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">    <span class="nam">allowed_credential_ids</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">Any</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t">    <span class="nam">allowed_payload_types</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">Any</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t">    <span class="nam">allowed_artifact_kinds</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">Any</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t">    <span class="nam">abi_tier_floor</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
@@ -160,7 +160,7 @@
     <p class="exc show_exc"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t"><span class="nam">_SELECT_COLUMNS</span> <span class="op">=</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="str">"permit_id, peer_facility_id, direction, "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">    <span class="str">"allowed_credentials, allowed_payload_types, allowed_artifact_kinds, "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">    <span class="str">"allowed_credential_ids, allowed_payload_types, allowed_artifact_kinds, "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="str">"abi_tier_floor, expires_at, defined_by_actor_id, status, terms_kind, "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">    <span class="str">"defined_at, activated_at, suspended_at, resumed_at, revoked_at"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -171,7 +171,7 @@
     <p class="mis mis2 show_mis"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">        <span class="nam">permit_id</span><span class="op">=</span><span class="nam">row</span><span class="op">[</span><span class="str">"permit_id"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">        <span class="nam">peer_facility_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"peer_facility_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">        <span class="nam">direction</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"direction"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">        <span class="nam">allowed_credentials</span><span class="op">=</span><span class="nam">list</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"allowed_credentials"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">        <span class="nam">allowed_credential_ids</span><span class="op">=</span><span class="nam">list</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"allowed_credential_ids"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">        <span class="nam">allowed_payload_types</span><span class="op">=</span><span class="nam">list</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"allowed_payload_types"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">        <span class="nam">allowed_artifact_kinds</span><span class="op">=</span><span class="nam">list</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"allowed_artifact_kinds"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">        <span class="nam">abi_tier_floor</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"abi_tier_floor"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -234,7 +234,7 @@
             <a class="nav" href="z_a5aa8e22ac40e040_query_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
     </div>
 </footer>

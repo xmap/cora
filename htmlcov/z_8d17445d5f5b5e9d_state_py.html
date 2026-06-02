@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_6f2f19f72e766cfc___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -96,17 +96,17 @@
     <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">Minimal Method:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">  - `id` + `name`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">  - `needed_families: frozenset[UUID]` &#8212; the Family ids this</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">  - `needed_family_ids: frozenset[UUID]` &#8212; the Family ids this</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">    Method requires. Composable: a "Fly Tomography" Method has</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">    needed_families = {Tomography_id, FlyScan_id}. At Plan</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">    needed_family_ids = {Tomography_id, FlyScan_id}. At Plan</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">    binding time, the operator picks an Asset whose</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">    families &#8839; method.needed_families.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">    families &#8839; method.needed_family_ids.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">  - `status` (defaults `Defined`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">`Versioned` and `Deprecated` transitions land in the lifecycle</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">slices. Description / owner / additional facets defer to enrichment.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">## Needed_families &#8212; eventual-consistency stance</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">## Needed_family_ids: eventual-consistency stance</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">The decider does NOT verify each Family id refers to a real</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">Family stream in the event store. Same precedent as Trust's</span>&nbsp;</span><span class="r"></span></p>
@@ -116,7 +116,7 @@
     <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">day-one ergonomics this is fine; structural validation can be</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">layered on at the API boundary later if pilot demand emerges.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">Empty `needed_families` is allowed (a Method that needs no</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">Empty `needed_family_ids` is allowed (a Method that needs no</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">specific equipment family &#8212; rare but operationally valid for</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">purely procedural Methods like "Sample Cleaning").</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -141,11 +141,11 @@
     <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t"><span class="str">## Frozensets in state, lists in payloads</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t"><span class="str">`needed_families` is `frozenset[UUID]` in domain state</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t"><span class="str">`needed_family_ids` is `frozenset[UUID]` in domain state</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t"><span class="str">(deduplicated, hashable, set-membership in O(1) for Plan-binding</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="str">checks) and `list[UUID]` in event payloads (JSON-friendly, sorted</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t"><span class="str">for determinism). Same precedent as Trust's Policy</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="str">`permitted_principals` / `permitted_commands`. The evolver bridges</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="str">`permitted_principal_ids` / `permitted_commands`. The evolver bridges</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t"><span class="str">the two. Sorting in `to_payload` keeps the persisted bytes</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="str">deterministic &#8212; same logical family set, same payload, same</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t"><span class="str">idempotency hash.</span>&nbsp;</span><span class="r"></span></p>
@@ -280,7 +280,7 @@
     <p class="pln"><span class="n"><a id="t196" href="#t196">196</a></span><span class="t"><span class="str">    references kind values that Supply registrations carry). See</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t197" href="#t197">197</a></span><span class="t"><span class="str">    [[project_supply_design]] &#167;"Method.needed_supplies consumer" for</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t198" href="#t198">198</a></span><span class="t"><span class="str">    the design lock + asymmetry rationale (frozenset[str] on Method</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t"><span class="str">    vs frozenset[UUID] for needed_families: Supply is INSTANCE-aggregate</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t"><span class="str">    vs frozenset[UUID] for needed_family_ids: Supply is INSTANCE-aggregate</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t"><span class="str">    per facility, sharing a `kind` label; Family is TYPE-aggregate,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t"><span class="str">    one global definition referenced by UUID).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
@@ -337,7 +337,7 @@
     <p class="run"><span class="n"><a id="t253" href="#t253">253</a></span><span class="t"><span class="key">class</span> <span class="nam">Method</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t254" href="#t254">254</a></span><span class="t">    <span class="str">"""Aggregate root: an abstract technique-class recipe.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t"><span class="str">    `needed_families` is a frozenset of Family ids the Method</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t"><span class="str">    `needed_family_ids` is a frozenset of Family ids the Method</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t"><span class="str">    requires. Eventual-consistency stance: existence is not verified</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t"><span class="str">    at decide time; mismatch surfaces at Plan binding.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -366,12 +366,12 @@
     <p class="pln"><span class="n"><a id="t282" href="#t282">282</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t283" href="#t283">283</a></span><span class="t">    <span class="nam">id</span><span class="op">:</span> <span class="nam">UUID</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t284" href="#t284">284</a></span><span class="t">    <span class="nam">name</span><span class="op">:</span> <span class="nam">MethodName</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t285" href="#t285">285</a></span><span class="t">    <span class="nam">needed_families</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t285" href="#t285">285</a></span><span class="t">    <span class="nam">needed_family_ids</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t286" href="#t286">286</a></span><span class="t">    <span class="nam">status</span><span class="op">:</span> <span class="nam">MethodStatus</span> <span class="op">=</span> <span class="nam">MethodStatus</span><span class="op">.</span><span class="nam">DEFINED</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t">    <span class="nam">version</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t288" href="#t288">288</a></span><span class="t">    <span class="com"># content_hash captures the SHA-256 of the canonical body bytes for</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t">    <span class="com"># the most recently versioned content subset (`name +</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">    <span class="com"># parameters_schema + capability_id + needed_families +</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">    <span class="com"># parameters_schema + capability_id + needed_family_ids +</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t">    <span class="com"># needed_supplies`). None until first MethodVersioned (Defined-only</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t">    <span class="com"># streams have no attested revision yet) AND for pre-rollout legacy</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t293" href="#t293">293</a></span><span class="t">    <span class="com"># MethodVersioned events that predate the content-hash field</span>&nbsp;</span><span class="r"></span></p>
@@ -387,7 +387,7 @@
     <p class="pln"><span class="n"><a id="t303" href="#t303">303</a></span><span class="t">    <span class="com"># executor. REQUIRED at define_method now; defaults None at the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t304" href="#t304">304</a></span><span class="t">    <span class="com"># STATE level for evolver-back-compat with older streams (additive-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t305" href="#t305">305</a></span><span class="t">    <span class="com"># state pattern; same shape as Method.parameters_schema).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t">    <span class="com"># Distinct from `needed_families` (hardware compatibility, what</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t">    <span class="com"># Distinct from `needed_family_ids` (hardware compatibility, what</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t">    <span class="com"># Family classes the Method needs available), both fields stay,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t">    <span class="com"># answering DIFFERENT questions per [[project-capability-aggregate-design]]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t309" href="#t309">309</a></span><span class="t">    <span class="com"># see [[project-capability-aggregate-design]] watch item 10. The cross-BC validation that</span>&nbsp;</span><span class="r"></span></p>
@@ -396,7 +396,7 @@
     <p class="pln"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t">    <span class="com"># [[project-asset-settings-design]] cross-BC anchor).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t">    <span class="nam">capability_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default</span><span class="op">=</span><span class="key">None</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t">    <span class="com"># needed_supplies references Supply.kind STRINGS (not</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t315" href="#t315">315</a></span><span class="t">    <span class="com"># UUIDs). Asymmetric with needed_families (frozenset[UUID]) by</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t315" href="#t315">315</a></span><span class="t">    <span class="com"># UUIDs). Asymmetric with needed_family_ids (frozenset[UUID]) by</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t316" href="#t316">316</a></span><span class="t">    <span class="com"># design: Family is a TYPE registry (one global definition,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t317" href="#t317">317</a></span><span class="t">    <span class="com"># referenced by UUID); Supply is an INSTANCE aggregate (multiple</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t318" href="#t318">318</a></span><span class="t">    <span class="com"># per facility, each with its own availability state, sharing a</span>&nbsp;</span><span class="r"></span></p>
@@ -412,7 +412,7 @@
     <p class="pln"><span class="n"><a id="t328" href="#t328">328</a></span><span class="t">        <span class="str">"""Canonical content subset hashed into MethodVersioned.content_hash.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t329" href="#t329">329</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t330" href="#t330">330</a></span><span class="t"><span class="str">        Pins identity per [[project_content_addressed_identity_design]]:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t331" href="#t331">331</a></span><span class="t"><span class="str">        `name + parameters_schema + capability_id + needed_families +</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t331" href="#t331">331</a></span><span class="t"><span class="str">        `name + parameters_schema + capability_id + needed_family_ids +</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t332" href="#t332">332</a></span><span class="t"><span class="str">        needed_supplies`. Identity-bearing fields excluded: `id`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t333" href="#t333">333</a></span><span class="t"><span class="str">        (identity, not content); `status` and `version` (lifecycle,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t334" href="#t334">334</a></span><span class="t"><span class="str">        derived in evolver from event type and version_tag).</span>&nbsp;</span><span class="r"></span></p>
@@ -429,7 +429,7 @@
     <p class="run run2"><span class="n"><a id="t345" href="#t345">345</a></span><span class="t">            <span class="str">"name"</span><span class="op">:</span> <span class="nam">self</span><span class="op">.</span><span class="nam">name</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t346" href="#t346">346</a></span><span class="t">            <span class="str">"parameters_schema"</span><span class="op">:</span> <span class="nam">self</span><span class="op">.</span><span class="nam">parameters_schema</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t347" href="#t347">347</a></span><span class="t">            <span class="str">"capability_id"</span><span class="op">:</span> <span class="nam">str</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">capability_id</span><span class="op">)</span> <span class="key">if</span> <span class="nam">self</span><span class="op">.</span><span class="nam">capability_id</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">else</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t348" href="#t348">348</a></span><span class="t">            <span class="str">"needed_families"</span><span class="op">:</span> <span class="nam">sorted</span><span class="op">(</span><span class="nam">str</span><span class="op">(</span><span class="nam">f</span><span class="op">)</span> <span class="key">for</span> <span class="nam">f</span> <span class="key">in</span> <span class="nam">self</span><span class="op">.</span><span class="nam">needed_families</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t348" href="#t348">348</a></span><span class="t">            <span class="str">"needed_family_ids"</span><span class="op">:</span> <span class="nam">sorted</span><span class="op">(</span><span class="nam">str</span><span class="op">(</span><span class="nam">f</span><span class="op">)</span> <span class="key">for</span> <span class="nam">f</span> <span class="key">in</span> <span class="nam">self</span><span class="op">.</span><span class="nam">needed_family_ids</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t349" href="#t349">349</a></span><span class="t">            <span class="str">"needed_supplies"</span><span class="op">:</span> <span class="nam">sorted</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">needed_supplies</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t350" href="#t350">350</a></span><span class="t">        <span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t351" href="#t351">351</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -486,7 +486,7 @@
             <a class="nav" href="z_6f2f19f72e766cfc___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
     </div>
 </footer>

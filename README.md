@@ -672,7 +672,7 @@
 | src/cora/federation/aggregates/credential/read.py                            |       22 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/federation/aggregates/credential/state.py                           |       45 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/aggregates/permit/\_\_init\_\_.py                        |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/federation/aggregates/permit/events.py                              |       71 |        8 |       24 |        2 |     87.4% |103-116, 313-315 |
+| src/cora/federation/aggregates/permit/events.py                              |       71 |        8 |       24 |        2 |     87.4% |103-116, 315-317 |
 | src/cora/federation/aggregates/permit/evolver.py                             |       29 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/federation/aggregates/permit/read.py                                |       27 |        7 |        0 |        0 |     74.1% |63, 67, 71, 75, 95-97 |
 | src/cora/federation/aggregates/permit/state.py                               |       82 |        2 |        0 |        0 |     97.6% |   317-321 |

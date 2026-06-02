@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -152,7 +152,7 @@
     <p class="pln"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t"><span class="str">  - subject (if present) must be in {Mounted, Measured}</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t"><span class="str">  - no bound Asset may be Decommissioned</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t"><span class="str">  - capability superset RE-VALIDATED: union(asset.families) &#8839;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t"><span class="str">    method.needed_families (from current Asset state, not the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t"><span class="str">    method.needed_family_ids (from current Asset state, not the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t"><span class="str">    Plan-bind snapshot &#8212; drift is real and Run is the last gate)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t"><span class="str">  - name validation (via RunName VO)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -206,7 +206,7 @@
     <p class="pln"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t"><span class="com"># same triggers as RunAbortReason.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t"><span class="nam">RUN_ADJUST_REASON_MAX_LENGTH</span> <span class="op">=</span> <span class="num">500</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t"><span class="com"># cardinality cap on the AsShot pin set</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t"><span class="com"># (Run.pinned_calibrations). Mirrors Data BC's</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t"><span class="com"># (Run.pinned_calibration_ids). Mirrors Data BC's</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t"><span class="com"># DATASET_USED_CALIBRATIONS_MAX_ENTRIES exactly (same default + same</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t"><span class="com"># precedent justification: per-entry existence is NOT checked at the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t"><span class="com"># write path &#8212; revision-cited atomic IDs are cross-BC eventual-</span>&nbsp;</span><span class="r"></span></p>
@@ -1162,15 +1162,15 @@
     <p class="pln"><span class="n"><a id="t1078" href="#t1078">1078</a></span><span class="t">    <span class="com"># transition arm in the evolver (RunHeld / RunResumed /</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1079" href="#t1079">1079</a></span><span class="t">    <span class="com"># RunCompleted / RunAborted / RunStopped / RunTruncated /</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1080" href="#t1080">1080</a></span><span class="t">    <span class="com"># RunAdjusted / RunAddedToCampaign / RunRemovedFromCampaign /</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1081" href="#t1081">1081</a></span><span class="t">    <span class="com"># RunReadingLogbookOpened) preserves `prior.pinned_calibrations`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1081" href="#t1081">1081</a></span><span class="t">    <span class="com"># RunReadingLogbookOpened) preserves `prior.pinned_calibration_ids`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1082" href="#t1082">1082</a></span><span class="t">    <span class="com"># verbatim. The AsShot anchor lets downstream consumers (Dataset</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1083" href="#t1083">1083</a></span><span class="t">    <span class="com"># reconstruction in the Data BC, RunDebriefer AI advisories) answer "what</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1084" href="#t1084">1084</a></span><span class="t">    <span class="com"># calibration was this scan acquired against?" deterministically</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1085" href="#t1085">1085</a></span><span class="t">    <span class="com"># months later, even if later refined revisions arrive on the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1086" href="#t1086">1086</a></span><span class="t">    <span class="com"># same Calibration aggregate. DNG AsShot vs Current precedent</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1087" href="#t1087">1087</a></span><span class="t">    <span class="com"># (Q5/Q6 research). Defaults to empty frozenset so legacy streams</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1088" href="#t1088">1088</a></span><span class="t">    <span class="com"># without the field fold cleanly via `payload.get("pinned_calibrations", [])`.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1089" href="#t1089">1089</a></span><span class="t">    <span class="nam">pinned_calibrations</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1088" href="#t1088">1088</a></span><span class="t">    <span class="com"># without the field fold cleanly via `payload.get("pinned_calibration_ids", [])`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1089" href="#t1089">1089</a></span><span class="t">    <span class="nam">pinned_calibration_ids</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1090" href="#t1090">1090</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1091" href="#t1091">1091</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1092" href="#t1092">1092</a></span><span class="t"><span class="key">class</span> <span class="nam">InvalidRunParametersError</span><span class="op">(</span><span class="nam">ValueError</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -1271,7 +1271,7 @@
     <p class="pln"><span class="n"><a id="t1187" href="#t1187">1187</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1188" href="#t1188">1188</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1189" href="#t1189">1189</a></span><span class="t"><span class="key">class</span> <span class="nam">InvalidPinnedCalibrationsError</span><span class="op">(</span><span class="nam">ValueError</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1190" href="#t1190">1190</a></span><span class="t">    <span class="str">"""The supplied pinned_calibrations set has too many entries.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1190" href="#t1190">1190</a></span><span class="t">    <span class="str">"""The supplied pinned_calibration_ids set has too many entries.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1191" href="#t1191">1191</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1192" href="#t1192">1192</a></span><span class="t"><span class="str">    Per-entry validation (each is a UUID) is type-enforced; the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1193" href="#t1193">1193</a></span><span class="t"><span class="str">    set-cardinality cap protects against accidentally massive AsShot-</span>&nbsp;</span><span class="r"></span></p>
@@ -1292,20 +1292,20 @@
     <p class="pln"><span class="n"><a id="t1208" href="#t1208">1208</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1209" href="#t1209">1209</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">count</span><span class="op">:</span> <span class="nam">int</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1210" href="#t1210">1210</a></span><span class="t">        <span class="nam">super</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">__init__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t1211" href="#t1211">1211</a></span><span class="t">            <span class="fst">f"</span><span class="fst">Run pinned_calibrations must have at most </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t1211" href="#t1211">1211</a></span><span class="t">            <span class="fst">f"</span><span class="fst">Run pinned_calibration_ids must have at most </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t1212" href="#t1212">1212</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">RUN_PINNED_CALIBRATIONS_MAX_ENTRIES</span><span class="op">}</span><span class="fst"> entries (got: </span><span class="op">{</span><span class="nam">count</span><span class="op">}</span><span class="fst">)</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t1213" href="#t1213">1213</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1214" href="#t1214">1214</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">count</span> <span class="op">=</span> <span class="nam">count</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1215" href="#t1215">1215</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1216" href="#t1216">1216</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1217" href="#t1217">1217</a></span><span class="t"><span class="key">def</span> <span class="nam">validate_pinned_calibrations</span><span class="op">(</span><span class="nam">value</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">)</span> <span class="op">-></span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1218" href="#t1218">1218</a></span><span class="t">    <span class="str">"""Normalize / validate pinned_calibrations for the Run state and decider.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1217" href="#t1217">1217</a></span><span class="t"><span class="key">def</span> <span class="nam">validate_pinned_calibration_ids</span><span class="op">(</span><span class="nam">value</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">)</span> <span class="op">-></span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1218" href="#t1218">1218</a></span><span class="t">    <span class="str">"""Normalize / validate pinned_calibration_ids for the Run state and decider.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1219" href="#t1219">1219</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1220" href="#t1220">1220</a></span><span class="t"><span class="str">    Cardinality-only check. NO per-element existence</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1221" href="#t1221">1221</a></span><span class="t"><span class="str">    check (revision-cited atomic-ID model; cross-BC eventual-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1222" href="#t1222">1222</a></span><span class="t"><span class="str">    consistency per [[project_calibration_design]] anti-hook #3 +</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1223" href="#t1223">1223</a></span><span class="t"><span class="str">    Vernon/Evans DDD canon). Mirrors Data BC's</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1224" href="#t1224">1224</a></span><span class="t"><span class="str">    `validate_used_calibrations` exactly &#8212; same shape, same default</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1224" href="#t1224">1224</a></span><span class="t"><span class="str">    `validate_used_calibration_ids` exactly &#8212; same shape, same default</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1225" href="#t1225">1225</a></span><span class="t"><span class="str">    cap, same justification.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1226" href="#t1226">1226</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1227" href="#t1227">1227</a></span><span class="t">    <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">value</span><span class="op">)</span> <span class="op">></span> <span class="nam">RUN_PINNED_CALIBRATIONS_MAX_ENTRIES</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -1320,7 +1320,7 @@
             <a class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
     </div>
 </footer>

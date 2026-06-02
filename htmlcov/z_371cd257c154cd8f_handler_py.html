@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_371cd257c154cd8f_query_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -207,7 +207,7 @@
     <p class="run"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">        <span class="nam">union_families</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">frozenset</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">            <span class="nam">fid</span> <span class="key">for</span> <span class="nam">asset</span> <span class="key">in</span> <span class="nam">assets</span><span class="op">.</span><span class="nam">values</span><span class="op">(</span><span class="op">)</span> <span class="key">for</span> <span class="nam">fid</span> <span class="key">in</span> <span class="nam">asset</span><span class="op">.</span><span class="nam">families</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">        <span class="nam">missing_families</span> <span class="op">=</span> <span class="nam">method</span><span class="op">.</span><span class="nam">needed_families</span> <span class="op">-</span> <span class="nam">union_families</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">        <span class="nam">missing_families</span> <span class="op">=</span> <span class="nam">method</span><span class="op">.</span><span class="nam">needed_family_ids</span> <span class="op">-</span> <span class="nam">union_families</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">        <span class="key">if</span> <span class="nam">method</span><span class="op">.</span><span class="nam">capability_id</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">            <span class="nam">capability</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">load_capability</span><span class="op">(</span><span class="nam">deps</span><span class="op">.</span><span class="nam">event_store</span><span class="op">,</span> <span class="nam">method</span><span class="op">.</span><span class="nam">capability_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -275,7 +275,7 @@
     <p class="run run2"><span class="n"><a id="t191" href="#t191">191</a></span><span class="t">            <span class="nam">practice_id</span><span class="op">=</span><span class="nam">query</span><span class="op">.</span><span class="nam">practice_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t">            <span class="nam">method_id</span><span class="op">=</span><span class="nam">method</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t193" href="#t193">193</a></span><span class="t">            <span class="nam">capability_id</span><span class="op">=</span><span class="nam">method</span><span class="op">.</span><span class="nam">capability_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t194" href="#t194">194</a></span><span class="t">            <span class="nam">method_needed_families</span><span class="op">=</span><span class="nam">method</span><span class="op">.</span><span class="nam">needed_families</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t194" href="#t194">194</a></span><span class="t">            <span class="nam">method_needed_family_ids</span><span class="op">=</span><span class="nam">method</span><span class="op">.</span><span class="nam">needed_family_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t195" href="#t195">195</a></span><span class="t">            <span class="nam">capability_required_affordances</span><span class="op">=</span><span class="nam">required_affordances</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t196" href="#t196">196</a></span><span class="t">            <span class="nam">wired_assets</span><span class="op">=</span><span class="nam">wired_assets</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t197" href="#t197">197</a></span><span class="t">            <span class="nam">missing_families</span><span class="op">=</span><span class="nam">missing_families</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -398,7 +398,7 @@
             <a class="nav" href="z_371cd257c154cd8f_query_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_8438b06f8d95618d_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -200,7 +200,7 @@
     <p class="run run2"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">            <span class="str">"ad-hoc Runs without a Decision (Decision&#8594;Run linkage)."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="nam">pinned_calibrations</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="nam">pinned_calibration_ids</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">        <span class="nam">default_factory</span><span class="op">=</span><span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">            <span class="str">"Optional list of `CalibrationRevision.id`s pinned at this "</span>&nbsp;</span><span class="r"></span></p>
@@ -258,7 +258,7 @@
     <p class="run run2"><span class="n"><a id="t174" href="#t174">174</a></span><span class="t">                <span class="str">"Run-start rejected: Plan is Deprecated, Subject is not "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t">                <span class="str">"in Mounted or Measured, a bound Asset is Decommissioned, "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t176" href="#t176">176</a></span><span class="t">                <span class="str">"the bound Assets' current capabilities don't cover "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t177" href="#t177">177</a></span><span class="t">                <span class="str">"the Method's needed_families, OR the "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t177" href="#t177">177</a></span><span class="t">                <span class="str">"the Method's needed_family_ids, OR the "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t178" href="#t178">178</a></span><span class="t">                <span class="str">"supplied Campaign is in a terminal status (Closed / "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t179" href="#t179">179</a></span><span class="t">                <span class="str">"Abandoned) and refuses new members."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t180" href="#t180">180</a></span><span class="t">            <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -300,7 +300,7 @@
     <p class="run run2"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">            <span class="nam">trigger_source</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">trigger_source</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">            <span class="nam">campaign_id</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">campaign_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t218" href="#t218">218</a></span><span class="t">            <span class="nam">decided_by_decision_id</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">decided_by_decision_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t">            <span class="nam">pinned_calibrations</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">body</span><span class="op">.</span><span class="nam">pinned_calibrations</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t">            <span class="nam">pinned_calibration_ids</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">body</span><span class="op">.</span><span class="nam">pinned_calibration_ids</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t220" href="#t220">220</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t">        <span class="nam">principal_id</span><span class="op">=</span><span class="nam">principal_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t">        <span class="nam">correlation_id</span><span class="op">=</span><span class="nam">cid</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -317,7 +317,7 @@
             <a class="nav" href="z_8438b06f8d95618d_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
     </div>
 </footer>

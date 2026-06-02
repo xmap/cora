@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -473,7 +473,7 @@
     <p class="pln"><span class="n"><a id="t389" href="#t389">389</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t390" href="#t390">390</a></span><span class="t"><span class="str">    Eventual-consistency: the decider does NOT verify the referenced</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t391" href="#t391">391</a></span><span class="t"><span class="str">    Family id refers to a real Family stream. Same precedent</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t392" href="#t392">392</a></span><span class="t"><span class="str">    as Trust Conduit zone refs (3b) and Method.needed_families</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t392" href="#t392">392</a></span><span class="t"><span class="str">    as Trust Conduit zone refs (3b) and Method.needed_family_ids</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t393" href="#t393">393</a></span><span class="t"><span class="str">    (6a).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t394" href="#t394">394</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t395" href="#t395">395</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -598,7 +598,7 @@
     <p class="pln"><span class="n"><a id="t514" href="#t514">514</a></span><span class="t"><span class="str">    commissioning a new device-class on the asset, remove via</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t515" href="#t515">515</a></span><span class="t"><span class="str">    `remove_asset_family` when retiring one. Used at Plan binding</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t516" href="#t516">516</a></span><span class="t"><span class="str">    time (6e) for the structural check</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t517" href="#t517">517</a></span><span class="t"><span class="str">    `asset.families &#8839; method.needed_families`. Eventual-</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t517" href="#t517">517</a></span><span class="t"><span class="str">    `asset.families &#8839; method.needed_family_ids`. Eventual-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t518" href="#t518">518</a></span><span class="t"><span class="str">    consistency: each Family id is NOT verified against the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t519" href="#t519">519</a></span><span class="t"><span class="str">    Family stream at decide time. Defaults to empty so prior</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t520" href="#t520">520</a></span><span class="t"><span class="str">    `AssetRegistered`-only streams fold cleanly without an upcaster</span>&nbsp;</span><span class="r"></span></p>
@@ -652,7 +652,7 @@
     <p class="pln"><span class="n"><a id="t568" href="#t568">568</a></span><span class="t">    <span class="com"># `frozenset` as default_factory triggers reportUnknownVariableType</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t569" href="#t569">569</a></span><span class="t">    <span class="com"># under pyright strict because the empty frozenset has no element</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t570" href="#t570">570</a></span><span class="t">    <span class="com"># type to infer. The parametrized form gives pyright the type</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t571" href="#t571">571</a></span><span class="t">    <span class="com"># without runtime cost. Same trick used in Method.needed_families.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t571" href="#t571">571</a></span><span class="t">    <span class="com"># without runtime cost. Same trick used in Method.needed_family_ids.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t572" href="#t572">572</a></span><span class="t">    <span class="nam">families</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t573" href="#t573">573</a></span><span class="t">    <span class="com"># dict[str, Any] for runtime-typed operator-supplied settings.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t574" href="#t574">574</a></span><span class="t">    <span class="com"># Same default_factory pattern as families &#8212; the empty dict</span>&nbsp;</span><span class="r"></span></p>
@@ -672,7 +672,7 @@
             <a class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
     </div>
 </footer>

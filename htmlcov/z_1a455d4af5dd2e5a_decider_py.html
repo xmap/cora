@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1a455d4af5dd2e5a_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -142,7 +142,7 @@
     <p class="run run2"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">    <span class="nam">ProducingRunNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">    <span class="nam">validate_byte_size</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">    <span class="nam">validate_derived_from</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="nam">validate_used_calibrations</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="nam">validate_used_calibration_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">data</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">dataset</span><span class="op">.</span><span class="nam">state</span> <span class="key">import</span> <span class="nam">Dataset</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">data</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">register_dataset</span><span class="op">.</span><span class="nam">command</span> <span class="key">import</span> <span class="nam">RegisterDataset</span>&nbsp;</span><span class="r"></span></p>
@@ -173,8 +173,8 @@
     <p class="pln"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t"><span class="str">        -> InvalidDatasetEncodingError (via DatasetEncoding VO)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t"><span class="str">      - derived_from must satisfy cardinality + UUID shape</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t"><span class="str">        -> InvalidDerivedFromError (via validate_derived_from)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t"><span class="str">      - used_calibrations must satisfy cardinality</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t"><span class="str">        -> InvalidUsedCalibrationsError (via validate_used_calibrations)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t"><span class="str">      - used_calibration_ids must satisfy cardinality</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t"><span class="str">        -> InvalidUsedCalibrationsError (via validate_used_calibration_ids)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t"><span class="str">      - When producing_run_id is set, the Run must exist</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t"><span class="str">        -> ProducingRunNotFoundError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="str">      - When subject_id is set, the Subject must exist</span>&nbsp;</span><span class="r"></span></p>
@@ -205,9 +205,9 @@
     <p class="pln"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">    <span class="com"># cardinality-only check on the AsShot citation set.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="com"># NO cross-BC existence check (revision-cited atomic-ID model;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="com"># eventual-consistency stance per [[project_calibration_design]]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="com"># anti-hook #3; mirrors Run.pinned_calibrations decider-time</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="com"># anti-hook #3; mirrors Run.pinned_calibration_ids decider-time</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">    <span class="com"># treatment exactly).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="nam">used_calibrations</span> <span class="op">=</span> <span class="nam">validate_used_calibrations</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">used_calibrations</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="nam">used_calibration_ids</span> <span class="op">=</span> <span class="nam">validate_used_calibration_ids</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">used_calibration_ids</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">    <span class="com"># Cross-aggregate checks (existence-only per Q2 lock B).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">    <span class="com"># The handler's pre-loads either populate context.* or raise</span>&nbsp;</span><span class="r"></span></p>
@@ -268,10 +268,10 @@
     <p class="run run2"><span class="n"><a id="t184" href="#t184">184</a></span><span class="t">            <span class="com"># intent defaults to "Trial" on the dataclass; promotion is a</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t185" href="#t185">185</a></span><span class="t">            <span class="com"># separate explicit slice (promote_dataset).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t186" href="#t186">186</a></span><span class="t">            <span class="com"># sort before emit so the event-payload bytes are</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t187" href="#t187">187</a></span><span class="t">            <span class="com"># deterministic (matches Run.pinned_calibrations</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t187" href="#t187">187</a></span><span class="t">            <span class="com"># deterministic (matches Run.pinned_calibration_ids</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t188" href="#t188">188</a></span><span class="t">            <span class="com"># decider-time treatment + the derived_from sorted-list</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t189" href="#t189">189</a></span><span class="t">            <span class="com"># precedent on the same payload).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t190" href="#t190">190</a></span><span class="t">            <span class="nam">used_calibrations</span><span class="op">=</span><span class="nam">tuple</span><span class="op">(</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">used_calibrations</span><span class="op">)</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t190" href="#t190">190</a></span><span class="t">            <span class="nam">used_calibration_ids</span><span class="op">=</span><span class="nam">tuple</span><span class="op">(</span><span class="nam">sorted</span><span class="op">(</span><span class="nam">used_calibration_ids</span><span class="op">)</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t191" href="#t191">191</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t">    <span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
@@ -283,7 +283,7 @@
             <a class="nav" href="z_1a455d4af5dd2e5a_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
     </div>
 </footer>

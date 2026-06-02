@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_cab6e45ffbca22a7_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -104,12 +104,12 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">encoding=..., status=...)` without explicitly passing the optional</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">cross-aggregate refs (`producing_run_id`, `subject_id`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">`derived_from`) AND the additive fields (`producing_run_end_state`,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">`intent`, `used_calibrations`) would silently WIPE them to defaults.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">`intent`, `used_calibration_ids`) would silently WIPE them to defaults.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">Aligned to explicit construction post-domain-audit to match the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">documented pattern in Asset/Plan/Method/Practice/Family/Subject/Run</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">evolvers. The `used_calibrations` AsShot citation set is IMMUTABLE</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">evolvers. The `used_calibration_ids` AsShot citation set is IMMUTABLE</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">after register &#8212; every transition arm preserves</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">`prior.used_calibrations` verbatim (mirrors Run.pinned_calibrations</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">`prior.used_calibration_ids` verbatim (mirrors Run.pinned_calibration_ids</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">AsShot immutability).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">Defensive guard: `DatasetDiscarded` and `DatasetPromoted` arms raise</span>&nbsp;</span><span class="r"></span></p>
@@ -158,7 +158,7 @@
     <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">            <span class="nam">derived_from</span><span class="op">=</span><span class="nam">derived_from</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">            <span class="nam">producing_run_end_state</span><span class="op">=</span><span class="nam">producing_run_end_state</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">            <span class="nam">intent</span><span class="op">=</span><span class="nam">intent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">            <span class="nam">used_calibrations</span><span class="op">=</span><span class="nam">used_calibrations</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">            <span class="nam">used_calibration_ids</span><span class="op">=</span><span class="nam">used_calibration_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">        <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">            <span class="nam">_</span> <span class="op">=</span> <span class="nam">state</span>  <span class="com"># DatasetRegistered is the genesis event; prior state ignored.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">            <span class="key">return</span> <span class="nam">Dataset</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -185,7 +185,7 @@
     <p class="run run2"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">                <span class="com"># AsShot citation set at genesis (frozenset for</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">                <span class="com"># in-memory equality semantics; the event carries a tuple</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">                <span class="com"># for deterministic wire byte ordering).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">                <span class="nam">used_calibrations</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">used_calibrations</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">                <span class="nam">used_calibration_ids</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">used_calibration_ids</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">        <span class="key">case</span> <span class="nam">DatasetDiscarded</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">            <span class="nam">prior</span> <span class="op">=</span> <span class="nam">require_state</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="str">"DatasetDiscarded"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -205,7 +205,7 @@
     <p class="run run2"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">                <span class="nam">producing_run_end_state</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">producing_run_end_state</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">                <span class="nam">intent</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">intent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">                <span class="com"># AsShot invariant: never change after register.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">                <span class="nam">used_calibrations</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">used_calibrations</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">                <span class="nam">used_calibration_ids</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">used_calibration_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">        <span class="key">case</span> <span class="nam">DatasetPromoted</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">            <span class="nam">prior</span> <span class="op">=</span> <span class="nam">require_state</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="str">"DatasetPromoted"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -225,7 +225,7 @@
     <p class="run run2"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t">                <span class="com"># The state change: intent flips Trial -> Production.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">                <span class="nam">intent</span><span class="op">=</span><span class="nam">Intent</span><span class="op">.</span><span class="nam">PRODUCTION</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">                <span class="com"># AsShot invariant: never change after register.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">                <span class="nam">used_calibrations</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">used_calibrations</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">                <span class="nam">used_calibration_ids</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">used_calibration_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">        <span class="key">case</span> <span class="nam">DatasetDemoted</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">            <span class="nam">prior</span> <span class="op">=</span> <span class="nam">require_state</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="str">"DatasetDemoted"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -247,7 +247,7 @@
     <p class="run run2"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">                <span class="com"># [[project-dataset-demote-design]] lock).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t164" href="#t164">164</a></span><span class="t">                <span class="nam">intent</span><span class="op">=</span><span class="nam">Intent</span><span class="op">.</span><span class="nam">RETRACTED</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t165" href="#t165">165</a></span><span class="t">                <span class="com"># AsShot invariant: never change after register.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">                <span class="nam">used_calibrations</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">used_calibrations</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">                <span class="nam">used_calibration_ids</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">used_calibration_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t167" href="#t167">167</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t168" href="#t168">168</a></span><span class="t">        <span class="key">case</span> <span class="nam">_</span><span class="op">:</span>  <span class="com"># pragma: no cover  # exhaustiveness guard</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t169" href="#t169">169</a></span><span class="t">            <span class="nam">assert_never</span><span class="op">(</span><span class="nam">event</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -268,7 +268,7 @@
             <a class="nav" href="z_cab6e45ffbca22a7_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
     </div>
 </footer>

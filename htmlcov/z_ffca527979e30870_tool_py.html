@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_25e6848583360fae___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -186,7 +186,7 @@
     <p class="run run2"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">            <span class="str">"Define a new federation Permit (genesis; lands in Defined). "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">            <span class="str">"Atomically emits a DecisionRegistered audit on the Decision "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">            <span class="str">"stream. Required: peer_facility_id, direction, "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">            <span class="str">"allowed_credentials, allowed_payload_types, "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">            <span class="str">"allowed_credential_ids, allowed_payload_types, "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">            <span class="str">"allowed_artifact_kinds, abi_tier_floor, expires_at, terms. "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">            <span class="str">"`terms.kind` discriminates Outbound vs Inbound and must match "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">            <span class="str">"`direction`."</span>&nbsp;</span><span class="r"></span></p>
@@ -202,7 +202,7 @@
     <p class="run run2"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">            <span class="nam">Direction</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">            <span class="nam">Field</span><span class="op">(</span><span class="nam">description</span><span class="op">=</span><span class="str">"Permit direction (must match terms.kind)."</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">        <span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">        <span class="nam">allowed_credentials</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">        <span class="nam">allowed_credential_ids</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">            <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">            <span class="nam">Field</span><span class="op">(</span><span class="nam">min_length</span><span class="op">=</span><span class="num">1</span><span class="op">,</span> <span class="nam">description</span><span class="op">=</span><span class="str">"Credential ids permitted under this permit."</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">        <span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -232,7 +232,7 @@
     <p class="run run2"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">            <span class="nam">DefinePermit</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">                <span class="nam">peer_facility_id</span><span class="op">=</span><span class="nam">peer_facility_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">                <span class="nam">direction</span><span class="op">=</span><span class="nam">direction</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">                <span class="nam">allowed_credentials</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">allowed_credentials</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">                <span class="nam">allowed_credential_ids</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">allowed_credential_ids</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">                <span class="nam">allowed_payload_types</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">allowed_payload_types</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">                <span class="nam">allowed_artifact_kinds</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">allowed_artifact_kinds</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">                <span class="nam">abi_tier_floor</span><span class="op">=</span><span class="nam">abi_tier_floor</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -253,7 +253,7 @@
             <a class="nav" href="z_25e6848583360fae___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-01 14:17 +0000
+            created at 2026-06-02 04:37 +0000
         </p>
     </div>
 </footer>
