@@ -31,3 +31,7 @@ Auto-memory grows monotonically without a forcing function. These rules curb dri
 ## Commits
 
 One-line subject, body explains WHY. Recent commits set the tone — `git log --oneline -10`.
+
+## Reviewer subagents
+
+- [`naming-r3-reviewer`](.claude/agents/naming-r3-reviewer.md): auto-invoked on rename or new-name commits (aggregate fields, event/command classes, slice directories, aggregate types, agent types). Checks R1-R5 with an explicit guard against the R3 noun-LAST trap. First committed reviewer; more axes added only after a rule-of-three trigger fires.

@@ -69,8 +69,10 @@ logs/
 /docs/assets/*.png
 
 # Claude Code per-project state (settings, scheduled tasks, hooks, etc.)
-.claude/
+.claude/*
 !.claude/CLAUDE.md
+!.claude/agents/
+!.claude/agents/**
 
 # Talks (slidev decks): track sources, ignore build artifacts.
 # Decks are built in CI by .github/workflows/docs.yml and mounted under
