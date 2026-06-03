@@ -20,6 +20,8 @@ filters (documented in CONTRIBUTING.md "BC-application-layer errors").
 Cross-BC consumers catching authorization failures import per-BC.
 """
 
+from uuid import UUID
+
 
 class UnauthorizedError(Exception):
     """The Authorize port denied the command."""
@@ -27,3 +29,73 @@ class UnauthorizedError(Exception):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
+
+
+class PidinstSerializationError(Exception):
+    """Base class for every PIDINST serializer precondition violation.
+
+    Five concrete classes derive from this base: four pre-construction
+    errors raised by `to_pidinst_record` before `PidinstRecord`
+    construction (`AssetNameMissingError`, `LandingPageMissingError`,
+    `OwnerStateNotAvailableError`, `ManufacturerStateNotAvailableError`)
+    and one construction-time invariant error
+    (`PidinstRecordInvariantError`) raised from
+    `PidinstRecord.__post_init__`. Callers `except` once on this base
+    to handle all five.
+    """
+
+
+class PidinstRecordInvariantError(PidinstSerializationError):
+    """The PIDINST intermediate's `__post_init__` tripped a structural invariant.
+
+    Distinct from the four typed pre-construction errors below: those
+    describe missing source data on the input view; this describes a
+    malformed intermediate that slipped past the pre-construction
+    checks. Both share the `PidinstSerializationError` base so callers
+    can `except` once.
+
+    Raised explicitly via if-raise inside `PidinstRecord.__post_init__`
+    for each of the nine invariants in section 6.7 of the design memo.
+    Bare `assert` is intentionally avoided: it is stripped under
+    `python -O` and would surface construction-time failures as an
+    undocumented `AssertionError` distinct from the five named classes.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"PidinstRecord invariant violated: {reason}")
+        self.reason = reason
+
+
+class OwnerStateNotAvailableError(PidinstSerializationError):
+    """The view carries no owner state; mandatory PIDINST property 5 cannot be emitted."""
+
+    def __init__(self, asset_id: UUID) -> None:
+        super().__init__(f"PIDINST mandatory property missing: owner for asset {asset_id}")
+        self.asset_id = asset_id
+
+
+class ManufacturerStateNotAvailableError(PidinstSerializationError):
+    """The view has no Model binding; mandatory PIDINST property 6 cannot be emitted."""
+
+    def __init__(self, asset_id: UUID) -> None:
+        super().__init__(
+            f"PIDINST mandatory property missing: manufacturer for asset {asset_id} "
+            f"(no Model bound)"
+        )
+        self.asset_id = asset_id
+
+
+class LandingPageMissingError(PidinstSerializationError):
+    """`view.landing_page_url` is empty or whitespace-only."""
+
+    def __init__(self, asset_id: UUID) -> None:
+        super().__init__(f"PIDINST mandatory property missing: landingPage for asset {asset_id}")
+        self.asset_id = asset_id
+
+
+class AssetNameMissingError(PidinstSerializationError):
+    """`view.asset_name` is empty or whitespace-only."""
+
+    def __init__(self, asset_id: UUID) -> None:
+        super().__init__(f"PIDINST mandatory property missing: name for asset {asset_id}")
+        self.asset_id = asset_id
