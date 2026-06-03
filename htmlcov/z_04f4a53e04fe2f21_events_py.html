@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_04f4a53e04fe2f21_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-03 13:31 +0000
+            created at 2026-06-03 16:12 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -97,9 +97,9 @@
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">                           append-only mirroring CalibrationRevision)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">  - `AssemblyDeprecated`  (terminal lifecycle)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">`AssemblyInstantiated` is a fourth event in the design memo but</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">lives on a separate `assembly_instantiation` stream and ships with</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">the `instantiate_assembly` slice. Keeping it out of this scaffold</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">`FixtureRegistered` is a fourth event in the design memo but lives</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">on a separate `Fixture` stream (its own aggregate) and ships with</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">the `register_fixture` slice. Keeping it out of this scaffold</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">module keeps the discriminated union focused on the main-stream</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">events that the Assembly evolver folds.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -256,7 +256,7 @@
     <p class="run"><span class="n"><a id="t172" href="#t172">172</a></span><span class="t"><span class="key">class</span> <span class="nam">AssemblyDeprecated</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t173" href="#t173">173</a></span><span class="t">    <span class="str">"""The Assembly was retired from active use.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t174" href="#t174">174</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t"><span class="str">    Terminal lifecycle transition. Subsequent `instantiate_assembly`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t"><span class="str">    Terminal lifecycle transition. Subsequent `register_fixture`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t176" href="#t176">176</a></span><span class="t"><span class="str">    calls reject. New revisions must fork via `define_assembly` with</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t177" href="#t177">177</a></span><span class="t"><span class="str">    a fresh id.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t178" href="#t178">178</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -457,7 +457,7 @@
             <a class="nav" href="z_04f4a53e04fe2f21_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-03 13:31 +0000
+            created at 2026-06-03 16:12 +0000
         </p>
     </div>
 </footer>
