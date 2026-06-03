@@ -253,6 +253,20 @@
         "title": "AddAssetFamilyRequest",
         "type": "object"
       },
+      "AddAssetOwnerRequest": {
+        "description": "Body for `POST /assets/{asset_id}/add-owner`.\n\nThe full `AssetOwner` block is required. Pydantic enforces\nbounded-text length checks at the boundary; the AssetOwner VO\nre-validates (trim + length + pairing) inside the decider.",
+        "properties": {
+          "owner": {
+            "$ref": "#/components/schemas/AssetOwnerBody",
+            "description": "The institutional owner block to add. Uniqueness keyed on `name` at the Asset scope; cross-Asset duplicates are NOT rejected in v1."
+          }
+        },
+        "required": [
+          "owner"
+        ],
+        "title": "AddAssetOwnerRequest",
+        "type": "object"
+      },
       "AddAssetPortRequest": {
         "description": "Body for `POST /assets/{asset_id}/add-port`.\n\nAll three fields are required. Pydantic enforces non-empty\nname/signal_type at the boundary; the AssetPort VO then trims\nand re-validates length within the decider.",
         "properties": {
@@ -1136,6 +1150,65 @@
           "items"
         ],
         "title": "AssetListResponse",
+        "type": "object"
+      },
+      "AssetOwnerBody": {
+        "description": "Wire format for an `AssetOwner` value object (PIDINST v1.0 Property 5).",
+        "properties": {
+          "contact": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional contact string for the owner (PIDINST 5.2). The spec hints at email; CORA accepts arbitrary free text (phone numbers, contact-form URLs, mail-team aliases all appear in DataCite corpora). Email-format validation is not enforced here.",
+            "title": "Contact"
+          },
+          "identifier": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional opaque owner identifier (PIDINST 5.3). The spec recommends a globally unique identifier; ROR is the preferred scheme. Both bare codes and full URLs are accepted; no normalization. Paired with identifier_type: both must be set or both must be absent.",
+            "title": "Identifier"
+          },
+          "identifier_type": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional scheme label for `identifier` (PIDINST 5.3.1). Free text by spec design (unlike sibling identifier-type fields): the field accepts ROR, GRID, ISNI, RAID, IGSN, internal facility codes, or any other authority. CORA does NOT case-normalize the recorded value. Paired with identifier.",
+            "title": "Identifier Type"
+          },
+          "name": {
+            "description": "Mandatory institutional owner name (PIDINST v1.0 Property 5.1). Trimmed at the domain boundary. Unique within a single Asset's owners set.",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "AssetOwnerBody",
         "type": "object"
       },
       "AssetPortDTO": {
@@ -8138,6 +8211,21 @@
             "title": "Name",
             "type": "string"
           },
+          "owners": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AssetOwnerBody"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional PIDINST v1.0 Property 5 institutional owner blocks seeded at registration. Each entry carries a mandatory `name` plus optional `contact`, `identifier`, and `identifier_type`. Owner names must be unique within the payload (rejected as 409 otherwise). Aggregate allows 0-n owners; the PIDINST serializer enforces the 1-n cardinality at emission time.",
+            "title": "Owners"
+          },
           "parent_id": {
             "anyOf": [
               {
@@ -9414,6 +9502,23 @@
           "family_id"
         ],
         "title": "RemoveAssetFamilyRequest",
+        "type": "object"
+      },
+      "RemoveAssetOwnerRequest": {
+        "description": "Body for `POST /assets/{asset_id}/remove-owner`.\n\nCarries only `owner_name` (Lock 5: removal keys on name, not\non the full VO).",
+        "properties": {
+          "owner_name": {
+            "description": "Name of the institutional owner to remove. Matched against the asset's stored owners by exact name.",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Owner Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "owner_name"
+        ],
+        "title": "RemoveAssetOwnerRequest",
         "type": "object"
       },
       "RemoveAssetPortRequest": {
@@ -14762,6 +14867,16 @@
             },
             "description": "model_id was supplied but the referenced Model stream does not exist (ModelNotFoundError)."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Two or more entries in the owners payload share a name (AssetOwnerAlreadyPresentError); owner names must be unique within a single Asset."
+          },
           "422": {
             "description": "Request body failed schema validation (unknown level, missing fields, malformed UUID) OR Idempotency-Key was reused with a different request body."
           }
@@ -15111,6 +15226,111 @@
           }
         },
         "summary": "Add a Family to an existing asset's family set",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/assets/{asset_id}/add-owner": {
+      "post": {
+        "operationId": "post_assets_add_owner_assets__asset_id__add_owner_post",
+        "parameters": [
+          {
+            "description": "Target asset's id.",
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "description": "Target asset's id.",
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddAssetOwnerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Owner VO validation failed: empty / whitespace-only name, contact, identifier, or identifier_type; or the identifier <-> identifier_type pairing invariant was violated (InvalidAssetOwnerIdentifierPairingError)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize policy denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No asset exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Asset cannot accept the owner under current conditions: the asset is Decommissioned (AssetCannotAddOwnerError), OR an owner with the same name already exists on the asset (AssetOwnerAlreadyPresentError), OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation (missing field, malformed UUID, length out of bounds at the wire layer)."
+          }
+        },
+        "summary": "Add an institutional owner to an existing Asset's owners set",
         "tags": [
           "equipment"
         ]
@@ -16009,6 +16229,106 @@
           }
         },
         "summary": "Remove a Family from an existing asset's family set",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/assets/{asset_id}/remove-owner": {
+      "post": {
+        "operationId": "post_assets_remove_owner_assets__asset_id__remove_owner_post",
+        "parameters": [
+          {
+            "description": "Target asset's id.",
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "description": "Target asset's id.",
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveAssetOwnerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Owner name is empty / whitespace-only / exceeds the configured max length after trimming (InvalidAssetOwnerNameError)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize policy denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No asset exists with the given id (AssetNotFoundError), OR no owner with the given name exists on the asset (AssetOwnerNotPresentError; strict-not-idempotent)."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Asset cannot remove the owner under current conditions: the asset is Decommissioned (AssetCannotAddOwnerError; the shared lifecycle-guard class is used by BOTH add and remove), OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation (missing field, malformed UUID)."
+          }
+        },
+        "summary": "Remove an institutional owner from an existing Asset's owners set",
         "tags": [
           "equipment"
         ]

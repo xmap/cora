@@ -46,7 +46,11 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from cora.equipment.aggregates._drawing import Drawing
-from cora.equipment.aggregates.asset import AlternateIdentifier, AssetLevel
+from cora.equipment.aggregates.asset import (
+    AlternateIdentifier,
+    AssetLevel,
+    AssetOwner,
+)
 
 
 @dataclass(frozen=True)
@@ -54,8 +58,8 @@ class RegisterAsset:
     """Register a new asset.
 
     Carries the display name, hierarchical level, parent_id, optional
-    Drawing reference, optional `model_id` Model-binding ref, and
-    optional `alternate_identifiers` seed set.
+    Drawing reference, optional `model_id` Model-binding ref, optional
+    `alternate_identifiers` seed set, and optional `owners` seed set.
     """
 
     name: str
@@ -72,3 +76,8 @@ class RegisterAsset:
     alternate_identifiers: frozenset[AlternateIdentifier] = field(
         default_factory=frozenset[AlternateIdentifier]
     )
+    # frozenset[AssetOwner] for PIDINST v1.0 Property 5 owner blocks
+    # seeded at registration. The decider enforces owner_name
+    # uniqueness within the payload (Lock 6); identifier/identifier_type
+    # pairing is enforced by the AssetOwner VO.
+    owners: frozenset[AssetOwner] = field(default_factory=frozenset[AssetOwner])

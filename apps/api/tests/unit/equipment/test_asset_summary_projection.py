@@ -58,6 +58,8 @@ def test_projection_metadata() -> None:
             "AssetRestored",
             "AssetAlternateIdentifierAdded",
             "AssetAlternateIdentifierRemoved",
+            "AssetOwnerAdded",
+            "AssetOwnerRemoved",
         }
     )
 
@@ -114,7 +116,10 @@ async def test_asset_registered_inserts_with_commissioned_lifecycle_and_parent()
     # bound to a jsonb column, so the projection passes a Python list
     # directly instead of a pre-serialized JSON string.
     assert args.args[9] == []
-    assert args.args[10] == _NOW
+    # owners omitted from payload: column folds to the canonical empty
+    # list for the same reasons as alternate_identifiers.
+    assert args.args[10] == []
+    assert args.args[11] == _NOW
 
 
 @pytest.mark.unit

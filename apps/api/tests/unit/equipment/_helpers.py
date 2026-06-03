@@ -49,6 +49,13 @@ _DEFAULT_OWNER = Owner(
     identifier_type="ROR",
 )
 
+_HZB_OWNER = Owner(
+    name="Helmholtz-Zentrum Berlin",
+    contact="instrument-data@helmholtz-berlin.de",
+    identifier="https://ror.org/02aj13c28",
+    identifier_type="ROR",
+)
+
 
 def build_minimal_view() -> AssetPidinstView:
     """Asset with the smallest possible view that still serializes.
@@ -152,6 +159,39 @@ def build_view_with_alt_ids() -> AssetPidinstView:
         publisher=_PUBLISHER,
         publication_year=_COMMISSIONED_AT.year,
         owners=(_DEFAULT_OWNER,),
+    )
+
+
+def build_view_with_hzb_owners() -> AssetPidinstView:
+    """Asset with HZB as the sole owner (slice D anchor case).
+
+    Mirrors the HZB live record cited in
+    [[project-pidinst-operational-patterns-research]] F6.8: a
+    single owner with full PIDINST Property 5 payload (name +
+    contact + ROR identifier + identifier_type). Pinned by
+    `test_pidinst_serializer_golden::test_to_pidinst_record_asset_with_hzb_owners_golden_file_byte_equal`.
+    """
+    return AssetPidinstView(
+        asset_id=_ASSET_ID,
+        asset_name="HZB BESSY II Instrument NI000001",
+        landing_page_url=_LANDING_PAGE,
+        lifecycle=AssetLifecycle.ACTIVE,
+        alternate_identifiers=frozenset(),
+        parent_id=None,
+        family_names=(),
+        family_ids=(),
+        model=ModelPidinstView(
+            name="ANT130-L",
+            part_number="ANT130-L-RM",
+            manufacturer_name="Aerotech",
+            manufacturer_identifier=None,
+            manufacturer_identifier_type=None,
+        ),
+        commissioned_at=_COMMISSIONED_AT,
+        decommissioned_at=None,
+        publisher=_PUBLISHER,
+        publication_year=_COMMISSIONED_AT.year,
+        owners=(_HZB_OWNER,),
     )
 
 

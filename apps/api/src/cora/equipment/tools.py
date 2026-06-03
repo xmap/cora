@@ -18,6 +18,7 @@ from cora.equipment.features.add_asset_alternate_identifier import (
 from cora.equipment.features.add_asset_family import (
     tool as add_asset_family_tool,
 )
+from cora.equipment.features.add_asset_owner import tool as add_asset_owner_tool
 from cora.equipment.features.add_asset_port import tool as add_asset_port_tool
 from cora.equipment.features.add_model_family import tool as add_model_family_tool
 from cora.equipment.features.decommission_asset import tool as decommission_asset_tool
@@ -57,6 +58,7 @@ from cora.equipment.features.remove_asset_alternate_identifier import (
 from cora.equipment.features.remove_asset_family import (
     tool as remove_asset_family_tool,
 )
+from cora.equipment.features.remove_asset_owner import tool as remove_asset_owner_tool
 from cora.equipment.features.remove_asset_port import tool as remove_asset_port_tool
 from cora.equipment.features.remove_model_family import tool as remove_model_family_tool
 from cora.equipment.features.restore_asset import tool as restore_asset_tool
@@ -195,6 +197,14 @@ def register_equipment_tools(
     remove_asset_alternate_identifier_tool.register(
         mcp,
         get_handler=lambda: get_handlers().remove_asset_alternate_identifier,
+    )
+    add_asset_owner_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().add_asset_owner,
+    )
+    remove_asset_owner_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().remove_asset_owner,
     )
     get_asset_tool.register(
         mcp,

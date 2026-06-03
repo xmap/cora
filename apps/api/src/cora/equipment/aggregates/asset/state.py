@@ -74,6 +74,10 @@ from cora.infrastructure.bounded_text import validate_bounded_text
 
 ASSET_NAME_MAX_LENGTH = 200
 ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH = 200
+ASSET_OWNER_NAME_MAX_LENGTH = 255
+ASSET_OWNER_CONTACT_MAX_LENGTH = 255
+ASSET_OWNER_IDENTIFIER_MAX_LENGTH = 255
+ASSET_OWNER_IDENTIFIER_TYPE_MAX_LENGTH = 64
 
 
 class AssetLevel(StrEnum):
@@ -339,6 +343,263 @@ class AssetCannotAddAlternateIdentifierError(Exception):
         self.asset_id = asset_id
         self.kind = kind
         self.value = value
+        self.reason = reason
+
+
+class InvalidAssetOwnerNameError(ValueError):
+    """The supplied owner name is empty, whitespace-only, or too long.
+
+    PIDINST v1.0 Property 5.1 `ownerName` is MANDATORY free text. The
+    aggregate enforces non-empty + length-cap; semantic validation
+    (registry name match, casing) is operator-side.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Asset owner name must be 1-{ASSET_OWNER_NAME_MAX_LENGTH} chars "
+            f"after trimming (got: {value!r})"
+        )
+        self.value = value
+
+
+class InvalidAssetOwnerContactError(ValueError):
+    """The supplied owner contact is empty, whitespace-only, or too long.
+
+    PIDINST v1.0 Property 5.2 `ownerContact` is optional free text;
+    spec hints at email but does not enforce a format. Shape-only
+    validation at this layer; email-format checks live at the route
+    layer (Pydantic `EmailStr`) if a future deployment opts in.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Asset owner contact must be 1-{ASSET_OWNER_CONTACT_MAX_LENGTH} chars "
+            f"after trimming (got: {value!r})"
+        )
+        self.value = value
+
+
+class InvalidAssetOwnerIdentifierError(ValueError):
+    """The supplied owner identifier is empty, whitespace-only, or too long.
+
+    PIDINST v1.0 Property 5.3 `ownerIdentifier` is opaque free text;
+    the spec recommends ROR but accepts any globally unique string.
+    Both bare codes (for example `02aj13c28`) and full URLs (for example
+    `https://ror.org/02aj13c28`) round-trip as-is; no normalization at
+    this layer.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Asset owner identifier must be 1-{ASSET_OWNER_IDENTIFIER_MAX_LENGTH} chars "
+            f"after trimming (got: {value!r})"
+        )
+        self.value = value
+
+
+class InvalidAssetOwnerIdentifierTypeError(ValueError):
+    """The supplied owner identifier_type is empty, whitespace-only, or too long.
+
+    PIDINST v1.0 Property 5.3.1 `ownerIdentifierType` is **free text**
+    by spec design (unlike sibling fields `relatedIdentifierType`,
+    `alternateIdentifierType`, `dateType`, which use closed vocabularies).
+    CORA honors the spec posture: shape-only validation, no closed
+    enum. ROR is documented as the recommended scheme in operator docs
+    but never enforced at this layer.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Asset owner identifier_type must be "
+            f"1-{ASSET_OWNER_IDENTIFIER_TYPE_MAX_LENGTH} chars after trimming "
+            f"(got: {value!r})"
+        )
+        self.value = value
+
+
+@dataclass(frozen=True)
+class AssetOwnerName:
+    """Owner display name. Trimmed; 1-255 chars."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        trimmed = validate_bounded_text(
+            self.value,
+            max_length=ASSET_OWNER_NAME_MAX_LENGTH,
+            error_class=InvalidAssetOwnerNameError,
+        )
+        object.__setattr__(self, "value", trimmed)
+
+
+@dataclass(frozen=True)
+class AssetOwnerContact:
+    """Owner contact string (typically email). Trimmed; 1-255 chars when present."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        trimmed = validate_bounded_text(
+            self.value,
+            max_length=ASSET_OWNER_CONTACT_MAX_LENGTH,
+            error_class=InvalidAssetOwnerContactError,
+        )
+        object.__setattr__(self, "value", trimmed)
+
+
+@dataclass(frozen=True)
+class AssetOwnerIdentifier:
+    """Opaque owner identifier value (typically a ROR URL or bare code). Trimmed; 1-255 chars."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        trimmed = validate_bounded_text(
+            self.value,
+            max_length=ASSET_OWNER_IDENTIFIER_MAX_LENGTH,
+            error_class=InvalidAssetOwnerIdentifierError,
+        )
+        object.__setattr__(self, "value", trimmed)
+
+
+@dataclass(frozen=True)
+class AssetOwnerIdentifierType:
+    """Owner identifier scheme label (free text). Trimmed; 1-64 chars.
+
+    Deliberately NOT a closed StrEnum (unlike
+    `ManufacturerIdentifierType`): PIDINST v1.0 Property 5.3.1 is the
+    one identifier-type field the spec leaves open. ROR is the
+    recommended scheme but the field accepts arbitrary
+    organization-identifier authorities (RAID, IGSN-for-orgs, internal
+    facility codes).
+    """
+
+    value: str
+
+    def __post_init__(self) -> None:
+        trimmed = validate_bounded_text(
+            self.value,
+            max_length=ASSET_OWNER_IDENTIFIER_TYPE_MAX_LENGTH,
+            error_class=InvalidAssetOwnerIdentifierTypeError,
+        )
+        object.__setattr__(self, "value", trimmed)
+
+
+class InvalidAssetOwnerIdentifierPairingError(ValueError):
+    """Owner identifier and identifier_type must be both-set or both-None.
+
+    PIDINST v1.0 Property 5.3.1 only exists when 5.3 is provided; a
+    bare identifier with no scheme cannot be resolved, a scheme with
+    no identifier is meaningless. Same shape as Model's
+    `InvalidManufacturerIdentifierPairingError`; per-BC, not hoisted.
+    """
+
+    def __init__(
+        self,
+        *,
+        name: "AssetOwnerName",
+        identifier: "AssetOwnerIdentifier | None",
+        identifier_type: "AssetOwnerIdentifierType | None",
+    ) -> None:
+        super().__init__(
+            f"Asset owner {name.value!r}: identifier and identifier_type must be "
+            f"both set or both None (got identifier="
+            f"{identifier.value if identifier is not None else None!r}, "
+            f"identifier_type="
+            f"{identifier_type.value if identifier_type is not None else None!r})"
+        )
+        self.name = name
+        self.identifier = identifier
+        self.identifier_type = identifier_type
+
+
+@dataclass(frozen=True)
+class AssetOwner:
+    """A body owning or curating the Asset (PIDINST v1.0 Property 5).
+
+    `name` is mandatory (5.1). `contact` is optional (5.2; free text,
+    spec hints at email). `identifier` (5.3) and `identifier_type`
+    (5.3.1) are independently optional but jointly constrained: both
+    set or both None. The pairing invariant raises
+    `InvalidAssetOwnerIdentifierPairingError` from `__post_init__`.
+
+    Uniqueness within one Asset's `owners` frozenset is keyed on
+    `name` and enforced at the decider, not at the VO; this lets
+    operators record genuine same-name distinct contacts only after
+    they disambiguate the names (see Defer-5 in the design memo).
+    """
+
+    name: AssetOwnerName
+    contact: AssetOwnerContact | None = None
+    identifier: AssetOwnerIdentifier | None = None
+    identifier_type: AssetOwnerIdentifierType | None = None
+
+    def __post_init__(self) -> None:
+        has_id = self.identifier is not None
+        has_type = self.identifier_type is not None
+        if has_id != has_type:
+            raise InvalidAssetOwnerIdentifierPairingError(
+                name=self.name,
+                identifier=self.identifier,
+                identifier_type=self.identifier_type,
+            )
+
+
+class AssetOwnerAlreadyPresentError(Exception):
+    """Attempted to add an AssetOwner whose name is already on the asset.
+
+    Strict-not-idempotent: same precedent as
+    `AssetAlternateIdentifierAlreadyPresentError`. Owner uniqueness
+    is keyed on `name` per Lock 5 of the design memo; two owners
+    sharing a name on the same Asset are forbidden in v1.
+    """
+
+    def __init__(self, asset_id: UUID, name: "AssetOwnerName") -> None:
+        super().__init__(
+            f"Asset {asset_id} already has owner with name {name.value!r}; "
+            "owner names are unique within a single Asset"
+        )
+        self.asset_id = asset_id
+        self.name = name
+
+
+class AssetOwnerNotPresentError(Exception):
+    """Attempted to remove an AssetOwner whose name is not on the asset.
+
+    Mirror of `AssetOwnerAlreadyPresentError`. Strict-not-idempotent:
+    removing an unknown owner_name rejects rather than no-ops, so a
+    typo cannot mask a missing-owner audit gap.
+    """
+
+    def __init__(self, asset_id: UUID, name: "AssetOwnerName") -> None:
+        super().__init__(
+            f"Asset {asset_id} does not have owner with name {name.value!r}; nothing to remove"
+        )
+        self.asset_id = asset_id
+        self.name = name
+
+
+class AssetCannotAddOwnerError(Exception):
+    """Attempted to add / remove an AssetOwner under a disqualifying lifecycle.
+
+    Used by BOTH `add_asset_owner` and `remove_asset_owner` deciders:
+    the lifecycle guard (asset is `Decommissioned`) is symmetric across
+    the add and remove transitions; mirrors
+    `AssetCannotAddAlternateIdentifierError`'s reason-bearing pattern.
+    A Decommissioned asset is out of inventory; owner-data curation
+    after retirement would drift unobserved.
+    """
+
+    def __init__(
+        self,
+        asset_id: UUID,
+        name: "AssetOwnerName",
+        *,
+        reason: str,
+    ) -> None:
+        super().__init__(f"Asset {asset_id} cannot mutate owner {name.value!r}: {reason}")
+        self.asset_id = asset_id
+        self.name = name
         self.reason = reason
 
 
@@ -757,8 +1018,19 @@ class Asset:
     additive-state pattern. See
     [[project-asset-alternate-identifiers-design]] Locks A, D, E.
 
-    Future additive facets: `owner`, `persistent_id`. The state-
-    level fields land with defaults for the same forward-
+    `owners`: frozenset of PIDINST v1.0 Property 5 owner blocks
+    (institutional bodies owning or curating the Asset). Each entry is
+    an `AssetOwner` VO (name + optional contact + optional paired
+    identifier+identifier_type). Updated incrementally via
+    `add_asset_owner` / `remove_asset_owner` slices; the optional
+    `owners` parameter at `register_asset` time seeds the initial set.
+    Aggregate allows 0-n owners; PIDINST 1-n MANDATORY cardinality is
+    a serializer-time gate, not an aggregate-time invariant. Defaults
+    to empty frozenset; legacy AssetRegistered streams without the
+    field fold cleanly via the additive-state pattern.
+
+    Future additive facet: `persistent_id` (PIDINST DOI). The state-
+    level field lands with a default for the same forward-
     compatibility reason.
     """
 
@@ -792,3 +1064,8 @@ class Asset:
     alternate_identifiers: frozenset[AlternateIdentifier] = field(
         default_factory=frozenset[AlternateIdentifier]
     )
+    # frozenset[AssetOwner] for PIDINST v1.0 Property 5 owner blocks.
+    # Same parametrized-callable trick as family_ids / ports /
+    # alternate_identifiers; the empty frozenset has no element type
+    # for pyright to infer under strict.
+    owners: frozenset[AssetOwner] = field(default_factory=frozenset[AssetOwner])

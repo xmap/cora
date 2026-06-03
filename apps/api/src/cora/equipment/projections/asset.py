@@ -1,12 +1,13 @@
 """AssetSummaryProjection: folds the Asset aggregate's lifecycle +
-hierarchy + condition + alternate-identifier events into the
+hierarchy + condition + alternate-identifier + owner events into the
 `proj_equipment_asset_summary` read model that backs `GET /assets`.
 
 Subscribed events:
   - AssetRegistered                   -> INSERT (lifecycle=Commissioned,
                                          condition=Nominal; level + parent_id
                                          + drawing trio + model_id +
-                                         alternate_identifiers from payload)
+                                         alternate_identifiers + owners from
+                                         payload)
   - AssetActivated                    -> UPDATE lifecycle=Active
   - AssetDecommissioned               -> UPDATE lifecycle=Decommissioned
   - AssetMaintenanceEntered           -> UPDATE lifecycle=Maintenance
@@ -20,6 +21,10 @@ Subscribed events:
                                          de-duplicated and re-sorted
   - AssetAlternateIdentifierRemoved   -> UPDATE remove (kind, value) from
                                          alternate_identifiers JSONB array
+  - AssetOwnerAdded                   -> UPDATE append owner into owners JSONB
+                                         array, re-sorted by name ASC
+  - AssetOwnerRemoved                 -> UPDATE remove owner matching name
+                                         from owners JSONB array
 
 NOT subscribed:
   - AssetFamilyAdded / AssetFamilyRemoved: these describe
@@ -53,9 +58,9 @@ _INSERT_ASSET_SQL = """
 INSERT INTO proj_equipment_asset_summary
     (asset_id, name, level, lifecycle, condition, parent_id,
      drawing_system, drawing_number, drawing_revision, model_id,
-     alternate_identifiers, created_at)
+     alternate_identifiers, owners, created_at)
 VALUES ($1, $2, $3, 'Commissioned', 'Nominal', $4, $5, $6, $7, $8,
-        $9, $10)
+        $9, $10, $11)
 ON CONFLICT (asset_id) DO NOTHING
 """
 
@@ -119,6 +124,47 @@ SET alternate_identifiers = COALESCE(
 WHERE asset_id = $1
 """
 
+# Append-and-re-sort owners in a single SQL statement. The full owner
+# block (name + nullable contact + nullable identifier + nullable
+# identifier_type) arrives as a JSON object literal bound on $2. Union
+# the existing array with the new singleton, dedupe by name (latest
+# event wins via DISTINCT ON), and re-aggregate sorted by name ASC.
+_UPDATE_OWNER_ADDED_SQL = """
+UPDATE proj_equipment_asset_summary
+SET owners = COALESCE(
+        (
+            SELECT jsonb_agg(elem ORDER BY elem->>'name')
+            FROM (
+                SELECT DISTINCT ON (elem->>'name') elem
+                FROM jsonb_array_elements(
+                    owners || jsonb_build_array($2::jsonb)
+                ) AS elem
+                ORDER BY elem->>'name'
+            ) AS dedup
+        ),
+        '[]'::jsonb
+    ),
+    updated_at = now()
+WHERE asset_id = $1
+"""
+
+# Filter-out owner blocks whose `name` matches. Empty result collapses
+# to `[]` via COALESCE so the NOT NULL constraint holds. Keyed on the
+# JSON `name` text (Lock 5: owner_name is the removal key, not full VO).
+_UPDATE_OWNER_REMOVED_SQL = """
+UPDATE proj_equipment_asset_summary
+SET owners = COALESCE(
+        (
+            SELECT jsonb_agg(elem ORDER BY elem->>'name')
+            FROM jsonb_array_elements(owners) AS elem
+            WHERE elem->>'name' <> $2::text
+        ),
+        '[]'::jsonb
+    ),
+    updated_at = now()
+WHERE asset_id = $1
+"""
+
 
 class AssetSummaryProjection:
     """Maintains the `proj_equipment_asset_summary` read model."""
@@ -137,6 +183,8 @@ class AssetSummaryProjection:
             "AssetRestored",
             "AssetAlternateIdentifierAdded",
             "AssetAlternateIdentifierRemoved",
+            "AssetOwnerAdded",
+            "AssetOwnerRemoved",
         }
     )
 
@@ -161,6 +209,7 @@ class AssetSummaryProjection:
                 alternate_identifiers_list = _canonical_alternate_identifiers_list(
                     event.payload.get("alternate_identifiers")
                 )
+                owners_list = _canonical_owners_list(event.payload.get("owners"))
                 await conn.execute(
                     _INSERT_ASSET_SQL,
                     UUID(event.payload["asset_id"]),
@@ -172,6 +221,7 @@ class AssetSummaryProjection:
                     drawing_revision,
                     model_id,
                     alternate_identifiers_list,
+                    owners_list,
                     datetime.fromisoformat(event.payload["occurred_at"]),
                 )
             case "AssetActivated" | "AssetMaintenanceExited":
@@ -208,6 +258,19 @@ class AssetSummaryProjection:
                     identifier["kind"],
                     identifier["value"],
                 )
+            case "AssetOwnerAdded":
+                owner_jsonb = _canonical_owner_jsonb(event.payload["owner"])
+                await conn.execute(
+                    _UPDATE_OWNER_ADDED_SQL,
+                    UUID(event.payload["asset_id"]),
+                    owner_jsonb,
+                )
+            case "AssetOwnerRemoved":
+                await conn.execute(
+                    _UPDATE_OWNER_REMOVED_SQL,
+                    UUID(event.payload["asset_id"]),
+                    event.payload["owner_name"],
+                )
             case _:
                 pass
 
@@ -234,6 +297,57 @@ class AssetSummaryProjection:
             UUID(event.payload["asset_id"]),
             new_condition,
         )
+
+
+def _canonical_owner_dict(raw: dict[str, Any]) -> dict[str, Any]:
+    """Normalize one owner block into the canonical stored shape.
+
+    Always emits the four keys in the same order (`name`, `contact`,
+    `identifier`, `identifier_type`) with `None` for absent optional
+    fields. The pool's jsonb codec encodes Python `None` as JSON
+    null, matching the wire shape recorded in the event payload.
+    """
+    return {
+        "name": str(raw["name"]),
+        "contact": (None if raw.get("contact") is None else str(raw["contact"])),
+        "identifier": (None if raw.get("identifier") is None else str(raw["identifier"])),
+        "identifier_type": (
+            None if raw.get("identifier_type") is None else str(raw["identifier_type"])
+        ),
+    }
+
+
+def _canonical_owners_list(
+    raw: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Serialize the AssetRegistered payload's owners into a canonical
+    list of dicts the asyncpg jsonb codec can encode.
+
+    Sorted by `name` so the same logical set produces the same byte
+    sequence on disk regardless of payload insertion order. Empty or
+    missing payload key produces `[]`. Mirrors the
+    `_canonical_alternate_identifiers_list` helper and the projection
+    UPDATE statements' `jsonb_agg(... ORDER BY name)` sort.
+    """
+    if not raw:
+        return []
+    return sorted(
+        (_canonical_owner_dict(item) for item in raw),
+        key=lambda item: item["name"],
+    )
+
+
+def _canonical_owner_jsonb(raw: dict[str, Any]) -> dict[str, Any]:
+    """Return a canonical owner dict for binding to a `$x::jsonb` parameter.
+
+    The pool's jsonb codec (`encoder=json.dumps`) serializes Python
+    dicts on the wire; the SQL cast `$2::jsonb` then wraps the encoded
+    bytes back as a JSONB value that `jsonb_build_array` can wrap.
+    Returning the dict (not pre-serialized JSON text) avoids the
+    double-encoding the codec would otherwise apply if a JSON string
+    were bound to a jsonb parameter.
+    """
+    return _canonical_owner_dict(raw)
 
 
 def _canonical_alternate_identifiers_list(

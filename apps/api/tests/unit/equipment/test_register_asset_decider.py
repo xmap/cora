@@ -17,6 +17,12 @@ from cora.equipment.aggregates.asset import (
     AssetAlreadyExistsError,
     AssetLevel,
     AssetName,
+    AssetOwner,
+    AssetOwnerAlreadyPresentError,
+    AssetOwnerContact,
+    AssetOwnerIdentifier,
+    AssetOwnerIdentifierType,
+    AssetOwnerName,
     AssetRegistered,
     InvalidAssetNameError,
     InvalidAssetParentError,
@@ -270,6 +276,124 @@ def test_decide_defaults_alternate_identifiers_to_empty_when_omitted() -> None:
         new_id=uuid4(),
     )
     assert events[0].alternate_identifiers == frozenset()
+
+
+@pytest.mark.unit
+def test_register_asset_with_zero_owners_succeeds() -> None:
+    """Aggregate-level cardinality is 0-n; an empty owners frozenset
+    is valid at registration."""
+    events = register_asset.decide(
+        state=None,
+        command=RegisterAsset(
+            name="APS-2BM",
+            level=AssetLevel.SITE,
+            parent_id=uuid4(),
+            owners=frozenset(),
+        ),
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert events[0].owners == frozenset()
+
+
+@pytest.mark.unit
+def test_register_asset_with_one_owner_succeeds() -> None:
+    owner = AssetOwner(
+        name=AssetOwnerName("HZB"),
+        contact=AssetOwnerContact("ops@hzb.de"),
+        identifier=AssetOwnerIdentifier("https://ror.org/02aj13c28"),
+        identifier_type=AssetOwnerIdentifierType("ROR"),
+    )
+    events = register_asset.decide(
+        state=None,
+        command=RegisterAsset(
+            name="HZB-Instrument",
+            level=AssetLevel.UNIT,
+            parent_id=uuid4(),
+            owners=frozenset({owner}),
+        ),
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert events[0].owners == frozenset({owner})
+
+
+@pytest.mark.unit
+def test_register_asset_with_three_owners_succeeds() -> None:
+    owners = frozenset(
+        {
+            AssetOwner(name=AssetOwnerName("HZB")),
+            AssetOwner(name=AssetOwnerName("APS")),
+            AssetOwner(name=AssetOwnerName("ESRF")),
+        }
+    )
+    events = register_asset.decide(
+        state=None,
+        command=RegisterAsset(
+            name="Shared-Instrument",
+            level=AssetLevel.UNIT,
+            parent_id=uuid4(),
+            owners=owners,
+        ),
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert events[0].owners == owners
+
+
+@pytest.mark.unit
+def test_register_asset_with_duplicate_owner_names_raises_already_present_error() -> None:
+    """Two AssetOwner VOs in the same payload sharing `name` (with
+    different optional fields so the frozenset doesn't dedupe them at
+    the type level) must surface as AssetOwnerAlreadyPresentError."""
+    first = AssetOwner(name=AssetOwnerName("HZB"), contact=AssetOwnerContact("a@hzb.de"))
+    second = AssetOwner(name=AssetOwnerName("HZB"), contact=AssetOwnerContact("b@hzb.de"))
+    with pytest.raises(AssetOwnerAlreadyPresentError) as exc_info:
+        register_asset.decide(
+            state=None,
+            command=RegisterAsset(
+                name="X",
+                level=AssetLevel.UNIT,
+                parent_id=uuid4(),
+                owners=frozenset({first, second}),
+            ),
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.name.value == "HZB"
+
+
+@pytest.mark.unit
+def test_register_asset_emits_owners_in_payload() -> None:
+    owners = frozenset({AssetOwner(name=AssetOwnerName("HZB"))})
+    events = register_asset.decide(
+        state=None,
+        command=RegisterAsset(
+            name="X",
+            level=AssetLevel.UNIT,
+            parent_id=uuid4(),
+            owners=owners,
+        ),
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert isinstance(events[0], AssetRegistered)
+    assert events[0].owners == owners
+
+
+@pytest.mark.unit
+def test_decide_defaults_owners_to_empty_when_omitted() -> None:
+    events = register_asset.decide(
+        state=None,
+        command=RegisterAsset(
+            name="APS",
+            level=AssetLevel.SITE,
+            parent_id=uuid4(),
+        ),
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert events[0].owners == frozenset()
 
 
 @pytest.mark.unit

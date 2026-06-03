@@ -30,6 +30,7 @@ from tests.unit.equipment._helpers import (
     build_minimal_view,
     build_view_2bm_rotary_stage,
     build_view_with_alt_ids,
+    build_view_with_hzb_owners,
     build_view_with_model,
 )
 
@@ -66,3 +67,11 @@ def test_to_pidinst_record_asset_with_alt_ids_golden_file_byte_equal() -> None:
 
 def test_to_pidinst_record_2bm_rotary_stage_golden_file_byte_equal() -> None:
     _assert_golden("asset_2bm_rotary_stage", build_view_2bm_rotary_stage)
+
+
+def test_to_pidinst_record_asset_with_hzb_owners_golden_file_byte_equal() -> None:
+    """Slice D anchor: HZB record from F6.8 with full PIDINST Property
+    5 payload (name + contact + ROR identifier + identifier_type).
+    Asserts the slice D owners data substrate threads through to the
+    serializer's canonical wire shape."""
+    _assert_golden("asset_with_hzb_owners", build_view_with_hzb_owners)

@@ -15,6 +15,7 @@ from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
 from cora.equipment._alternate_identifier_body import AlternateIdentifierBody
+from cora.equipment._asset_owner_body import AssetOwnerBody
 from cora.equipment._drawing_body import DrawingBody
 from cora.equipment.aggregates.asset import ASSET_NAME_MAX_LENGTH, AssetLevel
 from cora.equipment.features.register_asset.command import RegisterAsset
@@ -109,6 +110,19 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 ),
             ),
         ] = None,
+        owners: Annotated[
+            list[AssetOwnerBody] | None,
+            Field(
+                default=None,
+                description=(
+                    "Optional PIDINST v1.0 Property 5 institutional "
+                    "owner blocks seeded at registration. Each entry "
+                    "carries a mandatory name plus optional contact, "
+                    "identifier, and identifier_type (paired). Owner "
+                    "names must be unique within the payload."
+                ),
+            ),
+        ] = None,
     ) -> RegisterAssetOutput:
         handler = get_handler()
         asset_id = await handler(
@@ -121,6 +135,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 alternate_identifiers=frozenset(
                     entry.to_domain() for entry in (alternate_identifiers or [])
                 ),
+                owners=frozenset(entry.to_domain() for entry in (owners or [])),
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

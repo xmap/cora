@@ -17,6 +17,8 @@ from cora.equipment.aggregates.asset.events import (
     AssetFaulted,
     AssetMaintenanceEntered,
     AssetMaintenanceExited,
+    AssetOwnerAdded,
+    AssetOwnerRemoved,
     AssetPortAdded,
     AssetPortRemoved,
     AssetRegistered,
@@ -30,6 +32,11 @@ from cora.equipment.aggregates.asset.events import (
 from cora.equipment.aggregates.asset.state import (
     AlternateIdentifier,
     AlternateIdentifierKind,
+    AssetOwner,
+    AssetOwnerContact,
+    AssetOwnerIdentifier,
+    AssetOwnerIdentifierType,
+    AssetOwnerName,
 )
 from cora.infrastructure.ports.event_store import StoredEvent
 
@@ -1367,4 +1374,179 @@ def test_from_stored_raises_on_unknown_alternate_identifier_kind() -> None:
         },
     )
     with pytest.raises(ValueError, match="Malformed AssetAlternateIdentifierAdded payload"):
+        from_stored(stored)
+
+
+_HZB_OWNER = AssetOwner(
+    name=AssetOwnerName("HZB"),
+    contact=AssetOwnerContact("ops@helmholtz-berlin.de"),
+    identifier=AssetOwnerIdentifier("https://ror.org/02aj13c28"),
+    identifier_type=AssetOwnerIdentifierType("ROR"),
+)
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_asset_registered_with_owners() -> None:
+    asset_id = uuid4()
+    event = AssetRegistered(
+        asset_id=asset_id,
+        name="X",
+        level="Unit",
+        parent_id=uuid4(),
+        occurred_at=_NOW,
+        owners=frozenset({_HZB_OWNER}),
+    )
+    payload = to_payload(event)
+    assert payload["owners"] == [
+        {
+            "name": "HZB",
+            "contact": "ops@helmholtz-berlin.de",
+            "identifier": "https://ror.org/02aj13c28",
+            "identifier_type": "ROR",
+        }
+    ]
+
+
+@pytest.mark.unit
+def test_to_payload_omits_owners_when_empty() -> None:
+    """Mirror of the alternate_identifiers omit-when-empty convention:
+    legacy AssetRegistered events had no `owners` key; preserve that
+    wire shape so stream readers can't observe an empty list where the
+    key was previously absent."""
+    event = AssetRegistered(
+        asset_id=uuid4(),
+        name="X",
+        level="Unit",
+        parent_id=uuid4(),
+        occurred_at=_NOW,
+    )
+    payload = to_payload(event)
+    assert "owners" not in payload
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_asset_registered_without_owners_key_defaults_to_empty() -> None:
+    """Replay back-compat: a pre-Slice-D AssetRegistered payload with
+    no `owners` key folds to `owners=frozenset()` (Lock 1)."""
+    asset_id = uuid4()
+    stored = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(asset_id),
+            "name": "X",
+            "level": "Unit",
+            "parent_id": str(uuid4()),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, AssetRegistered)
+    assert rebuilt.owners == frozenset()
+
+
+@pytest.mark.unit
+def test_round_trip_for_asset_registered_with_owners() -> None:
+    original = AssetRegistered(
+        asset_id=uuid4(),
+        name="X",
+        level="Unit",
+        parent_id=uuid4(),
+        occurred_at=_NOW,
+        owners=frozenset({_HZB_OWNER}),
+    )
+    stored = _stored("AssetRegistered", to_payload(original))
+    assert from_stored(stored) == original
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_owner_added() -> None:
+    asset_id = uuid4()
+    event = AssetOwnerAdded(asset_id=asset_id, owner=_HZB_OWNER, occurred_at=_NOW)
+    assert to_payload(event) == {
+        "asset_id": str(asset_id),
+        "owner": {
+            "name": "HZB",
+            "contact": "ops@helmholtz-berlin.de",
+            "identifier": "https://ror.org/02aj13c28",
+            "identifier_type": "ROR",
+        },
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+def test_round_trip_for_owner_added() -> None:
+    original = AssetOwnerAdded(asset_id=uuid4(), owner=_HZB_OWNER, occurred_at=_NOW)
+    stored = _stored("AssetOwnerAdded", to_payload(original))
+    assert from_stored(stored) == original
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_owner_removed() -> None:
+    asset_id = uuid4()
+    event = AssetOwnerRemoved(asset_id=asset_id, owner_name=AssetOwnerName("HZB"), occurred_at=_NOW)
+    assert to_payload(event) == {
+        "asset_id": str(asset_id),
+        "owner_name": "HZB",
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+def test_round_trip_for_owner_removed() -> None:
+    original = AssetOwnerRemoved(
+        asset_id=uuid4(), owner_name=AssetOwnerName("HZB"), occurred_at=_NOW
+    )
+    stored = _stored("AssetOwnerRemoved", to_payload(original))
+    assert from_stored(stored) == original
+
+
+@pytest.mark.unit
+def test_from_stored_owner_added_with_invalid_pairing_raises_malformed() -> None:
+    """Malformed AssetOwnerAdded payloads (pairing-invariant violation)
+    surface as a Malformed* ValueError wrap, not a bare
+    InvalidAssetOwnerIdentifierPairingError. The extra=(ValueError,)
+    wrap absorbs the per-VO subclass for stream-decoding hygiene."""
+    stored = _stored(
+        "AssetOwnerAdded",
+        {
+            "asset_id": str(uuid4()),
+            "owner": {
+                "name": "HZB",
+                "contact": None,
+                "identifier": "02aj13c28",
+                "identifier_type": None,  # pairing violation
+            },
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    with pytest.raises(ValueError, match="Malformed AssetOwnerAdded payload"):
+        from_stored(stored)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("event_type", "extra_payload"),
+    [
+        ("AssetRegistered", {"owners": [{"name": "   "}]}),  # malformed owner
+    ],
+)
+def test_replay_asset_registered_back_compat_paths(
+    event_type: str, extra_payload: dict[str, object]
+) -> None:
+    """Parametrized entry point per Section 9.4 of the design memo. The
+    canonical case (no `owners` key -> empty frozenset) is covered by
+    `test_from_stored_rebuilds_asset_registered_without_owners_key_defaults_to_empty`
+    above; this matrix asserts that malformed owner shapes wrap to the
+    canonical Malformed* error rather than leaking the raw VO failure."""
+    base_payload: dict[str, object] = {
+        "asset_id": str(uuid4()),
+        "name": "X",
+        "level": "Unit",
+        "parent_id": str(uuid4()),
+        "occurred_at": _NOW.isoformat(),
+    }
+    payload = {**base_payload, **extra_payload}
+    stored = _stored(event_type, payload)
+    with pytest.raises(ValueError, match=f"Malformed {event_type} payload"):
         from_stored(stored)

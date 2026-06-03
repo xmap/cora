@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, Header, Request, status
 from pydantic import BaseModel, Field
 
 from cora.equipment._alternate_identifier_body import AlternateIdentifierBody
+from cora.equipment._asset_owner_body import AssetOwnerBody
 from cora.equipment._drawing_body import DrawingBody
 from cora.equipment.aggregates.asset import ASSET_NAME_MAX_LENGTH, AssetLevel
 from cora.equipment.features.register_asset.command import RegisterAsset
@@ -95,6 +96,18 @@ class RegisterAssetRequest(BaseModel):
             "in v1."
         ),
     )
+    owners: list[AssetOwnerBody] | None = Field(
+        None,
+        description=(
+            "Optional PIDINST v1.0 Property 5 institutional owner "
+            "blocks seeded at registration. Each entry carries a "
+            "mandatory `name` plus optional `contact`, `identifier`, "
+            "and `identifier_type`. Owner names must be unique within "
+            "the payload (rejected as 409 otherwise). Aggregate "
+            "allows 0-n owners; the PIDINST serializer enforces the "
+            "1-n cardinality at emission time."
+        ),
+    )
 
 
 class RegisterAssetResponse(BaseModel):
@@ -138,6 +151,14 @@ router = APIRouter(tags=["equipment"])
                 "does not exist (ModelNotFoundError)."
             ),
         },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "Two or more entries in the owners payload share a "
+                "name (AssetOwnerAlreadyPresentError); owner names "
+                "must be unique within a single Asset."
+            ),
+        },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
             "description": (
                 "Request body failed schema validation (unknown level, "
@@ -176,6 +197,7 @@ async def post_assets(
             alternate_identifiers=frozenset(
                 entry.to_domain() for entry in (body.alternate_identifiers or [])
             ),
+            owners=frozenset(entry.to_domain() for entry in (body.owners or [])),
         ),
         principal_id=principal_id,
         correlation_id=cid,

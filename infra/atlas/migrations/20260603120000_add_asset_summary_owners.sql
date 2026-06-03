@@ -1,0 +1,35 @@
+-- Widen proj_equipment_asset_summary with the Asset.owners facet: the
+-- institutional bodies (PIDINST v1.0 Property 5) owning or curating the
+-- Asset. Stored as a sorted list of `{"name", "contact", "identifier",
+-- "identifier_type"}` objects (sorted by `name` ASC at write time for
+-- byte-stable replay).
+--
+-- Additive JSONB array per Lock 8 of project_asset_owner_design. Legacy
+-- AssetRegistered events written before slice D ships fold to an empty
+-- array via the NOT NULL DEFAULT '[]'::jsonb shape.
+--
+-- ## No GIN index
+--
+-- Lock 8 explicitly defers the GIN index until a query in any view
+-- builder or analytics path filters by owner identifier. The PIDINST
+-- consumption pattern reads owners alongside the rest of the Asset
+-- row; no current call site needs containment lookup. The cost of an
+-- unused GIN index is per-row write amplification; add at Defer-7's
+-- trigger rather than eagerly.
+--
+-- ## Forward-only
+--
+-- Pure ADD COLUMN with safe default; greenfield-friendly; no backfill
+-- needed. Rollback via a NEW compensating migration per
+-- project_forward_only_migrations.
+--
+-- ## v1 scope reminders (see design memo Lock 7 and Defer-3)
+--
+-- Aggregate-level cardinality is 0-n; the PIDINST 1-n MANDATORY
+-- cardinality lives at the serializer boundary (slice C's
+-- OwnerStateNotAvailableError). No owner-role / contributor_type
+-- column in v1; the DataCite mint adapter (future slice 6) hardcodes
+-- contributorType=HostingInstitution.
+
+ALTER TABLE proj_equipment_asset_summary
+    ADD COLUMN owners JSONB NOT NULL DEFAULT '[]'::jsonb;

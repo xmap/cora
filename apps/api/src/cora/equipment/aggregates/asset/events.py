@@ -64,9 +64,54 @@ from cora.equipment.aggregates._drawing import Drawing, DrawingSystem
 from cora.equipment.aggregates.asset.state import (
     AlternateIdentifier,
     AlternateIdentifierKind,
+    AssetOwner,
+    AssetOwnerContact,
+    AssetOwnerIdentifier,
+    AssetOwnerIdentifierType,
+    AssetOwnerName,
 )
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
+
+
+def _owner_to_payload(owner: AssetOwner) -> dict[str, Any]:
+    """Serialize an `AssetOwner` VO to a stable-shape dict for jsonb.
+
+    Always emits the same key order (`name`, `contact`, `identifier`,
+    `identifier_type`) regardless of the VO's defaulted fields. Each
+    optional value is rendered as `None` when absent so the wire shape
+    of an `AssetOwner` block stays uniform across rows; the
+    projection's JSONB sort key reads `name` consistently.
+    """
+    return {
+        "name": owner.name.value,
+        "contact": owner.contact.value if owner.contact is not None else None,
+        "identifier": owner.identifier.value if owner.identifier is not None else None,
+        "identifier_type": (
+            owner.identifier_type.value if owner.identifier_type is not None else None
+        ),
+    }
+
+
+def _owner_from_payload(entry: dict[str, Any]) -> AssetOwner:
+    """Rebuild an `AssetOwner` VO from a stored-event payload dict.
+
+    Returns the VO; any `ValueError` raised by the VOs is caught by
+    the surrounding `deserialize_or_raise(extra=(ValueError,))` wrap.
+    """
+    raw_contact = entry.get("contact")
+    raw_identifier = entry.get("identifier")
+    raw_identifier_type = entry.get("identifier_type")
+    return AssetOwner(
+        name=AssetOwnerName(entry["name"]),
+        contact=AssetOwnerContact(raw_contact) if raw_contact is not None else None,
+        identifier=(AssetOwnerIdentifier(raw_identifier) if raw_identifier is not None else None),
+        identifier_type=(
+            AssetOwnerIdentifierType(raw_identifier_type)
+            if raw_identifier_type is not None
+            else None
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -101,6 +146,17 @@ class AssetRegistered:
     omit-when-empty convention (key absent rather than serialized as
     `[]`) to mirror the `drawing` / `model_id` precedents. See
     [[project-asset-alternate-identifiers-design]] Locks A and D.
+
+    `owners` is an optional frozenset of PIDINST v1.0 Property 5
+    owner blocks (institutional bodies owning or curating the
+    instrument) seeded at registration. Defaults to an empty
+    frozenset so legacy AssetRegistered streams (no `owners` key in
+    the payload) fold cleanly via the additive-payload pattern;
+    `to_payload` uses the omit-when-empty convention mirroring the
+    `alternate_identifiers` precedent. The aggregate allows 0-n
+    owners; PIDINST 1-n MANDATORY cardinality is enforced at the
+    serializer boundary, not here. See
+    [[project-asset-owner-design]] Locks 1, 7, 11.
     """
 
     asset_id: UUID
@@ -117,6 +173,7 @@ class AssetRegistered:
     alternate_identifiers: frozenset[AlternateIdentifier] = field(
         default_factory=frozenset[AlternateIdentifier]
     )
+    owners: frozenset[AssetOwner] = field(default_factory=frozenset[AssetOwner])
 
 
 @dataclass(frozen=True)
@@ -338,6 +395,43 @@ class AssetAlternateIdentifierRemoved:
 
 
 @dataclass(frozen=True)
+class AssetOwnerAdded:
+    """An institutional owner block (PIDINST Property 5) was added to an Asset.
+
+    Single-owner event mirroring `AssetAlternateIdentifierAdded`. Audit
+    value: "when did this Asset first gain HZB as an owner?"
+
+    The full `AssetOwner` VO (name + optional contact + paired
+    identifier/identifier_type) travels in the payload so `from_stored`
+    reconstructs the VO without reading prior state. The decider
+    enforces uniqueness on `name` at command time per
+    [[project-asset-owner-design]] Locks 5 and 6.
+    """
+
+    asset_id: UUID
+    owner: AssetOwner
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class AssetOwnerRemoved:
+    """An institutional owner block was removed from an Asset.
+
+    Mirror of `AssetOwnerAdded` but keyed on `owner_name` only per
+    [[project-asset-owner-design]] Lock 5: operator commands say
+    "remove HZB", not "remove HZB with contact X and identifier Y".
+    The smaller payload also keeps the audit log readable when an
+    operator scans the event stream after a long curation gap. The
+    decider rejects an unknown name at command time
+    (`AssetOwnerNotPresentError`) per Lock 6's name-key uniqueness.
+    """
+
+    asset_id: UUID
+    owner_name: AssetOwnerName
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class AssetSettingsUpdated:
     """An asset's settings dict was set / replaced via the
     update_asset_settings slice (5g-c).
@@ -406,6 +500,8 @@ AssetEvent = (
     | AssetPortRemoved
     | AssetAlternateIdentifierAdded
     | AssetAlternateIdentifierRemoved
+    | AssetOwnerAdded
+    | AssetOwnerRemoved
 )
 
 
@@ -430,6 +526,7 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
             drawing=drawing,
             model_id=model_id,
             alternate_identifiers=alternate_identifiers,
+            owners=owners,
         ):
             payload: dict[str, Any] = {
                 "asset_id": str(asset_id),
@@ -461,6 +558,14 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
                         alternate_identifiers,
                         key=lambda ident: (ident.kind.value, ident.value),
                     )
+                ]
+            if owners:
+                # Omit-when-empty mirroring the alternate_identifiers
+                # precedent. Sorted by `name` so payload bytes are
+                # stable under the equivalent VO set; the projection
+                # writer re-sorts defensively at insert time too.
+                payload["owners"] = [
+                    _owner_to_payload(owner) for owner in sorted(owners, key=lambda o: o.name.value)
                 ]
             return payload
         case AssetActivated(asset_id=asset_id, occurred_at=occurred_at):
@@ -587,6 +692,26 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
                 },
                 "occurred_at": occurred_at.isoformat(),
             }
+        case AssetOwnerAdded(
+            asset_id=asset_id,
+            owner=owner,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "asset_id": str(asset_id),
+                "owner": _owner_to_payload(owner),
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case AssetOwnerRemoved(
+            asset_id=asset_id,
+            owner_name=owner_name,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "asset_id": str(asset_id),
+                "owner_name": owner_name.value,
+                "occurred_at": occurred_at.isoformat(),
+            }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 
@@ -624,6 +749,8 @@ def from_stored(stored: StoredEvent) -> AssetEvent:
                     )
                     for entry in raw_alt_ids
                 )
+                raw_owners = payload.get("owners", [])
+                owners = frozenset(_owner_from_payload(entry) for entry in raw_owners)
                 return AssetRegistered(
                     asset_id=UUID(payload["asset_id"]),
                     name=payload["name"],
@@ -633,6 +760,7 @@ def from_stored(stored: StoredEvent) -> AssetEvent:
                     drawing=drawing,
                     model_id=model_id,
                     alternate_identifiers=alternate_identifiers,
+                    owners=owners,
                 )
 
             return deserialize_or_raise(
@@ -787,6 +915,26 @@ def from_stored(stored: StoredEvent) -> AssetEvent:
                 ),
                 extra=(ValueError,),
             )
+        case "AssetOwnerAdded":
+            return deserialize_or_raise(
+                "AssetOwnerAdded",
+                lambda: AssetOwnerAdded(
+                    asset_id=UUID(payload["asset_id"]),
+                    owner=_owner_from_payload(payload["owner"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+                extra=(ValueError,),
+            )
+        case "AssetOwnerRemoved":
+            return deserialize_or_raise(
+                "AssetOwnerRemoved",
+                lambda: AssetOwnerRemoved(
+                    asset_id=UUID(payload["asset_id"]),
+                    owner_name=AssetOwnerName(payload["owner_name"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+                extra=(ValueError,),
+            )
         case _:
             msg = f"Unknown AssetEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -804,6 +952,8 @@ __all__ = [
     "AssetFaulted",
     "AssetMaintenanceEntered",
     "AssetMaintenanceExited",
+    "AssetOwnerAdded",
+    "AssetOwnerRemoved",
     "AssetPortAdded",
     "AssetPortRemoved",
     "AssetRegistered",

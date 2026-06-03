@@ -50,6 +50,17 @@ format-opaque about provenance of the string. Frozenset semantics
 on the field structurally forbid duplicate `(kind, value)` pairs
 on the same Asset. No cross-BC IO fires on this field's behalf
 (Lock I); the handler does not load any external stream.
+
+## Owners (Lock 6 + Lock 11)
+
+`command.owners` flows through to the emitted AssetRegistered
+event verbatim. The decider enforces name-uniqueness within the
+payload (Lock 6): two owners sharing a `name` raise
+`AssetOwnerAlreadyPresentError`. The pairing invariant on
+(identifier, identifier_type) is enforced inside the `AssetOwner`
+VO's `__post_init__`. No cross-BC IO fires on this field's
+behalf; ROR / GRID / ISNI string values are opaque to the
+aggregate.
 """
 
 from datetime import datetime
@@ -60,6 +71,7 @@ from cora.equipment.aggregates.asset import (
     AssetAlreadyExistsError,
     AssetLevel,
     AssetName,
+    AssetOwnerAlreadyPresentError,
     AssetRegistered,
     InvalidAssetParentError,
 )
@@ -83,6 +95,8 @@ def decide(
         -> InvalidAssetParentError
       - Non-Enterprise-level Assets must have a non-null parent_id
         -> InvalidAssetParentError
+      - Owner names must be unique within the payload (Lock 6)
+        -> AssetOwnerAlreadyPresentError
     """
     if state is not None:
         raise AssetAlreadyExistsError(state.id)
@@ -100,6 +114,16 @@ def decide(
         )
         raise InvalidAssetParentError(msg)
 
+    # Owner-name uniqueness within the payload (Lock 6). Frozenset
+    # semantics already deduplicate full-VO equality but two distinct
+    # AssetOwner VOs may share `name` while differing on optional
+    # fields; the keying choice forbids that on a single Asset.
+    seen_owner_names: set[str] = set()
+    for owner in command.owners:
+        if owner.name.value in seen_owner_names:
+            raise AssetOwnerAlreadyPresentError(new_id, owner.name)
+        seen_owner_names.add(owner.name.value)
+
     return [
         AssetRegistered(
             asset_id=new_id,
@@ -110,5 +134,6 @@ def decide(
             drawing=command.drawing,
             model_id=command.model_id,
             alternate_identifiers=command.alternate_identifiers,
+            owners=command.owners,
         )
     ]

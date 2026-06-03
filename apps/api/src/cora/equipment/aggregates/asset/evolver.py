@@ -23,6 +23,10 @@ Lifecycle mapping per event type:
     alternate_identifiers frozenset)
   - `AssetAlternateIdentifierRemoved` -> (lifecycle UNCHANGED; removes from
     alternate_identifiers frozenset)
+  - `AssetOwnerAdded`              -> (lifecycle UNCHANGED; inserts AssetOwner
+    into owners frozenset)
+  - `AssetOwnerRemoved`            -> (lifecycle UNCHANGED; removes owner
+    matching name from owners frozenset)
 
 The lifecycle mapping is hardcoded per match arm — the event type
 IS the lifecycle-change indicator (no lifecycle field in event
@@ -42,28 +46,28 @@ mutated incrementally by `AssetFamilyAdded` /
 
 **Critical invariant**: every transition arm MUST carry
 `family_ids` AND `condition` AND `settings` AND `ports` AND
-`drawing` AND `model_id` AND `alternate_identifiers` through from
-prior state. Constructing
+`drawing` AND `model_id` AND `alternate_identifiers` AND `owners`
+through from prior state. Constructing
 `Asset(id=..., name=..., level=..., parent_id=..., lifecycle=...)`
 without explicitly passing them would silently WIPE the fields to
 their defaults (empty frozenset / NOMINAL / empty dict / empty
-frozenset / None / None / empty frozenset). `family_ids` was added
-with a default solely for additive-state forward compatibility on
-genesis events; `condition`, `settings`, `ports`, `drawing`,
-`model_id`, and `alternate_identifiers` followed the same additive
-pattern. Transition arms must explicitly carry all seven.
-`model_id` is set ONCE at registration per the model-binding
-design memo (Lock A) and never changes post-genesis, but
-transition arms still must carry it forward like any other Asset
-field. Pinned by
+frozenset / None / None / empty frozenset / empty frozenset).
+`family_ids` was added with a default solely for additive-state
+forward compatibility on genesis events; `condition`, `settings`,
+`ports`, `drawing`, `model_id`, `alternate_identifiers`, and
+`owners` followed the same additive pattern. Transition arms must
+explicitly carry all eight. `model_id` is set ONCE at registration
+per the model-binding design memo (Lock A) and never changes
+post-genesis, but transition arms still must carry it forward like
+any other Asset field. Pinned by
 `test_evolve_<transition>_preserves_capabilities`,
 `test_evolve_<transition>_preserves_condition`,
 `test_evolve_<transition>_preserves_settings`,
 `test_evolve_<transition>_preserves_ports`,
 `test_evolve_<transition>_preserves_drawing`,
-`test_evolve_<transition>_preserves_model_id`, and
-`test_evolve_<transition>_preserves_alternate_identifiers` for
-each transition.
+`test_evolve_<transition>_preserves_model_id`,
+`test_evolve_<transition>_preserves_alternate_identifiers`, and
+`test_evolve_<transition>_preserves_owners` for each transition.
 
 Transition events applied to empty state raise ValueError: they
 can never appear before `AssetRegistered` in a well-formed stream.
@@ -86,6 +90,8 @@ from cora.equipment.aggregates.asset.events import (
     AssetFaulted,
     AssetMaintenanceEntered,
     AssetMaintenanceExited,
+    AssetOwnerAdded,
+    AssetOwnerRemoved,
     AssetPortAdded,
     AssetPortRemoved,
     AssetRegistered,
@@ -116,6 +122,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             drawing=drawing,
             model_id=model_id,
             alternate_identifiers=alternate_identifiers,
+            owners=owners,
         ):
             _ = state  # AssetRegistered is the genesis event; prior state ignored
             return Asset(
@@ -127,14 +134,15 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=drawing,
                 model_id=model_id,
                 alternate_identifiers=alternate_identifiers,
+                owners=owners,
                 # family_ids defaults to empty frozenset; condition
                 # defaults to NOMINAL. Additive-state pattern: both
                 # default-via-state so legacy streams without these
                 # fields fold cleanly without an upcaster.
-                # alternate_identifiers default is empty frozenset on
-                # the event side (additive-payload pattern), so
-                # legacy streams missing the field fold to the empty
-                # frozenset without an upcaster.
+                # alternate_identifiers / owners defaults are empty
+                # frozenset on the event side (additive-payload
+                # pattern), so legacy streams missing those keys fold
+                # to the empty frozenset without an upcaster.
             )
         case AssetActivated():
             prior = require_state(state, "AssetActivated")
@@ -151,6 +159,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetDecommissioned():
             prior = require_state(state, "AssetDecommissioned")
@@ -167,6 +176,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetRelocated(to_parent_id=to_parent_id):
             # Hierarchy mutation: only parent_id changes; lifecycle / level
@@ -188,6 +198,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetMaintenanceEntered():
             prior = require_state(state, "AssetMaintenanceEntered")
@@ -204,6 +215,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetMaintenanceExited():
             prior = require_state(state, "AssetMaintenanceExited")
@@ -220,6 +232,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetFamilyAdded(family_id=family_id):
             # Family mutation: only `family_ids` changes; everything
@@ -241,6 +254,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetFamilyRemoved(family_id=family_id):
             # Mirror of AssetFamilyAdded. Frozenset difference is a
@@ -263,6 +277,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetDegraded():
             # Condition mutation: only `condition` changes; everything
@@ -284,6 +299,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetFaulted():
             prior = require_state(state, "AssetFaulted")
@@ -300,6 +316,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetRestored():
             prior = require_state(state, "AssetRestored")
@@ -316,6 +333,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetSettingsUpdated(settings=settings):
             # Settings mutation: only `settings` changes. Event payload
@@ -339,6 +357,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetPortAdded(
             port_name=port_name,
@@ -370,6 +389,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetPortRemoved(port_name=port_name):
             # Mirror of AssetPortAdded. Removes the port whose `name`
@@ -394,6 +414,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
             )
         case AssetAlternateIdentifierAdded(alternate_identifier=identifier):
             # Alternate-identifier mutation: only
@@ -417,6 +438,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers | {identifier},
+                owners=prior.owners,
             )
         case AssetAlternateIdentifierRemoved(alternate_identifier=identifier):
             # Mirror of AssetAlternateIdentifierAdded. Frozenset
@@ -436,6 +458,54 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 drawing=prior.drawing,
                 model_id=prior.model_id,
                 alternate_identifiers=prior.alternate_identifiers - {identifier},
+                owners=prior.owners,
+            )
+        case AssetOwnerAdded(owner=owner):
+            # Owner mutation: only `owners` changes; everything else
+            # carries over. Frozenset union semantics: adding an owner
+            # already present (by full VO equality) is a no-op AT THE
+            # EVOLVER LAYER; the decider's strict-not-idempotent guard
+            # enforces "no owner with this name already exists" at
+            # command time (which is stricter than full VO equality).
+            prior = require_state(state, "AssetOwnerAdded")
+            return Asset(
+                id=prior.id,
+                name=prior.name,
+                level=prior.level,
+                parent_id=prior.parent_id,
+                lifecycle=prior.lifecycle,
+                condition=prior.condition,
+                family_ids=prior.family_ids,
+                settings=prior.settings,
+                ports=prior.ports,
+                drawing=prior.drawing,
+                model_id=prior.model_id,
+                alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners | {owner},
+            )
+        case AssetOwnerRemoved(owner_name=owner_name):
+            # Mirror of AssetOwnerAdded. Removes the owner whose `name`
+            # matches; full-VO equality alone wouldn't suffice because
+            # the remove command only carries the name. Filter via
+            # comprehension. The decider enforces "owner with this
+            # name MUST exist" at command time; this arm is forgiving
+            # if the name isn't present (by-design the only producer
+            # is the decider that already validated).
+            prior = require_state(state, "AssetOwnerRemoved")
+            return Asset(
+                id=prior.id,
+                name=prior.name,
+                level=prior.level,
+                parent_id=prior.parent_id,
+                lifecycle=prior.lifecycle,
+                condition=prior.condition,
+                family_ids=prior.family_ids,
+                settings=prior.settings,
+                ports=prior.ports,
+                drawing=prior.drawing,
+                model_id=prior.model_id,
+                alternate_identifiers=prior.alternate_identifiers,
+                owners=frozenset(o for o in prior.owners if o.name != owner_name),
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

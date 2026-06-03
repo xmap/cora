@@ -35,6 +35,7 @@ from cora.equipment.features import (
     activate_asset,
     add_asset_alternate_identifier,
     add_asset_family,
+    add_asset_owner,
     add_asset_port,
     add_model_family,
     decommission_asset,
@@ -64,6 +65,7 @@ from cora.equipment.features import (
     relocate_asset,
     remove_asset_alternate_identifier,
     remove_asset_family,
+    remove_asset_owner,
     remove_asset_port,
     remove_model_family,
     restore_asset,
@@ -138,6 +140,8 @@ class EquipmentHandlers:
     remove_asset_port: remove_asset_port.Handler
     add_asset_alternate_identifier: add_asset_alternate_identifier.Handler
     remove_asset_alternate_identifier: remove_asset_alternate_identifier.Handler
+    add_asset_owner: add_asset_owner.Handler
+    remove_asset_owner: remove_asset_owner.Handler
     get_asset: get_asset.Handler
     get_asset_integration_view: get_asset_integration_view.Handler
     list_assets: list_assets.Handler
@@ -329,6 +333,16 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
         remove_asset_alternate_identifier=with_tracing(
             remove_asset_alternate_identifier.bind(deps),
             command_name="RemoveAssetAlternateIdentifier",
+            bc=_BC,
+        ),
+        add_asset_owner=with_tracing(
+            add_asset_owner.bind(deps),
+            command_name="AddAssetOwner",
+            bc=_BC,
+        ),
+        remove_asset_owner=with_tracing(
+            remove_asset_owner.bind(deps),
+            command_name="RemoveAssetOwner",
             bc=_BC,
         ),
         get_asset=with_tracing(
