@@ -323,15 +323,29 @@ class Method:
     # See [[project_supply_design]] §"Method.needed_supplies consumer"
     # for the full design lock.
     needed_supplies: frozenset[str] = field(default_factory=frozenset[str])
+    # needed_assembly_ids references Assembly aggregates (Equipment BC)
+    # by UUID. Declares "this Method needs a specific composition
+    # blueprint" (e.g., the MCTOptics microscope fixture), not just N
+    # independent Assets of the Families in needed_family_ids. Plan
+    # binding consults this set at bind time: each id in
+    # Method.needed_assembly_ids must be materialized as a Fixture among
+    # the Plan's Assets, where Fixture.assembly_id matches. Affordance-cover (Capability) check is
+    # unchanged because Assembly.presents_as_family_id provides the
+    # Family-typed unit the Capability binds against. Defaults to empty
+    # frozenset (additive-state pattern; legacy MethodDefined-only
+    # streams fold cleanly via payload.get default). See
+    # [[project-assembly-aggregate-design]] Locks section for the cross-BC
+    # contract.
+    needed_assembly_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
 
     def content_subset(self) -> dict[str, object]:
         """Canonical content subset hashed into MethodVersioned.content_hash.
 
         Pins identity per [[project_content_addressed_identity_design]]:
         `name + parameters_schema + capability_id + needed_family_ids +
-        needed_supplies`. Identity-bearing fields excluded: `id`
-        (identity, not content); `status` and `version` (lifecycle,
-        derived in evolver from event type and version_tag).
+        needed_supplies + needed_assembly_ids`. Identity-bearing fields
+        excluded: `id` (identity, not content); `status` and `version`
+        (lifecycle, derived in evolver from event type and version_tag).
         UUIDs render as strings (json-serializable); frozensets render
         as sorted lists (canonical_body_bytes would sort either way but
         the explicit materialization keeps "what's hashed" readable as
@@ -347,6 +361,7 @@ class Method:
             "capability_id": str(self.capability_id) if self.capability_id is not None else None,
             "needed_family_ids": sorted(str(f) for f in self.needed_family_ids),
             "needed_supplies": sorted(self.needed_supplies),
+            "needed_assembly_ids": sorted(str(a) for a in self.needed_assembly_ids),
         }
 
 

@@ -96,6 +96,18 @@ class DefineMethodRequest(BaseModel):
             "stream at decide time; mismatch surfaces at Plan binding."
         ),
     )
+    needed_assembly_ids: list[UUID] = Field(
+        default_factory=list[UUID],
+        description=(
+            "Equipment Assembly ids this Method requires (composition "
+            "blueprints). May be empty (Method needs only Assets "
+            "satisfying needed_family_ids, no specific composition). "
+            "Eventual-consistency: ids are NOT verified against the "
+            "Assembly stream at decide time; mismatch surfaces at Plan "
+            "binding when the picked Assets must include Fixtures "
+            "whose assembly_id covers this set."
+        ),
+    )
 
 
 class DefineMethodResponse(BaseModel):
@@ -158,6 +170,7 @@ async def post_methods(
             capability_id=body.capability_id,
             needed_family_ids=frozenset(body.needed_family_ids),
             needed_supplies=frozenset(body.needed_supplies),
+            needed_assembly_ids=frozenset(body.needed_assembly_ids),
         ),
         principal_id=principal_id,
         correlation_id=cid,

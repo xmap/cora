@@ -79,6 +79,9 @@ def test_to_payload_serializes_method_defined_to_primitives() -> None:
         # (default). 6l-strict will require the field on the command;
         # the payload key stays additive for stream-replay compat.
         "capability_id": None,
+        # needed_assembly_ids (default factory). Sorted by UUID string when
+        # populated; pinned by tests/unit/recipe/test_method_needed_assembly_ids.py.
+        "needed_assembly_ids": [],
         "occurred_at": _NOW.isoformat(),
     }
 

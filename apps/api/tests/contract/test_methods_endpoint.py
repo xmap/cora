@@ -117,6 +117,56 @@ def test_post_methods_rejects_whitespace_only_name_with_400() -> None:
 
 
 @pytest.mark.contract
+def test_post_methods_accepts_needed_assembly_ids() -> None:
+    """needed_assembly_ids is OPTIONAL on the request body (defaults to
+    [] via Pydantic) and accepts a list of Assembly UUIDs. Pins the
+    wire shape; eventual-consistency: ids are NOT verified against
+    the Equipment Assembly stream at decide time."""
+    asm_id = str(uuid4())
+    with TestClient(create_app()) as client:
+        _cap_id = create_capability_via_api(client)
+        response = client.post(
+            "/methods",
+            json={
+                "name": "MCTOptics Tomography",
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+                "needed_assembly_ids": [asm_id],
+            },
+        )
+    assert response.status_code == 201
+
+
+@pytest.mark.contract
+def test_post_methods_accepts_omitted_needed_assembly_ids() -> None:
+    """Backward-compat: existing callers that don't supply
+    needed_assembly_ids keep working (defaults to [])."""
+    with TestClient(create_app()) as client:
+        _cap_id = create_capability_via_api(client)
+        response = client.post(
+            "/methods",
+            json={"name": "X", "capability_id": _cap_id, "needed_family_ids": []},
+        )
+    assert response.status_code == 201
+
+
+@pytest.mark.contract
+def test_post_methods_rejects_non_uuid_needed_assembly_with_422() -> None:
+    with TestClient(create_app()) as client:
+        _cap_id = create_capability_via_api(client)
+        response = client.post(
+            "/methods",
+            json={
+                "name": "X",
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+                "needed_assembly_ids": ["not-a-uuid"],
+            },
+        )
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
 def test_post_methods_rejects_non_uuid_needed_family_with_422() -> None:
     with TestClient(create_app()) as client:
         _cap_id = create_capability_via_api(client)

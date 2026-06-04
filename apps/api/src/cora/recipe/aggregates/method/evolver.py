@@ -36,14 +36,17 @@ PRESERVED by MethodDeprecated. MethodDefined-only streams fold
 cleanly with version=None (the additive-state pattern).
 
 **Critical invariant**: every transition arm MUST carry
-`needed_family_ids`, `version`, `parameters_schema`, AND
-`needed_supplies` through from prior state. Constructing
+`needed_family_ids`, `version`, `parameters_schema`,
+`needed_supplies`, `capability_id`, AND `needed_assembly_ids` through
+from prior state. Constructing
 `Method(id=..., name=..., status=...)` without explicitly passing
 the additive frozenset/optional fields would silently WIPE them to
 defaults. Pinned by `test_evolve_<transition>_preserves_needed_family_ids`,
 the existing `version` preservation tests, the
-`test_evolve_<transition>_preserves_parameters_schema`, and the
-`test_evolve_<transition>_preserves_needed_supplies` cases.
+`test_evolve_<transition>_preserves_parameters_schema`,
+`test_evolve_<transition>_preserves_needed_supplies`,
+`test_evolve_<transition>_preserves_capability_id`, and the
+`test_evolve_<transition>_preserves_needed_assembly_ids` cases.
 
 `needed_supplies` is converted from `list[str]` (event
 payload) to `frozenset[str]` (state) here. Order doesn't matter at
@@ -83,6 +86,7 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
             needed_family_ids=needed_family_ids,
             needed_supplies=needed_supplies,
             capability_id=capability_id,
+            needed_assembly_ids=needed_assembly_ids,
         ):
             _ = state  # MethodDefined is the genesis event; prior state ignored
             return Method(
@@ -95,6 +99,9 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 # capability_id flows through genesis. None for
                 # legacy streams without the field (additive-state default).
                 capability_id=capability_id,
+                # needed_assembly_ids flows through genesis. Empty for
+                # legacy streams without the field (additive-state default).
+                needed_assembly_ids=frozenset(needed_assembly_ids),
             )
         case MethodVersioned(version_tag=version_tag, content_hash=content_hash):
             prior = require_state(state, "MethodVersioned")
@@ -114,6 +121,7 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 # operates as the same Capability executor across
                 # revisions; rebinding would mean a new Method).
                 capability_id=prior.capability_id,
+                needed_assembly_ids=prior.needed_assembly_ids,
             )
         case MethodDeprecated():
             prior = require_state(state, "MethodDeprecated")
@@ -134,6 +142,7 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 # critical (the historical Capability binding stays
                 # visible).
                 capability_id=prior.capability_id,
+                needed_assembly_ids=prior.needed_assembly_ids,
             )
         case MethodParametersSchemaUpdated(parameters_schema=parameters_schema):
             prior = require_state(state, "MethodParametersSchemaUpdated")
@@ -160,6 +169,7 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 # parameters_schema and capability binding evolve
                 # independently.
                 capability_id=prior.capability_id,
+                needed_assembly_ids=prior.needed_assembly_ids,
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

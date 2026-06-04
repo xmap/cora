@@ -4373,6 +4373,15 @@
             "title": "Name",
             "type": "string"
           },
+          "needed_assembly_ids": {
+            "description": "Equipment Assembly ids this Method requires (composition blueprints). May be empty (Method needs only Assets satisfying needed_family_ids, no specific composition). Eventual-consistency: ids are NOT verified against the Assembly stream at decide time; mismatch surfaces at Plan binding when the picked Assets must include Fixtures whose assembly_id covers this set.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Needed Assembly Ids",
+            "type": "array"
+          },
           "needed_family_ids": {
             "description": "Family ids this Method requires. May be empty. Eventual-consistency: ids are NOT verified against the Family stream at decide time; mismatch surfaces at Plan binding.",
             "items": {

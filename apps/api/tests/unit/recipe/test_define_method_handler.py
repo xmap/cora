@@ -91,6 +91,8 @@ async def test_handler_appends_method_defined_event_to_store() -> None:
         "needed_family_ids": sorted([str(_CAP1), str(_CAP2)]),
         # needed_supplies. Pinned by test_method_needed_supplies.py.
         "needed_supplies": [],
+        # needed_assembly_ids. Pinned by test_method_needed_assembly_ids.py.
+        "needed_assembly_ids": [],
         # and round-trips through MethodDefined as a UUID string.
         "capability_id": str(_CAPABILITY_ID),
         "occurred_at": _NOW.isoformat(),

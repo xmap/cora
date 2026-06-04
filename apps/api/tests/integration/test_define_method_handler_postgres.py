@@ -67,6 +67,8 @@ async def test_define_method_persists_event_to_postgres_with_capabilities(
         "needed_supplies": [],
         # MethodDefined.payload carries it as a UUID string.
         "capability_id": str(capability_id),
+        # needed_assembly_ids. Pinned by tests/unit/recipe/test_method_needed_assembly_ids.py.
+        "needed_assembly_ids": [],
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.correlation_id == _CORRELATION_ID
@@ -101,6 +103,39 @@ async def test_define_method_persists_procedural_method_with_empty_capabilities(
 
     events, _ = await deps.event_store.load("Method", method_id)
     assert events[0].payload["needed_family_ids"] == []
+
+
+@pytest.mark.integration
+async def test_define_method_persists_needed_assembly_ids_to_postgres(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """needed_assembly_ids round-trips through jsonb as a sorted list of
+    UUID strings (deterministic for idempotency hashing). Mirrors the
+    needed_family_ids pin."""
+    method_id = UUID("01900000-0000-7000-8000-00000056ef01")
+    event_id = UUID("01900000-0000-7000-8000-00000056ef0e")
+    capability_id = UUID("01900000-0000-7000-8000-00000056ef0c")
+    asm1 = UUID("01900000-0000-7000-8000-0000a0a0a0a1")
+    asm2 = UUID("01900000-0000-7000-8000-0000a0a0a0a2")
+
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[method_id, event_id])
+    await seed_capability_postgres(
+        deps.event_store, capability_id, shapes=frozenset({ExecutorShape.METHOD})
+    )
+
+    await define_method.bind(deps)(
+        DefineMethod(
+            name="MCTOptics Tomography",
+            capability_id=capability_id,
+            needed_family_ids=frozenset(),
+            needed_assembly_ids=frozenset({asm2, asm1}),  # unsorted input
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    events, _ = await deps.event_store.load("Method", method_id)
+    assert events[0].payload["needed_assembly_ids"] == sorted([str(asm1), str(asm2)])
 
 
 @pytest.mark.integration

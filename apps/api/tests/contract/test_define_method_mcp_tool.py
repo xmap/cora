@@ -90,6 +90,36 @@ def test_mcp_define_method_tool_accepts_empty_needed_family_ids() -> None:
 
 
 @pytest.mark.contract
+def test_mcp_define_method_tool_accepts_needed_assembly_ids() -> None:
+    """needed_assembly_ids is OPTIONAL on the MCP tool and round-trips
+    as a list of UUID strings through the MCP boundary."""
+    asm_id = str(uuid4())
+    with TestClient(create_app()) as client:
+        cap_id = create_capability_via_api(client)
+        session_headers = open_session(client)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "tools/call",
+                "params": {
+                    "name": "define_method",
+                    "arguments": {
+                        "name": "MCTOptics Tomography",
+                        "capability_id": cap_id,
+                        "needed_family_ids": [],
+                        "needed_assembly_ids": [asm_id],
+                    },
+                },
+            },
+            headers=session_headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is False
+
+
+@pytest.mark.contract
 def test_mcp_define_method_tool_returns_iserror_on_invalid_input() -> None:
     """Whitespace-only name passes Pydantic min_length=1 but trips
     the domain VO; FastMCP wraps the raised InvalidMethodNameError as

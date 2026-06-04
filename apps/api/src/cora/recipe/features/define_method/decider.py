@@ -101,6 +101,7 @@ def decide(
             needed_family_ids=tuple(command.needed_family_ids),
             needed_supplies=tuple(trimmed_supplies),
             capability_id=command.capability_id,
+            needed_assembly_ids=tuple(command.needed_assembly_ids),
             occurred_at=now,
         )
     ]

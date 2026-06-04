@@ -55,6 +55,14 @@ class MethodDefined:
     Older events without the field fold via `payload.get("needed_supplies", ())`. The
     values are sorted by string form in `to_payload` for persistence
     determinism (matches needed_family_ids). Default empty tuple.
+
+    `needed_assembly_ids` (additive evolution) carries Assembly UUIDs
+    the Method requires (Equipment BC cross-aggregate ref). Empty
+    means "no specific composition blueprint required, just N Assets
+    of the needed_family_ids Families." Older events without the
+    field fold via `payload.get("needed_assembly_ids", ())`. Values are
+    sorted by string form in `to_payload` for persistence determinism
+    (matches needed_family_ids). Default empty tuple.
     """
 
     method_id: UUID
@@ -67,6 +75,10 @@ class MethodDefined:
     # None for older events without the field (additive-state pattern); current decider
     # rejects None at define_method time per Pattern P.
     capability_id: UUID | None = None
+    # additive evolution: needed_assembly_ids declares the Method's
+    # cross-BC dependency on Equipment Assemblies (composition
+    # blueprints). Defaults empty for additive-state forward-compat.
+    needed_assembly_ids: tuple[UUID, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -86,8 +98,9 @@ class MethodVersioned:
 
     `content_hash` is the SHA-256 of the canonical body bytes for this
     Method revision's content subset (`name + parameters_schema +
-    capability_id + needed_family_ids + needed_supplies`), captured by
-    the decider per the non-determinism principle. 64-char lowercase
+    capability_id + needed_family_ids + needed_supplies +
+    needed_assembly_ids`), captured by the decider per the
+    non-determinism principle. 64-char lowercase
     hex. The same content emitted twice (re-attestation) produces the
     same hash, which is the intended equivalence-detection semantic
     (Bazel input/output split pattern). Pre-rollout legacy events
@@ -171,6 +184,7 @@ def to_payload(event: MethodEvent) -> dict[str, Any]:
             needed_family_ids=needed_family_ids,
             needed_supplies=needed_supplies,
             capability_id=capability_id,
+            needed_assembly_ids=needed_assembly_ids,
             occurred_at=occurred_at,
         ):
             return {
@@ -185,6 +199,9 @@ def to_payload(event: MethodEvent) -> dict[str, Any]:
                 # without the field; the from_stored fallback to None
                 # preserves legacy stream replay.
                 "capability_id": (str(capability_id) if capability_id is not None else None),
+                # additive: Assembly UUIDs sorted lexically by string
+                # form (matches needed_family_ids convention).
+                "needed_assembly_ids": sorted(str(a) for a in needed_assembly_ids),
                 "occurred_at": occurred_at.isoformat(),
             }
         case MethodVersioned(
@@ -245,6 +262,12 @@ def from_stored(stored: StoredEvent) -> MethodEvent:
                     # have no capability_id key; default to None. Currently
                     # the decider enforces non-None at write time.
                     capability_id=(UUID(capability_raw) if capability_raw is not None else None),
+                    # forward-compat: older MethodDefined payloads
+                    # have no needed_assembly_ids key; default to empty tuple.
+                    # Additive-evolution pattern.
+                    needed_assembly_ids=tuple(
+                        UUID(a) for a in payload.get("needed_assembly_ids", ())
+                    ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
 

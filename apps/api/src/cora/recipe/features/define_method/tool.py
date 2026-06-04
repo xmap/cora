@@ -90,6 +90,18 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             ),
         ]
         | None = None,
+        needed_assembly_ids: Annotated[
+            list[UUID],
+            Field(
+                description=(
+                    "Equipment Assembly ids this Method requires "
+                    "(composition blueprints). May be empty. Eventual-"
+                    "consistency: ids are NOT verified against the "
+                    "Assembly stream at decide time."
+                ),
+            ),
+        ]
+        | None = None,
     ) -> DefineMethodOutput:
         handler = get_handler()
         method_id = await handler(
@@ -98,6 +110,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 capability_id=capability_id,
                 needed_family_ids=frozenset(needed_family_ids),
                 needed_supplies=frozenset(needed_supplies or []),
+                needed_assembly_ids=frozenset(needed_assembly_ids or []),
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

@@ -57,3 +57,11 @@ class DefineMethod:
     capability_id: UUID
     needed_family_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
     needed_supplies: frozenset[str] = field(default_factory=frozenset[str])
+    # needed_assembly_ids declares the Method's cross-BC dependency on
+    # Equipment Assemblies (composition blueprints). Empty means "no
+    # specific composition required, just N Assets satisfying
+    # needed_family_ids." Eventual-consistency: Assembly stream
+    # existence is NOT verified at decide time; mismatch surfaces at
+    # Plan binding. Same hashability + `_normalize_for_hash` story as
+    # needed_family_ids.
+    needed_assembly_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])

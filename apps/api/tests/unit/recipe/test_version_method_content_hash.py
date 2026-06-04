@@ -4,7 +4,8 @@ Pins the Candidate A adoption on the Method aggregate per
 [[project_content_addressed_identity_design]]. The decider computes a
 SHA-256 of the canonical body bytes for the Method's content subset
 (`name + parameters_schema + capability_id + needed_family_ids +
-needed_supplies`) and pins it in the emitted MethodVersioned event.
+needed_supplies + needed_assembly_ids`) and pins it in the emitted
+MethodVersioned event.
 Tests in this module cover:
 
   - golden vectors that detect any drift in the canonicalization
@@ -46,8 +47,11 @@ _FIXED_FAMILY_B = UUID("01900000-0000-7000-8000-000000000222")
 #     event_type_to_payload_type("MethodVersioned"), <content_subset>)`.
 # Pinned here so future Pydantic / canonicalization / payloadType-scheme
 # drift trips a single fixture rather than every consumer test.
-_GOLDEN_EMPTY = "29d9d36ce6e033edf1100c42751ba52462bd3f0daac6589821a5f18984aa4a56"
-_GOLDEN_POPULATED = "203a1e8bb9ea5cf8238a3f8cea143054f3fa271d0cea5ff08dce96e1ca333f86"
+_GOLDEN_EMPTY = "401562ae3a3d9a376217b501a2def17b41fb4e33a32ef80ceed0d7704db0f76d"
+_GOLDEN_POPULATED = "4e6446dd422420c77413a28af7f340f541b84def875242da1495ff6944c6bb01"
+
+_FIXED_ASM_A = UUID("01900000-0000-7000-8000-0000a0a0a0a1")
+_FIXED_ASM_B = UUID("01900000-0000-7000-8000-0000a0a0a0a2")
 
 
 def _method(
@@ -57,6 +61,7 @@ def _method(
     capability_id: UUID | None = None,
     needed_family_ids: frozenset[UUID] = frozenset(),
     needed_supplies: frozenset[str] = frozenset(),
+    needed_assembly_ids: frozenset[UUID] = frozenset(),
     status: MethodStatus = MethodStatus.DEFINED,
     version: str | None = None,
 ) -> Method:
@@ -69,6 +74,7 @@ def _method(
         parameters_schema=parameters_schema,
         capability_id=capability_id,
         needed_supplies=needed_supplies,
+        needed_assembly_ids=needed_assembly_ids,
     )
 
 
@@ -148,6 +154,7 @@ def test_decide_content_hash_matches_helper_output_directly() -> None:
             "capability_id": str(_FIXED_CAP_ID),
             "needed_family_ids": [str(_FIXED_FAMILY_A)],
             "needed_supplies": ["nitrogen"],
+            "needed_assembly_ids": [],
         },
     )
     assert event.content_hash == expected
@@ -199,6 +206,15 @@ def test_decide_hash_invariant_under_needed_family_ids_ordering() -> None:
     assert _decide(state_a).content_hash == _decide(state_b).content_hash
 
 
+@pytest.mark.unit
+def test_decide_hash_invariant_under_needed_assembly_ids_ordering() -> None:
+    """needed_assembly_ids is set-typed; content_subset sorts by UUID
+    string form so the hash is iteration-order-invariant."""
+    state_a = _method(needed_assembly_ids=frozenset({_FIXED_ASM_A, _FIXED_ASM_B}))
+    state_b = _method(needed_assembly_ids=frozenset({_FIXED_ASM_B, _FIXED_ASM_A}))
+    assert _decide(state_a).content_hash == _decide(state_b).content_hash
+
+
 # ---------- Sensitivity (different content -> different hash) ----------
 
 
@@ -236,6 +252,15 @@ def test_decide_hash_sensitive_to_needed_family_ids_membership() -> None:
 def test_decide_hash_sensitive_to_needed_supplies() -> None:
     a = _decide(_method(needed_supplies=frozenset({"nitrogen"})))
     b = _decide(_method(needed_supplies=frozenset({"helium"})))
+    assert a.content_hash != b.content_hash
+
+
+@pytest.mark.unit
+def test_decide_hash_sensitive_to_needed_assembly_ids_membership() -> None:
+    """Adding an Assembly to the requirement set changes the hash;
+    needed_assembly_ids participates in content identity (anti-hook #10)."""
+    a = _decide(_method(needed_assembly_ids=frozenset({_FIXED_ASM_A})))
+    b = _decide(_method(needed_assembly_ids=frozenset({_FIXED_ASM_A, _FIXED_ASM_B})))
     assert a.content_hash != b.content_hash
 
 
