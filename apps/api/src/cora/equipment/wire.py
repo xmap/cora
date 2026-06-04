@@ -31,6 +31,7 @@ lifecycle slices.
 from dataclasses import dataclass
 from uuid import UUID
 
+from cora.equipment._bootstrap import check_pidinst_landing_page_template
 from cora.equipment.features import (
     activate_asset,
     add_asset_alternate_identifier,
@@ -55,6 +56,7 @@ from cora.equipment.features import (
     fault_asset,
     get_asset,
     get_asset_integration_view,
+    get_asset_pidinst,
     get_family,
     get_fixture,
     get_model,
@@ -148,6 +150,7 @@ class EquipmentHandlers:
     remove_asset_owner: remove_asset_owner.Handler
     get_asset: get_asset.Handler
     get_asset_integration_view: get_asset_integration_view.Handler
+    get_asset_pidinst: get_asset_pidinst.Handler
     list_assets: list_assets.Handler
 
     # Frame aggregate
@@ -173,6 +176,7 @@ class EquipmentHandlers:
 
 def wire_equipment(deps: Kernel) -> EquipmentHandlers:
     """Build the Equipment BC handlers from shared dependencies."""
+    check_pidinst_landing_page_template(deps.settings)
     return EquipmentHandlers(
         # Family aggregate
         define_family=with_tracing(
@@ -362,6 +366,12 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
         get_asset_integration_view=with_tracing(
             get_asset_integration_view.bind(deps),
             command_name="GetAssetIntegrationView",
+            bc=_BC,
+            kind="query",
+        ),
+        get_asset_pidinst=with_tracing(
+            get_asset_pidinst.bind(deps),
+            command_name="GetAssetPidinst",
             bc=_BC,
             kind="query",
         ),

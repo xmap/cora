@@ -146,7 +146,13 @@ from cora.equipment.aggregates.mount import (
     MountIsEmptyError,
     MountNotFoundError,
 )
-from cora.equipment.errors import UnauthorizedError
+from cora.equipment.errors import (
+    AssetNameMissingError,
+    LandingPageMissingError,
+    ManufacturerStateNotAvailableError,
+    OwnerStateNotAvailableError,
+    UnauthorizedError,
+)
 from cora.equipment.features import (
     activate_asset,
     add_asset_alternate_identifier,
@@ -171,6 +177,7 @@ from cora.equipment.features import (
     fault_asset,
     get_asset,
     get_asset_integration_view,
+    get_asset_pidinst,
     get_family,
     get_fixture,
     get_model,
@@ -262,6 +269,38 @@ async def _handle_cannot_transition(request: Request, exc: Exception) -> JSONRes
     )
 
 
+async def _handle_pidinst_state_not_available(request: Request, exc: Exception) -> JSONResponse:
+    """Shared 409 handler for PIDINST mandatory-state-missing errors.
+
+    Maps `OwnerStateNotAvailableError` and
+    `ManufacturerStateNotAvailableError`: the asset exists but its
+    state cannot satisfy the PIDINST emission contract (1-n Owner per
+    PIDINST Property 5; Manufacturer required per Property 6). 409 not
+    422 because the deficiency is in aggregate state, not in the
+    request payload.
+    """
+    _ = request
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+async def _handle_pidinst_view_preparation_error(request: Request, exc: Exception) -> JSONResponse:
+    """Shared 422 handler for PIDINST view-preparation deficiencies.
+
+    Maps `LandingPageMissingError` and `AssetNameMissingError`. The
+    view itself failed serializer preconditions despite passing
+    aggregate construction, so the source is the view assembler's
+    input handling.
+    """
+    _ = request
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={"detail": str(exc)},
+    )
+
+
 def register_equipment_routes(app: FastAPI) -> None:
     """Attach Equipment slice routers and exception handlers to the FastAPI app."""
     # Family aggregate
@@ -299,6 +338,7 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(remove_asset_owner.router)
     app.include_router(get_asset.router)
     app.include_router(get_asset_integration_view.router)
+    app.include_router(get_asset_pidinst.router)
     app.include_router(list_assets.router)
     # Frame aggregate
     app.include_router(register_frame.router)
@@ -430,4 +470,14 @@ def register_equipment_routes(app: FastAPI) -> None:
         AssetAttachedToDifferentFixtureError,
     ):
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)
+    for pidinst_state_cls in (
+        OwnerStateNotAvailableError,
+        ManufacturerStateNotAvailableError,
+    ):
+        app.add_exception_handler(pidinst_state_cls, _handle_pidinst_state_not_available)
+    for pidinst_view_cls in (
+        LandingPageMissingError,
+        AssetNameMissingError,
+    ):
+        app.add_exception_handler(pidinst_view_cls, _handle_pidinst_view_preparation_error)
     app.add_exception_handler(UnauthorizedError, _handle_unauthorized)

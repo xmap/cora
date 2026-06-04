@@ -6,10 +6,11 @@ Subscribed events:
   - AssetRegistered                   -> INSERT (lifecycle=Commissioned,
                                          condition=Nominal; level + parent_id
                                          + drawing trio + model_id +
-                                         alternate_identifiers + owners from
-                                         payload)
+                                         alternate_identifiers + owners +
+                                         commissioned_at from payload)
   - AssetActivated                    -> UPDATE lifecycle=Active
   - AssetDecommissioned               -> UPDATE lifecycle=Decommissioned
+                                         AND decommissioned_at=occurred_at
   - AssetMaintenanceEntered           -> UPDATE lifecycle=Maintenance
   - AssetMaintenanceExited            -> UPDATE lifecycle=Active
   - AssetRelocated                    -> UPDATE parent_id=to_parent_id
@@ -62,9 +63,9 @@ _INSERT_ASSET_SQL = """
 INSERT INTO proj_equipment_asset_summary
     (asset_id, name, level, lifecycle, condition, parent_id,
      drawing_system, drawing_number, drawing_revision, model_id,
-     alternate_identifiers, owners, created_at)
+     alternate_identifiers, owners, commissioned_at, created_at)
 VALUES ($1, $2, $3, 'Commissioned', 'Nominal', $4, $5, $6, $7, $8,
-        $9, $10, $11)
+        $9, $10, $11, $11)
 ON CONFLICT (asset_id) DO NOTHING
 """
 
@@ -83,6 +84,18 @@ WHERE asset_id = $1
 _UPDATE_LIFECYCLE_SQL = """
 UPDATE proj_equipment_asset_summary
 SET lifecycle = $2, updated_at = now()
+WHERE asset_id = $1
+"""
+
+# AssetDecommissioned writes BOTH lifecycle and decommissioned_at in a
+# single statement so the read row's two facets land atomically. The
+# timestamp source is the event's occurred_at (passed as $2), matching
+# the Asset evolver's fold per L2.
+_UPDATE_DECOMMISSIONED_SQL = """
+UPDATE proj_equipment_asset_summary
+SET lifecycle = 'Decommissioned',
+    decommissioned_at = $2,
+    updated_at = now()
 WHERE asset_id = $1
 """
 
@@ -245,7 +258,11 @@ class AssetSummaryProjection:
             case "AssetActivated" | "AssetMaintenanceExited":
                 await self._update_lifecycle(event, conn, "Active")
             case "AssetDecommissioned":
-                await self._update_lifecycle(event, conn, "Decommissioned")
+                await conn.execute(
+                    _UPDATE_DECOMMISSIONED_SQL,
+                    UUID(event.payload["asset_id"]),
+                    datetime.fromisoformat(event.payload["occurred_at"]),
+                )
             case "AssetMaintenanceEntered":
                 await self._update_lifecycle(event, conn, "Maintenance")
             case "AssetRelocated":

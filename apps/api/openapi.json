@@ -6059,6 +6059,36 @@
         "title": "InstallAssetRequest",
         "type": "object"
       },
+      "InstrumentTypeDTO": {
+        "description": "PIDINST v1.0 Property 9: a typology category for the instrument.",
+        "properties": {
+          "identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier"
+          },
+          "identifier_type": {
+            "title": "Identifier Type",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "identifier_type"
+        ],
+        "title": "InstrumentTypeDTO",
+        "type": "object"
+      },
       "ListPermissionsResponse": {
         "description": "Read-side DTO at the API boundary.\n\n`incomplete` is always False at v1, required from day 1 per the\ndesign lock's anti-hook to forward-compat with future ABAC\npolicies that may make enumeration lossy.",
         "properties": {
@@ -6140,6 +6170,42 @@
           "name"
         ],
         "title": "ManufacturerBody",
+        "type": "object"
+      },
+      "ManufacturerDTO": {
+        "description": "PIDINST v1.0 Property 6: the body manufacturing the instrument.",
+        "properties": {
+          "identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier"
+          },
+          "identifier_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier Type"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ManufacturerDTO",
         "type": "object"
       },
       "ManufacturerIdentifierType": {
@@ -6239,6 +6305,34 @@
           "reason"
         ],
         "title": "MarkSupplyUnavailableRequest",
+        "type": "object"
+      },
+      "MeasuredVariableDTO": {
+        "description": "PIDINST v1.0 Property 10: a physical quantity the instrument measures.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "MeasuredVariableDTO",
+        "type": "object"
+      },
+      "MeasurementTechniqueDTO": {
+        "description": "PIDINST v1.0 Property 14: a measurement technique applied by the instrument.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "MeasurementTechniqueDTO",
         "type": "object"
       },
       "MethodListResponse": {
@@ -6644,6 +6738,53 @@
         "title": "OnwardActionScope",
         "type": "string"
       },
+      "OwnerDTO": {
+        "description": "PIDINST v1.0 Property 5: a body owning or curating the instrument.",
+        "properties": {
+          "contact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact"
+          },
+          "identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier"
+          },
+          "identifier_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier Type"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "OwnerDTO",
+        "type": "object"
+      },
       "PermitListResponse": {
         "description": "Page of permits plus opaque next-page cursor.",
         "properties": {
@@ -6951,6 +7092,230 @@
           "defined_at"
         ],
         "title": "PermitSummaryDTO",
+        "type": "object"
+      },
+      "PidinstAlternateIdentifierDTO": {
+        "description": "PIDINST v1.0 Property 13: an alternate identifier under a known scheme.",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "kind"
+        ],
+        "title": "PidinstAlternateIdentifierDTO",
+        "type": "object"
+      },
+      "PidinstDateDTO": {
+        "description": "PIDINST v1.0 Property 11: a date marker on the instrument lifecycle.",
+        "properties": {
+          "date_type": {
+            "title": "Date Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "date_type"
+        ],
+        "title": "PidinstDateDTO",
+        "type": "object"
+      },
+      "PidinstIdentifierDTO": {
+        "description": "PIDINST v1.0 Property 1: persistent identifier of the instrument.",
+        "properties": {
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "scheme"
+        ],
+        "title": "PidinstIdentifierDTO",
+        "type": "object"
+      },
+      "PidinstModelDTO": {
+        "description": "PIDINST v1.0 Property 7: the model identification of the instrument.",
+        "properties": {
+          "identifier": {
+            "title": "Identifier",
+            "type": "string"
+          },
+          "identifier_type": {
+            "title": "Identifier Type",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "identifier",
+          "identifier_type"
+        ],
+        "title": "PidinstModelDTO",
+        "type": "object"
+      },
+      "PidinstRecordResponse": {
+        "description": "Read-side DTO mirroring the slice-C `PidinstRecord` dataclass.\n\nPydantic mirror so FastAPI can generate an OpenAPI schema. Decouples\nthe wire format from the slice-C `PidinstRecord` so the two can\nevolve independently. Field shapes verbatim from the slice-C tree.",
+        "properties": {
+          "alternate_identifiers": {
+            "items": {
+              "$ref": "#/components/schemas/PidinstAlternateIdentifierDTO"
+            },
+            "title": "Alternate Identifiers",
+            "type": "array"
+          },
+          "dates": {
+            "items": {
+              "$ref": "#/components/schemas/PidinstDateDTO"
+            },
+            "title": "Dates",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "identifier": {
+            "$ref": "#/components/schemas/PidinstIdentifierDTO"
+          },
+          "instrument_types": {
+            "items": {
+              "$ref": "#/components/schemas/InstrumentTypeDTO"
+            },
+            "title": "Instrument Types",
+            "type": "array"
+          },
+          "landing_page": {
+            "title": "Landing Page",
+            "type": "string"
+          },
+          "manufacturers": {
+            "items": {
+              "$ref": "#/components/schemas/ManufacturerDTO"
+            },
+            "title": "Manufacturers",
+            "type": "array"
+          },
+          "measured_variables": {
+            "items": {
+              "$ref": "#/components/schemas/MeasuredVariableDTO"
+            },
+            "title": "Measured Variables",
+            "type": "array"
+          },
+          "measurement_techniques": {
+            "items": {
+              "$ref": "#/components/schemas/MeasurementTechniqueDTO"
+            },
+            "title": "Measurement Techniques",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PidinstModelDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owners": {
+            "items": {
+              "$ref": "#/components/schemas/OwnerDTO"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "publication_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publication Year"
+          },
+          "publisher": {
+            "title": "Publisher",
+            "type": "string"
+          },
+          "related_identifiers": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedIdentifierDTO"
+            },
+            "title": "Related Identifiers",
+            "type": "array"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "identifier",
+          "schema_version",
+          "landing_page",
+          "name",
+          "publisher",
+          "publication_year",
+          "owners",
+          "manufacturers",
+          "model",
+          "description",
+          "instrument_types",
+          "measured_variables",
+          "dates",
+          "related_identifiers",
+          "alternate_identifiers",
+          "measurement_techniques"
+        ],
+        "title": "PidinstRecordResponse",
         "type": "object"
       },
       "PlacementBody": {
@@ -9596,6 +9961,30 @@
           "reason"
         ],
         "title": "RejectClearanceRequest",
+        "type": "object"
+      },
+      "RelatedIdentifierDTO": {
+        "description": "PIDINST v1.0 Property 12: a related identifier (parent asset, etc.).",
+        "properties": {
+          "identifier_type": {
+            "title": "Identifier Type",
+            "type": "string"
+          },
+          "relation_type": {
+            "title": "Relation Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "identifier_type",
+          "relation_type"
+        ],
+        "title": "RelatedIdentifierDTO",
         "type": "object"
       },
       "ReleaseControlOfSurfaceBody": {
@@ -16324,6 +16713,93 @@
           }
         },
         "summary": "Get the integration-view bundle for an asset",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/assets/{asset_id}/pidinst": {
+      "get": {
+        "operationId": "get_asset_pidinst_assets__asset_id__pidinst_get",
+        "parameters": [
+          {
+            "description": "Target asset's id.",
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "description": "Target asset's id.",
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PidinstRecordResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the query."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No asset exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Asset state is missing a mandatory PIDINST source: at least one Owner (PIDINST Property 5) or a bound Model carrying the Manufacturer (Property 6)."
+          },
+          "422": {
+            "description": "View preparation produced an empty landing page URL or asset name; or the path parameter failed schema validation."
+          }
+        },
+        "summary": "Get the PIDINST v1.0 record for an asset",
         "tags": [
           "equipment"
         ]

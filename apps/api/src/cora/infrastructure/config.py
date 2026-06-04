@@ -170,6 +170,23 @@ class Settings(BaseSettings):
     # malformed config fails fast, not on first auth attempt.
     identity_providers: list[IdentityProviderConfig] = []
 
+    # Equipment BC — PIDINST integration (slice E.1)
+    # `facility_publisher` is the institutional `publisher` field emitted
+    # on every PIDINST record produced by `GET /assets/{asset_id}/pidinst`
+    # per L13 of project_asset_persistent_id_design. Default "CORA" is a
+    # placeholder; production deployments override with the operator
+    # facility name (for example "Argonne National Laboratory").
+    facility_publisher: str = "CORA"
+    # `landing_page_template` is the URL template used by the PIDINST
+    # view assembler to derive the per-asset landing page (PIDINST v1.0
+    # Property 3) per L12. Carries the literal `{asset_id}` substitution
+    # token; expanded via `str.format(asset_id=...)`. Default points at
+    # a placeholder URL; production deployments override with the public
+    # URL of their operator-facing asset landing page. Bootstrap fails
+    # fast at startup when this is the empty string (see
+    # `check_pidinst_landing_page_template`).
+    landing_page_template: str = "https://cora.local/assets/{asset_id}/landing"
+
     # ControlPort routing — Operation BC Conductor
     # When empty (default), `wire_operation` builds an
     # `InMemoryControlPort` (legacy + test convenience: the conduct_procedure

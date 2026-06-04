@@ -46,6 +46,7 @@ from cora.equipment.features.get_asset import tool as get_asset_tool
 from cora.equipment.features.get_asset_integration_view import (
     tool as get_asset_integration_view_tool,
 )
+from cora.equipment.features.get_asset_pidinst import tool as get_asset_pidinst_tool
 from cora.equipment.features.get_family import tool as get_family_tool
 from cora.equipment.features.get_fixture import tool as get_fixture_tool
 from cora.equipment.features.get_model import tool as get_model_tool
@@ -219,6 +220,10 @@ def register_equipment_tools(
     get_asset_integration_view_tool.register(
         mcp,
         get_handler=lambda: get_handlers().get_asset_integration_view,
+    )
+    get_asset_pidinst_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().get_asset_pidinst,
     )
     list_assets_tool.register(
         mcp,

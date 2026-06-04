@@ -77,6 +77,7 @@ async def test_handler_returns_asset_for_known_id() -> None:
         level=AssetLevel.UNIT,
         parent_id=_PARENT_ID,
         lifecycle=AssetLifecycle.COMMISSIONED,
+        commissioned_at=_NOW,
     )
 
 

@@ -69,6 +69,7 @@ def test_evolve_asset_registered_sets_lifecycle_to_commissioned() -> None:
         level=AssetLevel.SITE,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.COMMISSIONED,
+        commissioned_at=_NOW,
     )
 
 
@@ -92,6 +93,7 @@ def test_evolve_asset_registered_handles_enterprise_with_null_parent() -> None:
         level=AssetLevel.ENTERPRISE,
         parent_id=None,
         lifecycle=AssetLifecycle.COMMISSIONED,
+        commissioned_at=_NOW,
     )
 
 
@@ -143,6 +145,7 @@ def test_fold_single_asset_registered_returns_asset() -> None:
         level=AssetLevel.DEVICE,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.COMMISSIONED,
+        commissioned_at=_NOW,
     )
 
 
@@ -176,6 +179,7 @@ def test_decider_and_evolver_round_trip_for_enterprise() -> None:
         level=AssetLevel.ENTERPRISE,
         parent_id=None,
         lifecycle=AssetLifecycle.COMMISSIONED,
+        commissioned_at=_NOW,
     )
 
 
@@ -194,6 +198,7 @@ def test_decider_and_evolver_round_trip_for_device_with_parent() -> None:
         level=AssetLevel.DEVICE,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.COMMISSIONED,
+        commissioned_at=_NOW,
     )
 
 

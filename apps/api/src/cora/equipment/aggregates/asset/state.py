@@ -65,6 +65,7 @@ its own frozen dataclass type and per-aggregate error class.
 """
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
@@ -1165,3 +1166,12 @@ class Asset:
     # slot_name; this back-ref answers "what Fixture is this Asset in?"
     # in O(1) for the conformance projection.
     fixture_id: UUID | None = None
+    # PIDINST v1.0 Property 11 lifecycle dates. `commissioned_at` is
+    # folded from `AssetRegistered.occurred_at` (Asset enters
+    # `Commissioned` at genesis per the existing evolver),
+    # `decommissioned_at` from `AssetDecommissioned.occurred_at`. No
+    # new events ship for these fields; the evolver derives both from
+    # existing event timestamps. Default-None so legacy streams fold
+    # cleanly via the additive-state pattern.
+    commissioned_at: datetime | None = None
+    decommissioned_at: datetime | None = None

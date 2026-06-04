@@ -257,7 +257,6 @@ async def test_asset_registered_with_null_parent_for_enterprise_root() -> None:
     ("event_type", "expected_lifecycle"),
     [
         ("AssetActivated", "Active"),
-        ("AssetDecommissioned", "Decommissioned"),
         ("AssetMaintenanceEntered", "Maintenance"),
         ("AssetMaintenanceExited", "Active"),
     ],
@@ -269,7 +268,11 @@ async def test_lifecycle_transition_updates_lifecycle_field(
     Note that AssetActivated and AssetMaintenanceExited both
     map to 'Active' — the projection collapses both to the same
     state since the audit history of "how did we get here?" lives
-    in the events themselves."""
+    in the events themselves.
+
+    AssetDecommissioned is excluded here: it writes lifecycle AND
+    decommissioned_at atomically via a dedicated SQL statement (see
+    `test_asset_summary_projection_lifecycle_columns`)."""
     proj = AssetSummaryProjection()
     conn = AsyncMock()
     event = _stored(
