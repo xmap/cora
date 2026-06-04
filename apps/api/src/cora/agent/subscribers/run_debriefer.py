@@ -128,6 +128,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
+from cora.agent._subscriber_lease import attempt_debrief_lease
 from cora.agent.prompts import (
     RUN_DEBRIEF_PROMPT_TEMPLATE_ID,
     RunDebriefPayload,
@@ -344,6 +345,36 @@ class RunDebrieferSubscriber:
             )
             return
 
+        # Cross-agent lease (per [[project-run-debriefer-lease-design]]):
+        # append a DecisionDebriefRequested marker to the Run stream
+        # BEFORE the LLM call so a losing agent pays zero LLM cost. The
+        # first writer wins via the existing UNIQUE(stream_type,
+        # stream_id, version) primitive; losing agents see the winner
+        # via the helper's re-load + emit a DebriefConflicted Decision
+        # on their own Decision stream for audit visibility.
+        lease_acquired, winning_agent_id = await attempt_debrief_lease(
+            self.event_store,
+            run_id=run_id,
+            debriefer_agent_id=RUN_DEBRIEFER_AGENT_ID,
+            terminal_event=event,
+            occurred_at=event.occurred_at,
+            command_name=_COMMAND_NAME,
+        )
+        if not lease_acquired:
+            log.info(
+                "run_debriefer.lease_lost",
+                winning_agent_id=str(winning_agent_id) if winning_agent_id else None,
+            )
+            await self._write_debrief_conflicted(
+                decision_id=decision_id,
+                actor=actor,
+                run_id=run_id,
+                terminal_event=event,
+                winning_agent_id=winning_agent_id,
+                log=log,
+            )
+            return
+
         payload = RunDebriefPayload(
             terminal_event_type=event.event_type,
             terminal_event_reason=terminal_event_reason,
@@ -465,6 +496,57 @@ class RunDebrieferSubscriber:
             ),
             extra_inputs={"failure_error_class": error_class},
             outcome="deferred",
+            log=log,
+        )
+
+    async def _write_debrief_conflicted(
+        self,
+        *,
+        decision_id: UUID,
+        actor: Actor,
+        run_id: UUID,
+        terminal_event: StoredEvent,
+        winning_agent_id: UUID | None,
+        log: Any,
+    ) -> None:
+        """Compose + append the DebriefConflicted audit Decision when
+        the lease race was lost to another agent.
+
+        Per [[project-run-debriefer-lease-design]]: losing agents emit
+        a Decision on their OWN Decision stream (deterministic
+        decision_id via the per-agent uuid5 namespace) citing the
+        winning `debriefer_agent_id`. Recovers the only observability
+        axis where the Trust.Policy alternative beat the Run-stream
+        lease primitive: concurrent-debrief races stay visible in the
+        Decision projection without polluting the Run stream further.
+
+        `confidence` is omitted: there was no LLM call. `winning_agent_id`
+        is None on the rare race where the Run stream version moved for
+        a non-lease reason; the reasoning string degrades gracefully."""
+        if winning_agent_id is not None:
+            reasoning = (
+                f"Lost cross-agent debrief-lease race for terminal event "
+                f"{terminal_event.event_id} to agent {winning_agent_id}."
+            )
+            extra_inputs: dict[str, Any] = {"winning_agent_id": str(winning_agent_id)}
+        else:
+            reasoning = (
+                f"Lost cross-agent debrief-lease race for terminal event "
+                f"{terminal_event.event_id}; winning agent not identified "
+                "(Run stream version advanced between load and append for "
+                "a non-lease reason)."
+            )
+            extra_inputs = {}
+        await self._compose_and_append(
+            decision_id=decision_id,
+            actor=actor,
+            run_id=run_id,
+            terminal_event=terminal_event,
+            choice="DebriefConflicted",
+            confidence=None,
+            reasoning=reasoning,
+            extra_inputs=extra_inputs,
+            outcome="conflicted",
             log=log,
         )
 

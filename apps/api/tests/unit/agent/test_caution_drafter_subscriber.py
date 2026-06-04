@@ -973,3 +973,78 @@ async def test_apply_does_not_swallow_unexpected_signer_exception() -> None:
     events, version = await store.load("Decision", decision_id)
     assert version == 0
     assert events == []
+
+
+# ---------- Cross-agent lease (project_run_debriefer_lease_design) ----------
+
+
+@pytest.mark.unit
+async def test_apply_appends_lease_event_to_run_stream_on_happy_path() -> None:
+    """The subscriber appends a DecisionDebriefRequested marker to the
+    Run stream BEFORE invoking the LLM. Mirrors RunDebriefer; the
+    primitive's existence on the stream IS the lease."""
+    from cora.agent._subscriber_lease import derive_lease_event_id
+
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    stored, _v = await store.load("Run", run_id)
+    leases = [s for s in stored if s.event_type == "DecisionDebriefRequested"]
+    assert len(leases) == 1
+    lease = leases[0]
+    assert lease.payload["run_id"] == str(run_id)
+    assert lease.payload["debriefer_agent_id"] == str(CAUTION_DRAFTER_AGENT_ID)
+    assert lease.payload["terminal_event_id"] == str(event.event_id)
+    assert lease.event_id == derive_lease_event_id(
+        run_id=run_id,
+        debriefer_agent_id=CAUTION_DRAFTER_AGENT_ID,
+        terminal_event_id=event.event_id,
+    )
+
+
+@pytest.mark.unit
+async def test_apply_writes_caution_draft_conflicted_when_another_agent_holds_lease() -> None:
+    """When a different agent already holds the lease, the subscriber
+    writes CautionDraftConflicted on its own Decision stream WITHOUT
+    invoking the LLM. Losing agents pay zero LLM cost."""
+    from cora.agent._subscriber_lease import attempt_debrief_lease
+
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    foreign_agent_id = uuid4()
+    pre_acquired, _ = await attempt_debrief_lease(
+        store,
+        run_id=run_id,
+        debriefer_agent_id=foreign_agent_id,
+        terminal_event=event,
+        occurred_at=event.occurred_at,
+        command_name="ForeignAgent",
+    )
+    assert pre_acquired is True
+
+    subscriber = await _build_subscriber(store, llm)
+    await subscriber.apply(event, conn=None)
+
+    decision_id = _derive_decision_id(event.event_id)
+    decision = await load_decision(store, decision_id)
+    assert decision is not None
+    assert decision.context.value == "CautionProposal"
+    assert decision.choice.value == "CautionDraftConflicted"
+    assert decision.confidence is None
+    assert decision.inputs is not None
+    assert decision.inputs["winning_agent_id"] == str(foreign_agent_id)
+    assert llm.received == []

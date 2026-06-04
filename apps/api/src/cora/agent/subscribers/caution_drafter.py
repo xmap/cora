@@ -80,6 +80,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
+from cora.agent._subscriber_lease import attempt_debrief_lease
 from cora.agent.prompts import (
     CAUTION_DRAFTER_PROMPT_TEMPLATE_ID,
     CandidateTarget,
@@ -244,6 +245,37 @@ class CautionDrafterSubscriber:
                 "caution_drafter.skip.agent_actor_deactivated",
                 agent_id=str(CAUTION_DRAFTER_AGENT_ID),
                 agent_name=CAUTION_DRAFTER_AGENT_NAME,
+            )
+            return
+
+        # Cross-agent lease (per [[project-run-debriefer-lease-design]];
+        # mirrors RunDebriefer's gate verbatim). Reserved for future
+        # multi-instance CautionDrafter variants (e.g., different LLM
+        # backends). The lease event_id includes CAUTION_DRAFTER_AGENT_ID
+        # in the uuid5 seed so the marker is independent of any
+        # RunDebriefer lease for the same terminal event; the two
+        # agents are intentionally distinct and both write their own
+        # Decisions.
+        lease_acquired, winning_agent_id = await attempt_debrief_lease(
+            self.event_store,
+            run_id=run_id,
+            debriefer_agent_id=CAUTION_DRAFTER_AGENT_ID,
+            terminal_event=event,
+            occurred_at=event.occurred_at,
+            command_name=_COMMAND_NAME,
+        )
+        if not lease_acquired:
+            log.info(
+                "caution_drafter.lease_lost",
+                winning_agent_id=str(winning_agent_id) if winning_agent_id else None,
+            )
+            await self._write_caution_conflicted(
+                decision_id=decision_id,
+                actor=actor,
+                run_id=run_id,
+                terminal_event=event,
+                winning_agent_id=winning_agent_id,
+                log=log,
             )
             return
 
@@ -419,6 +451,52 @@ class CautionDrafterSubscriber:
             reasoning=reasoning,
             extra_inputs=extra_inputs,
             outcome="proposed" if choice != "NoAction" else "no_action",
+            log=log,
+        )
+
+    async def _write_caution_conflicted(
+        self,
+        *,
+        decision_id: UUID,
+        actor: Actor,
+        run_id: UUID,
+        terminal_event: StoredEvent,
+        winning_agent_id: UUID | None,
+        log: Any,
+    ) -> None:
+        """Compose + append the CautionDraftConflicted audit Decision
+        when the lease race was lost to another agent variant.
+
+        Mirrors RunDebriefer's `_write_debrief_conflicted` per the
+        symmetric pattern in [[project-run-debriefer-lease-design]].
+        Cited Decision lives on this agent's own Decision stream
+        (deterministic decision_id via the CautionDrafter UUIDv5
+        namespace); the winning `caution_drafter_agent_id` is recorded
+        in `inputs` for cross-Decision audit queries."""
+        if winning_agent_id is not None:
+            reasoning = (
+                f"Lost cross-agent caution-draft-lease race for terminal event "
+                f"{terminal_event.event_id} to agent {winning_agent_id}."
+            )
+            extra_inputs: dict[str, Any] = {"winning_agent_id": str(winning_agent_id)}
+        else:
+            reasoning = (
+                f"Lost cross-agent caution-draft-lease race for terminal event "
+                f"{terminal_event.event_id}; winning agent not identified "
+                "(Run stream version advanced between load and append for a "
+                "non-lease reason)."
+            )
+            extra_inputs = {}
+        await self._compose_and_append(
+            decision_id=decision_id,
+            actor=actor,
+            run_id=run_id,
+            terminal_event=terminal_event,
+            choice="CautionDraftConflicted",
+            confidence=None,
+            reasoning=reasoning,
+            extra_inputs=extra_inputs,
+            outcome="conflicted",
             log=log,
         )
 

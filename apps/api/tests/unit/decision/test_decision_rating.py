@@ -73,6 +73,7 @@ def test_run_debrief_choices_closed_set() -> None:
                 "EquipmentAbort",
                 "DataSuspect",
                 "DebriefDeferred",
+                "DebriefConflicted",
             }
         )
         == RUN_DEBRIEF_CHOICES

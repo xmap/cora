@@ -15,6 +15,7 @@ from cora.run.aggregates.run.entries import (
 )
 from cora.run.aggregates.run.events import (
     CautionAcknowledgement,
+    DecisionDebriefRequested,
     RunAborted,
     RunAddedToCampaign,
     RunAdjusted,
@@ -113,6 +114,7 @@ __all__ = [
     "SAMPLING_PROCEDURE_VALUES",
     "CautionAcknowledgement",
     "ChannelName",
+    "DecisionDebriefRequested",
     "ExternalRef",
     "InMemoryReadingStore",
     "InvalidChannelNameError",

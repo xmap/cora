@@ -101,12 +101,13 @@ DEFAULT_RUN_DEBRIEF_MODEL = ModelRef(
 )
 
 
-# 6-value closed choice set. Sourced from Decision BC's canonical
-# `RUN_DEBRIEF_CHOICES` constant so there's one declaration
-# and one rename surface. The frozenset is sorted for stable JSON
-# Schema output ordering (the LLM's enum-list ordering can subtly
-# affect tool-use behavior; sort-then-tuple is reproducible).
-_CHOICE_VALUES = tuple(sorted(RUN_DEBRIEF_CHOICES))
+# Closed LLM-facing choice set. Sourced from Decision BC's canonical
+# `RUN_DEBRIEF_CHOICES` MINUS `DebriefConflicted`, which is an
+# audit-only outcome the subscriber writes on its own when it loses a
+# lease race (see [[project-run-debriefer-lease-design]]); the LLM
+# must never be offered it. Sorted for stable JSON Schema output
+# (enum ordering can subtly affect LLM tool-use behavior).
+_CHOICE_VALUES = tuple(sorted(RUN_DEBRIEF_CHOICES - {"DebriefConflicted"}))
 
 
 # Structured-output JSON Schema fed to the Anthropic adapter's

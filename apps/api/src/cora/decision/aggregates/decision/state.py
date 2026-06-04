@@ -175,6 +175,12 @@ DECISION_CONTEXT_RUN_DEBRIEF = "RunDebrief"
 # `DebriefDeferred` is the audit-fallback value emitted by the
 # subscriber when the LLM call fails after 3 retries; preserves the
 # exactly-one-Decision-per-terminal-Run audit invariant.
+# `DebriefConflicted` is the audit-only value emitted by a losing
+# agent when it lost the cross-agent lease race on the Run stream
+# (per [[project-run-debriefer-lease-design]]). The losing agent
+# writes the Decision on its own Decision stream citing the winning
+# `debriefer_agent_id` so concurrent-debrief races stay visible in
+# the Decision projection without polluting the Run stream further.
 RunDebriefChoice = Literal[
     "NominalCompletion",
     "DegradedCompletion",
@@ -182,6 +188,7 @@ RunDebriefChoice = Literal[
     "EquipmentAbort",
     "DataSuspect",
     "DebriefDeferred",
+    "DebriefConflicted",
 ]
 RUN_DEBRIEF_CHOICES: Final = frozenset(
     {
@@ -191,6 +198,7 @@ RUN_DEBRIEF_CHOICES: Final = frozenset(
         "EquipmentAbort",
         "DataSuspect",
         "DebriefDeferred",
+        "DebriefConflicted",
     }
 )
 
@@ -246,6 +254,15 @@ CAUTION_PROPOSAL_CHOICES: Final = frozenset(
         "ProposeCaution",
         "ProposeWarning",
         "ProposeSupersede",
+        # Audit-only value emitted by a losing CautionDrafter agent
+        # when it lost the cross-agent lease race on the Run stream
+        # (per [[project-run-debriefer-lease-design]]). Parallel to
+        # RUN_DEBRIEF_CHOICES.DebriefConflicted. The losing agent
+        # writes the Decision on its own Decision stream citing the
+        # winning `caution_drafter_agent_id` so concurrent-debrief
+        # races stay visible in the Decision projection without
+        # polluting the Run stream further.
+        "CautionDraftConflicted",
     }
 )
 

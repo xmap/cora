@@ -7,6 +7,7 @@ import pytest
 
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.run.aggregates.run.events import (
+    DecisionDebriefRequested,
     RunAborted,
     RunCompleted,
     RunHeld,
@@ -1117,6 +1118,21 @@ def test_run_started_pinned_calibration_ids_round_trip() -> None:
 
 
 @pytest.mark.unit
+def test_decision_debrief_requested_round_trips_through_payload() -> None:
+    """The lease event class round-trips through to_payload + from_stored
+    so the audit trail on the Run stream survives serialization to / from
+    Postgres jsonb. Per [[project-run-debriefer-lease-design]]."""
+    original = DecisionDebriefRequested(
+        run_id=uuid4(),
+        debriefer_agent_id=uuid4(),
+        terminal_event_id=uuid4(),
+        occurred_at=_NOW,
+    )
+    stored = _stored("DecisionDebriefRequested", to_payload(original))
+    assert from_stored(stored) == original
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "event_type",
     [
@@ -1131,6 +1147,7 @@ def test_run_started_pinned_calibration_ids_round_trip() -> None:
         "RunReadingLogbookOpened",
         "RunAddedToCampaign",
         "RunRemovedFromCampaign",
+        "DecisionDebriefRequested",
     ],
 )
 def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:

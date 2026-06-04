@@ -1216,3 +1216,49 @@ def test_run_removed_from_campaign_preserves_pinned_calibration_ids() -> None:
     )
     assert state is not None
     assert state.pinned_calibration_ids == frozenset({pin_a})
+
+
+@pytest.mark.unit
+def test_decision_debrief_requested_is_audit_only_no_state_mutation() -> None:
+    """The lease marker emitted by Agent BC subscribers is provenance-only
+    on the Run aggregate. Folding it must return the prior state
+    unchanged. Per [[project-run-debriefer-lease-design]]: the lease's
+    existence on the stream IS the lease; no Run aggregate state field
+    tracks debrief authorization."""
+    from cora.run.aggregates.run.events import DecisionDebriefRequested
+
+    run_id = uuid4()
+    started = _run_started(run_id=run_id)
+    pre_lease = fold([started])
+    assert pre_lease is not None
+    post_lease = fold(
+        [
+            started,
+            DecisionDebriefRequested(
+                run_id=run_id,
+                debriefer_agent_id=uuid4(),
+                terminal_event_id=uuid4(),
+                occurred_at=_NOW,
+            ),
+        ]
+    )
+    assert post_lease == pre_lease
+
+
+@pytest.mark.unit
+def test_decision_debrief_requested_on_empty_state_raises() -> None:
+    """The lease event requires prior state (a Run must exist). An
+    Agent BC subscriber attempting to lease a non-existent Run would
+    be a serious orchestration bug; require_state surfaces it loudly."""
+    from cora.run.aggregates.run.events import DecisionDebriefRequested
+
+    with pytest.raises(ValueError):
+        evolve(
+            None,
+            DecisionDebriefRequested(
+                run_id=uuid4(),
+                debriefer_agent_id=uuid4(),
+                terminal_event_id=uuid4(),
+                occurred_at=_NOW,
+            ),
+        )

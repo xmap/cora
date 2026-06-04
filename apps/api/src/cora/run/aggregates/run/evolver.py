@@ -80,6 +80,7 @@ from typing import assert_never
 
 from cora.infrastructure.evolver import require_state
 from cora.run.aggregates.run.events import (
+    DecisionDebriefRequested,
     RunAborted,
     RunAddedToCampaign,
     RunAdjusted,
@@ -362,6 +363,14 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
             )
+        case DecisionDebriefRequested():
+            # Audit-only lease marker appended by an Agent BC subscriber
+            # (RunDebriefer, CautionDrafter, future agents) BEFORE
+            # invoking the LLM. The lease's existence on the stream IS
+            # the lease; Run state carries no debrief-authorization
+            # field. Returns prior state unchanged. See
+            # [[project-run-debriefer-lease-design]].
+            return require_state(state, "DecisionDebriefRequested")
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 

@@ -258,6 +258,40 @@ class RunRemovedFromCampaign:
 
 
 @dataclass(frozen=True)
+class DecisionDebriefRequested:
+    """An Agent BC subscriber leased the right to author a Decision for
+    this Run's terminal event.
+
+    Written by terminal-Run-event side-effecting subscribers
+    (`RunDebriefer`, `CautionDrafter`, future agents) BEFORE invoking
+    the LLM. The append uses the Run aggregate's current
+    `expected_version`; first writer wins via the existing
+    `UNIQUE(stream_type, stream_id, version)` optimistic-concurrency
+    primitive on the events table. Losing subscribers see
+    `ConcurrencyError`, emit a `DebriefConflicted` Decision on their
+    own Decision stream for audit visibility, and exit without
+    consuming LLM tokens.
+
+    The lease is per `(terminal_event_id, debriefer_agent_id)` pair:
+    the event_id is derived as
+    `uuid5(run_id, f"lease:{terminal_event_id}:{agent_id}")` so the
+    same agent's retries are idempotent (re-append fails on event_id
+    UNIQUE) but different agents compete on stream version.
+
+    Audit-only on the Run aggregate: the evolver returns prior state
+    unchanged. The lease's existence on the stream IS the lease. See
+    [[project-run-debriefer-lease-design]] for the full design and
+    [[project-cross-bc-atomic-writes]] for the cross-BC stream-write
+    precedent (Agent BC subscriber appending to Run stream).
+    """
+
+    run_id: UUID
+    debriefer_agent_id: UUID
+    terminal_event_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class RunHeld:
     """A Run was held (Running → Held).
 
@@ -495,6 +529,7 @@ RunEvent = (
     | RunReadingLogbookOpened
     | RunAddedToCampaign
     | RunRemovedFromCampaign
+    | DecisionDebriefRequested
 )
 
 
@@ -659,6 +694,18 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "run_id": str(run_id),
                 "campaign_id": str(campaign_id),
                 "reason": reason,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case DecisionDebriefRequested(
+            run_id=run_id,
+            debriefer_agent_id=debriefer_agent_id,
+            terminal_event_id=terminal_event_id,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "run_id": str(run_id),
+                "debriefer_agent_id": str(debriefer_agent_id),
+                "terminal_event_id": str(terminal_event_id),
                 "occurred_at": occurred_at.isoformat(),
             }
         case _:  # pragma: no cover  # exhaustiveness guard
@@ -839,6 +886,16 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
+        case "DecisionDebriefRequested":
+            return deserialize_or_raise(
+                "DecisionDebriefRequested",
+                lambda: DecisionDebriefRequested(
+                    run_id=UUID(payload["run_id"]),
+                    debriefer_agent_id=UUID(payload["debriefer_agent_id"]),
+                    terminal_event_id=UUID(payload["terminal_event_id"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
         case _:
             msg = f"Unknown RunEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -846,6 +903,7 @@ def from_stored(stored: StoredEvent) -> RunEvent:
 
 __all__ = [
     "CautionAcknowledgement",
+    "DecisionDebriefRequested",
     "RunAborted",
     "RunAddedToCampaign",
     "RunAdjusted",

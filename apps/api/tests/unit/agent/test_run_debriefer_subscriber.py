@@ -1024,3 +1024,121 @@ async def test_apply_does_not_swallow_unexpected_signer_exception() -> None:
     events, version = await store.load("Decision", decision_id)
     assert version == 0
     assert events == []
+
+
+# ---------- Cross-agent lease (project_run_debriefer_lease_design) ----------
+
+
+@pytest.mark.unit
+async def test_apply_appends_lease_event_to_run_stream_on_happy_path() -> None:
+    """The subscriber appends a DecisionDebriefRequested marker to the
+    Run stream BEFORE invoking the LLM. Per the design memo, the lease
+    primitive's existence on the stream IS the lease; this test pins
+    the append + payload shape."""
+    from cora.agent._subscriber_lease import derive_lease_event_id
+
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    stored, _v = await store.load("Run", run_id)
+    leases = [s for s in stored if s.event_type == "DecisionDebriefRequested"]
+    assert len(leases) == 1
+    lease = leases[0]
+    assert lease.payload["run_id"] == str(run_id)
+    assert lease.payload["debriefer_agent_id"] == str(RUN_DEBRIEFER_AGENT_ID)
+    assert lease.payload["terminal_event_id"] == str(event.event_id)
+    # event_id is the deterministic seed so retries are idempotent.
+    assert lease.event_id == derive_lease_event_id(
+        run_id=run_id,
+        debriefer_agent_id=RUN_DEBRIEFER_AGENT_ID,
+        terminal_event_id=event.event_id,
+    )
+
+
+@pytest.mark.unit
+async def test_apply_writes_debrief_conflicted_when_another_agent_holds_lease() -> None:
+    """When a different agent already holds the lease (lease event on
+    Run stream by a foreign debriefer_agent_id), the subscriber writes
+    DebriefConflicted on its own Decision stream WITHOUT invoking the
+    LLM. Per the design memo: losing agents pay zero LLM cost."""
+    from cora.agent._subscriber_lease import attempt_debrief_lease
+
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    # Pre-seed a lease by a foreign agent.
+    foreign_agent_id = uuid4()
+    pre_acquired, _ = await attempt_debrief_lease(
+        store,
+        run_id=run_id,
+        debriefer_agent_id=foreign_agent_id,
+        terminal_event=event,
+        occurred_at=event.occurred_at,
+        command_name="ForeignAgent",
+    )
+    assert pre_acquired is True
+
+    subscriber = await _build_subscriber(store, llm)
+    await subscriber.apply(event, conn=None)
+
+    decision_id = _derive_decision_id(event.event_id)
+    decision = await load_decision(store, decision_id)
+    assert decision is not None
+    assert decision.context.value == "RunDebrief"
+    assert decision.choice.value == "DebriefConflicted"
+    assert decision.confidence is None  # no LLM call was made
+    # winning agent_id is recorded in inputs for cross-Decision audit.
+    assert decision.inputs is not None
+    assert decision.inputs["winning_agent_id"] == str(foreign_agent_id)
+    # LLM must NOT have been called.
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_apply_after_prior_lease_by_same_agent_proceeds_to_llm_and_writes_decision() -> None:
+    """Re-fire after a crash-between-lease-and-Decision: the subscriber
+    sees its OWN prior lease on the Run stream, treats the lease as
+    already held, and proceeds to the LLM + Decision write path.
+    Pins the design memo's same-agent crash-recovery contract."""
+    from cora.agent._subscriber_lease import attempt_debrief_lease
+
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    # Simulate prior crash: lease landed on Run stream under THIS agent.
+    pre_acquired, _ = await attempt_debrief_lease(
+        store,
+        run_id=run_id,
+        debriefer_agent_id=RUN_DEBRIEFER_AGENT_ID,
+        terminal_event=event,
+        occurred_at=event.occurred_at,
+        command_name="PriorCrash",
+    )
+    assert pre_acquired is True
+
+    subscriber = await _build_subscriber(store, llm)
+    await subscriber.apply(event, conn=None)
+
+    decision_id = _derive_decision_id(event.event_id)
+    decision = await load_decision(store, decision_id)
+    assert decision is not None
+    assert decision.choice.value == "NominalCompletion"
+    assert llm.received != []
+    stored, _v = await store.load("Run", run_id)
+    leases = [s for s in stored if s.event_type == "DecisionDebriefRequested"]
+    assert len(leases) == 1

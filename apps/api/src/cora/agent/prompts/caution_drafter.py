@@ -115,10 +115,13 @@ DEFAULT_CAUTION_DRAFTER_MODEL = ModelRef(
 )
 
 
-# Closed choice set sourced from the canonical
-# `CAUTION_PROPOSAL_CHOICES` constant on the Decision aggregate.
-# Sorted for stable JSON Schema output ordering.
-_CHOICE_VALUES = tuple(sorted(CAUTION_PROPOSAL_CHOICES))
+# Closed LLM-facing choice set. Sourced from the canonical
+# `CAUTION_PROPOSAL_CHOICES` constant on the Decision aggregate MINUS
+# `CautionDraftConflicted`, which is an audit-only outcome the
+# subscriber writes on its own when it loses a lease race (see
+# [[project-run-debriefer-lease-design]]); the LLM must never be
+# offered it. Sorted for stable JSON Schema output ordering.
+_CHOICE_VALUES = tuple(sorted(CAUTION_PROPOSAL_CHOICES - {"CautionDraftConflicted"}))
 
 # Closed severity values (Z535 downshifted; sourced from Caution BC's enum).
 _SEVERITY_VALUES = tuple(sorted(s.value for s in CautionSeverity))

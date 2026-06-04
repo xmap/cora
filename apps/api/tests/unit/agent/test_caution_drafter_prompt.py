@@ -68,10 +68,13 @@ def test_default_model_is_sonnet() -> None:
 
 
 @pytest.mark.unit
-def test_output_schema_choice_enum_matches_decision_constant() -> None:
-    """The prompt's `choice` enum MUST equal Decision BC's canonical set."""
+def test_output_schema_choice_enum_matches_decision_constant_minus_conflicted() -> None:
+    """The prompt's `choice` enum MUST equal Decision BC's canonical set
+    minus `CautionDraftConflicted`, which is an audit-only outcome the
+    subscriber writes on lease loss and the LLM must never produce.
+    Per [[project-run-debriefer-lease-design]]."""
     schema_enum = set(CAUTION_DRAFTER_OUTPUT_SCHEMA["properties"]["choice"]["enum"])
-    assert schema_enum == set(CAUTION_PROPOSAL_CHOICES)
+    assert schema_enum == set(CAUTION_PROPOSAL_CHOICES) - {"CautionDraftConflicted"}
 
 
 @pytest.mark.unit
