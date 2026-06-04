@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_fd3cd1c5409f6931_routes_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-04 21:31 +0000
+            created at 2026-06-04 23:10 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -112,8 +112,8 @@
     <p class="run"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="nam">_INSERT_DECISION_SQL</span> <span class="op">=</span> <span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">INSERT INTO proj_decision_summary</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">    (decision_id, actor_id, rule, parent_id,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">     confidence, confidence_band, created_at)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">VALUES ($1, $2, $3, $4, $5, $6, $7)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">     confidence, confidence_band, choice, created_at)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">VALUES ($1, $2, $3, $4, $5, $6, $7, $8)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">ON CONFLICT (decision_id) DO NOTHING</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -145,11 +145,12 @@
     <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">            <span class="nam">parent_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">            <span class="nam">confidence</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">            <span class="nam">band</span><span class="op">.</span><span class="nam">value</span> <span class="key">if</span> <span class="nam">band</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">else</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">            <span class="nam">datetime</span><span class="op">.</span><span class="nam">fromisoformat</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"occurred_at"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">            <span class="nam">payload</span><span class="op">[</span><span class="str">"choice"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">            <span class="nam">datetime</span><span class="op">.</span><span class="nam">fromisoformat</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"occurred_at"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span><span class="str">"DecisionSummaryProjection"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span><span class="str">"DecisionSummaryProjection"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -159,7 +160,7 @@
             <a class="nav" href="z_fd3cd1c5409f6931_routes_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-04 21:31 +0000
+            created at 2026-06-04 23:10 +0000
         </p>
     </div>
 </footer>
