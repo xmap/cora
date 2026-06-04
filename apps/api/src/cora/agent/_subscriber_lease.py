@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
 
 from cora.infrastructure.event_envelope import to_new_event
+from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError
 from cora.run.aggregates.run.events import DecisionDebriefRequested
 
@@ -34,6 +35,8 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from cora.infrastructure.ports.event_store import EventStore, StoredEvent
+
+_log = get_logger(__name__)
 
 _RUN_STREAM_TYPE = "Run"
 _LEASE_EVENT_TYPE = DecisionDebriefRequested.__name__
@@ -127,6 +130,20 @@ async def attempt_debrief_lease(
     so the Run stream's audit trail links the lease back to the
     triggering terminal event. `principal_id` is the
     `debriefer_agent_id` (the Agent's identity-shared Actor.id).
+
+    Emits structured log lines at every terminal branch:
+      - `lease.acquired` on clean acquisition (append succeeded)
+      - `lease.same_agent_replay` when initial scan returned own lease
+        (crash-recovery / projection re-fire path)
+      - `lease.lost` on any loss path; `winning_agent_id` field is
+        the foreign agent id, or null when the version advanced for
+        a non-lease reason (the degenerate `(False, None)` path).
+      - `lease.conflict_on_append` precedes `lease.acquired` /
+        `lease.lost` when the append raced and we re-scanned.
+
+    The correlation_id is sourced from the terminal Run event so the
+    lease lines join with the subscriber's `<subscriber>.start` /
+    `<subscriber>.lease_lost` lines on the same log query.
     """
     lease_event_id = derive_lease_event_id(
         run_id=run_id,
@@ -134,12 +151,27 @@ async def attempt_debrief_lease(
         terminal_event_id=terminal_event.event_id,
     )
 
+    log = _log.bind(
+        run_id=str(run_id),
+        terminal_event_id=str(terminal_event.event_id),
+        debriefer_agent_id=str(debriefer_agent_id),
+        correlation_id=str(terminal_event.correlation_id),
+        command_name=command_name,
+    )
+
     stored, current_version = await event_store.load(_RUN_STREAM_TYPE, run_id)
 
     winner = _find_lease_winner_for_terminal_event(stored, terminal_event.event_id)
     if winner is not None:
         if winner == debriefer_agent_id:
+            log.info("lease.same_agent_replay", current_version=current_version)
             return True, None
+        log.info(
+            "lease.lost",
+            winning_agent_id=str(winner),
+            decided_by="initial_scan",
+            current_version=current_version,
+        )
         return False, winner
 
     lease_envelope = to_new_event(
@@ -166,12 +198,23 @@ async def attempt_debrief_lease(
             events=[lease_envelope],
         )
     except ConcurrencyError:
-        stored, _ = await event_store.load(_RUN_STREAM_TYPE, run_id)
+        log.info("lease.conflict_on_append", attempted_version=current_version)
+        stored, post_version = await event_store.load(_RUN_STREAM_TYPE, run_id)
         winner = _find_lease_winner_for_terminal_event(stored, terminal_event.event_id)
         if winner == debriefer_agent_id:
+            log.info(
+                "lease.acquired", decided_by="post_conflict_rescan", current_version=post_version
+            )
             return True, None
+        log.info(
+            "lease.lost",
+            winning_agent_id=str(winner) if winner is not None else None,
+            decided_by="post_conflict_rescan",
+            current_version=post_version,
+        )
         return False, winner
 
+    log.info("lease.acquired", decided_by="append", current_version=current_version + 1)
     return True, None
 
 

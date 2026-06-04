@@ -582,3 +582,112 @@ async def test_attempt_debrief_lease_skips_malformed_lease_payload_missing_winne
     stored, _v = await store.load("Run", run_id)
     leases = [e for e in stored if e.event_type == "DecisionDebriefRequested"]
     assert len(leases) == 2  # malformed + new lease both present
+
+
+# ---------- Structured logging ----------
+
+
+@pytest.mark.unit
+async def test_attempt_debrief_lease_emits_acquired_log_on_clean_append() -> None:
+    """Pin the `lease.acquired` line + load-bearing fields so operators
+    can diagnose race incidents without spelunking the event store."""
+    import structlog.testing
+
+    store = InMemoryEventStore()
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    agent_id = uuid4()
+    terminal = _terminal_event(run_id=run_id)
+
+    with structlog.testing.capture_logs() as logs:
+        await attempt_debrief_lease(
+            store,
+            run_id=run_id,
+            debriefer_agent_id=agent_id,
+            terminal_event=terminal,
+            occurred_at=_NOW,
+            command_name=_COMMAND_NAME,
+        )
+
+    acquired = [e for e in logs if e.get("event") == "lease.acquired"]
+    assert len(acquired) == 1
+    assert acquired[0]["decided_by"] == "append"
+    assert acquired[0]["run_id"] == str(run_id)
+    assert acquired[0]["debriefer_agent_id"] == str(agent_id)
+    assert acquired[0]["terminal_event_id"] == str(terminal.event_id)
+    assert acquired[0]["correlation_id"] == str(terminal.correlation_id)
+
+
+@pytest.mark.unit
+async def test_attempt_debrief_lease_emits_same_agent_replay_log_on_own_prior_lease() -> None:
+    """Pin the distinct `lease.same_agent_replay` line so operators
+    can tell crash-recovery from a fresh acquire."""
+    import structlog.testing
+
+    store = InMemoryEventStore()
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    agent_id = uuid4()
+    terminal = _terminal_event(run_id=run_id)
+
+    await attempt_debrief_lease(
+        store,
+        run_id=run_id,
+        debriefer_agent_id=agent_id,
+        terminal_event=terminal,
+        occurred_at=_NOW,
+        command_name=_COMMAND_NAME,
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await attempt_debrief_lease(
+            store,
+            run_id=run_id,
+            debriefer_agent_id=agent_id,
+            terminal_event=terminal,
+            occurred_at=_NOW,
+            command_name=_COMMAND_NAME,
+        )
+
+    replay = [e for e in logs if e.get("event") == "lease.same_agent_replay"]
+    assert len(replay) == 1
+    assert replay[0]["debriefer_agent_id"] == str(agent_id)
+
+
+@pytest.mark.unit
+async def test_attempt_debrief_lease_emits_lost_log_with_winner_on_cross_agent_loss() -> None:
+    """Pin the `lease.lost` line + winning_agent_id field so cross-agent
+    races are visible from logs alone (no event-store query needed)."""
+    import structlog.testing
+
+    store = InMemoryEventStore()
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    winner_id = uuid4()
+    loser_id = uuid4()
+    terminal = _terminal_event(run_id=run_id)
+
+    await attempt_debrief_lease(
+        store,
+        run_id=run_id,
+        debriefer_agent_id=winner_id,
+        terminal_event=terminal,
+        occurred_at=_NOW,
+        command_name=_COMMAND_NAME,
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await attempt_debrief_lease(
+            store,
+            run_id=run_id,
+            debriefer_agent_id=loser_id,
+            terminal_event=terminal,
+            occurred_at=_NOW,
+            command_name=_COMMAND_NAME,
+        )
+
+    lost = [e for e in logs if e.get("event") == "lease.lost"]
+    assert len(lost) == 1
+    assert lost[0]["winning_agent_id"] == str(winner_id)
+    assert lost[0]["decided_by"] == "initial_scan"
+    assert lost[0]["debriefer_agent_id"] == str(loser_id)
