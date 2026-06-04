@@ -1048,3 +1048,43 @@ async def test_apply_writes_caution_draft_conflicted_when_another_agent_holds_le
     assert decision.inputs is not None
     assert decision.inputs["winning_agent_id"] == str(foreign_agent_id)
     assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_apply_writes_caution_draft_conflicted_unidentified_winner_on_no_winner_loss(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`(False, None)` from the lease helper (degenerate-loss path
+    where the Run stream advanced for a non-lease reason between
+    load and append) lands a CautionDraftConflicted Decision whose
+    reasoning notes the unidentified winner and whose `inputs` omits
+    `winning_agent_id`. Mirrors RunDebriefer."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    async def _force_loss_without_winner(*_args: object, **_kwargs: object) -> tuple[bool, None]:
+        return False, None
+
+    monkeypatch.setattr(
+        "cora.agent.subscribers.caution_drafter.attempt_debrief_lease",
+        _force_loss_without_winner,
+    )
+
+    subscriber = await _build_subscriber(store, llm)
+    await subscriber.apply(event, conn=None)
+
+    decision_id = _derive_decision_id(event.event_id)
+    decision = await load_decision(store, decision_id)
+    assert decision is not None
+    assert decision.choice.value == "CautionDraftConflicted"
+    assert decision.confidence is None
+    assert decision.inputs is not None
+    assert "winning_agent_id" not in decision.inputs
+    assert decision.reasoning is not None
+    assert "winning agent not identified" in decision.reasoning
+    assert llm.received == []
