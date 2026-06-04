@@ -154,7 +154,7 @@ from cora.decision.aggregates.decision import (
 )
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import ConcurrencyError, LLMError
+from cora.infrastructure.ports import ConcurrencyError
 from cora.infrastructure.signing import SIGNED_EVENT_TYPES
 from cora.run.aggregates.run import load_run
 
@@ -396,7 +396,14 @@ class RunDebrieferSubscriber:
 
         try:
             response = await self.llm.chat(request)
-        except LLMError as exc:
+        except Exception as exc:
+            # Widened from `except LLMError` so any adapter-layer failure
+            # (TimeoutError, ConnectionError, an exception not yet wrapped
+            # in `LLMError` by a new adapter) routes to DebriefDeferred
+            # instead of orphaning the lease + infinite-replaying the same
+            # crash on every projection retry. `asyncio.CancelledError` is
+            # a BaseException since Python 3.8 and falls through this
+            # handler, preserving shutdown semantics.
             log.warning(
                 "run_debriefer.llm_failed",
                 error_class=type(exc).__name__,

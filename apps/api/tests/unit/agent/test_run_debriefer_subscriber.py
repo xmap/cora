@@ -10,7 +10,7 @@ missing-Actor guard.
 # pyright: reportPrivateUsage=false, reportUnknownMemberType=false
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -50,6 +50,10 @@ from cora.run.aggregates.run import (
 )
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
+
+if TYPE_CHECKING:
+    from cora.infrastructure.ports import LLM
+
 from cora.run.aggregates.run.events import (
     RunAborted,
     RunCompleted,
@@ -408,6 +412,91 @@ async def test_debrief_deferred_decision_id_matches_success_path() -> None:
     decision_after = await load_decision(store, decision_id)
     assert decision_after is not None
     assert decision_after.choice.value == "DebriefDeferred"
+
+
+class _RaisingLLM:
+    """LLM test-double whose `chat()` always raises a configured exception.
+
+    FakeLLM only accepts `LLMError` in its response queue; this lets a
+    test cover the widened exception handler that routes ANY
+    non-CancelledError exception (TimeoutError, ConnectionError, an
+    adapter bug not yet wrapped in `LLMError`) to the deferred fallback.
+    """
+
+    def __init__(self, exc: BaseException) -> None:
+        self._exc = exc
+        self.received: list[Any] = []
+
+    async def chat(self, request: Any) -> Any:
+        self.received.append(request)
+        raise self._exc
+
+
+@pytest.mark.unit
+async def test_apply_routes_non_llm_error_to_debrief_deferred() -> None:
+    """Adapter raises a `RuntimeError` (not an `LLMError` subclass);
+    subscriber's widened `except Exception` routes to the
+    `DebriefDeferred` fallback so the lease is not orphaned + the
+    bookmark advances. Defends against the infinite-replay loop where
+    a non-LLMError on the LLM call would propagate, the bookmark tx
+    would abort, and the next re-fire would re-acquire its own lease
+    + hit the same crash."""
+    store = InMemoryEventStore()
+    llm = _RaisingLLM(RuntimeError("adapter bug: unwrapped transport failure"))
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = RunDebrieferSubscriber(
+        event_store=store,
+        llm=cast("LLM", llm),
+        logbook_mirror=None,
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "DebriefDeferred"
+    assert decision.confidence is None
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "RuntimeError"
+
+
+@pytest.mark.unit
+async def test_apply_propagates_cancelled_error_does_not_write_decision() -> None:
+    """`asyncio.CancelledError` is a `BaseException` since Python 3.8
+    and MUST fall through `except Exception` so shutdown semantics
+    are preserved. The lease event lands on the Run stream (BEFORE
+    the LLM call), but no Decision is written and the exception
+    propagates so the projection worker's bookmark transaction
+    aborts and the event will retry on next process start."""
+    import asyncio
+
+    store = InMemoryEventStore()
+    llm = _RaisingLLM(asyncio.CancelledError())
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = RunDebrieferSubscriber(
+        event_store=store,
+        llm=cast("LLM", llm),
+        logbook_mirror=None,
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    with pytest.raises(asyncio.CancelledError):
+        await subscriber.apply(event, conn=None)
+
+    decision_id = _derive_decision_id(event.event_id)
+    events, version = await store.load("Decision", decision_id)
+    assert version == 0
+    assert events == []
+    # The lease was appended BEFORE the LLM call; it stays on the
+    # Run stream as the audit primitive intends.
+    stored, _v = await store.load("Run", run_id)
+    leases = [s for s in stored if s.event_type == "DecisionDebriefRequested"]
+    assert len(leases) == 1
 
 
 # ---------- Idempotency ----------
