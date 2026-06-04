@@ -76,3 +76,29 @@ async def test_handler_accepts_combined_filters() -> None:
         correlation_id=_CORRELATION_ID,
     )
     assert page.items == []
+
+
+@pytest.mark.unit
+async def test_handler_accepts_choice_filter() -> None:
+    handler = bind(build_deps())
+    page = await handler(
+        ListDecisions(choice="NominalCompletion"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert page.items == []
+
+
+@pytest.mark.unit
+async def test_handler_accepts_exclude_choices_filter() -> None:
+    """Audit-only `DebriefConflicted` + `CautionDraftConflicted` are
+    the common drop-set for analytic queries computing outcome rates."""
+    handler = bind(build_deps())
+    page = await handler(
+        ListDecisions(
+            exclude_choices=("DebriefConflicted", "CautionDraftConflicted"),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert page.items == []

@@ -28,8 +28,8 @@ from cora.infrastructure.projection.handler import ConnectionLike
 _INSERT_DECISION_SQL = """
 INSERT INTO proj_decision_summary
     (decision_id, actor_id, rule, parent_id,
-     confidence, confidence_band, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+     confidence, confidence_band, choice, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (decision_id) DO NOTHING
 """
 
@@ -61,6 +61,7 @@ class DecisionSummaryProjection:
             parent_id,
             confidence,
             band.value if band is not None else None,
+            payload["choice"],
             datetime.fromisoformat(payload["occurred_at"]),
         )
 

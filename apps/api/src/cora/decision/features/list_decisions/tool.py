@@ -22,6 +22,7 @@ class DecisionSummaryRow(BaseModel):
     parent_id: UUID | None
     confidence: float | None
     confidence_band: ConfidenceBandFilter | None
+    choice: str
     created_at: datetime
 
 
@@ -42,7 +43,12 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             "`confidence_band` filter accepts: Low, Medium, High, "
             "Certain. Optional `rule` filter narrows by "
             "categorical rule label. Optional `actor_id` filter "
-            "narrows to Decisions made by one Actor. Pass `cursor` "
+            "narrows to Decisions made by one Actor. Optional "
+            "`choice` filter narrows to one DecisionChoice value "
+            "(e.g. NominalCompletion). Optional `exclude_choices` "
+            "list drops named choices, commonly the audit-only "
+            "DebriefConflicted / CautionDraftConflicted rows from "
+            "the cross-agent debrief lease. Pass `cursor` "
             "from a previous page's `next_cursor`."
         ),
     )
@@ -68,6 +74,20 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             UUID | None,
             Field(description="Optional Actor-id filter."),
         ] = None,
+        choice: Annotated[
+            str | None,
+            Field(description="Optional DecisionChoice filter (one value)."),
+        ] = None,
+        exclude_choices: Annotated[
+            list[str] | None,
+            Field(
+                description=(
+                    "Optional DecisionChoice exclusion list. Drops named "
+                    "choices; commonly used to omit DebriefConflicted / "
+                    "CautionDraftConflicted audit rows."
+                ),
+            ),
+        ] = None,
     ) -> DecisionListOutput:
         handler = get_handler()
         page = await handler(
@@ -77,6 +97,8 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                 confidence_band=confidence_band,
                 rule=rule,
                 actor_id=actor_id,
+                choice=choice,
+                exclude_choices=tuple(exclude_choices) if exclude_choices else None,
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),
@@ -91,6 +113,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                     parent_id=item.parent_id,
                     confidence=item.confidence,
                     confidence_band=item.confidence_band,
+                    choice=item.choice,
                     created_at=item.created_at,
                 )
                 for item in page.items

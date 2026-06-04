@@ -30,6 +30,7 @@ class DecisionSummaryDTO(BaseModel):
     parent_id: UUID | None
     confidence: float | None
     confidence_band: ConfidenceBandFilter | None
+    choice: str
     created_at: datetime
 
 
@@ -98,6 +99,27 @@ async def list_decisions(
         UUID | None,
         Query(description="Optional Actor-id filter."),
     ] = None,
+    choice: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Optional DecisionChoice filter (e.g. NominalCompletion). "
+                "See cora.decision.aggregates.decision RUN_DEBRIEF_CHOICES / "
+                "CAUTION_PROPOSAL_CHOICES for the closed sets."
+            ),
+        ),
+    ] = None,
+    exclude_choices: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "Optional DecisionChoice exclusion list. Common case: "
+                "drop the audit-only DebriefConflicted / "
+                "CautionDraftConflicted rows when computing outcome "
+                "rates. Repeat the query param for multiple values."
+            ),
+        ),
+    ] = None,
 ) -> DecisionListResponse:
     page = await handler(
         ListDecisions(
@@ -106,6 +128,8 @@ async def list_decisions(
             confidence_band=confidence_band,
             rule=rule,
             actor_id=actor_id,
+            choice=choice,
+            exclude_choices=tuple(exclude_choices) if exclude_choices else None,
         ),
         principal_id=principal_id,
         correlation_id=cid,
@@ -120,6 +144,7 @@ async def list_decisions(
                 parent_id=item.parent_id,
                 confidence=item.confidence,
                 confidence_band=item.confidence_band,
+                choice=item.choice,
                 created_at=item.created_at,
             )
             for item in page.items

@@ -233,7 +233,30 @@ class ColumnInFilter:
     column: str | None = None
 
 
-FilterSpec = ScalarFilter | ArrayContainsFilter | ColumnInFilter
+@dataclass(frozen=True)
+class ColumnNotInFilter:
+    """Set-exclusion filter: emits `WHERE <column> <> ALL($N)` when the
+    query attribute is a non-empty sequence; emits nothing when None
+    or empty.
+
+    The negative-list counterpart to `ColumnInFilter`. Used for
+    "filter out one-or-more values" patterns -- e.g., excluding
+    audit-only DecisionChoice values from analytic queries that
+    compute outcome rates. `<> ALL($1)` is the PG-idiomatic NOT-IN
+    against an array parameter and stays sargable on the scalar
+    column's index when other predicates narrow the row set first.
+
+    `column` defaults to `attr` when omitted. Empty list is treated
+    as "no filter" to match the `ColumnInFilter` symmetry and avoid
+    the route layer accidentally turning "user passed nothing" into
+    "WHERE FALSE".
+    """
+
+    attr: str
+    column: str | None = None
+
+
+FilterSpec = ScalarFilter | ArrayContainsFilter | ColumnInFilter | ColumnNotInFilter
 
 
 class _Query(Protocol):
@@ -282,6 +305,8 @@ def _render_filter_fragment(spec: FilterSpec, param_number: int) -> str:
         return f"{column} = ${param_number}"
     if isinstance(spec, ArrayContainsFilter):
         return f"${param_number} = ANY({column})"
+    if isinstance(spec, ColumnNotInFilter):
+        return f"{column} <> ALL(${param_number})"
     # ColumnInFilter: column scalar, parameter is the candidate list.
     return f"{column} = ANY(${param_number})"
 
@@ -290,14 +315,14 @@ def _active_filter_value(spec: FilterSpec, value: Any) -> bool:
     """A filter is active iff the slice would emit a WHERE fragment.
 
     None is always inactive (matches the `getattr` default). For
-    `ColumnInFilter`, an empty list is also inactive (an empty
-    acceptable-value set would return zero rows, which is rarely
-    what the caller meant; the route layer omits the filter
-    instead of passing []).
+    `ColumnInFilter` / `ColumnNotInFilter`, an empty list is also
+    inactive: an empty IN would return zero rows + an empty NOT IN
+    would exclude nothing, neither of which the caller likely meant.
+    The route layer omits the filter instead of passing [].
     """
     if value is None:
         return False
-    if isinstance(spec, ColumnInFilter):
+    if isinstance(spec, ColumnInFilter | ColumnNotInFilter):
         return len(value) > 0
     return True
 
@@ -471,6 +496,7 @@ def make_list_query_handler[Q: _Query, Item, Page](
 __all__ = [
     "ArrayContainsFilter",
     "ColumnInFilter",
+    "ColumnNotInFilter",
     "FilterSpec",
     "ScalarFilter",
     "make_list_query_handler",

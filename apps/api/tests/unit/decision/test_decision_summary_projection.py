@@ -96,7 +96,8 @@ async def test_decision_registered_inserts_with_genesis_payload() -> None:
     assert args.args[4] is None  # parent_id
     assert args.args[5] == 0.97  # confidence
     assert args.args[6] == "Certain"  # confidence_band derived (>=0.95)
-    assert args.args[7] == _NOW
+    assert args.args[7] == "accept"  # choice
+    assert args.args[8] == _NOW
 
 
 @pytest.mark.unit
@@ -124,6 +125,7 @@ async def test_confidence_band_derivation_at_insert(
             "decision_id": str(_DECISION_ID),
             "actor_id": str(_ACTOR_ID),
             "confidence": confidence,
+            "choice": "NominalCompletion",
             "occurred_at": _NOW.isoformat(),
         },
     )
@@ -147,6 +149,7 @@ async def test_decision_with_parent_id_persists_override_chain_link() -> None:
             "actor_id": str(_ACTOR_ID),
             "parent_id": str(_PARENT_ID),
             "confidence": None,
+            "choice": "NominalCompletion",
             "occurred_at": _NOW.isoformat(),
         },
     )
@@ -156,6 +159,32 @@ async def test_decision_with_parent_id_persists_override_chain_link() -> None:
     args = conn.execute.await_args
     assert args is not None
     assert args.args[4] == _PARENT_ID
+
+
+@pytest.mark.unit
+async def test_decision_with_audit_only_choice_persists_for_filter_visibility() -> None:
+    """`DebriefConflicted` (audit-only, emitted by the loser agent in
+    the cross-agent debrief lease) is projected like any other choice.
+    The list_decisions surface exposes a `choice` filter so analytic
+    callers can drop these rows from outcome-rate denominators."""
+    proj = DecisionSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "DecisionRegistered",
+        {
+            "decision_id": str(_DECISION_ID),
+            "actor_id": str(_ACTOR_ID),
+            "confidence": None,
+            "choice": "DebriefConflicted",
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[7] == "DebriefConflicted"
 
 
 @pytest.mark.unit

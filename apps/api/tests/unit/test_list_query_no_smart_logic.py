@@ -34,6 +34,7 @@ import pytest
 from cora.infrastructure.list_query import (
     ArrayContainsFilter,
     ColumnInFilter,
+    ColumnNotInFilter,
     ScalarFilter,
     make_list_query_handler,
 )
@@ -55,6 +56,7 @@ class _ProbeQuery:
     scalar_attr: str | None = None
     array_contains_attr: UUID | None = None
     column_in_attr: list[str] | None = None
+    column_not_in_attr: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -123,6 +125,7 @@ def _build_probe_handler(conn: _RecordingConn) -> Any:
             ScalarFilter(attr="scalar_attr", column="scalar_col"),
             ArrayContainsFilter(attr="array_contains_attr", column="array_col"),
             ColumnInFilter(attr="column_in_attr", column="in_col"),
+            ColumnNotInFilter(attr="column_not_in_attr", column="not_in_col"),
         ],
         row_to_item=lambda row: _ProbeItem(item_id=row["item_id"], created_at=row["created_at"]),
         item_cursor_at=lambda item: item.created_at,
@@ -221,4 +224,44 @@ async def test_factory_treats_empty_column_in_filter_list_as_inactive() -> None:
         "treated as 'no filter' equivalent to None."
     )
     # No filters active at all -> no WHERE clause.
+    assert "WHERE" not in sql.upper()
+
+
+@pytest.mark.unit
+async def test_factory_emits_column_not_in_filter_as_not_all_predicate() -> None:
+    """ColumnNotInFilter must compose as `col <> ALL($N)` so the
+    excluded values are dropped from results without re-introducing
+    the smart-logic anti-pattern. PG-idiomatic NOT IN against an
+    array param; stays sargable when paired with another narrowing
+    predicate."""
+    conn = _RecordingConn()
+    handler = _build_probe_handler(conn)
+    await handler(
+        _ProbeQuery(column_not_in_attr=["DebriefConflicted", "CautionDraftConflicted"]),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert len(conn.fetched_sql) == 1
+    sql = conn.fetched_sql[0]
+    assert "not_in_col <> ALL($2)" in sql
+
+
+@pytest.mark.unit
+async def test_factory_treats_empty_column_not_in_filter_list_as_inactive() -> None:
+    """Empty exclusion list == no filter. Without this, a route layer
+    that accidentally passes [] would exclude nothing AND still bloat
+    the SQL string + parameter list."""
+    conn = _RecordingConn()
+    handler = _build_probe_handler(conn)
+    await handler(
+        _ProbeQuery(column_not_in_attr=[]),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert len(conn.fetched_sql) == 1
+    sql = conn.fetched_sql[0]
+    assert "not_in_col" not in sql, (
+        "Empty ColumnNotInFilter list emitted a WHERE fragment; expected to be "
+        "treated as 'no filter' equivalent to None."
+    )
     assert "WHERE" not in sql.upper()

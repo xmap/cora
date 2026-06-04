@@ -22,7 +22,11 @@ from uuid import UUID
 from cora.decision.errors import UnauthorizedError
 from cora.decision.features.list_decisions.query import ConfidenceBandFilter, ListDecisions
 from cora.infrastructure.kernel import Kernel
-from cora.infrastructure.list_query import ScalarFilter, make_list_query_handler
+from cora.infrastructure.list_query import (
+    ColumnNotInFilter,
+    ScalarFilter,
+    make_list_query_handler,
+)
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 
 
@@ -36,6 +40,7 @@ class DecisionSummaryItem:
     parent_id: UUID | None
     confidence: float | None
     confidence_band: ConfidenceBandFilter | None
+    choice: str
     created_at: datetime
 
 
@@ -60,7 +65,9 @@ class Handler(Protocol):
     ) -> DecisionListPage: ...
 
 
-_SELECT_COLUMNS = "decision_id, actor_id, rule, parent_id, confidence, confidence_band, created_at"
+_SELECT_COLUMNS = (
+    "decision_id, actor_id, rule, parent_id, confidence, confidence_band, choice, created_at"
+)
 
 
 def _row_to_item(row: Any) -> DecisionSummaryItem:
@@ -75,6 +82,7 @@ def _row_to_item(row: Any) -> DecisionSummaryItem:
             if row["confidence_band"] is not None
             else None
         ),
+        choice=str(row["choice"]),
         created_at=row["created_at"],
     )
 
@@ -84,6 +92,8 @@ def _log_fields(query: ListDecisions) -> dict[str, Any]:
         "confidence_band": query.confidence_band,
         "rule": query.rule,
         "actor_id": str(query.actor_id) if query.actor_id else None,
+        "choice": query.choice,
+        "exclude_choices": list(query.exclude_choices) if query.exclude_choices else None,
     }
 
 
@@ -102,6 +112,8 @@ def bind(deps: Kernel) -> Handler:
             ScalarFilter(attr="confidence_band"),
             ScalarFilter(attr="rule"),
             ScalarFilter(attr="actor_id"),
+            ScalarFilter(attr="choice"),
+            ColumnNotInFilter(attr="exclude_choices", column="choice"),
         ],
         row_to_item=_row_to_item,
         item_cursor_at=lambda item: item.created_at,

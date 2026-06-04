@@ -3829,6 +3829,10 @@
             "title": "Actor Id",
             "type": "string"
           },
+          "choice": {
+            "title": "Choice",
+            "type": "string"
+          },
           "confidence": {
             "anyOf": [
               {
@@ -3898,6 +3902,7 @@
           "parent_id",
           "confidence",
           "confidence_band",
+          "choice",
           "created_at"
         ],
         "title": "DecisionSummaryDTO",
@@ -22280,6 +22285,45 @@
               ],
               "description": "Optional Actor-id filter.",
               "title": "Actor Id"
+            }
+          },
+          {
+            "description": "Optional DecisionChoice filter (e.g. NominalCompletion). See cora.decision.aggregates.decision RUN_DEBRIEF_CHOICES / CAUTION_PROPOSAL_CHOICES for the closed sets.",
+            "in": "query",
+            "name": "choice",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional DecisionChoice filter (e.g. NominalCompletion). See cora.decision.aggregates.decision RUN_DEBRIEF_CHOICES / CAUTION_PROPOSAL_CHOICES for the closed sets.",
+              "title": "Choice"
+            }
+          },
+          {
+            "description": "Optional DecisionChoice exclusion list. Common case: drop the audit-only DebriefConflicted / CautionDraftConflicted rows when computing outcome rates. Repeat the query param for multiple values.",
+            "in": "query",
+            "name": "exclude_choices",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional DecisionChoice exclusion list. Common case: drop the audit-only DebriefConflicted / CautionDraftConflicted rows when computing outcome rates. Repeat the query param for multiple values.",
+              "title": "Exclude Choices"
             }
           },
           {

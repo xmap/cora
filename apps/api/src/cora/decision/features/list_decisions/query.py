@@ -38,3 +38,18 @@ class ListDecisions:
     actor_id: UUID | None = None
     """Optional `actor_id` filter: returns Decisions made by the
     given Actor. Pass `None` (omit) for "any Actor"."""
+
+    choice: str | None = None
+    """Optional categorical filter on the DecisionChoice value
+    (RUN_DEBRIEF_CHOICES / CAUTION_PROPOSAL_CHOICES values).
+    Filter to one specific outcome (e.g. ``NominalCompletion``).
+    Mutually compatible with ``exclude_choices``; both filters can be
+    set, although a contradictory combination returns zero rows."""
+
+    exclude_choices: tuple[str, ...] | None = None
+    """Optional negative filter on the DecisionChoice value. Pass a
+    tuple of choice values to EXCLUDE from results -- the common case
+    is dropping the audit-only ``DebriefConflicted`` /
+    ``CautionDraftConflicted`` rows emitted by the cross-agent debrief
+    lease (per project_run_debriefer_lease_design). Empty tuple is
+    treated as "no exclusion"."""
