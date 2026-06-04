@@ -636,6 +636,11 @@
 | src/cora/equipment/features/get\_family/query.py                                 |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/get\_family/route.py                                 |       25 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/equipment/features/get\_family/tool.py                                  |       27 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/equipment/features/get\_fixture/\_\_init\_\_.py                         |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/features/get\_fixture/handler.py                              |       23 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/equipment/features/get\_fixture/query.py                                |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/features/get\_fixture/route.py                                |       23 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/equipment/features/get\_fixture/tool.py                                 |       25 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/equipment/features/get\_model/\_\_init\_\_.py                           |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/get\_model/handler.py                                |       23 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/equipment/features/get\_model/query.py                                  |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -658,6 +663,11 @@
 | src/cora/equipment/features/list\_families/query.py                              |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/list\_families/route.py                              |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/list\_families/tool.py                               |       22 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/features/list\_fixtures/\_\_init\_\_.py                       |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/features/list\_fixtures/handler.py                            |       22 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/features/list\_fixtures/query.py                              |       14 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/features/list\_fixtures/route.py                              |       19 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/features/list\_fixtures/tool.py                               |       20 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/register\_asset/\_\_init\_\_.py                      |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/register\_asset/command.py                           |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/register\_asset/decider.py                           |       20 |        0 |       10 |        0 |    100.0% |           |
@@ -790,8 +800,8 @@
 | src/cora/equipment/projections/mount\_children.py                                |       21 |        2 |        6 |        1 |     88.9% |     84-85 |
 | src/cora/equipment/projections/mount\_slot\_code.py                              |       23 |        2 |        6 |        1 |     89.7% |     84-85 |
 | src/cora/equipment/projections/mount\_summary.py                                 |       30 |        3 |       10 |        2 |     87.5% |96, 113-114 |
-| src/cora/equipment/routes.py                                                     |       86 |        0 |        8 |        0 |    100.0% |           |
-| src/cora/equipment/tools.py                                                      |       98 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/routes.py                                                     |       88 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/equipment/tools.py                                                      |      102 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/wire.py                                                       |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/\_\_init\_\_.py                                              |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/\_actor\_update\_handler.py                                  |       29 |        0 |        0 |        0 |    100.0% |           |
@@ -1852,7 +1862,7 @@
 | src/cora/trust/routes.py                                                         |       68 |        2 |       12 |        0 |     97.5% |   147-148 |
 | src/cora/trust/tools.py                                                          |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                           |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                        | **35225** |  **626** | **4694** |  **171** | **97.7%** |           |
+| **TOTAL**                                                                        | **35391** |  **626** | **4700** |  **171** | **97.7%** |           |
 
 
 ## Setup coverage badge
