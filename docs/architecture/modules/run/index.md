@@ -109,6 +109,7 @@ stateDiagram-v2
 | `RunReadingLogbookOpened` | `run_id`, `logbook_id`, `schema`, `occurred_at` | `append_run_reading` first write per Run (lazy open) |
 | `RunAddedToCampaign` | `run_id`, `campaign_id`, `occurred_at` | post-hoc Campaign membership write (see Campaign module) |
 | `RunRemovedFromCampaign` | `run_id`, `campaign_id`, `occurred_at` | post-hoc Campaign membership removal |
+| `DecisionDebriefRequested` | `run_id`, `debriefer_agent_id`, `terminal_event_id`, `occurred_at` | appended by an Agent BC subscriber (RunDebriefer / CautionDrafter) BEFORE invoking its LLM as a per-(run, terminal-event, agent) lease marker; first writer wins via the existing `UNIQUE(stream_type, stream_id, version)` constraint; audit-only with a no-op evolver fold |
 
 Individual reading rows do not emit per-row events on the Run stream; they are written directly to `entries_run_readings` via the `ReadingStore` port. The row's `event_id`, `correlation_id`, and `causation_id` constitute the audit trail without bloating the main event log.
 
@@ -227,7 +228,8 @@ Clock skew between the sensor (`sampled_at`) and the handler (`occurred_at`) is 
 | Campaign | shared-id-with | `Run.campaign_id` (single-Campaign-per-Run invariant); the post-hoc `add_run_to_campaign` / `remove_run_from_campaign` slices are owned by the Campaign module and atomically write `RunAddedToCampaign` / `RunRemovedFromCampaign` plus the Campaign-side membership event via `EventStore.append_streams` |
 | Decision | shared-id-with | `RunAdjusted.decided_by_decision_id` cites the Decision that justified a mid-flight adjustment; no existence check at write time (eventual-consistency stance) |
 | Calibration | reads-from | `Run.pinned_calibration_ids` is a frozen set of `CalibrationRevision.id`s captured at `start_run` and **immutable** for the life of the Run; every FSM transition preserves the set verbatim, and downstream consumers cite this set to answer "what calibration was this scan acquired against?" deterministically |
-| Agent | writes-to | Terminal Run events (`RunCompleted`, `RunAborted`, `RunStopped`, `RunTruncated`) are subscribed by the RunDebriefer agent, which emits an advisory `Decision` per terminal Run |
+| Agent | writes-to (Decision stream) | Terminal Run events (`RunCompleted`, `RunAborted`, `RunStopped`, `RunTruncated`) are subscribed by the RunDebriefer and CautionDrafter agents, each of which emits an advisory `Decision` per terminal Run |
+| Agent | writes-to (Run stream, lease marker) | Each terminal-Run-event subscriber appends `DecisionDebriefRequested` to the Run stream BEFORE invoking its LLM as a per-(run, terminal-event, agent) lease primitive; first writer wins via the existing optimistic-concurrency constraint, losing agents emit a `DebriefConflicted` / `CautionDraftConflicted` audit Decision on their own Decision stream with zero LLM cost (no Run-state mutation) |
 | Access | shared-id-with | Every Run event envelope carries `actor_id` for principal attribution; cross-module references are bare UUIDs and not verified at write time |
 
 `Plan`, `Subject`, `Asset`, `Campaign`, `Clearance`, and `Calibration` references are validated at handler load-time but treated as opaque by the decider; the decider operates on pre-loaded context bundles rather than re-fetching, which keeps the pure-decider boundary clean.

@@ -213,6 +213,157 @@ async def test_confidence_band_filter_narrows_results(
 
 
 @pytest.mark.integration
+async def test_choice_filter_narrows_to_one_choice_value(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Filter by `choice` returns only rows with that DecisionChoice value.
+
+    Proves the new column populated by migration 20260605000000 round-
+    trips through the projection INSERT into the handler's SELECT and
+    is sargable on the `(actor_id, choice)` composite index."""
+    actor_id = uuid4()
+    deps_actor = _build_deps(db_pool, [actor_id, uuid4()])
+    actor_real_id = await _seed_actor(deps_actor, db_pool)
+
+    nominal_id = uuid4()
+    deps_nominal = _build_deps(db_pool, [nominal_id, uuid4()])
+    await bind_register(deps_nominal)(
+        RegisterDecision(
+            actor_id=actor_real_id,
+            context="RunDebrief",
+            choice="NominalCompletion",
+            confidence=0.92,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    conflicted_id = uuid4()
+    deps_conflicted = _build_deps(db_pool, [conflicted_id, uuid4()])
+    await bind_register(deps_conflicted)(
+        RegisterDecision(
+            actor_id=actor_real_id,
+            context="RunDebrief",
+            choice="DebriefConflicted",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    await _drain(db_pool)
+
+    handler = bind_list(deps_nominal)
+    nominal_page = await handler(
+        ListDecisions(choice="NominalCompletion", limit=10),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert len(nominal_page.items) == 1
+    assert nominal_page.items[0].decision_id == nominal_id
+    assert nominal_page.items[0].choice == "NominalCompletion"
+
+    conflicted_page = await handler(
+        ListDecisions(choice="DebriefConflicted", limit=10),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert len(conflicted_page.items) == 1
+    assert conflicted_page.items[0].decision_id == conflicted_id
+    assert conflicted_page.items[0].choice == "DebriefConflicted"
+
+
+@pytest.mark.integration
+async def test_exclude_choices_filter_drops_audit_only_rows_from_analytic_query(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """`exclude_choices` is the analytic-query primitive for excluding
+    the audit-only DebriefConflicted / CautionDraftConflicted rows
+    (per project_run_debriefer_lease_design follow-up). Proves the
+    `<> ALL($N)` SQL composition + NOT NULL guarantee on the choice
+    column survives end-to-end against real PG (NULL `<> ALL` would
+    evaluate to NULL and silently drop the row otherwise)."""
+    actor_id = uuid4()
+    deps_actor = _build_deps(db_pool, [actor_id, uuid4()])
+    actor_real_id = await _seed_actor(deps_actor, db_pool)
+
+    nominal_id_a = uuid4()
+    deps_a = _build_deps(db_pool, [nominal_id_a, uuid4()])
+    await bind_register(deps_a)(
+        RegisterDecision(
+            actor_id=actor_real_id,
+            context="RunDebrief",
+            choice="NominalCompletion",
+            confidence=0.90,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    nominal_id_b = uuid4()
+    deps_b = _build_deps(db_pool, [nominal_id_b, uuid4()])
+    await bind_register(deps_b)(
+        RegisterDecision(
+            actor_id=actor_real_id,
+            context="RunDebrief",
+            choice="DegradedCompletion",
+            confidence=0.55,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    debrief_conflicted_id = uuid4()
+    deps_conf_a = _build_deps(db_pool, [debrief_conflicted_id, uuid4()])
+    await bind_register(deps_conf_a)(
+        RegisterDecision(
+            actor_id=actor_real_id,
+            context="RunDebrief",
+            choice="DebriefConflicted",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    caution_conflicted_id = uuid4()
+    deps_conf_b = _build_deps(db_pool, [caution_conflicted_id, uuid4()])
+    await bind_register(deps_conf_b)(
+        RegisterDecision(
+            actor_id=actor_real_id,
+            context="CautionProposal",
+            choice="CautionDraftConflicted",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    await _drain(db_pool)
+
+    handler = bind_list(deps_a)
+    no_audit_page = await handler(
+        ListDecisions(
+            exclude_choices=("DebriefConflicted", "CautionDraftConflicted"),
+            limit=20,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    returned_choices = {item.choice for item in no_audit_page.items}
+    assert "DebriefConflicted" not in returned_choices
+    assert "CautionDraftConflicted" not in returned_choices
+    assert {"NominalCompletion", "DegradedCompletion"}.issubset(returned_choices)
+
+    # Unfiltered baseline: the audit rows are visible.
+    baseline_page = await handler(
+        ListDecisions(limit=20),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    baseline_choices = {item.choice for item in baseline_page.items}
+    assert "DebriefConflicted" in baseline_choices
+    assert "CautionDraftConflicted" in baseline_choices
+
+
+@pytest.mark.integration
 async def test_empty_table_returns_empty_page(db_pool: asyncpg.Pool) -> None:
     deps = _build_deps(db_pool, [])
     handler = bind_list(deps)
