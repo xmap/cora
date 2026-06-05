@@ -13,16 +13,16 @@ loads N cross-aggregate references BEFORE calling the decider):
      (single-stream write with expected_version=0 for genesis).
 
 Pattern mirrors register_mount's longhand-with-precondition shape
-but checks N references instead of one. Family loads are concurrent
-via `asyncio.gather` to keep latency bounded.
+but checks N references instead of one. The per-id lookup strategy
+and its concurrency are owned by `find_missing_families_per_id`
+in family/read.py.
 """
 
-import asyncio
 from typing import Protocol
 from uuid import UUID
 
 from cora.equipment.aggregates.assembly import event_type_name, to_payload
-from cora.equipment.aggregates.family import load_family
+from cora.equipment.aggregates.family import find_missing_families_per_id
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.define_assembly.command import DefineAssembly
 from cora.equipment.features.define_assembly.context import DefineAssemblyContext
@@ -122,10 +122,7 @@ def bind(deps: Kernel) -> Handler:
         now = deps.clock.now()
 
         family_ids = _referenced_family_ids(command)
-        loaded = await asyncio.gather(*(load_family(deps.event_store, fid) for fid in family_ids))
-        missing = frozenset(
-            fid for fid, family in zip(family_ids, loaded, strict=True) if family is None
-        )
+        missing = await find_missing_families_per_id(deps.event_store, family_ids)
         context = DefineAssemblyContext(missing_family_ids=missing)
 
         domain_events = decide(

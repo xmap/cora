@@ -36,6 +36,7 @@ posture); using the discovery filter here would surface a misleading
 internal categorization key for this aggregate.
 """
 
+import asyncio
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
@@ -169,6 +170,39 @@ async def list_all_family_ids(pool: asyncpg.Pool | None) -> list[UUID]:
     async with pool.acquire() as conn:
         rows = await conn.fetch(_SELECT_ALL_FAMILY_IDS_SQL)
     return [row["family_id"] for row in rows]
+
+
+async def find_missing_families_per_id(
+    event_store: EventStore,
+    family_ids: Iterable[UUID],
+) -> frozenset[UUID]:
+    """Return the subset of `family_ids` not present as Family streams.
+
+    Per-id event-store strategy: loads each referenced Family stream
+    concurrently via `load_family` + `asyncio.gather`. Cheap when the
+    caller has a bounded handful of ids to verify (Assembly slot count
+    today). Returns the missing set; callers decide whether to raise
+    or thread the result through context to a decider.
+
+    Used by `define_assembly` and `version_assembly`, which thread
+    the missing set into context so the decider surfaces a richer
+    error carrying the full set of missing ids (richer than the
+    first-missing pattern that `define_model` / `add_model_family`
+    use against the bulk-SQL `list_all_family_ids`).
+
+    The Model side keeps its bulk-SQL lookup inline (~2 lines around
+    `list_all_family_ids`) because its 15-test monkeypatch surface
+    points at the handler module rather than the read module; the
+    helper sees no further callers without that test-shape rework.
+    Trigger to revisit: a third per-id caller appears (rule of three),
+    OR the Model-side handler tests get migrated to patching at the
+    read-module location.
+    """
+    ids_tuple = tuple(family_ids)
+    if not ids_tuple:
+        return frozenset()
+    loaded = await asyncio.gather(*(load_family(event_store, fid) for fid in ids_tuple))
+    return frozenset(fid for fid, family in zip(ids_tuple, loaded, strict=True) if family is None)
 
 
 _SELECT_ASSET_IDS_BY_FAMILIES_SQL = """

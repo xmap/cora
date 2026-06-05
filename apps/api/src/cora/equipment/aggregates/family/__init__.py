@@ -22,6 +22,7 @@ from cora.equipment.aggregates.family.events import (
 from cora.equipment.aggregates.family.evolver import evolve, fold
 from cora.equipment.aggregates.family.read import (
     FamilyLifecycleTimestamps,
+    find_missing_families_per_id,
     list_all_family_ids,
     list_asset_ids_in_families,
     list_family_ids,
@@ -69,6 +70,7 @@ __all__ = [
     "InvalidFamilyVersionTagError",
     "event_type_name",
     "evolve",
+    "find_missing_families_per_id",
     "fold",
     "from_stored",
     "list_all_family_ids",

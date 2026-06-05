@@ -10,15 +10,15 @@ same shape as define_assembly):
      optimistic-concurrency append (matches decommission_mount's
      single-load shape).
   3. Load Family aggregate for `presents_as_family_id` + every
-     FamilyId across the slot set's required_family_ids (concurrent
-     via asyncio.gather, de-duplicated via frozenset). Build
-     context with missing_family_ids.
+     FamilyId across the slot set's required_family_ids
+     (de-duplicated via frozenset). The per-id lookup strategy and
+     its concurrency are owned by `find_missing_families_per_id`
+     in family/read.py. Build context with missing_family_ids.
   4. Call pure decider with state + context + command + now.
   5. Wrap emitted events and append to the Assembly stream at the
      captured version.
 """
 
-import asyncio
 from typing import Protocol
 from uuid import UUID
 
@@ -28,7 +28,7 @@ from cora.equipment.aggregates.assembly import (
     from_stored,
     to_payload,
 )
-from cora.equipment.aggregates.family import load_family
+from cora.equipment.aggregates.family import find_missing_families_per_id
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.version_assembly.command import VersionAssembly
 from cora.equipment.features.version_assembly.context import VersionAssemblyContext
@@ -115,13 +115,7 @@ def bind(deps: Kernel) -> Handler:
         state = fold([from_stored(s) for s in stored])
 
         family_ids = _referenced_family_ids(command)
-        family_id_tuple = tuple(family_ids)
-        loaded = await asyncio.gather(
-            *(load_family(deps.event_store, fid) for fid in family_id_tuple)
-        )
-        missing = frozenset(
-            fid for fid, family in zip(family_id_tuple, loaded, strict=True) if family is None
-        )
+        missing = await find_missing_families_per_id(deps.event_store, family_ids)
         context = VersionAssemblyContext(missing_family_ids=missing)
 
         domain_events = decide(
