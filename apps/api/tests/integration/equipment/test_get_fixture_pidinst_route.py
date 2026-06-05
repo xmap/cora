@@ -75,7 +75,10 @@ from cora.equipment.features.register_fixture import RegisterFixture
 from cora.equipment.wire import wire_equipment
 from cora.infrastructure.config import Settings
 from cora.infrastructure.kernel import Kernel
-from tests.integration._equipment_helpers import drain_equipment_projections
+from tests.integration._equipment_helpers import (
+    drain_equipment_projections,
+    install_existing_asset_into_fresh_mount,
+)
 from tests.integration._helpers import build_postgres_deps
 
 pytestmark = pytest.mark.timeout(60, method="thread")
@@ -182,6 +185,11 @@ async def _seed_asset(
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
+    )
+    # INV-4: a Fixture's bindings must be installed in a Mount.
+    # Activate + install before the later register_fixture call.
+    await install_existing_asset_into_fresh_mount(
+        db_pool, now=_NOW, asset_id=asset_id, slot_code=f"02-BM-pidinst-{asset_id}"
     )
     await _add_family_to_asset(db_pool, asset_id=asset_id, family_id=family_id)
     if owner is not None:

@@ -168,4 +168,70 @@ async def seed_installed_asset(
     return frame_id, mount_id, asset_id
 
 
-__all__ = ["drain_equipment_projections", "placement", "seed_installed_asset"]
+async def install_existing_asset_into_fresh_mount(
+    pool: asyncpg.Pool,
+    *,
+    now: datetime,
+    asset_id: UUID,
+    slot_code: str,
+) -> tuple[UUID, UUID]:
+    """Activate the given pre-registered Asset, then register a fresh
+    Frame + Mount and install the Asset; drain. Returns (frame_id,
+    mount_id).
+
+    Companion to `seed_installed_asset`: use this when the test
+    already needed to register the Asset itself (e.g., to bind a
+    model_id or seed an owner) and now needs to satisfy the INV-4
+    install-required guard before calling `register_fixture`.
+
+    Activates the Asset because `install_asset` rejects non-Active
+    Assets (`AssetNotInstallableError`). Tests that have already
+    activated the Asset should not call this helper; activate is a
+    strict-not-idempotent transition.
+    """
+    frame_id, mount_id = uuid4(), uuid4()
+
+    deps = build_postgres_deps(pool, now=now, ids=[frame_id, uuid4()])
+    await bind_register_frame(deps)(
+        RegisterFrame(name=f"frame-{slot_code}", parent_frame_id=None, placement=None),
+        principal_id=_SEED_PRINCIPAL_ID,
+        correlation_id=_SEED_CORRELATION_ID,
+    )
+
+    deps = build_postgres_deps(pool, now=now, ids=[mount_id, uuid4()])
+    await bind_register_mount(deps)(
+        RegisterMount(
+            slot_code=slot_code,
+            parent_mount_id=None,
+            placement=placement(frame_id),
+            drawing=None,
+        ),
+        principal_id=_SEED_PRINCIPAL_ID,
+        correlation_id=_SEED_CORRELATION_ID,
+    )
+
+    deps = build_postgres_deps(pool, now=now, ids=[uuid4()])
+    await bind_activate_asset(deps)(
+        ActivateAsset(asset_id=asset_id),
+        principal_id=_SEED_PRINCIPAL_ID,
+        correlation_id=_SEED_CORRELATION_ID,
+    )
+    await drain_equipment_projections(pool)
+
+    deps = build_postgres_deps(pool, now=now, ids=[uuid4()])
+    await bind_install_asset(deps)(
+        InstallAsset(mount_id=mount_id, asset_id=asset_id),
+        principal_id=_SEED_PRINCIPAL_ID,
+        correlation_id=_SEED_CORRELATION_ID,
+    )
+    await drain_equipment_projections(pool)
+
+    return frame_id, mount_id
+
+
+__all__ = [
+    "drain_equipment_projections",
+    "install_existing_asset_into_fresh_mount",
+    "placement",
+    "seed_installed_asset",
+]
