@@ -143,9 +143,14 @@ def bind(deps: Kernel) -> Handler:
             aid: (asset.family_ids if asset is not None else None)
             for aid, asset in zip(asset_ids, assets, strict=True)
         }
+        lifecycle_by_asset_id = {
+            aid: (asset.lifecycle if asset is not None else None)
+            for aid, asset in zip(asset_ids, assets, strict=True)
+        }
         context = RegisterFixtureContext(
             assembly_state=assembly_state,
             family_ids_by_asset_id=family_ids_by_asset_id,
+            lifecycle_by_asset_id=lifecycle_by_asset_id,
         )
 
         # Decider raises FixtureAlreadyExistsError defensively when

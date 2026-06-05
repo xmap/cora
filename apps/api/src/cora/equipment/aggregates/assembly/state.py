@@ -290,6 +290,31 @@ class FixtureAssetNotFoundError(Exception):
         self.asset_id = asset_id
 
 
+class FixtureAssetNotAttachableError(Exception):
+    """A referenced Asset's lifecycle disallows attachment to a Fixture.
+
+    Currently fires for `Decommissioned` Assets only (terminal state;
+    no further wiring). Mirrors the Asset BC's
+    `AssetCannotAttachToFixtureError` precondition at register time:
+    rejecting a Decommissioned binding here prevents the operator
+    from registering a Fixture that would inevitably fail later at
+    `attach_asset_to_fixture` (the Fixture is single-event-genesis
+    and cannot be amended).
+
+    Carries the sorted-first offending `asset_id` for deterministic
+    error responses.
+    """
+
+    def __init__(self, asset_id: UUID, current_lifecycle: str) -> None:
+        super().__init__(
+            f"Asset {asset_id} cannot be bound into a Fixture: currently in "
+            f"lifecycle {current_lifecycle}; expected Commissioned, Active, "
+            f"or Maintenance"
+        )
+        self.asset_id = asset_id
+        self.current_lifecycle = current_lifecycle
+
+
 class FixtureMappingIncompleteError(Exception):
     """`register_fixture`'s slot_asset_bindings does not satisfy
     the required cardinality of one or more slots.

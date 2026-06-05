@@ -12,6 +12,7 @@ from cora.equipment.aggregates.assembly import (
     AssemblyNotFoundError,
     AssemblyStatus,
     FixtureAssetFamilyMismatchError,
+    FixtureAssetNotAttachableError,
     FixtureAssetNotFoundError,
     FixtureMappingIncompleteError,
     FixtureParameterOverridesInvalidError,
@@ -19,6 +20,7 @@ from cora.equipment.aggregates.assembly import (
     SlotName,
     TemplateSlot,
 )
+from cora.equipment.aggregates.asset import AssetLifecycle
 from cora.equipment.aggregates.fixture import (
     FixtureRegistered,
     SlotAssetBinding,
@@ -288,6 +290,74 @@ def test_decide_rejects_overrides_failing_schema_validation() -> None:
             now=_NOW,
             new_id=uuid4(),
         )
+
+
+@pytest.mark.unit
+def test_decide_rejects_decommissioned_bound_asset_with_not_attachable_error() -> None:
+    """Cross-aggregate guard: a Decommissioned Asset cannot be bound
+    into a Fixture; mirrors AssetCannotAttachToFixtureError at the
+    attach-time precondition. Fires AFTER the existence check
+    (FixtureAssetNotFoundError) but BEFORE cardinality / family
+    match so the operator sees the most actionable error first.
+    """
+    assembly_id = uuid4()
+    family_id = uuid4()
+    slot = _slot("camera", required_family_ids=frozenset({family_id}))
+    asset_id = uuid4()
+    context = RegisterFixtureContext(
+        assembly_state=_assembly(assembly_id, slots=frozenset({slot})),
+        family_ids_by_asset_id={asset_id: frozenset({family_id})},
+        lifecycle_by_asset_id={asset_id: AssetLifecycle.DECOMMISSIONED},
+    )
+    command = RegisterFixture(
+        assembly_id=assembly_id,
+        slot_asset_bindings=frozenset(
+            {SlotAssetBinding(slot_name="camera", asset_id=asset_id)},
+        ),
+    )
+    with pytest.raises(FixtureAssetNotAttachableError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=command,
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.asset_id == asset_id
+    assert exc_info.value.current_lifecycle == AssetLifecycle.DECOMMISSIONED.value
+
+
+@pytest.mark.unit
+def test_decide_skips_lifecycle_guard_when_dict_is_empty() -> None:
+    """Default-empty lifecycle_by_asset_id means the handler did not
+    load lifecycle info (decider-only unit tests that exercise other
+    invariants leave it empty); the guard short-circuits without
+    firing. Mirrors family_ids_by_asset_id's relaxed default.
+    """
+    assembly_id = uuid4()
+    family_id = uuid4()
+    slot = _slot("camera", required_family_ids=frozenset({family_id}))
+    asset_id = uuid4()
+    context = RegisterFixtureContext(
+        assembly_state=_assembly(assembly_id, slots=frozenset({slot})),
+        family_ids_by_asset_id={asset_id: frozenset({family_id})},
+        # lifecycle_by_asset_id intentionally omitted -> default empty
+    )
+    command = RegisterFixture(
+        assembly_id=assembly_id,
+        slot_asset_bindings=frozenset(
+            {SlotAssetBinding(slot_name="camera", asset_id=asset_id)},
+        ),
+    )
+    events = register_fixture.decide(
+        state=None,
+        command=command,
+        context=context,
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], FixtureRegistered)
 
 
 @pytest.mark.unit

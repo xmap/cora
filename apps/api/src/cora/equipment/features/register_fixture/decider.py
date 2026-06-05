@@ -19,6 +19,10 @@ Clock and IdGenerator ports.
   - Every referenced asset_id in the bindings must resolve
     -> FixtureAssetNotFoundError carrying the sorted-first missing
     id for deterministic error responses.
+  - Every referenced Asset must NOT be Decommissioned
+    -> FixtureAssetNotAttachableError carrying the sorted-first
+    offending asset_id (mirrors AssetCannotAttachToFixtureError
+    at attach-time).
   - Each TemplateSlot's cardinality is satisfied by the count of
     bindings carrying its slot_name
     -> FixtureMappingIncompleteError carrying the offending
@@ -49,12 +53,14 @@ from cora.equipment.aggregates.assembly import (
     AssemblyNotFoundError,
     AssemblyStatus,
     FixtureAssetFamilyMismatchError,
+    FixtureAssetNotAttachableError,
     FixtureAssetNotFoundError,
     FixtureMappingIncompleteError,
     FixtureParameterOverridesInvalidError,
     SlotCardinality,
     TemplateSlot,
 )
+from cora.equipment.aggregates.asset import AssetLifecycle
 from cora.equipment.aggregates.fixture import (
     Fixture,
     FixtureAlreadyExistsError,
@@ -120,6 +126,10 @@ def decide(
       - Every referenced asset_id must resolve to a registered Asset
         -> FixtureAssetNotFoundError carrying the sorted-first missing
         id for deterministic error responses.
+      - Every referenced Asset must NOT be Decommissioned
+        -> FixtureAssetNotAttachableError carrying the sorted-first
+        offending asset_id (mirrors AssetCannotAttachToFixtureError
+        at attach-time).
       - Each TemplateSlot's cardinality must be satisfied by the count
         of bindings carrying its slot_name
         -> FixtureMappingIncompleteError carrying the offending
@@ -158,6 +168,26 @@ def decide(
     )
     if missing_asset_ids:
         raise FixtureAssetNotFoundError(missing_asset_ids[0])
+
+    # Cross-aggregate guard: every referenced Asset must NOT be
+    # Decommissioned (mirrors AssetCannotAttachToFixtureError at
+    # attach-time; rejecting here prevents registering a Fixture that
+    # would inevitably fail at the per-Asset attach step since the
+    # Fixture is single-event-genesis and cannot be amended).
+    # Empty dict means no lifecycle info loaded -> guard skipped.
+    decommissioned_asset_ids = sorted(
+        (
+            asset_id
+            for asset_id, lifecycle in context.lifecycle_by_asset_id.items()
+            if lifecycle is AssetLifecycle.DECOMMISSIONED
+        ),
+        key=str,
+    )
+    if decommissioned_asset_ids:
+        raise FixtureAssetNotAttachableError(
+            decommissioned_asset_ids[0],
+            AssetLifecycle.DECOMMISSIONED.value,
+        )
 
     slots_by_name = {slot.slot_name.value: slot for slot in assembly.required_slots}
     binding_counts: Counter[str] = Counter(

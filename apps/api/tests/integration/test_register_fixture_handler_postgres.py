@@ -8,22 +8,29 @@ parameter_overrides, then appends.
 """
 
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.assembly import SlotCardinality, SlotName, TemplateSlot
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.assembly import (
+    FixtureAssetNotAttachableError,
+    SlotCardinality,
+    SlotName,
+    TemplateSlot,
+)
+from cora.equipment.aggregates.asset import AssetLevel, AssetLifecycle
 from cora.equipment.aggregates.fixture import SlotAssetBinding
 from cora.equipment.features import (
     add_asset_family,
+    decommission_asset,
     define_assembly,
     define_family,
     register_asset,
     register_fixture,
 )
 from cora.equipment.features.add_asset_family import AddAssetFamily
+from cora.equipment.features.decommission_asset import DecommissionAsset
 from cora.equipment.features.define_assembly import DefineAssembly
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.register_asset import RegisterAsset
@@ -134,3 +141,71 @@ async def test_register_fixture_appends_genesis_event_to_postgres(
     assert assembly_version == 1  # defined only; UNCHANGED
     _ = asset_events
     _ = assembly_events
+
+
+@pytest.mark.integration
+async def test_register_fixture_rejects_decommissioned_asset_with_not_attachable_error(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Cross-aggregate guard end-to-end: a Decommissioned Asset
+    cannot be bound into a Fixture. The lifecycle guard fires in the
+    pure decider after the handler folds the Asset's stream via the
+    standard load_asset gather (no extra round-trip, no new
+    projection). Rejecting at register-time prevents registering a
+    Fixture that would inevitably fail later at
+    `attach_asset_to_fixture`, since Fixture is single-event-genesis
+    and cannot be amended.
+    """
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(8)])
+
+    # Register a fresh Asset and decommission it directly from
+    # Commissioned (no install / activate needed; Slice 1's
+    # decommission guards do not fire because the Asset is not
+    # bound to a Fixture and not installed in any Mount).
+    asset_id = await register_asset.bind(deps)(
+        RegisterAsset(name="RetiredCam", level=AssetLevel.DEVICE, parent_id=uuid4()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await decommission_asset.bind(deps)(
+        DecommissionAsset(asset_id=asset_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    family_id = await define_family.bind(deps)(
+        DefineFamily(name="RetiredCamera", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assembly_id = await define_assembly.bind(deps)(
+        DefineAssembly(
+            name="RetiredRig",
+            presents_as_family_id=family_id,
+            required_slots=frozenset(
+                {
+                    TemplateSlot(
+                        slot_name=SlotName("camera"),
+                        required_family_ids=frozenset({family_id}),
+                        cardinality=SlotCardinality.EXACTLY_1,
+                    )
+                }
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    with pytest.raises(FixtureAssetNotAttachableError) as exc_info:
+        await register_fixture.bind(deps)(
+            RegisterFixture(
+                assembly_id=assembly_id,
+                slot_asset_bindings=frozenset(
+                    {SlotAssetBinding(slot_name="camera", asset_id=asset_id)}
+                ),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.asset_id == asset_id
+    assert exc_info.value.current_lifecycle == AssetLifecycle.DECOMMISSIONED.value

@@ -45,6 +45,7 @@ from cora.equipment.aggregates.assembly import (
     AssemblyNotFoundError,
     FamilyNotFoundForAssemblyError,
     FixtureAssetFamilyMismatchError,
+    FixtureAssetNotAttachableError,
     FixtureAssetNotFoundError,
     FixtureMappingIncompleteError,
     FixtureParameterOverridesInvalidError,
@@ -520,6 +521,7 @@ def register_equipment_routes(app: FastAPI) -> None:
         AssetCannotAttachToFixtureError,
         AssetNotAttachedToFixtureError,
         AssetAttachedToDifferentFixtureError,
+        FixtureAssetNotAttachableError,
     ):
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)
     for pidinst_state_cls in (
