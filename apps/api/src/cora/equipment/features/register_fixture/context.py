@@ -32,9 +32,8 @@ orphan guard is disabled entirely; this matches the
 install_asset / decommission_asset projection-precondition
 short-circuit convention. When non-None and an entry maps to
 `None`, the decider raises `FixtureAssetNotInstalledError` carrying
-the sorted-first orphan id, closing INV-4 from the
-Fixture+Mount+Asset alignment plan: a Fixture should snapshot only
-equipment already on the floor, so install-then-register becomes
+the sorted-first orphan id: a Fixture should snapshot only
+equipment already on the floor, so install-then-register is
 the contract.
 """
 

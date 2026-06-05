@@ -4,7 +4,8 @@ The Mount/Frame PG integration test files share an identical
 `placement(parent_frame_id)` constructor and projection-drain wrapper;
 hoisted here so per-file boilerplate stays short. `seed_installed_asset`
 is the install-then-register-fixture choreography helper used by every
-Fixture-touching integration test after slice 3b locked INV-4.
+Fixture-touching integration test (register_fixture requires every
+bound Asset to be currently installed in some Mount).
 
 Per-file helpers that vary (the `_seed_*` family, scenario-specific
 fixtures) stay local to each test file. Only the genuinely-identical
@@ -109,7 +110,8 @@ async def seed_installed_asset(
 
     Shared by every register_fixture / attach_asset_to_fixture /
     detach_asset_from_fixture integration test that needs a real
-    Fixture-able Asset after slice 3b locked INV-4. Tests that need
+    Fixture-able Asset (register_fixture rejects bindings whose Asset
+    is not currently installed in some Mount). Tests that need
     fine-grained control over the individual ids (specific
     FixedIdGenerator values) keep their own inline setup.
 

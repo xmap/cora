@@ -213,11 +213,11 @@ async def test_decommission_asset_rejects_when_still_bound_to_fixture(
     `detach_asset_from_fixture` first. Verifies the guard fires
     end-to-end against the real Asset stream fold.
 
-    Setup chain after slice 3b's INV-4 lock: seed_installed_asset
-    (Frame + Mount + Asset + activate + install) -> define_family
-    + add_asset_family -> define_assembly + register_fixture
-    -> attach_asset_to_fixture -> decommission_asset (rejected by
-    AssetHasFixtureBindingError).
+    Setup chain (register_fixture requires every bound Asset to be
+    currently installed): seed_installed_asset (Frame + Mount + Asset
+    + activate + install) -> define_family + add_asset_family
+    -> define_assembly + register_fixture -> attach_asset_to_fixture
+    -> decommission_asset (rejected by AssetHasFixtureBindingError).
     """
     _, _, asset_id = await seed_installed_asset(
         db_pool, now=_NOW, slot_code="02-BM-decom-fix", asset_name="Cam-1"

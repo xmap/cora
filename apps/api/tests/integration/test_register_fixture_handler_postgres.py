@@ -55,8 +55,8 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000dd")
 async def test_register_fixture_appends_genesis_event_to_postgres(
     db_pool: asyncpg.Pool,
 ) -> None:
-    # INV-4 (slice 3b): a Fixture's bindings must be installed in a
-    # Mount. Seed Frame + Mount + Asset and install the Asset BEFORE
+    # A Fixture's bindings must be currently installed in some Mount.
+    # Seed Frame + Mount + Asset and install the Asset BEFORE
     # register_fixture; the helper bypasses this test's outer
     # FixedIdGenerator so the pre-allocated id pool only needs to
     # budget for the work after seeding.
@@ -218,9 +218,9 @@ async def test_register_fixture_rejects_decommissioned_asset_with_not_attachable
 async def test_register_fixture_rejects_orphan_asset_with_not_installed_error(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """INV-4 guard end-to-end: a registered Asset that is NOT installed
-    in any Mount cannot be bound into a Fixture. Operator must
-    install_asset first so the choreography becomes
+    """Install-required guard end-to-end: a registered Asset that is
+    NOT installed in any Mount cannot be bound into a Fixture. Operator
+    must install_asset first so the choreography becomes
     install -> register_fixture, never register_fixture -> install.
 
     The asset_location projection is the back-lookup; the handler

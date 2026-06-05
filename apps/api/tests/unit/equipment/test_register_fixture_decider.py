@@ -363,7 +363,7 @@ def test_decide_skips_lifecycle_guard_when_dict_is_empty() -> None:
 
 @pytest.mark.unit
 def test_decide_rejects_orphan_bound_asset_with_not_installed_error() -> None:
-    """Cross-aggregate guard (INV-4): every bound Asset must currently
+    """Cross-aggregate guard: every bound Asset must currently
     be installed in some Mount. mount_id_by_asset_id with a None entry
     says 'the projection has no row for this asset_id'
     -> FixtureAssetNotInstalledError. Fires AFTER the lifecycle check
@@ -395,6 +395,50 @@ def test_decide_rejects_orphan_bound_asset_with_not_installed_error() -> None:
             new_id=uuid4(),
         )
     assert exc_info.value.asset_id == asset_id
+
+
+@pytest.mark.unit
+def test_decide_orphan_error_carries_sorted_first_when_multiple_orphans() -> None:
+    """With multiple orphan bindings, FixtureAssetNotInstalledError must
+    carry the sorted-by-str-of-UUID first id (the deterministic
+    invariant). Uses concrete UUIDs whose dict insertion order does NOT
+    match their stringified sort order, so a regression to e.g.
+    `next(iter(...))` would catch the wrong id and fail.
+    """
+    assembly_id = uuid4()
+    family_id = uuid4()
+    slot = TemplateSlot(
+        slot_name=SlotName("camera"),
+        required_family_ids=frozenset({family_id}),
+        cardinality=SlotCardinality.ZERO_OR_MORE,
+    )
+    # Concrete ids chosen so the dict's first-inserted entry sorts LAST
+    # by str(UUID). Sorted-by-str order: 11..., 22..., 33....
+    asset_late = UUID("33333333-3333-7333-9333-333333333333")
+    asset_mid = UUID("22222222-2222-7222-9222-222222222222")
+    asset_early = UUID("11111111-1111-7111-9111-111111111111")
+    asset_ids = (asset_late, asset_mid, asset_early)
+    context = RegisterFixtureContext(
+        assembly_state=_assembly(assembly_id, slots=frozenset({slot})),
+        family_ids_by_asset_id={aid: frozenset({family_id}) for aid in asset_ids},
+        lifecycle_by_asset_id={aid: AssetLifecycle.ACTIVE for aid in asset_ids},
+        mount_id_by_asset_id={aid: None for aid in asset_ids},
+    )
+    command = RegisterFixture(
+        assembly_id=assembly_id,
+        slot_asset_bindings=frozenset(
+            SlotAssetBinding(slot_name="camera", asset_id=aid) for aid in asset_ids
+        ),
+    )
+    with pytest.raises(FixtureAssetNotInstalledError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=command,
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.asset_id == asset_early
 
 
 @pytest.mark.unit

@@ -57,10 +57,10 @@ async def _seed_fixture(
 
     Pre-seeds Frame + Mount + Asset via the shared seed_installed_asset
     helper (uuid4 ids; bypasses the outer FixedIdGenerator) so the
-    bound Asset is mount-installed before register_fixture (INV-4 lock
-    from slice 3b). The outer deps's id pool only needs to budget for
-    the four post-seed commands: define_family, add_asset_family,
-    define_assembly, register_fixture.
+    bound Asset is mount-installed before register_fixture (the
+    install-required guard). The outer deps's id pool only needs to
+    budget for the four post-seed commands: define_family,
+    add_asset_family, define_assembly, register_fixture.
     """
     _, _, asset_id = await seed_installed_asset(
         db_pool, now=_NOW, slot_code=f"02-BM-{asset_name}", asset_name=asset_name

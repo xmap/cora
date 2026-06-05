@@ -131,37 +131,35 @@ def bind(deps: Kernel) -> Handler:
         now = deps.clock.now()
 
         asset_ids = _referenced_asset_ids(command)
-        # Split gather across the aggregate types so pyright keeps
-        # `assembly_state` narrowed to `Assembly | None` and each item
-        # in `assets` narrowed to `Asset | None`; a single gather across
-        # all three would widen everything to the union.
-        #
-        # All three I/O streams run concurrently: assembly_state_task
-        # and mount_ids_future are scheduled before we await the
-        # per-Asset gather. The mount_ids_future is only created when
-        # deps.pool is set (pool=None short-circuit preserves the
-        # pre-tightening permissive default for the pool-less test
-        # path; matches install_asset / decommission_asset shape). In
+        # All three I/O streams run concurrently inside a TaskGroup so
+        # that a failure in any one of them cancels the siblings before
+        # the handler returns. Without this discipline, a load_asset
+        # raise would leak the assembly_state and mount_ids work as
+        # "task exception never retrieved" warnings and tie up pool
+        # connections after the request had already errored out.
+        # Per-asset tasks keep each result narrowed (Asset | None,
+        # Assembly | None) for pyright; the asset_location stream is
+        # only scheduled when deps.pool is set (pool=None short-circuit
+        # preserves the permissive default for the pool-less test path;
+        # matches install_asset / decommission_asset shape). In
         # production deps.pool is always set, so every referenced
-        # asset_id gets an entry in the dict (mount_id when installed,
-        # None when orphan).
-        assembly_state_task = asyncio.create_task(
-            load_assembly(deps.event_store, command.assembly_id)
-        )
-        # asyncio.gather(...) returns a Future that has already
-        # scheduled its children; storing it (without await) is the
-        # canonical way to start a gather concurrently with other work.
-        if deps.pool is not None:
-            pool = deps.pool
-            mount_ids_future: asyncio.Future[list[UUID | None]] | None = asyncio.gather(
-                *(load_asset_location(pool, aid) for aid in asset_ids)
+        # asset_id gets an entry in mount_id_by_asset_id (mount_id when
+        # installed, None when orphan).
+        pool = deps.pool
+        async with asyncio.TaskGroup() as tg:
+            assembly_task = tg.create_task(load_assembly(deps.event_store, command.assembly_id))
+            asset_tasks = [tg.create_task(load_asset(deps.event_store, aid)) for aid in asset_ids]
+            mount_id_tasks: list[asyncio.Task[UUID | None]] | None = (
+                [tg.create_task(load_asset_location(pool, aid)) for aid in asset_ids]
+                if pool is not None
+                else None
             )
-        else:
-            mount_ids_future = None
 
-        assets = await asyncio.gather(*(load_asset(deps.event_store, aid) for aid in asset_ids))
-        assembly_state = await assembly_state_task
-        mount_ids = await mount_ids_future if mount_ids_future is not None else None
+        assembly_state = assembly_task.result()
+        assets = [t.result() for t in asset_tasks]
+        mount_ids: list[UUID | None] | None = (
+            [t.result() for t in mount_id_tasks] if mount_id_tasks is not None else None
+        )
 
         family_ids_by_asset_id: dict[UUID, frozenset[UUID] | None] = {
             aid: (asset.family_ids if asset is not None else None)

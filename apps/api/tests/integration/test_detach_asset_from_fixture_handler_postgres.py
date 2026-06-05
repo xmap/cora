@@ -49,7 +49,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000dd")
 async def test_detach_asset_from_fixture_clears_back_reference_in_postgres(
     db_pool: asyncpg.Pool,
 ) -> None:
-    # Pre-seed: Frame + Mount + Asset, installed (passes INV-4 at register_fixture).
+    # Pre-seed: Frame + Mount + Asset, installed (passes register_fixture's install-required guard).
     _, _, asset_id = await seed_installed_asset(
         db_pool, now=_NOW, slot_code="02-BM-detach", asset_name="Cam-1"
     )

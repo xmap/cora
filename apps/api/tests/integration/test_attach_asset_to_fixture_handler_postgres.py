@@ -47,7 +47,7 @@ async def test_attach_asset_to_fixture_sets_back_reference_in_postgres(
     db_pool: asyncpg.Pool,
 ) -> None:
     # Pre-seed: Frame + Mount + Asset, with the Asset installed so it
-    # passes register_fixture's INV-4 install-required guard.
+    # passes register_fixture's install-required guard.
     _, _, asset_id = await seed_installed_asset(
         db_pool, now=_NOW, slot_code="02-BM-attach", asset_name="Cam-1"
     )

@@ -226,7 +226,7 @@ stateDiagram-v2
 : `presents_as_family_id` references a Family that exists in the Equipment module (verified at decide time via a cross-aggregate load). Every `TemplateWire.source_slot` and `TemplateWire.target_slot` matches a `TemplateSlot.slot_name` declared on the same Assembly. The decider captures the canonical `content_hash` from the new structural content; re-versioning with identical content yields the same hash by design.
 
 `register_fixture`
-: Every required slot in the Assembly is covered by exactly one `SlotAssetBinding` whose `asset_id` references an Asset whose `family_ids` includes the slot's required Family. The Assembly is in `Defined` or `Versioned` (not `Deprecated`). The Fixture's `surface_id` is read from the caller's authenticated Trust Surface; the Fixture is bound to that Surface for authorization scoping.
+: Every required slot in the Assembly is covered by exactly one `SlotAssetBinding` whose `asset_id` references an Asset whose `family_ids` includes the slot's required Family. The Assembly is in `Defined` or `Versioned` (not `Deprecated`). Every bound Asset must not be `Decommissioned` (a terminal lifecycle disallows attachment) and must currently be installed in some Mount (so the choreography is `install_asset` -> `register_fixture`, never the reverse). The Fixture's `surface_id` is read from the caller's authenticated Trust Surface; the Fixture is bound to that Surface for authorization scoping.
 
 `add_model_family` / `remove_model_family`
 : The Model is not Deprecated. The Family id is not already present (or is present, for remove). The referenced Family must exist in the Family event stream (verified at decide time via load).
@@ -459,7 +459,7 @@ The seven aggregates expose fifty slices end to end.
 : `AssemblyAlreadyExists` (define only), `AssemblyNotFound`, `AssemblyCannotVersion` / `AssemblyCannotDeprecate`, `FamilyNotFoundForAssembly` (define / version, when `presents_as_family_id` or a slot's `required_family_ids` references a missing Family), `WireReferencesUnknownSlot` (define / version, when a TemplateWire endpoint cites a slot the same Assembly does not declare), `Unauthorized`
 
 `RegisterFixture`
-: `AssemblyNotFound`, `AssemblyCannotInstantiate` (Assembly is Deprecated), `FixtureAlreadyExists`, `FixtureAssetNotFound` (a binding references a missing Asset), `FixtureAssetFamilyMismatch` (a binding's Asset does not include the slot's required Family in its `family_ids`), `FixtureMappingIncomplete` (a required slot has no covering binding), `Unauthorized`
+: `AssemblyNotFound`, `AssemblyCannotInstantiate` (Assembly is Deprecated), `FixtureAlreadyExists`, `FixtureAssetNotFound` (a binding references a missing Asset), `FixtureAssetNotAttachable` (a binding's Asset is Decommissioned), `FixtureAssetNotInstalled` (a binding's Asset is not currently installed in any Mount), `FixtureAssetFamilyMismatch` (a binding's Asset does not include the slot's required Family in its `family_ids`), `FixtureMappingIncomplete` (a required slot has no covering binding), `Unauthorized`
 
 `GetFamily` / `GetModel` / `GetAsset` / `GetAssetIntegrationView` / `GetFixture`
 : `<X>NotFound`

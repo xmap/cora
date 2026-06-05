@@ -320,10 +320,9 @@ class FixtureAssetNotInstalledError(Exception):
 
     Fires when `proj_equipment_asset_location` carries no row for the
     Asset at register_fixture time, i.e., the Asset exists but has
-    not been physically racked. Closes INV-4 from the
-    Fixture+Mount+Asset alignment plan: a Fixture should materialize
-    only equipment that is already on the floor, so the
-    install-then-register-fixture choreography becomes the contract.
+    not been physically racked. A Fixture should materialize only
+    equipment that is already on the floor, so the
+    install-then-register-fixture choreography is the contract.
 
     Carries the sorted-first offending `asset_id` for deterministic
     error responses.

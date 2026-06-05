@@ -26,8 +26,8 @@ Clock and IdGenerator ports.
   - Every referenced Asset must currently be installed in some Mount
     (when the handler loaded asset_location info)
     -> FixtureAssetNotInstalledError carrying the sorted-first
-    orphan id. Closes INV-4 from the Fixture+Mount+Asset alignment
-    plan.
+    orphan id. A Fixture should materialize only equipment that is
+    already on the floor; install_asset is a hard precondition.
   - Each TemplateSlot's cardinality is satisfied by the count of
     bindings carrying its slot_name
     -> FixtureMappingIncompleteError carrying the offending
@@ -139,8 +139,8 @@ def decide(
       - Every referenced Asset must currently be installed in some Mount
         (when the handler loaded asset_location info)
         -> FixtureAssetNotInstalledError carrying the sorted-first
-        orphan id. Closes INV-4 from the Fixture+Mount+Asset
-        alignment plan.
+        orphan id. A Fixture should materialize only equipment that is
+        already on the floor; install_asset is a hard precondition.
       - Each TemplateSlot's cardinality must be satisfied by the count
         of bindings carrying its slot_name
         -> FixtureMappingIncompleteError carrying the offending
@@ -201,9 +201,9 @@ def decide(
         )
 
     # Cross-aggregate guard: every referenced Asset must currently be
-    # installed in some Mount. Closes INV-4: a Fixture should snapshot
-    # only equipment already racked on the floor, so the
-    # install-then-register-fixture choreography becomes the contract.
+    # installed in some Mount. A Fixture should snapshot only equipment
+    # already racked on the floor, so the install-then-register-fixture
+    # choreography is the contract.
     # `mount_id_by_asset_id is None` means the handler ran without a
     # pool (test path) and the guard is disabled entirely.
     if context.mount_id_by_asset_id is not None:
