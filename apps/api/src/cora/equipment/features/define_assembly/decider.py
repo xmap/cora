@@ -34,7 +34,6 @@ the AssemblyDefined event into state.
 from datetime import datetime
 from uuid import UUID
 
-from cora.equipment.aggregates._assembly_content_hash import compute_assembly_content_hash
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyAlreadyExistsError,
@@ -44,6 +43,7 @@ from cora.equipment.aggregates.assembly import (
     InvalidParameterOverridesSchemaError,
     WireReferencesUnknownSlotError,
 )
+from cora.equipment.aggregates.assembly._content_hash import compute_assembly_content_hash
 from cora.equipment.features.define_assembly.command import DefineAssembly
 from cora.equipment.features.define_assembly.context import DefineAssemblyContext
 from cora.infrastructure.json_schema_validation import validate_schema_declaration

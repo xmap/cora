@@ -52,7 +52,7 @@ _ALLOW_RELATIVE_PATHS: frozenset[str] = frozenset(
         # aggregate; widen the list as new sites land at gate review.
         "apps/api/src/cora/equipment/_template_slot_body.py",
         "apps/api/src/cora/equipment/_template_wire_body.py",
-        "apps/api/src/cora/equipment/aggregates/_assembly_content_hash.py",
+        "apps/api/src/cora/equipment/aggregates/assembly/_content_hash.py",
         "apps/api/src/cora/equipment/aggregates/assembly/__init__.py",
         "apps/api/src/cora/equipment/aggregates/assembly/events.py",
         "apps/api/src/cora/equipment/aggregates/assembly/evolver.py",

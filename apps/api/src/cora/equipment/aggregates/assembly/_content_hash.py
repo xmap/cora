@@ -17,9 +17,15 @@ DSSE PAE-wrapped canonical JSON. Per
 set-to-sorted-list, all delegated to the shared
 `canonical_body_bytes`.
 
-Lives at BC root (`equipment/aggregates/_assembly_content_hash.py`)
-alongside `_drawing.py` and `_placement.py`, following the
-shared-helper convention.
+Lives inside the Assembly aggregate dir
+(`equipment/aggregates/assembly/_content_hash.py`) because it is
+exclusively consumed by Assembly's own slices (define + version).
+Unlike `_drawing.py` / `_placement.py` at the parent `aggregates/`
+level, which are genuinely shared by multiple aggregates, this
+helper has no cross-aggregate consumers. The future Fixture-tier
+content hash (`project_fixture_configuration_hash_followup`) would
+be a sibling inside `aggregates/fixture/`, not a reuse of this
+module.
 """
 
 from uuid import UUID

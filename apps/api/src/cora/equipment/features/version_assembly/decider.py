@@ -13,7 +13,6 @@ re-confirmation is captured in the audit log. Pinned by
 
 from datetime import datetime
 
-from cora.equipment.aggregates._assembly_content_hash import compute_assembly_content_hash
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyCannotVersionError,
@@ -25,6 +24,7 @@ from cora.equipment.aggregates.assembly import (
     InvalidParameterOverridesSchemaError,
     WireReferencesUnknownSlotError,
 )
+from cora.equipment.aggregates.assembly._content_hash import compute_assembly_content_hash
 from cora.equipment.features.version_assembly.command import VersionAssembly
 from cora.equipment.features.version_assembly.context import VersionAssemblyContext
 from cora.infrastructure.json_schema_validation import validate_schema_declaration

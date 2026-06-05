@@ -13,10 +13,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.equipment.aggregates._assembly_content_hash import (
-    compute_assembly_content_hash,
-    compute_assembly_content_hash_from_state,
-)
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyName,
@@ -24,6 +20,10 @@ from cora.equipment.aggregates.assembly import (
     SlotName,
     TemplateSlot,
     TemplateWire,
+)
+from cora.equipment.aggregates.assembly._content_hash import (
+    compute_assembly_content_hash,
+    compute_assembly_content_hash_from_state,
 )
 
 
