@@ -53,7 +53,7 @@ dependencies = [
     # these). Per the Phase C design lock library-vs-DIY decision: PyJWT
     # is the one library we don't roll ourselves; everything else
     # (introspection adapter, registry, middleware) is hand-written.
-    "pyjwt[crypto]>=2.10.0,<3",
+    "pyjwt[crypto]>=2.13.0,<3",
     # aioca (Stage-1c of the control-port arc): production asyncio EPICS
     # Channel Access client (libca via ctypes; Diamond Light Source-maintained
     # and production-grade — Diamond's full stack depends on it). Used by
