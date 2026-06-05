@@ -99,3 +99,54 @@ class AssetNameMissingError(PidinstSerializationError):
     def __init__(self, asset_id: UUID) -> None:
         super().__init__(f"PIDINST mandatory property missing: name for asset {asset_id}")
         self.asset_id = asset_id
+
+
+class FixturePidinstSerializationError(PidinstSerializationError):
+    """Base for every Fixture-tier PIDINST serializer precondition violation.
+
+    Inherits from the cross-tier `PidinstSerializationError` so generic
+    exception handlers that catch the base continue to function for
+    both Asset-tier and Fixture-tier failures. Concrete Fixture-tier
+    subclasses carry `fixture_id` (not `asset_id`); raising an
+    Asset-tier sibling against a Fixture would be a semantic lie.
+    """
+
+
+class FixtureOwnerStateNotAvailableError(FixturePidinstSerializationError):
+    """No bound Asset carries any owners; the Fixture's owners-union is empty."""
+
+    def __init__(self, fixture_id: UUID) -> None:
+        super().__init__(
+            f"PIDINST mandatory property missing: owner for fixture {fixture_id} "
+            f"(no bound Asset carries any owners)"
+        )
+        self.fixture_id = fixture_id
+
+
+class FixtureManufacturerStateNotAvailableError(FixturePidinstSerializationError):
+    """No bound Asset's Model carries any manufacturer; the union is empty."""
+
+    def __init__(self, fixture_id: UUID) -> None:
+        super().__init__(
+            f"PIDINST mandatory property missing: manufacturer for fixture {fixture_id} "
+            f"(no bound Asset carries any manufacturer)"
+        )
+        self.fixture_id = fixture_id
+
+
+class FixtureLandingPageMissingError(FixturePidinstSerializationError):
+    """`view.landing_page_url` is empty or whitespace-only."""
+
+    def __init__(self, fixture_id: UUID) -> None:
+        super().__init__(
+            f"PIDINST mandatory property missing: landingPage for fixture {fixture_id}"
+        )
+        self.fixture_id = fixture_id
+
+
+class FixtureNameMissingError(FixturePidinstSerializationError):
+    """`view.name` is empty or whitespace-only."""
+
+    def __init__(self, fixture_id: UUID) -> None:
+        super().__init__(f"PIDINST mandatory property missing: name for fixture {fixture_id}")
+        self.fixture_id = fixture_id

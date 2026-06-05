@@ -62,6 +62,7 @@ from cora.equipment.features import (
     get_asset_pidinst,
     get_family,
     get_fixture,
+    get_fixture_pidinst,
     get_model,
     install_asset,
     list_assets,
@@ -176,6 +177,7 @@ class EquipmentHandlers:
     attach_asset_to_fixture: attach_asset_to_fixture.Handler
     detach_asset_from_fixture: detach_asset_from_fixture.Handler
     get_fixture: get_fixture.Handler
+    get_fixture_pidinst: get_fixture_pidinst.Handler
     list_fixtures: list_fixtures.Handler
 
     doi_minter: DoiMinter
@@ -527,6 +529,12 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
         get_fixture=with_tracing(
             get_fixture.bind(deps),
             command_name="GetFixture",
+            bc=_BC,
+            kind="query",
+        ),
+        get_fixture_pidinst=with_tracing(
+            get_fixture_pidinst.bind(deps),
+            command_name="GetFixturePidinst",
             bc=_BC,
             kind="query",
         ),

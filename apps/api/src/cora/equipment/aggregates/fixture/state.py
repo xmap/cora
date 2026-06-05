@@ -27,6 +27,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from cora.equipment.aggregates.asset import PersistentIdentifier
+
 
 @dataclass(frozen=True)
 class SlotAssetBinding:
@@ -69,6 +71,15 @@ class Fixture:
     )
     parameter_overrides: dict[str, Any] = field(default_factory=dict[str, Any])
     registered_at: datetime | None = None
+    # PIDINST v1.0 Property 1 persistent identifier (DOI or Handle).
+    # Data-substrate field landed ahead of the write path (mirrors slice
+    # E.1's Asset.commissioned_at pattern). Reads None at end-of-fold
+    # until the future assign_fixture_persistent_id slice ships the
+    # FixturePersistentIdAssigned event + evolver fold that flips this
+    # from None to Some. Set-once at the aggregate level per F3.3
+    # Findable immutability. The PersistentIdentifier VO is reused
+    # unchanged from the Asset aggregate per Lock 2.
+    persistent_id: PersistentIdentifier | None = None
 
 
 class FixtureAlreadyExistsError(Exception):
@@ -102,5 +113,6 @@ __all__ = [
     "Fixture",
     "FixtureAlreadyExistsError",
     "FixtureNotFoundError",
+    "PersistentIdentifier",
     "SlotAssetBinding",
 ]

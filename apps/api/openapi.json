@@ -25815,6 +25815,93 @@
         ]
       }
     },
+    "/fixtures/{fixture_id}/pidinst": {
+      "get": {
+        "operationId": "get_fixture_pidinst_fixtures__fixture_id__pidinst_get",
+        "parameters": [
+          {
+            "description": "Target fixture's id.",
+            "in": "path",
+            "name": "fixture_id",
+            "required": true,
+            "schema": {
+              "description": "Target fixture's id.",
+              "format": "uuid",
+              "title": "Fixture Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PidinstRecordResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the query."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No fixture exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Fixture state is missing a mandatory PIDINST source: no bound Asset carries any owners (FixtureOwnerStateNotAvailableError), or no bound Asset carries any manufacturer (FixtureManufacturerStateNotAvailableError)."
+          },
+          "422": {
+            "description": "View preparation produced an empty landing page URL or fixture name; or the path parameter failed schema validation."
+          }
+        },
+        "summary": "Get the PIDINST v1.0 record for a fixture",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
     "/frames": {
       "post": {
         "operationId": "post_frames_frames_post",

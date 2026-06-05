@@ -157,6 +157,11 @@ from cora.equipment.aggregates.mount import (
 )
 from cora.equipment.errors import (
     AssetNameMissingError,
+    FixtureLandingPageMissingError,
+    FixtureManufacturerStateNotAvailableError,
+    FixtureNameMissingError,
+    FixtureOwnerStateNotAvailableError,
+    FixturePidinstSerializationError,
     LandingPageMissingError,
     ManufacturerStateNotAvailableError,
     OwnerStateNotAvailableError,
@@ -190,6 +195,7 @@ from cora.equipment.features import (
     get_asset_pidinst,
     get_family,
     get_fixture,
+    get_fixture_pidinst,
     get_model,
     install_asset,
     list_assets,
@@ -333,6 +339,23 @@ async def _handle_malformed_stored_event(request: Request, exc: Exception) -> JS
     )
 
 
+async def _handle_pidinst_serialization_error(request: Request, exc: Exception) -> JSONResponse:
+    """500 backstop for unmapped Fixture-tier PIDINST serializer errors.
+
+    The four concrete `FixturePidinstSerializationError` subclasses get
+    pinned to 409 / 422 via their own tuple registrations above; this
+    handler catches the base class itself plus any future subclass that
+    has not yet received an explicit mapping. The choice of 500 mirrors
+    the slice E.1 backstop reasoning: an unmapped serializer failure
+    signals a server-side gap, not a client error.
+    """
+    _ = request
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": str(exc)},
+    )
+
+
 async def _handle_pidinst_view_preparation_error(request: Request, exc: Exception) -> JSONResponse:
     """Shared 422 handler for PIDINST view-preparation deficiencies.
 
@@ -405,6 +428,7 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(attach_asset_to_fixture.router)
     app.include_router(detach_asset_from_fixture.router)
     app.include_router(get_fixture.router)
+    app.include_router(get_fixture_pidinst.router)
     app.include_router(list_fixtures.router)
     for validation_cls in (
         InvalidAffordanceError,
@@ -529,13 +553,18 @@ def register_equipment_routes(app: FastAPI) -> None:
     for pidinst_state_cls in (
         OwnerStateNotAvailableError,
         ManufacturerStateNotAvailableError,
+        FixtureOwnerStateNotAvailableError,
+        FixtureManufacturerStateNotAvailableError,
     ):
         app.add_exception_handler(pidinst_state_cls, _handle_pidinst_state_not_available)
     for pidinst_view_cls in (
         LandingPageMissingError,
         AssetNameMissingError,
+        FixtureLandingPageMissingError,
+        FixtureNameMissingError,
     ):
         app.add_exception_handler(pidinst_view_cls, _handle_pidinst_view_preparation_error)
+    app.add_exception_handler(FixturePidinstSerializationError, _handle_pidinst_serialization_error)
     app.add_exception_handler(
         PersistentIdentifierMintError, _handle_persistent_identifier_mint_error
     )

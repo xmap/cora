@@ -60,6 +60,7 @@ from datetime import datetime
 from cora.equipment._pidinst_types import (
     AssetPidinstView,
     DateType,
+    FixturePidinstView,
     InstrumentType,
     Manufacturer,
     MeasuredVariable,
@@ -71,12 +72,17 @@ from cora.equipment._pidinst_types import (
     PidinstIdentifierType,
     PidinstModel,
     PidinstRecord,
+    PidinstRelationType,
     RelatedIdentifier,
     SchemaVersion,
 )
 from cora.equipment.aggregates.asset import PersistentIdentifierScheme
 from cora.equipment.errors import (
     AssetNameMissingError,
+    FixtureLandingPageMissingError,
+    FixtureManufacturerStateNotAvailableError,
+    FixtureNameMissingError,
+    FixtureOwnerStateNotAvailableError,
     LandingPageMissingError,
     ManufacturerStateNotAvailableError,
     OwnerStateNotAvailableError,
@@ -281,3 +287,136 @@ def _build_measurement_techniques(
 
 def _format_iso_date(value: datetime) -> str:
     return value.date().isoformat()
+
+
+def to_fixture_pidinst_record(
+    view: FixturePidinstView,
+    *,
+    landing_page_url: str,
+    publisher: str,
+) -> PidinstRecord:
+    """Transform a hydrated Fixture view into a CORA PIDINST v1.0 record.
+
+    Pure synchronous function. Sibling to `to_pidinst_record`; shares
+    the kernel (PidinstRecord, all closed StrEnums, PidinstRecord
+    invariants) but has its own error class taxonomy. Raises
+    `FixturePidinstSerializationError` (one of four concrete subclasses)
+    on the first missing mandatory property in PIDINST schema order.
+
+    Schema-order failure ordering: LandingPage first, then Name, then
+    Owner, then Manufacturer. Identifier never raises on the read path
+    because the URN fallback always succeeds; the swap to DOI / Handle
+    when `view.persistent_id` is set is structurally typed and cannot
+    raise.
+
+    `landing_page_url` and `publisher` are injected by the caller (the
+    read-side view assembler) from per-deployment facility configuration;
+    they are not aggregate state. `publication_year` is carried on the
+    view because Fixture's `registered_at` IS aggregate state.
+
+    The HasComponent `related_identifiers` list is populated from
+    `view.components`: only components whose (scheme, value) are both
+    non-None become `RelatedIdentifier` entries with
+    `relation_type=HAS_COMPONENT` (PIDINST-faithful; the slice-6
+    renderer substitutes to HasPart at the DataCite wire boundary per
+    L3). Unminted components are OMITTED from `related_identifiers` per
+    L27 and surface in the Description block instead.
+
+    `PidinstRecordInvariantError` propagates unwrapped from
+    `PidinstRecord.__post_init__`, mirroring the Asset side.
+    """
+    _validate_fixture_landing_page(view, landing_page_url)
+    _validate_fixture_name(view)
+    _validate_fixture_owner_state_available(view)
+    _validate_fixture_manufacturer_state_available(view)
+
+    return PidinstRecord(
+        identifier=_build_fixture_identifier(view),
+        schema_version=SchemaVersion.V1_0,
+        landing_page=landing_page_url,
+        name=view.name,
+        publisher=publisher,
+        publication_year=view.publication_year,
+        owners=_build_fixture_owners(view),
+        manufacturers=view.manufacturers,
+        model=None,
+        description=_build_fixture_description(view),
+        instrument_types=(),
+        measured_variables=(),
+        dates=(),
+        related_identifiers=_build_fixture_components(view),
+        alternate_identifiers=(),
+        measurement_techniques=(),
+    )
+
+
+def _validate_fixture_landing_page(view: FixturePidinstView, landing_page_url: str) -> None:
+    if not landing_page_url or not landing_page_url.strip():
+        raise FixtureLandingPageMissingError(view.fixture_id)
+
+
+def _validate_fixture_name(view: FixturePidinstView) -> None:
+    if not view.name or not view.name.strip():
+        raise FixtureNameMissingError(view.fixture_id)
+
+
+def _validate_fixture_owner_state_available(view: FixturePidinstView) -> None:
+    if not view.owners:
+        raise FixtureOwnerStateNotAvailableError(view.fixture_id)
+
+
+def _validate_fixture_manufacturer_state_available(view: FixturePidinstView) -> None:
+    if not view.manufacturers:
+        raise FixtureManufacturerStateNotAvailableError(view.fixture_id)
+
+
+def _build_fixture_identifier(view: FixturePidinstView) -> PidinstIdentifier:
+    if view.persistent_id is None:
+        return PidinstIdentifier(
+            value=f"{_URN_UUID_PREFIX}{view.fixture_id}",
+            scheme=PidinstIdentifierType.URN,
+        )
+    match view.persistent_id.scheme:
+        case PersistentIdentifierScheme.DOI:
+            wire_scheme = PidinstIdentifierType.DOI
+        case PersistentIdentifierScheme.HANDLE:
+            wire_scheme = PidinstIdentifierType.HANDLE
+    return PidinstIdentifier(value=view.persistent_id.value, scheme=wire_scheme)
+
+
+def _build_fixture_owners(view: FixturePidinstView) -> tuple[Owner, ...]:
+    return tuple(
+        Owner(
+            name=raw.name.value,
+            contact=raw.contact.value if raw.contact is not None else None,
+            identifier=raw.identifier.value if raw.identifier is not None else None,
+            identifier_type=(
+                raw.identifier_type.value if raw.identifier_type is not None else None
+            ),
+        )
+        for raw in view.owners
+    )
+
+
+def _build_fixture_components(view: FixturePidinstView) -> tuple[RelatedIdentifier, ...]:
+    return tuple(
+        RelatedIdentifier(
+            value=component.value,
+            identifier_type=component.scheme.value,
+            relation_type=PidinstRelationType.HAS_COMPONENT,
+        )
+        for component in view.components
+        if component.scheme is not None and component.value is not None
+    )
+
+
+def _build_fixture_description(view: FixturePidinstView) -> str | None:
+    if not view.components:
+        return None
+    lines: list[str] = []
+    for component in view.components:
+        suffix = ""
+        if component.scheme is None or component.value is None:
+            suffix = " (no persistent identifier)"
+        lines.append(f"- {component.name}{suffix}")
+    return "\n".join(lines)

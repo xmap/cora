@@ -47,7 +47,9 @@ from cora.equipment.aggregates.asset import (
     AlternateIdentifier,
     AlternateIdentifierKind,
     AssetLifecycle,
+    AssetOwner,
     PersistentIdentifier,
+    PersistentIdentifierScheme,
 )
 from cora.equipment.aggregates.model import ManufacturerIdentifierType
 from cora.equipment.errors import PidinstRecordInvariantError
@@ -239,6 +241,79 @@ class AssetPidinstView:
     publication_year: int | None
     owners: tuple[Owner, ...]
     persistent_id: PersistentIdentifier | None = None
+
+
+@dataclass(frozen=True)
+class FixtureComponentRef:
+    """One bound Asset under a Fixture, with PID-or-fallback resolution.
+
+    `component_id` is the bound Asset's id (the Fixture's
+    `SlotAssetBinding.asset_id`). `scheme` and `value` carry the
+    bound Asset's `PersistentIdentifier` decomposed into primitives;
+    both are None when the Asset has not been minted yet. The
+    serializer skips unminted components from the HAS_COMPONENT
+    related_identifiers tuple per L27 (HasComponent requires a
+    PID-bearing target); unminted components still appear in this
+    tuple so the Description block can surface the full composition.
+
+    `name` is the bound Asset's display name; used by the Description
+    builder to surface unminted and decommissioned components.
+
+    Skip-unminted semantics live in the assembler / serializer, NOT
+    in this dataclass. The dataclass is a plain data substrate.
+    """
+
+    component_id: UUID
+    scheme: PersistentIdentifierScheme | None
+    value: str | None
+    name: str
+
+
+@dataclass(frozen=True)
+class FixturePidinstView:
+    """Hydrated read-model view consumed by `to_fixture_pidinst_record`.
+
+    Separate dataclass from `AssetPidinstView` per Lock 1. Carries the
+    Fixture-tier rollup of bound Assets' PIDINST-relevant facets,
+    populated by the read-side view assembler from Fixture + Asset +
+    Model streams.
+
+    `owners` is the UNION of bound Assets' owners deduplicated by
+    (name, identifier) and sorted by name per L7. An empty tuple is
+    the sentinel for "no bound Asset carries any owners"; the
+    serializer raises `FixtureOwnerStateNotAvailableError` so the
+    Fixture-tier record never silently emits PIDINST-invalid output.
+
+    `manufacturers` is the UNION of bound Assets' Models' manufacturers
+    deduplicated by (name, identifier) and sorted by name per L9
+    (revised). The cascade is model-mediated: Asset does NOT carry a
+    manufacturers field, the Model catalog tier is the source of truth.
+    An empty tuple triggers `FixtureManufacturerStateNotAvailableError`
+    at the serializer.
+
+    `components` is one entry per bound Asset, ordered deterministically
+    by the assembler. The serializer emits HasComponent
+    `RelatedIdentifier` entries ONLY for components with non-None
+    (scheme, value) per L27.
+
+    `publication_year` is typed `int` (non-optional) because Fixture is
+    single-event-genesis; the assembler narrows
+    `fixture.registered_at.year` to int via the FixtureRegistered fold
+    invariant. Diverges from `AssetPidinstView` (where commissioned_at
+    may be None pre-commissioning) as a Fixture-specific simplification.
+
+    `persistent_id` is None until a future `assign_fixture_persistent_id`
+    write slice lands; the read route surfaces None as the absent
+    optional field per the PIDINST v1.0 schema.
+    """
+
+    fixture_id: UUID
+    name: str
+    persistent_id: PersistentIdentifier | None
+    owners: tuple[AssetOwner, ...]
+    manufacturers: tuple["Manufacturer", ...]
+    components: tuple[FixtureComponentRef, ...]
+    publication_year: int
 
 
 @dataclass(frozen=True)
