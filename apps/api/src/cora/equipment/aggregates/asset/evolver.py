@@ -627,6 +627,8 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=frozenset(o for o in prior.owners if o.name != owner_name),
                 fixture_id=prior.fixture_id,
+                commissioned_at=prior.commissioned_at,
+                decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
             )
         case AssetAttachedToFixture(fixture_id=fixture_id):
@@ -650,6 +652,8 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=fixture_id,
+                commissioned_at=prior.commissioned_at,
+                decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
             )
         case AssetDetachedFromFixture():

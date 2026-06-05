@@ -19,6 +19,7 @@ from cora.equipment.aggregates.asset.events import (
     AssetActivated,
     AssetAlternateIdentifierAdded,
     AssetAlternateIdentifierRemoved,
+    AssetAttachedToFixture,
     AssetDecommissioned,
     AssetDegraded,
     AssetFamilyAdded,
@@ -26,6 +27,7 @@ from cora.equipment.aggregates.asset.events import (
     AssetFaulted,
     AssetMaintenanceEntered,
     AssetMaintenanceExited,
+    AssetOwnerRemoved,
     AssetPortAdded,
     AssetPortRemoved,
     AssetRegistered,
@@ -36,6 +38,8 @@ from cora.equipment.aggregates.asset.events import (
 from cora.equipment.aggregates.asset.state import (
     AlternateIdentifier,
     AlternateIdentifierKind,
+    AssetOwner,
+    AssetOwnerName,
     AssetPort,
     PortDirection,
 )
@@ -2221,3 +2225,61 @@ def test_fold_register_with_seed_then_lifecycle_transitions_preserves_alternate_
     assert state is not None
     assert state.alternate_identifiers == seed
     assert state.lifecycle is AssetLifecycle.DECOMMISSIONED
+
+
+@pytest.mark.unit
+def test_evolve_asset_owner_removed_preserves_lifecycle_timestamps() -> None:
+    """Critical pin: AssetOwnerRemoved MUST carry `commissioned_at` and
+    `decommissioned_at` through from prior state. The Asset evolver
+    Critical Invariant docstring lists both fields as required
+    carry-forward; constructing Asset(...) without explicitly passing
+    them silently wipes them to None, corrupting PIDINST Property 11
+    lifecycle dates on any Asset whose owners change."""
+    commissioned = datetime(2026, 4, 1, 9, 0, 0, tzinfo=UTC)
+    decommissioned = datetime(2026, 5, 1, 17, 0, 0, tzinfo=UTC)
+    owner_a = AssetOwner(name=AssetOwnerName("HZB"))
+    owner_b = AssetOwner(name=AssetOwnerName("APS"))
+    prior = Asset(
+        id=uuid4(),
+        name=AssetName("X"),
+        level=AssetLevel.UNIT,
+        parent_id=uuid4(),
+        lifecycle=AssetLifecycle.ACTIVE,
+        owners=frozenset({owner_a, owner_b}),
+        commissioned_at=commissioned,
+        decommissioned_at=decommissioned,
+    )
+    state = evolve(
+        prior,
+        AssetOwnerRemoved(asset_id=prior.id, owner_name=owner_a.name, occurred_at=_NOW),
+    )
+    assert state.owners == frozenset({owner_b})
+    assert state.commissioned_at == commissioned
+    assert state.decommissioned_at == decommissioned
+
+
+@pytest.mark.unit
+def test_evolve_asset_attached_to_fixture_preserves_lifecycle_timestamps() -> None:
+    """Critical pin: AssetAttachedToFixture MUST carry `commissioned_at`
+    and `decommissioned_at` through from prior state. Same silent-data-
+    loss shape as AssetOwnerRemoved. Pinned because attach is the
+    primary mutation path during 2-BM deployment ceremony; losing the
+    commission timestamp on attach would corrupt the PIDINST view for
+    every fixture-bound Asset."""
+    commissioned = datetime(2026, 4, 1, 9, 0, 0, tzinfo=UTC)
+    fixture_id = uuid4()
+    prior = Asset(
+        id=uuid4(),
+        name=AssetName("X"),
+        level=AssetLevel.UNIT,
+        parent_id=uuid4(),
+        lifecycle=AssetLifecycle.ACTIVE,
+        commissioned_at=commissioned,
+    )
+    state = evolve(
+        prior,
+        AssetAttachedToFixture(asset_id=prior.id, fixture_id=fixture_id, occurred_at=_NOW),
+    )
+    assert state.fixture_id == fixture_id
+    assert state.commissioned_at == commissioned
+    assert state.decommissioned_at is None
