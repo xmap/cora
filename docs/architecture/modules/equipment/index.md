@@ -474,6 +474,47 @@ The seven aggregates expose fifty slices end to end.
 
 `GetAssetPidinst` is a read-time serializer slice at `GET /assets/{asset_id}/pidinst`. A feature-local view assembler loads the Asset, its bound `Model`, the Families behind the Model, the Asset's owners, and its alternate identifiers, then hands the assembled view to the `to_pidinst_record` pure function at the module root (`_pidinst_serializer.py` plus `_pidinst_types.py`). The response body is the PIDINST record shape used by external persistent-identifier registries, returned directly so a downstream caller can post it to DataCite or another mint surface without further transformation. Errors map: `AssetNotFound` to 404, `PidinstRecordInvariant` to 422 (the assembled view violated a PIDINST schema invariant), the three `*StateNotAvailable` subclasses to 409 (cross-aggregate state was loaded but failed serializer preconditions), and any unexpected failure to 500.
 
+## Cross-aggregate invariants
+
+The Mount, Fixture, and Asset aggregates compose to answer two different questions about a single piece of equipment: Mount answers "where is this Asset bolted in the beamline" (one physical bay, one Asset, a 6-DoF pose, mutable across re-installs), and Fixture answers "which Assets compose this Assembly recipe on this Trust Surface" (one snapshot, N Assets keyed by template slot names, frozen at registration). The two are complementary; a typical specimen is both physically installed in a Mount and logically bound into a Fixture for the run that consumes its Assembly.
+
+The word "slot" carries two distinct meanings in this module, only differentiated by the carrier. `Mount.slot_code` is a facility-unique physical bay (for example, APS 2-BM's `02-BM-A-K-01`); slot codes are facility-wide identifiers operators speak in. `SlotAssetBinding.slot_name` is a template-local name drawn from the Assembly's `required_slots` (for example, `camera`, `rotary`, `detector`); slot names are scoped to one materialization and may repeat under `OneOrMore` cardinality. The two never reference each other directly: a Mount slot and an Assembly template slot are independent axes that the same Asset can be reached through.
+
+| Axis | Mount | Fixture |
+|---|---|---|
+| Cardinality | one Asset per Mount, facility-unique `slot_code` | N Assets per Fixture, `slot_name` unique only within the materialization |
+| Lifecycle | two-state FSM (`Active`, `Decommissioned`), in-place mutation via install / uninstall / `update_mount_placement` | no FSM; single-event genesis; "if it needs to change, register a new Fixture" |
+| Relation graph | inbound terminus of the placement tree (`Mount.placement.parent_frame_id` -> Frame; `parent_mount_id` -> Mount) | outbound hub of the composition tree (`Fixture.assembly_id` -> Assembly; `Fixture.surface_id` -> Trust `Surface`) |
+| Back-reference shape | `proj_equipment_asset_location` projection (Asset deliberately carries NO `installed_at` field) | denormalized `Asset.fixture_id` scalar set by `attach_asset_to_fixture` on the Asset stream |
+
+The `Mount.installed_asset_id` field is the single source of truth for "what is bolted into this slot right now"; the `proj_equipment_asset_location` projection feeds the back-lookup. The `Asset.fixture_id` field is the back-reference for "what Fixture currently binds this Asset"; it is set and cleared by the `attach_asset_to_fixture` / `detach_asset_from_fixture` slices that mirror the Fixture's `slot_asset_bindings` set.
+
+Four cross-aggregate guards keep the three aggregates from drifting:
+
+| Slice | Source aggregate | Refuses when | Operator must first | Error class |
+|---|---|---|---|---|
+| `decommission_asset` | Asset | the Asset still carries a `fixture_id` back-reference | `detach_asset_from_fixture` | `AssetHasFixtureBindingError` |
+| `decommission_asset` | Asset | the Asset is still installed in a Mount (`proj_equipment_asset_location` row exists) | `uninstall_asset` from that Mount | `AssetIsInstalledError` |
+| `uninstall_asset` | Mount | the installed Asset still carries a `fixture_id` back-reference | `detach_asset_from_fixture` | `MountHasFixtureBoundAssetError` |
+| `register_fixture` | Fixture | any bound Asset has lifecycle `Decommissioned` | use a different Asset, or activate this one | `FixtureAssetNotAttachableError` |
+
+All four mirror the same precedent: per-reason error class (not a discriminated `*CannotTransition(reason=...)`), HAS/IS micro-grammar for Asset/Mount, negation prefix for the FixtureAsset* sibling family, sorted-first deterministic identification of the offending Asset when more than one applies. The guards surface the cross-aggregate dependency at the natural choreography step rather than letting a stranded back-reference propagate into a downstream operation that fails far from its cause.
+
+The recommended choreography for a typical specimen lifecycle is therefore:
+
+1. `register_asset` (Asset enters `Commissioned`)
+2. `activate_asset` (Asset enters `Active`)
+3. `register_frame` (if no parent Frame exists yet) and `register_mount` (Mount provisioned at a known `slot_code`)
+4. `install_asset` (the Asset is bolted into the Mount; `proj_equipment_asset_location` records the back-lookup)
+5. `define_family`, `define_assembly`, `register_fixture` (the Assembly blueprint is materialized into a Fixture binding this Asset by its template slot name)
+6. `attach_asset_to_fixture` (the Asset's `fixture_id` back-reference is set)
+7. Run consumes the Fixture for the duration of its execution
+8. `detach_asset_from_fixture` (the Asset's `fixture_id` is cleared)
+9. `uninstall_asset` (the Mount becomes vacant; `proj_equipment_asset_location` clears the row)
+10. `decommission_asset` (the Asset enters `Decommissioned`)
+
+Steps 5-9 may repeat many times across runs while a single physical install (step 4) persists; the Mount slot outlives the individual specimens that pass through it. The four guards above hold the order of the teardown side: 8 must precede 9 if the Mount-uninstall guard is not to fire, and 8 + 9 must both precede 10 if the Asset-decommission guards are not to fire.
+
 ## Storage & Projections
 
 Thirteen read-side tables back the Equipment module: per-aggregate summaries for the six aggregates that have one (Asset, Family, Model, Frame, Mount, Assembly, Fixture), join projections for membership and parent-child relations, and uniqueness helpers that back decide-time precondition checks.
