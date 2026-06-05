@@ -69,6 +69,8 @@ Out of scope
 
 The six `AssetLevel` values are ISA-95-derived with single-word names. Levels are conventional: the decider checks that an Enterprise-level Asset has no parent and that every other level has one, but it does not enforce that a `Device` parents to a `Component`. Smart instruments with addressable sub-modules legitimately put a `Device` under another `Device`.
 
+`AssetLevel` is a tree-depth label, not the aggregate ladder. The aggregate ladder (`Family`, `Model`, `Assembly`, `Fixture`, `Asset`) answers what kind of identity each row carries; `AssetLevel` answers where one registered Asset sits in the org and facility tree. The two axes are orthogonal: a Family has no level, a Fixture has no level, only an Asset carries one. ISA-88 and ISA-95 readers should note that in those traditions the equipment hierarchy is the type ladder, but in CORA the two are kept apart.
+
 Whether a composite vendor unit is one Asset with a wide settings dict or a parent Asset with several child Assets follows three tests. Any one is sufficient to spawn a child Asset:
 
 - **Lifecycle independence.** The sub-component can be commissioned, swapped, or decommissioned without retiring the parent.

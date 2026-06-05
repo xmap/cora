@@ -42,6 +42,21 @@ decider does NOT check that a Device's parent is a Component.
 `Device`-in-`Device` is allowed when reality demands it (smart
 instruments with addressable sub-modules).
 
+## AssetLevel is a tree-depth label, not the aggregate ladder
+
+`AssetLevel` (Enterprise / Site / Area / Unit / Component / Device)
+is an ISA-95-derived hierarchy-depth tag stored on a single Asset
+row, set at registration and never mutated. It is NOT the Equipment
+aggregate ladder (Family, Model, Assembly, Fixture, Asset). The
+aggregate ladder answers WHAT KIND of identity each row carries
+(catalog entry, composition template, materialization, physical
+instance); `AssetLevel` answers WHERE this particular Asset sits in
+the org and facility tree. The two axes are orthogonal: a Family
+has no level, a Fixture has no level, only a registered Asset
+carries one. An ISA-88 or ISA-95 reader will be tempted to map
+`AssetLevel` onto the aggregate ladder because in those traditions
+the equipment hierarchy IS the type ladder; in CORA it is not.
+
 ## Status as enum-in-state, derived-from-event-type-in-evolver
 
 `AssetLifecycle` is a `StrEnum` so values serialize naturally as
