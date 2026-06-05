@@ -9,7 +9,14 @@ exception-handler registration:
   - `ManufacturerStateNotAvailableError` -> 409 (per L8 + L9; new)
   - `LandingPageMissingError`          -> 422 (per L8 + L9; new)
   - `AssetNameMissingError`            -> 422 (per L8 + L9; new)
-  - `PidinstRecordInvariantError`      -> 500 (defensive; FastAPI default)
+  - `PidinstRecordInvariantError`      -> 500 (intentional per L11 of
+    project_asset_persistent_id_design: server-bug backstop, NOT a
+    routable error. The four pre-construction validators above cover
+    every client-fixable case; if this fires the assembler produced
+    a malformed view, which is a CORA bug. FastAPI default 500 is
+    the locked policy; this handler logs the violation at error
+    level before re-raising so monitoring still sees it (the
+    serializer cannot log directly per L22 purity).
 
 Per L5 + L22: handler is async, pure aside from loader reads. No
 decider, no event emission, no clock injection, no UUID generator.
@@ -22,7 +29,7 @@ from uuid import UUID
 
 from cora.equipment._pidinst_serializer import to_pidinst_record
 from cora.equipment._pidinst_types import PidinstRecord
-from cora.equipment.errors import UnauthorizedError
+from cora.equipment.errors import PidinstRecordInvariantError, UnauthorizedError
 from cora.equipment.features.get_asset_pidinst._view_assembler import assemble_pidinst_view
 from cora.equipment.features.get_asset_pidinst.query import GetAssetPidinst
 from cora.infrastructure.kernel import Kernel
@@ -89,7 +96,30 @@ def bind(deps: Kernel) -> Handler:
             facility_publisher=facility_publisher,
             landing_page_template=landing_page_template,
         )
-        record = to_pidinst_record(view)
+        try:
+            record = to_pidinst_record(view)
+        except PidinstRecordInvariantError as exc:
+            # Should never fire: the four pre-construction validators
+            # inside `to_pidinst_record` cover every PIDINST-mandatory-
+            # state gap, so a PidinstRecord invariant violation here is
+            # a CORA bug (assembler produced a malformed view, or
+            # PidinstRecord.__post_init__ added an invariant without a
+            # matching pre-construction guard). Lock 11 of
+            # project_asset_persistent_id_design forbids wiring this to
+            # a custom HTTP handler; FastAPI's default 500 fires after
+            # this re-raise. The structured log closes the
+            # observability gap that the bare-500 path would otherwise
+            # leave, and lives at the application boundary because L22
+            # forbids logging inside the serializer.
+            _log.exception(
+                "get_asset_pidinst.pidinst_record_invariant",
+                query_name=_QUERY_NAME,
+                asset_id=str(query.asset_id),
+                principal_id=str(principal_id),
+                correlation_id=str(correlation_id),
+                reason=exc.reason,
+            )
+            raise
         _log.info(
             "get_asset_pidinst.success",
             query_name=_QUERY_NAME,

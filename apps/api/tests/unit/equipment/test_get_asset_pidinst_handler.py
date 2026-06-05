@@ -1,12 +1,16 @@
 """Unit tests for the `get_asset_pidinst` query handler.
 
-Four tests covering the handler's success + the three propagation
+Five tests covering the handler's success + the four propagation
 paths per section 10 of project_asset_persistent_id_design:
 
   - Returns a `PidinstRecord` for a fully populated asset.
   - Propagates `AssetNotFoundError` to the caller (route maps 404).
   - Propagates `OwnerStateNotAvailableError` (route maps 409).
   - Propagates `ManufacturerStateNotAvailableError` (route maps 409).
+  - Logs + re-raises `PidinstRecordInvariantError` (route maps 500
+    via FastAPI default per L11; the handler closes the observability
+    gap that the bare-500 path would otherwise leave because L22
+    forbids logging inside the serializer).
 
 The handler is thin (assemble + serialize); these tests pin the
 propagation behavior so the route's exception-handler tuples are
@@ -50,6 +54,7 @@ from cora.equipment.aggregates.model.state import (
 from cora.equipment.errors import (
     ManufacturerStateNotAvailableError,
     OwnerStateNotAvailableError,
+    PidinstRecordInvariantError,
 )
 from cora.equipment.features import get_asset_pidinst
 from cora.equipment.features.get_asset_pidinst import GetAssetPidinst
@@ -223,3 +228,66 @@ async def test_handler_propagates_manufacturer_unavailable_for_asset_without_mod
             correlation_id=_CORRELATION_ID,
         )
     assert exc_info.value.asset_id == asset_id
+
+
+@pytest.mark.unit
+@pytest.mark.timeout(60, method="thread")
+async def test_handler_logs_and_reraises_on_pidinst_record_invariant_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`PidinstRecordInvariantError` from `to_pidinst_record` is a
+    CORA bug class (server-side defect; the four pre-construction
+    validators should have caught it earlier). Lock 11 of
+    project_asset_persistent_id_design forbids wiring it to a custom
+    HTTP handler, so FastAPI's default 500 fires. The query handler
+    is the observability site: it emits a structured
+    `get_asset_pidinst.pidinst_record_invariant` log entry with
+    asset_id, principal_id, correlation_id, and the invariant
+    `reason`, then re-raises. The serializer cannot log directly
+    per L22 purity.
+    """
+    import structlog.testing
+
+    from cora.equipment.features.get_asset_pidinst import handler as handler_module
+
+    store = InMemoryEventStore()
+    asset_id = uuid4()
+    model_id = uuid4()
+    await _seed_model_defined(store, model_id=model_id)
+    await _seed_asset_registered(
+        store,
+        asset_id=asset_id,
+        model_id=model_id,
+        owners=frozenset({_owner()}),
+    )
+
+    raised_reason = "owners must contain at least one Owner"
+
+    def fake_to_pidinst_record(_view: object) -> PidinstRecord:
+        raise PidinstRecordInvariantError(raised_reason)
+
+    monkeypatch.setattr(handler_module, "to_pidinst_record", fake_to_pidinst_record)
+
+    deps = _build_deps(event_store=store)
+    handler = get_asset_pidinst.bind(deps)
+    with (
+        structlog.testing.capture_logs() as captured,
+        pytest.raises(PidinstRecordInvariantError) as exc_info,
+    ):
+        await handler(
+            GetAssetPidinst(asset_id=asset_id),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.reason == raised_reason
+
+    invariant_logs = [
+        e for e in captured if e.get("event") == "get_asset_pidinst.pidinst_record_invariant"
+    ]
+    assert len(invariant_logs) == 1
+    entry = invariant_logs[0]
+    assert entry["asset_id"] == str(asset_id)
+    assert entry["principal_id"] == str(_PRINCIPAL_ID)
+    assert entry["correlation_id"] == str(_CORRELATION_ID)
+    assert entry["reason"] == raised_reason
+    assert entry["log_level"] == "error"

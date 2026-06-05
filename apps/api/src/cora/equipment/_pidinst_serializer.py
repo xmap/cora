@@ -100,6 +100,11 @@ def to_pidinst_record(view: AssetPidinstView) -> PidinstRecord:
     LandingPage first, then 4 Name, then 5 Owner, then 6 Manufacturer.
     Property 1 Identifier never raises in slice C because the URN
     fallback always succeeds.
+
+    `PidinstRecordInvariantError` is propagated bare from
+    `PidinstRecord.__post_init__`; observability for that bug-class
+    path lives in `features/get_asset_pidinst/handler.py` (L22
+    forbids I/O here including logging).
     """
     _validate_landing_page(view)
     _validate_name(view)

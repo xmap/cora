@@ -9,7 +9,11 @@ on hit. Errors propagate to the BC's exception-handler tuples in
   - `ManufacturerStateNotAvailableError`  -> 409
   - `LandingPageMissingError`             -> 422
   - `AssetNameMissingError`               -> 422
-  - `PidinstRecordInvariantError`         -> 500 (FastAPI default; defensive)
+  - `PidinstRecordInvariantError`         -> 500 (intentional per L11 of
+    project_asset_persistent_id_design: server-bug backstop;
+    FastAPI default 500 is the locked policy. The query handler
+    logs the violation at error level before re-raising so the
+    bare 500 path still leaves a structured trail.)
 
 FastAPI cannot generate `response_model` from the frozen slice-C
 `PidinstRecord` dataclass directly: the OpenAPI schema generator
