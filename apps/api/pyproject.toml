@@ -8,11 +8,11 @@ authors = [{ name = "Doga Gursoy" }]
 license = { text = "Apache-2.0" }
 
 dependencies = [
-    "fastapi>=0.136.1,<0.137",
+    "fastapi>=0.136.3,<0.137",
     "asyncpg>=0.31.0,<0.32",
     "pydantic>=2.13.4,<3",
     "pydantic-settings>=2.14.1,<3",
-    "mcp>=1.27.1,<2",
+    "mcp>=1.27.2,<2",
     "uvicorn[standard]>=0.47.0",
     "structlog>=25.0.0",
     "uuid-utils>=0.16.0",
@@ -35,7 +35,7 @@ dependencies = [
     # subscribers + tests use the port + `FakeLLM`. Pin <1 to flag a future
     # major SDK shift in CI
     # before it lands silently.
-    "anthropic>=0.103.1,<1",
+    "anthropic>=0.105.2,<1",
     # cryptography: explicit top-level floor pin. Previously pulled
     # transitively at 48.x via pyjwt[crypto]. Pinned explicitly to
     # >=46,<47 ahead of the federation wire-tier adapters (python-cwt
@@ -77,12 +77,12 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.3,<10",
-    "pytest-asyncio>=1.3.0,<2",
+    "pytest-asyncio>=1.4.0,<2",
     "pytest-cov>=7.1.0,<8",
     "coverage[toml]>=7.14.0,<8",
-    "diff-cover>=10.2.0,<11",
-    "ruff>=0.15.13,<0.16",
-    "pyright>=1.1.409,<2",
+    "diff-cover>=10.3.0,<11",
+    "ruff>=0.15.16,<0.16",
+    "pyright>=1.1.410,<2",
     "httpx>=0.28.0",
     "asgi-lifespan>=2.1.0,<3",
     "pre-commit>=4.0.0,<5",
@@ -118,7 +118,7 @@ dev = [
     # tests/conftest.py and auto-activates on CI=true to derandomize the seed
     # and disable the local example database, sidestepping xdist seed
     # collisions across worker processes.
-    "hypothesis>=6.130,<7",
+    "hypothesis>=6.155.2,<7",
     # hypothesis-jsonschema: Hypothesis strategy builder driven by JSON
     # Schema documents. Used by `tests/contract/test_mcp_tools_fuzz.py`
     # (Iter H of the testing-techniques rollout) to generate
