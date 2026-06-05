@@ -106,7 +106,7 @@ def test_decide_emits_registered_plus_recipe_expansion_recorded() -> None:
     assert isinstance(prov, RecipeExpansionRecorded)
     assert prov.recipe_id == recipe.id
     assert prov.capability_id == cap.id
-    assert prov.expansion_port_version == "v1"
+    assert prov.expansion_port_version == "v2-pseudoaxis-aware"
     assert prov.step_count == 1
 
 

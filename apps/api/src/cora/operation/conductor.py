@@ -98,6 +98,7 @@ from cora.infrastructure.ports.clock import Clock
 from cora.infrastructure.ports.event_store import ConcurrencyError
 from cora.infrastructure.ports.id_generator import IdGenerator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.operation._control_dispatch_context import with_dispatch_correlation_id
 from cora.operation.aggregates.procedure import (
     PROCEDURE_ABORT_REASON_MAX_LENGTH,
     ProcedureNotFoundError,
@@ -475,7 +476,13 @@ class Conductor:
         )
         completed = 0
         for index, step in enumerate(steps):
-            failure = await self._dispatch(step, index=index, envelope=envelope)
+            # Bind correlation_id to the ContextVar scoped per dispatch so
+            # ControlPort adapters can emit `controlport.dispatch` events
+            # without taking a kwarg. See `_control_dispatch_context` for
+            # the why; contextvars survive each `await` inside `_dispatch`
+            # and reset cleanly on exception.
+            with with_dispatch_correlation_id(correlation_id):
+                failure = await self._dispatch(step, index=index, envelope=envelope)
             if failure is not None:
                 return ConductorResult(
                     procedure_id=procedure_id,

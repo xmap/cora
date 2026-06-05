@@ -1,13 +1,19 @@
-"""FixtureSummaryProjection: folds the Fixture aggregate's single
-genesis event into the `proj_equipment_fixture_summary` read model.
+"""FixtureSummaryProjection: folds Fixture stream events into the
+`proj_equipment_fixture_summary` read model.
 
 Subscribed events (v1):
-  - FixtureRegistered -> INSERT (snapshot of assembly_content_hash,
-                          surface_id, plus binding_count and
-                          override_count for cheap summary reads).
+  - FixtureRegistered          -> INSERT (snapshot of assembly_content_hash,
+                                  surface_id, plus binding_count and
+                                  override_count for cheap summary reads).
+  - FixturePersistentIdAssigned -> UPDATE persistent_id JSONB with
+                                  {scheme, value} for the assigned
+                                  PIDINST v1.0 Property 1 identifier
+                                  (Fixture-tier PIDINST integration).
 
-Single-event genesis: idempotent via ON CONFLICT DO NOTHING. The
-full slot_asset_bindings stays in the event payload; this read
+Genesis is single-event (FixtureRegistered, idempotent via ON CONFLICT
+DO NOTHING). Subsequent mutations stay append-only-monotonic; the
+PIDINST assign is the first Fixture-stream mutation past genesis.
+The full slot_asset_bindings stays in the event payload; this read
 model is summary-only by design.
 """
 
@@ -29,11 +35,27 @@ ON CONFLICT (fixture_id) DO NOTHING
 """
 
 
+_UPDATE_FIXTURE_PERSISTENT_ID_ASSIGNED_SQL = """
+UPDATE proj_equipment_fixture_summary
+SET persistent_id = jsonb_build_object(
+        'scheme', $2::text,
+        'value', $3::text
+    ),
+    updated_at = now()
+WHERE fixture_id = $1
+"""
+
+
 class FixtureSummaryProjection:
     """Maintains the `proj_equipment_fixture_summary` read model."""
 
     name = "proj_equipment_fixture_summary"
-    subscribed_event_types = frozenset({"FixtureRegistered"})
+    subscribed_event_types = frozenset(
+        {
+            "FixtureRegistered",
+            "FixturePersistentIdAssigned",
+        }
+    )
 
     async def apply(
         self,
@@ -54,6 +76,13 @@ class FixtureSummaryProjection:
                     len(bindings),
                     len(overrides),
                     datetime.fromisoformat(str(payload["occurred_at"])),
+                )
+            case "FixturePersistentIdAssigned":
+                await conn.execute(
+                    _UPDATE_FIXTURE_PERSISTENT_ID_ASSIGNED_SQL,
+                    UUID(str(event.payload["fixture_id"])),
+                    event.payload["persistent_id_scheme"],
+                    event.payload["persistent_id_value"],
                 )
             case _:
                 pass

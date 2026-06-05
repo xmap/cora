@@ -62,7 +62,16 @@ from cora.operation.aggregates.procedure import (
     RecipeExpansionRecordNotFoundError,
     RecipeExpansionReplayMismatchError,
 )
-from cora.operation.errors import UnauthorizedError
+from cora.operation.errors import (
+    AssetNotPseudoAxisError,
+    PartitionRuleNotFoundError,
+    PseudoAxisConstituentDispatchError,
+    PseudoAxisConstituentNotFoundError,
+    PseudoAxisConstituentUnauthorizedError,
+    PseudoAxisEvaluationFailedError,
+    PseudoAxisSingularityExceededError,
+    UnauthorizedError,
+)
 from cora.operation.features import (
     abort_procedure,
     append_procedure_steps,
@@ -169,10 +178,33 @@ async def _handle_internal_server_error(request: Request, exc: Exception) -> JSO
     Distinct from operator error: the operator's request is well-formed;
     the server-side bug means re-trying with the same payload will
     likely fail the same way. Mapped to HTTP 500.
+
+    Also covers `PseudoAxisEvaluationFailedError`: the partition-rule
+    math kernel produced a non-finite result, a NaN, or an unsupported
+    rule variant. Operator command shape was valid; the server-side
+    failure is in the evaluator. Per [[project-pseudoaxis-design]] v3
+    HTTP status map: 500.
     """
     _ = request
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": str(exc)},
+    )
+
+
+async def _handle_bad_gateway(request: Request, exc: Exception) -> JSONResponse:
+    """Shared 502 handler for downstream substrate-dispatch failures.
+
+    Covers `PseudoAxisConstituentDispatchError`: a constituent
+    ControlPort write rejected the resolved setpoint mid-dispatch.
+    Operator request was well-formed and the evaluator's math
+    succeeded; the failure is in the downstream substrate (network,
+    IOC unreachable, write rejected by hardware). Per
+    [[project-pseudoaxis-design]] v3 HTTP status map: 502.
+    """
+    _ = request
+    return JSONResponse(
+        status_code=status.HTTP_502_BAD_GATEWAY,
         content={"detail": str(exc)},
     )
 
@@ -231,6 +263,14 @@ def register_operation_routes(app: FastAPI) -> None:
         # cross-BC Supply pre-flight gate (Phase-of-Run only).
         ProcedureRequiresAvailableSupplyError,
         ProcedureSupplyCoverageMismatchError,
+        # PseudoAxis pre-Conductor expansion ([[project-pseudoaxis-design]]
+        # v3): the routing layer dispatched a virtual-axis setpoint
+        # into the evaluator for an Asset whose Family is not PseudoAxis
+        # (routing bug surfaced as 409) OR the PseudoAxis Asset has no
+        # partition rule set (operator-recoverable: set the rule via
+        # `update_asset_partition_rule` then retry).
+        AssetNotPseudoAxisError,
+        PartitionRuleNotFoundError,
     ):
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)
     for unprocessable_cls in (
@@ -240,6 +280,15 @@ def register_operation_routes(app: FastAPI) -> None:
         RecipeBindingsStaleAgainstCurrentCapabilityError,
         InvalidRecipeBindingsError,
         RecipeExpansionOverflowError,
+        # PseudoAxis pre-Conductor expansion ([[project-pseudoaxis-design]]
+        # v3): evaluator-input shape failures the operator can correct.
+        # ConstituentNotFound = the partition rule references a constituent
+        # Asset the Equipment BC cannot resolve. SingularityExceeded =
+        # SolverReference rule's post-solve residual exceeded the declared
+        # singularity_threshold (the requested pose is mathematically
+        # singular for the configured solver).
+        PseudoAxisConstituentNotFoundError,
+        PseudoAxisSingularityExceededError,
     ):
         app.add_exception_handler(unprocessable_cls, _handle_unprocessable)
     # Server-side determinism bugs / data corruption: HTTP 500. Distinct
@@ -259,8 +308,26 @@ def register_operation_routes(app: FastAPI) -> None:
         RecipeExpansionPortVersionMismatchError,
         RecipeExpansionRecordNotFoundError,
         RecipeExpansionReplayMismatchError,
+        # PseudoAxis pre-Conductor expansion ([[project-pseudoaxis-design]]
+        # v3): the partition-rule math kernel returned a non-finite result,
+        # rejected an unsupported AggregatorKind / PartitionKind variant,
+        # or refused a LookupTable for which the kernel is not yet wired.
+        # The operator command was well-formed; re-trying the same payload
+        # will likely fail the same way. 500.
+        PseudoAxisEvaluationFailedError,
     ):
         app.add_exception_handler(internal_cls, _handle_internal_server_error)
+    # PseudoAxis constituent-dispatch substrate failures land as 502:
+    # the upstream evaluator succeeded but a downstream ControlPort write
+    # to one of the resolved constituents failed mid-dispatch (substrate
+    # rejection, network drop, IOC unreachable). Distinct from 500
+    # because the failure is in the substrate, not the server.
+    app.add_exception_handler(PseudoAxisConstituentDispatchError, _handle_bad_gateway)
+    # PseudoAxis constituent-Surface authorization failures land as 403:
+    # the pre-dispatch authz sweep rejected the principal's permission
+    # against one of the constituent Assets' Surface. Pre-flight, NOT
+    # mid-dispatch; the whole command is rejected at acceptance time.
+    app.add_exception_handler(PseudoAxisConstituentUnauthorizedError, _handle_unauthorized)
     # NOT registered here: RecipeVersionNotFoundError (Recipe BC owns;
     # raised from conduct_procedure handler via load_recipe_at_version
     # but HTTP mapping lives in recipe/routes.py per the same cross-BC

@@ -109,10 +109,56 @@ class FixtureNotFoundError(Exception):
         self.fixture_id = fixture_id
 
 
+class FixturePersistentIdAlreadyAssignedError(Exception):
+    """Attempted to assign a persistent_id to a Fixture that already carries one.
+
+    Set-once at the aggregate level per PIDINST v1.0 F3.3 Findable
+    immutability: once `Fixture.persistent_id` is set, no further
+    FixturePersistentIdAssigned event can land. Both the same-value and
+    different-value retry shapes collapse here; the diagnostic fields
+    carry the current and attempted PersistentIdentifier so operators
+    see which assign collided. Mirrors
+    `AssetPersistentIdAlreadyAssignedError` on the sibling Asset
+    aggregate.
+    """
+
+    def __init__(
+        self,
+        fixture_id: UUID,
+        *,
+        current: "PersistentIdentifier",
+        attempted: "PersistentIdentifier",
+    ) -> None:
+        super().__init__(
+            f"Fixture {fixture_id} already has persistent identifier "
+            f"{current.scheme.value}={current.value!r}; "
+            f"attempted to assign {attempted.scheme.value}={attempted.value!r}; "
+            "persistent_id is set-once"
+        )
+        self.fixture_id = fixture_id
+        self.current = current
+        self.attempted = attempted
+
+
+class MalformedFixturePersistentIdentifierError(Exception):
+    """A stored FixturePersistentIdAssigned payload failed deserialization.
+
+    Wraps any underlying `ValueError` raised by
+    `PersistentIdentifierScheme(...)` or `PersistentIdentifier(...)` at
+    `from_stored` time, per the [[project-from-stored-wrap-convention]]
+    precedent (mirrors `MalformedPersistentIdentifierError` on the
+    sibling Asset aggregate). The evolver itself never raises; it
+    trusts that `from_stored` already wrapped any malformed payload as
+    this error class.
+    """
+
+
 __all__ = [
     "Fixture",
     "FixtureAlreadyExistsError",
     "FixtureNotFoundError",
+    "FixturePersistentIdAlreadyAssignedError",
+    "MalformedFixturePersistentIdentifierError",
     "PersistentIdentifier",
     "SlotAssetBinding",
 ]

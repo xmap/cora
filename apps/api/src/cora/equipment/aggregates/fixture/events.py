@@ -25,7 +25,11 @@ from datetime import datetime
 from typing import Any, assert_never
 from uuid import UUID
 
-from cora.equipment.aggregates.fixture.state import SlotAssetBinding
+from cora.equipment.aggregates.asset import PersistentIdentifierScheme
+from cora.equipment.aggregates.fixture.state import (
+    MalformedFixturePersistentIdentifierError,
+    SlotAssetBinding,
+)
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 
@@ -63,7 +67,32 @@ class FixtureRegistered:
     occurred_at: datetime
 
 
-FixtureEvent = FixtureRegistered
+@dataclass(frozen=True)
+class FixturePersistentIdAssigned:
+    """A persistent identifier (PIDINST v1.0 Property 1) was assigned to a Fixture.
+
+    Single-assign event. Set-once at the aggregate level: the
+    decider's `FixturePersistentIdAlreadyAssignedError` enforces "must
+    currently be absent" at command time, so the stream can contain
+    AT MOST ONE `FixturePersistentIdAssigned` event per Fixture.
+
+    The full `PersistentIdentifier` VO (scheme + value) travels in the
+    payload as two primitives, mirroring `AssetPersistentIdAssigned`:
+    scheme is the StrEnum value, value is the trimmed string. This
+    lets `from_stored` rebuild the VO without reading prior state.
+
+    No `withdrawn_at` / `withdrawal_reason` on this event: this slice does
+    not model withdrawal. A future slice owns the withdrawal sibling
+    event when operator demand fires.
+    """
+
+    fixture_id: UUID
+    persistent_id_scheme: str
+    persistent_id_value: str
+    occurred_at: datetime
+
+
+FixtureEvent = FixtureRegistered | FixturePersistentIdAssigned
 
 
 def event_type_name(event: FixtureEvent) -> str:
@@ -95,6 +124,18 @@ def to_payload(event: FixtureEvent) -> dict[str, Any]:
                 "parameter_overrides": parameter_overrides,
                 "occurred_at": occurred_at.isoformat(),
             }
+        case FixturePersistentIdAssigned(
+            fixture_id=fixture_id,
+            persistent_id_scheme=scheme,
+            persistent_id_value=value,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "fixture_id": str(fixture_id),
+                "persistent_id_scheme": scheme,
+                "persistent_id_value": value,
+                "occurred_at": occurred_at.isoformat(),
+            }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 
@@ -119,6 +160,27 @@ def from_stored(stored: StoredEvent) -> FixtureEvent:
                 )
 
             return deserialize_or_raise("FixtureRegistered", _build)
+        case "FixturePersistentIdAssigned":
+
+            def _build_persistent_id_assigned() -> FixturePersistentIdAssigned:
+                scheme = PersistentIdentifierScheme(payload["persistent_id_scheme"])
+                value = payload["persistent_id_value"]
+                if not isinstance(value, str) or not value.strip():
+                    raise MalformedFixturePersistentIdentifierError(
+                        f"persistent_id_value must be a non-empty string (got: {value!r})"
+                    )
+                return FixturePersistentIdAssigned(
+                    fixture_id=UUID(payload["fixture_id"]),
+                    persistent_id_scheme=scheme.value,
+                    persistent_id_value=value,
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                )
+
+            return deserialize_or_raise(
+                "FixturePersistentIdAssigned",
+                _build_persistent_id_assigned,
+                extra=(ValueError, MalformedFixturePersistentIdentifierError),
+            )
         case _:
             msg = f"Unknown FixtureEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -126,6 +188,7 @@ def from_stored(stored: StoredEvent) -> FixtureEvent:
 
 __all__ = [
     "FixtureEvent",
+    "FixturePersistentIdAssigned",
     "FixtureRegistered",
     "event_type_name",
     "from_stored",

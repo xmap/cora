@@ -61,6 +61,11 @@ from typing import Any, assert_never
 from uuid import UUID
 
 from cora.equipment.aggregates._drawing import Drawing, DrawingSystem
+from cora.equipment.aggregates._partition_rule import (
+    PartitionRule,
+    partition_rule_from_payload,
+    partition_rule_to_payload,
+)
 from cora.equipment.aggregates.asset.state import (
     AlternateIdentifier,
     AlternateIdentifierKind,
@@ -486,6 +491,36 @@ class AssetSettingsUpdated:
 
 
 @dataclass(frozen=True)
+class AssetPartitionRuleUpdated:
+    """A PseudoAxis Asset's partition rule was set, changed, or cleared
+    via the update_asset_partition_rule slice.
+
+    Single event covers genesis (None -> rule), mutation (rule -> rule'),
+    and removal (rule -> None). Mirrors the AssetSettingsUpdated precedent
+    (one event covers set + update + clear).
+
+    Payload `partition_rule` is None when the operator cleared the rule;
+    otherwise it is the serialized typed-VO with the `kind` discriminator
+    plus per-kind fields. The discriminated union codec lives at
+    `cora.equipment.aggregates._partition_rule.partition_rule_to_payload`
+    and `partition_rule_from_payload`; from_stored re-runs the per-shape
+    `__post_init__` validators, so a malformed event payload fails loud
+    rather than folding into invalid state.
+
+    Genesis detection (was-the-prior-rule-None) is reconstructable from
+    the event stream by replay: the first AssetPartitionRuleUpdated
+    payload with non-None partition_rule on a stream is the genesis.
+    No separate AssetPartitionRuleSet event ships (matches
+    AssetSettingsUpdated precedent; rejected as overspecification in
+    the round-2 gate review).
+    """
+
+    asset_id: UUID
+    partition_rule: PartitionRule | None
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class AssetRelocated:
     """An asset's parent in the hierarchy tree changed.
 
@@ -556,6 +591,7 @@ AssetEvent = (
     | AssetFaulted
     | AssetRestored
     | AssetSettingsUpdated
+    | AssetPartitionRuleUpdated
     | AssetPortAdded
     | AssetPortRemoved
     | AssetAlternateIdentifierAdded
@@ -707,6 +743,20 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
             return {
                 "asset_id": str(asset_id),
                 "settings": settings,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case AssetPartitionRuleUpdated(
+            asset_id=asset_id,
+            partition_rule=partition_rule,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "asset_id": str(asset_id),
+                "partition_rule": (
+                    partition_rule_to_payload(partition_rule)
+                    if partition_rule is not None
+                    else None
+                ),
                 "occurred_at": occurred_at.isoformat(),
             }
         case AssetPortAdded(
@@ -960,6 +1010,19 @@ def from_stored(stored: StoredEvent) -> AssetEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
+        case "AssetPartitionRuleUpdated":
+            return deserialize_or_raise(
+                "AssetPartitionRuleUpdated",
+                lambda: AssetPartitionRuleUpdated(
+                    asset_id=UUID(payload["asset_id"]),
+                    partition_rule=(
+                        partition_rule_from_payload(payload["partition_rule"])
+                        if payload.get("partition_rule") is not None
+                        else None
+                    ),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
         case "AssetPortAdded":
             return deserialize_or_raise(
                 "AssetPortAdded",
@@ -1090,6 +1153,7 @@ __all__ = [
     "AssetMaintenanceExited",
     "AssetOwnerAdded",
     "AssetOwnerRemoved",
+    "AssetPartitionRuleUpdated",
     "AssetPersistentIdAssigned",
     "AssetPortAdded",
     "AssetPortRemoved",

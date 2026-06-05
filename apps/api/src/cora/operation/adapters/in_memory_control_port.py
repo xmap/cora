@@ -71,6 +71,8 @@ import asyncio
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from cora.infrastructure.logging import get_logger
+from cora.operation._control_dispatch_context import get_dispatch_correlation_id
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     Reading,
@@ -79,6 +81,12 @@ from cora.operation.ports.control_port import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
+
+
+_log = get_logger(__name__)
+_DISPATCH_EVENT = "controlport.dispatch"
+_DISPATCH_COMPLETED_EVENT = "controlport.dispatch.completed"
+_DISPATCH_FAILED_EVENT = "controlport.dispatch.failed"
 
 
 class _DisconnectSentinel:
@@ -164,13 +172,36 @@ class InMemoryControlPort:
         timeout_s: float = 30.0,
     ) -> None:
         _ = (wait, timeout_s)
+        correlation_id = get_dispatch_correlation_id()
+        _log.info(
+            _DISPATCH_EVENT,
+            address=address,
+            operation="write",
+            correlation_id=str(correlation_id) if correlation_id is not None else None,
+            status="started",
+        )
         if address not in self._connected:
+            _log.info(
+                _DISPATCH_FAILED_EVENT,
+                address=address,
+                operation="write",
+                correlation_id=str(correlation_id) if correlation_id is not None else None,
+                status="failed",
+                error_class=ControlNotConnectedError.__name__,
+            )
             raise ControlNotConnectedError(address)
         kind: ReadingKind = "Array" if isinstance(value, tuple) else "Scalar"
         reading = Reading(value=value, kind=kind, quality="Good", sampled_at=self._now())
         self._values[address] = reading
         for queue in self._subscribers.get(address, []):
             queue.put_nowait(reading)
+        _log.info(
+            _DISPATCH_COMPLETED_EVENT,
+            address=address,
+            operation="write",
+            correlation_id=str(correlation_id) if correlation_id is not None else None,
+            status="completed",
+        )
 
     def subscribe(self, address: str) -> AsyncGenerator[Reading]:
         """Return type narrows the Protocol's `AsyncIterator` to `AsyncGenerator`.

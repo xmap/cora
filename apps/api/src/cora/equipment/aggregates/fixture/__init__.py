@@ -12,6 +12,7 @@ See `project_assembly_aggregate_design` for the locked design memo.
 
 from cora.equipment.aggregates.fixture.events import (
     FixtureEvent,
+    FixturePersistentIdAssigned,
     FixtureRegistered,
     event_type_name,
     from_stored,
@@ -23,6 +24,8 @@ from cora.equipment.aggregates.fixture.state import (
     Fixture,
     FixtureAlreadyExistsError,
     FixtureNotFoundError,
+    FixturePersistentIdAlreadyAssignedError,
+    MalformedFixturePersistentIdentifierError,
     PersistentIdentifier,
     SlotAssetBinding,
 )
@@ -32,7 +35,10 @@ __all__ = [
     "FixtureAlreadyExistsError",
     "FixtureEvent",
     "FixtureNotFoundError",
+    "FixturePersistentIdAlreadyAssignedError",
+    "FixturePersistentIdAssigned",
     "FixtureRegistered",
+    "MalformedFixturePersistentIdentifierError",
     "PersistentIdentifier",
     "SlotAssetBinding",
     "event_type_name",

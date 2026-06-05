@@ -24,6 +24,9 @@ from cora.equipment.features.add_model_family import tool as add_model_family_to
 from cora.equipment.features.assign_asset_persistent_id import (
     tool as assign_asset_persistent_id_tool,
 )
+from cora.equipment.features.assign_fixture_persistent_id import (
+    tool as assign_fixture_persistent_id_tool,
+)
 from cora.equipment.features.attach_asset_to_fixture import tool as attach_asset_to_fixture_tool
 from cora.equipment.features.decommission_asset import tool as decommission_asset_tool
 from cora.equipment.features.decommission_frame import tool as decommission_frame_tool
@@ -74,6 +77,9 @@ from cora.equipment.features.remove_asset_port import tool as remove_asset_port_
 from cora.equipment.features.remove_model_family import tool as remove_model_family_tool
 from cora.equipment.features.restore_asset import tool as restore_asset_tool
 from cora.equipment.features.uninstall_asset import tool as uninstall_asset_tool
+from cora.equipment.features.update_asset_partition_rule import (
+    tool as update_asset_partition_rule_tool,
+)
 from cora.equipment.features.update_asset_settings import (
     tool as update_asset_settings_tool,
 )
@@ -193,6 +199,10 @@ def register_equipment_tools(
         mcp,
         get_handler=lambda: get_handlers().update_asset_settings,
     )
+    update_asset_partition_rule_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().update_asset_partition_rule,
+    )
     add_asset_port_tool.register(
         mcp,
         get_handler=lambda: get_handlers().add_asset_port,
@@ -294,6 +304,10 @@ def register_equipment_tools(
     detach_asset_from_fixture_tool.register(
         mcp,
         get_handler=lambda: get_handlers().detach_asset_from_fixture,
+    )
+    assign_fixture_persistent_id_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().assign_fixture_persistent_id,
     )
     get_fixture_tool.register(
         mcp,

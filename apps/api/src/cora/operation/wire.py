@@ -138,6 +138,16 @@ def wire_operation(deps: Kernel) -> OperationHandlers:
     # 2-arg pure substitution; future deployment-specific expanders
     # implement the same Protocol and bump `version` to invalidate
     # cached expansions on substantive semantic changes.
+    # The PseudoAxis-aware widening ([[project-pseudoaxis-design]] v3)
+    # threads a second method `expand_pseudoaxis` onto the port; the
+    # default in-memory adapter pins `version="v2-pseudoaxis-aware"`
+    # and ships with empty `pseudoaxis_family_ids` + the wiring-
+    # deferred `constituent_resolver`. The canonical PseudoAxis Family
+    # id + Plan.wiring-backed constituent resolver are deferred to a
+    # follow-up slice; until then any `pseudoaxis://` SetpointStep at
+    # conduct time is rejected with `PartitionRuleNotFoundError`
+    # (HTTP 409) so the routing-layer status mapping surfaces the
+    # deferral cleanly.
     recipe_expansion_port = InMemoryRecipeExpansionPort()
     start_handler = with_tracing(
         start_procedure.bind(deps),

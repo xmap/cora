@@ -109,6 +109,8 @@ from typing import TYPE_CHECKING, Any
 
 from p4p.client.asyncio import Context, Disconnected, RemoteError
 
+from cora.infrastructure.logging import get_logger
+from cora.operation._control_dispatch_context import get_dispatch_correlation_id
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlTimeoutError,
@@ -121,6 +123,12 @@ from cora.operation.ports.control_port import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+
+
+_log = get_logger(__name__)
+_DISPATCH_EVENT = "controlport.dispatch"
+_DISPATCH_COMPLETED_EVENT = "controlport.dispatch.completed"
+_DISPATCH_FAILED_EVENT = "controlport.dispatch.failed"
 
 
 _DEFAULT_TIMEOUT_S = 5.0
@@ -285,6 +293,14 @@ class EpicsPvaControlPort:
         wait: bool = True,
         timeout_s: float = 30.0,
     ) -> None:
+        correlation_id = get_dispatch_correlation_id()
+        _log.info(
+            _DISPATCH_EVENT,
+            address=address,
+            operation="write",
+            correlation_id=str(correlation_id) if correlation_id is not None else None,
+            status="started",
+        )
         ctx = self._ensure_context()
         try:
             await asyncio.wait_for(
@@ -292,15 +308,54 @@ class EpicsPvaControlPort:
                 timeout=timeout_s,
             )
         except TimeoutError as exc:
+            _log.info(
+                _DISPATCH_FAILED_EVENT,
+                address=address,
+                operation="write",
+                correlation_id=str(correlation_id) if correlation_id is not None else None,
+                status="failed",
+                error_class=ControlTimeoutError.__name__,
+            )
             raise ControlTimeoutError(address, timeout_s) from exc
         except Disconnected as exc:
+            _log.info(
+                _DISPATCH_FAILED_EVENT,
+                address=address,
+                operation="write",
+                correlation_id=str(correlation_id) if correlation_id is not None else None,
+                status="failed",
+                error_class=ControlNotConnectedError.__name__,
+            )
             raise ControlNotConnectedError(address) from exc
         except RemoteError as exc:
+            _log.info(
+                _DISPATCH_FAILED_EVENT,
+                address=address,
+                operation="write",
+                correlation_id=str(correlation_id) if correlation_id is not None else None,
+                status="failed",
+                error_class=ControlWriteRejectedError.__name__,
+            )
             raise ControlWriteRejectedError(address, str(exc)) from exc
         except ValueError as exc:
+            _log.info(
+                _DISPATCH_FAILED_EVENT,
+                address=address,
+                operation="write",
+                correlation_id=str(correlation_id) if correlation_id is not None else None,
+                status="failed",
+                error_class=ControlValueCoercionError.__name__,
+            )
             raise ControlValueCoercionError(
                 address, raw_type=type(value).__name__, target_kind="pva put"
             ) from exc
+        _log.info(
+            _DISPATCH_COMPLETED_EVENT,
+            address=address,
+            operation="write",
+            correlation_id=str(correlation_id) if correlation_id is not None else None,
+            status="completed",
+        )
 
     def subscribe(self, address: str) -> AsyncGenerator[Reading]:
         """Return type narrows the Protocol's `AsyncIterator` to `AsyncGenerator`.

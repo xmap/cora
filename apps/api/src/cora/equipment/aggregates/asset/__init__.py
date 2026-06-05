@@ -21,6 +21,7 @@ from cora.equipment.aggregates.asset.events import (
     AssetMaintenanceExited,
     AssetOwnerAdded,
     AssetOwnerRemoved,
+    AssetPartitionRuleUpdated,
     AssetPersistentIdAssigned,
     AssetPortAdded,
     AssetPortRemoved,
@@ -33,7 +34,7 @@ from cora.equipment.aggregates.asset.events import (
     to_payload,
 )
 from cora.equipment.aggregates.asset.evolver import evolve, fold
-from cora.equipment.aggregates.asset.read import load_asset
+from cora.equipment.aggregates.asset.read import load_asset, load_partition_rule
 from cora.equipment.aggregates.asset.state import (
     ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
     ASSET_NAME_MAX_LENGTH,
@@ -64,6 +65,7 @@ from cora.equipment.aggregates.asset.state import (
     AssetCannotRelocateError,
     AssetCannotRemoveFamilyError,
     AssetCannotRemovePortError,
+    AssetCannotUpdatePartitionRuleError,
     AssetCondition,
     AssetHasFixtureBindingError,
     AssetIsInstalledError,
@@ -136,6 +138,7 @@ __all__ = [
     "AssetCannotRelocateError",
     "AssetCannotRemoveFamilyError",
     "AssetCannotRemovePortError",
+    "AssetCannotUpdatePartitionRuleError",
     "AssetCondition",
     "AssetDecommissioned",
     "AssetDegraded",
@@ -164,6 +167,7 @@ __all__ = [
     "AssetOwnerName",
     "AssetOwnerNotPresentError",
     "AssetOwnerRemoved",
+    "AssetPartitionRuleUpdated",
     "AssetPersistentIdAlreadyAssignedError",
     "AssetPersistentIdAssigned",
     "AssetPersistentIdAssignmentForbiddenError",
@@ -195,5 +199,6 @@ __all__ = [
     "fold",
     "from_stored",
     "load_asset",
+    "load_partition_rule",
     "to_payload",
 ]

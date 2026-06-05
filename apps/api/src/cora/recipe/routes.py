@@ -69,6 +69,9 @@ from cora.recipe.aggregates.plan import (
     PlanCannotVersionError,
     PlanFamiliesNotSatisfiedError,
     PlanNotFoundError,
+    PlanPseudoAxisArityMismatchError,
+    PlanPseudoAxisFanoutSignalTypeMismatchError,
+    PlanPseudoAxisOutputCardinalityError,
     PlanWireAlreadyExistsError,
     PlanWireAssetNotBoundError,
     PlanWireDirectionMismatchError,
@@ -319,6 +322,13 @@ def register_recipe_routes(app: FastAPI) -> None:
         PlanWireDirectionMismatchError,
         PlanWireSignalTypeMismatchError,
         PlanWireSelfLoopError,
+        # PseudoAxis fan-out guards on Plan.wires (Slice 3): the
+        # candidate wire would leave a PseudoAxis Asset structurally
+        # inconsistent with its partition rule. All 409 (state-conflict
+        # family; consistent with the structural guards above).
+        PlanPseudoAxisOutputCardinalityError,
+        PlanPseudoAxisArityMismatchError,
+        PlanPseudoAxisFanoutSignalTypeMismatchError,
         # Recipe transition guards.
         RecipeCannotVersionError,
         RecipeCannotDeprecateError,

@@ -86,6 +86,7 @@ from typing import Any
 from uuid import UUID
 
 from cora.equipment.aggregates._drawing import Drawing
+from cora.equipment.aggregates._partition_rule import PartitionRule
 from cora.infrastructure.bounded_text import validate_bounded_text
 
 ASSET_NAME_MAX_LENGTH = 200
@@ -1207,6 +1208,23 @@ class AssetAttachedToDifferentFixtureError(Exception):
         self.current_fixture_id = current_fixture_id
 
 
+class AssetCannotUpdatePartitionRuleError(Exception):
+    """Attempted to update the partition rule on an Asset that is not
+    of Family PseudoAxis OR is Decommissioned.
+
+    Partition rules are the equipment-property facet that decomposes a
+    virtual-axis command into constituent setpoints; only PseudoAxis
+    Assets carry them. Decommissioned Assets reject all mutations,
+    including rule updates, to preserve the audit trail of the
+    final-state rule that was in effect at decommissioning.
+    """
+
+    def __init__(self, asset_id: UUID, reason: str) -> None:
+        super().__init__(f"Asset {asset_id} cannot update partition rule: {reason}")
+        self.asset_id = asset_id
+        self.reason = reason
+
+
 @dataclass(frozen=True)
 class AssetName:
     """Display name for an asset. Trimmed; 1-200 chars.
@@ -1340,6 +1358,20 @@ class Asset:
     # Same parametrized-callable trick as family_ids.
     ports: frozenset[AssetPort] = field(default_factory=frozenset[AssetPort])
     drawing: Drawing | None = None
+    # `partition_rule` is the typed VO that decomposes a virtual-axis
+    # command into setpoints on N constituent motor axes. Only Assets
+    # of Family `PseudoAxis` carry a non-None partition_rule; other
+    # Assets keep the field at None. Closed discriminated union of 5
+    # frozen-dataclass shapes (Affine, Aggregation, LookupTable,
+    # CompositePartition, SolverReference) defined at
+    # `cora.equipment.aggregates._partition_rule`. The rule is set,
+    # changed, or cleared via `update_asset_partition_rule`; runtime
+    # evaluation (Operation BC) reads this state on every virtual-axis
+    # command. Defaults to None for additive-state forward-compat;
+    # legacy AssetRegistered streams without the field fold cleanly.
+    # Equipment-property semantics: distinct from `settings` (which is
+    # operationally-mutable). See [[project-pseudoaxis-design]] v3.
+    partition_rule: PartitionRule | None = None
     model_id: UUID | None = None
     # frozenset[AlternateIdentifier] for PIDINST v1.0 Property 13
     # alternate-identifier tuples. Same parametrized-callable trick

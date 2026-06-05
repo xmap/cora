@@ -554,7 +554,7 @@ async def _seed_recipe_driven_procedure(
     *,
     bindings: dict[str, object] | None = None,
     recipe_steps: tuple[RecipeSetpointStep, ...] | None = None,
-    expansion_port_version: str = "v1",
+    expansion_port_version: str = "v2-pseudoaxis-aware",
     bindings_hash_override: str | None = None,
     steps_hash_override: str | None = None,
     omit_recipe_expansion_recorded: bool = False,
@@ -746,15 +746,17 @@ async def test_recipe_driven_handler_with_missing_expansion_record_raises_not_fo
 
 @pytest.mark.unit
 async def test_recipe_driven_handler_with_port_version_mismatch_raises_port_error() -> None:
-    """Dataclass `version` field supports `InMemoryRecipeExpansionPort(version='v2')`
-    so we can stage a v2 port against a v1-pinned event without inventing a second adapter."""
+    """Dataclass `version` field supports `InMemoryRecipeExpansionPort(version='v3')`
+    so we can stage a drifted port against a `v2-pseudoaxis-aware`-pinned event
+    without inventing a second adapter."""
     procedure_id = uuid4()
     recipe_id = uuid4()
     store = InMemoryEventStore()
-    await _seed_recipe_driven_procedure(store, procedure_id, recipe_id)  # pinned at v1
+    # Pinned at the current default version; the port below reports v3.
+    await _seed_recipe_driven_procedure(store, procedure_id, recipe_id)
     conductor = _FakeConductor(result=ConductorResult(procedure_id=procedure_id, completed_count=0))
     handler = _bind_handler(
-        store, conductor, expansion_port=InMemoryRecipeExpansionPort(version="v2")
+        store, conductor, expansion_port=InMemoryRecipeExpansionPort(version="v3")
     )
     with pytest.raises(RecipeExpansionPortVersionMismatchError) as exc:
         await handler(
@@ -763,8 +765,8 @@ async def test_recipe_driven_handler_with_port_version_mismatch_raises_port_erro
             correlation_id=uuid4(),
         )
     assert exc.value.procedure_id == procedure_id
-    assert exc.value.recorded_version == "v1"
-    assert exc.value.current_version == "v2"
+    assert exc.value.recorded_version == "v2-pseudoaxis-aware"
+    assert exc.value.current_version == "v3"
 
 
 @pytest.mark.unit

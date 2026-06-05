@@ -83,6 +83,18 @@ SET fixture_id = NULL, updated_at = now()
 WHERE asset_id = $1
 """
 
+# AssetPartitionRuleUpdated writes the PartitionRuleKind discriminator
+# into the partition_rule_kind column. The same statement handles all
+# three transitions (set, change, clear): $2 = the kind string for
+# set/change, or NULL for clear. The CHECK constraint on the column
+# (added in 20260605160000_add_asset_summary_partition_rule_kind.sql)
+# enforces the closed PartitionRuleKind value set.
+_UPDATE_PARTITION_RULE_KIND_SQL = """
+UPDATE proj_equipment_asset_summary
+SET partition_rule_kind = $2, updated_at = now()
+WHERE asset_id = $1
+"""
+
 _UPDATE_LIFECYCLE_SQL = """
 UPDATE proj_equipment_asset_summary
 SET lifecycle = $2, updated_at = now()
@@ -229,6 +241,7 @@ class AssetSummaryProjection:
             "AssetPersistentIdAssigned",
             "AssetAttachedToFixture",
             "AssetDetachedFromFixture",
+            "AssetPartitionRuleUpdated",
         }
     )
 
@@ -336,6 +349,19 @@ class AssetSummaryProjection:
                 await conn.execute(
                     _CLEAR_FIXTURE_ID_SQL,
                     UUID(event.payload["asset_id"]),
+                )
+            case "AssetPartitionRuleUpdated":
+                # partition_rule payload is None when the rule was cleared;
+                # otherwise it is the serialized typed-VO dict carrying the
+                # `kind` discriminator at the top level. Extract the kind
+                # string for the projection column; the CHECK constraint
+                # on the column enforces the closed PartitionRuleKind set.
+                rule = event.payload.get("partition_rule")
+                kind = rule.get("kind") if isinstance(rule, dict) else None
+                await conn.execute(
+                    _UPDATE_PARTITION_RULE_KIND_SQL,
+                    UUID(event.payload["asset_id"]),
+                    kind,
                 )
             case _:
                 pass

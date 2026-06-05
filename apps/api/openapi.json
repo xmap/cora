@@ -394,6 +394,39 @@
         "title": "AdjustRunRequest",
         "type": "object"
       },
+      "AffineBody": {
+        "description": "Pydantic model for Affine partition rule.",
+        "properties": {
+          "gain": {
+            "default": 1.0,
+            "title": "Gain",
+            "type": "number"
+          },
+          "kind": {
+            "const": "Affine",
+            "default": "Affine",
+            "title": "Kind",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0.0,
+            "title": "Offset",
+            "type": "number"
+          },
+          "unit_in": {
+            "default": "",
+            "title": "Unit In",
+            "type": "string"
+          },
+          "unit_out": {
+            "default": "",
+            "title": "Unit Out",
+            "type": "string"
+          }
+        },
+        "title": "AffineBody",
+        "type": "object"
+      },
       "Affordance": {
         "description": "Device-level operational primitive. Closed v1 enum (28 items, 2 patterns).\n\nValues are PascalCase strings so they serialize naturally as JSON\ndiscriminators without translation.\n\nPattern A, Operational affordances (`-able` / `-ible` / `-ing`):\n    \"device supports doing X\" (action) or \"device performs X\"\n    (role/flow). Set-membership claim. 27 items.\n\nPattern C, Lifecycle affordances (noun):\n    \"device has lifecycle property X\". 1 item.",
         "enum": [
@@ -565,6 +598,39 @@
           "Deprecated"
         ],
         "title": "AgentStatus",
+        "type": "string"
+      },
+      "AggregationBody": {
+        "description": "Pydantic model for Aggregation partition rule.",
+        "properties": {
+          "aggregator_kind": {
+            "$ref": "#/components/schemas/AggregatorKind",
+            "default": "Sum"
+          },
+          "constituent_count": {
+            "default": 1,
+            "title": "Constituent Count",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "Aggregation",
+            "default": "Aggregation",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "title": "AggregationBody",
+        "type": "object"
+      },
+      "AggregatorKind": {
+        "description": "How an Aggregation shape combines N constituent values into one.\n\nSum: `v = sum(c_i)`. Difference (2-constituent only): `v = c_1 - c_0`.\nMidRange (2-constituent only): `v = (c_0 + c_1) / 2`. Product:\n`v = prod(c_i)`.",
+        "enum": [
+          "Sum",
+          "Difference",
+          "MidRange",
+          "Product"
+        ],
+        "title": "AggregatorKind",
         "type": "string"
       },
       "AlternateIdentifierBody": {
@@ -1418,6 +1484,55 @@
           "value"
         ],
         "title": "AssignAssetPersistentIdResponse",
+        "type": "object"
+      },
+      "AssignFixturePersistentIdRequest": {
+        "description": "Body for `POST /fixtures/{fixture_id}/assign-persistent-identifier`.\n\n`scheme` selects the PID scheme; v1 supports DOI and HANDLE.\n`suffix` is the optional operator-supplied local part; when absent\nthe configured `DoiMinter` adapter auto-generates one. No `value`\nfield per the server-mint posture.",
+        "properties": {
+          "scheme": {
+            "$ref": "#/components/schemas/PersistentIdentifierScheme",
+            "description": "Closed PIDINST Property 1 scheme: DOI or HANDLE."
+          },
+          "suffix": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional operator-supplied local part. When absent, the configured DoiMinter adapter auto-generates the suffix.",
+            "title": "Suffix"
+          }
+        },
+        "required": [
+          "scheme"
+        ],
+        "title": "AssignFixturePersistentIdRequest",
+        "type": "object"
+      },
+      "AssignFixturePersistentIdResponse": {
+        "description": "Response body for `POST /fixtures/{fixture_id}/assign-persistent-identifier`.\n\nEchoes the server-minted `(scheme, value)` pair so the operator\nlearns the assigned identifier without a follow-up GET. Mirrors the\nAsset-tier sibling exactly; the value is server-minted and not\nderivable from the request alone.",
+        "properties": {
+          "scheme": {
+            "description": "Assigned PIDINST Property 1 scheme value (DOI or Handle).",
+            "title": "Scheme",
+            "type": "string"
+          },
+          "value": {
+            "description": "Authority-assigned persistent identifier string.",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scheme",
+          "value"
+        ],
+        "title": "AssignFixturePersistentIdResponse",
         "type": "object"
       },
       "AttachAssetToFixtureRequest": {
@@ -3113,6 +3228,49 @@
           }
         },
         "title": "CompleteSealRepublishingBody",
+        "type": "object"
+      },
+      "CompositePartitionBody": {
+        "description": "Pydantic model for CompositePartition rule.",
+        "properties": {
+          "constituent_count": {
+            "default": 2,
+            "title": "Constituent Count",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "CompositePartition",
+            "default": "CompositePartition",
+            "title": "Kind",
+            "type": "string"
+          },
+          "partition_kind": {
+            "$ref": "#/components/schemas/PartitionKind",
+            "default": "ProportionalFill"
+          },
+          "partition_parameters": {
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Partition Parameters",
+            "type": "array"
+          },
+          "readback_aggregator_kind": {
+            "$ref": "#/components/schemas/ReadbackAggregatorKind",
+            "default": "Sum"
+          }
+        },
+        "title": "CompositePartitionBody",
         "type": "object"
       },
       "ConductProcedureRequest": {
@@ -5410,6 +5568,15 @@
         "title": "ExternalRefDTO",
         "type": "object"
       },
+      "ExtrapolationKind": {
+        "description": "How a LookupTable handles inputs outside its tabulated range.\n\nClamp: returns the value at the nearest endpoint. Error: raises\nPseudoAxisEvaluationFailedError at runtime.",
+        "enum": [
+          "Clamp",
+          "Error"
+        ],
+        "title": "ExtrapolationKind",
+        "type": "string"
+      },
       "FamilyListResponse": {
         "description": "Page of families plus opaque next-page cursor.",
         "properties": {
@@ -6152,6 +6319,16 @@
         "title": "InstrumentTypeDTO",
         "type": "object"
       },
+      "InterpolationKind": {
+        "description": "How a LookupTable interpolates between tabulated points.",
+        "enum": [
+          "Linear",
+          "Cubic",
+          "Nearest"
+        ],
+        "title": "InterpolationKind",
+        "type": "string"
+      },
       "ListPermissionsResponse": {
         "description": "Read-side DTO at the API boundary.\n\n`incomplete` is always False at v1, required from day 1 per the\ndesign lock's anti-hook to forward-compat with future ABAC\npolicies that may make enumeration lossy.",
         "properties": {
@@ -6191,6 +6368,60 @@
           "incomplete"
         ],
         "title": "ListPermissionsResponse",
+        "type": "object"
+      },
+      "LookupTableBody": {
+        "description": "Pydantic model for LookupTable partition rule.",
+        "properties": {
+          "calibration_revision_id": {
+            "format": "uuid",
+            "title": "Calibration Revision Id",
+            "type": "string"
+          },
+          "extrapolation_kind": {
+            "$ref": "#/components/schemas/ExtrapolationKind",
+            "default": "Clamp"
+          },
+          "interpolation_kind": {
+            "$ref": "#/components/schemas/InterpolationKind",
+            "default": "Linear"
+          },
+          "invertible": {
+            "default": true,
+            "title": "Invertible",
+            "type": "boolean"
+          },
+          "kind": {
+            "const": "LookupTable",
+            "default": "LookupTable",
+            "title": "Kind",
+            "type": "string"
+          },
+          "readback_aggregator_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadbackAggregatorKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unit_in": {
+            "default": "",
+            "title": "Unit In",
+            "type": "string"
+          },
+          "unit_out": {
+            "default": "",
+            "title": "Unit Out",
+            "type": "string"
+          }
+        },
+        "required": [
+          "calibration_revision_id"
+        ],
+        "title": "LookupTableBody",
         "type": "object"
       },
       "ManufacturerBody": {
@@ -6847,6 +7078,17 @@
         ],
         "title": "OwnerDTO",
         "type": "object"
+      },
+      "PartitionKind": {
+        "description": "How a CompositePartition shape splits an operator-commanded\nvirtual value across N constituents.\n\nCoarseFirstFill: fill from the coarsest constituent first; remaining\nconstituents stay near their default. FineCenteredKeep: keep the\nfinest constituent near its center of travel; let the other\nconstituents pick up coarse offset (the 2-BM sample-stack rule).\nProportionalFill: split proportionally to each constituent's travel\nrange. ConcentricSymmetric: symmetric expansion around a center\n(used for concentric pinhole + iris compositions).",
+        "enum": [
+          "CoarseFirstFill",
+          "FineCenteredKeep",
+          "ProportionalFill",
+          "ConcentricSymmetric"
+        ],
+        "title": "PartitionKind",
+        "type": "string"
       },
       "PermitListResponse": {
         "description": "Page of permits plus opaque next-page cursor.",
@@ -8299,6 +8541,17 @@
           "ReadByABITierMinimum"
         ],
         "title": "ReadScope",
+        "type": "string"
+      },
+      "ReadbackAggregatorKind": {
+        "description": "How a PartitionRule reconstructs the virtual-axis readback value\nfrom constituent readbacks when forward-inverse symmetry is not\navailable (LookupTable non-monotonic, SolverReference declared\nnon-invertible).\n\nIdentity: returns the single constituent's readback (only valid\nwhen there is exactly one constituent). Sum: returns the sum of\nconstituent readbacks. Mean: returns the arithmetic mean. SelectIndex0:\nreturns the first constituent's readback (operator decides the\ncanonical choice when the math admits no clean inverse).",
+        "enum": [
+          "Identity",
+          "Sum",
+          "Mean",
+          "SelectIndex0"
+        ],
+        "title": "ReadbackAggregatorKind",
         "type": "string"
       },
       "ReasoningEntryRequest": {
@@ -11143,6 +11396,71 @@
         "title": "SlotCardinality",
         "type": "string"
       },
+      "SolverReferenceBody": {
+        "description": "Pydantic model for SolverReference partition rule.",
+        "properties": {
+          "invertible": {
+            "default": true,
+            "title": "Invertible",
+            "type": "boolean"
+          },
+          "kind": {
+            "const": "SolverReference",
+            "default": "SolverReference",
+            "title": "Kind",
+            "type": "string"
+          },
+          "readback_aggregator_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadbackAggregatorKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residual_tolerance_limit": {
+            "default": 0.0,
+            "title": "Residual Tolerance Limit",
+            "type": "number"
+          },
+          "singularity_threshold": {
+            "default": 0.0,
+            "title": "Singularity Threshold",
+            "type": "number"
+          },
+          "solver_id": {
+            "title": "Solver Id",
+            "type": "string"
+          },
+          "solver_transport_kind": {
+            "$ref": "#/components/schemas/SolverTransportKind",
+            "default": "SoftIOCRecord"
+          },
+          "solver_version": {
+            "title": "Solver Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "solver_id",
+          "solver_version"
+        ],
+        "title": "SolverReferenceBody",
+        "type": "object"
+      },
+      "SolverTransportKind": {
+        "description": "How a SolverReference reaches its external solver.\n\nSoftIOCRecord: the solver is an EPICS soft-IOC record; the\ninvocation writes setpoints to a calc record and reads results.\nPythonCallable: the solver is a registered Python callable in the\nfacility's solver registry. ControllerAPI: the solver lives in a\nhardware controller exposed via a vendor API. ExternalHTTPService:\nthe solver is a long-running HTTP service registered at facility\nsetup.",
+        "enum": [
+          "SoftIOCRecord",
+          "PythonCallable",
+          "ControllerAPI",
+          "ExternalHTTPService"
+        ],
+        "title": "SolverTransportKind",
+        "type": "string"
+      },
       "SourceAssertedDTO": {
         "description": "Wire shape for an Asserted source (operator-typed value).",
         "properties": {
@@ -12105,6 +12423,51 @@
         ],
         "title": "UnitSystem",
         "type": "string"
+      },
+      "UpdateAssetPartitionRuleRequest": {
+        "description": "Body for `POST /assets/{asset_id}/partition-rule`.\n\n`partition_rule` is a discriminated-union Pydantic model covering\nthe 5 PartitionRule shapes (Affine, Aggregation, LookupTable,\nCompositePartition, SolverReference), or null to clear the rule.\n\nThe route converts the Pydantic model to the frozen-dataclass union\nbefore invoking the handler. Pydantic 422 fires on shape mismatch\n(unknown kind, missing required field for kind, etc.).",
+        "properties": {
+          "partition_rule": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "Affine": "#/components/schemas/AffineBody",
+                    "Aggregation": "#/components/schemas/AggregationBody",
+                    "CompositePartition": "#/components/schemas/CompositePartitionBody",
+                    "LookupTable": "#/components/schemas/LookupTableBody",
+                    "SolverReference": "#/components/schemas/SolverReferenceBody"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AffineBody"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AggregationBody"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LookupTableBody"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CompositePartitionBody"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SolverReferenceBody"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Partition rule as a discriminated union (kind + shape-specific fields), or null to clear the rule. Unknown kind or missing required fields for the kind trigger HTTP 422.",
+            "title": "Partition Rule"
+          }
+        },
+        "title": "UpdateAssetPartitionRuleRequest",
+        "type": "object"
       },
       "UpdateAssetSettingsRequest": {
         "description": "Body for `PATCH /assets/{asset_id}/settings`.\n\n`settings_patch` is a dict applied with RFC 7396 (JSON Merge\nPatch) semantics:\n  - keys with non-null values are set / replaced\n  - keys with null are deleted from settings\n  - absent keys are preserved\n\nThe decider validates the post-merge result against the union\nof the Asset's currently-assigned Capabilities' settings_schemas\n(5g-a). Validation failure surfaces as HTTP 400.",
@@ -16902,6 +17265,118 @@
           }
         },
         "summary": "Get the integration-view bundle for an asset",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/assets/{asset_id}/partition-rule": {
+      "post": {
+        "description": "Update or clear a PseudoAxis asset's partition rule.\n\nPOST is used (not PATCH) because the rule is a complete typed VO\nreplacement, not a merge patch. Null body clears the rule.\nReturns 200 OK with an empty acknowledgment dict.",
+        "operationId": "post_asset_partition_rule_assets__asset_id__partition_rule_post",
+        "parameters": [
+          {
+            "description": "Target asset's id.",
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "description": "Target asset's id.",
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAssetPartitionRuleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Post Asset Partition Rule Assets  Asset Id  Partition Rule Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "PartitionRule validation failed: invalid numeric fields (NaN/Inf), calibration revision not found or retracted, self-reference detected, nesting rule violation, or rule shape constraint violated."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No asset exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Asset is not of Family PseudoAxis or is Decommissioned, OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Request body failed schema validation (unknown partition rule kind, missing required field for kind, malformed UUID, etc.)."
+          }
+        },
+        "summary": "Update or clear a PseudoAxis asset's partition rule",
         "tags": [
           "equipment"
         ]
@@ -25810,6 +26285,123 @@
           }
         },
         "summary": "Get a Fixture by id",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/fixtures/{fixture_id}/assign-persistent-identifier": {
+      "post": {
+        "operationId": "post_fixtures_assign_persistent_identifier_fixtures__fixture_id__assign_persistent_identifier_post",
+        "parameters": [
+          {
+            "description": "Target fixture's id.",
+            "in": "path",
+            "name": "fixture_id",
+            "required": true,
+            "schema": {
+              "description": "Target fixture's id.",
+              "format": "uuid",
+              "title": "Fixture Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignFixturePersistentIdRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignFixturePersistentIdResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "PersistentIdentifier VO validation failed: empty or whitespace-only value, or value over the max-length bound (InvalidPersistentIdentifierValueError)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize policy denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No fixture exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Fixture cannot accept the persistent identifier: the fixture already carries a persistent_id (set-once: FixturePersistentIdAlreadyAssignedError), OR a concurrent write to the same fixture stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation (missing field, malformed UUID, scheme outside the closed enum, suffix length out of bounds at the wire layer)."
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The external mint authority (DataCite or Handle.net) failed to assign a persistent identifier (PersistentIdentifierMintError)."
+          }
+        },
+        "summary": "Assign a PIDINST persistent identifier to an existing Fixture",
         "tags": [
           "equipment"
         ]

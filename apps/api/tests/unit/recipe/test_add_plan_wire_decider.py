@@ -18,6 +18,12 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from cora.equipment.aggregates._partition_rule import (
+    Affine,
+    Aggregation,
+    AggregatorKind,
+    PartitionRule,
+)
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetLevel,
@@ -31,6 +37,9 @@ from cora.recipe.aggregates.plan import (
     Plan,
     PlanName,
     PlanNotFoundError,
+    PlanPseudoAxisArityMismatchError,
+    PlanPseudoAxisFanoutSignalTypeMismatchError,
+    PlanPseudoAxisOutputCardinalityError,
     PlanStatus,
     PlanWireAdded,
     PlanWireAlreadyExistsError,
@@ -52,6 +61,8 @@ def _asset(
     *,
     asset_id: UUID,
     ports: frozenset[AssetPort] = frozenset(),
+    family_ids: frozenset[UUID] = frozenset(),
+    partition_rule: PartitionRule | None = None,
 ) -> Asset:
     return Asset(
         id=asset_id,
@@ -60,6 +71,8 @@ def _asset(
         parent_id=None,
         lifecycle=AssetLifecycle.ACTIVE,
         ports=ports,
+        family_ids=family_ids,
+        partition_rule=partition_rule,
     )
 
 
@@ -584,3 +597,161 @@ def test_decide_allows_wire_in_versioned_or_deprecated_plan() -> None:
             now=_NOW,
         )
         assert len(events) == 1, f"Should accept wire in status={status.value}"
+
+
+@pytest.mark.unit
+def test_decide_raises_pseudoaxis_arity_mismatch_when_wire_count_exceeds_rule() -> None:
+    """PseudoAxis Asset with Affine rule (arity 1) rejects the 2nd incoming wire."""
+    pseudoaxis_family_id = uuid4()
+    src_id_1 = uuid4()
+    src_id_2 = uuid4()
+    tgt_id = uuid4()
+    existing = Wire(
+        source_asset_id=src_id_1,
+        source_port_name="setpoint_out",
+        target_asset_id=tgt_id,
+        target_port_name="constituent_in_a",
+    )
+    state = _plan(
+        asset_ids=frozenset({src_id_1, src_id_2, tgt_id}),
+        wires=frozenset({existing}),
+    )
+    with pytest.raises(PlanPseudoAxisArityMismatchError) as exc_info:
+        add_plan_wire.decide(
+            state=state,
+            command=AddPlanWire(
+                plan_id=state.id,
+                source_asset_id=src_id_2,
+                source_port_name="setpoint_out",
+                target_asset_id=tgt_id,
+                target_port_name="constituent_in_b",
+            ),
+            context=PlanWireContext(
+                assets={
+                    src_id_1: _asset(
+                        asset_id=src_id_1,
+                        ports=_ports(("setpoint_out", PortDirection.OUTPUT, "mm")),
+                    ),
+                    src_id_2: _asset(
+                        asset_id=src_id_2,
+                        ports=_ports(("setpoint_out", PortDirection.OUTPUT, "mm")),
+                    ),
+                    tgt_id: _asset(
+                        asset_id=tgt_id,
+                        ports=_ports(
+                            ("constituent_in_a", PortDirection.INPUT, "mm"),
+                            ("constituent_in_b", PortDirection.INPUT, "mm"),
+                            ("virtual_out", PortDirection.OUTPUT, "mm"),
+                        ),
+                        family_ids=frozenset({pseudoaxis_family_id}),
+                        partition_rule=Affine(gain=1.0, offset=0.0),
+                    ),
+                }
+            ),
+            now=_NOW,
+            pseudoaxis_family_ids=frozenset({pseudoaxis_family_id}),
+        )
+    assert exc_info.value.pseudoaxis_asset_id == tgt_id
+    assert exc_info.value.expected_constituent_count == 1
+    assert exc_info.value.actual_input_wire_count == 2
+
+
+@pytest.mark.unit
+def test_decide_raises_pseudoaxis_fanout_signal_type_mismatch_on_mixed_sources() -> None:
+    """PseudoAxis fan-out rejects when incoming wires carry differing signal_types."""
+    pseudoaxis_family_id = uuid4()
+    src_id_1 = uuid4()
+    src_id_2 = uuid4()
+    tgt_id = uuid4()
+    existing = Wire(
+        source_asset_id=src_id_1,
+        source_port_name="setpoint_out",
+        target_asset_id=tgt_id,
+        target_port_name="constituent_in_a",
+    )
+    state = _plan(
+        asset_ids=frozenset({src_id_1, src_id_2, tgt_id}),
+        wires=frozenset({existing}),
+    )
+    with pytest.raises(PlanPseudoAxisFanoutSignalTypeMismatchError) as exc_info:
+        add_plan_wire.decide(
+            state=state,
+            command=AddPlanWire(
+                plan_id=state.id,
+                source_asset_id=src_id_2,
+                source_port_name="setpoint_out",
+                target_asset_id=tgt_id,
+                target_port_name="constituent_in_b",
+            ),
+            context=PlanWireContext(
+                assets={
+                    src_id_1: _asset(
+                        asset_id=src_id_1,
+                        ports=_ports(("setpoint_out", PortDirection.OUTPUT, "mm")),
+                    ),
+                    src_id_2: _asset(
+                        asset_id=src_id_2,
+                        ports=_ports(("setpoint_out", PortDirection.OUTPUT, "deg")),
+                    ),
+                    tgt_id: _asset(
+                        asset_id=tgt_id,
+                        ports=_ports(
+                            ("constituent_in_a", PortDirection.INPUT, "mm"),
+                            ("constituent_in_b", PortDirection.INPUT, "deg"),
+                            ("virtual_out", PortDirection.OUTPUT, "mm"),
+                        ),
+                        family_ids=frozenset({pseudoaxis_family_id}),
+                        partition_rule=Aggregation(
+                            aggregator_kind=AggregatorKind.SUM,
+                            constituent_count=2,
+                        ),
+                    ),
+                }
+            ),
+            now=_NOW,
+            pseudoaxis_family_ids=frozenset({pseudoaxis_family_id}),
+        )
+    assert exc_info.value.pseudoaxis_asset_id == tgt_id
+    assert exc_info.value.signal_types == frozenset({"mm", "deg"})
+
+
+@pytest.mark.unit
+def test_decide_raises_pseudoaxis_output_cardinality_when_target_has_no_output_port() -> None:
+    """PseudoAxis Asset MUST declare exactly 1 OUTPUT port; zero or 2+ rejects."""
+    pseudoaxis_family_id = uuid4()
+    src_id = uuid4()
+    tgt_id = uuid4()
+    state = _plan(asset_ids=frozenset({src_id, tgt_id}))
+    with pytest.raises(PlanPseudoAxisOutputCardinalityError) as exc_info:
+        add_plan_wire.decide(
+            state=state,
+            command=AddPlanWire(
+                plan_id=state.id,
+                source_asset_id=src_id,
+                source_port_name="setpoint_out",
+                target_asset_id=tgt_id,
+                target_port_name="constituent_in",
+            ),
+            context=PlanWireContext(
+                assets={
+                    src_id: _asset(
+                        asset_id=src_id,
+                        ports=_ports(("setpoint_out", PortDirection.OUTPUT, "mm")),
+                    ),
+                    tgt_id: _asset(
+                        asset_id=tgt_id,
+                        ports=_ports(
+                            ("constituent_in", PortDirection.INPUT, "mm"),
+                            ("virtual_out_a", PortDirection.OUTPUT, "mm"),
+                            ("virtual_out_b", PortDirection.OUTPUT, "mm"),
+                        ),
+                        family_ids=frozenset({pseudoaxis_family_id}),
+                        partition_rule=Affine(gain=1.0, offset=0.0),
+                    ),
+                }
+            ),
+            now=_NOW,
+            pseudoaxis_family_ids=frozenset({pseudoaxis_family_id}),
+        )
+    assert exc_info.value.pseudoaxis_asset_id == tgt_id
+    assert exc_info.value.output_port_count == 2

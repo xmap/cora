@@ -34,8 +34,15 @@ into a `PlanWireContext` (slice-local, mirrors `PlanBindingContext`
 from collections.abc import Mapping
 from uuid import UUID
 
+from cora.equipment.aggregates._partition_rule import (
+    PartitionRule,
+    expected_constituent_count,
+)
 from cora.equipment.aggregates.asset import Asset, AssetPort, PortDirection
 from cora.recipe.aggregates.plan.state import (
+    PlanPseudoAxisArityMismatchError,
+    PlanPseudoAxisFanoutSignalTypeMismatchError,
+    PlanPseudoAxisOutputCardinalityError,
     PlanWireAssetNotBoundError,
     PlanWireDirectionMismatchError,
     PlanWirePortNotFoundError,
@@ -140,4 +147,101 @@ def validate_wire_endpoints(
         )
 
 
-__all__ = ["validate_wire_endpoints"]
+def validate_pseudoaxis_fanout(
+    *,
+    pseudoaxis_asset: Asset,
+    partition_rule: PartitionRule | None,
+    incoming_wires: frozenset[Wire],
+    assets_by_id: Mapping[UUID, Asset],
+) -> None:
+    """Validate fan-out into a PseudoAxis Asset's INPUT ports.
+
+    Adds three checks on TOP of `validate_wire_endpoints` (which is
+    per-wire structural). This validator looks at the full set of
+    wires that target a single PseudoAxis Asset's INPUT ports and
+    asks whether the SET satisfies the partition rule's contract:
+
+      (a) Rule presence: if `partition_rule is None`, the Asset is
+          PseudoAxis-shaped but the rule has not been set yet. That
+          is an Equipment-side concern (the partition-rule slice), not
+          a Plan-bind concern; this validator no-ops and lets earlier
+          Plan-bind checks own the empty case.
+      (b) Output cardinality: PseudoAxis Assets MUST declare exactly
+          one OUTPUT port. Zero or two-plus OUTPUT ports raise
+          `PlanPseudoAxisOutputCardinalityError`.
+      (c) Over-arity: incoming wire count must NOT exceed
+          `expected_constituent_count(rule)`. Under-wiring is allowed
+          here (operators wire incrementally; the first add_plan_wire
+          to a multi-constituent PseudoAxis would otherwise always
+          trip strict equality). Under-arity is a Plan-completeness
+          check that belongs at version_plan time, not per-wire add.
+          `SolverReference` rules declare no arity (the external solver
+          owns kinematics signature) and skip this check.
+      (d) Signal-type homogeneity: all incoming wires' source ports
+          must share one `signal_type`; mixed types raise
+          `PlanPseudoAxisFanoutSignalTypeMismatchError`.
+
+    Pure (no I/O). The caller (the `add_plan_wire` handler) is
+    responsible for pre-loading every Asset that appears as a SOURCE
+    of an incoming wire into `assets_by_id` before invocation; missing
+    source assets would surface as a KeyError, which the handler
+    prevents by load-then-validate ordering.
+
+    `incoming_wires` MUST be the FULL set targeting this PseudoAxis
+    Asset (the existing wires plus the proposed wire if this is an
+    add-time invocation). The caller assembles the set; the validator
+    just counts and reads.
+    """
+    # (a) rule not set: Plan-bind validator does not own this case.
+    if partition_rule is None:
+        return
+
+    # (b) output cardinality: PseudoAxis Asset must have exactly 1 OUTPUT port.
+    output_ports = [p for p in pseudoaxis_asset.ports if p.direction is PortDirection.OUTPUT]
+    if len(output_ports) != 1:
+        raise PlanPseudoAxisOutputCardinalityError(
+            pseudoaxis_asset_id=pseudoaxis_asset.id,
+            output_port_count=len(output_ports),
+        )
+
+    rule_kind = partition_rule.kind.value
+
+    # (c) over-arity check (skip for SolverReference where expected is None).
+    # Under-wiring is a Plan-completeness concern caught at version_plan time;
+    # incremental add_plan_wire must accept the intermediate "still wiring"
+    # state, otherwise no operator could ever wire a multi-constituent
+    # PseudoAxis (the first add would always trip strict equality).
+    expected = expected_constituent_count(partition_rule)
+    if expected is not None and len(incoming_wires) > expected:
+        raise PlanPseudoAxisArityMismatchError(
+            pseudoaxis_asset_id=pseudoaxis_asset.id,
+            expected_constituent_count=expected,
+            actual_input_wire_count=len(incoming_wires),
+            rule_kind=rule_kind,
+        )
+
+    # (d) signal-type homogeneity across the incoming wires' source ports.
+    source_signal_types: set[str] = set()
+    for wire in incoming_wires:
+        source_asset = assets_by_id[wire.source_asset_id]
+        source_port = _find_port(source_asset, wire.source_port_name)
+        if source_port is None:
+            # Defensive: validate_wire_endpoints rejects this on the
+            # proposed wire; existing wires were validated before they
+            # were added. A None here would mean an Asset port was
+            # removed out from under a previously-valid wire, which is
+            # blocked by the strict forward-reference contract. Skip
+            # this wire rather than crash; the structural validator
+            # owns the real error surface.
+            continue
+        source_signal_types.add(source_port.signal_type)
+
+    if len(source_signal_types) > 1:
+        raise PlanPseudoAxisFanoutSignalTypeMismatchError(
+            pseudoaxis_asset_id=pseudoaxis_asset.id,
+            signal_types=frozenset(source_signal_types),
+            rule_kind=rule_kind,
+        )
+
+
+__all__ = ["validate_pseudoaxis_fanout", "validate_wire_endpoints"]

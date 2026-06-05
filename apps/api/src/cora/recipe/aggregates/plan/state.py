@@ -711,6 +711,103 @@ class PlanWireSignalTypeMismatchError(Exception):
         self.target_signal_type = target_signal_type
 
 
+class PlanPseudoAxisArityMismatchError(Exception):
+    """A PseudoAxis Asset has a wire count that disagrees with the rule arity.
+
+    The count of incoming wires targeting the PseudoAxis Asset's INPUT
+    ports must equal the constituent arity declared by its
+    `partition_rule`. `Affine` and `LookupTable` declare 1. `Aggregation`
+    and `CompositePartition` declare the rule's `constituent_count`.
+    `SolverReference` declares no arity (the external solver owns the
+    kinematics signature) and is exempt from this check.
+
+    Raised by the Plan-bind fan-out validator after a candidate wire is
+    accepted as structurally valid; rejection here means the new wire
+    would leave the PseudoAxis Asset under- or over-wired against its
+    own partition rule. Mapped to HTTP 409.
+    """
+
+    def __init__(
+        self,
+        pseudoaxis_asset_id: UUID,
+        expected_constituent_count: int,
+        actual_input_wire_count: int,
+        rule_kind: str,
+    ) -> None:
+        super().__init__(
+            f"PseudoAxis Asset {pseudoaxis_asset_id} has "
+            f"{actual_input_wire_count} incoming wire(s) on its INPUT ports "
+            f"but its {rule_kind} partition rule expects "
+            f"{expected_constituent_count} constituent(s) "
+            "(add or remove wires until counts match, OR update the "
+            "partition rule to a different arity)"
+        )
+        self.pseudoaxis_asset_id = pseudoaxis_asset_id
+        self.expected_constituent_count = expected_constituent_count
+        self.actual_input_wire_count = actual_input_wire_count
+        self.rule_kind = rule_kind
+
+
+class PlanPseudoAxisFanoutSignalTypeMismatchError(Exception):
+    """A PseudoAxis Asset receives wires carrying more than one signal_type.
+
+    All constituents feeding a single PseudoAxis Asset's INPUT ports must
+    share the same source-side `signal_type` so the partition rule
+    operates over a single dimensional intent. Mixed types (for example
+    "mm" and "deg" sources fanning into one Aggregation rule) indicate
+    operator error at Plan-bind time, not a soft warning.
+
+    Carries the full set of distinct signal_types observed on the
+    incoming wires so the operator can see the diversity at a glance.
+    Mapped to HTTP 409.
+    """
+
+    def __init__(
+        self,
+        pseudoaxis_asset_id: UUID,
+        signal_types: frozenset[str],
+        rule_kind: str,
+    ) -> None:
+        rendered = sorted(signal_types)
+        super().__init__(
+            f"PseudoAxis Asset {pseudoaxis_asset_id} receives wires whose "
+            f"source ports carry mixed signal_types {rendered!r} under its "
+            f"{rule_kind} partition rule (all constituents must share one "
+            "signal_type; reconcile source ports or pick consistent "
+            "constituents)"
+        )
+        self.pseudoaxis_asset_id = pseudoaxis_asset_id
+        self.signal_types = signal_types
+        self.rule_kind = rule_kind
+
+
+class PlanPseudoAxisOutputCardinalityError(Exception):
+    """A PseudoAxis Asset has a non-one OUTPUT-direction port count.
+
+    PseudoAxis is a virtual axis with exactly one virtual output by
+    design (the partition rule decomposes ONE commanded value into N
+    constituent setpoints). Operators registering 0 or >= 2 OUTPUT ports
+    on a PseudoAxis Asset have a structural mismatch between port
+    declaration and Family semantics; the Plan-bind validator surfaces
+    it here so the violation is caught before any Run starts. Mapped to
+    HTTP 409.
+    """
+
+    def __init__(
+        self,
+        pseudoaxis_asset_id: UUID,
+        output_port_count: int,
+    ) -> None:
+        super().__init__(
+            f"PseudoAxis Asset {pseudoaxis_asset_id} declares "
+            f"{output_port_count} OUTPUT port(s) but PseudoAxis Assets MUST "
+            "declare exactly 1 OUTPUT port (the virtual axis output); "
+            "reconcile the port declarations on the Asset"
+        )
+        self.pseudoaxis_asset_id = pseudoaxis_asset_id
+        self.output_port_count = output_port_count
+
+
 class PlanWireSelfLoopError(Exception):
     """A Wire connects a port to itself (same asset_id AND same port_name).
 

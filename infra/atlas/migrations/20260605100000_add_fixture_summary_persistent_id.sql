@@ -1,0 +1,32 @@
+-- Reserve the persistent_id JSONB column on proj_equipment_fixture_summary
+-- that the Fixture-tier PIDINST Phase 2 write path will populate
+-- (PIDINST v1.0 Property 1 DOI/Handle).
+--
+-- Per project_fixture_pidinst_design Phase 2 (Section 1.2 #9 + Section 12):
+--
+--   - persistent_id is reserved nullable JSONB; ALWAYS NULL until the
+--     `assign_fixture_persistent_id` slice mints an identifier.
+--   - The extended FixtureSummaryProjection subscribes to the new
+--     `FixturePersistentIdAssigned` event and writes the column via
+--     `jsonb_build_object('scheme', ..., 'value', ...)` (mirrors the
+--     Asset-tier `_UPDATE_PERSISTENT_ID_ASSIGNED_SQL` precedent at
+--     `cora.equipment.projections.asset`).
+--
+-- Mirrors the Asset-tier `add_asset_summary_persistent_id` migration
+-- shape: pure ADD COLUMN with a safe NULL default, no backfill needed.
+--
+-- ## Forward-only
+--
+-- Greenfield-friendly; the projection rebuilds from the event store and
+-- picks up persistent_id on `FixturePersistentIdAssigned` replay.
+-- Rollback via a NEW compensating migration per
+-- project_forward_only_migrations.
+--
+-- ## v1 scope reminders
+--
+-- No index on persistent_id (matches the Asset-tier slice E.1 posture).
+-- A future bulk-mint operator UX wanting `WHERE persistent_id IS NULL`
+-- triggers the index when query latency on a large facility exceeds 1s.
+
+ALTER TABLE proj_equipment_fixture_summary
+    ADD COLUMN persistent_id JSONB NULL DEFAULT NULL;

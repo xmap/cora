@@ -235,7 +235,6 @@ EMDASH_ALLOWLIST: frozenset[str] = frozenset(
         "src/cora/recipe/aggregates/practice/state.py",
         "src/cora/recipe/features/add_plan_wire/command.py",
         "src/cora/recipe/features/add_plan_wire/context.py",
-        "src/cora/recipe/features/add_plan_wire/decider.py",
         "src/cora/recipe/features/define_capability/command.py",
         "src/cora/recipe/features/define_capability/handler.py",
         "src/cora/recipe/features/define_method/command.py",

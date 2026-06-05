@@ -47,8 +47,10 @@ mutated incrementally by `AssetFamilyAdded` /
 **Critical invariant**: every transition arm MUST carry
 `family_ids` AND `condition` AND `settings` AND `ports` AND
 `drawing` AND `model_id` AND `alternate_identifiers` AND `owners`
-AND `fixture_id` AND `commissioned_at` AND `decommissioned_at`
-through from prior state. Constructing
+AND `fixture_id` AND `partition_rule` AND `commissioned_at` AND
+`decommissioned_at` AND `persistent_id` through from prior state.
+`partition_rule` toggles None <-> Some(rule) <-> Some(rule') <-> None
+via AssetPartitionRuleUpdated; every other transition arm preserves it. Constructing
 `Asset(id=..., name=..., level=..., parent_id=..., lifecycle=...)`
 without explicitly passing them would silently WIPE the fields to
 their defaults (empty frozenset / NOMINAL / empty dict / empty
@@ -99,6 +101,7 @@ from cora.equipment.aggregates.asset.events import (
     AssetMaintenanceExited,
     AssetOwnerAdded,
     AssetOwnerRemoved,
+    AssetPartitionRuleUpdated,
     AssetPersistentIdAssigned,
     AssetPortAdded,
     AssetPortRemoved,
@@ -181,6 +184,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -202,6 +206,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=occurred_at,
                 persistent_id=prior.persistent_id,
@@ -228,6 +233,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -249,6 +255,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -270,6 +277,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -296,6 +304,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -323,6 +332,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -349,6 +359,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -370,6 +381,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -391,6 +403,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -419,6 +432,38 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
+                commissioned_at=prior.commissioned_at,
+                decommissioned_at=prior.decommissioned_at,
+                persistent_id=prior.persistent_id,
+            )
+        case AssetPartitionRuleUpdated(partition_rule=partition_rule):
+            # Partition rule mutation: only `partition_rule` changes.
+            # Event payload carries the FULL post-update rule (or None
+            # for clear); this arm replaces. Validation (kind shape,
+            # self-reference, nested-PseudoAxis, Family-membership,
+            # lifecycle-not-Decommissioned, calibration-revision-not-
+            # retracted) already happened at the decider boundary before
+            # append; an event in the stream is by definition validated.
+            # Set + change + clear all flow through this single arm,
+            # mirroring AssetSettingsUpdated.
+            prior = require_state(state, "AssetPartitionRuleUpdated")
+            return Asset(
+                id=prior.id,
+                name=prior.name,
+                level=prior.level,
+                parent_id=prior.parent_id,
+                lifecycle=prior.lifecycle,
+                condition=prior.condition,
+                family_ids=prior.family_ids,
+                settings=prior.settings,
+                ports=prior.ports,
+                drawing=prior.drawing,
+                model_id=prior.model_id,
+                alternate_identifiers=prior.alternate_identifiers,
+                owners=prior.owners,
+                fixture_id=prior.fixture_id,
+                partition_rule=partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -455,6 +500,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -484,6 +530,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -512,6 +559,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers | {identifier},
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -536,6 +584,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers - {identifier},
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -563,6 +612,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners | {owner},
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -596,6 +646,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=PersistentIdentifier(
@@ -627,6 +678,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=frozenset(o for o in prior.owners if o.name != owner_name),
                 fixture_id=prior.fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -652,6 +704,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=fixture_id,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,
@@ -678,6 +731,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 alternate_identifiers=prior.alternate_identifiers,
                 owners=prior.owners,
                 fixture_id=None,
+                partition_rule=prior.partition_rule,
                 commissioned_at=prior.commissioned_at,
                 decommissioned_at=prior.decommissioned_at,
                 persistent_id=prior.persistent_id,

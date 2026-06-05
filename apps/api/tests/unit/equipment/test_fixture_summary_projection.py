@@ -39,7 +39,9 @@ def _stored(event_type: str, payload: dict[str, Any]) -> StoredEvent:
 def test_projection_metadata() -> None:
     proj = FixtureSummaryProjection()
     assert proj.name == "proj_equipment_fixture_summary"
-    assert proj.subscribed_event_types == frozenset({"FixtureRegistered"})
+    assert proj.subscribed_event_types == frozenset(
+        {"FixtureRegistered", "FixturePersistentIdAssigned"}
+    )
 
 
 @pytest.mark.unit

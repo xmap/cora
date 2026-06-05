@@ -49,6 +49,9 @@ from cora.recipe.aggregates.plan.state import (
     PlanFamiliesNotSatisfiedError,
     PlanName,
     PlanNotFoundError,
+    PlanPseudoAxisArityMismatchError,
+    PlanPseudoAxisFanoutSignalTypeMismatchError,
+    PlanPseudoAxisOutputCardinalityError,
     PlanStatus,
     PlanWireAlreadyExistsError,
     PlanWireAssetNotBoundError,
@@ -60,7 +63,10 @@ from cora.recipe.aggregates.plan.state import (
     PlanWireTargetAlreadyConnectedError,
     Wire,
 )
-from cora.recipe.aggregates.plan.wires_validation import validate_wire_endpoints
+from cora.recipe.aggregates.plan.wires_validation import (
+    validate_pseudoaxis_fanout,
+    validate_wire_endpoints,
+)
 
 __all__ = [
     "PLAN_NAME_MAX_LENGTH",
@@ -87,6 +93,9 @@ __all__ = [
     "PlanLifecycleTimestamps",
     "PlanName",
     "PlanNotFoundError",
+    "PlanPseudoAxisArityMismatchError",
+    "PlanPseudoAxisFanoutSignalTypeMismatchError",
+    "PlanPseudoAxisOutputCardinalityError",
     "PlanStatus",
     "PlanVersioned",
     "PlanWireAdded",
@@ -108,5 +117,6 @@ __all__ = [
     "load_plan_timestamps",
     "to_payload",
     "validate_default_parameters_against_method_schema",
+    "validate_pseudoaxis_fanout",
     "validate_wire_endpoints",
 ]

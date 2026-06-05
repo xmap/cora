@@ -164,6 +164,19 @@ def bind(
         else:
             steps = tuple(command.steps)
 
+        # Pre-Conductor PseudoAxis expansion: rewrite any virtual-axis
+        # SetpointStep into N sequential constituent SetpointSteps so
+        # the Conductor's existing dispatch loop walks the constituents
+        # in declared order. ActionStep / CheckStep pass through
+        # unchanged. PseudoAxis evaluator errors propagate to the
+        # routes layer for HTTP status mapping
+        # ([[project-pseudoaxis-design]] v3).
+        steps = await expansion_port.expand_pseudoaxis(
+            steps,
+            event_store=deps.event_store,
+            correlation_id=correlation_id,
+        )
+
         result = await conductor.conduct(
             procedure_id=command.procedure_id,
             principal_id=principal_id,
