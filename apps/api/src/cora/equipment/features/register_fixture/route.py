@@ -119,9 +119,11 @@ router = APIRouter(tags=["equipment"])
             "description": (
                 "Assembly is Deprecated (cannot instantiate), OR a "
                 "referenced Asset is Decommissioned (lifecycle disallows "
-                "attachment), OR a concurrent write to the new Fixture "
-                "stream conflicted (optimistic concurrency; essentially "
-                "impossible with UUIDv7 ids)."
+                "attachment), OR a referenced Asset is not currently "
+                "installed in any Mount (install_asset first), OR a "
+                "concurrent write to the new Fixture stream conflicted "
+                "(optimistic concurrency; essentially impossible with "
+                "UUIDv7 ids)."
             ),
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {

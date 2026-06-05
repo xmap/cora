@@ -12,7 +12,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.assembly import SlotCardinality, SlotName, TemplateSlot
-from cora.equipment.aggregates.asset import AssetLevel, load_asset
+from cora.equipment.aggregates.asset import load_asset
 from cora.equipment.aggregates.fixture import SlotAssetBinding
 from cora.equipment.features import (
     add_asset_family,
@@ -20,7 +20,6 @@ from cora.equipment.features import (
     define_assembly,
     define_family,
     detach_asset_from_fixture,
-    register_asset,
     register_fixture,
 )
 from cora.equipment.features.add_asset_family import AddAssetFamily
@@ -28,15 +27,13 @@ from cora.equipment.features.attach_asset_to_fixture import AttachAssetToFixture
 from cora.equipment.features.define_assembly import DefineAssembly
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.detach_asset_from_fixture import DetachAssetFromFixture
-from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_fixture import RegisterFixture
+from tests.integration._equipment_helpers import seed_installed_asset
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 4, 14, 0, 0, tzinfo=UTC)
 _FAMILY_ID = UUID("01900000-0000-7000-8000-00000054cc01")
 _FAMILY_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cc0e")
-_ASSET_ID = UUID("01900000-0000-7000-8000-00000054cc02")
-_ASSET_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cc0f")
 _ADD_FAMILY_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cc10")
 _ASSEMBLY_ID = UUID("01900000-0000-7000-8000-00000054cc03")
 _ASSEMBLY_DEFINED_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cc1e")
@@ -46,21 +43,23 @@ _ATTACH_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cc3e")
 _DETACH_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cc4e")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000dd")
-_PARENT_ID = UUID("01900000-0000-7000-8000-000000000fff")
 
 
 @pytest.mark.integration
 async def test_detach_asset_from_fixture_clears_back_reference_in_postgres(
     db_pool: asyncpg.Pool,
 ) -> None:
+    # Pre-seed: Frame + Mount + Asset, installed (passes INV-4 at register_fixture).
+    _, _, asset_id = await seed_installed_asset(
+        db_pool, now=_NOW, slot_code="02-BM-detach", asset_name="Cam-1"
+    )
+
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
             _FAMILY_ID,
             _FAMILY_EVENT_ID,
-            _ASSET_ID,
-            _ASSET_EVENT_ID,
             _ADD_FAMILY_EVENT_ID,
             _ASSEMBLY_ID,
             _ASSEMBLY_DEFINED_EVENT_ID,
@@ -73,11 +72,6 @@ async def test_detach_asset_from_fixture_clears_back_reference_in_postgres(
 
     family_id = await define_family.bind(deps)(
         DefineFamily(name="Camera", affordances=frozenset()),
-        principal_id=_PRINCIPAL_ID,
-        correlation_id=_CORRELATION_ID,
-    )
-    asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="Cam-1", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -127,8 +121,10 @@ async def test_detach_asset_from_fixture_clears_back_reference_in_postgres(
 
     # Asset stream: Registered + AddFamily + AttachedToFixture + DetachedFromFixture.
     asset_events, asset_version = await deps.event_store.load("Asset", asset_id)
-    assert asset_version == 4
-    detach_event = asset_events[3]
+    # Asset stream: Registered + Activated + AddFamily + AttachedToFixture +
+    # DetachedFromFixture (Activated comes from seed_installed_asset).
+    assert asset_version == 5
+    detach_event = asset_events[4]
     assert detach_event.event_type == "AssetDetachedFromFixture"
     assert detach_event.event_id == _DETACH_EVENT_ID
     assert detach_event.payload == {

@@ -315,6 +315,28 @@ class FixtureAssetNotAttachableError(Exception):
         self.current_lifecycle = current_lifecycle
 
 
+class FixtureAssetNotInstalledError(Exception):
+    """A referenced Asset is not currently installed in any Mount.
+
+    Fires when `proj_equipment_asset_location` carries no row for the
+    Asset at register_fixture time, i.e., the Asset exists but has
+    not been physically racked. Closes INV-4 from the
+    Fixture+Mount+Asset alignment plan: a Fixture should materialize
+    only equipment that is already on the floor, so the
+    install-then-register-fixture choreography becomes the contract.
+
+    Carries the sorted-first offending `asset_id` for deterministic
+    error responses.
+    """
+
+    def __init__(self, asset_id: UUID) -> None:
+        super().__init__(
+            f"Asset {asset_id} cannot be bound into a Fixture: not currently "
+            f"installed in any Mount; install_asset first"
+        )
+        self.asset_id = asset_id
+
+
 class FixtureMappingIncompleteError(Exception):
     """`register_fixture`'s slot_asset_bindings does not satisfy
     the required cardinality of one or more slots.

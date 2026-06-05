@@ -53,7 +53,11 @@ from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_fixture import RegisterFixture
 from cora.equipment.features.register_frame import RegisterFrame
 from cora.equipment.features.register_mount import RegisterMount
-from tests.integration._equipment_helpers import drain_equipment_projections, placement
+from tests.integration._equipment_helpers import (
+    drain_equipment_projections,
+    placement,
+    seed_installed_asset,
+)
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -208,15 +212,20 @@ async def test_decommission_asset_rejects_when_still_bound_to_fixture(
     carries `fixture_id` cannot be decommissioned; operator must
     `detach_asset_from_fixture` first. Verifies the guard fires
     end-to-end against the real Asset stream fold.
+
+    Setup chain after slice 3b's INV-4 lock: seed_installed_asset
+    (Frame + Mount + Asset + activate + install) -> define_family
+    + add_asset_family -> define_assembly + register_fixture
+    -> attach_asset_to_fixture -> decommission_asset (rejected by
+    AssetHasFixtureBindingError).
     """
-    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(10)])
+    _, _, asset_id = await seed_installed_asset(
+        db_pool, now=_NOW, slot_code="02-BM-decom-fix", asset_name="Cam-1"
+    )
+
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(8)])
     family_id = await define_family.bind(deps)(
         DefineFamily(name="Camera", affordances=frozenset()),
-        principal_id=_PRINCIPAL_ID,
-        correlation_id=_CORRELATION_ID,
-    )
-    asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="Cam-1", level=AssetLevel.DEVICE, parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -267,10 +276,12 @@ async def test_decommission_asset_rejects_when_still_bound_to_fixture(
     assert exc_info.value.asset_id == asset_id
     assert exc_info.value.fixture_id == fixture_id
 
-    # The Asset stream is unchanged after the rejection.
+    # The Asset stream is unchanged after the rejection (AssetActivated
+    # comes from seed_installed_asset).
     events, _ = await deps.event_store.load("Asset", asset_id)
     assert [e.event_type for e in events] == [
         "AssetRegistered",
+        "AssetActivated",
         "AssetFamilyAdded",
         "AssetAttachedToFixture",
     ]

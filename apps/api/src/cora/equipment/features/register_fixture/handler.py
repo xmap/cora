@@ -38,6 +38,7 @@ from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.register_fixture.command import RegisterFixture
 from cora.equipment.features.register_fixture.context import RegisterFixtureContext
 from cora.equipment.features.register_fixture.decider import decide
+from cora.equipment.projections.asset_location import load_asset_location
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
@@ -130,15 +131,38 @@ def bind(deps: Kernel) -> Handler:
         now = deps.clock.now()
 
         asset_ids = _referenced_asset_ids(command)
-        # Split gather across the two aggregate types so pyright keeps
+        # Split gather across the aggregate types so pyright keeps
         # `assembly_state` narrowed to `Assembly | None` and each item
         # in `assets` narrowed to `Asset | None`; a single gather across
-        # both would widen everything to the union.
+        # all three would widen everything to the union.
+        #
+        # All three I/O streams run concurrently: assembly_state_task
+        # and mount_ids_future are scheduled before we await the
+        # per-Asset gather. The mount_ids_future is only created when
+        # deps.pool is set (pool=None short-circuit preserves the
+        # pre-tightening permissive default for the pool-less test
+        # path; matches install_asset / decommission_asset shape). In
+        # production deps.pool is always set, so every referenced
+        # asset_id gets an entry in the dict (mount_id when installed,
+        # None when orphan).
         assembly_state_task = asyncio.create_task(
             load_assembly(deps.event_store, command.assembly_id)
         )
+        # asyncio.gather(...) returns a Future that has already
+        # scheduled its children; storing it (without await) is the
+        # canonical way to start a gather concurrently with other work.
+        if deps.pool is not None:
+            pool = deps.pool
+            mount_ids_future: asyncio.Future[list[UUID | None]] | None = asyncio.gather(
+                *(load_asset_location(pool, aid) for aid in asset_ids)
+            )
+        else:
+            mount_ids_future = None
+
         assets = await asyncio.gather(*(load_asset(deps.event_store, aid) for aid in asset_ids))
         assembly_state = await assembly_state_task
+        mount_ids = await mount_ids_future if mount_ids_future is not None else None
+
         family_ids_by_asset_id: dict[UUID, frozenset[UUID] | None] = {
             aid: (asset.family_ids if asset is not None else None)
             for aid, asset in zip(asset_ids, assets, strict=True)
@@ -147,10 +171,14 @@ def bind(deps: Kernel) -> Handler:
             aid: (asset.lifecycle if asset is not None else None)
             for aid, asset in zip(asset_ids, assets, strict=True)
         }
+        mount_id_by_asset_id: dict[UUID, UUID | None] | None = (
+            dict(zip(asset_ids, mount_ids, strict=True)) if mount_ids is not None else None
+        )
         context = RegisterFixtureContext(
             assembly_state=assembly_state,
             family_ids_by_asset_id=family_ids_by_asset_id,
             lifecycle_by_asset_id=lifecycle_by_asset_id,
+            mount_id_by_asset_id=mount_id_by_asset_id,
         )
 
         # Decider raises FixtureAlreadyExistsError defensively when

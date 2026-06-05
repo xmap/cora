@@ -23,6 +23,19 @@ later at `attach_asset_to_fixture`, since Fixture is single-event-
 genesis and cannot be amended). Empty dict (default) means no
 lifecycle info was loaded; the decider skips the guard entirely
 (useful for decider unit tests that exercise other invariants).
+
+`mount_id_by_asset_id` maps each referenced asset_id to the Mount
+currently holding it (sourced from `proj_equipment_asset_location`),
+or `None` when the Asset is not currently installed. The whole field
+is `None` when the handler ran without a pool (test path) and the
+orphan guard is disabled entirely; this matches the
+install_asset / decommission_asset projection-precondition
+short-circuit convention. When non-None and an entry maps to
+`None`, the decider raises `FixtureAssetNotInstalledError` carrying
+the sorted-first orphan id, closing INV-4 from the
+Fixture+Mount+Asset alignment plan: a Fixture should snapshot only
+equipment already on the floor, so install-then-register becomes
+the contract.
 """
 
 from dataclasses import dataclass, field
@@ -34,7 +47,7 @@ from cora.equipment.aggregates.asset import AssetLifecycle
 
 @dataclass(frozen=True)
 class RegisterFixtureContext:
-    """Snapshot of Assembly + Asset existence + lifecycle checks."""
+    """Snapshot of Assembly + Asset existence + lifecycle + install checks."""
 
     assembly_state: Assembly | None
     family_ids_by_asset_id: dict[UUID, frozenset[UUID] | None] = field(
@@ -43,3 +56,4 @@ class RegisterFixtureContext:
     lifecycle_by_asset_id: dict[UUID, AssetLifecycle | None] = field(
         default_factory=dict[UUID, AssetLifecycle | None]
     )
+    mount_id_by_asset_id: dict[UUID, UUID | None] | None = None

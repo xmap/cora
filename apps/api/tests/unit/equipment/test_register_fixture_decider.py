@@ -14,6 +14,7 @@ from cora.equipment.aggregates.assembly import (
     FixtureAssetFamilyMismatchError,
     FixtureAssetNotAttachableError,
     FixtureAssetNotFoundError,
+    FixtureAssetNotInstalledError,
     FixtureMappingIncompleteError,
     FixtureParameterOverridesInvalidError,
     SlotCardinality,
@@ -358,6 +359,109 @@ def test_decide_skips_lifecycle_guard_when_dict_is_empty() -> None:
     )
     assert len(events) == 1
     assert isinstance(events[0], FixtureRegistered)
+
+
+@pytest.mark.unit
+def test_decide_rejects_orphan_bound_asset_with_not_installed_error() -> None:
+    """Cross-aggregate guard (INV-4): every bound Asset must currently
+    be installed in some Mount. mount_id_by_asset_id with a None entry
+    says 'the projection has no row for this asset_id'
+    -> FixtureAssetNotInstalledError. Fires AFTER the lifecycle check
+    (Decommissioned is a more fundamental constraint) and BEFORE
+    cardinality / family-mismatch / parameter-overrides.
+    """
+    assembly_id = uuid4()
+    family_id = uuid4()
+    slot = _slot("camera", required_family_ids=frozenset({family_id}))
+    asset_id = uuid4()
+    context = RegisterFixtureContext(
+        assembly_state=_assembly(assembly_id, slots=frozenset({slot})),
+        family_ids_by_asset_id={asset_id: frozenset({family_id})},
+        lifecycle_by_asset_id={asset_id: AssetLifecycle.ACTIVE},
+        mount_id_by_asset_id={asset_id: None},
+    )
+    command = RegisterFixture(
+        assembly_id=assembly_id,
+        slot_asset_bindings=frozenset(
+            {SlotAssetBinding(slot_name="camera", asset_id=asset_id)},
+        ),
+    )
+    with pytest.raises(FixtureAssetNotInstalledError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=command,
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.asset_id == asset_id
+
+
+@pytest.mark.unit
+def test_decide_skips_orphan_guard_when_mount_id_dict_is_none() -> None:
+    """Pool-None test path: handler ran without a database pool, so
+    mount_id_by_asset_id is None and the orphan guard is disabled.
+    Mirrors install_asset / decommission_asset projection-precondition
+    short-circuit pattern.
+    """
+    assembly_id = uuid4()
+    family_id = uuid4()
+    slot = _slot("camera", required_family_ids=frozenset({family_id}))
+    asset_id = uuid4()
+    context = RegisterFixtureContext(
+        assembly_state=_assembly(assembly_id, slots=frozenset({slot})),
+        family_ids_by_asset_id={asset_id: frozenset({family_id})},
+        lifecycle_by_asset_id={asset_id: AssetLifecycle.ACTIVE},
+        mount_id_by_asset_id=None,
+    )
+    command = RegisterFixture(
+        assembly_id=assembly_id,
+        slot_asset_bindings=frozenset(
+            {SlotAssetBinding(slot_name="camera", asset_id=asset_id)},
+        ),
+    )
+    events = register_fixture.decide(
+        state=None,
+        command=command,
+        context=context,
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], FixtureRegistered)
+
+
+@pytest.mark.unit
+def test_decide_decommissioned_guard_fires_before_orphan_guard() -> None:
+    """Deterministic ordering when both guards would apply: the
+    Decommissioned-lifecycle check fires first because lifecycle is
+    the more fundamental constraint (an installed Decommissioned
+    Asset is rarer in practice but still wrong).
+    """
+    assembly_id = uuid4()
+    family_id = uuid4()
+    slot = _slot("camera", required_family_ids=frozenset({family_id}))
+    asset_id = uuid4()
+    context = RegisterFixtureContext(
+        assembly_state=_assembly(assembly_id, slots=frozenset({slot})),
+        family_ids_by_asset_id={asset_id: frozenset({family_id})},
+        lifecycle_by_asset_id={asset_id: AssetLifecycle.DECOMMISSIONED},
+        mount_id_by_asset_id={asset_id: None},
+    )
+    command = RegisterFixture(
+        assembly_id=assembly_id,
+        slot_asset_bindings=frozenset(
+            {SlotAssetBinding(slot_name="camera", asset_id=asset_id)},
+        ),
+    )
+    with pytest.raises(FixtureAssetNotAttachableError):
+        register_fixture.decide(
+            state=None,
+            command=command,
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+        )
 
 
 @pytest.mark.unit

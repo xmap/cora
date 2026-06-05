@@ -15,7 +15,6 @@ import pytest
 
 from cora.equipment._projections import register_equipment_projections
 from cora.equipment.aggregates.assembly import SlotCardinality, SlotName, TemplateSlot
-from cora.equipment.aggregates.asset import AssetLevel
 from cora.equipment.aggregates.fixture import SlotAssetBinding
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.add_asset_family import bind as bind_add_family
@@ -25,18 +24,16 @@ from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_family import bind as bind_define_family
 from cora.equipment.features.list_fixtures import ListFixtures
 from cora.equipment.features.list_fixtures import bind as bind_list_fixtures
-from cora.equipment.features.register_asset import RegisterAsset
-from cora.equipment.features.register_asset import bind as bind_register_asset
 from cora.equipment.features.register_fixture import RegisterFixture
 from cora.equipment.features.register_fixture import bind as bind_register_fixture
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests.integration._equipment_helpers import seed_installed_asset
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 4, 14, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000bb")
-_PARENT_ID = UUID("01900000-0000-7000-8000-000000000fff")
 
 
 def _build_deps(db_pool: asyncpg.Pool, ids: list[UUID]) -> Kernel:
@@ -51,18 +48,26 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
 
 async def _seed_fixture(
     deps: Kernel,
+    db_pool: asyncpg.Pool,
     *,
     asset_name: str = "Cam",
     assembly_name: str = "MCTOptics",
 ) -> tuple[UUID, UUID, UUID]:
-    """Returns (family_id, assembly_id, fixture_id)."""
+    """Returns (family_id, assembly_id, fixture_id).
+
+    Pre-seeds Frame + Mount + Asset via the shared seed_installed_asset
+    helper (uuid4 ids; bypasses the outer FixedIdGenerator) so the
+    bound Asset is mount-installed before register_fixture (INV-4 lock
+    from slice 3b). The outer deps's id pool only needs to budget for
+    the four post-seed commands: define_family, add_asset_family,
+    define_assembly, register_fixture.
+    """
+    _, _, asset_id = await seed_installed_asset(
+        db_pool, now=_NOW, slot_code=f"02-BM-{asset_name}", asset_name=asset_name
+    )
+
     family_id = await bind_define_family(deps)(
         DefineFamily(name=f"Camera-{asset_name}", affordances=frozenset()),
-        principal_id=_PRINCIPAL_ID,
-        correlation_id=_CORRELATION_ID,
-    )
-    asset_id = await bind_register_asset(deps)(
-        RegisterAsset(name=asset_name, level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -109,7 +114,7 @@ async def test_list_fixtures_returns_registered_fixture(
         db_pool,
         ids=[UUID(f"01900000-0000-7000-8000-00000054ee{i:02x}") for i in range(20)],
     )
-    _, assembly_id, fixture_id = await _seed_fixture(deps)
+    _, assembly_id, fixture_id = await _seed_fixture(deps, db_pool)
     await _drain(db_pool)
     page = await bind_list_fixtures(deps)(
         ListFixtures(limit=20),
@@ -132,8 +137,10 @@ async def test_list_fixtures_filter_by_assembly_id(
         db_pool,
         ids=[UUID(f"01900000-0000-7000-8000-00000054ef{i:02x}") for i in range(40)],
     )
-    _, assembly_a, fixture_a = await _seed_fixture(deps, asset_name="CamA", assembly_name="A")
-    _, _, fixture_b = await _seed_fixture(deps, asset_name="CamB", assembly_name="B")
+    _, assembly_a, fixture_a = await _seed_fixture(
+        deps, db_pool, asset_name="CamA", assembly_name="A"
+    )
+    _, _, fixture_b = await _seed_fixture(deps, db_pool, asset_name="CamB", assembly_name="B")
     await _drain(db_pool)
     page = await bind_list_fixtures(deps)(
         ListFixtures(limit=50, assembly_id=assembly_a),
@@ -155,7 +162,7 @@ async def test_list_fixtures_filter_by_surface_id(
         db_pool,
         ids=[UUID(f"01900000-0000-7000-8000-00000055f1{i:02x}") for i in range(40)],
     )
-    _, _, fixture_id = await _seed_fixture(deps)
+    _, _, fixture_id = await _seed_fixture(deps, db_pool)
     await _drain(db_pool)
     # Fetch all to discover the surface_id our test fixture landed on.
     all_page = await bind_list_fixtures(deps)(
@@ -184,7 +191,7 @@ async def test_list_fixtures_filter_by_content_hash(
         db_pool,
         ids=[UUID(f"01900000-0000-7000-8000-00000054f0{i:02x}") for i in range(40)],
     )
-    _, _, fixture_id = await _seed_fixture(deps)
+    _, _, fixture_id = await _seed_fixture(deps, db_pool)
     await _drain(db_pool)
     # Fetch all fixtures and pull the content_hash for our fixture.
     all_page = await bind_list_fixtures(deps)(

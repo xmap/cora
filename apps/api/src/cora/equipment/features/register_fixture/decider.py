@@ -23,6 +23,11 @@ Clock and IdGenerator ports.
     -> FixtureAssetNotAttachableError carrying the sorted-first
     offending asset_id (mirrors AssetCannotAttachToFixtureError
     at attach-time).
+  - Every referenced Asset must currently be installed in some Mount
+    (when the handler loaded asset_location info)
+    -> FixtureAssetNotInstalledError carrying the sorted-first
+    orphan id. Closes INV-4 from the Fixture+Mount+Asset alignment
+    plan.
   - Each TemplateSlot's cardinality is satisfied by the count of
     bindings carrying its slot_name
     -> FixtureMappingIncompleteError carrying the offending
@@ -55,6 +60,7 @@ from cora.equipment.aggregates.assembly import (
     FixtureAssetFamilyMismatchError,
     FixtureAssetNotAttachableError,
     FixtureAssetNotFoundError,
+    FixtureAssetNotInstalledError,
     FixtureMappingIncompleteError,
     FixtureParameterOverridesInvalidError,
     SlotCardinality,
@@ -130,6 +136,11 @@ def decide(
         -> FixtureAssetNotAttachableError carrying the sorted-first
         offending asset_id (mirrors AssetCannotAttachToFixtureError
         at attach-time).
+      - Every referenced Asset must currently be installed in some Mount
+        (when the handler loaded asset_location info)
+        -> FixtureAssetNotInstalledError carrying the sorted-first
+        orphan id. Closes INV-4 from the Fixture+Mount+Asset
+        alignment plan.
       - Each TemplateSlot's cardinality must be satisfied by the count
         of bindings carrying its slot_name
         -> FixtureMappingIncompleteError carrying the offending
@@ -188,6 +199,24 @@ def decide(
             decommissioned_asset_ids[0],
             AssetLifecycle.DECOMMISSIONED.value,
         )
+
+    # Cross-aggregate guard: every referenced Asset must currently be
+    # installed in some Mount. Closes INV-4: a Fixture should snapshot
+    # only equipment already racked on the floor, so the
+    # install-then-register-fixture choreography becomes the contract.
+    # `mount_id_by_asset_id is None` means the handler ran without a
+    # pool (test path) and the guard is disabled entirely.
+    if context.mount_id_by_asset_id is not None:
+        orphan_asset_ids = sorted(
+            (
+                asset_id
+                for asset_id, mount_id in context.mount_id_by_asset_id.items()
+                if mount_id is None
+            ),
+            key=str,
+        )
+        if orphan_asset_ids:
+            raise FixtureAssetNotInstalledError(orphan_asset_ids[0])
 
     slots_by_name = {slot.slot_name.value: slot for slot in assembly.required_slots}
     binding_counts: Counter[str] = Counter(
