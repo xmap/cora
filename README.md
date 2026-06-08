@@ -939,14 +939,14 @@
 | src/cora/federation/features/get\_seal/\_\_init\_\_.py                                   |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/get\_seal/handler.py                                        |       34 |        1 |        6 |        1 |     95.0% |       129 |
 | src/cora/federation/features/get\_seal/query.py                                          |        3 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/federation/features/get\_seal/route.py                                          |       24 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/federation/features/get\_seal/tool.py                                           |       25 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/federation/features/get\_seal/route.py                                          |       24 |        2 |        2 |        1 |     88.5% |   60, 125 |
+| src/cora/federation/features/get\_seal/tool.py                                           |       25 |        2 |        2 |        1 |     88.9% |    47, 89 |
 | src/cora/federation/features/initialize\_seal/\_\_init\_\_.py                            |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/initialize\_seal/command.py                                 |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/federation/features/initialize\_seal/decider.py                                 |       36 |        1 |       22 |        1 |     96.6% |       184 |
-| src/cora/federation/features/initialize\_seal/handler.py                                 |       44 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/federation/features/initialize\_seal/decider.py                                 |       41 |        0 |       22 |        0 |    100.0% |           |
+| src/cora/federation/features/initialize\_seal/handler.py                                 |       51 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/federation/features/initialize\_seal/route.py                                   |       18 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/federation/features/initialize\_seal/tool.py                                    |       17 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/federation/features/initialize\_seal/tool.py                                    |       17 |        1 |        0 |        0 |     94.1% |        86 |
 | src/cora/federation/features/list\_credentials/\_\_init\_\_.py                           |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/list\_credentials/handler.py                                |       22 |        1 |        0 |        0 |     95.5% |        78 |
 | src/cora/federation/features/list\_credentials/query.py                                  |       11 |        0 |        0 |        0 |    100.0% |           |
@@ -958,7 +958,7 @@
 | src/cora/federation/features/list\_permits/route.py                                      |       28 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/list\_permits/tool.py                                       |       28 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/list\_seals/\_\_init\_\_.py                                 |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/federation/features/list\_seals/handler.py                                      |       22 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/federation/features/list\_seals/handler.py                                      |       22 |        1 |        0 |        0 |     95.5% |        78 |
 | src/cora/federation/features/list\_seals/query.py                                        |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/list\_seals/route.py                                        |       24 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/list\_seals/tool.py                                         |       24 |        0 |        0 |        0 |    100.0% |           |
@@ -1000,8 +1000,8 @@
 | src/cora/federation/features/revoke\_permit/tool.py                                      |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/rotate\_seal\_online\_key/\_\_init\_\_.py                   |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/rotate\_seal\_online\_key/command.py                        |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/federation/features/rotate\_seal\_online\_key/decider.py                        |       27 |        0 |       14 |        0 |    100.0% |           |
-| src/cora/federation/features/rotate\_seal\_online\_key/handler.py                        |       43 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/federation/features/rotate\_seal\_online\_key/decider.py                        |       34 |        0 |       16 |        0 |    100.0% |           |
+| src/cora/federation/features/rotate\_seal\_online\_key/handler.py                        |       50 |        2 |        2 |        0 |     96.2% |   155-156 |
 | src/cora/federation/features/rotate\_seal\_online\_key/route.py                          |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/rotate\_seal\_online\_key/tool.py                           |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/features/sign\_seal\_pointer/\_\_init\_\_.py                         |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -1032,7 +1032,7 @@
 | src/cora/federation/projections/credential.py                                            |       39 |        7 |       10 |        3 |     79.6% |155-160, 163-168, 179 |
 | src/cora/federation/projections/facility.py                                              |       33 |        1 |        8 |        1 |     95.1% |       181 |
 | src/cora/federation/projections/permit.py                                                |       48 |       21 |       14 |        2 |     46.8% |111-125, 179-215 |
-| src/cora/federation/projections/seal.py                                                  |       39 |        5 |       10 |        1 |     83.7% |   159-169 |
+| src/cora/federation/projections/seal.py                                                  |       39 |       24 |       10 |        0 |     30.6% |   111-169 |
 | src/cora/federation/routes.py                                                            |       71 |        2 |       10 |        0 |     97.5% |   162-163 |
 | src/cora/federation/tools.py                                                             |       56 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/wire.py                                                              |       12 |        0 |        0 |        0 |    100.0% |           |
@@ -1974,7 +1974,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   147-148 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **38340** |  **732** | **5182** |  **197** | **97.6%** |           |
+| **TOTAL**                                                                                | **38366** |  **758** | **5184** |  **197** | **97.5%** |           |
 
 
 ## Setup coverage badge
