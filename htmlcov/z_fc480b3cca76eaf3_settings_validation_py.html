@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_fc480b3cca76eaf3_state_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -92,7 +92,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">The companion RFC 7396 `merge_patch` helper originally lived in this</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">module (5g-c shipped both together). Post-6g cleanup hoisted it to</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">`cora.infrastructure.json_merge_patch` once the third call site</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">`cora.shared.json_merge_patch` once the third call site</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">landed (5g-c here + 6g-b Plan.default_parameters + 6g-c Run</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">effective_parameters resolution). New callers import directly from</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">the infrastructure module.</span>&nbsp;</span><span class="r"></span></p>
@@ -119,7 +119,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">This validator's mega-schema construction is structurally different</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">from the single-schema path the shared</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="str">`cora.infrastructure.json_schema_validation.validate_values_against_schema`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="str">`cora.shared.json_schema_validation.validate_values_against_schema`</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="str">walks, and that difference is forced by a real JSON Schema pitfall:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t"><span class="str">`additionalProperties: false` only sees properties declared in the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t"><span class="str">SAME schema object &#8212; it CANNOT see properties declared in `allOf`</span>&nbsp;</span><span class="r"></span></p>
@@ -132,7 +132,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="str">The standard 2020-12 fix is the `unevaluatedProperties` keyword,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t"><span class="str">which DOES recognize properties declared in subschemas. CORA's</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t"><span class="str">constrained subset deliberately forbids it (see</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="str">`cora.infrastructure.json_schema_subset` &#8212; keeping the subset small</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="str">`cora.shared.json_schema_subset` &#8212; keeping the subset small</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t"><span class="str">is a separate locked design decision).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">So the Asset validator manually closes the union: collect declared</span>&nbsp;</span><span class="r"></span></p>
@@ -197,7 +197,7 @@
     <p class="pln"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">equipment</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">asset</span><span class="op">.</span><span class="nam">state</span> <span class="key">import</span> <span class="nam">InvalidAssetSettingsError</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">equipment</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">family</span><span class="op">.</span><span class="nam">state</span> <span class="key">import</span> <span class="nam">Family</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">json_schema_subset</span> <span class="key">import</span> <span class="nam">DRAFT_2020_12_URI</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">json_schema_subset</span> <span class="key">import</span> <span class="nam">DRAFT_2020_12_URI</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t"><span class="key">def</span> <span class="nam">validate_settings_against_families</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -347,7 +347,7 @@
             <a class="nav" href="z_fc480b3cca76eaf3_state_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
     </div>
 </footer>

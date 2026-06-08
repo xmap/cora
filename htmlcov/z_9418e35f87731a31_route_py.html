@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_9418e35f87731a31_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -104,17 +104,17 @@
     <p class="run"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">federation</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">facility</span> <span class="key">import</span> <span class="nam">FacilityKind</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">federation</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">register_facility</span><span class="op">.</span><span class="nam">command</span> <span class="key">import</span> <span class="nam">RegisterFacility</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">federation</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">register_facility</span><span class="op">.</span><span class="nam">handler</span> <span class="key">import</span> <span class="nam">IdempotentHandler</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">facility_code</span> <span class="key">import</span> <span class="nam">FACILITY_CODE_MAX_LENGTH</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">identifier</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t">    <span class="nam">ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t">    <span class="nam">AlternateIdentifier</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">    <span class="nam">AlternateIdentifierKind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">routing</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">    <span class="nam">ErrorResponse</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t">    <span class="nam">get_correlation_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t">    <span class="nam">get_principal_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">    <span class="nam">get_surface_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">routing</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">    <span class="nam">ErrorResponse</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">    <span class="nam">get_correlation_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">    <span class="nam">get_principal_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">    <span class="nam">get_surface_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">facility_code</span> <span class="key">import</span> <span class="nam">FACILITY_CODE_MAX_LENGTH</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">identifier</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">    <span class="nam">ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">    <span class="nam">AlternateIdentifier</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">    <span class="nam">AlternateIdentifierKind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -290,7 +290,7 @@
             <a class="nav" href="z_9418e35f87731a31_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
     </div>
 </footer>

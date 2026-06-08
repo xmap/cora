@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_c5a3c1404951b4ee_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -164,7 +164,7 @@
     <p class="pln"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="str">`SupplyName` is the eleventh trimmed-bounded-name VO. Uses the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="str">shared `validate_bounded_text` helper</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="str">(`cora.infrastructure.bounded_text`).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="str">(`cora.shared.bounded_text`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="str">## SupplyKind shape, BARE str, not a VO (gate-review lock)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -206,8 +206,8 @@
     <p class="run"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t"><span class="key">from</span> <span class="nam">enum</span> <span class="key">import</span> <span class="nam">StrEnum</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t"><span class="key">from</span> <span class="nam">uuid</span> <span class="key">import</span> <span class="nam">UUID</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">bounded_text</span> <span class="key">import</span> <span class="nam">bounded_name</span><span class="op">,</span> <span class="nam">validate_bounded_text</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">scope_markers</span> <span class="key">import</span> <span class="nam">Annotated</span><span class="op">,</span> <span class="nam">DeferredVocabulary</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">bounded_text</span> <span class="key">import</span> <span class="nam">bounded_name</span><span class="op">,</span> <span class="nam">validate_bounded_text</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">scope_markers</span> <span class="key">import</span> <span class="nam">Annotated</span><span class="op">,</span> <span class="nam">DeferredVocabulary</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t"><span class="nam">SUPPLY_NAME_MAX_LENGTH</span> <span class="op">=</span> <span class="num">200</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t"><span class="nam">SUPPLY_KIND_MAX_LENGTH</span> <span class="op">=</span> <span class="num">50</span>&nbsp;</span><span class="r"></span></p>
@@ -508,7 +508,7 @@
     <p class="pln"><span class="n"><a id="t424" href="#t424">424</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t425" href="#t425">425</a></span><span class="t"><span class="str">    Eleventh occurrence of the trimmed-bounded-name VO pattern. Uses</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t426" href="#t426">426</a></span><span class="t"><span class="str">    the shared `validate_bounded_text` helper (see</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t427" href="#t427">427</a></span><span class="t"><span class="str">    `cora.infrastructure.bounded_text`).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t427" href="#t427">427</a></span><span class="t"><span class="str">    `cora.shared.bounded_text`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t428" href="#t428">428</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t429" href="#t429">429</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t430" href="#t430">430</a></span><span class="t">    <span class="nam">value</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
@@ -660,7 +660,7 @@
     <p class="pln"><span class="n"><a id="t576" href="#t576">576</a></span><span class="t">    <span class="com"># kinds + no new kind in trailing 60 days). LOCKSTEP with</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t577" href="#t577">577</a></span><span class="t">    <span class="com"># `Method.needed_supplies` per the same marker convention; one</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t578" href="#t578">578</a></span><span class="t">    <span class="com"># cannot graduate without the other. See</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t579" href="#t579">579</a></span><span class="t">    <span class="com"># `cora.infrastructure.scope_markers` for the marker shape.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t579" href="#t579">579</a></span><span class="t">    <span class="com"># `cora.shared.scope_markers` for the marker shape.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t580" href="#t580">580</a></span><span class="t">    <span class="nam">kind</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t581" href="#t581">581</a></span><span class="t">        <span class="nam">str</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t582" href="#t582">582</a></span><span class="t">        <span class="nam">DeferredVocabulary</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -679,7 +679,7 @@
             <a class="nav" href="z_c5a3c1404951b4ee_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
     </div>
 </footer>

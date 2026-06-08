@@ -1060,26 +1060,16 @@
 | src/cora/infrastructure/auth/config.py                                                   |       56 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/exception\_handlers.py                                      |       44 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/idp\_registry.py                                            |       48 |        0 |       18 |        0 |    100.0% |           |
-| src/cora/infrastructure/bounded\_text.py                                                 |       23 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/infrastructure/canonical\_json.py                                               |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/config.py                                                        |       67 |        0 |       10 |        0 |    100.0% |           |
-| src/cora/infrastructure/content\_hash.py                                                 |       32 |        1 |       12 |        1 |     95.5% |       102 |
 | src/cora/infrastructure/control\_port\_route.py                                          |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/deps.py                                                          |       90 |        0 |       14 |        1 |     99.0% | 736-\>732 |
 | src/cora/infrastructure/event\_envelope.py                                               |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/event\_payload.py                                                |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/evolver.py                                                       |        6 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/infrastructure/facility\_code.py                                                |       20 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/idempotency.py                                                   |       98 |        1 |       38 |        1 |     98.5% |115, 332-\>exit |
 | src/cora/infrastructure/idempotency\_pruner.py                                           |       34 |        1 |        4 |        0 |     97.4% |        95 |
-| src/cora/infrastructure/identifier.py                                                    |       50 |        0 |        4 |        0 |    100.0% |           |
-| src/cora/infrastructure/identity.py                                                      |        7 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/json\_merge\_patch.py                                            |       13 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/infrastructure/json\_schema\_subset.py                                          |       76 |        0 |       38 |        0 |    100.0% |           |
-| src/cora/infrastructure/json\_schema\_validation.py                                      |       80 |        4 |       34 |        1 |     95.6% |141, 258-260 |
 | src/cora/infrastructure/kernel.py                                                        |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/list\_query.py                                                   |       94 |        0 |       30 |        0 |    100.0% |           |
-| src/cora/infrastructure/logbook.py                                                       |       31 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/logging.py                                                       |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/mcp\_principal.py                                                |       39 |        1 |       12 |        1 |     96.1% |       147 |
 | src/cora/infrastructure/observability/\_\_init\_\_.py                                    |        5 |        0 |        0 |        0 |    100.0% |           |
@@ -1132,7 +1122,6 @@
 | src/cora/infrastructure/published\_artifact/\_stages.py                                  |       64 |        3 |       28 |        0 |     96.7% |87-88, 235 |
 | src/cora/infrastructure/published\_artifact/orchestrator.py                              |       48 |        1 |       16 |        1 |     96.9% |       135 |
 | src/cora/infrastructure/routing.py                                                       |       46 |        1 |       12 |        1 |     96.6% |       164 |
-| src/cora/infrastructure/scope\_markers.py                                                |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/signing.py                                                       |       56 |        1 |       12 |        1 |     97.1% |       114 |
 | src/cora/infrastructure/update\_handler.py                                               |       12 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/\_\_init\_\_.py                                                       |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -1640,6 +1629,18 @@
 | src/cora/safety/routes.py                                                                |       43 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/safety/tools.py                                                                 |       26 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/wire.py                                                                  |       11 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/shared/\_\_init\_\_.py                                                          |        0 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/shared/bounded\_text.py                                                         |       23 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/shared/canonical\_json.py                                                       |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/shared/content\_hash.py                                                         |       32 |        1 |       12 |        1 |     95.5% |       102 |
+| src/cora/shared/facility\_code.py                                                        |       20 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/shared/identifier.py                                                            |       50 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/shared/identity.py                                                              |        7 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/shared/json\_merge\_patch.py                                                    |       13 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/shared/json\_schema\_subset.py                                                  |       76 |        0 |       38 |        0 |    100.0% |           |
+| src/cora/shared/json\_schema\_validation.py                                              |       80 |        4 |       34 |        1 |     95.6% |141, 258-260 |
+| src/cora/shared/logbook.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/shared/scope\_markers.py                                                        |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/subject/\_\_init\_\_.py                                                         |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/subject/\_bootstrap.py                                                          |        2 |        2 |        0 |        0 |      0.0% |     13-15 |
 | src/cora/subject/\_projections.py                                                        |        7 |        0 |        0 |        0 |    100.0% |           |

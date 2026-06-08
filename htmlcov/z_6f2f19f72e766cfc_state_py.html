@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_6f2f19f72e766cfc_wires_validation_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -163,7 +163,7 @@
     <p class="pln"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="str">`PlanName` is the **tenth** bounded-name VO. The Family gate-review</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t"><span class="str">parked extraction at "first per-VO divergence OR ~10 instances".</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="str">We hit 10 with no divergence pressure, so the trim+length-check</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="str">helper got hoisted to `cora.infrastructure.bounded_text.validate_bounded_text`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="str">helper got hoisted to `cora.shared.bounded_text.validate_bounded_text`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="str">(see that module's docstring). PlanName uses the helper from day</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t"><span class="str">one; the prior 9 VOs were refactored in the same hoist commit.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
@@ -173,8 +173,8 @@
     <p class="run"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t"><span class="key">from</span> <span class="nam">typing</span> <span class="key">import</span> <span class="nam">Any</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t"><span class="key">from</span> <span class="nam">uuid</span> <span class="key">import</span> <span class="nam">UUID</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">bounded_text</span> <span class="key">import</span> <span class="nam">bounded_name</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">recipe</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">method</span> <span class="key">import</span> <span class="nam">RoleName</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">recipe</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">method</span> <span class="key">import</span> <span class="nam">RoleName</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">bounded_text</span> <span class="key">import</span> <span class="nam">bounded_name</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t"><span class="nam">PLAN_NAME_MAX_LENGTH</span> <span class="op">=</span> <span class="num">200</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="nam">PLAN_VERSION_TAG_MAX_LENGTH</span> <span class="op">=</span> <span class="num">50</span>&nbsp;</span><span class="r"></span></p>
@@ -420,7 +420,7 @@
     <p class="pln"><span class="n"><a id="t336" href="#t336">336</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t337" href="#t337">337</a></span><span class="t"><span class="str">    Tenth occurrence of the trimmed-bounded-name VO pattern. Uses</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t338" href="#t338">338</a></span><span class="t"><span class="str">    the shared `bounded_name` decorator (see</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t339" href="#t339">339</a></span><span class="t"><span class="str">    `cora.infrastructure.bounded_text`). The decorator preserves per-VO</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t339" href="#t339">339</a></span><span class="t"><span class="str">    `cora.shared.bounded_text`). The decorator preserves per-VO</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t340" href="#t340">340</a></span><span class="t"><span class="str">    distinctness (separate frozen dataclass type, separate error</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t341" href="#t341">341</a></span><span class="t"><span class="str">    class) while removing the trim+length-check duplication that</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t342" href="#t342">342</a></span><span class="t"><span class="str">    had accumulated across 10 aggregates.</span>&nbsp;</span><span class="r"></span></p>
@@ -1177,7 +1177,7 @@
             <a class="nav" href="z_6f2f19f72e766cfc_wires_validation_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
     </div>
 </footer>

@@ -62,12 +62,12 @@
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">1<span class="text"> partial</span></button>
         </h2>
         <p class="text">
-            <a id="prevFileLink" class="nav" href="z_9b1401bacecaa802_scope_markers_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a id="prevFileLink" class="nav" href="z_9b1401bacecaa802_routing_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_9b1401bacecaa802_update_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -106,7 +106,7 @@
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">## Signature input</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">`PAE(payload_type, canonical_body_bytes(payload))`, computed via the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">shared helper in `cora.infrastructure.content_hash`. The payloadType</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">shared helper in `cora.shared.content_hash`. The payloadType</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">URI binds the event type into the signature so a `DecisionRegistered`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">signature can never collide with a different Agent-emitted event of a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">future type even when their bodies happen to serialize to the same</span>&nbsp;</span><span class="r"></span></p>
@@ -128,8 +128,8 @@
     <p class="run"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t"><span class="key">from</span> <span class="nam">cryptography</span><span class="op">.</span><span class="nam">exceptions</span> <span class="key">import</span> <span class="nam">InvalidSignature</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t"><span class="key">from</span> <span class="nam">cryptography</span><span class="op">.</span><span class="nam">hazmat</span><span class="op">.</span><span class="nam">primitives</span><span class="op">.</span><span class="nam">asymmetric</span><span class="op">.</span><span class="nam">ed25519</span> <span class="key">import</span> <span class="nam">Ed25519PublicKey</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">content_hash</span> <span class="key">import</span> <span class="nam">canonical_body_bytes</span><span class="op">,</span> <span class="nam">pae_bytes</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span><span class="op">.</span><span class="nam">event_store</span> <span class="key">import</span> <span class="nam">StoredEvent</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span><span class="op">.</span><span class="nam">event_store</span> <span class="key">import</span> <span class="nam">StoredEvent</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">content_hash</span> <span class="key">import</span> <span class="nam">canonical_body_bytes</span><span class="op">,</span> <span class="nam">pae_bytes</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t"><span class="nam">EVENT_TYPE_PAYLOAD_TYPE_PREFIX</span> <span class="op">=</span> <span class="str">"application/vnd.cora."</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="nam">EVENT_TYPE_PAYLOAD_TYPE_SUFFIX</span> <span class="op">=</span> <span class="str">"+json"</span>&nbsp;</span><span class="r"></span></p>
@@ -351,12 +351,12 @@
 <footer>
     <div class="content">
         <p>
-            <a class="nav" href="z_9b1401bacecaa802_scope_markers_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a class="nav" href="z_9b1401bacecaa802_routing_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_9b1401bacecaa802_update_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
     </div>
 </footer>

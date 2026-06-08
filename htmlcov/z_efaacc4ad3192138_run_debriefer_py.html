@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1f1cd5df6fb88adf_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -237,11 +237,11 @@
     <p class="run run2"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">    <span class="nam">validate_reasoning</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">event_envelope</span> <span class="key">import</span> <span class="nam">to_new_event</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">identity</span> <span class="key">import</span> <span class="nam">ActorId</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">logging</span> <span class="key">import</span> <span class="nam">get_logger</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span> <span class="key">import</span> <span class="nam">ConcurrencyError</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">signing</span> <span class="key">import</span> <span class="nam">SIGNED_EVENT_TYPES</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">run</span> <span class="key">import</span> <span class="nam">load_run</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">logging</span> <span class="key">import</span> <span class="nam">get_logger</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span> <span class="key">import</span> <span class="nam">ConcurrencyError</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">signing</span> <span class="key">import</span> <span class="nam">SIGNED_EVENT_TYPES</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">run</span> <span class="key">import</span> <span class="nam">load_run</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">identity</span> <span class="key">import</span> <span class="nam">ActorId</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t"><span class="key">if</span> <span class="nam">TYPE_CHECKING</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">    <span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">access</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">actor</span> <span class="key">import</span> <span class="nam">Actor</span>&nbsp;</span><span class="r"></span></p>
@@ -806,7 +806,7 @@
             <a class="nav" href="z_1f1cd5df6fb88adf_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
     </div>
 </footer>

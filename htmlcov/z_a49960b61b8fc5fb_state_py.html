@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -169,7 +169,7 @@
     <p class="pln"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="str">## Eleventh bounded-name VO</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t"><span class="str">`RunName` calls the shared `validate_bounded_text` helper hoisted in</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t"><span class="str">6e-1 (`cora.infrastructure.bounded_text`). Same pattern as the prior 10.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t"><span class="str">6e-1 (`cora.shared.bounded_text`). Same pattern as the prior 10.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t"><span class="str">## Known gaps documented (gate-review Q3)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -187,15 +187,15 @@
     <p class="run"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t"><span class="key">from</span> <span class="nam">typing</span> <span class="key">import</span> <span class="nam">Any</span><span class="op">,</span> <span class="nam">Literal</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t"><span class="key">from</span> <span class="nam">uuid</span> <span class="key">import</span> <span class="nam">UUID</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">bounded_text</span> <span class="key">import</span> <span class="nam">bounded_name</span><span class="op">,</span> <span class="nam">validate_bounded_text</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">identifier</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">bounded_text</span> <span class="key">import</span> <span class="nam">bounded_name</span><span class="op">,</span> <span class="nam">validate_bounded_text</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">identifier</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">    <span class="nam">IDENTIFIER_SCHEME_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">    <span class="nam">IDENTIFIER_VALUE_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="nam">Identifier</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">    <span class="nam">InvalidIdentifierError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">identity</span> <span class="key">import</span> <span class="nam">ActorId</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">logbook</span> <span class="key">import</span> <span class="nam">LogbookFieldSpec</span><span class="op">,</span> <span class="nam">LogbookSchema</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">identity</span> <span class="key">import</span> <span class="nam">ActorId</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">logbook</span> <span class="key">import</span> <span class="nam">LogbookFieldSpec</span><span class="op">,</span> <span class="nam">LogbookSchema</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t"><span class="nam">RUN_NAME_MAX_LENGTH</span> <span class="op">=</span> <span class="num">200</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t"><span class="nam">RUN_ABORT_REASON_MAX_LENGTH</span> <span class="op">=</span> <span class="num">500</span>&nbsp;</span><span class="r"></span></p>
@@ -221,7 +221,7 @@
     <p class="pln"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t"><span class="com"># lab_visit / session / cycle / visit, etc.). Same bounded lengths so</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t138" href="#t138">138</a></span><span class="t"><span class="com"># the round-trip with `ExternalBinding`-keyed clearance coverage</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t"><span class="com"># queries stays symmetric. The VO + bounds live at</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t"><span class="com"># `cora.infrastructure.identifier`; the Run BC keeps the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t"><span class="com"># `cora.shared.identifier`; the Run BC keeps the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t"><span class="com"># `RUN_EXTERNAL_REF_*` names as aliases for backward-compat (existing</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t"><span class="com"># routes / tools / tests reference them).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t"><span class="nam">RUN_EXTERNAL_REF_SCHEME_MAX_LENGTH</span> <span class="op">=</span> <span class="nam">IDENTIFIER_SCHEME_MAX_LENGTH</span>&nbsp;</span><span class="r"></span></p>
@@ -443,7 +443,7 @@
     <p class="pln"><span class="n"><a id="t359" href="#t359">359</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t360" href="#t360">360</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t361" href="#t361">361</a></span><span class="t"><span class="com"># hoist alias: `InvalidRunExternalRefError` is the cross-BC</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t362" href="#t362">362</a></span><span class="t"><span class="com"># `InvalidIdentifierError` from `cora.infrastructure.identifier`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t362" href="#t362">362</a></span><span class="t"><span class="com"># `InvalidIdentifierError` from `cora.shared.identifier`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t363" href="#t363">363</a></span><span class="t"><span class="com"># Kept as a Run-scoped alias so the BC's routes / tools / re-exports</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t364" href="#t364">364</a></span><span class="t"><span class="com"># (which name the symbol `InvalidRunExternalRefError`) stay unchanged.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t365" href="#t365">365</a></span><span class="t"><span class="com"># `isinstance(exc, InvalidRunExternalRefError)` and</span>&nbsp;</span><span class="r"></span></p>
@@ -1059,14 +1059,14 @@
     <p class="pln"><span class="n"><a id="t975" href="#t975">975</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t976" href="#t976">976</a></span><span class="t"><span class="str">    Eleventh occurrence of the trimmed-bounded-name VO pattern.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t977" href="#t977">977</a></span><span class="t"><span class="str">    Uses the shared `validate_bounded_text` helper hoisted at the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t978" href="#t978">978</a></span><span class="t"><span class="str">    rule-of-three trigger (see `cora.infrastructure.bounded_text`).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t978" href="#t978">978</a></span><span class="t"><span class="str">    rule-of-three trigger (see `cora.shared.bounded_text`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t979" href="#t979">979</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t980" href="#t980">980</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t981" href="#t981">981</a></span><span class="t">    <span class="nam">value</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t982" href="#t982">982</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t983" href="#t983">983</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t984" href="#t984">984</a></span><span class="t"><span class="com"># Open-scheme anti-corruption ref: `Identifier(scheme, value)` lives at</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t985" href="#t985">985</a></span><span class="t"><span class="com"># `cora.infrastructure.identifier`. The Run BC carries</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t985" href="#t985">985</a></span><span class="t"><span class="com"># `cora.shared.identifier`. The Run BC carries</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t986" href="#t986">986</a></span><span class="t"><span class="com"># `external_refs: frozenset[Identifier]` on Run state; imports come</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t987" href="#t987">987</a></span><span class="t"><span class="com"># from the infrastructure module directly.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t988" href="#t988">988</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -1316,7 +1316,7 @@
             <a class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
     </div>
 </footer>

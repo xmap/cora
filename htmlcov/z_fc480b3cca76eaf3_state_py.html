@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -158,7 +158,7 @@
     <p class="pln"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t"><span class="str">`AssetName` is the **seventh** trimmed-bounded-name VO. The shared</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="str">trim+length-check logic was hoisted to</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t"><span class="str">`cora.infrastructure.bounded_text.validate_bounded_text` once the 10th</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t"><span class="str">`cora.shared.bounded_text.validate_bounded_text` once the 10th</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t"><span class="str">VO (PlanName) landed; AssetName now calls that helper while keeping</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="str">its own frozen dataclass type and per-aggregate error class.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
@@ -171,13 +171,13 @@
     <p class="pln"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">equipment</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">_drawing</span> <span class="key">import</span> <span class="nam">Drawing</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">equipment</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">_partition_rule</span> <span class="key">import</span> <span class="nam">PartitionRule</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">bounded_text</span> <span class="key">import</span> <span class="nam">bounded_name</span><span class="op">,</span> <span class="nam">validate_bounded_text</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">identifier</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">bounded_text</span> <span class="key">import</span> <span class="nam">bounded_name</span><span class="op">,</span> <span class="nam">validate_bounded_text</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">identifier</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">    <span class="nam">AlternateIdentifier</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">    <span class="nam">AlternateIdentifierKind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">    <span class="nam">PersistentIdentifier</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">identity</span> <span class="key">import</span> <span class="nam">ActorId</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">identity</span> <span class="key">import</span> <span class="nam">ActorId</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t"><span class="nam">ASSET_NAME_MAX_LENGTH</span> <span class="op">=</span> <span class="num">200</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="nam">ASSET_OWNER_NAME_MAX_LENGTH</span> <span class="op">=</span> <span class="num">255</span>&nbsp;</span><span class="r"></span></p>
@@ -1160,7 +1160,7 @@
     <p class="pln"><span class="n"><a id="t1076" href="#t1076">1076</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1077" href="#t1077">1077</a></span><span class="t"><span class="str">    Seventh occurrence of the trimmed-bounded-name VO pattern. Uses</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1078" href="#t1078">1078</a></span><span class="t"><span class="str">    the shared `validate_bounded_text` helper (see</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1079" href="#t1079">1079</a></span><span class="t"><span class="str">    `cora.infrastructure.bounded_text`).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1079" href="#t1079">1079</a></span><span class="t"><span class="str">    `cora.shared.bounded_text`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1080" href="#t1080">1080</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1081" href="#t1081">1081</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1082" href="#t1082">1082</a></span><span class="t">    <span class="nam">value</span><span class="op">:</span> <span class="nam">str</span>&nbsp;</span><span class="r"></span></p>
@@ -1361,7 +1361,7 @@
             <a class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 13:12 +0000
+            created at 2026-06-08 14:32 +0000
         </p>
     </div>
 </footer>
