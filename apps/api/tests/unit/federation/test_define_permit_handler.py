@@ -140,7 +140,7 @@ async def test_define_permit_handler_writes_permit_payload_fields() -> None:
 
 @pytest.mark.unit
 async def test_define_permit_handler_decision_audit_carries_actor_and_permit_id_choice() -> None:
-    """The co-written DecisionRegistered audit pins actor_id == principal_id,
+    """The co-written DecisionRegistered audit pins decided_by == principal_id,
     context == 'PermitDefined', and choice == str(new permit_id) for
     cross-stream correlation."""
     store = InMemoryEventStore()
@@ -154,7 +154,7 @@ async def test_define_permit_handler_decision_audit_carries_actor_and_permit_id_
     decision_events, _ = await store.load("Decision", _DECISION_ID)
     payload = decision_events[0].payload
     assert payload["decision_id"] == str(_DECISION_ID)
-    assert payload["actor_id"] == str(_PRINCIPAL_ID)
+    assert payload["decided_by"] == str(_PRINCIPAL_ID)
     assert payload["context"] == "PermitDefined"
     assert payload["choice"] == str(_NEW_PERMIT_ID)
     assert payload["occurred_at"] == _NOW.isoformat()

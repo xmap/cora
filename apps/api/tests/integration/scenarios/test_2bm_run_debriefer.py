@@ -39,7 +39,7 @@ First scenario-tier exercise of:
     key needed) being driven from a scenario-tier test
   - `Decision` aggregate genesis with `context=RunDebrief`,
     `rule=agent:RunDebriefer:v1`, `confidence_source=
-    self_reported`, `actor_id=RUN_DEBRIEFER_AGENT_ID`
+    self_reported`, `decided_by=RUN_DEBRIEFER_AGENT_ID`
 
 ## Why a separate scenario
 
@@ -398,4 +398,4 @@ async def test_run_debrief_agent_fires_on_terminal_run(
     assert decision_payload["choice"] == "NominalCompletion"
     assert decision_payload["rule"] == "agent:RunDebriefer:v1"
     assert decision_payload["confidence_source"] == "self_reported"
-    assert UUID(decision_payload["actor_id"]) == RUN_DEBRIEFER_AGENT_ID
+    assert UUID(decision_payload["decided_by"]) == RUN_DEBRIEFER_AGENT_ID

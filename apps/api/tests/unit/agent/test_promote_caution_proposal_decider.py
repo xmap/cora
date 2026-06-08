@@ -1,5 +1,6 @@
 """Pure-decider tests for the `promote_caution_proposal` slice."""
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -33,6 +34,7 @@ def _decision(
     return Decision(
         id=decision_id or uuid4(),  # type: ignore[arg-type]
         decided_by=ActorId(uuid4()),
+        decided_at=datetime(2026, 6, 8, 12, 0, 0, tzinfo=UTC),
         context=DecisionContext(context),
         choice=DecisionChoice(choice),
         inputs=inputs,

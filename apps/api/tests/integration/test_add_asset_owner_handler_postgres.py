@@ -47,6 +47,7 @@ async def _append_asset_registered(
         "level": "Device",
         "parent_id": str(uuid4()),
         "occurred_at": _NOW.isoformat(),
+        "commissioned_by": str(_PRINCIPAL_ID),
     }
     if owners is not None:
         payload["owners"] = owners

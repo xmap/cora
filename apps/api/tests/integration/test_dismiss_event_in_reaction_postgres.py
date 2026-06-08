@@ -178,7 +178,7 @@ async def test_dismiss_event_advances_bookmark_and_writes_decision(
     payload = json.loads(raw_payload) if isinstance(raw_payload, str) else raw_payload
     assert payload["context"] == "ReactionDismissal"
     assert payload["choice"] == "EventDismissed"
-    assert payload["actor_id"] == str(_PRINCIPAL_ID)
+    assert payload["decided_by"] == str(_PRINCIPAL_ID)
     assert payload["inputs"]["subscriber_name"] == subscriber_name
     assert payload["inputs"]["event_id"] == str(event_id)
     assert payload["inputs"]["previous_bookmark_transaction_id"] == "0"

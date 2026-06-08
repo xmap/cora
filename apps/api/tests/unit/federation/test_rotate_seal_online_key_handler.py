@@ -240,7 +240,7 @@ async def test_rotate_seal_online_key_handler_appends_to_both_seal_and_decision_
 
 @pytest.mark.unit
 async def test_rotate_seal_online_key_handler_decision_audit_carries_actor_and_choice() -> None:
-    """The co-written DecisionRegistered audit pins actor_id == principal_id,
+    """The co-written DecisionRegistered audit pins decided_by == principal_id,
     context == 'SealOnlineKeyRotated', and choice == facility_code for
     cross-stream correlation."""
     store = InMemoryEventStore()
@@ -256,7 +256,7 @@ async def test_rotate_seal_online_key_handler_decision_audit_carries_actor_and_c
     decision_events, _ = await store.load("Decision", _DECISION_ID)
     payload = decision_events[0].payload
     assert payload["decision_id"] == str(_DECISION_ID)
-    assert payload["actor_id"] == str(_PRINCIPAL_ID)
+    assert payload["decided_by"] == str(_PRINCIPAL_ID)
     assert payload["context"] == "SealOnlineKeyRotated"
     assert payload["choice"] == _FACILITY_CODE
     assert payload["occurred_at"] == _T2.isoformat()
@@ -491,7 +491,7 @@ async def test_rotate_seal_online_key_handler_records_principal_as_rotated_by() 
     events, _ = await store.load("Seal", _STREAM_ID)
     assert events[-1].payload["rotated_by"] == str(_PRINCIPAL_ID)
     decision_events, _ = await store.load("Decision", _DECISION_ID)
-    assert decision_events[0].payload["actor_id"] == str(_PRINCIPAL_ID)
+    assert decision_events[0].payload["decided_by"] == str(_PRINCIPAL_ID)
 
 
 @pytest.mark.unit

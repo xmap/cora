@@ -126,7 +126,7 @@ async def test_register_credential_handler_writes_credential_payload_fields() ->
 
 @pytest.mark.unit
 async def test_register_credential_handler_decision_audit_carries_actor_and_choice() -> None:
-    """The co-written DecisionRegistered audit pins actor_id == principal_id,
+    """The co-written DecisionRegistered audit pins decided_by == principal_id,
     context == 'CredentialRegistered', and choice == str(new credential_id) for
     cross-stream correlation."""
     store = InMemoryEventStore()
@@ -140,7 +140,7 @@ async def test_register_credential_handler_decision_audit_carries_actor_and_choi
     decision_events, _ = await store.load("Decision", _DECISION_ID)
     payload = decision_events[0].payload
     assert payload["decision_id"] == str(_DECISION_ID)
-    assert payload["actor_id"] == str(_PRINCIPAL_ID)
+    assert payload["decided_by"] == str(_PRINCIPAL_ID)
     assert payload["context"] == "CredentialRegistered"
     assert payload["choice"] == str(_NEW_CREDENTIAL_ID)
     assert payload["occurred_at"] == _NOW.isoformat()
