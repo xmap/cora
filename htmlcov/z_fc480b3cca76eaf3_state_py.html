@@ -55,8 +55,8 @@
             </div>
         </aside>
         <h2>
-            <span class="text">284 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">284<span class="text"> run</span></button>
+            <span class="text">285 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">285<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 11:27 +0000
+            created at 2026-06-08 13:12 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -1337,6 +1337,21 @@
     <p class="pln"><span class="n"><a id="t1253" href="#t1253">1253</a></span><span class="t">    <span class="com"># streams without the field fold cleanly via the additive-state</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1254" href="#t1254">1254</a></span><span class="t">    <span class="com"># pattern. See [[project-asset-persistent-id-write-design]].</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1255" href="#t1255">1255</a></span><span class="t">    <span class="nam">persistent_id</span><span class="op">:</span> <span class="nam">PersistentIdentifier</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1256" href="#t1256">1256</a></span><span class="t">    <span class="com"># Optional back-reference to the controller Asset (a sibling Device</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1257" href="#t1257">1257</a></span><span class="t">    <span class="com"># carrying the MotionController Family) that drives this Asset.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1258" href="#t1258">1258</a></span><span class="t">    <span class="com"># Set ONCE at `register_asset` per the model-binding Lock A</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1259" href="#t1259">1259</a></span><span class="t">    <span class="com"># precedent; rebind path is decommission + re-register (which</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1260" href="#t1260">1260</a></span><span class="t">    <span class="com"># matches the operational semantics of a physical controller swap:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1261" href="#t1261">1261</a></span><span class="t">    <span class="com"># swap IS a logical decommission of the prior controller). Eventual-</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1262" href="#t1262">1262</a></span><span class="t">    <span class="com"># consistency: the decider does NOT verify the referenced controller</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1263" href="#t1263">1263</a></span><span class="t">    <span class="com"># Asset stream exists (mirrors `parent_id`, `model_id`, `fixture_id`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1264" href="#t1264">1264</a></span><span class="t">    <span class="com"># precedents). Defaults to None so legacy AssetRegistered streams</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1265" href="#t1265">1265</a></span><span class="t">    <span class="com"># without the field fold cleanly via the additive-state pattern.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1266" href="#t1266">1266</a></span><span class="t">    <span class="com"># See [[project-controller-as-asset-stage1-design]] for the design</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1267" href="#t1267">1267</a></span><span class="t">    <span class="com"># lock and [[project-controller-as-asset-research]] for the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1268" href="#t1268">1268</a></span><span class="t">    <span class="com"># standards convergence (OPC UA DI, ISA-88, AAS DigitalNameplate,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1269" href="#t1269">1269</a></span><span class="t">    <span class="com"># MTConnect, PIDINST).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1270" href="#t1270">1270</a></span><span class="t">    <span class="nam">controller_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -1346,7 +1361,7 @@
             <a class="nav" href="z_f90b920ac18720bd___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 11:27 +0000
+            created at 2026-06-08 13:12 +0000
         </p>
     </div>
 </footer>
