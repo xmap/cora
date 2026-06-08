@@ -28,7 +28,7 @@ from cora.data.aggregates.dataset import (
     DatasetStatus,
 )
 from cora.data.features.discard_dataset.command import DiscardDataset
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

@@ -20,17 +20,17 @@ from pydantic import BaseModel, Field
 from cora.federation.aggregates.facility import FacilityKind
 from cora.federation.features.register_facility.command import RegisterFacility
 from cora.federation.features.register_facility.handler import IdempotentHandler
-from cora.infrastructure.facility_code import FACILITY_CODE_MAX_LENGTH
-from cora.infrastructure.identifier import (
-    ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
-    AlternateIdentifier,
-    AlternateIdentifierKind,
-)
 from cora.infrastructure.routing import (
     ErrorResponse,
     get_correlation_id,
     get_principal_id,
     get_surface_id,
+)
+from cora.shared.facility_code import FACILITY_CODE_MAX_LENGTH
+from cora.shared.identifier import (
+    ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
+    AlternateIdentifier,
+    AlternateIdentifierKind,
 )
 
 

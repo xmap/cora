@@ -33,7 +33,7 @@ from cora.equipment.errors import (
     OwnerStateNotAvailableError,
     PidinstRecordInvariantError,
 )
-from cora.infrastructure.identifier import AlternateIdentifierKind
+from cora.shared.identifier import AlternateIdentifierKind
 from tests.architecture.conftest import BCS, CORA_ROOT, tracked_python_files
 
 pytestmark = [pytest.mark.architecture]

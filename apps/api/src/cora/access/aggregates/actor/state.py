@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name
+from cora.shared.bounded_text import bounded_name
 
 ACTOR_NAME_MAX_LENGTH = 200
 

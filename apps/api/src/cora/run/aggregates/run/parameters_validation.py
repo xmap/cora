@@ -20,7 +20,7 @@ sibling adapters cover the two postures the Run BC needs.
     adjust time.
 
 Both delegate to the shared values-validator at
-`cora.infrastructure.json_schema_validation` and surface
+`cora.shared.json_schema_validation` and surface
 Run-specific error classes for unambiguous API responses.
 
 ## Module shape
@@ -39,11 +39,11 @@ validation posture" for the operator-vocabulary mapping.
 from collections.abc import Mapping
 from typing import Any
 
-from cora.infrastructure.json_schema_validation import validate_values_against_schema
 from cora.run.aggregates.run.state import (
     InvalidRunAdjustSchemaError,
     InvalidRunParametersError,
 )
+from cora.shared.json_schema_validation import validate_values_against_schema
 
 _NO_SCHEMA_MESSAGE = (
     "Method declares no parameters_schema; cannot start Run with "

@@ -18,7 +18,7 @@ from cora.equipment.aggregates.asset import (
     to_payload,
 )
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
     from datetime import datetime

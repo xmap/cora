@@ -30,7 +30,7 @@ SUBSCRIPTION side, not threaded through the command surface.
 from dataclasses import dataclass
 from uuid import UUID
 
-from cora.infrastructure.identity import MonitorSourceId
+from cora.shared.identity import MonitorSourceId
 from cora.supply.aggregates.supply import MonitorRef, SupplyStatus
 
 

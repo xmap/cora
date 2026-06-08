@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 
 from cora.federation.aggregates._value_types import FacilityId
 from cora.federation.aggregates.facility import FacilityKind
-from cora.infrastructure.identifier import AlternateIdentifier
+from cora.shared.identifier import AlternateIdentifier
 
 
 @dataclass(frozen=True, slots=True)

@@ -59,8 +59,8 @@ from typing import Any, assert_never
 from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise
-from cora.infrastructure.identity import ActorId, MonitorSourceId, SchedulerTickId
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId, MonitorSourceId, SchedulerTickId
 
 # Trigger-aware discriminated union for the `triggered_by` attribution
 # field. NewType-based; pyright treats the three options as distinct at

@@ -34,11 +34,11 @@ from cora.equipment.aggregates.asset import (
     AssetSettingsUpdated,
     evolve,
 )
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))
 _NOW = datetime(2026, 6, 3, 12, 0, 0, tzinfo=UTC)

@@ -52,8 +52,8 @@ from cora.caution.aggregates.caution.state import (
     ProcedureTarget,
 )
 from cora.infrastructure.event_payload import deserialize_or_raise, deserialize_vo_or_raise
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId
 
 # ---------------------------------------------------------------------------
 # CautionTarget serialize / deserialize (public cross-slice helpers)

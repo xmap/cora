@@ -19,7 +19,6 @@ whole app); operators retry via the standard 409 flow.
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from cora.infrastructure.identifier import InvalidIdentifierError
 from cora.safety.aggregates.clearance import (
     ClearanceAlreadyExistsError,
     ClearanceCannotActivateError,
@@ -59,6 +58,7 @@ from cora.safety.features import (
     start_clearance_review,
     submit_clearance,
 )
+from cora.shared.identifier import InvalidIdentifierError
 
 
 async def _handle_validation_error(request: Request, exc: Exception) -> JSONResponse:

@@ -40,9 +40,9 @@ temporarily revoking access without deleting the policy.
 from dataclasses import dataclass
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name
 from cora.infrastructure.ports import Allow, AuthzResult, Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.bounded_text import bounded_name
 
 POLICY_NAME_MAX_LENGTH = 200
 
@@ -71,7 +71,7 @@ class PolicyName:
     """Display name for a policy. Trimmed; 1-200 chars.
 
     Uses the shared `@bounded_name` decorator from
-    `cora.infrastructure.bounded_text`.
+    `cora.shared.bounded_text`.
     """
 
     value: str

@@ -459,7 +459,6 @@ def test_conduct_procedure_request_default_is_empty_step_list() -> None:
 
 import hashlib  # noqa: E402
 
-from cora.infrastructure.canonical_json import canonical_json_bytes  # noqa: E402
 from cora.operation._recipe_expansion import steps_to_wire  # noqa: E402
 from cora.operation.aggregates.procedure import (  # noqa: E402
     ProcedureBoundCapabilityDeprecatedError,
@@ -487,6 +486,7 @@ from cora.recipe.aggregates.recipe import (  # noqa: E402
 )
 from cora.recipe.aggregates.recipe import event_type_name as recipe_event_type_name  # noqa: E402
 from cora.recipe.aggregates.recipe import to_payload as recipe_to_payload  # noqa: E402
+from cora.shared.canonical_json import canonical_json_bytes  # noqa: E402
 
 
 async def _seed_capability(

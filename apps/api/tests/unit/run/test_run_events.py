@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.run.aggregates.run.events import (
     DecisionDebriefRequested,
@@ -19,6 +18,7 @@ from cora.run.aggregates.run.events import (
     from_stored,
     to_payload,
 )
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)
 

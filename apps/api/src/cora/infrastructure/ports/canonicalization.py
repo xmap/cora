@@ -2,7 +2,7 @@
 
 `CanonicalizationPort` lifts the shipped v1 recipe (stdlib json sort-keys
 + DSSE PAE + SHA-256) into a swappable port surface. The v1 adapter
-delegates byte-for-byte to `cora.infrastructure.content_hash` helpers;
+delegates byte-for-byte to `cora.shared.content_hash` helpers;
 future adapters at versions like `"cora/v2-cose"` can ride alongside
 v1 without invalidating any shipped `content_hash` on Method,
 Plan, CalibrationRevision, or signed DecisionRegistered.

@@ -118,7 +118,6 @@ from cora.decision.features.register_decision import RegisterDecision
 from cora.decision.features.register_decision import bind as bind_register_decision
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
-from cora.infrastructure.identity import ActorId
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_plan import DefinePlan
@@ -141,6 +140,7 @@ from cora.run.features.complete_run import CompleteRun
 from cora.run.features.complete_run import bind as bind_complete_run
 from cora.run.features.start_run import StartRun
 from cora.run.features.start_run import bind as bind_start_run
+from cora.shared.identity import ActorId
 from cora.subject.features.measure_subject import MeasureSubject
 from cora.subject.features.measure_subject import bind as bind_measure_subject
 from cora.subject.features.mount_subject import MountSubject

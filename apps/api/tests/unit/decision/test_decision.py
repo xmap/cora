@@ -40,7 +40,7 @@ from cora.decision.aggregates.decision import (
     validate_reasoning_signature,
 )
 from cora.decision.errors import OverrideKindRequiresParentError
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 # ---------- DecisionChoice / DecisionContext / DecisionRule ----------
 

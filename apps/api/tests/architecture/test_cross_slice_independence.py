@@ -3,8 +3,10 @@
 Vertical slices are independent units. A handler / decider / route
 in `cora.<bc>.features.<slice_a>` MUST NOT import from
 `cora.<bc>.features.<slice_b>`. Shared types belong in the
-aggregate kernel (`cora.<bc>.aggregates.*`); shared infra belongs
-in `cora.infrastructure`.
+aggregate kernel (`cora.<bc>.aggregates.*`); pure cross-BC value
+objects belong in `cora.shared`; cross-BC infrastructure with
+adapter / port / kernel dependencies belongs in
+`cora.infrastructure`.
 
 Tach handles cross-BC rules at module granularity; cross-slice
 inside a BC would require ~50 per-slice tach module stanzas, so
@@ -65,5 +67,5 @@ def test_no_cross_slice_imports(py_file: Path) -> None:
     assert not violations, (
         f"{qualified} imports from a sibling slice in the same BC:\n  "
         + "\n  ".join(violations)
-        + "\nMove shared types into the aggregate kernel or into infrastructure."
+        + "\nMove shared types into the aggregate kernel, cora.shared, or cora.infrastructure."
     )

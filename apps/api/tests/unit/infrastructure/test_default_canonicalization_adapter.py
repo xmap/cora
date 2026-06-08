@@ -3,11 +3,11 @@
 from cora.infrastructure.adapters.default_canonicalization_adapter import (
     DefaultCanonicalizationAdapter,
 )
-from cora.infrastructure.content_hash import compute_content_hash
 from cora.infrastructure.ports.canonicalization import (
     CanonicalizationFailedError,
     CanonicalizedBytes,
 )
+from cora.shared.content_hash import compute_content_hash
 
 
 def test_default_canonicalization_adapter_version_is_cora_v1() -> None:

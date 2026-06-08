@@ -119,7 +119,6 @@ import asyncpg
 import pytest
 
 from cora.campaign.aggregates.campaign import CampaignIntent
-from cora.infrastructure.identifier import Identifier
 from cora.safety.aggregates.clearance import (
     ClearanceKind,
     ClearanceStatus,
@@ -143,6 +142,7 @@ from cora.safety.features.start_clearance_review import StartClearanceReview
 from cora.safety.features.start_clearance_review import bind as bind_start_review
 from cora.safety.features.submit_clearance import SubmitClearance
 from cora.safety.features.submit_clearance import bind as bind_submit_clearance
+from cora.shared.identifier import Identifier
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 from tests.integration.scenarios._beamtime_fixture import (
     BeamtimeSpec,

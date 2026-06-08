@@ -24,7 +24,7 @@ from cora.federation.features import start_seal_republishing
 from cora.federation.features.start_seal_republishing import (
     StartSealRepublishing,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _FACILITY_ID = "aps-2bm"

@@ -4,7 +4,7 @@ JSON Schema subset.
 Method.parameters_schema declares the shape of parameter dicts that
 downstream Plans and Runs carry for this Method. This
 module is the write-time guard via the shared declarer-validator at
-`cora.infrastructure.json_schema_validation`. The runtime values
+`cora.shared.json_schema_validation`. The runtime values
 validation uses the values-against-schema function in the
 same shared module via Plan / Run thin wrappers.
 
@@ -19,7 +19,7 @@ adapter shape.
 
 from typing import Any
 
-from cora.infrastructure.json_schema_validation import validate_schema_declaration
+from cora.shared.json_schema_validation import validate_schema_declaration
 
 
 class InvalidMethodParametersSchemaError(ValueError):

@@ -53,8 +53,8 @@ from cora.calibration.aggregates.calibration.state import (
     MeasuredSource,
 )
 from cora.infrastructure.event_payload import deserialize_or_raise, deserialize_vo_or_raise
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId
 
 # ---------------------------------------------------------------------------
 # CalibrationSource serialize / deserialize (public cross-slice helpers)

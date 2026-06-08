@@ -49,7 +49,7 @@ from cora.equipment.aggregates.asset import (
 )
 from cora.equipment.features.decommission_asset.command import DecommissionAsset
 from cora.equipment.features.decommission_asset.context import DecommissionAssetContext
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _DECOMMISSIONABLE_LIFECYCLES: tuple[AssetLifecycle, ...] = (
     AssetLifecycle.COMMISSIONED,

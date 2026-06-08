@@ -37,7 +37,7 @@ from cora.equipment.errors import (
     FixtureOwnerStateNotAvailableError,
     PidinstRecordInvariantError,
 )
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )

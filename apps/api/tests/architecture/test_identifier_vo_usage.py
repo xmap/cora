@@ -1,5 +1,5 @@
 """Pin: every 2-field `(scheme, value)`-shaped VO either reuses the shared
-`cora.infrastructure.identifier.Identifier` VO or carries a deviation
+`cora.shared.identifier.Identifier` VO or carries a deviation
 docstring explaining why it stays bespoke.
 
 The open-scheme anti-corruption-ref VO `Identifier(scheme, value)` is the
@@ -11,7 +11,7 @@ allowlist (`value`, `id`, `number`, `code`, `identifier`) is structurally
 indistinguishable from `Identifier` and SHOULD either:
 
   (a) compose `Identifier` directly (import from
-      `cora.infrastructure.identifier`), or
+      `cora.shared.identifier`), or
   (b) appear in the deviation allowlist below with a docstring line
       matching `r'^\\s*Deviation from Identifier VO:\\s+'` justifying why
       the bespoke shape is load-bearing (closed-enum scheme, third
@@ -129,10 +129,10 @@ def _matches_identifier_shape(class_def: ast.ClassDef) -> bool:
 
 
 def _module_imports_identifier(tree: ast.AST) -> bool:
-    """True if the module imports `Identifier` from `cora.infrastructure.identifier`."""
+    """True if the module imports `Identifier` from `cora.shared.identifier`."""
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
-            if node.module != "cora.infrastructure.identifier":
+            if node.module != "cora.shared.identifier":
                 continue
             if any(alias.name == "Identifier" for alias in node.names):
                 return True
@@ -197,7 +197,7 @@ def test_identifier_shaped_vos_compose_or_deviate_explicitly(path: Path) -> None
         + "\n\nA frozen dataclass with exactly two fields named from "
         f"scheme={sorted(_SCHEME_FIELD_NAMES)} AND value={sorted(_VALUE_FIELD_NAMES)} "
         "is the canonical `Identifier(scheme, value)` shape. Either import "
-        "`Identifier` from `cora.infrastructure.identifier` and compose it, "
+        "`Identifier` from `cora.shared.identifier` and compose it, "
         "or add the class to the deviation allowlist in this test plus a "
         "docstring line matching r'^\\s*Deviation from Identifier VO:\\s+' "
         "explaining what load-bearing constraint forces the bespoke shape."

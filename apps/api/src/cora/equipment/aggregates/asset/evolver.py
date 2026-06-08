@@ -126,7 +126,7 @@ from cora.equipment.aggregates.asset.state import (
     PortDirection,
 )
 from cora.infrastructure.evolver import require_state
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )

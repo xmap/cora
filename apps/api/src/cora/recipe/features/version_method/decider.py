@@ -39,7 +39,6 @@ Invariants:
 
 from datetime import datetime
 
-from cora.infrastructure.content_hash import compute_content_hash
 from cora.infrastructure.signing import event_type_to_payload_type
 from cora.recipe.aggregates.method import (
     METHOD_VERSION_TAG_MAX_LENGTH,
@@ -51,6 +50,7 @@ from cora.recipe.aggregates.method import (
     MethodVersioned,
 )
 from cora.recipe.features.version_method.command import VersionMethod
+from cora.shared.content_hash import compute_content_hash
 
 _VERSIONABLE_STATUSES: tuple[MethodStatus, ...] = (
     MethodStatus.DEFINED,

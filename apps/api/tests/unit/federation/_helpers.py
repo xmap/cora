@@ -47,7 +47,7 @@ from cora.federation.aggregates.seal import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _DEFAULT_SEAL_ONLINE_KEY_REF = UUID("01900000-0000-7000-8000-00000000c0a1")
 _DEFAULT_SEAL_OFFLINE_KEY_REF = UUID("01900000-0000-7000-8000-00000000c0b1")

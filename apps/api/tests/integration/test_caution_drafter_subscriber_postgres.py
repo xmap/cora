@@ -48,7 +48,6 @@ from cora.caution.aggregates.caution import (
 )
 from cora.decision.aggregates.decision import load_decision
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports import FakeLLM, FakeLLMResponse
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.recipe.aggregates.plan import PlanDefined
@@ -58,6 +57,7 @@ from cora.run.aggregates.run import RunStarted
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
 from cora.run.aggregates.run.events import RunAborted
+from cora.shared.identity import ActorId
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)

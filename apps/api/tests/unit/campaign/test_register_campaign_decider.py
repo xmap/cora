@@ -18,7 +18,7 @@ from cora.campaign.aggregates.campaign import (
 )
 from cora.campaign.features.register_campaign import RegisterCampaign
 from cora.campaign.features.register_campaign.decider import decide
-from cora.infrastructure.identifier import Identifier, InvalidIdentifierError
+from cora.shared.identifier import Identifier, InvalidIdentifierError
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
 _NEW_ID = UUID("01900000-0000-7000-8000-00000000d001")

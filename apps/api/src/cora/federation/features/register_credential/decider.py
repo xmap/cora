@@ -43,7 +43,7 @@ from cora.federation.aggregates.credential import (
     InvalidCredentialSecretRefError,
 )
 from cora.federation.features.register_credential.command import RegisterCredential
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

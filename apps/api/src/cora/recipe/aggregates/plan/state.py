@@ -79,7 +79,7 @@ Q2).
 `PlanName` is the **tenth** bounded-name VO. The Family gate-review
 parked extraction at "first per-VO divergence OR ~10 instances".
 We hit 10 with no divergence pressure, so the trim+length-check
-helper got hoisted to `cora.infrastructure.bounded_text.validate_bounded_text`
+helper got hoisted to `cora.shared.bounded_text.validate_bounded_text`
 (see that module's docstring). PlanName uses the helper from day
 one; the prior 9 VOs were refactored in the same hoist commit.
 """
@@ -89,8 +89,8 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name
 from cora.recipe.aggregates.method import RoleName
+from cora.shared.bounded_text import bounded_name
 
 PLAN_NAME_MAX_LENGTH = 200
 PLAN_VERSION_TAG_MAX_LENGTH = 50
@@ -336,7 +336,7 @@ class PlanName:
 
     Tenth occurrence of the trimmed-bounded-name VO pattern. Uses
     the shared `bounded_name` decorator (see
-    `cora.infrastructure.bounded_text`). The decorator preserves per-VO
+    `cora.shared.bounded_text`). The decorator preserves per-VO
     distinctness (separate frozen dataclass type, separate error
     class) while removing the trim+length-check duplication that
     had accumulated across 10 aggregates.

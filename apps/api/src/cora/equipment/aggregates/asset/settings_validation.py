@@ -8,7 +8,7 @@ diagnostic.
 
 The companion RFC 7396 `merge_patch` helper originally lived in this
 module (5g-c shipped both together). Post-6g cleanup hoisted it to
-`cora.infrastructure.json_merge_patch` once the third call site
+`cora.shared.json_merge_patch` once the third call site
 landed (5g-c here + 6g-b Plan.default_parameters + 6g-c Run
 effective_parameters resolution). New callers import directly from
 the infrastructure module.
@@ -35,7 +35,7 @@ nothing to the allowed-keys set.
 
 This validator's mega-schema construction is structurally different
 from the single-schema path the shared
-`cora.infrastructure.json_schema_validation.validate_values_against_schema`
+`cora.shared.json_schema_validation.validate_values_against_schema`
 walks, and that difference is forced by a real JSON Schema pitfall:
 `additionalProperties: false` only sees properties declared in the
 SAME schema object — it CANNOT see properties declared in `allOf`
@@ -48,7 +48,7 @@ silently rejects every key that isn't redeclared at the root.
 The standard 2020-12 fix is the `unevaluatedProperties` keyword,
 which DOES recognize properties declared in subschemas. CORA's
 constrained subset deliberately forbids it (see
-`cora.infrastructure.json_schema_subset` — keeping the subset small
+`cora.shared.json_schema_subset` — keeping the subset small
 is a separate locked design decision).
 
 So the Asset validator manually closes the union: collect declared
@@ -113,7 +113,7 @@ import jsonschema_rs
 
 from cora.equipment.aggregates.asset.state import InvalidAssetSettingsError
 from cora.equipment.aggregates.family.state import Family
-from cora.infrastructure.json_schema_subset import DRAFT_2020_12_URI
+from cora.shared.json_schema_subset import DRAFT_2020_12_URI
 
 
 def validate_settings_against_families(

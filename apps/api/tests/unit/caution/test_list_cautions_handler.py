@@ -21,9 +21,9 @@ import pytest
 from cora.caution.errors import UnauthorizedError
 from cora.caution.features import list_cautions
 from cora.caution.features.list_cautions import ListCautions
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports import Allow
 from cora.infrastructure.projection import encode_cursor
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)

@@ -16,7 +16,7 @@ violations (mapped to 400 by the BC's exception handler).
 
 from pydantic import BaseModel, Field
 
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
     AlternateIdentifier,
     AlternateIdentifierKind,

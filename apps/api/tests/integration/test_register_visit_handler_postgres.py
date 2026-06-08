@@ -11,7 +11,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from cora.infrastructure.identifier import Identifier
+from cora.shared.identifier import Identifier
 from cora.trust.aggregates.visit import VisitType
 from cora.trust.features import register_visit
 from cora.trust.features.register_visit import RegisterVisit

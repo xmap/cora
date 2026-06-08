@@ -45,7 +45,7 @@ from cora.equipment.aggregates.asset.state import (
 )
 from cora.equipment.features import register_asset
 from cora.equipment.features.register_asset import RegisterAsset
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)

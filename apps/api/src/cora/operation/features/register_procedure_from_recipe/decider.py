@@ -48,8 +48,6 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import validate_bounded_text
-from cora.infrastructure.json_schema_validation import validate_values_against_schema
 from cora.operation._recipe_expansion import canonical_json_bytes, steps_to_wire
 from cora.operation.aggregates.procedure import (
     PROCEDURE_KIND_MAX_LENGTH,
@@ -73,6 +71,8 @@ from cora.operation.features.register_procedure_from_recipe.command import (
 from cora.operation.ports.recipe_expansion_port import RecipeExpansionPort
 from cora.recipe.aggregates.capability import Capability, ExecutorShape
 from cora.recipe.aggregates.recipe import Recipe
+from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.json_schema_validation import validate_values_against_schema
 
 
 def _hash_steps(steps: tuple[Step, ...]) -> str:

@@ -7,7 +7,7 @@ marking an already-Unavailable supply raises.
 
 from datetime import datetime
 
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from cora.supply.aggregates.supply import (
     Supply,
     SupplyCannotMarkUnavailableError,

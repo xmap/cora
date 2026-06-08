@@ -26,7 +26,7 @@ from cora.agent.aggregates.agent import (
     AgentStatus,
 )
 from cora.agent.features.resume_agent.command import ResumeAgent
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

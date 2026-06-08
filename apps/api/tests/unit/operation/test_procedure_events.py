@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.logbook import LogbookFieldSpec, LogbookSchema
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.operation.aggregates.procedure import (
     STEPS_LOGBOOK_SCHEMA,
@@ -20,6 +19,7 @@ from cora.operation.aggregates.procedure import (
     from_stored,
     to_payload,
 )
+from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
 

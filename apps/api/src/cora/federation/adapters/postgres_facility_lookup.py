@@ -61,8 +61,8 @@ from cora.federation.aggregates.facility.state import (
     FacilityKind,
     FacilityStatus,
 )
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
 
 _LOOKUP_SQL = """
 SELECT facility_id, code, kind, status, trust_anchor_credential_ids

@@ -28,7 +28,7 @@ from cora.equipment.aggregates.asset import (
     AssetLifecycle,
 )
 from cora.equipment.aggregates.model import ManufacturerIdentifierType
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
 )

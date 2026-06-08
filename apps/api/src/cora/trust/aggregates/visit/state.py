@@ -84,7 +84,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.identifier import Identifier
+from cora.shared.identifier import Identifier
 
 VISIT_REASON_MAX_LENGTH = 500
 

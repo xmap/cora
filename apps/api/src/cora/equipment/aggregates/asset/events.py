@@ -74,14 +74,14 @@ from cora.equipment.aggregates.asset.state import (
     AssetOwnerName,
 )
 from cora.infrastructure.event_payload import deserialize_or_raise
-from cora.infrastructure.identifier import (
+from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
     MalformedPersistentIdentifierError,
     PersistentIdentifierScheme,
 )
-from cora.infrastructure.identity import ActorId
-from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId
 
 
 def _owner_to_payload(owner: AssetOwner) -> dict[str, Any]:

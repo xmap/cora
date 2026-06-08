@@ -27,7 +27,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.content_hash import compute_content_hash
 from cora.recipe.aggregates.method import (
     Method,
     MethodName,
@@ -36,6 +35,7 @@ from cora.recipe.aggregates.method import (
 )
 from cora.recipe.features import version_method
 from cora.recipe.features.version_method import VersionMethod
+from cora.shared.content_hash import compute_content_hash
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 _FIXED_METHOD_ID = UUID("01900000-0000-7000-8000-000000000001")

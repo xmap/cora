@@ -59,7 +59,6 @@ from cora.campaign.aggregates.campaign import (
 )
 from cora.equipment.aggregates.asset import Asset, AssetNotFoundError, load_asset
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.json_merge_patch import merge_patch
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny, SupplyReference
@@ -73,6 +72,7 @@ from cora.run.errors import UnauthorizedError
 from cora.run.features.start_run.command import StartRun
 from cora.run.features.start_run.context import RunStartContext
 from cora.run.features.start_run.decider import decide
+from cora.shared.json_merge_patch import merge_patch
 from cora.subject.aggregates.subject import SubjectNotFoundError, load_subject
 
 _STREAM_TYPE = "Run"

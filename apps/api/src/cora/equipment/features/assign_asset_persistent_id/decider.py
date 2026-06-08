@@ -34,7 +34,7 @@ from cora.equipment.aggregates.asset import (
     AssetPersistentIdAssignmentForbiddenError,
 )
 from cora.equipment.features.assign_asset_persistent_id.command import AssignAssetPersistentId
-from cora.infrastructure.identifier import PersistentIdentifier
+from cora.shared.identifier import PersistentIdentifier
 
 
 def decide(

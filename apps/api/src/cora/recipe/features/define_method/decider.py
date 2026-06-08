@@ -24,7 +24,6 @@ procedural Methods like "Sample Cleaning").
 from datetime import datetime
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import validate_bounded_text
 from cora.recipe.aggregates.capability import (
     Capability,
     CapabilityNotFoundError,
@@ -40,6 +39,7 @@ from cora.recipe.aggregates.method import (
     MethodName,
 )
 from cora.recipe.features.define_method.command import DefineMethod
+from cora.shared.bounded_text import validate_bounded_text
 
 
 def decide(

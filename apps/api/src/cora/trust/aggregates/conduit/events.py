@@ -31,8 +31,8 @@ from typing import Any, assert_never
 from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise
-from cora.infrastructure.logbook import LogbookSchema
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.logbook import LogbookSchema
 
 
 @dataclass(frozen=True)

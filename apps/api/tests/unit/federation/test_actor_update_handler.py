@@ -32,7 +32,7 @@ from cora.federation.aggregates.seal import (
 from cora.federation.aggregates.seal._stream_id import seal_stream_id
 from cora.federation.errors import UnauthorizedError
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps as _build_deps_shared
 from tests.unit.federation._helpers import (
     seed_active_credential,

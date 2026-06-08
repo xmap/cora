@@ -28,11 +28,11 @@ from cora.decision.errors import UnauthorizedError
 from cora.decision.features.rate_decision.command import RateDecision
 from cora.decision.features.rate_decision.decider import decide
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.identity import ActorId
 
 _STREAM_TYPE = "Decision"
 _COMMAND_NAME = "RateDecision"

@@ -20,7 +20,7 @@ Invariants:
 
 from datetime import datetime
 
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from cora.subject.aggregates.subject import (
     Subject,
     SubjectCannotReturnError,

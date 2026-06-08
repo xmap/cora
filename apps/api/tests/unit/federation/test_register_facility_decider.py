@@ -26,9 +26,9 @@ from cora.federation.aggregates.facility import (
 )
 from cora.federation.features import register_facility
 from cora.federation.features.register_facility import RegisterFacility
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 6, 8, 12, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = ActorId(UUID("01900000-0000-7000-8000-000000fed101"))

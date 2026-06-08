@@ -33,11 +33,11 @@ from cora.equipment.features.add_asset_alternate_identifier import (
 from cora.equipment.features.decommission_asset import DecommissionAsset
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.identifier import (
+from cora.infrastructure.kernel import Kernel
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
 )
-from cora.infrastructure.kernel import Kernel
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 6, 2, 12, 0, 0, tzinfo=UTC)

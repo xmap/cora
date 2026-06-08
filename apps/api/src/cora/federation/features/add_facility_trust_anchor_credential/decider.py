@@ -37,7 +37,7 @@ from cora.federation.aggregates.facility import (
 from cora.federation.features.add_facility_trust_anchor_credential.command import (
     AddFacilityTrustAnchorCredential,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

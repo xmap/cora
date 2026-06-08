@@ -11,7 +11,7 @@ from cora.equipment.aggregates.asset import (
     AssetLifecycle,
     AssetName,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from cora.subject.aggregates.subject import (
     Subject,
     SubjectCannotMountError,

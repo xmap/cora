@@ -30,7 +30,7 @@ mutating the existing one.
 from datetime import datetime
 from uuid import UUID
 
-from cora.infrastructure.logbook import LogbookFieldSpec, LogbookSchema
+from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.trust.aggregates.conduit import (
     LOGBOOK_KIND_TRAVERSALS,
     Conduit,

@@ -20,7 +20,7 @@ from cora.agent.aggregates.agent import (
 )
 from cora.agent.features.suspend_agent.command import SuspendAgent
 from cora.agent.features.suspend_agent.decider import decide
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 _SUSPENDED_BY = ActorId(uuid4())

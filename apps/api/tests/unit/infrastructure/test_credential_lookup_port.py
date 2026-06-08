@@ -14,7 +14,6 @@ from uuid import uuid4
 
 import pytest
 
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.ports import (
     CredentialLookup,
     CredentialLookupResult,
@@ -25,6 +24,7 @@ from cora.infrastructure.ports.credential_lookup import (
 from cora.infrastructure.ports.credential_lookup import (
     CredentialLookupResult as CredentialLookupResultFromModule,
 )
+from cora.shared.facility_code import FacilityCode
 
 
 @pytest.mark.unit

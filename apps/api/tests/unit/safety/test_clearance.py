@@ -5,8 +5,6 @@ from uuid import uuid4
 
 import pytest
 
-from cora.infrastructure.identifier import Identifier, InvalidIdentifierError
-from cora.infrastructure.identity import ActorId
 from cora.safety.aggregates.clearance import (
     CLEARANCE_HAZARD_NOTES_MAX_LENGTH,
     CLEARANCE_MITIGATION_REF_MAX_LENGTH,
@@ -27,6 +25,8 @@ from cora.safety.aggregates.clearance import (
     SubjectBinding,
 )
 from cora.safety.aggregates.clearance.hazard_classification import NFPA704Rating, RiskBand
+from cora.shared.identifier import Identifier, InvalidIdentifierError
+from cora.shared.identity import ActorId
 
 # ---------- ClearanceTitle VO ----------
 

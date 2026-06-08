@@ -30,9 +30,9 @@ from cora.decision.features.list_decisions import ListDecisions
 from cora.decision.features.list_decisions import bind as bind_list
 from cora.decision.features.register_decision import RegisterDecision
 from cora.decision.features.register_decision import bind as bind_register
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.shared.identity import ActorId
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 
 _NOW = datetime(2026, 5, 13, 12, 0, 0, tzinfo=UTC)

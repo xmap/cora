@@ -22,7 +22,7 @@ smaller signatures (64 bytes) than RSA-2048 (256 bytes), faster sign
 ## Signature input
 
 `PAE(payload_type, canonical_body_bytes(payload))`, computed via the
-shared helper in `cora.infrastructure.content_hash`. The payloadType
+shared helper in `cora.shared.content_hash`. The payloadType
 URI binds the event type into the signature so a `DecisionRegistered`
 signature can never collide with a different Agent-emitted event of a
 future type even when their bodies happen to serialize to the same
@@ -44,8 +44,8 @@ from typing import Any
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from cora.infrastructure.content_hash import canonical_body_bytes, pae_bytes
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.content_hash import canonical_body_bytes, pae_bytes
 
 EVENT_TYPE_PAYLOAD_TYPE_PREFIX = "application/vnd.cora."
 EVENT_TYPE_PAYLOAD_TYPE_SUFFIX = "+json"

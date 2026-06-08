@@ -31,7 +31,7 @@ from typing import Any
 
 import pytest
 
-from cora.infrastructure.content_hash import canonical_body_bytes, compute_content_hash
+from cora.shared.content_hash import canonical_body_bytes, compute_content_hash
 
 _PAYLOAD_TYPE = "application/vnd.cora.test+json"
 

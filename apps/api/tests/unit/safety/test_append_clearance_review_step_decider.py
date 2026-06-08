@@ -5,7 +5,6 @@ from uuid import uuid4
 
 import pytest
 
-from cora.infrastructure.identity import ActorId
 from cora.safety.aggregates.clearance import (
     Clearance,
     ClearanceCannotAppendReviewStepError,
@@ -26,6 +25,7 @@ from cora.safety.aggregates.clearance.state import (
 )
 from cora.safety.features import append_clearance_review_step
 from cora.safety.features.append_clearance_review_step import AppendClearanceReviewStep
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
 _DECIDED = datetime(2026, 5, 15, 11, 0, 0, tzinfo=UTC)

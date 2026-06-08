@@ -45,7 +45,6 @@ from cora.equipment.aggregates.family.events import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.recipe import RecipeHandlers, UnauthorizedError, wire_recipe
 from cora.recipe.aggregates.capability import (
     CapabilityCode,
@@ -97,6 +96,7 @@ from cora.recipe.aggregates.practice.events import (
 )
 from cora.recipe.features import define_plan
 from cora.recipe.features.define_plan import DefinePlan
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)

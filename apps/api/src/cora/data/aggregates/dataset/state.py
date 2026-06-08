@@ -111,7 +111,7 @@ value used MUST be a cited revision.
 ## Twelfth bounded-name VO
 
 `DatasetName` calls the shared `validate_bounded_text` helper hoisted in
-6e-1 (`cora.infrastructure.bounded_text`). Twelfth occurrence of the
+6e-1 (`cora.shared.bounded_text`). Twelfth occurrence of the
 trimmed-bounded-name VO pattern (after Actor / Zone / Conduit /
 Policy / Subject / Family / Asset / Method / Practice / Plan /
 Run).
@@ -122,7 +122,7 @@ from enum import StrEnum
 from urllib.parse import urlparse
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.bounded_text import bounded_name, validate_bounded_text
 
 DATASET_NAME_MAX_LENGTH = 200
 DATASET_URI_MAX_LENGTH = 2048
@@ -663,7 +663,7 @@ class DatasetName:
 
     Twelfth occurrence of the trimmed-bounded-name VO pattern. Uses
     the shared `validate_bounded_text` helper hoisted at the
-    rule-of-three trigger (see `cora.infrastructure.bounded_text`).
+    rule-of-three trigger (see `cora.shared.bounded_text`).
     """
 
     value: str

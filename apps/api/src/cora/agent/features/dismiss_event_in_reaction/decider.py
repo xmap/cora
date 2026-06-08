@@ -35,7 +35,7 @@ from cora.decision.aggregates.decision.events import DecisionRegistered
 from cora.decision.aggregates.decision.state import (
     DECISION_CONTEXT_REACTION_DISMISSAL,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _REASON_MIN_LENGTH = 1
 _REASON_MAX_LENGTH = 500

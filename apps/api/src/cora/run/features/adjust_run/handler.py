@@ -42,7 +42,6 @@ from typing import Protocol
 from uuid import UUID
 
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
@@ -61,6 +60,7 @@ from cora.run.errors import UnauthorizedError
 from cora.run.features.adjust_run.command import AdjustRun
 from cora.run.features.adjust_run.context import RunAdjustContext
 from cora.run.features.adjust_run.decider import decide
+from cora.shared.identity import ActorId
 
 _STREAM_TYPE = "Run"
 _COMMAND_NAME = "AdjustRun"

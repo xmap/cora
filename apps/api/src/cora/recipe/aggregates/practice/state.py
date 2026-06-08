@@ -61,7 +61,7 @@ mirrors Method's: Defined → Versioned → Deprecated.
 `PracticeName` is the **ninth** trimmed-bounded-name VO after
 Actor / Zone / Conduit / Policy / Subject / Family / Asset /
 Method. The shared trim+length-check logic was hoisted to
-`cora.infrastructure.bounded_text.validate_bounded_text` once the
+`cora.shared.bounded_text.validate_bounded_text` once the
 10th VO (PlanName) landed; PracticeName now calls that helper
 while keeping its own frozen dataclass type and per-aggregate
 error class.
@@ -71,7 +71,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name
+from cora.shared.bounded_text import bounded_name
 
 PRACTICE_NAME_MAX_LENGTH = 200
 PRACTICE_VERSION_TAG_MAX_LENGTH = 50
@@ -191,7 +191,7 @@ class PracticeName:
 
     Ninth occurrence of the trimmed-bounded-name VO pattern. Uses
     the shared `bounded_name` decorator (see
-    `cora.infrastructure.bounded_text`).
+    `cora.shared.bounded_text`).
     """
 
     value: str

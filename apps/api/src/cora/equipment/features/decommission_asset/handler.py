@@ -41,11 +41,11 @@ from cora.equipment.features.decommission_asset.context import DecommissionAsset
 from cora.equipment.features.decommission_asset.decider import decide
 from cora.equipment.projections.asset_location import load_asset_location
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.identity import ActorId
 
 _STREAM_TYPE = "Asset"
 _COMMAND_NAME = "DecommissionAsset"

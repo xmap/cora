@@ -23,16 +23,16 @@ from cora.campaign.aggregates.campaign import (
 )
 from cora.campaign.features.register_campaign.command import RegisterCampaign
 from cora.campaign.features.register_campaign.handler import IdempotentHandler
-from cora.infrastructure.identifier import (
-    IDENTIFIER_SCHEME_MAX_LENGTH,
-    IDENTIFIER_VALUE_MAX_LENGTH,
-    Identifier,
-)
 from cora.infrastructure.routing import (
     ErrorResponse,
     get_correlation_id,
     get_principal_id,
     get_surface_id,
+)
+from cora.shared.identifier import (
+    IDENTIFIER_SCHEME_MAX_LENGTH,
+    IDENTIFIER_VALUE_MAX_LENGTH,
+    Identifier,
 )
 
 

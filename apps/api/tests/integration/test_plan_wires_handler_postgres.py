@@ -21,7 +21,6 @@ from cora.equipment.aggregates.asset.events import (
 from cora.equipment.aggregates.asset.events import event_type_name as asset_event_type_name
 from cora.equipment.aggregates.asset.events import to_payload as asset_to_payload
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.recipe.aggregates.plan import Wire, load_plan
 from cora.recipe.aggregates.plan.events import (
@@ -32,6 +31,7 @@ from cora.recipe.aggregates.plan.events import (
 from cora.recipe.features import add_plan_wire, remove_plan_wire
 from cora.recipe.features.add_plan_wire import AddPlanWire
 from cora.recipe.features.remove_plan_wire import RemovePlanWire
+from cora.shared.identity import ActorId
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 14, 12, 0, 0, tzinfo=UTC)

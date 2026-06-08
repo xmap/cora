@@ -63,7 +63,7 @@ from cora.data.aggregates.dataset import (
 from cora.data.aggregates.dataset.state import Dataset
 from cora.data.features.register_dataset.command import RegisterDataset
 from cora.data.features.register_dataset.context import DatasetRegistrationContext
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

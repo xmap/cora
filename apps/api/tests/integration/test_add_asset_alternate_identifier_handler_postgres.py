@@ -26,7 +26,7 @@ from cora.equipment.features.add_asset_alternate_identifier import (
 )
 from cora.equipment.features.decommission_asset import DecommissionAsset
 from cora.equipment.features.register_asset import RegisterAsset
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
 )

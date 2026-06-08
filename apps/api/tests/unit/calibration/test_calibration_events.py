@@ -25,8 +25,8 @@ from cora.calibration.aggregates.calibration import (
     serialize_source,
     to_payload,
 )
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 18, 12, 0, 0, tzinfo=UTC)
 _CALIBRATION_ID = UUID("01900000-0000-7000-8000-000000ca0001")

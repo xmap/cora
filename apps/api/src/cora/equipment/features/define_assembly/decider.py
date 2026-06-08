@@ -46,7 +46,7 @@ from cora.equipment.aggregates.assembly import (
 from cora.equipment.aggregates.assembly._content_hash import compute_assembly_content_hash
 from cora.equipment.features.define_assembly.command import DefineAssembly
 from cora.equipment.features.define_assembly.context import DefineAssemblyContext
-from cora.infrastructure.json_schema_validation import validate_schema_declaration
+from cora.shared.json_schema_validation import validate_schema_declaration
 
 
 def decide(

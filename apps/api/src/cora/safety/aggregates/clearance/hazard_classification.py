@@ -1,8 +1,8 @@
 """Hazard classification: discriminated-union value object kernel for the Safety BC.
 
 Lives in the BC root (importable from any feature) per the cross-BC
-shared-kernel pattern (mirrors `cora.infrastructure.json_schema_validation`
-for schema-validated values, and `cora.infrastructure.bounded_text` for
+shared-kernel pattern (mirrors `cora.shared.json_schema_validation`
+for schema-validated values, and `cora.shared.bounded_text` for
 trimmed-bounded names).
 
 Per [[project_safety_clearance_design]] §"HazardClassification discriminated

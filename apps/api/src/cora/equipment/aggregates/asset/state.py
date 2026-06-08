@@ -74,7 +74,7 @@ the evolver reconstructs via `AssetLevel(payload["level"])`.
 
 `AssetName` is the **seventh** trimmed-bounded-name VO. The shared
 trim+length-check logic was hoisted to
-`cora.infrastructure.bounded_text.validate_bounded_text` once the 10th
+`cora.shared.bounded_text.validate_bounded_text` once the 10th
 VO (PlanName) landed; AssetName now calls that helper while keeping
 its own frozen dataclass type and per-aggregate error class.
 """
@@ -87,13 +87,13 @@ from uuid import UUID
 
 from cora.equipment.aggregates._drawing import Drawing
 from cora.equipment.aggregates._partition_rule import PartitionRule
-from cora.infrastructure.bounded_text import bounded_name, validate_bounded_text
-from cora.infrastructure.identifier import (
+from cora.shared.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
     PersistentIdentifier,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 ASSET_NAME_MAX_LENGTH = 200
 ASSET_OWNER_NAME_MAX_LENGTH = 255
@@ -1076,7 +1076,7 @@ class AssetName:
 
     Seventh occurrence of the trimmed-bounded-name VO pattern. Uses
     the shared `validate_bounded_text` helper (see
-    `cora.infrastructure.bounded_text`).
+    `cora.shared.bounded_text`).
     """
 
     value: str

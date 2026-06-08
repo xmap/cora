@@ -4,7 +4,7 @@ parameters_schema.
 The Method-side checker validates the SHAPE of the schema
 itself. This module validates VALUES against that schema by
 delegating to the shared values-validator at
-`cora.infrastructure.json_schema_validation`. Strict-by-default
+`cora.shared.json_schema_validation`. Strict-by-default
 when the schema is None; mirrors Asset.settings's
 "no Capabilities + non-empty settings → reject" anchor.
 
@@ -23,8 +23,8 @@ implementation pattern.
 from collections.abc import Mapping
 from typing import Any
 
-from cora.infrastructure.json_schema_validation import validate_values_against_schema
 from cora.recipe.aggregates.plan.state import InvalidPlanDefaultParametersError
+from cora.shared.json_schema_validation import validate_values_against_schema
 
 _NO_SCHEMA_MESSAGE = (
     "Method declares no parameters_schema; cannot accept defaults "

@@ -37,8 +37,8 @@ from cora.federation.features.remove_facility_trust_anchor_credential import (
     RemoveFacilityTrustAnchorCredential,
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.kernel import Kernel
+from cora.shared.facility_code import FacilityCode
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _REGISTER_NOW = datetime(2026, 6, 8, 12, 0, 0, tzinfo=UTC)

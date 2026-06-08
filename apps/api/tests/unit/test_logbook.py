@@ -1,4 +1,4 @@
-"""Unit tests for shared `cora.infrastructure.logbook` types.
+"""Unit tests for shared `cora.shared.logbook` types.
 
 `LogbookSchema` + `LogbookFieldSpec` carry the schema declaration on
 `<Aggregate>ChannelOpened` event payloads. Round-trip through
@@ -8,7 +8,7 @@ and need to rebuild faithfully.
 
 import pytest
 
-from cora.infrastructure.logbook import LogbookFieldSpec, LogbookSchema
+from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 
 
 @pytest.mark.unit

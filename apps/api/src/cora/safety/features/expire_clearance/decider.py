@@ -14,7 +14,6 @@ clearance (`amend_clearance`) is the path forward.
 
 from datetime import datetime
 
-from cora.infrastructure.bounded_text import validate_bounded_text
 from cora.safety.aggregates.clearance import (
     Clearance,
     ClearanceCannotExpireError,
@@ -27,6 +26,7 @@ from cora.safety.aggregates.clearance.state import (
     CLEARANCE_EXPIRE_REASON_MAX_LENGTH,
 )
 from cora.safety.features.expire_clearance.command import ExpireClearance
+from cora.shared.bounded_text import validate_bounded_text
 
 _EXPIRABLE_STATUSES: tuple[ClearanceStatus, ...] = (ClearanceStatus.ACTIVE,)
 

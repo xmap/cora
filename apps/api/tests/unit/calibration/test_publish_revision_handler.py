@@ -30,9 +30,9 @@ from cora.federation.adapters.in_memory_permit_lookup import InMemoryPermitLooku
 from cora.federation.adapters.in_memory_publish_port import InMemoryPublishPort
 from cora.federation.adapters.in_memory_signature_port import InMemorySignaturePort
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports.event_store import StreamAppend
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)

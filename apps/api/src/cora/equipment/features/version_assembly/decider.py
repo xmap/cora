@@ -27,7 +27,7 @@ from cora.equipment.aggregates.assembly import (
 from cora.equipment.aggregates.assembly._content_hash import compute_assembly_content_hash
 from cora.equipment.features.version_assembly.command import VersionAssembly
 from cora.equipment.features.version_assembly.context import VersionAssemblyContext
-from cora.infrastructure.json_schema_validation import validate_schema_declaration
+from cora.shared.json_schema_validation import validate_schema_declaration
 
 _VERSIONABLE_STATUSES: tuple[AssemblyStatus, ...] = (
     AssemblyStatus.DEFINED,

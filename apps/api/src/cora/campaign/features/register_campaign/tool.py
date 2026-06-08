@@ -18,10 +18,10 @@ from cora.campaign.aggregates.campaign import (
 )
 from cora.campaign.features.register_campaign.command import RegisterCampaign
 from cora.campaign.features.register_campaign.handler import IdempotentHandler
-from cora.infrastructure.identifier import Identifier
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+from cora.shared.identifier import Identifier
 
 
 class RegisterCampaignOutput(BaseModel):

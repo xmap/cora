@@ -119,8 +119,8 @@ from enum import StrEnum
 from typing import Any, Final, Literal
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import validate_bounded_text
-from cora.infrastructure.identity import ActorId
+from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.identity import ActorId
 
 DECISION_CHOICE_MAX_LENGTH = 500
 DECISION_REASONING_MAX_LENGTH = 5000

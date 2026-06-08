@@ -45,13 +45,13 @@ from cora.federation.errors import UnauthorizedError
 from cora.federation.features.register_facility.command import RegisterFacility
 from cora.federation.features.register_facility.decider import decide
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.ports.event_store import ConcurrencyError
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 _FACILITY_STREAM_TYPE = "Facility"
 _COMMAND_NAME = "RegisterFacility"

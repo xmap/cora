@@ -24,8 +24,8 @@ from cora.caution.features import supersede_caution
 from cora.caution.features.supersede_caution import SupersedeCaution
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)

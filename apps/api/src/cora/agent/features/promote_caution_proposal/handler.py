@@ -86,12 +86,12 @@ from cora.caution.aggregates.caution import (
 from cora.caution.aggregates.caution.evolver import fold
 from cora.decision.aggregates.decision import load_decision
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.ports.event_store import StreamAppend
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.identity import ActorId
 
 _CAUTION_STREAM_TYPE = "Caution"
 _COMMAND_NAME = "PromoteCautionProposal"

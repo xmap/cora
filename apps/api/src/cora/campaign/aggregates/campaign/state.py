@@ -29,7 +29,7 @@ mutated when membership slices land) + status + last_status_reason.
 
 `CampaignName`, `CampaignDescription`, and `CampaignTag` are
 trimmed-bounded-text VOs following the shared
-`cora.infrastructure.bounded_text.validate_bounded_text` pattern.
+`cora.shared.bounded_text.validate_bounded_text` pattern.
 
 Reason fields on `hold_campaign` and `abandon_campaign` slices are
 bare `str` validated 1-500 chars at the decider, mirroring
@@ -51,7 +51,7 @@ surface. Day-1 lock is intentionally narrow: adding intents is cheap
 ## Identifier (anti-corruption for proposal / btr / visit / cycle)
 
 `Campaign.external_refs: frozenset[Identifier]` reuses the shared
-`cora.infrastructure.identifier.Identifier` VO (open-scheme anti-
+`cora.shared.identifier.Identifier` VO (open-scheme anti-
 corruption-ref axis per `[[project_identifier_vo_design]]`). Day-1
 schemes: `proposal` / `btr` / `visit` / `cycle`. Mirrors
 `Run.external_refs` exactly.
@@ -69,8 +69,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name, validate_bounded_text
-from cora.infrastructure.identifier import Identifier
+from cora.shared.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.identifier import Identifier
 
 CAMPAIGN_NAME_MAX_LENGTH = 200
 CAMPAIGN_DESCRIPTION_MAX_LENGTH = 2000

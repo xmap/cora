@@ -32,11 +32,12 @@ Live at the smallest scope owning the invariants:
 | --- | --- | --- |
 | One aggregate | `aggregates/<aggregate>/state.py` (split when >~200 lines) | `ActorName` |
 | Across aggregates in one BC | `<bc>/value_objects.py` or `<bc>/_shared/` | `ConduitName` |
-| Across multiple BCs | `cora/infrastructure/` (e.g. `bounded_text.py`) | shared validation helpers |
+| Across multiple BCs (pure: zero `cora.*` imports) | `cora/shared/` (e.g. `bounded_text.py`, `identifier.py`) | shared value objects + validation helpers |
+| Across multiple BCs (depends on ports / kernel / adapters) | `cora/infrastructure/` (e.g. `event_payload.py`, `update_handler.py`) | composition root + ES machinery |
 
 Promote up only after ≥3 real usages with identical, stable invariants.
 
-**Trimmed-bounded-text VOs share a validation helper, not a base class.** The bounded-text VOs (`ActorName`, `MethodName`, reason fields on Run / Subject / Dataset, choice / context / rule on Decision, ...) call `cora.infrastructure.bounded_text.validate_bounded_text`:
+**Trimmed-bounded-text VOs share a validation helper, not a base class.** The bounded-text VOs (`ActorName`, `MethodName`, reason fields on Run / Subject / Dataset, choice / context / rule on Decision, ...) call `cora.shared.bounded_text.validate_bounded_text`:
 
 ```python
 @dataclass(frozen=True)

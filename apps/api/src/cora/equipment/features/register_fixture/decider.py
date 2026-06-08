@@ -74,8 +74,8 @@ from cora.equipment.aggregates.fixture import (
 )
 from cora.equipment.features.register_fixture.command import RegisterFixture
 from cora.equipment.features.register_fixture.context import RegisterFixtureContext
-from cora.infrastructure.identity import ActorId
-from cora.infrastructure.json_schema_validation import validate_values_against_schema
+from cora.shared.identity import ActorId
+from cora.shared.json_schema_validation import validate_values_against_schema
 
 _NO_SCHEMA_REJECTION = (
     "Assembly does not declare a parameter_overrides_schema; cannot accept "

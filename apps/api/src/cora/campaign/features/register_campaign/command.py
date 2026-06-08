@@ -37,7 +37,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from cora.campaign.aggregates.campaign import CampaignIntent
-from cora.infrastructure.identifier import Identifier
+from cora.shared.identifier import Identifier
 
 
 @dataclass(frozen=True)

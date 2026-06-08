@@ -7,7 +7,7 @@ import pytest
 
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from cora.supply.aggregates.supply import (
     SupplyRegistered,
     SupplyStatus,

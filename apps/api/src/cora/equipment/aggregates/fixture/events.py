@@ -30,9 +30,9 @@ from cora.equipment.aggregates.fixture.state import (
     SlotAssetBinding,
 )
 from cora.infrastructure.event_payload import deserialize_or_raise
-from cora.infrastructure.identifier import PersistentIdentifierScheme
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identifier import PersistentIdentifierScheme
+from cora.shared.identity import ActorId
 
 
 def _binding_to_payload(binding: SlotAssetBinding) -> dict[str, Any]:

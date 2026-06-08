@@ -53,10 +53,10 @@ from cora.calibration.features.append_calibration_revision.command import (
     AppendCalibrationRevision,
 )
 from cora.calibration.quantities import CalibrationQuantity, get_value_schema
-from cora.infrastructure.content_hash import compute_content_hash
-from cora.infrastructure.identity import ActorId
-from cora.infrastructure.json_schema_validation import validate_values_against_schema
 from cora.infrastructure.signing import event_type_to_payload_type
+from cora.shared.content_hash import compute_content_hash
+from cora.shared.identity import ActorId
+from cora.shared.json_schema_validation import validate_values_against_schema
 
 _CALIBRATION_REVISION_APPENDED_PAYLOAD_TYPE = event_type_to_payload_type(
     "CalibrationRevisionAppended"

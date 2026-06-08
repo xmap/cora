@@ -39,7 +39,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
-from cora.infrastructure.identifier import Identifier
+from cora.shared.identifier import Identifier
 
 
 @dataclass(frozen=True)

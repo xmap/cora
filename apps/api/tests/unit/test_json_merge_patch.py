@@ -1,6 +1,6 @@
 """Unit tests for the shared RFC 7396 JSON Merge Patch implementation.
 
-`cora.infrastructure.json_merge_patch.merge_patch` was hoisted at the
+`cora.shared.json_merge_patch.merge_patch` was hoisted at the
 rule-of-three trigger once the third call site landed (originally
 lived in `cora.equipment.aggregates.asset.settings_validation`). The
 tests below were moved with the implementation; the equipment slice's
@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from cora.infrastructure.json_merge_patch import merge_patch
+from cora.shared.json_merge_patch import merge_patch
 
 
 @pytest.mark.unit

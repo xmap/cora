@@ -8,7 +8,7 @@ the BINDING shape; cross-BC validation at define_method ensures
 the binding fits within the contract.
 
 Reuses the shared declarer-validator at
-`cora.infrastructure.json_schema_validation` (same pattern as
+`cora.shared.json_schema_validation` (same pattern as
 Family.settings_schema validation). The
 constrained subset rules are identical: `$schema`, `type`,
 `required`, `properties`, `enum`, `minimum`, `maximum`, `pattern`
@@ -18,7 +18,7 @@ forbidden.
 
 from typing import Any
 
-from cora.infrastructure.json_schema_validation import validate_schema_declaration
+from cora.shared.json_schema_validation import validate_schema_declaration
 
 
 class InvalidCapabilityParametersSchemaError(ValueError):

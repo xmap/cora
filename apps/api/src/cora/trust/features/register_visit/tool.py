@@ -8,10 +8,10 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.infrastructure.identifier import Identifier
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+from cora.shared.identifier import Identifier
 from cora.trust.aggregates.visit import VisitType
 from cora.trust.features.register_visit.command import RegisterVisit
 from cora.trust.features.register_visit.handler import IdempotentHandler

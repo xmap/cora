@@ -39,9 +39,9 @@ from cora.federation.aggregates.facility import (
 )
 from cora.federation.features import register_facility
 from cora.federation.features.register_facility import RegisterFacility
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 if TYPE_CHECKING:

@@ -5,7 +5,7 @@ from uuid import UUID
 
 import pytest
 
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from cora.supply.aggregates.supply import (
     Supply,
     SupplyDegraded,

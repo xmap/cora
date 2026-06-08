@@ -1,8 +1,13 @@
 # Tach: declarative dependency contract for the cora package.
 #
 # Enforces:
-#   1. Layered: infrastructure depends on nothing; BCs depend on
-#      infrastructure; api depends on every BC.
+#   1. Layered: shared depends on nothing; infrastructure depends only
+#      on shared; BCs depend on shared + infrastructure (+ any sibling
+#      aggregate kernels they integrate with); api depends on every BC.
+#      `cora.shared` is the pure-value-object foundation (Identifier
+#      VOs, NewType identity aliases, bounded-text validators, JSON
+#      Schema helpers); `cora.infrastructure` is composition root,
+#      adapters, ports, and event-sourcing machinery.
 #   2. Cross-BC: a BC may only reach into a sibling BC through that
 #      sibling's `aggregates.*` namespace (the read-side public
 #      surface). Never through `features.*` (sibling slice handlers).
@@ -21,7 +26,17 @@
 exclude = ["tests", "**/__pycache__", ".venv", "build", "dist"]
 source_roots = ["src"]
 
-# Foundation. Depends on nothing in the cora package.
+# Shared kernel: pure value objects and helpers with zero `cora.*`
+# imports. Adapter-free and side-effect-free. Importable from every
+# BC and from `cora.infrastructure`. Modules that depend on ports,
+# the kernel, or adapters belong in `cora.infrastructure`, not here.
+[[modules]]
+path = "cora.shared"
+depends_on = []
+
+# Infrastructure: composition root, adapters, ports, event-sourcing
+# machinery, and cross-cutting concerns. May reach down into
+# `cora.shared` (e.g. `signing.py` uses `content_hash`).
 #
 # The Kernel data class lives in `cora.infrastructure.kernel` (zero
 # BC imports) and the authorize factory is injected into `build_kernel`
@@ -29,89 +44,89 @@ source_roots = ["src"]
 # build_authorize`).
 [[modules]]
 path = "cora.infrastructure"
-depends_on = []
+depends_on = ["cora.shared"]
 
 # Aggregate kernels: declared as their own modules so other BCs
 # can target them with `depends_on = ["cora.X.aggregates"]` while
 # `cora.X.features` stays implicitly off-limits to outsiders.
 [[modules]]
 path = "cora.access.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.agent.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.campaign.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.caution.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.calibration.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.data.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.decision.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.equipment.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.equipment.ports"
-depends_on = ["cora.infrastructure", "cora.equipment.aggregates"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.equipment.aggregates"]
 
 [[modules]]
 path = "cora.equipment.adapters"
-depends_on = ["cora.infrastructure", "cora.equipment.aggregates", "cora.equipment.ports"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.equipment.aggregates", "cora.equipment.ports"]
 
 [[modules]]
 path = "cora.federation.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.operation.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.recipe.aggregates"
-depends_on = ["cora.infrastructure", "cora.equipment.aggregates"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.equipment.aggregates"]
 
 [[modules]]
 path = "cora.run.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.safety.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.subject.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.supply.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.trust.aggregates"
-depends_on = ["cora.infrastructure"]
+depends_on = ["cora.infrastructure", "cora.shared"]
 
 # Bounded contexts. Each BC depends on its own aggregate kernel,
 # infrastructure, and any sibling aggregate kernels it integrates
 # with at handler-load time (cross-aggregate validation pattern).
 [[modules]]
 path = "cora.access"
-depends_on = ["cora.infrastructure", "cora.access.aggregates"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.access.aggregates"]
 
 # Data BC depends on its own aggregates plus Run + Subject aggregate
 # kernels for cross-aggregate validation at register_dataset time
@@ -121,6 +136,7 @@ depends_on = ["cora.infrastructure", "cora.access.aggregates"]
 path = "cora.data"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.data.aggregates",
     "cora.run.aggregates",
     "cora.subject.aggregates",
@@ -134,6 +150,7 @@ depends_on = [
 path = "cora.decision"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.decision.aggregates",
     "cora.access.aggregates",
 ]
@@ -142,6 +159,7 @@ depends_on = [
 path = "cora.equipment"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.equipment.aggregates",
     "cora.equipment.ports",
     "cora.equipment.adapters",
@@ -151,22 +169,24 @@ depends_on = [
 path = "cora.subject"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.subject.aggregates",
     "cora.equipment.aggregates",
 ]
 
 [[modules]]
 path = "cora.supply"
-depends_on = ["cora.infrastructure", "cora.supply.aggregates"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.supply.aggregates"]
 
 [[modules]]
 path = "cora.trust"
-depends_on = ["cora.infrastructure", "cora.trust.aggregates"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.trust.aggregates"]
 
 [[modules]]
 path = "cora.recipe"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.recipe.aggregates",
     "cora.equipment.aggregates",
 ]
@@ -175,6 +195,7 @@ depends_on = [
 path = "cora.run"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.run.aggregates",
     "cora.campaign.aggregates",
     "cora.equipment.aggregates",
@@ -196,6 +217,7 @@ depends_on = [
 path = "cora.operation"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.operation.aggregates",
     "cora.equipment.aggregates",
     "cora.recipe.aggregates",
@@ -213,7 +235,7 @@ depends_on = [
 # bare identifier reference (no Asset load on the write path).
 [[modules]]
 path = "cora.safety"
-depends_on = ["cora.infrastructure", "cora.safety.aggregates"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.safety.aggregates"]
 
 # Caution BC owns the Caution aggregate (operator-authored tribal-
 # knowledge notes; 3-state FSM). Day-1 lock: target ids are bare UUID
@@ -222,7 +244,7 @@ depends_on = ["cora.infrastructure", "cora.safety.aggregates"]
 # Asset parent refs + Procedure target Asset refs precedent).
 [[modules]]
 path = "cora.caution"
-depends_on = ["cora.infrastructure", "cora.caution.aggregates"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.caution.aggregates"]
 
 # Calibration BC owns the Calibration aggregate (empirical
 # instrument-value records keyed by `(subsystem_or_asset_id, quantity,
@@ -238,6 +260,7 @@ depends_on = ["cora.infrastructure", "cora.caution.aggregates"]
 path = "cora.calibration"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.calibration.aggregates",
     # publish_revision slice emits a cross-BC event pair
     # (CalibrationRevisionPublished on Calibration; PublicationReceiptRecorded
@@ -264,6 +287,7 @@ depends_on = [
 path = "cora.federation"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.federation.aggregates",
     "cora.decision.aggregates",
 ]
@@ -281,6 +305,7 @@ depends_on = [
 path = "cora.campaign"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.campaign.aggregates",
     "cora.run.aggregates",
 ]
@@ -307,6 +332,7 @@ depends_on = [
 path = "cora.agent"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.agent.aggregates",
     "cora.access.aggregates",
     "cora.run.aggregates",
@@ -330,6 +356,7 @@ depends_on = [
 path = "cora.api"
 depends_on = [
     "cora.infrastructure",
+    "cora.shared",
     "cora.access",
     "cora.agent",
     "cora.calibration",

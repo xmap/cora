@@ -34,7 +34,7 @@ _REPO_ROOT = CORA_ROOT.parents[3]
 _SCENARIOS_META_PATH = _REPO_ROOT / "scripts" / "scenarios_meta.py"
 
 # Entries under cora/ that are NOT bounded contexts.
-_NON_BC_ENTRIES: frozenset[str] = frozenset({"api", "infrastructure"})
+_NON_BC_ENTRIES: frozenset[str] = frozenset({"api", "infrastructure", "shared"})
 
 
 def _load_scenarios_meta() -> ModuleType:

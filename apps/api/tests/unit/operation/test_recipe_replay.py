@@ -14,7 +14,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.canonical_json import canonical_json_bytes
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.operation._recipe_expansion import steps_to_wire
 from cora.operation._recipe_replay import (
@@ -29,6 +28,7 @@ from cora.operation.aggregates.procedure import (
     RecipeExpansionReplayMismatchError,
 )
 from cora.operation.conductor import SetpointStep
+from cora.shared.canonical_json import canonical_json_bytes
 
 _NOW = datetime(2026, 6, 2, 12, 0, 0, tzinfo=UTC)
 _PROCEDURE_ID = UUID("01900000-0000-7000-8000-000000000099")
@@ -178,7 +178,7 @@ def test_verify_steps_hash_with_mismatch_raises_with_steps_discriminator() -> No
 def test_verify_bindings_hash_uses_canonical_json_bytes_byte_equal_to_at_write() -> None:
     """Bindings hash reproduces against the EXACT same canonical-JSON
     bytes the  at-write decider used (single-source via
-    cora.infrastructure.canonical_json). A divergence would silently
+    cora.shared.canonical_json). A divergence would silently
     break replay verification for in-flight Procedures."""
     bindings = {"beta": 2.0, "alpha": 1.0}
     direct = hashlib.sha256(

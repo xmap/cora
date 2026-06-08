@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import pytest
 
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from cora.subject.aggregates.subject import (
     Subject,
     SubjectCannotReturnError,

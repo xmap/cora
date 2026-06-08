@@ -22,7 +22,7 @@ from cora.equipment.aggregates.asset.state import (
     AssetOwner,
     AssetOwnerName,
 )
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )

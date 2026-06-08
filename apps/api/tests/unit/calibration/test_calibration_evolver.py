@@ -20,7 +20,7 @@ from cora.calibration.aggregates.calibration import (
     evolve,
     fold,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 18, 12, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 18, 14, 30, 0, tzinfo=UTC)

@@ -30,7 +30,7 @@ from cora.federation.aggregates.permit import (
 )
 from cora.federation.features import revoke_permit
 from cora.federation.features.revoke_permit import RevokePermit
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _PERMIT_ID = UUID("01900000-0000-7000-8000-000000fed001")

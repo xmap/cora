@@ -17,7 +17,7 @@ from cora.decision.aggregates.decision import (
 )
 from cora.decision.features.rate_decision.command import RateDecision
 from cora.decision.features.rate_decision.decider import decide
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 _RATER_ID = ActorId(uuid4())

@@ -26,7 +26,7 @@ from cora.federation.features import complete_seal_republishing
 from cora.federation.features.complete_seal_republishing import (
     CompleteSealRepublishing,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = ActorId(UUID("01900000-0000-7000-8000-000000fec001"))

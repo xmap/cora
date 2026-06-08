@@ -62,7 +62,7 @@ from cora.decision.aggregates.decision import (
     DecisionConfidenceSource,
     DecisionOverrideKind,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 @dataclass(frozen=True)

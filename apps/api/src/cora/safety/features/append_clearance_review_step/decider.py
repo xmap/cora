@@ -26,8 +26,6 @@ Append-only-into-tuple, no status change.
 
 from datetime import datetime
 
-from cora.infrastructure.bounded_text import validate_bounded_text
-from cora.infrastructure.identity import ActorId
 from cora.safety.aggregates.clearance import (
     Clearance,
     ClearanceCannotAppendReviewStepError,
@@ -46,6 +44,8 @@ from cora.safety.aggregates.clearance.state import (
 from cora.safety.features.append_clearance_review_step.command import (
     AppendClearanceReviewStep,
 )
+from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.identity import ActorId
 
 _REVIEW_STEP_APPENDABLE_STATUSES: tuple[ClearanceStatus, ...] = (ClearanceStatus.UNDER_REVIEW,)
 

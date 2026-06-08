@@ -30,7 +30,7 @@ from cora.equipment.aggregates.model.state import (
     ManufacturerName,
 )
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _SEED_NOW = datetime(2026, 5, 10, 11, 0, 0, tzinfo=UTC)
 _SEED_CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")

@@ -64,7 +64,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.bounded_text import bounded_name, validate_bounded_text
 
 MODEL_NAME_MAX_LENGTH = 200
 MODEL_PART_NUMBER_MAX_LENGTH = 100

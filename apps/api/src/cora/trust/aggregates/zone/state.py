@@ -19,7 +19,7 @@ new event types).
 from dataclasses import dataclass
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name
+from cora.shared.bounded_text import bounded_name
 
 ZONE_NAME_MAX_LENGTH = 200
 

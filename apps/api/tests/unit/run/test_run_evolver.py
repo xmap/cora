@@ -7,7 +7,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.identity import ActorId
 from cora.run.aggregates.run import (
     Run,
     RunName,
@@ -24,6 +23,7 @@ from cora.run.aggregates.run.events import (
     RunStopped,
     RunTruncated,
 )
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)
 

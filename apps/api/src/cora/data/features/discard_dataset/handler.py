@@ -21,11 +21,11 @@ from cora.data.errors import UnauthorizedError
 from cora.data.features.discard_dataset.command import DiscardDataset
 from cora.data.features.discard_dataset.decider import decide
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.identity import ActorId
 
 _STREAM_TYPE = "Dataset"
 _COMMAND_NAME = "DiscardDataset"

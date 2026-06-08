@@ -51,7 +51,7 @@ from dataclasses import dataclass, field
 from typing import Final
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name
+from cora.shared.bounded_text import bounded_name
 
 CONDUIT_NAME_MAX_LENGTH = 200
 

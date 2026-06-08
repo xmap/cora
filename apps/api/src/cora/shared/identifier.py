@@ -45,7 +45,7 @@ for the Sub-Slice 0 hoist rationale.
 from dataclasses import dataclass
 from enum import StrEnum
 
-from cora.infrastructure.bounded_text import validate_bounded_text
+from cora.shared.bounded_text import validate_bounded_text
 
 IDENTIFIER_SCHEME_MAX_LENGTH = 50
 IDENTIFIER_VALUE_MAX_LENGTH = 200

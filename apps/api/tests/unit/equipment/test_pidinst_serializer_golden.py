@@ -3,7 +3,7 @@
 Section 7.5 of the design memo. Each test builds a view from
 `_pidinst_view_fixtures.py`, calls the serializer, canonicalises the
 returned `PidinstRecord` via the shared
-`cora.infrastructure.content_hash.canonical_body_bytes` helper, and
+`cora.shared.content_hash.canonical_body_bytes` helper, and
 asserts byte equality against the matching JSON fixture under
 `pidinst_golden/` (read through the same canonicalizer for symmetric
 trailing-newline handling).
@@ -25,7 +25,7 @@ import pytest
 
 from cora.equipment._pidinst_serializer import to_pidinst_record
 from cora.equipment._pidinst_types import AssetPidinstView
-from cora.infrastructure.content_hash import canonical_body_bytes
+from cora.shared.content_hash import canonical_body_bytes
 from tests.unit.equipment._helpers import (
     build_minimal_view,
     build_view_2bm_rotary_stage,

@@ -32,7 +32,7 @@ maps it to 502.
 
 from typing import Protocol
 
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )

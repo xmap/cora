@@ -24,7 +24,7 @@ is deterministic without a config dependency: tests can construct
 
 from uuid import uuid4
 
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )

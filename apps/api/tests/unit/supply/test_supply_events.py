@@ -13,8 +13,8 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.identity import ActorId, MonitorSourceId, SchedulerTickId
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId, MonitorSourceId, SchedulerTickId
 from cora.supply.aggregates.supply import (
     SupplyDegraded,
     SupplyDeregistered,

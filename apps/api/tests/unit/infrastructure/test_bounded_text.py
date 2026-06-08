@@ -1,4 +1,4 @@
-"""Unit tests for `cora.infrastructure.bounded_text`.
+"""Unit tests for `cora.shared.bounded_text`.
 
 Coverage:
   - `validate_bounded_text`: trim, empty rejection, over-length rejection,
@@ -16,7 +16,7 @@ from dataclasses import FrozenInstanceError, dataclass, is_dataclass
 
 import pytest
 
-from cora.infrastructure.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.bounded_text import bounded_name, validate_bounded_text
 
 # ---------- validate_bounded_text (function) ----------
 

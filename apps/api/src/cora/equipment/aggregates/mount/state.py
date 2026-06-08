@@ -90,7 +90,7 @@ from uuid import UUID
 
 from cora.equipment.aggregates._drawing import Drawing
 from cora.equipment.aggregates._placement import Placement
-from cora.infrastructure.bounded_text import validate_bounded_text
+from cora.shared.bounded_text import validate_bounded_text
 
 SLOT_CODE_MAX_LENGTH = 200
 

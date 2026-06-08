@@ -16,11 +16,6 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.infrastructure.identifier import (
-    IDENTIFIER_SCHEME_MAX_LENGTH,
-    IDENTIFIER_VALUE_MAX_LENGTH,
-    Identifier,
-)
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
@@ -52,6 +47,11 @@ from cora.safety.aggregates.clearance.hazard_classification import (
 )
 from cora.safety.features.register_clearance.command import RegisterClearance
 from cora.safety.features.register_clearance.handler import IdempotentHandler
+from cora.shared.identifier import (
+    IDENTIFIER_SCHEME_MAX_LENGTH,
+    IDENTIFIER_VALUE_MAX_LENGTH,
+    Identifier,
+)
 
 
 class _BindingSubjectArg(BaseModel):

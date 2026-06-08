@@ -19,11 +19,11 @@ from typing import Protocol
 from uuid import UUID
 
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.identity import ActorId
 from cora.supply.aggregates.supply import event_type_name, to_payload
 from cora.supply.errors import UnauthorizedError
 from cora.supply.features.register_supply.command import RegisterSupply

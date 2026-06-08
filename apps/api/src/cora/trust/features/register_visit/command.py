@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 
-from cora.infrastructure.identifier import Identifier
+from cora.shared.identifier import Identifier
 from cora.trust.aggregates.visit import VisitType
 
 

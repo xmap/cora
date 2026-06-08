@@ -17,13 +17,13 @@ import pytest
 
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.logbook import LogbookFieldSpec, LogbookSchema
 from cora.infrastructure.ports import (
     Allow,
     Deny,
     FakeClock,
     FixedIdGenerator,
 )
+from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.trust.aggregates.conduit import (
     LOGBOOK_KIND_TRAVERSALS,
     ConduitDefined,

@@ -5,14 +5,14 @@ consolidation + §Locks.  had three copies of the inline
 `json.dumps(..., sort_keys=True, separators=(",", ":"))` string
 (decider's bindings/steps hashing, events.py to_payload arm, and the
 contract test).  consolidated to one source:
-`cora.infrastructure.canonical_json.canonical_json_bytes`.
+`cora.shared.canonical_json.canonical_json_bytes`.
 
 This fitness AST-walks `tracked_python_files()` (per
 [[feedback-architecture-test-git-aware]]) under the operation and
 recipe BC source trees only, and asserts every `json.dumps` Call
 node carrying `sort_keys=True` lives in the single allowlisted file
 (`canonical_json.py` itself). Pre-existing co-occurrences in
-`infrastructure/content_hash.py`, `infrastructure/idempotency.py`,
+`shared/content_hash.py`, `infrastructure/idempotency.py`,
 and the  integration test stay out of scope because they
 canonicalize for orthogonal purposes (content-addressed identity +
 idempotency keys); promoting them to canonical_json_bytes is a
@@ -36,23 +36,23 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 # Source trees this fitness governs. Other BC trees + infrastructure +
-# tests carry their own canonicalizers (deliberately untouched in
-# ; rule-of-three deferred). Restrict the AST walk so the
-# scope of the lock is unambiguous.
+# shared + tests carry their own canonicalizers (deliberately
+# untouched in ; rule-of-three deferred). Restrict the AST walk
+# so the scope of the lock is unambiguous.
 _SCOPED_TREES = (
     CORA_ROOT / "operation",
     CORA_ROOT / "recipe",
 )
 
 # The single file allowed to construct `json.dumps(..., sort_keys=True)`
-# in scope. `canonical_json_bytes` is hoisted to infrastructure (NOT in
+# in scope. `canonical_json_bytes` is hoisted to cora/shared (NOT in
 # scope here); both `cora/operation/` and `cora/recipe/` import it from
 # there. If a future module legitimately needs to extend the
 # canonicalizer (e.g., add a `decimal=str` mode), add it here AND in
 # the comment block at the top of canonical_json.py.
 # No source file under cora/operation or cora/recipe is allowed to call
 # json.dumps with sort_keys=True directly. The allowlist is intentionally
-# empty: the helper lives at cora.infrastructure.canonical_json (out of
+# empty: the helper lives at cora.shared.canonical_json (out of
 # scope of this fitness's tree filter).
 _ALLOWLIST_RELATIVE_PATHS: frozenset[Path] = frozenset()
 
@@ -98,7 +98,7 @@ def test_canonical_json_bytes_is_the_single_source_in_operation_and_recipe_trees
     """No source file under `cora/operation/` or `cora/recipe/` may
     invoke `json.dumps(..., sort_keys=True, ...)` directly: route all
     canonical-JSON byte production through
-    `cora.infrastructure.canonical_json.canonical_json_bytes`."""
+    `cora.shared.canonical_json.canonical_json_bytes`."""
     violations: list[str] = []
     for path in _scoped_files():
         relative = path.relative_to(CORA_ROOT)
@@ -110,7 +110,7 @@ def test_canonical_json_bytes_is_the_single_source_in_operation_and_recipe_trees
     assert not violations, (
         "Inline `json.dumps(..., sort_keys=True)` co-occurrence found in "
         "the operation/recipe BC source trees; route the call through "
-        "`cora.infrastructure.canonical_json.canonical_json_bytes` so "
+        "`cora.shared.canonical_json.canonical_json_bytes` so "
         "hash bytes stay byte-equal across write-time and replay-time. "
         "See [[project-run-procedure-replay-design]] §Canonical-JSON "
         "consolidation. Offenders:\n" + "\n".join(violations)

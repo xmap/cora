@@ -229,7 +229,7 @@ from cora.equipment.features import (
     version_model,
 )
 from cora.equipment.ports.doi_minter import PersistentIdentifierMintError
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     InvalidAlternateIdentifierValueError,
     InvalidPersistentIdentifierValueError,
     MalformedPersistentIdentifierError,

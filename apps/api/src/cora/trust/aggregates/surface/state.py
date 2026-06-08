@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name
+from cora.shared.bounded_text import bounded_name
 from cora.trust.aggregates.surface.surface_kind import SurfaceKind
 
 SURFACE_NAME_MAX_LENGTH = 200

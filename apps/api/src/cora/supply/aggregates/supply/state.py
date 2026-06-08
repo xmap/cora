@@ -80,7 +80,7 @@ cross-stream uniqueness without DCB (per [[project_deferred]]).
 
 `SupplyName` is the eleventh trimmed-bounded-name VO. Uses the
 shared `validate_bounded_text` helper
-(`cora.infrastructure.bounded_text`).
+(`cora.shared.bounded_text`).
 
 ## SupplyKind shape, BARE str, not a VO (gate-review lock)
 
@@ -122,8 +122,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name, validate_bounded_text
-from cora.infrastructure.scope_markers import Annotated, DeferredVocabulary
+from cora.shared.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.scope_markers import Annotated, DeferredVocabulary
 
 SUPPLY_NAME_MAX_LENGTH = 200
 SUPPLY_KIND_MAX_LENGTH = 50
@@ -424,7 +424,7 @@ class SupplyName:
 
     Eleventh occurrence of the trimmed-bounded-name VO pattern. Uses
     the shared `validate_bounded_text` helper (see
-    `cora.infrastructure.bounded_text`).
+    `cora.shared.bounded_text`).
     """
 
     value: str
@@ -576,7 +576,7 @@ class Supply:
     # kinds + no new kind in trailing 60 days). LOCKSTEP with
     # `Method.needed_supplies` per the same marker convention; one
     # cannot graduate without the other. See
-    # `cora.infrastructure.scope_markers` for the marker shape.
+    # `cora.shared.scope_markers` for the marker shape.
     kind: Annotated[
         str,
         DeferredVocabulary(

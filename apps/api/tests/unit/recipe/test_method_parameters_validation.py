@@ -3,7 +3,7 @@
 Pins the constrained JSON Schema subset CORA accepts for
 Method.parameters_schema. Same subset as Family.settings_schema
 (5g-a); the two share the underlying checker via
-`cora.infrastructure.json_schema_subset`. Symmetry is the point —
+`cora.shared.json_schema_subset`. Symmetry is the point —
 this file mirrors `tests/unit/equipment/test_capability_settings_validation.py`
 case for case, so the two BC-specific wrappers stay aligned.
 """

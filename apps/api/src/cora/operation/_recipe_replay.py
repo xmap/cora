@@ -23,7 +23,6 @@ from dataclasses import dataclass
 from typing import Any, Literal
 from uuid import UUID
 
-from cora.infrastructure.canonical_json import canonical_json_bytes
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.operation._recipe_expansion import steps_to_wire
 from cora.operation.aggregates.procedure import (
@@ -31,6 +30,7 @@ from cora.operation.aggregates.procedure import (
     RecipeExpansionReplayMismatchError,
 )
 from cora.operation.conductor import Step
+from cora.shared.canonical_json import canonical_json_bytes
 
 
 @dataclass(frozen=True)

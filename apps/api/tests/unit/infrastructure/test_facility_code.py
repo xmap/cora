@@ -1,4 +1,4 @@
-"""Unit tests for `cora.infrastructure.facility_code`.
+"""Unit tests for `cora.shared.facility_code`.
 
 Coverage:
   - happy path construction returns a frozen dataclass with the trimmed
@@ -19,7 +19,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from cora.infrastructure.facility_code import (
+from cora.shared.facility_code import (
     FACILITY_CODE_MAX_LENGTH,
     FacilityCode,
     InvalidFacilityCodeError,

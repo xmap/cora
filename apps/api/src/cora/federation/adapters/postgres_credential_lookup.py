@@ -49,8 +49,8 @@ from cora.federation.aggregates.credential.state import (
     CredentialPurpose,
     CredentialStatus,
 )
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.ports.credential_lookup import CredentialLookupResult
+from cora.shared.facility_code import FacilityCode
 
 _LOOKUP_SQL = """
 SELECT credential_id, facility_id, purpose, status

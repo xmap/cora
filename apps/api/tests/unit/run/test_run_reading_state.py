@@ -13,7 +13,6 @@ from uuid import uuid4
 
 import pytest
 
-from cora.infrastructure.logbook import LogbookSchema
 from cora.run.aggregates.run import (
     LOGBOOK_KIND_READING,
     READING_CHANNEL_NAME_MAX_LENGTH,
@@ -27,6 +26,7 @@ from cora.run.aggregates.run import (
     RunReadingLogbookClosedError,
     RunStatus,
 )
+from cora.shared.logbook import LogbookSchema
 
 # ---------- ChannelName VO ----------
 

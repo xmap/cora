@@ -151,8 +151,8 @@ class Signer(Protocol):
         full payloadType URI via
         `cora.infrastructure.signing.event_type_to_payload_type` and
         canonicalize the payload via
-        `cora.infrastructure.content_hash.canonical_body_bytes` +
-        `cora.infrastructure.content_hash.pae_bytes`. Rolling a custom
+        `cora.shared.content_hash.canonical_body_bytes` +
+        `cora.shared.content_hash.pae_bytes`. Rolling a custom
         canonicalization here is the dominant footgun: it desyncs from
         `verify_signature` and breaks every signed event silently.
         `payload` is the event-payload dict that will land in

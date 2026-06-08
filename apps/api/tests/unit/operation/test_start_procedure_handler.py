@@ -22,7 +22,6 @@ from cora.equipment.aggregates.asset.events import (
 from cora.equipment.aggregates.asset.events import to_payload as asset_to_payload
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.operation.aggregates.procedure import (
     ProcedureCannotStartError,
     ProcedureNotFoundError,
@@ -34,6 +33,7 @@ from cora.operation.aggregates.procedure import to_payload as procedure_to_paylo
 from cora.operation.errors import UnauthorizedError
 from cora.operation.features import start_procedure
 from cora.operation.features.start_procedure import StartProcedure
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)

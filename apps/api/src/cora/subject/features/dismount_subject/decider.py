@@ -31,7 +31,7 @@ fold-symmetry attribution half then lands on the event payload per
 
 from datetime import datetime
 
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from cora.subject.aggregates.subject import (
     Subject,
     SubjectCannotDismountError,

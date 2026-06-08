@@ -1,6 +1,6 @@
 """Catalog: every `Annotated[T, ...]` site that uses one of the three
 scope-marker classes (`NamedFor`, `DeferredVocabulary`, `SubsumedBy`)
-from `cora.infrastructure.scope_markers`, with a structural sanity
+from `cora.shared.scope_markers`, with a structural sanity
 check on each marker's argument shape.
 
 The three markers (per `project_structural_scope_design.md` §"Marker
@@ -252,7 +252,7 @@ _CHECKERS = {
 def test_scope_marker_sites_are_well_formed() -> None:
     """Every `Annotated[..., NamedFor|DeferredVocabulary|SubsumedBy(...)]` site
     constructs the marker with well-formed arguments per the dataclass shape
-    declared in `cora.infrastructure.scope_markers`."""
+    declared in `cora.shared.scope_markers`."""
     sites = _all_marker_sites()
     offenders: list[str] = []
     for site in sites:
@@ -266,7 +266,7 @@ def test_scope_marker_sites_are_well_formed() -> None:
     assert not offenders, (
         "Malformed scope-marker site(s) found:\n  "
         + "\n  ".join(offenders)
-        + "\n\nSee `cora.infrastructure.scope_markers` for the dataclass shapes."
+        + "\n\nSee `cora.shared.scope_markers` for the dataclass shapes."
     )
 
 

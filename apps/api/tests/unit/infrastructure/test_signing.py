@@ -31,7 +31,6 @@ from cryptography.hazmat.primitives.serialization import (
     PublicFormat,
 )
 
-from cora.infrastructure.content_hash import canonical_body_bytes, pae_bytes
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.infrastructure.ports.signer import (
     Signer,
@@ -47,6 +46,7 @@ from cora.infrastructure.signing import (
     verify_signature,
     verify_stream,
 )
+from cora.shared.content_hash import canonical_body_bytes, pae_bytes
 
 # ---------- event_type_to_payload_type ----------
 

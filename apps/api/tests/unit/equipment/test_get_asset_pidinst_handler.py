@@ -60,8 +60,8 @@ from cora.equipment.features import get_asset_pidinst
 from cora.equipment.features.get_asset_pidinst import GetAssetPidinst
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))

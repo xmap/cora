@@ -39,7 +39,7 @@ from cora.equipment.aggregates.fixture import (
 from cora.equipment.features.assign_fixture_persistent_id.command import (
     AssignFixturePersistentId,
 )
-from cora.infrastructure.identifier import PersistentIdentifier
+from cora.shared.identifier import PersistentIdentifier
 
 
 def decide(

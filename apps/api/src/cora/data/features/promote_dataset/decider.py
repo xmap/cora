@@ -31,7 +31,7 @@ from cora.data.aggregates.dataset import (
 )
 from cora.data.features.promote_dataset.command import PromoteDataset
 from cora.data.features.promote_dataset.context import DatasetPromotionContext
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

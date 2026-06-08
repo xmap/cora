@@ -27,8 +27,8 @@ state.
 from datetime import datetime
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import validate_bounded_text
-from cora.infrastructure.identity import ActorId
+from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.identity import ActorId
 from cora.supply.aggregates.supply import (
     SUPPLY_KIND_MAX_LENGTH,
     InvalidSupplyKindError,

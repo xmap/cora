@@ -23,11 +23,11 @@ from cora.caution.errors import UnauthorizedError
 from cora.caution.features.register_caution.command import RegisterCaution
 from cora.caution.features.register_caution.decider import decide
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.identity import ActorId
 
 _STREAM_TYPE = "Caution"
 _COMMAND_NAME = "RegisterCaution"

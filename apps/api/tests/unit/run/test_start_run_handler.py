@@ -33,7 +33,6 @@ from cora.equipment.aggregates.asset.events import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.recipe.aggregates.method import MethodNotFoundError
 from cora.recipe.aggregates.method.events import MethodDefined
 from cora.recipe.aggregates.method.events import (
@@ -63,6 +62,7 @@ from cora.run.aggregates.run import (
 )
 from cora.run.features import start_run
 from cora.run.features.start_run import StartRun
+from cora.shared.identity import ActorId
 from cora.subject.aggregates.subject import SubjectNotFoundError
 from cora.subject.aggregates.subject.events import (
     SubjectMounted,

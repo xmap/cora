@@ -23,10 +23,10 @@ from cora.federation.aggregates._value_types import FacilityId
 from cora.federation.aggregates.facility import FacilityKind
 from cora.federation.features.register_facility.command import RegisterFacility
 from cora.federation.features.register_facility.handler import IdempotentHandler
-from cora.infrastructure.facility_code import FACILITY_CODE_MAX_LENGTH
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+from cora.shared.facility_code import FACILITY_CODE_MAX_LENGTH
 
 
 class RegisterFacilityOutput(BaseModel):

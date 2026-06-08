@@ -19,7 +19,7 @@ from cora.equipment.features import add_asset_alternate_identifier
 from cora.equipment.features.add_asset_alternate_identifier import (
     AddAssetAlternateIdentifier,
 )
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
     InvalidAlternateIdentifierValueError,

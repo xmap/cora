@@ -86,7 +86,7 @@ from cora.equipment.errors import (
     ManufacturerStateNotAvailableError,
     OwnerStateNotAvailableError,
 )
-from cora.infrastructure.identifier import PersistentIdentifierScheme
+from cora.shared.identifier import PersistentIdentifierScheme
 
 _URN_UUID_PREFIX = "urn:uuid:"
 _FAMILY_URN_PREFIX = "urn:cora:family:"

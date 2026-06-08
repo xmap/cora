@@ -49,7 +49,7 @@ derives the new status from the event TYPE — same precedent as
 `MethodName` is the **eighth** trimmed-bounded-name VO after
 `ActorName`, `ZoneName`, `ConduitName`, `PolicyName`, `SubjectName`,
 `FamilyName`, `AssetName`. The shared trim+length-check logic was
-hoisted to `cora.infrastructure.bounded_text.validate_bounded_text`
+hoisted to `cora.shared.bounded_text.validate_bounded_text`
 once the 10th VO (PlanName) landed; MethodName now calls that
 helper while keeping its own frozen dataclass type and per-aggregate
 error class. See the helper module's docstring for the design
@@ -95,8 +95,8 @@ from cora.equipment.aggregates.asset import (
     PORT_SIGNAL_TYPE_MAX_LENGTH,
     PortDirection,
 )
-from cora.infrastructure.bounded_text import bounded_name
-from cora.infrastructure.scope_markers import Annotated, DeferredVocabulary
+from cora.shared.bounded_text import bounded_name
+from cora.shared.scope_markers import Annotated, DeferredVocabulary
 
 METHOD_NAME_MAX_LENGTH = 200
 METHOD_VERSION_TAG_MAX_LENGTH = 50
@@ -275,7 +275,7 @@ class MethodName:
 
     Eighth occurrence of the trimmed-bounded-name VO pattern. Uses
     the shared `bounded_name` decorator (see
-    `cora.infrastructure.bounded_text`).
+    `cora.shared.bounded_text`).
     """
 
     value: str
@@ -500,7 +500,7 @@ class Method:
     "this Method declares no parameter contract, accept any dict".
     Distinct from `{}` (empty schema, "operator explicitly said no
     parameters"). Subset shared with Family.settings_schema via
-    `cora.infrastructure.json_schema_subset`. See
+    `cora.shared.json_schema_subset`. See
     [[project_run_parameters_design]] for the full parameter-family layout.
     """
 
@@ -551,7 +551,7 @@ class Method:
     # [[project_structural_scope_design]] §"Marker convention": the
     # bare-str element type graduates to a typed `SupplyKind(StrEnum)`
     # in LOCKSTEP with Supply.kind when Supply.kind Watch item 4 fires.
-    # See `cora.infrastructure.scope_markers` for the marker shape.
+    # See `cora.shared.scope_markers` for the marker shape.
     needed_supplies: Annotated[
         frozenset[str],
         DeferredVocabulary(

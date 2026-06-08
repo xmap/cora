@@ -3,7 +3,7 @@
 The trimmed-bounded-name VO pattern (frozen dataclass with a single
 `value: str` field whose class name ends in `Name`) has 28 sites
 across the codebase. They share byte-identical trim + length-check
-logic via `cora.infrastructure.bounded_text.bounded_name`. A NEW
+logic via `cora.shared.bounded_text.bounded_name`. A NEW
 *Name VO that hand-rolls its own `__post_init__` would be the 29th
 reinvention; this test fails at PR time so reviewers catch it before
 merge and either route the new VO through the decorator or argue
@@ -147,7 +147,7 @@ def test_bounded_name_decorator_wraps_display_name_vos(path: Path) -> None:
         + "\n\nA frozen dataclass named `*Name` with a single `value: str` field is the "
         "29th reinvention of the trimmed-bounded-name VO pattern. Decorate the class with "
         "`@bounded_name(max_length=..., error_class=...)` from "
-        "`cora.infrastructure.bounded_text` instead of hand-rolling a `__post_init__`. "
+        "`cora.shared.bounded_text` instead of hand-rolling a `__post_init__`. "
         "If the VO needs non-standard rejection semantics (empty-after-trim allowed, "
         "regex validation, multi-field composite), give it a shape that fails one of "
         "the three structural predicates this fitness function checks (drop the "

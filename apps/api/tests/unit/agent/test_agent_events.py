@@ -21,8 +21,8 @@ from cora.agent.aggregates.agent.events import (
     to_payload,
 )
 from cora.agent.aggregates.agent.state import ModelRef
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
 

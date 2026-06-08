@@ -34,7 +34,7 @@ deferred until a PCL-shaped middle latency window emerges in pilot use.
 `CalibrationDescription` is a 0-2000 char trimmed optional string
 (matches Method/Plan/Family/Practice precedent). Body fields ride
 through bounded-text validation; the helper is hoisted at
-`cora.infrastructure.bounded_text`.
+`cora.shared.bounded_text`.
 """
 
 from dataclasses import dataclass
@@ -43,8 +43,8 @@ from enum import StrEnum
 from typing import Any, cast
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import validate_bounded_text
-from cora.infrastructure.identity import ActorId
+from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.identity import ActorId
 
 CALIBRATION_DESCRIPTION_MAX_LENGTH = 2000
 
@@ -193,7 +193,7 @@ class InvalidOperatingPointError(ValueError):
 
     Validated STRICT against the per-quantity operating_point_schema
     (additionalProperties: False; property types restricted to primitives
-    per Q1 lock). Matches the `cora.infrastructure.json_schema_validation`
+    per Q1 lock). Matches the `cora.shared.json_schema_validation`
     error class shape used by Method.parameters_schema +
     Family.settings_schema.
     """
@@ -369,7 +369,7 @@ def reject_empty_against_required(
 ) -> None:
     """Raise when `values` is empty AND `schema` declares required keys.
 
-    `cora.infrastructure.json_schema_validation.validate_values_against_schema`
+    `cora.shared.json_schema_validation.validate_values_against_schema`
     accepts empty + non-None schema by design (required-field enforcement
     delegated to the per-aggregate consumer). For Calibration's
     `operating_point` and revision `value` dicts we want empty rejected:

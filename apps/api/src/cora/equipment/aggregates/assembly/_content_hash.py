@@ -1,6 +1,6 @@
 """Content-hash helper for the Assembly aggregate.
 
-Wraps the shared `cora.infrastructure.content_hash.compute_content_hash`
+Wraps the shared `cora.shared.content_hash.compute_content_hash`
 pipeline with the Assembly-specific payload_type and the canonical
 subset materialized by `canonical_assembly_subset`.
 
@@ -37,8 +37,8 @@ from cora.equipment.aggregates.assembly.state import (
     TemplateWire,
     canonical_assembly_subset,
 )
-from cora.infrastructure.content_hash import compute_content_hash
 from cora.infrastructure.signing import event_type_to_payload_type
+from cora.shared.content_hash import compute_content_hash
 
 # Aggregate-level payload_type: stable across define / version events
 # so two snapshots of the same canonical subset produce the same hash.

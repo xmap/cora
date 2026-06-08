@@ -73,10 +73,10 @@ from cora.federation.aggregates.seal import (
 from cora.federation.features.rotate_seal_online_key.command import (
     RotateSealOnlineKey,
 )
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.credential_lookup import CredentialLookupResult
 from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 _ONLINE_SLOT = "online_credential_id"
 

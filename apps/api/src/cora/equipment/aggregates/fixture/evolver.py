@@ -20,7 +20,7 @@ from cora.equipment.aggregates.fixture.state import (
     FixtureAlreadyExistsError,
     FixtureNotFoundError,
 )
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )

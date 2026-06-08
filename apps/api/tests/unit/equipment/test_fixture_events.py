@@ -12,8 +12,8 @@ from cora.equipment.aggregates.fixture import (
     from_stored,
     to_payload,
 )
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId
 
 _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))
 

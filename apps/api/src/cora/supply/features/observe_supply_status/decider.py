@@ -27,7 +27,7 @@ payload for downstream audit ("which sensor said so").
 
 from datetime import datetime
 
-from cora.infrastructure.identity import MonitorSourceId
+from cora.shared.identity import MonitorSourceId
 from cora.supply.aggregates.supply import (
     MonitorTriggerNotPermittedError,
     Supply,

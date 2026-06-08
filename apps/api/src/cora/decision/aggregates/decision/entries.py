@@ -66,7 +66,7 @@ from uuid import UUID
 
 import asyncpg
 
-from cora.infrastructure.logbook import LogbookFieldSpec, LogbookSchema
+from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 
 # OTel gen_ai.tool.type enum (Stable values per v1.38 semconv).
 # Open string at the storage layer so future OTel additions don't

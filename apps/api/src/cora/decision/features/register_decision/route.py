@@ -25,13 +25,13 @@ from cora.decision.aggregates.decision import (
 )
 from cora.decision.features.register_decision.command import RegisterDecision
 from cora.decision.features.register_decision.handler import IdempotentHandler
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.routing import (
     ErrorResponse,
     get_correlation_id,
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.identity import ActorId
 
 
 class RegisterDecisionRequest(BaseModel):

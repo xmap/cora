@@ -82,7 +82,6 @@ from collections.abc import Sequence
 from typing import assert_never
 
 from cora.infrastructure.evolver import require_state
-from cora.infrastructure.identifier import Identifier
 from cora.run.aggregates.run.events import (
     DecisionDebriefRequested,
     RunAborted,
@@ -99,6 +98,7 @@ from cora.run.aggregates.run.events import (
     RunTruncated,
 )
 from cora.run.aggregates.run.state import Run, RunName, RunStatus
+from cora.shared.identifier import Identifier
 
 
 def evolve(state: Run | None, event: RunEvent) -> Run:

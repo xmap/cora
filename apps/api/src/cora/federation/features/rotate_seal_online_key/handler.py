@@ -68,13 +68,13 @@ from cora.federation.features.rotate_seal_online_key.command import (
 )
 from cora.federation.features.rotate_seal_online_key.decider import decide
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.ports.event_store import StreamAppend
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 _SEAL_STREAM_TYPE = "Seal"
 _DECISION_STREAM_TYPE = "Decision"

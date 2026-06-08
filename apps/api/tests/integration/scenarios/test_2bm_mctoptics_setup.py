@@ -150,7 +150,6 @@ from cora.equipment.features.update_family_settings_schema import UpdateFamilySe
 from cora.equipment.features.update_family_settings_schema import (
     bind as bind_update_family_settings_schema,
 )
-from cora.infrastructure.identity import ActorId
 from cora.recipe.features.add_plan_wire import AddPlanWire
 from cora.recipe.features.add_plan_wire import bind as bind_add_plan_wire
 from cora.recipe.features.define_method import DefineMethod
@@ -159,6 +158,7 @@ from cora.recipe.features.define_plan import DefinePlan
 from cora.recipe.features.define_plan import bind as bind_define_plan
 from cora.recipe.features.define_practice import DefinePractice
 from cora.recipe.features.define_practice import bind as bind_define_practice
+from cora.shared.identity import ActorId
 from tests.integration._helpers import (
     build_postgres_deps,
     make_pg_profile_store,

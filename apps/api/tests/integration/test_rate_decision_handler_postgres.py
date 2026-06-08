@@ -39,8 +39,8 @@ from cora.decision.features.rate_decision import RateDecision
 from cora.decision.features.register_decision import RegisterDecision
 from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.shared.identity import ActorId
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)

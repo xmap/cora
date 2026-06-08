@@ -14,7 +14,7 @@ from cora.equipment.aggregates.asset import (
     AssetName,
     InvalidAssetNameError,
 )
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
     InvalidAlternateIdentifierValueError,

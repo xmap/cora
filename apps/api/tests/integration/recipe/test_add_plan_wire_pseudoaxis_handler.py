@@ -49,7 +49,6 @@ from cora.equipment.aggregates.family.events import (
     to_payload as family_to_payload,
 )
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports.event_store import EventStore
 from cora.recipe.aggregates.plan import (
@@ -69,6 +68,7 @@ from cora.recipe.aggregates.plan.events import (
 )
 from cora.recipe.features import add_plan_wire
 from cora.recipe.features.add_plan_wire import AddPlanWire
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 6, 5, 12, 0, 0, tzinfo=UTC)

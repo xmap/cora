@@ -90,10 +90,10 @@ from cora.federation.aggregates.seal import (
     verify_key_separation,
 )
 from cora.federation.features.initialize_seal.command import InitializeSeal
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.credential_lookup import CredentialLookupResult
 from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 _ONLINE_SLOT = "online_credential_id"
 _OFFLINE_SLOT = "offline_credential_id"

@@ -85,7 +85,7 @@ carried in event payloads.
 ## Eleventh bounded-name VO
 
 `RunName` calls the shared `validate_bounded_text` helper hoisted in
-6e-1 (`cora.infrastructure.bounded_text`). Same pattern as the prior 10.
+6e-1 (`cora.shared.bounded_text`). Same pattern as the prior 10.
 
 ## Known gaps documented (gate-review Q3)
 
@@ -103,15 +103,15 @@ from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name, validate_bounded_text
-from cora.infrastructure.identifier import (
+from cora.shared.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.identifier import (
     IDENTIFIER_SCHEME_MAX_LENGTH,
     IDENTIFIER_VALUE_MAX_LENGTH,
     Identifier,
     InvalidIdentifierError,
 )
-from cora.infrastructure.identity import ActorId
-from cora.infrastructure.logbook import LogbookFieldSpec, LogbookSchema
+from cora.shared.identity import ActorId
+from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 
 RUN_NAME_MAX_LENGTH = 200
 RUN_ABORT_REASON_MAX_LENGTH = 500
@@ -137,7 +137,7 @@ RUN_PINNED_CALIBRATIONS_MAX_ENTRIES = 64
 # lab_visit / session / cycle / visit, etc.). Same bounded lengths so
 # the round-trip with `ExternalBinding`-keyed clearance coverage
 # queries stays symmetric. The VO + bounds live at
-# `cora.infrastructure.identifier`; the Run BC keeps the
+# `cora.shared.identifier`; the Run BC keeps the
 # `RUN_EXTERNAL_REF_*` names as aliases for backward-compat (existing
 # routes / tools / tests reference them).
 RUN_EXTERNAL_REF_SCHEME_MAX_LENGTH = IDENTIFIER_SCHEME_MAX_LENGTH
@@ -359,7 +359,7 @@ class RunPlanAssetDecommissionedError(Exception):
 
 
 # hoist alias: `InvalidRunExternalRefError` is the cross-BC
-# `InvalidIdentifierError` from `cora.infrastructure.identifier`.
+# `InvalidIdentifierError` from `cora.shared.identifier`.
 # Kept as a Run-scoped alias so the BC's routes / tools / re-exports
 # (which name the symbol `InvalidRunExternalRefError`) stay unchanged.
 # `isinstance(exc, InvalidRunExternalRefError)` and
@@ -975,14 +975,14 @@ class RunName:
 
     Eleventh occurrence of the trimmed-bounded-name VO pattern.
     Uses the shared `validate_bounded_text` helper hoisted at the
-    rule-of-three trigger (see `cora.infrastructure.bounded_text`).
+    rule-of-three trigger (see `cora.shared.bounded_text`).
     """
 
     value: str
 
 
 # Open-scheme anti-corruption ref: `Identifier(scheme, value)` lives at
-# `cora.infrastructure.identifier`. The Run BC carries
+# `cora.shared.identifier`. The Run BC carries
 # `external_refs: frozenset[Identifier]` on Run state; imports come
 # from the infrastructure module directly.
 

@@ -30,7 +30,7 @@ namespace value is intentionally DISTINCT from the Seal namespace so
 
 from uuid import UUID, uuid5
 
-from cora.infrastructure.facility_code import FacilityCode
+from cora.shared.facility_code import FacilityCode
 
 _FEDERATION_FACILITY_NAMESPACE = UUID("01900000-0000-7000-8000-0000fac11111")
 

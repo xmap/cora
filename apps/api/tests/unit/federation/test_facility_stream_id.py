@@ -6,7 +6,7 @@ import pytest
 
 from cora.federation.aggregates.facility import facility_stream_id
 from cora.federation.aggregates.seal._stream_id import seal_stream_id
-from cora.infrastructure.facility_code import FacilityCode
+from cora.shared.facility_code import FacilityCode
 
 # Expected namespace UUID locked at module load by `_stream_id.py`. The
 # literal lives here as a regression guard against silent drift; the

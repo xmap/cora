@@ -55,7 +55,6 @@ from cora.calibration.features.publish_revision.decider import (
 from cora.federation.aggregates.permit import event_type_name as permit_event_type_name
 from cora.federation.aggregates.permit import to_payload as permit_to_payload
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
@@ -68,6 +67,7 @@ from cora.infrastructure.ports.federation import (
     SignedOffBy,
 )
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.facility_code import FacilityCode
 
 _STREAM_TYPE_CALIBRATION = "Calibration"
 _STREAM_TYPE_PERMIT = "Permit"

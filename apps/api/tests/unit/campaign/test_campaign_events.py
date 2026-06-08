@@ -19,8 +19,8 @@ from cora.campaign.aggregates.campaign import (
     serialize_external_ref,
     to_payload,
 )
-from cora.infrastructure.identifier import Identifier
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identifier import Identifier
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
 _CAMPAIGN_ID = UUID("01900000-0000-7000-8000-00000000a001")

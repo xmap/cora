@@ -22,7 +22,7 @@ ship at the Asset tier and the Fixture tier imports them unchanged).
 
 from pydantic import BaseModel, Field
 
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     PERSISTENT_IDENTIFIER_VALUE_MAX_LENGTH,
     PersistentIdentifierScheme,
 )

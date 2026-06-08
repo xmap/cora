@@ -28,7 +28,7 @@ The "schema-validated values" pattern has two halves:
      Values mutations validate against the declarer's schema.
 
 Both halves use the same constrained JSON Schema subset
-(`cora.infrastructure.json_schema_subset`) and the same
+(`cora.shared.json_schema_subset`) and the same
 `jsonschema-rs` Draft 2020-12 engine. The strict-by-default posture
 is uniform across both halves: missing schema +
 non-empty values → reject with operator-facing guidance.
@@ -45,7 +45,7 @@ from typing import Any
 
 import jsonschema_rs
 
-from cora.infrastructure.json_schema_subset import DRAFT_2020_12_URI, check_subset
+from cora.shared.json_schema_subset import DRAFT_2020_12_URI, check_subset
 
 ALLOWED_UNIT_SYSTEMS: frozenset[str] = frozenset({"udunits", "ucum", "qudt", "iec61360", "ucefact"})
 """Closed namespace allowlist for the `unit.system` annotation

@@ -3,7 +3,7 @@
 `DefaultCanonicalizationAdapter` IS the shipped v1 recipe per
 [[project_canonicalization_port_design]]: NFC + sort-keys JSON +
 DSSE PAE + SHA-256. The adapter is a thin wrapper around
-`cora.infrastructure.content_hash` helpers; bit-identical output
+`cora.shared.content_hash` helpers; bit-identical output
 is guaranteed because they share the implementation.
 
 Constraint on `payload_type`: the v1 adapter accepts ONLY URIs that
@@ -20,14 +20,14 @@ config.
 
 from typing import Any
 
-from cora.infrastructure.content_hash import (
-    canonical_body_bytes,
-    compute_content_hash,
-    pae_bytes,
-)
 from cora.infrastructure.ports.canonicalization import (
     CanonicalizationFailedError,
     CanonicalizedBytes,
+)
+from cora.shared.content_hash import (
+    canonical_body_bytes,
+    compute_content_hash,
+    pae_bytes,
 )
 
 _PAYLOAD_TYPE_PREFIX = "application/vnd.cora."

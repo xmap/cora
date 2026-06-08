@@ -21,7 +21,7 @@ Currently exposes:
 import pytest
 
 from cora.equipment.ports.doi_minter import PersistentIdentifierMintError
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )

@@ -7,7 +7,7 @@ copy-pasted construction across 9 decider test files.
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from cora.infrastructure.identifier import Identifier
+from cora.shared.identifier import Identifier
 from cora.trust.aggregates.visit import (
     Visit,
     VisitArrived,

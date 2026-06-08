@@ -52,8 +52,8 @@ from cora.calibration.aggregates.calibration import (
 )
 from cora.calibration.features.define_calibration.command import DefineCalibration
 from cora.calibration.quantities import get_operating_point_schema
-from cora.infrastructure.identity import ActorId
-from cora.infrastructure.json_schema_validation import validate_values_against_schema
+from cora.shared.identity import ActorId
+from cora.shared.json_schema_validation import validate_values_against_schema
 
 
 def decide(

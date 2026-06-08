@@ -37,10 +37,10 @@ from cora.federation.aggregates.seal import (
 )
 from cora.federation.features import initialize_seal
 from cora.federation.features.initialize_seal import InitializeSeal
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.credential_lookup import CredentialLookupResult
 from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = ActorId(UUID("01900000-0000-7000-8000-000000fed101"))

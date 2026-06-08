@@ -65,8 +65,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name
 from cora.recipe.aggregates.recipe.body import RecipeStep
+from cora.shared.bounded_text import bounded_name
 
 RECIPE_NAME_MAX_LENGTH = 200
 RECIPE_VERSION_TAG_MAX_LENGTH = 50

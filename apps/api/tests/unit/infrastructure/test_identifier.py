@@ -1,4 +1,4 @@
-"""Unit tests for `cora.infrastructure.identifier`.
+"""Unit tests for `cora.shared.identifier`.
 
 Coverage:
   - Happy path construction of `Identifier(scheme, value)`.
@@ -14,7 +14,7 @@ from dataclasses import FrozenInstanceError, dataclass
 
 import pytest
 
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     IDENTIFIER_SCHEME_MAX_LENGTH,
     IDENTIFIER_VALUE_MAX_LENGTH,
     Identifier,

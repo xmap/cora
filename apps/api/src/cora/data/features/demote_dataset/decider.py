@@ -37,7 +37,7 @@ from cora.data.aggregates.dataset import (
     Intent,
 )
 from cora.data.features.demote_dataset.command import DemoteDataset
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

@@ -11,13 +11,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Request, status
 from pydantic import BaseModel, Field
 
-from cora.infrastructure.identifier import Identifier
 from cora.infrastructure.routing import (
     ErrorResponse,
     get_correlation_id,
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.identifier import Identifier
 from cora.trust.aggregates.visit import VisitType
 from cora.trust.features.register_visit.command import RegisterVisit
 from cora.trust.features.register_visit.handler import IdempotentHandler

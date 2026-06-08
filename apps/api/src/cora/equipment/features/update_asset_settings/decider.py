@@ -31,7 +31,7 @@ from cora.equipment.aggregates.asset.settings_validation import (
 )
 from cora.equipment.features.update_asset_settings.command import UpdateAssetSettings
 from cora.equipment.features.update_asset_settings.context import AssetSettingsContext
-from cora.infrastructure.json_merge_patch import merge_patch
+from cora.shared.json_merge_patch import merge_patch
 
 
 def decide(

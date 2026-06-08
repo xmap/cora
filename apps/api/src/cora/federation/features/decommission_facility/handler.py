@@ -38,11 +38,11 @@ from cora.federation.errors import UnauthorizedError
 from cora.federation.features.decommission_facility.command import DecommissionFacility
 from cora.federation.features.decommission_facility.decider import decide
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.identity import ActorId
 
 _FACILITY_STREAM_TYPE = "Facility"
 _COMMAND_NAME = "DecommissionFacility"

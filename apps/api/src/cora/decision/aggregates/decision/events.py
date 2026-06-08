@@ -54,9 +54,9 @@ from cora.decision.aggregates.decision.state import (
     DecisionRating,
 )
 from cora.infrastructure.event_payload import deserialize_or_raise
-from cora.infrastructure.identity import ActorId
-from cora.infrastructure.logbook import LogbookSchema
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId
+from cora.shared.logbook import LogbookSchema
 
 
 @dataclass(frozen=True)

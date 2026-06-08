@@ -8,7 +8,7 @@ Phoebus latched-alarm precedent. Strict-not-idempotent.
 
 from datetime import datetime
 
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from cora.supply.aggregates.supply import (
     Supply,
     SupplyCannotRestoreError,

@@ -37,11 +37,11 @@ from cora.equipment.features import define_family, define_model, register_asset
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.register_asset import RegisterAsset
-from cora.infrastructure.identifier import (
+from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
 )
-from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)

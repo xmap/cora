@@ -27,8 +27,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from cora.infrastructure.identifier import PersistentIdentifier
-from cora.infrastructure.identity import ActorId
+from cora.shared.identifier import PersistentIdentifier
+from cora.shared.identity import ActorId
 
 
 @dataclass(frozen=True)

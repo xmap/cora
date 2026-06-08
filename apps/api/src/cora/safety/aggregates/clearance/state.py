@@ -78,10 +78,10 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import validate_bounded_text
-from cora.infrastructure.identifier import Identifier
-from cora.infrastructure.identity import ActorId
 from cora.safety.aggregates.clearance.hazard_classification import HazardClassification, RiskBand
+from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.identifier import Identifier
+from cora.shared.identity import ActorId
 
 CLEARANCE_TITLE_MAX_LENGTH = 200
 CLEARANCE_EXTERNAL_ID_MAX_LENGTH = 100
@@ -509,7 +509,7 @@ class ClearanceTitle:
 
     Thirteenth occurrence of the trimmed-bounded-name VO pattern. Uses
     the shared `validate_bounded_text` helper hoisted at the
-    rule-of-three trigger (`cora.infrastructure.bounded_text`).
+    rule-of-three trigger (`cora.shared.bounded_text`).
     """
 
     value: str
@@ -566,7 +566,7 @@ class ExternalRefBinding:
     "consumed via anti-corruption adapter, not modeled internally". Same
     for BeamtimeRequest, LabVisit (DLS-specific), Session. ExternalRefBinding
     wraps the shared `Identifier(scheme, value)` VO from
-    `cora.infrastructure.identifier` so the Clearance can still gate
+    `cora.shared.identifier` so the Clearance can still gate
     against these references.
 
     Common schemes: 'proposal' / 'btr' / 'lab_visit' / 'session'.

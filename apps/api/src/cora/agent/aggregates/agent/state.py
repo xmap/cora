@@ -25,7 +25,7 @@ design lock for CORA-vocabulary-alignment and Actor-collision risk.
 chars, must start with https://), `AgentCapability` (1-100 chars per
 entry, cardinality cap 32), `AgentDeprecationReason` (1-500 chars).
 All follow the `validate_bounded_text` + `object.__setattr__` pattern
-from the shared `cora.infrastructure.bounded_text` helper.
+from the shared `cora.shared.bounded_text` helper.
 
 `ModelRef` is a 3-field VO (`provider` + `model` + optional
 `snapshot_pin`); required at definition so the runtime LLM has the
@@ -45,8 +45,8 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name, validate_bounded_text
-from cora.infrastructure.identity import ActorId
+from cora.shared.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.identity import ActorId
 
 AGENT_KIND_MAX_LENGTH = 100
 AGENT_NAME_MAX_LENGTH = 100

@@ -60,7 +60,7 @@ from cora.equipment.aggregates.asset import (
     AssetLevel,
     AssetOwner,
 )
-from cora.infrastructure.identifier import AlternateIdentifier
+from cora.shared.identifier import AlternateIdentifier
 
 
 @dataclass(frozen=True)

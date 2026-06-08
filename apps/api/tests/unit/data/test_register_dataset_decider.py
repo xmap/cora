@@ -36,8 +36,8 @@ from cora.data.features.register_dataset import (
     DatasetRegistrationContext,
     RegisterDataset,
 )
-from cora.infrastructure.identity import ActorId
 from cora.run.aggregates.run import Run, RunName, RunStatus
+from cora.shared.identity import ActorId
 from cora.subject.aggregates.subject import Subject, SubjectName
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH

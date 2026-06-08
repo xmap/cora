@@ -51,12 +51,12 @@ from cora.calibration.features.publish_revision import (
     PublishCalibrationRevision,
     decide,
 )
-from cora.infrastructure.facility_code import FACILITY_CODE_MAX_LENGTH, FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.federation import (
     DsseStaticJwksEnvelope,
     PermitLookupResult,
 )
+from cora.shared.facility_code import FACILITY_CODE_MAX_LENGTH, FacilityCode
+from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 _HEX_CHAR = st.sampled_from("0123456789abcdef")

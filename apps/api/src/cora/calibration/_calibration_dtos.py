@@ -51,7 +51,7 @@ from cora.calibration.aggregates.calibration import (
     ComputedSource,
     MeasuredSource,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 class SourceMeasuredDTO(BaseModel):

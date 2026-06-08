@@ -53,7 +53,7 @@ from typing import Any
 from uuid import UUID
 
 from cora.equipment.aggregates.family.affordance import Affordance
-from cora.infrastructure.bounded_text import bounded_name
+from cora.shared.bounded_text import bounded_name
 
 FAMILY_NAME_MAX_LENGTH = 200
 FAMILY_VERSION_TAG_MAX_LENGTH = 50

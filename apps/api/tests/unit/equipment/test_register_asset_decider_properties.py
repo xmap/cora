@@ -34,12 +34,12 @@ from cora.equipment.aggregates.asset import (
 )
 from cora.equipment.features import register_asset
 from cora.equipment.features.register_asset import RegisterAsset
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     ALTERNATE_IDENTIFIER_VALUE_MAX_LENGTH,
     AlternateIdentifier,
     AlternateIdentifierKind,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))

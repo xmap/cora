@@ -56,7 +56,7 @@ from cora.federation.aggregates.permit import (
     ReadScope,
 )
 from cora.federation.features.define_permit.command import DefinePermit
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

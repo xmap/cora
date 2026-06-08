@@ -92,7 +92,7 @@ async def _seed_run(store: InMemoryEventStore, run_id: UUID) -> None:
 
 
 async def _seed_subject(store: InMemoryEventStore, subject_id: UUID) -> None:
-    from cora.infrastructure.identity import ActorId
+    from cora.shared.identity import ActorId
 
     event = SubjectRegistered(
         subject_id=subject_id,
@@ -115,7 +115,7 @@ async def _seed_subject(store: InMemoryEventStore, subject_id: UUID) -> None:
 
 
 async def _seed_dataset(store: InMemoryEventStore, dataset_id: UUID) -> None:
-    from cora.infrastructure.identity import ActorId
+    from cora.shared.identity import ActorId
 
     event = DatasetRegistered(
         dataset_id=dataset_id,

@@ -4,7 +4,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     PERSISTENT_IDENTIFIER_VALUE_MAX_LENGTH,
     InvalidPersistentIdentifierValueError,
     PersistentIdentifier,

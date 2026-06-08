@@ -37,8 +37,8 @@ from cora.equipment.features import add_asset_family, register_asset
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
+from cora.shared.identity import ActorId
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)

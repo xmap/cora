@@ -52,11 +52,11 @@ from cora.federation.aggregates.facility import (
     to_payload,
 )
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports.event_store import ConcurrencyError
 from cora.infrastructure.routing import SYSTEM_PRINCIPAL_ID
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel

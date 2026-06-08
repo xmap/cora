@@ -40,7 +40,7 @@ from cora.decision.aggregates.decision import (
     to_payload,
 )
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _T0 = datetime(2026, 5, 17, 10, 0, 0, tzinfo=UTC)
 _ASSET_ID = UUID("01900000-0000-7000-8000-000000000aaa")

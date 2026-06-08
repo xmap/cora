@@ -33,7 +33,7 @@ from cora.federation.aggregates.permit import (
 )
 from cora.federation.features import suspend_permit
 from cora.federation.features.suspend_permit import SuspendPermit
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _EXPIRES_AT = datetime(2027, 5, 30, 12, 0, 0, tzinfo=UTC)

@@ -22,7 +22,7 @@ from cora.calibration.aggregates.calibration import (
 )
 from cora.calibration.features import append_calibration_revision
 from cora.calibration.features.append_calibration_revision import AppendCalibrationRevision
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 18, 12, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = ActorId(UUID("01900000-0000-7000-8000-000000ca2001"))

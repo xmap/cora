@@ -14,7 +14,7 @@ from cora.decision.aggregates.decision import (
     DecisionContext,
     has_determining_policies,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)
 

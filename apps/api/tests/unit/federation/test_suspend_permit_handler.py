@@ -31,8 +31,8 @@ from cora.federation.features import suspend_permit
 from cora.federation.features.suspend_permit import SuspendPermit
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps as _build_deps_shared
 from tests.unit.federation._helpers import (
     seed_active_permit,

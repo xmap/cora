@@ -46,10 +46,10 @@ from cora.federation.aggregates.seal import (
 )
 from cora.federation.features import rotate_seal_online_key
 from cora.federation.features.rotate_seal_online_key import RotateSealOnlineKey
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.credential_lookup import CredentialLookupResult
 from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _FACILITY_ID = "aps-2bm"

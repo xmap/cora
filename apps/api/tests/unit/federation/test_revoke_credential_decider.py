@@ -30,7 +30,7 @@ from cora.federation.aggregates.credential import (
 )
 from cora.federation.features import revoke_credential
 from cora.federation.features.revoke_credential import RevokeCredential
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _EXPIRES_AT = datetime(2027, 5, 30, 12, 0, 0, tzinfo=UTC)

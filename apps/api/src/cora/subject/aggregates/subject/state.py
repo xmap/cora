@@ -55,7 +55,7 @@ with a default; no event upcaster needed).
 `SubjectName` is the **fifth** trimmed-bounded-name VO after
 `ActorName`, `ZoneName`, `ConduitName`, `PolicyName`. The shared
 trim+length-check logic was hoisted to
-`cora.infrastructure.bounded_text.validate_bounded_text` once the
+`cora.shared.bounded_text.validate_bounded_text` once the
 10th VO (PlanName) landed; SubjectName now calls that helper while
 keeping its own frozen dataclass type and per-aggregate error class.
 """
@@ -64,7 +64,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.bounded_text import bounded_name, validate_bounded_text
 
 SUBJECT_NAME_MAX_LENGTH = 200
 SUBJECT_DISCARD_REASON_MAX_LENGTH = 500
@@ -348,7 +348,7 @@ class SubjectName:
 
     Fifth occurrence of the trimmed-bounded-name VO pattern. Uses
     the shared `validate_bounded_text` helper (see
-    `cora.infrastructure.bounded_text`).
+    `cora.shared.bounded_text`).
     """
 
     value: str

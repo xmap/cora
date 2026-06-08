@@ -17,7 +17,6 @@ validation time and compares results to enforce determinism via the
 from collections.abc import Mapping
 from typing import Any
 
-from cora.infrastructure.canonical_json import canonical_json_bytes
 from cora.operation.conductor import (
     ActionStep,
     CheckStep,
@@ -32,6 +31,7 @@ from cora.recipe.aggregates.recipe import (
     RecipeStep,
 )
 from cora.recipe.aggregates.recipe.body import resolve_value
+from cora.shared.canonical_json import canonical_json_bytes
 
 
 def _criterion_from_wire(

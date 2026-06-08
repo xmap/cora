@@ -1,7 +1,7 @@
 """Unit tests for the shared JSON Schema declaration / unit-annotation
 validators.
 
-Most of `cora.infrastructure.json_schema_validation` is exercised
+Most of `cora.shared.json_schema_validation` is exercised
 indirectly via each BC's wrapper (5g-a Family, 6g-a Method, 6g-b
 Plan, 6g-c Run, 5g-c Asset). This file pins the cross-BC pieces ONCE
 to keep their contract scannable:
@@ -19,8 +19,8 @@ from typing import Any
 
 import pytest
 
-from cora.infrastructure.json_schema_subset import DRAFT_2020_12_URI
-from cora.infrastructure.json_schema_validation import (
+from cora.shared.json_schema_subset import DRAFT_2020_12_URI
+from cora.shared.json_schema_validation import (
     ALLOWED_UNIT_SYSTEMS,
     validate_schema_declaration,
     validate_unit_annotations,

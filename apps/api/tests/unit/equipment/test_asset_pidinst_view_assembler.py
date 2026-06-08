@@ -60,7 +60,7 @@ from cora.equipment.errors import VirtualAxisNotPidinstableError
 from cora.equipment.features.get_asset_pidinst._view_assembler import assemble_pidinst_view
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))
 

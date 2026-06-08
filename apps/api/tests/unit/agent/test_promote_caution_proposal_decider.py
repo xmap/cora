@@ -20,7 +20,7 @@ from cora.decision.aggregates.decision import (
     DecisionContext,
     DecisionNotFoundError,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def _decision(

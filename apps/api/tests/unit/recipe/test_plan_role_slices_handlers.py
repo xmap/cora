@@ -29,7 +29,6 @@ from cora.equipment.aggregates.family.events import event_type_name as family_ev
 from cora.equipment.aggregates.family.events import to_payload as family_to_payload
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.recipe import UnauthorizedError, wire_recipe
 from cora.recipe.aggregates.method import RoleName
@@ -48,6 +47,7 @@ from cora.recipe.aggregates.plan.events import (
 from cora.recipe.features import bind_plan_role, unbind_plan_role
 from cora.recipe.features.bind_plan_role import BindPlanRole
 from cora.recipe.features.unbind_plan_role import UnbindPlanRole
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 6, 6, 12, 0, 0, tzinfo=UTC)

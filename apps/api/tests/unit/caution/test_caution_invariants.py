@@ -28,7 +28,7 @@ from cora.caution.aggregates.caution import (
     ensure_supersedable,
     ensure_target_preserved,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def _active_caution(target: AssetTarget | ProcedureTarget | None = None) -> Caution:

@@ -77,10 +77,10 @@ from datetime import datetime
 from enum import StrEnum
 
 from cora.federation.aggregates._value_types import CredentialId, FacilityId
-from cora.infrastructure.bounded_text import bounded_name
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identifier import AlternateIdentifier, PersistentIdentifier
-from cora.infrastructure.identity import ActorId
+from cora.shared.bounded_text import bounded_name
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identifier import AlternateIdentifier, PersistentIdentifier
+from cora.shared.identity import ActorId
 
 FACILITY_NAME_MAX_LENGTH = 200
 

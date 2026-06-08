@@ -15,7 +15,6 @@ idempotent.
 
 from datetime import datetime
 
-from cora.infrastructure.bounded_text import validate_bounded_text
 from cora.safety.aggregates.clearance import (
     Clearance,
     ClearanceCannotStartReviewError,
@@ -28,6 +27,7 @@ from cora.safety.aggregates.clearance.state import (
     CLEARANCE_REVIEWER_ROLE_MAX_LENGTH,
 )
 from cora.safety.features.start_clearance_review.command import StartClearanceReview
+from cora.shared.bounded_text import validate_bounded_text
 
 _REVIEW_STARTABLE_STATUSES: tuple[ClearanceStatus, ...] = (ClearanceStatus.SUBMITTED,)
 

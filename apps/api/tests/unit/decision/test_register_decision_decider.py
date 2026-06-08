@@ -31,7 +31,7 @@ from cora.decision.features.register_decision import (
     DecisionRegistrationContext,
     RegisterDecision,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)
 

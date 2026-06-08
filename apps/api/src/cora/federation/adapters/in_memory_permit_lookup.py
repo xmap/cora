@@ -9,11 +9,11 @@ from `proj_federation_permit_summary`.
 
 from uuid import UUID
 
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.ports.federation.permit_lookup import (
     PermitLookup,
     PermitLookupResult,
 )
+from cora.shared.facility_code import FacilityCode
 
 
 def _coerce_code(value: str | FacilityCode) -> FacilityCode:

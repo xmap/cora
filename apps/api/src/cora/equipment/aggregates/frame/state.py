@@ -64,7 +64,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from cora.equipment.aggregates._placement import Placement
-from cora.infrastructure.bounded_text import bounded_name
+from cora.shared.bounded_text import bounded_name
 
 FRAME_NAME_MAX_LENGTH = 200
 

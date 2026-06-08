@@ -71,8 +71,8 @@ from typing import Any
 from uuid import UUID
 
 from cora.equipment.aggregates.family import Affordance
-from cora.infrastructure.bounded_text import bounded_name
 from cora.recipe.aggregates.capability.executor_shape import ExecutorShape
+from cora.shared.bounded_text import bounded_name
 
 CAPABILITY_CODE_MAX_LENGTH = 200
 CAPABILITY_NAME_MAX_LENGTH = 200

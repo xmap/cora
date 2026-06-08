@@ -111,12 +111,12 @@ from cora.decision.aggregates.decision import (
     validate_reasoning,
 )
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError
 from cora.infrastructure.signing import SIGNED_EVENT_TYPES
 from cora.recipe.aggregates.plan import load_plan
 from cora.run.aggregates.run import load_run
+from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
     from cora.access.aggregates.actor import Actor

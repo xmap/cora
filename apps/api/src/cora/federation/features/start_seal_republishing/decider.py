@@ -34,7 +34,7 @@ from cora.federation.aggregates.seal import (
 from cora.federation.features.start_seal_republishing.command import (
     StartSealRepublishing,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

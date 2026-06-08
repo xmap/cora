@@ -1,4 +1,4 @@
-"""Unit tests for `cora.infrastructure.content_hash`.
+"""Unit tests for `cora.shared.content_hash`.
 
 Coverage:
   - PAE format conformance via the canonical DSSE test vector
@@ -23,7 +23,7 @@ from decimal import Decimal
 
 import pytest
 
-from cora.infrastructure.content_hash import (
+from cora.shared.content_hash import (
     canonical_body_bytes,
     compute_content_hash,
     pae_bytes,

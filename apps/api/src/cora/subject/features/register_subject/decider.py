@@ -18,7 +18,7 @@ fold-NEITHER (no actor folded onto the aggregate).
 from datetime import datetime
 from uuid import UUID
 
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from cora.subject.aggregates.subject import (
     Subject,
     SubjectAlreadyExistsError,

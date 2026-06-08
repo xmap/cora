@@ -33,7 +33,7 @@ from cora.federation.errors import UnauthorizedError
 from cora.federation.features.initialize_seal.route import (
     _get_handler as _get_initialize_seal_handler,  # pyright: ignore[reportPrivateUsage]
 )
-from cora.infrastructure.facility_code import FacilityCode
+from cora.shared.facility_code import FacilityCode
 
 _ONLINE_KEY_REF = "01900000-0000-7000-8000-00000000c0a1"
 _OFFLINE_KEY_REF = "01900000-0000-7000-8000-00000000c0b1"

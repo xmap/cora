@@ -39,7 +39,7 @@ from cora.caution.aggregates.caution import (
 )
 from cora.caution.features.supersede_caution.command import SupersedeCaution
 from cora.caution.features.supersede_caution.context import CautionSupersessionContext
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 @dataclass(frozen=True)

@@ -29,11 +29,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from cora.infrastructure.identifier import (
-    IDENTIFIER_SCHEME_MAX_LENGTH,
-    IDENTIFIER_VALUE_MAX_LENGTH,
-    Identifier,
-)
 from cora.safety.aggregates.clearance import (
     CLEARANCE_HAZARD_NOTES_MAX_LENGTH,
     AssetBinding,
@@ -57,6 +52,11 @@ from cora.safety.aggregates.clearance.hazard_classification import (
     NFPA704Rating,
     RiskBand,
     SchemeCode,
+)
+from cora.shared.identifier import (
+    IDENTIFIER_SCHEME_MAX_LENGTH,
+    IDENTIFIER_VALUE_MAX_LENGTH,
+    Identifier,
 )
 
 # ---------------------------------------------------------------------------

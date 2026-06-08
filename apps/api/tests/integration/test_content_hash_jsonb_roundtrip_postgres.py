@@ -43,7 +43,7 @@ from typing import Any
 import asyncpg
 import pytest
 
-from cora.infrastructure.content_hash import canonical_body_bytes, compute_content_hash
+from cora.shared.content_hash import canonical_body_bytes, compute_content_hash
 
 _PAYLOAD_TYPE = "application/vnd.cora.method-versioned+json"
 

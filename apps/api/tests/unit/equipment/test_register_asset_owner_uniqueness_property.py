@@ -22,7 +22,7 @@ from cora.equipment.aggregates.asset import (
 )
 from cora.equipment.features.register_asset.command import RegisterAsset
 from cora.equipment.features.register_asset.decider import decide as register_decide
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))
 

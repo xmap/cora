@@ -46,12 +46,12 @@ from cora.data.features.register_dataset.command import RegisterDataset
 from cora.data.features.register_dataset.context import DatasetRegistrationContext
 from cora.data.features.register_dataset.decider import decide
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import load_run
+from cora.shared.identity import ActorId
 from cora.subject.aggregates.subject import load_subject
 
 _STREAM_TYPE = "Dataset"

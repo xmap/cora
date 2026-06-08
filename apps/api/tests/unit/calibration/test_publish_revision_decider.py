@@ -22,12 +22,12 @@ from cora.calibration.features.publish_revision import (
     decide,
 )
 from cora.federation.aggregates.permit.events import PublicationReceiptRecorded
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.federation import (
     DsseStaticJwksEnvelope,
     PermitLookupResult,
 )
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
 _PEER = "aps-2bm"

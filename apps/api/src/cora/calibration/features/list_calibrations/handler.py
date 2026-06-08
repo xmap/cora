@@ -27,7 +27,6 @@ from uuid import UUID
 
 from cora.calibration.errors import UnauthorizedError
 from cora.calibration.features.list_calibrations.query import ListCalibrations
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.list_query import (
     ColumnInFilter,
@@ -35,6 +34,7 @@ from cora.infrastructure.list_query import (
     make_list_query_handler,
 )
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.identity import ActorId
 
 
 @dataclass(frozen=True)

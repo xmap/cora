@@ -12,7 +12,7 @@ call and forwards the resolved VO into the pure decider.
 from dataclasses import dataclass
 from uuid import UUID
 
-from cora.infrastructure.identifier import PersistentIdentifierScheme
+from cora.shared.identifier import PersistentIdentifierScheme
 
 
 @dataclass(frozen=True)

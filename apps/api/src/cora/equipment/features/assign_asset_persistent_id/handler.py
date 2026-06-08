@@ -36,9 +36,9 @@ from cora.equipment.aggregates.asset import (
 )
 from cora.equipment.features.assign_asset_persistent_id.command import AssignAssetPersistentId
 from cora.equipment.features.assign_asset_persistent_id.decider import decide
-from cora.infrastructure.identifier import PersistentIdentifier
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.identifier import PersistentIdentifier
 
 if TYPE_CHECKING:
     from cora.equipment.ports.doi_minter import DoiMinter

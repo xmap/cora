@@ -24,7 +24,6 @@ passing its `parameters_schema` into `decide` as the
 
 from datetime import datetime
 
-from cora.infrastructure.json_merge_patch import merge_patch
 from cora.recipe.aggregates.plan import (
     Plan,
     PlanDefaultParametersUpdated,
@@ -37,6 +36,7 @@ from cora.recipe.features.update_plan_default_parameters.command import (
 from cora.recipe.features.update_plan_default_parameters.context import (
     PlanDefaultParametersContext,
 )
+from cora.shared.json_merge_patch import merge_patch
 
 
 def decide(

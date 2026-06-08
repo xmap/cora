@@ -28,7 +28,7 @@ from cora.agent.aggregates.agent import (
     AgentSuspensionReason,
 )
 from cora.agent.features.suspend_agent.command import SuspendAgent
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

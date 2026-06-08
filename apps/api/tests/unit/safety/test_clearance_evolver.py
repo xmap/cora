@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.identity import ActorId
 from cora.safety.aggregates.clearance import (
     ClearanceActivated,
     ClearanceApproved,
@@ -21,6 +20,7 @@ from cora.safety.aggregates.clearance import (
     fold,
 )
 from cora.safety.aggregates.clearance.hazard_classification import RiskBand
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
 _CLEARANCE_ID = UUID("01900000-0000-7000-8000-000000011002")

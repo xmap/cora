@@ -55,8 +55,8 @@ from typing import Any, assert_never
 from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise, deserialize_vo_or_raise
-from cora.infrastructure.identifier import Identifier
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identifier import Identifier
 
 # ---------------------------------------------------------------------------
 # Identifier serialize / deserialize (public cross-slice helpers)

@@ -34,7 +34,7 @@ from cora.decision.aggregates.decision import (
     validate_decision_rating_comment,
 )
 from cora.decision.features.rate_decision.command import RateDecision
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

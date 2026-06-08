@@ -1,12 +1,13 @@
 """Each BC's routes.py only registers handlers for its own errors,
-or for shared infrastructure-layer errors.
+or for shared-kernel / infrastructure-layer errors.
 
 Sibling of `test_routes_completeness.py`. That test enforces "every
 domain error in BC `<bc>` is registered as an HTTP handler in
 `cora/<bc>/routes.py`"; this test enforces the converse: "every
 error class registered in `cora/<bc>/routes.py` comes from either
-`cora.<bc>.*` (the BC's own surface) or `cora.infrastructure.*`
-(infra-layer shared errors registered globally by Access)".
+`cora.<bc>.*` (the BC's own surface), `cora.shared.*` (pure value-
+object construction errors), or `cora.infrastructure.*` (infra-layer
+shared errors registered globally by Access)".
 
 Together the pair pins both directions: no orphaned errors,
 no cross-BC poaching. A foreign-BC registration is the typical
@@ -111,6 +112,7 @@ def _is_in_scope(bc: str, module: str) -> bool:
         module == f"cora.{bc}"
         or module.startswith(f"cora.{bc}.")
         or module.startswith("cora.infrastructure")
+        or module.startswith("cora.shared")
     )
 
 
@@ -142,5 +144,5 @@ def test_routes_only_register_own_bc_or_infra_errors() -> None:
         + "\n".join(f"  - {v}" for v in violations)
         + "\n\nMove the registration to the owning BC's routes.py, or "
         "(if the error is genuinely cross-BC infrastructure) re-home it "
-        "under cora.infrastructure.*."
+        "under cora.infrastructure.* or cora.shared.*."
     )

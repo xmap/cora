@@ -5,7 +5,7 @@ permissive mode + true-type-conflict detection.
 
 The companion `merge_patch` tests moved to
 `tests/unit/test_json_merge_patch.py` when the function hoisted to
-`cora.infrastructure.json_merge_patch`.
+`cora.shared.json_merge_patch`.
 """
 
 from typing import Any

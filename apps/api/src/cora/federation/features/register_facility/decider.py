@@ -60,9 +60,9 @@ from cora.federation.aggregates.facility import (
     FacilitySiteCannotHaveParentError,
 )
 from cora.federation.features.register_facility.command import RegisterFacility
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 
 def decide(

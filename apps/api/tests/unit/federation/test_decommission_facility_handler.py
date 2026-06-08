@@ -24,8 +24,8 @@ from cora.federation.features import decommission_facility, register_facility
 from cora.federation.features.decommission_facility import DecommissionFacility
 from cora.federation.features.register_facility import RegisterFacility
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.kernel import Kernel
+from cora.shared.facility_code import FacilityCode
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 7, 1, 9, 30, 0, tzinfo=UTC)

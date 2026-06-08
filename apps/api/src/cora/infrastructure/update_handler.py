@@ -52,7 +52,7 @@ log shape stays stable across slices regardless of extras.
 
 ## Why a free function (not a base class)
 
-Same rationale documented at `cora.infrastructure.bounded_text`
+Same rationale documented at `cora.shared.bounded_text`
 and `cora.infrastructure.evolver`: a free function lets each per-
 BC wrapper bind its own narrow `Handler` Protocol around the
 shared body without dragging the cross-BC abstraction into the

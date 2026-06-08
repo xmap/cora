@@ -13,8 +13,8 @@ from collections.abc import Mapping
 from threading import Lock
 from uuid import UUID
 
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
 
 
 class InMemoryFacilityLookup:

@@ -30,7 +30,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 class CredentialPurpose(StrEnum):

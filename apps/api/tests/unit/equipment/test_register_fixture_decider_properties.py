@@ -28,7 +28,7 @@ from cora.equipment.features.register_fixture import (
     RegisterFixture,
     RegisterFixtureContext,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes
 
 _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))

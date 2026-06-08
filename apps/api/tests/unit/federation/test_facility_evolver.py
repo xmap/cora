@@ -16,9 +16,9 @@ from cora.federation.aggregates.facility import (
     evolve,
     fold,
 )
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identifier import AlternateIdentifier, AlternateIdentifierKind
-from cora.infrastructure.identity import ActorId
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identifier import AlternateIdentifier, AlternateIdentifierKind
+from cora.shared.identity import ActorId
 
 _FACILITY_ID = FacilityId(UUID("01900000-0000-7000-8000-00000000fac1"))
 _PARENT_FACILITY_ID = FacilityId(UUID("01900000-0000-7000-8000-00000000fac2"))

@@ -46,7 +46,7 @@ async def _seed_registered(
     derived_from: frozenset[UUID] = frozenset(),
     intent: str = "Trial",
 ) -> None:
-    from cora.infrastructure.identity import ActorId
+    from cora.shared.identity import ActorId
 
     event = DatasetRegistered(
         dataset_id=dataset_id,
@@ -93,7 +93,7 @@ async def _seed_promoted(
         producing_run_id=producing_run_id,
         producing_run_end_state=producing_run_end_state,
     )
-    from cora.infrastructure.identity import ActorId
+    from cora.shared.identity import ActorId
 
     promoted = DatasetPromoted(
         dataset_id=dataset_id,

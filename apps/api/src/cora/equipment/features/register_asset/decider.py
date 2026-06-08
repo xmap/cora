@@ -88,7 +88,7 @@ from cora.equipment.aggregates.asset import (
     InvalidAssetParentError,
 )
 from cora.equipment.features.register_asset.command import RegisterAsset
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from cora.infrastructure.identifier import AlternateIdentifier
+from cora.shared.identifier import AlternateIdentifier
 
 
 @dataclass(frozen=True)

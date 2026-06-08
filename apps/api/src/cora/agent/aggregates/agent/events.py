@@ -35,8 +35,8 @@ from uuid import UUID
 
 from cora.agent.aggregates.agent.state import ModelRef
 from cora.infrastructure.event_payload import deserialize_or_raise, deserialize_vo_or_raise
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId
 
 # ---------------------------------------------------------------------------
 # ModelRef serialize / deserialize (public cross-slice helpers)

@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from cora.infrastructure.identifier import Identifier
+from cora.shared.identifier import Identifier
 from cora.trust.aggregates.visit import (
     VISIT_REASON_MAX_LENGTH,
     InvalidVisitPlannedPeriodError,

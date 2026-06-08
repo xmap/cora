@@ -22,7 +22,7 @@ from cora.caution.aggregates.caution import (
 )
 from cora.caution.features import register_caution
 from cora.caution.features.register_caution import RegisterCaution
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
 _ASSET_ID = UUID("01900000-0000-7000-8000-00000000e001")

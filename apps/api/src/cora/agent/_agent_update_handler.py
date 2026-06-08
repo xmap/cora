@@ -58,12 +58,12 @@ from cora.agent.aggregates.agent import (
 )
 from cora.agent.errors import UnauthorizedError
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.infrastructure.update_handler import make_update_handler
+from cora.shared.identity import ActorId
 
 _STREAM_TYPE = "Agent"
 _TARGET_ID_ATTR = "agent_id"

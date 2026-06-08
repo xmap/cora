@@ -28,7 +28,7 @@ from cora.federation.aggregates.facility import (
     FacilityStatus,
 )
 from cora.federation.features.decommission_facility.command import DecommissionFacility
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

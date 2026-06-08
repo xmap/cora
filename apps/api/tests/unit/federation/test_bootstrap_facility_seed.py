@@ -14,13 +14,13 @@ from cora.federation.aggregates.facility import (
 )
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
-from cora.infrastructure.facility_code import (
-    FacilityCode,
-    InvalidFacilityCodeError,
-)
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, FixedIdGenerator
 from cora.infrastructure.routing import SYSTEM_PRINCIPAL_ID
+from cora.shared.facility_code import (
+    FacilityCode,
+    InvalidFacilityCodeError,
+)
 
 _NOW = datetime(2026, 6, 8, 12, 0, 0, tzinfo=UTC)
 

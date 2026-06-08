@@ -7,7 +7,8 @@ Per ``docs/reference/patterns.md`` Rejections table:
     aggregate-internal VO module beside it).
   - BC-application errors (``UnauthorizedError`` and BC-scoped
     cross-aggregate guards) live in ``cora/<bc>/errors.py``.
-  - Cross-BC infra errors live under ``cora/infrastructure/``.
+  - Cross-BC infra errors live under ``cora/infrastructure/`` or
+    ``cora/shared/`` (pure value-object construction errors).
 
 Errors defined inside a slice (``features/<slice>/*.py``), a projection
 module, a subscriber, an adapter, or a prompt template are out of contract.
@@ -56,8 +57,8 @@ def _is_exempt_path(path: Path) -> bool:
     # Protocol they belong to; first instance is ControlPort.
     if len(parts) >= 2 and parts[1] == "ports":
         return True
-    # cora/infrastructure/...
-    return bool(parts and parts[0] == "infrastructure")
+    # cora/infrastructure/... and cora/shared/...
+    return bool(parts and parts[0] in {"infrastructure", "shared"})
 
 
 def _scanned_files() -> list[Path]:

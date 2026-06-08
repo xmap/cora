@@ -22,7 +22,7 @@ is for non-genesis arms only.
 ## Why a free function (not a base class or mixin)
 
 Same rationale as `validate_bounded_text` (see
-`cora.infrastructure.bounded_text`): a per-aggregate distinct
+`cora.shared.bounded_text`): a per-aggregate distinct
 type at the call site keeps `isinstance` checks aggregate-
 specific and lets pyright narrow correctly through the match
 arms. A free generic function preserves that while retiring the

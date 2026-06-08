@@ -31,7 +31,7 @@ from cora.decision.features.append_reasoning_entries import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 5, 12, 12, 0, 0, tzinfo=UTC)

@@ -30,8 +30,8 @@ from cora.decision.aggregates.decision import (
 )
 from cora.decision.aggregates.decision.evolver import fold
 from cora.decision.aggregates.decision.state import validate_decision_rating_comment
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId
 
 _T0 = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 _T1 = _T0 + timedelta(minutes=10)

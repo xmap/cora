@@ -39,8 +39,8 @@ from cora.federation.features import add_facility_trust_anchor_credential
 from cora.federation.features.add_facility_trust_anchor_credential import (
     AddFacilityTrustAnchorCredential,
 )
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes
 
 if TYPE_CHECKING:

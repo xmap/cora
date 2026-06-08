@@ -54,10 +54,10 @@ from datetime import datetime
 from typing import Any, assert_never
 from uuid import UUID
 
-from cora.infrastructure.canonical_json import canonical_json_bytes
 from cora.infrastructure.event_payload import deserialize_or_raise
-from cora.infrastructure.logbook import LogbookSchema
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.canonical_json import canonical_json_bytes
+from cora.shared.logbook import LogbookSchema
 
 
 @dataclass(frozen=True)

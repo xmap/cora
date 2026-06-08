@@ -30,7 +30,7 @@ from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.remove_asset_alternate_identifier import (
     RemoveAssetAlternateIdentifier,
 )
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
 )

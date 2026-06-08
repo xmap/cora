@@ -33,9 +33,9 @@ from cora.decision.aggregates.decision import (
     to_payload,
 )
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
-from cora.infrastructure.logbook import LogbookFieldSpec, LogbookSchema
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identity import ActorId
+from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 
 _NOW = datetime(2026, 5, 12, 12, 0, 0, tzinfo=UTC)
 

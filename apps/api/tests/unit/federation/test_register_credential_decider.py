@@ -24,7 +24,7 @@ from cora.federation.aggregates.credential import (
 )
 from cora.federation.features import register_credential
 from cora.federation.features.register_credential import RegisterCredential
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _EXPIRES_AT = datetime(2027, 5, 30, 12, 0, 0, tzinfo=UTC)

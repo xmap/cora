@@ -36,7 +36,6 @@ from cora.decision.aggregates.decision import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports import (
     FakeLLM,
     FakeLLMResponse,
@@ -45,6 +44,7 @@ from cora.infrastructure.ports import (
 from cora.run.aggregates.run import RunNotFoundError, RunStarted
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
+from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 5, 17, 16, 0, 0, tzinfo=UTC)

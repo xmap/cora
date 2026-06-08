@@ -18,7 +18,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.identity import MonitorSourceId
+from cora.shared.identity import MonitorSourceId
 from cora.supply.aggregates.supply import (
     InvalidSupplyReasonError,
     MonitorRef,

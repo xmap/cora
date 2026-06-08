@@ -25,10 +25,10 @@ from cora.agent.aggregates.agent import (
     to_payload,
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.content_hash import canonical_body_bytes, pae_bytes
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.signing import event_type_to_payload_type
+from cora.shared.content_hash import canonical_body_bytes, pae_bytes
+from cora.shared.identity import ActorId
 
 
 async def seed_defined_agent(

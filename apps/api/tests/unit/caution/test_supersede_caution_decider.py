@@ -33,7 +33,7 @@ from cora.caution.features.supersede_caution import (
     CautionSupersessionContext,
     SupersedeCaution,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
 _ASSET_ID = UUID("01900000-0000-7000-8000-000000010001")

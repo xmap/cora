@@ -37,7 +37,7 @@ from cora.federation.aggregates.seal import (
     SealStatus,
 )
 from cora.federation.features.sign_seal_pointer.command import SignSealPointer
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

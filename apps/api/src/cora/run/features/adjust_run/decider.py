@@ -52,8 +52,6 @@ for steering it; we don't second-guess at adjust time.
 
 from datetime import datetime
 
-from cora.infrastructure.identity import ActorId
-from cora.infrastructure.json_merge_patch import merge_patch
 from cora.run.aggregates.run import (
     RUN_ADJUST_REASON_MAX_LENGTH,
     InvalidRunAdjustPatchError,
@@ -67,6 +65,8 @@ from cora.run.aggregates.run import (
 )
 from cora.run.features.adjust_run.command import AdjustRun
 from cora.run.features.adjust_run.context import RunAdjustContext
+from cora.shared.identity import ActorId
+from cora.shared.json_merge_patch import merge_patch
 
 _ADJUSTABLE_STATUSES: tuple[RunStatus, ...] = (RunStatus.RUNNING, RunStatus.HELD)
 

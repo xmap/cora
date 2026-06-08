@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from cora.infrastructure.logbook import LogbookFieldSpec, LogbookSchema
+from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.trust.aggregates.conduit import (
     Conduit,
     ConduitLogbookAlreadyOpenError,

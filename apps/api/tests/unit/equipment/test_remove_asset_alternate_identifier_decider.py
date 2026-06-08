@@ -19,7 +19,7 @@ from cora.equipment.features import remove_asset_alternate_identifier
 from cora.equipment.features.remove_asset_alternate_identifier import (
     RemoveAssetAlternateIdentifier,
 )
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
 )

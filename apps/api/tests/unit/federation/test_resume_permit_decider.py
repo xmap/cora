@@ -28,7 +28,7 @@ from cora.federation.aggregates.permit import (
 )
 from cora.federation.features import resume_permit
 from cora.federation.features.resume_permit import ResumePermit
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000fed001")

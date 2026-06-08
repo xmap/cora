@@ -42,7 +42,7 @@ from cora.caution.aggregates.caution import (
     ensure_expires_at_future,
 )
 from cora.caution.features.register_caution.command import RegisterCaution
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 
 def decide(

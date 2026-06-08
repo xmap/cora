@@ -64,7 +64,7 @@ from cora.decision.aggregates.decision import (
 from cora.decision.aggregates.decision import event_type_name as decision_event_type_name
 from cora.decision.aggregates.decision import to_payload as decision_to_payload
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 17, 15, 0, 0, tzinfo=UTC)

@@ -27,8 +27,8 @@ from cora.federation.features import remove_facility_trust_anchor_credential
 from cora.federation.features.remove_facility_trust_anchor_credential import (
     RemoveFacilityTrustAnchorCredential,
 )
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 7, 1, 9, 30, 0, tzinfo=UTC)
 _REGISTERED_AT = datetime(2026, 6, 8, 12, 0, 0, tzinfo=UTC)

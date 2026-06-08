@@ -11,10 +11,10 @@ from cora.equipment.features.assign_fixture_persistent_id.command import (
     AssignFixturePersistentId,
 )
 from cora.equipment.features.assign_fixture_persistent_id.handler import Handler
-from cora.infrastructure.identifier import PersistentIdentifierScheme
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+from cora.shared.identifier import PersistentIdentifierScheme
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:

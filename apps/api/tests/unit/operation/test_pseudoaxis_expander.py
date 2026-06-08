@@ -28,7 +28,6 @@ from cora.equipment.aggregates.asset.events import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.operation._pseudoaxis_expander import expand_pseudoaxis_steps
 from cora.operation.conductor import (
     ActionStep,
@@ -38,6 +37,7 @@ from cora.operation.conductor import (
     Step,
 )
 from cora.operation.errors import PartitionRuleNotFoundError
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 6, 5, 12, 0, 0, tzinfo=UTC)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")

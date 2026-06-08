@@ -38,7 +38,6 @@ Invariants:
 
 from datetime import datetime
 
-from cora.infrastructure.json_schema_subset import check_schema_is_subset
 from cora.recipe.aggregates.capability import Capability, CapabilityNotFoundError
 from cora.recipe.aggregates.method import (
     Method,
@@ -50,6 +49,7 @@ from cora.recipe.aggregates.method import (
 from cora.recipe.features.update_method_parameters_schema.command import (
     UpdateMethodParametersSchema,
 )
+from cora.shared.json_schema_subset import check_schema_is_subset
 
 
 def decide(

@@ -17,11 +17,11 @@ import pytest
 from cora.infrastructure.adapters.in_memory_credential_lookup import (
     InMemoryCredentialLookup,
 )
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.ports import (
     CredentialLookup,
     CredentialLookupResult,
 )
+from cora.shared.facility_code import FacilityCode
 
 
 @pytest.mark.unit

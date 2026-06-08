@@ -24,7 +24,7 @@ from cora.federation.aggregates.seal import (
 )
 from cora.federation.features import sign_seal_pointer
 from cora.federation.features.sign_seal_pointer import SignSealPointer
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _FACILITY_ID = "aps-2bm"

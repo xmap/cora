@@ -50,7 +50,7 @@ from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
-from cora.infrastructure.facility_code import FacilityCode
+from cora.shared.facility_code import FacilityCode
 
 
 @dataclass(frozen=True)

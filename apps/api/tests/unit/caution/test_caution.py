@@ -26,7 +26,7 @@ from cora.caution.aggregates.caution import (
     InvalidCautionWorkaroundError,
     ProcedureTarget,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 # ---------- CautionText VO ----------
 

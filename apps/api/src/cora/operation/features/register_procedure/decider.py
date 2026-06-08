@@ -34,7 +34,6 @@ a "configured but not running" state.
 from datetime import datetime
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import validate_bounded_text
 from cora.operation.aggregates.procedure import (
     PROCEDURE_KIND_MAX_LENGTH,
     InvalidProcedureKindError,
@@ -50,6 +49,7 @@ from cora.recipe.aggregates.capability import (
     CapabilityNotFoundError,
     ExecutorShape,
 )
+from cora.shared.bounded_text import validate_bounded_text
 
 
 def decide(

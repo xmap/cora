@@ -4,11 +4,11 @@ JSON Schema subset.
 Family.settings_schema declares the shape of Asset.settings keys
 this Family "owns". This module is the write-time guard via the
 shared declarer-validator at
-`cora.infrastructure.json_schema_validation`.
+`cora.shared.json_schema_validation`.
 
 ## Constrained subset
 
-See `cora.infrastructure.json_schema_subset` for the allowed
+See `cora.shared.json_schema_subset` for the allowed
 keyword whitelist (`$schema`, `type`, `required`, `properties`,
 `enum`, `minimum`, `maximum`, `pattern`). Forbidden everywhere:
 `$ref`, `oneOf`, `anyOf`, `allOf`, `not`, conditionals.
@@ -16,7 +16,7 @@ keyword whitelist (`$schema`, `type`, `required`, `properties`,
 
 from typing import Any
 
-from cora.infrastructure.json_schema_validation import validate_schema_declaration
+from cora.shared.json_schema_validation import validate_schema_declaration
 
 
 class InvalidFamilySettingsSchemaError(ValueError):

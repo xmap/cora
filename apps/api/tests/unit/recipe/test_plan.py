@@ -62,7 +62,7 @@ def test_plan_name_is_frozen() -> None:
 @pytest.mark.unit
 def test_plan_name_uses_shared_bounded_name_decorator() -> None:
     """Pin: PlanName routes through the shared
-    `cora.infrastructure.bounded_text.bounded_name` decorator. A direct
+    `cora.shared.bounded_text.bounded_name` decorator. A direct
     source inspection ensures we don't accidentally re-add the
     duplicated trim+length-check `__post_init__` ritual later."""
     import inspect
@@ -71,7 +71,7 @@ def test_plan_name_uses_shared_bounded_name_decorator() -> None:
 
     src = inspect.getsource(plan_state)
     assert "@bounded_name(" in src
-    assert "from cora.infrastructure.bounded_text import bounded_name" in src
+    assert "from cora.shared.bounded_text import bounded_name" in src
     assert not hasattr(PlanName, "__post_init__")
 
 

@@ -41,8 +41,8 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.adapters.in_memory_facility_lookup import (
     InMemoryFacilityLookup,
 )
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.kernel import Kernel
+from cora.shared.facility_code import FacilityCode
 from tests.unit._helpers import build_deps as _build_deps_shared
 from tests.unit.federation._helpers import (
     seed_live_seal,

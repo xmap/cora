@@ -3,7 +3,7 @@
 Per [[project_facility_aggregate_design]] L4 (amended), federation-BC
 relational references between aggregates (Credential ids, Facility ids,
 future Permit / Seal ids) live here rather than at
-`cora.infrastructure.identity`. Co-located with the aggregate kernel
+`cora.shared.identity`. Co-located with the aggregate kernel
 (`cora.federation.aggregates.*`) because tach's BC-isolation rule
 forbids `cora.federation.aggregates` from importing the BC top-level
 `cora.federation`; co-locating the shared-types module inside the

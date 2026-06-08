@@ -17,7 +17,7 @@ from cora.equipment.aggregates.asset import (
 )
 from cora.equipment.features import assign_asset_persistent_id
 from cora.equipment.features.assign_asset_persistent_id.command import AssignAssetPersistentId
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )

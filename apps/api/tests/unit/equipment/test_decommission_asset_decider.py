@@ -34,7 +34,7 @@ from cora.equipment.features.decommission_asset import (
     DecommissionAsset,
     DecommissionAssetContext,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))
 

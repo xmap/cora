@@ -40,7 +40,7 @@ from cora.federation.aggregates.permit import (
 )
 from cora.federation.features import define_permit
 from cora.federation.features.define_permit import DefinePermit
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 if TYPE_CHECKING:

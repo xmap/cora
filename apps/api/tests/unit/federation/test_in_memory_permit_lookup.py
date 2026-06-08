@@ -5,8 +5,8 @@ from uuid import uuid4
 import pytest
 
 from cora.federation.adapters.in_memory_permit_lookup import InMemoryPermitLookup
-from cora.infrastructure.facility_code import FacilityCode
 from cora.infrastructure.ports.federation import PermitLookup, PermitLookupResult
+from cora.shared.facility_code import FacilityCode
 
 _APS = FacilityCode("aps-2bm")
 _NSLS = FacilityCode("nsls-ii")

@@ -22,7 +22,7 @@ confirmation before the first revision-less Drawing is registered).
 `json_schema_validation` (that pattern is for declarer-owns-schema /
 carrier-owns-dict); validation lives in field shape + enum
 membership + `validate_bounded_text` from
-`cora.infrastructure.bounded_text` (the 22nd hoisting site for the
+`cora.shared.bounded_text` (the 22nd hoisting site for the
 trim + length-check + raise pattern; AssetPort precedent uses
 per-field error classes).
 
@@ -42,7 +42,7 @@ MIL-HDBK-61A 5.4 / CMII, ACL).
 from dataclasses import dataclass
 from enum import StrEnum
 
-from cora.infrastructure.bounded_text import validate_bounded_text
+from cora.shared.bounded_text import validate_bounded_text
 
 DRAWING_NUMBER_MAX_LENGTH = 200
 DRAWING_REVISION_MAX_LENGTH = 100

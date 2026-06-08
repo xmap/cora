@@ -25,7 +25,7 @@ query-time access.
 `CautionTag` is a 1-50 char trimmed string (one tag per VO; the
 aggregate carries `frozenset[CautionTag]`). All three follow the
 established `validate_bounded_text` + `object.__setattr__` pattern
-from the shared `cora.infrastructure.bounded_text` helper.
+from the shared `cora.shared.bounded_text` helper.
 
 ## Target discriminated union (day-1: 2 kinds)
 
@@ -65,8 +65,8 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from cora.infrastructure.bounded_text import validate_bounded_text
-from cora.infrastructure.identity import ActorId
+from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.identity import ActorId
 
 CAUTION_TEXT_MAX_LENGTH = 2000
 CAUTION_WORKAROUND_MAX_LENGTH = 2000

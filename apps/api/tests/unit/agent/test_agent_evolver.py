@@ -23,7 +23,7 @@ from cora.agent.aggregates.agent.state import (
     ModelRef,
     ToolName,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _SUSPENDED_BY = ActorId(uuid4())
 _RESUMED_BY = ActorId(uuid4())

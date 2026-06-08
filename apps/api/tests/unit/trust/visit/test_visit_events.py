@@ -11,8 +11,8 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.identifier import Identifier
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.identifier import Identifier
 from cora.trust.aggregates.visit import (
     VisitAborted,
     VisitArrived,

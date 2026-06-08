@@ -31,8 +31,8 @@ from cora.federation.aggregates.facility import (
 )
 from cora.federation.features import decommission_facility
 from cora.federation.features.decommission_facility import DecommissionFacility
-from cora.infrastructure.facility_code import FacilityCode
-from cora.infrastructure.identity import ActorId
+from cora.shared.facility_code import FacilityCode
+from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 if TYPE_CHECKING:

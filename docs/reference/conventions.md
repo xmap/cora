@@ -54,7 +54,7 @@ Numeric fields whose meaning depends on a unit carry the unit as a three-field a
 }
 ```
 
-- **`system`**: namespace identifier; `udunits` for beamline-native fields, `ucum` for clinical, `qudt` for linked-data export, `iec61360` for Industry-4.0 partners. Closed allowlist enforced by `cora.infrastructure.json_schema_validation`.
+- **`system`**: namespace identifier; `udunits` for beamline-native fields, `ucum` for clinical, `qudt` for linked-data export, `iec61360` for Industry-4.0 partners. Closed allowlist enforced by `cora.shared.json_schema_validation`.
 - **`code`**: the unit token interpreted within `system`. Opaque to anyone outside that namespace.
 - **`label`**: optional human display string for codes that are not self-explanatory.
 
@@ -95,7 +95,7 @@ One aggregate declares a JSON Schema; another aggregate carries a dict of values
 
 The vocabularies are not interchangeable. "Settings" maps to PLC and SCADA vocabulary and lifecycle; "parameters" maps to recipe and process-control vocabulary. Operators expect both terms in their respective contexts; CORA keeps both.
 
-The shared infrastructure lives in `cora.infrastructure.json_schema_validation` and exposes two functions:
+The shared infrastructure lives in `cora.shared.json_schema_validation` and exposes two functions:
 
 - `validate_schema_declaration(schema, *, error_class)` runs on the declarer's write path. Rejects schemas that are missing or that have the wrong `$schema`, use a forbidden keyword (`$ref`, `oneOf`, `allOf`, conditionals), or fail to compile.
 - `validate_values_against_schema(values, schema, *, error_class, no_schema_message)` runs on the carrier's write path.
@@ -277,10 +277,10 @@ Test names carry scenarios. Per-test docstrings stay rare.
 
 | Family | Domain entry point | Shared infrastructure |
 | --- | --- | --- |
-| Identifiers | `IdGenerator` port; per-aggregate `external_id` field | `cora.infrastructure.ids` |
-| Units of measurement | declarer's JSON Schema; allowlist of `system` namespaces | `cora.infrastructure.json_schema_validation` |
+| Identifiers | `IdGenerator` port; per-aggregate `external_id` field | `cora.shared.identity`, `cora.shared.identifier`, `cora.infrastructure.ports.id_generator` |
+| Units of measurement | declarer's JSON Schema; allowlist of `system` namespaces | `cora.shared.json_schema_validation` |
 | Personal data | `Actor` state; `profile` table | `cora.access.aggregates.actor.profile` |
-| Schema-validated values | declarer's schema field; carrier's values field | `cora.infrastructure.json_schema_validation`, `cora.infrastructure.json_schema_subset` |
+| Schema-validated values | declarer's schema field; carrier's values field | `cora.shared.json_schema_validation`, `cora.shared.json_schema_subset` |
 | Documentation | docstring on every public symbol; sparse `#` comments | [Glossary](glossary.md) for vocabulary |
 
 For the deeper rules each family inherits from (event sourcing, value-object scope, field grouping), see [Modeling](modeling.md). For the read-side, idempotency, and cross-aggregate validation patterns, see [Patterns](patterns.md).

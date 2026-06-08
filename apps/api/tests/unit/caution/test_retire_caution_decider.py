@@ -20,7 +20,7 @@ from cora.caution.aggregates.caution import (
 )
 from cora.caution.features import retire_caution
 from cora.caution.features.retire_caution import RetireCaution
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
 _AUTHOR_ID = ActorId(UUID("01900000-0000-7000-8000-000000030001"))

@@ -56,7 +56,7 @@ from cora.decision.aggregates.decision import (
     validate_inputs,
     validate_reasoning,
 )
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _DECISION_RULE = "agent:RunDebriefer:v1"
 

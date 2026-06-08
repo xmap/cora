@@ -49,7 +49,7 @@ from cora.equipment.aggregates.asset import (
 )
 from cora.equipment.aggregates.model import ManufacturerIdentifierType
 from cora.equipment.errors import PidinstRecordInvariantError
-from cora.infrastructure.identifier import (
+from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
     PersistentIdentifier,

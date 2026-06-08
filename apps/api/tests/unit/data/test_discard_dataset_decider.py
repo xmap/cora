@@ -26,7 +26,7 @@ from cora.data.aggregates.dataset import (
 )
 from cora.data.features import discard_dataset
 from cora.data.features.discard_dataset import DiscardDataset
-from cora.infrastructure.identity import ActorId
+from cora.shared.identity import ActorId
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)

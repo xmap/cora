@@ -45,8 +45,8 @@ from cora.caution.aggregates.caution import (
 from cora.caution.features import register_caution
 from cora.caution.features.register_caution.command import RegisterCaution
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.identity import ActorId
 from cora.infrastructure.ports.event_store import ConcurrencyError, StreamAppend
+from cora.shared.identity import ActorId
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)

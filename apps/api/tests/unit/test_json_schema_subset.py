@@ -1,6 +1,6 @@
 """Unit tests for the shared constrained-subset checker.
 
-`cora.infrastructure.json_schema_subset` was hoisted at the
+`cora.shared.json_schema_subset` was hoisted at the
 rule-of-three trigger once the third use site landed (Family schema
 declaration + Asset settings
 union compile + Method parameters declaration). The two BC-specific
@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-from cora.infrastructure.json_schema_subset import (
+from cora.shared.json_schema_subset import (
     ALLOWED_SCHEMA_KEYS,
     DRAFT_2020_12_URI,
     check_schema_is_subset,

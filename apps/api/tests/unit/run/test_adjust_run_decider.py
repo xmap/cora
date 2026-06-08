@@ -11,7 +11,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.identity import ActorId
 from cora.run.aggregates.run import (
     InvalidRunAdjustPatchError,
     InvalidRunAdjustReasonError,
@@ -24,6 +23,7 @@ from cora.run.aggregates.run import (
 )
 from cora.run.features.adjust_run import RunAdjustContext, decide
 from cora.run.features.adjust_run.command import AdjustRun
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 14, 12, 0, 0, tzinfo=UTC)
 _ACTOR = ActorId(UUID("01900000-0000-7000-8000-0000000000ac"))

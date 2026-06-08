@@ -5,7 +5,6 @@ from uuid import uuid4
 
 import pytest
 
-from cora.infrastructure.identity import ActorId
 from cora.safety.aggregates.clearance import (
     Clearance,
     ClearanceApproved,
@@ -20,6 +19,7 @@ from cora.safety.aggregates.clearance import (
 )
 from cora.safety.features import approve_clearance
 from cora.safety.features.approve_clearance import ApproveClearance
+from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
 
