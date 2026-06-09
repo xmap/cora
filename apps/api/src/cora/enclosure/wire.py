@@ -24,12 +24,21 @@ Subject / Equipment (composition order matters, innermost first):
     monitor_ref carried on the event payload is the natural dedup
     key, and the status-change-only short-circuit in the decider
     silently absorbs re-emission of identical-status observations.)
+  - `decommission_enclosure` (lifecycle-terminal transition; no
+    idempotency wrap, mirrors Federation `decommission_facility` and
+    Supply `deregister_supply`. Strict-not-idempotent: re-decommissioning
+    raises `EnclosureCannotDecommissionError` -> HTTP 409, so
+    HTTP-layer caching adds no value.)
 """
 
 from dataclasses import dataclass
 from uuid import UUID
 
-from cora.enclosure.features import observe_enclosure_status, register_enclosure
+from cora.enclosure.features import (
+    decommission_enclosure,
+    observe_enclosure_status,
+    register_enclosure,
+)
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
@@ -43,6 +52,7 @@ class EnclosureHandlers:
 
     register_enclosure: register_enclosure.IdempotentHandler
     observe_enclosure_status: observe_enclosure_status.Handler
+    decommission_enclosure: decommission_enclosure.Handler
 
 
 def wire_enclosure(deps: Kernel) -> EnclosureHandlers:
@@ -63,6 +73,11 @@ def wire_enclosure(deps: Kernel) -> EnclosureHandlers:
         observe_enclosure_status=with_tracing(
             observe_enclosure_status.bind(deps),
             command_name="ObserveEnclosureStatus",
+            bc=_BC,
+        ),
+        decommission_enclosure=with_tracing(
+            decommission_enclosure.bind(deps),
+            command_name="DecommissionEnclosure",
             bc=_BC,
         ),
     )

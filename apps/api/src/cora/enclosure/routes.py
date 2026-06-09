@@ -59,7 +59,11 @@ from cora.enclosure.aggregates.enclosure import (
     MonitorTriggerNotPermittedError,
 )
 from cora.enclosure.errors import UnauthorizedError
-from cora.enclosure.features import observe_enclosure_status, register_enclosure
+from cora.enclosure.features import (
+    decommission_enclosure,
+    observe_enclosure_status,
+    register_enclosure,
+)
 
 
 async def _handle_validation_error(request: Request, exc: Exception) -> JSONResponse:
@@ -124,6 +128,7 @@ async def _handle_unauthorized(request: Request, exc: Exception) -> JSONResponse
 def register_enclosure_routes(app: FastAPI) -> None:
     """Attach Enclosure slice routers and exception handlers to the FastAPI app."""
     app.include_router(register_enclosure.router)
+    app.include_router(decommission_enclosure.router)
     # Stub router inclusion for the in-process-only observe slice. The
     # router carries no routes by design; this include satisfies the
     # routes-completeness architecture fitness without exposing a

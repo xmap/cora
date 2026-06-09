@@ -4158,6 +4158,24 @@
         "title": "DecisionSummaryDTO",
         "type": "object"
       },
+      "DecommissionEnclosureRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /enclosures/{enclosure_id}/decommission`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb)\nexplaining why the enclosure is being decommissioned. Examples:\n\"hutch retired\", \"interlock chain replaced; re-registering\",\n\"duplicate of enclosure <id>\".",
+        "properties": {
+          "reason": {
+            "description": "Operator-supplied reason for the decommission transition (audit-log breadcrumb). Flows onto the EnclosureDecommissioned event payload.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DecommissionEnclosureRequest",
+        "type": "object"
+      },
       "DecommissionFacilityBody": {
         "additionalProperties": false,
         "description": "Optional decommission-facility request body.",
@@ -23862,6 +23880,106 @@
           }
         },
         "summary": "Register a new interlock-gated Enclosure (lands in Unknown)",
+        "tags": [
+          "enclosure"
+        ]
+      }
+    },
+    "/enclosures/{enclosure_id}/decommission": {
+      "post": {
+        "operationId": "post_enclosures_decommission_enclosures__enclosure_id__decommission_post",
+        "parameters": [
+          {
+            "description": "Target enclosure's id.",
+            "in": "path",
+            "name": "enclosure_id",
+            "required": true,
+            "schema": {
+              "description": "Target enclosure's id.",
+              "format": "uuid",
+              "title": "Enclosure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecommissionEnclosureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (for example whitespace-only reason rejected by the EnclosureReason value object past the Pydantic length bounds)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No enclosure exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Enclosure is already Decommissioned (decommission_enclosure is strict-not-idempotent; Decommissioned is terminal). The address tuple (containing_asset_id, name) is freed for re-registration once the projection arm advances."
+          },
+          "422": {
+            "description": "Request body failed schema validation (missing reason, empty reason, or reason exceeds 500 chars), OR the path enclosure_id is not a well-formed UUID."
+          }
+        },
+        "summary": "Decommission an Enclosure (terminal: Active -> Decommissioned)",
         "tags": [
           "enclosure"
         ]
