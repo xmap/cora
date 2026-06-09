@@ -78,6 +78,10 @@ path = "cora.decision.aggregates"
 depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
+path = "cora.enclosure.aggregates"
+depends_on = ["cora.infrastructure", "cora.shared"]
+
+[[modules]]
 path = "cora.equipment.aggregates"
 depends_on = ["cora.infrastructure", "cora.shared"]
 
@@ -177,6 +181,15 @@ depends_on = [
 [[modules]]
 path = "cora.supply"
 depends_on = ["cora.infrastructure", "cora.shared", "cora.supply.aggregates"]
+
+# Enclosure BC owns the Enclosure aggregate (operator-declared physical
+# zone with permit observation + lifecycle FSM Active -> Decommissioned).
+# Sub-Slice A scaffolds the aggregate only; no cross-BC kernel loads on
+# the write path yet (Asset existence check for `containing_asset_id`
+# deferred per the Stage-1 Sub-Slice A open ambiguity on Asset binding).
+[[modules]]
+path = "cora.enclosure"
+depends_on = ["cora.infrastructure", "cora.shared", "cora.enclosure.aggregates"]
 
 [[modules]]
 path = "cora.trust"
@@ -364,6 +377,7 @@ depends_on = [
     "cora.caution",
     "cora.data",
     "cora.decision",
+    "cora.enclosure",
     "cora.equipment",
     "cora.equipment.adapters",
     "cora.federation",
