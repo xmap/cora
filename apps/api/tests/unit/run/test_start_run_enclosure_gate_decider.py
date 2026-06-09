@@ -206,3 +206,46 @@ def test_decide_raises_coverage_mismatch_when_some_rows_pass_and_some_fail() -> 
     # not flagged.
     assert (failing.enclosure_id, "NotPermitted|Active") in summary
     assert all(eid != passing.enclosure_id for eid, _ in summary)
+
+
+@pytest.mark.unit
+def test_decide_raises_requires_when_all_bindings_fail_including_duplicates() -> None:
+    """Duplicate failing rows still classify as Requires, not CoverageMismatch.
+
+    The decider compares `len(failing_rows) == len(context.referencing_enclosures)`
+    on the raw tuples so duplicate adapter rows do not flip the
+    classification from Requires to CoverageMismatch. The frozenset
+    summary still dedups by (enclosure_id, label), which is why the
+    branch deliberately reads raw lengths instead of summary cardinality.
+    """
+    failing = _enclosure_ref(permit_status="NotPermitted", lifecycle="Active")
+    context, needs = _context(referencing_enclosures=(failing, failing))
+    new_id = uuid4()
+    with pytest.raises(RunRequiresPermittedEnclosureError) as exc_info:
+        _start(context, new_id, needs)
+    assert exc_info.value.run_id == new_id
+    summary = exc_info.value.enclosure_status_summary
+    assert (failing.enclosure_id, "NotPermitted|Active") in summary
+    assert len(summary) == 1
+
+
+@pytest.mark.unit
+def test_decide_raises_coverage_mismatch_when_passing_rows_are_duplicated() -> None:
+    """Duplicate passing rows still classify as CoverageMismatch when any row fails.
+
+    Seeding (passing, passing, failing) means `len(failing_rows) == 1`
+    but `len(context.referencing_enclosures) == 3`, so the branch fires
+    CoverageMismatch even though the frozenset summary collapses the
+    duplicate passing row. Guards against a regression that swaps the
+    raw-tuple check for a summary-cardinality check.
+    """
+    passing = _enclosure_ref(permit_status="Permitted", lifecycle="Active")
+    failing = _enclosure_ref(permit_status="NotPermitted", lifecycle="Active")
+    context, needs = _context(referencing_enclosures=(passing, passing, failing))
+    new_id = uuid4()
+    with pytest.raises(RunEnclosureCoverageMismatchError) as exc_info:
+        _start(context, new_id, needs)
+    assert exc_info.value.run_id == new_id
+    summary = exc_info.value.enclosure_status_summary
+    assert (failing.enclosure_id, "NotPermitted|Active") in summary
+    assert all(eid != passing.enclosure_id for eid, _ in summary)

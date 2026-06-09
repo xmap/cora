@@ -52,7 +52,10 @@ from cora.recipe.features import define_method, define_plan, define_practice
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_plan import DefinePlan
 from cora.recipe.features.define_practice import DefinePractice
-from cora.run.aggregates.run import RunRequiresPermittedEnclosureError
+from cora.run.aggregates.run import (
+    RunEnclosureCoverageMismatchError,
+    RunRequiresPermittedEnclosureError,
+)
 from cora.run.features import start_run
 from cora.run.features.start_run import StartRun
 from cora.shared.identity import MonitorSourceId
@@ -262,3 +265,41 @@ async def test_2bm_enclosure_preflight_walks_unknown_to_permitted_to_notpermitte
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
+
+
+@pytest.mark.integration
+async def test_2bm_enclosure_preflight_raises_coverage_mismatch_on_mixed_bindings(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Two Enclosures bind the same Asset; one is Permitted, the other
+    Unknown. The pre-flight gate fires CoverageMismatch (not Requires)
+    because the binding set is mixed: at least one row passes and at
+    least one row fails the Permitted-and-Active check.
+
+    End-to-end against real Postgres exercises the wire + projection +
+    Postgres lookup adapter + decider classification path. Mirrors the
+    contract-tier mixed-status test but uses the production adapter
+    so projection-side bugs (e.g. UNIQUE INDEX swallowing one row,
+    SELECT filter dropping NotPermitted) would surface here first.
+    """
+    deps, plan_id, subject_id, asset_id = await _seed_upstream_chain(db_pool)
+    permitted_enclosure_id = await _seed_enclosure(db_pool, asset_id=asset_id)
+    unknown_enclosure_id = await _seed_enclosure(db_pool, asset_id=asset_id)
+
+    await _observe(
+        db_pool,
+        enclosure_id=permitted_enclosure_id,
+        new_status=EnclosurePermitStatus.PERMITTED,
+        now=_T1,
+    )
+
+    with pytest.raises(RunEnclosureCoverageMismatchError) as exc_info:
+        await start_run.bind(deps)(
+            StartRun(name="Mixed bindings", plan_id=plan_id, subject_id=subject_id),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    failing = exc_info.value.enclosure_status_summary
+    enclosure_ids = {eid for eid, _ in failing}
+    assert unknown_enclosure_id in enclosure_ids
+    assert permitted_enclosure_id not in enclosure_ids

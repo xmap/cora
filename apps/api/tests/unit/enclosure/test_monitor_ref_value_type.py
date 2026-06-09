@@ -66,3 +66,22 @@ def test_monitor_ref_at_max_length_accepted() -> None:
     )
     assert len(ref.source_kind) == ENCLOSURE_MONITOR_SOURCE_KIND_MAX_LENGTH
     assert len(ref.source_id) == ENCLOSURE_MONITOR_SOURCE_ID_MAX_LENGTH
+
+
+@pytest.mark.unit
+def test_monitor_ref_rejects_colon_in_source_kind() -> None:
+    """`source_kind` may not contain ':' since the wire format joins
+    `{source_kind}:{source_id}` on a colon and would otherwise fail to
+    round-trip unambiguously. `source_id` may still contain colons
+    (e.g. EPICS PV names) because the split is on the first colon only.
+    """
+    with pytest.raises(InvalidMonitorRefError):
+        MonitorRef(source_kind="Epics:Pv", source_id="ok")
+
+
+@pytest.mark.unit
+def test_monitor_ref_allows_colon_in_source_id() -> None:
+    """Colons in `source_id` are legal: the wire split is on the first
+    colon, so a colon-bearing `source_id` round-trips cleanly."""
+    ref = MonitorRef(source_kind="EpicsPv", source_id="S35:pss:permit")
+    assert ref.source_id == "S35:pss:permit"

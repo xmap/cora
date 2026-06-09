@@ -65,6 +65,7 @@ def test_post_decommission_returns_409_when_already_decommissioned() -> None:
             json={"reason": "second"},
         )
     assert second.status_code == 409
+    assert "is already decommissioned" in second.json()["detail"]
 
 
 @pytest.mark.contract

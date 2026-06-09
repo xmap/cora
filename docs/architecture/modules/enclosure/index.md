@@ -17,7 +17,8 @@ Out of scope
 - **Severity, criticality, hazard-level scalars.** No `severity`, `risk_level`, `sil_level`, `signal_word`, or `vendor_status_code` field on the aggregate, events, port dataclasses, or projection. An ERROR-mode AST fitness test guards this; severity language belongs in the Caution module and in safety documentation, not on an observation-axis aggregate.
 - **A `Bypassed` or `MaintenanceMode` status.** The closed `EnclosurePermitStatus` enum carries only `Permitted`, `NotPermitted`, `Unknown`. Bypass observability, when it lands, surfaces via `source_kind` / `source_id` discriminators on the observation envelope, never as a separate state value.
 - **Upstream-chain carrier.** An `upstream_enclosure_id` field is not on the aggregate. Cascade-trip prerequisite logic, if a concrete consumer earns it, derives at pre-flight time from the Asset containment ladder via `containing_asset_id` walks; the carrier is deferred until evidence demands it.
-- **Production observer adapter.** The Monitor-side substrate seam ships with an inline `AlwaysPermittedEnclosureObserver` stub only. The EPICS / P4P / Tango observer adapters and the `PostgresEnclosureLookup` production adapter are reserved for the first pilot integration.
+- **Production observer adapter.** The Monitor-side substrate seam ships with an inline `AlwaysPermittedEnclosureObserver` stub only. The EPICS / P4P / Tango observer adapters are reserved for the first pilot integration.
+- **Production-only cross-BC lookup.** The cross-BC `EnclosureLookup` port ships with both an `InMemoryEnclosureLookup` (used in tests) and the `PostgresEnclosureLookup` production adapter that reads through `proj_enclosure_summary`; only the upstream observer seam is stubbed.
 
 </div>
 
@@ -38,7 +39,7 @@ The Enclosure aggregate carries two orthogonal state axes per the multi-axis lif
 | `EnclosureReason` | trimmed bounded text, 1-500 chars; decider-input only | `observe_enclosure_status` and `decommission_enclosure` `reason` input |
 | `EnclosurePermitStatus` | closed StrEnum `{Permitted, NotPermitted, Unknown}` | `Enclosure.permit_status`. Three-value spine-consumer-shaped predicate; the pre-flight gate treats `Permitted` as the only passing value. |
 | `EnclosureLifecycle` | closed StrEnum `{Active, Decommissioned}` | `Enclosure.lifecycle`. Mirrors `FacilityStatus` / `AssetLifecycle` shape; `Decommissioned` is the lifecycle terminal added by `decommission_enclosure`. |
-| `TriggerSource` | closed StrEnum `{Operator, Monitor, Auto}` | observation-event `trigger` discriminator. `Monitor` is the only legal value for `observe_enclosure_status` at Stage 1; `Operator` is reserved for the genesis and terminal events; `Auto` is reserved for a future timer-driven slice that does not yet exist. |
+| `TriggerSource` | closed StrEnum `{Operator, Monitor, Auto}` | observation-event `trigger` discriminator. `Monitor` is the only legal value for `observe_enclosure_status` today; `Operator` is reserved for the genesis and terminal events; `Auto` is reserved for a future timer-driven slice that does not yet exist. |
 | `MonitorRef` | `(source_kind: str, source_id: str)` split on the projection; serialized as `"{source_kind}:{source_id}"` on the event payload | `observe_enclosure_status` audit metadata. Split into separate columns at projection-write so consumers query `WHERE last_source_kind = 'EpicsPv'` without LIKE-substring fragility. |
 
 ## FSM
@@ -99,13 +100,13 @@ Every observation event carries both `from_status` and `to_status` explicitly so
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 
 `RegisterEnclosure`
-: `EnclosureAlreadyExistsError` (409), `InvalidEnclosureNameError` (400), `EnclosureCannotSelfReferenceError` (400), `Unauthorized`. A duplicate active `(containing_asset_id, name)` registration succeeds at the aggregate (different stream) but fails at projection-insert time on the partial UNIQUE INDEX; the projection swallows the conflict with a WARN log so the worker keeps advancing.
+: `EnclosureAlreadyExistsError` (409), `InvalidEnclosureNameError` (400), `UnauthorizedError` (403). A duplicate active `(containing_asset_id, name)` registration succeeds at the aggregate (different stream) but fails at projection-insert time on the partial UNIQUE INDEX; the projection swallows the conflict with a WARN log so the worker keeps advancing.
 
 `ObserveEnclosureStatus`
-: `EnclosureNotFoundError` (404), `MonitorTriggerNotPermittedError` (400; `trigger=Operator` or target `Decommissioned`), `EnclosureCannotObservePermittedError` / `EnclosureCannotObserveNotPermittedError` / `EnclosureCannotRevertToUnknownError` (409; per-target source-state allowlist rejections), `InvalidEnclosureReasonError` (400).
+: `EnclosureNotFoundError` (404), `MonitorTriggerNotPermittedError` (400; non-`Monitor` trigger), `EnclosureCannotObserveWhileDecommissionedError` (409; observation attempted on a decommissioned Enclosure), `InvalidEnclosureReasonError` (400), `InvalidMonitorRefError` (400; raised at VO construction before the decider runs). The operational FSM is any-to-any across `Unknown`, `Permitted`, `NotPermitted`: there is no per-target source-state allowlist. Identical-status observations return `[]` and emit no event.
 
 `DecommissionEnclosure`
-: `EnclosureNotFoundError` (404), `EnclosureAlreadyDecommissionedError` (409, strict-not-idempotent on a Supply-precedent terminal), `InvalidEnclosureReasonError` (400), `Unauthorized`.
+: `EnclosureNotFoundError` (404), `EnclosureCannotDecommissionError` (409, strict-not-idempotent on a Supply-precedent terminal), `InvalidEnclosureReasonError` (400), `UnauthorizedError` (403).
 
 `Run.start_run` / `Operation.start_procedure`
 : pre-flight gate raises `RunRequiresPermittedEnclosureError` / `RunEnclosureCoverageMismatchError` and the matching `Procedure*` pair (all HTTP 409) when the Asset scope resolves to no covering Enclosure, or when at least one covering Enclosure is not in `Permitted`. See Cross-Module boundaries below for the wiring shape.
@@ -160,8 +161,8 @@ The address tuple `(containing_asset_id, name)` is enforced unique at the projec
 | `Trust` | gated-by | Every write-side Enclosure slice (`register`, `decommission`, the in-process `observe`) is gated by the Authorize port resolving a `Policy` for the `(principal, command, conduit, surface)` tuple; deny outcomes refuse before the decider runs. |
 | `Access` | shared-id-with | Every Enclosure event envelope carries `actor_id` for principal attribution; `registered_by`, `triggered_by` on the decommission event, and the genesis attribution pair carry bare `ActorId` values. |
 | `Equipment` | reads-from (today, no schema link) | `Enclosure.containing_asset_id` is a bare UUID back-reference to an Equipment Asset. The reference is not verified at write time; cross-BC consistency is eventual. Upstream-chain prerequisite logic, when it is earned, derives at pre-flight time from the Asset containment ladder via `containing_asset_id` walks. |
-| `Run` | upstream-of (load-bearing) | `start_run` resolves the Run's Asset scope and reads through the cross-BC `EnclosureLookup.find_for_assets` port; the decider refuses to start the Run unless every covering Enclosure is in `Permitted`. Failure raises `RunRequiresPermittedEnclosureError` (no Enclosure for the asset scope) or `RunEnclosureCoverageMismatchError` (Enclosure exists but at least one is not `Permitted`); both map to HTTP 409. |
-| `Operation` | upstream-of (load-bearing) | `start_procedure` mirrors the Run-side gate verbatim against the same `EnclosureLookup` port, raising `ProcedureRequiresPermittedEnclosureError` / `ProcedureEnclosureCoverageMismatchError`. Procedures with no Asset scope pass the gate trivially. |
+| `Run` | upstream-of (load-bearing) | `start_run` resolves the Run's Asset scope and reads through the cross-BC `EnclosureLookup.find_for_assets` port; the decider refuses to start the Run when any referencing Enclosure is not Permitted-and-Active. An empty referencing-Enclosure set passes trivially (Permit-by-default). Failure raises `RunRequiresPermittedEnclosureError` (HTTP 409) when EVERY referencing Enclosure fails the gate, and `RunEnclosureCoverageMismatchError` (HTTP 409) when the set is MIXED (at least one passes, at least one fails). |
+| `Operation` | upstream-of (load-bearing) | `start_procedure` mirrors the Run-side gate verbatim against the same `EnclosureLookup` port, raising `ProcedureRequiresPermittedEnclosureError` when every referencing Enclosure fails and `ProcedureEnclosureCoverageMismatchError` when the set is mixed. Procedures with no Asset scope (or whose Assets are not contained by any Enclosure) pass the gate trivially. |
 
 The pre-flight gate is `Permitted`-only by design: `Unknown` does not pass, `NotPermitted` does not pass. The cost asymmetry anchor wins (false-positive availability invites entering a hutch the interlock has not cleared). There is no `force=true` parameter and no `accept_unverified=True` opt-in. The `EnclosureLookup` port lives at `cora.infrastructure.ports.enclosure_lookup` so cross-BC consumers depend on shapes that respect the empty `depends_on` tach contract; the BC-local `EnclosureObserver` port lives under `cora.enclosure.ports` because its consumer is the BC's own monitor-trigger runtime and its seam is substrate IO with no cross-BC reach.
 
@@ -206,6 +207,8 @@ The three examples below follow the canonical Enclosure path: register a hutch E
 ### Observe the Enclosure Permitted (in-process only)
 
 ```python
+from cora.enclosure.aggregates._value_types import MonitorRef
+from cora.enclosure.aggregates.enclosure import EnclosurePermitStatus
 from cora.enclosure.features.observe_enclosure_status import (
     ObserveEnclosureStatus,
 )
@@ -213,11 +216,11 @@ from cora.enclosure.features.observe_enclosure_status import (
 await enclosure_handlers.observe_enclosure_status(
     ObserveEnclosureStatus(
         enclosure_id=enclosure_id,
-        observed_status="Permitted",
+        new_status=EnclosurePermitStatus.PERMITTED,
         reason="Search-and-secure complete; PSS reports doors locked and beam-ready.",
+        monitor_source_id=monitor_source_id,
+        monitor_ref=MonitorRef(source_kind="EpicsPv", source_id="2bma:PSS:HutchA:Permit"),
         trigger="Monitor",
-        triggered_by=monitor_source_id,
-        monitor_ref="EpicsPv:2bma:PSS:HutchA:Permit",
     ),
 )
 ```

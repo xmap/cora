@@ -108,3 +108,5 @@ def test_mcp_decommission_enclosure_tool_is_strict_not_idempotent() -> None:
         )
     body = parse_sse_data(second.text)
     assert body["result"]["isError"] is True
+    error_text = "".join(block.get("text", "") for block in body["result"].get("content", []))
+    assert "is already decommissioned" in error_text

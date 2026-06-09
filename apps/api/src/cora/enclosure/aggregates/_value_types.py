@@ -141,6 +141,8 @@ class MonitorRef:
             max_length=ENCLOSURE_MONITOR_SOURCE_ID_MAX_LENGTH,
             error_class=InvalidMonitorRefError,
         )
+        if ":" in trimmed_kind:
+            raise InvalidMonitorRefError(trimmed_kind)
         object.__setattr__(self, "source_kind", trimmed_kind)
         object.__setattr__(self, "source_id", trimmed_id)
 

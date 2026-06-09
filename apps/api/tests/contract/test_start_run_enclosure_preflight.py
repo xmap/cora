@@ -142,7 +142,43 @@ def test_post_runs_returns_409_when_binding_enclosure_is_not_permitted(
             json={"name": "blocked", "plan_id": plan_id, "subject_id": subject_id},
         )
     assert response.status_code == 409, response.text
-    assert "Enclosure" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert "Enclosure" in detail
+    assert "one or more referencing Enclosures" in detail
+
+
+@pytest.mark.contract
+def test_post_runs_returns_409_coverage_mismatch_for_mixed_permitted_and_not_permitted() -> None:
+    """Mixed Permitted + NotPermitted bindings on the same Asset raise
+    409 RunEnclosureCoverageMismatchError. Discriminating substring
+    pins the CoverageMismatch branch versus the Requires branch."""
+    app = create_app()
+    with TestClient(app) as client:
+        plan_id, subject_id, asset_id = _setup_chain(client)
+        lookup = InMemoryEnclosureLookup()
+        lookup.register(
+            enclosure_id=uuid4(),
+            name="A-Hutch-Pass",
+            containing_asset_id=UUID(asset_id),
+            permit_status="Permitted",
+            lifecycle="Active",
+        )
+        lookup.register(
+            enclosure_id=uuid4(),
+            name="A-Hutch-Fail",
+            containing_asset_id=UUID(asset_id),
+            permit_status="NotPermitted",
+            lifecycle="Active",
+        )
+        _install_enclosure_lookup(app, lookup)
+        response = client.post(
+            "/runs",
+            json={"name": "mixed", "plan_id": plan_id, "subject_id": subject_id},
+        )
+    assert response.status_code == 409, response.text
+    detail = response.json()["detail"]
+    assert "Enclosure" in detail
+    assert "failed the Permitted-and-Active gate" in detail
 
 
 @pytest.mark.contract
@@ -183,4 +219,6 @@ def test_post_runs_returns_409_when_binding_enclosure_is_decommissioned() -> Non
             json={"name": "tombstoned", "plan_id": plan_id, "subject_id": subject_id},
         )
     assert response.status_code == 409, response.text
-    assert "Enclosure" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert "Enclosure" in detail
+    assert "one or more referencing Enclosures" in detail

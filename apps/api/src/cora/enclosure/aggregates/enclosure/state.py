@@ -24,7 +24,7 @@ later sub-slices via a handler-layer port; the decider stays pure.
 
 Two-axis FSM per locked design:
 
-  - Operational axis `permit_status` (mutated by `observe_enclosure_permit`):
+  - Operational axis `permit_status` (mutated by `observe_enclosure_status`):
     UNKNOWN (genesis default) <-> PERMITTED <-> NOT_PERMITTED. No source-
     state guard; Monitor adapters drive transitions in either direction.
   - Structural axis `lifecycle` (mutated by `decommission_enclosure`):
@@ -191,7 +191,7 @@ class EnclosureCannotObserveWhileDecommissionedError(Exception):
     ) -> None:
         super().__init__(
             f"Enclosure {enclosure_id} cannot observe permit status: currently in lifecycle "
-            f"{current_lifecycle.value}, observe_enclosure_permit requires "
+            f"{current_lifecycle.value}, observe_enclosure_status requires "
             f"{EnclosureLifecycle.ACTIVE.value}"
         )
         self.enclosure_id = enclosure_id

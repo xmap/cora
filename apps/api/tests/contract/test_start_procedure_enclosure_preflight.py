@@ -1,8 +1,9 @@
 """Contract tests for the cross-BC Enclosure pre-flight gate on
 POST /procedures/{procedure_id}/start.
 
-Pins the wire-level behavior of the gate added in Sub-Slice F.
-Mirrors test_start_run_enclosure_preflight.py exactly:
+Pins the wire-level behavior of the cross-BC Enclosure pre-flight gate
+on the Procedure side. Mirrors test_start_run_enclosure_preflight.py
+exactly:
   - 204 happy path (facility-envelope procedure, empty
     target_asset_ids) -- Permit-by-default per L-pre-1.
   - 204 happy path (procedure with target_asset_ids whose Enclosure
@@ -12,6 +13,13 @@ Mirrors test_start_run_enclosure_preflight.py exactly:
   - 409 Unknown: same shape with permit_status="Unknown".
   - 409 Decommissioned: the row reaching the decider has
     lifecycle="Decommissioned" -> defensive fail.
+  - 409 CoverageMismatch: two target Assets, two bindings, one
+    Permitted+Active and one NotPermitted+Active -> mixed-status
+    failure surfaces ProcedureEnclosureCoverageMismatchError.
+
+The 409 cases assert discriminating substrings drawn verbatim from
+operation/aggregates/procedure/state.py error messages so the Requires
+branch and the CoverageMismatch branch cannot pass each other's test.
 """
 
 import dataclasses
@@ -102,7 +110,8 @@ def test_post_start_procedure_returns_409_when_binding_enclosure_is_not_permitte
         _install_enclosure_lookup(app, lookup)
         response = client.post(f"/procedures/{pid}/start")
     assert response.status_code == 409, response.text
-    assert "Enclosure" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert "one or more referencing Enclosures are not Permitted-and-Active" in detail
 
 
 @pytest.mark.contract
@@ -143,4 +152,40 @@ def test_post_start_procedure_returns_409_when_binding_enclosure_is_decommission
         _install_enclosure_lookup(app, _AlwaysReturnLookup())
         response = client.post(f"/procedures/{pid}/start")
     assert response.status_code == 409, response.text
-    assert "Enclosure" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert "one or more referencing Enclosures are not Permitted-and-Active" in detail
+
+
+@pytest.mark.contract
+def test_post_start_procedure_returns_409_for_mixed_status_bindings() -> None:
+    """Mixed-status bindings raise 409 ProcedureEnclosureCoverageMismatchError.
+
+    Two target Assets, each bound by its own Enclosure: one Permitted+Active,
+    one NotPermitted+Active. The decider's CoverageMismatch branch fires
+    because some referencing rows pass and some fail.
+    """
+    app = create_app()
+    with TestClient(app) as client:
+        passing_asset_id = UUID(register_active_asset(client))
+        failing_asset_id = UUID(register_active_asset(client))
+        pid = _register_procedure(client, target_asset_ids=[passing_asset_id, failing_asset_id])
+        lookup = InMemoryEnclosureLookup()
+        lookup.register(
+            enclosure_id=uuid4(),
+            name="A-Hutch",
+            containing_asset_id=passing_asset_id,
+            permit_status="Permitted",
+            lifecycle="Active",
+        )
+        lookup.register(
+            enclosure_id=uuid4(),
+            name="B-Hutch",
+            containing_asset_id=failing_asset_id,
+            permit_status="NotPermitted",
+            lifecycle="Active",
+        )
+        _install_enclosure_lookup(app, lookup)
+        response = client.post(f"/procedures/{pid}/start")
+    assert response.status_code == 409, response.text
+    detail = response.json()["detail"]
+    assert "failed the Permitted-and-Active gate" in detail
