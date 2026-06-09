@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_503f800970903b54_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 14:32 +0000
+            created at 2026-06-09 17:22 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -85,7 +85,7 @@
     <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""HTTP route for the `complete_seal_republishing` slice.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Action endpoint at</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">`POST /federation/seals/{facility_id}/republishing/complete`. Optional</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">`POST /federation/seals/{facility_code}/republishing/complete`. Optional</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">JSON body carrying the fresh head pointer (`new_head_hash` +</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">`new_sequence_number`, supplied together or omitted together). 204 No</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">Content on success. The `republishing/complete` sub-path mirrors the</span>&nbsp;</span><span class="r"></span></p>
@@ -144,7 +144,7 @@
     <p class="pln"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="op">@</span><span class="nam">router</span><span class="op">.</span><span class="nam">post</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="str">"/federation/seals/{facility_id}/republishing/complete"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="str">"/federation/seals/{facility_code}/republishing/complete"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="nam">status_code</span><span class="op">=</span><span class="nam">status</span><span class="op">.</span><span class="nam">HTTP_204_NO_CONTENT</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="nam">responses</span><span class="op">=</span><span class="op">{</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">        <span class="nam">status</span><span class="op">.</span><span class="nam">HTTP_400_BAD_REQUEST</span><span class="op">:</span> <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
@@ -162,7 +162,7 @@
     <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">        <span class="op">}</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">        <span class="nam">status</span><span class="op">.</span><span class="nam">HTTP_404_NOT_FOUND</span><span class="op">:</span> <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">            <span class="str">"model"</span><span class="op">:</span> <span class="nam">ErrorResponse</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">            <span class="str">"description"</span><span class="op">:</span> <span class="str">"No Seal exists for the given facility_id."</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">            <span class="str">"description"</span><span class="op">:</span> <span class="str">"No Seal exists for the given facility code."</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">        <span class="op">}</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">        <span class="nam">status</span><span class="op">.</span><span class="nam">HTTP_409_CONFLICT</span><span class="op">:</span> <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">            <span class="str">"model"</span><span class="op">:</span> <span class="nam">ErrorResponse</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -184,7 +184,7 @@
     <p class="run run2"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">    <span class="nam">summary</span><span class="op">=</span><span class="str">"Complete an in-flight Seal republish (Republishing -> Live)"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t"><span class="key">async</span> <span class="key">def</span> <span class="nam">post_federation_seals_republishing_complete</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">    <span class="nam">facility_id</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Path</span><span class="op">(</span><span class="nam">description</span><span class="op">=</span><span class="str">"Target Seal's facility_id."</span><span class="op">)</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">    <span class="nam">facility_code</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Path</span><span class="op">(</span><span class="nam">description</span><span class="op">=</span><span class="str">"Target Seal's facility code."</span><span class="op">)</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">    <span class="nam">handler</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span><span class="nam">Handler</span><span class="op">,</span> <span class="nam">Depends</span><span class="op">(</span><span class="nam">_get_handler</span><span class="op">)</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">    <span class="nam">cid</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span><span class="nam">UUID</span><span class="op">,</span> <span class="nam">Depends</span><span class="op">(</span><span class="nam">get_correlation_id</span><span class="op">)</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">    <span class="nam">principal_id</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span><span class="nam">UUID</span><span class="op">,</span> <span class="nam">Depends</span><span class="op">(</span><span class="nam">get_principal_id</span><span class="op">)</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -193,7 +193,7 @@
     <p class="run run2"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t"><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="key">await</span> <span class="nam">handler</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">        <span class="nam">CompleteSealRepublishing</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">            <span class="nam">facility_id</span><span class="op">=</span><span class="nam">facility_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">            <span class="nam">facility_code</span><span class="op">=</span><span class="nam">facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">            <span class="nam">new_head_hash</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">new_head_hash</span> <span class="key">if</span> <span class="nam">body</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">else</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">            <span class="nam">new_sequence_number</span><span class="op">=</span><span class="nam">body</span><span class="op">.</span><span class="nam">new_sequence_number</span> <span class="key">if</span> <span class="nam">body</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">else</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -210,7 +210,7 @@
             <a class="nav" href="z_503f800970903b54_tool_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 14:32 +0000
+            created at 2026-06-09 17:22 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_b6df7fc533f373b8_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 14:32 +0000
+            created at 2026-06-09 17:22 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -119,7 +119,7 @@
     <p class="run"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">    <span class="key">match</span> <span class="nam">event</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">        <span class="key">case</span> <span class="nam">PermitDefined</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">            <span class="nam">permit_id</span><span class="op">=</span><span class="nam">permit_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">            <span class="nam">peer_facility_id</span><span class="op">=</span><span class="nam">peer_facility_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">            <span class="nam">peer_facility_code</span><span class="op">=</span><span class="nam">peer_facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">            <span class="nam">direction</span><span class="op">=</span><span class="nam">direction</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">            <span class="nam">allowed_credential_ids</span><span class="op">=</span><span class="nam">allowed_credential_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">            <span class="nam">allowed_payload_types</span><span class="op">=</span><span class="nam">allowed_payload_types</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -133,7 +133,7 @@
     <p class="run"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">            <span class="nam">_</span> <span class="op">=</span> <span class="nam">state</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">            <span class="key">return</span> <span class="nam">Permit</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">                <span class="nam">id</span><span class="op">=</span><span class="nam">permit_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">                <span class="nam">peer_facility_id</span><span class="op">=</span><span class="nam">peer_facility_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">                <span class="nam">peer_facility_code</span><span class="op">=</span><span class="nam">peer_facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">                <span class="nam">direction</span><span class="op">=</span><span class="nam">direction</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">                <span class="nam">allowed_credential_ids</span><span class="op">=</span><span class="nam">allowed_credential_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">                <span class="nam">allowed_payload_types</span><span class="op">=</span><span class="nam">allowed_payload_types</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -167,7 +167,7 @@
     <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="key">def</span> <span class="nam">_replace_status</span><span class="op">(</span><span class="nam">prior</span><span class="op">:</span> <span class="nam">Permit</span><span class="op">,</span> <span class="nam">new_status</span><span class="op">:</span> <span class="nam">PermitStatus</span><span class="op">)</span> <span class="op">-></span> <span class="nam">Permit</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">    <span class="key">return</span> <span class="nam">Permit</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">        <span class="nam">id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">        <span class="nam">peer_facility_id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">peer_facility_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">        <span class="nam">peer_facility_code</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">peer_facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">        <span class="nam">direction</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">direction</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">        <span class="nam">allowed_credential_ids</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">allowed_credential_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">        <span class="nam">allowed_payload_types</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">allowed_payload_types</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -195,7 +195,7 @@
             <a class="nav" href="z_b6df7fc533f373b8_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 14:32 +0000
+            created at 2026-06-09 17:22 +0000
         </p>
     </div>
 </footer>

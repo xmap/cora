@@ -58,7 +58,7 @@
             <span class="text">30 statements &nbsp;</span>
             <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">30<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
-            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">210<span class="text"> excluded</span></button>
+            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">211<span class="text"> excluded</span></button>
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
         </h2>
         <p class="text">
@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_31771e0763e066ad__bootstrap_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 14:32 +0000
+            created at 2026-06-09 17:22 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -106,12 +106,12 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">## Stream-id derivation</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">The Seal aggregate is a per-facility singleton: its event-store stream</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">UUID is derived from `command.facility_id` via `seal_stream_id`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">UUID is derived from `command.facility_code` via `seal_stream_id`</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">(UUID5), not pulled from a UUID command attribute. The optional</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">`resolve_stream_id` knob lets Seal slices override the default</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">`getattr(command, target_id_attr)` while keeping `target_id_attr` as</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">the log-line field name (so Seal slices log `facility_id=...` as a</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">str, matching the pre-refactor log shape).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">the log-line field name (so Seal slices log `facility_code=...` as a</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">str, matching the per-aggregate logging convention).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">## BC-local, not cross-BC</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -411,34 +411,35 @@
     <p class="exc show_exc"><span class="n"><a id="t327" href="#t327">327</a></span><span class="t"><span class="op">)</span> <span class="op">-></span> <span class="nam">_ActorUpdateHandler</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t328" href="#t328">328</a></span><span class="t">    <span class="str">"""Build an actor-stamping handler for one Seal transition slice.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t329" href="#t329">329</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t330" href="#t330">330</a></span><span class="t"><span class="str">    Seal slices key the event-store stream by `seal_stream_id(facility_id)`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t331" href="#t331">331</a></span><span class="t"><span class="str">    (UUID5 over the federation namespace) so the per-facility singleton</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t332" href="#t332">332</a></span><span class="t"><span class="str">    stays addressable from `command.facility_id: str`. The log line</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t333" href="#t333">333</a></span><span class="t"><span class="str">    still reports `facility_id=&lt;str>` (no UUID exposure).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t334" href="#t334">334</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t335" href="#t335">335</a></span><span class="t">    <span class="key">return</span> <span class="nam">make_actor_update_handler</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t336" href="#t336">336</a></span><span class="t">        <span class="nam">deps</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t337" href="#t337">337</a></span><span class="t">        <span class="nam">stream_type</span><span class="op">=</span><span class="str">"Seal"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t338" href="#t338">338</a></span><span class="t">        <span class="nam">target_id_attr</span><span class="op">=</span><span class="str">"facility_id"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t339" href="#t339">339</a></span><span class="t">        <span class="nam">from_stored</span><span class="op">=</span><span class="nam">seal_from_stored</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t340" href="#t340">340</a></span><span class="t">        <span class="nam">to_payload</span><span class="op">=</span><span class="nam">seal_to_payload</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t341" href="#t341">341</a></span><span class="t">        <span class="nam">event_type_name</span><span class="op">=</span><span class="nam">seal_event_type_name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t342" href="#t342">342</a></span><span class="t">        <span class="nam">fold</span><span class="op">=</span><span class="nam">seal_fold</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t343" href="#t343">343</a></span><span class="t">        <span class="nam">unauthorized_error</span><span class="op">=</span><span class="nam">UnauthorizedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t344" href="#t344">344</a></span><span class="t">        <span class="nam">command_name</span><span class="op">=</span><span class="nam">command_name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t345" href="#t345">345</a></span><span class="t">        <span class="nam">log_prefix</span><span class="op">=</span><span class="nam">log_prefix</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t346" href="#t346">346</a></span><span class="t">        <span class="nam">decide_fn</span><span class="op">=</span><span class="nam">decide_fn</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t347" href="#t347">347</a></span><span class="t">        <span class="nam">actor_kwarg</span><span class="op">=</span><span class="nam">actor_kwarg</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t348" href="#t348">348</a></span><span class="t">        <span class="nam">resolve_stream_id</span><span class="op">=</span><span class="key">lambda</span> <span class="nam">cmd</span><span class="op">:</span> <span class="nam">seal_stream_id</span><span class="op">(</span><span class="nam">cmd</span><span class="op">.</span><span class="nam">facility_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t349" href="#t349">349</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t350" href="#t350">350</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t330" href="#t330">330</a></span><span class="t"><span class="str">    Seal slices key the event-store stream by</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t331" href="#t331">331</a></span><span class="t"><span class="str">    `seal_stream_id(facility_code)` (UUID5 over the federation</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t332" href="#t332">332</a></span><span class="t"><span class="str">    namespace) so the per-facility singleton stays addressable from</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t333" href="#t333">333</a></span><span class="t"><span class="str">    `command.facility_code: str`. The log line reports</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t334" href="#t334">334</a></span><span class="t"><span class="str">    `facility_code=&lt;str>` (no UUID exposure).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t335" href="#t335">335</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t336" href="#t336">336</a></span><span class="t">    <span class="key">return</span> <span class="nam">make_actor_update_handler</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t337" href="#t337">337</a></span><span class="t">        <span class="nam">deps</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t338" href="#t338">338</a></span><span class="t">        <span class="nam">stream_type</span><span class="op">=</span><span class="str">"Seal"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t339" href="#t339">339</a></span><span class="t">        <span class="nam">target_id_attr</span><span class="op">=</span><span class="str">"facility_code"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t340" href="#t340">340</a></span><span class="t">        <span class="nam">from_stored</span><span class="op">=</span><span class="nam">seal_from_stored</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t341" href="#t341">341</a></span><span class="t">        <span class="nam">to_payload</span><span class="op">=</span><span class="nam">seal_to_payload</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t342" href="#t342">342</a></span><span class="t">        <span class="nam">event_type_name</span><span class="op">=</span><span class="nam">seal_event_type_name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t343" href="#t343">343</a></span><span class="t">        <span class="nam">fold</span><span class="op">=</span><span class="nam">seal_fold</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t344" href="#t344">344</a></span><span class="t">        <span class="nam">unauthorized_error</span><span class="op">=</span><span class="nam">UnauthorizedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t345" href="#t345">345</a></span><span class="t">        <span class="nam">command_name</span><span class="op">=</span><span class="nam">command_name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t346" href="#t346">346</a></span><span class="t">        <span class="nam">log_prefix</span><span class="op">=</span><span class="nam">log_prefix</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t347" href="#t347">347</a></span><span class="t">        <span class="nam">decide_fn</span><span class="op">=</span><span class="nam">decide_fn</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t348" href="#t348">348</a></span><span class="t">        <span class="nam">actor_kwarg</span><span class="op">=</span><span class="nam">actor_kwarg</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t349" href="#t349">349</a></span><span class="t">        <span class="nam">resolve_stream_id</span><span class="op">=</span><span class="key">lambda</span> <span class="nam">cmd</span><span class="op">:</span> <span class="nam">seal_stream_id</span><span class="op">(</span><span class="nam">cmd</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t350" href="#t350">350</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t351" href="#t351">351</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t352" href="#t352">352</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t353" href="#t353">353</a></span><span class="t">    <span class="str">"make_actor_update_handler"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t354" href="#t354">354</a></span><span class="t">    <span class="str">"make_credential_update_handler"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t355" href="#t355">355</a></span><span class="t">    <span class="str">"make_permit_update_handler"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t356" href="#t356">356</a></span><span class="t">    <span class="str">"make_seal_update_handler"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t357" href="#t357">357</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t352" href="#t352">352</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t353" href="#t353">353</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t354" href="#t354">354</a></span><span class="t">    <span class="str">"make_actor_update_handler"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t355" href="#t355">355</a></span><span class="t">    <span class="str">"make_credential_update_handler"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t356" href="#t356">356</a></span><span class="t">    <span class="str">"make_permit_update_handler"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t357" href="#t357">357</a></span><span class="t">    <span class="str">"make_seal_update_handler"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t358" href="#t358">358</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -448,7 +449,7 @@
             <a class="nav" href="z_31771e0763e066ad__bootstrap_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 14:32 +0000
+            created at 2026-06-09 17:22 +0000
         </p>
     </div>
 </footer>

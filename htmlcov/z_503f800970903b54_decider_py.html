@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_503f800970903b54_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 14:32 +0000
+            created at 2026-06-09 17:22 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -153,10 +153,10 @@
     <p class="pln"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t"><span class="str">        -> SealSequenceNumberRegressionError</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="key">if</span> <span class="nam">state</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">        <span class="key">raise</span> <span class="nam">SealNotFoundError</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">facility_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">        <span class="key">raise</span> <span class="nam">SealNotFoundError</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">    <span class="key">if</span> <span class="nam">state</span><span class="op">.</span><span class="nam">status</span> <span class="key">is</span> <span class="key">not</span> <span class="nam">SealStatus</span><span class="op">.</span><span class="nam">REPUBLISHING</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">        <span class="key">raise</span> <span class="nam">SealCannotCompleteRepublishingError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">            <span class="nam">facility_id</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">facility_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">            <span class="nam">facility_id</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">            <span class="nam">current_status</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">status</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -175,7 +175,7 @@
     <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">        <span class="key">assert</span> <span class="nam">command</span><span class="op">.</span><span class="nam">new_sequence_number</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">        <span class="key">if</span> <span class="nam">command</span><span class="op">.</span><span class="nam">new_sequence_number</span> <span class="op">&lt;=</span> <span class="nam">state</span><span class="op">.</span><span class="nam">current_sequence_number</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">            <span class="key">raise</span> <span class="nam">SealSequenceNumberRegressionError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">                <span class="nam">facility_id</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">facility_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">                <span class="nam">facility_id</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">                <span class="nam">prior_sequence_number</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">current_sequence_number</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">                <span class="nam">proposed_sequence_number</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">new_sequence_number</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -184,7 +184,7 @@
     <p class="pln"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">    <span class="key">else</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">        <span class="key">if</span> <span class="nam">state</span><span class="op">.</span><span class="nam">current_head_hash</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">            <span class="key">raise</span> <span class="nam">InvalidSealHeadHashError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">                <span class="fst">f"</span><span class="fst">Seal for facility </span><span class="op">{</span><span class="nam">state</span><span class="op">.</span><span class="nam">facility_id</span><span class="op">!</span><span class="nam">r</span><span class="op">}</span><span class="fst">: </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">                <span class="fst">f"</span><span class="fst">Seal for facility </span><span class="op">{</span><span class="nam">state</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">.</span><span class="nam">value</span><span class="op">!</span><span class="nam">r</span><span class="op">}</span><span class="fst">: </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">                <span class="fst">f"</span><span class="fst">complete_seal_republishing without new_head_hash requires </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">                <span class="fst">f"</span><span class="fst">a prior signing (current_head_hash is None)</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -193,7 +193,7 @@
     <p class="pln"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="key">return</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">        <span class="nam">SealRepublishingCompleted</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">            <span class="nam">facility_id</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">facility_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">            <span class="nam">facility_code</span><span class="op">=</span><span class="nam">state</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">            <span class="nam">new_head_hash</span><span class="op">=</span><span class="nam">new_head_hash</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">            <span class="nam">new_sequence_number</span><span class="op">=</span><span class="nam">new_sequence_number</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">            <span class="nam">completed_by</span><span class="op">=</span><span class="nam">completed_by</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -212,7 +212,7 @@
             <a class="nav" href="z_503f800970903b54_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-08 14:32 +0000
+            created at 2026-06-09 17:22 +0000
         </p>
     </div>
 </footer>
