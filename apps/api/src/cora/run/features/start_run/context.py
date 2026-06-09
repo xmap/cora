@@ -58,6 +58,7 @@ from cora.campaign.aggregates.campaign import Campaign
 from cora.equipment.aggregates.asset import Asset
 from cora.infrastructure.ports.caution_lookup import CautionReference
 from cora.infrastructure.ports.clearance_lookup import ClearanceReference
+from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
 from cora.infrastructure.ports.supply_lookup import SupplyReference
 from cora.recipe.aggregates.plan import Plan
 from cora.subject.aggregates.subject import Subject
@@ -104,4 +105,17 @@ class RunStartContext:
     needed_supplies_satisfaction: Mapping[str, tuple[SupplyReference, ...]] = field(
         default_factory=lambda: cast("Mapping[str, tuple[SupplyReference, ...]]", {})
     )
+    referencing_enclosures: tuple[EnclosureReference, ...] = ()
+    """Every Active Enclosure whose `containing_asset_id` traces to any
+    of the Run's scoped Asset ids. Loaded by the handler via
+    `deps.enclosure_lookup.find_for_assets(asset_ids=scoped_asset_ids)`.
+
+    Empty tuple is Permit-by-default per the EnclosureLookup port
+    docstring: an Asset that no Enclosure contains has no enclosure-
+    permit gate. The decider partitions each row on
+    `permit_status == "Permitted" AND lifecycle == "Active"`;
+    failing rows raise the appropriate cross-BC enclosure error per
+    [[project_enclosure_stage1_design]] L-pre-1 (always-derive-from-
+    Asset-chain). Methods do NOT declare a `needed_enclosure_permits`
+    field; the chain IS the declaration."""
     campaign: Campaign | None = None

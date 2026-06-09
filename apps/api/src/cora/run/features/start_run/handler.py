@@ -247,6 +247,19 @@ def bind(deps: Kernel) -> Handler:
             )
         )
 
+        # cross-BC enclosure pre-flight gate per
+        # [[project_enclosure_stage1_design]]: derive the set of
+        # referencing Enclosures from `scoped_asset_ids` via
+        # `EnclosureLookup.find_for_assets`. Per L-pre-1 (always-
+        # derive-from-Asset-chain), the Method does NOT declare an
+        # explicit needed-enclosure list; the chain IS the declaration.
+        # Empty result is Permit-by-default (no Enclosure binds any
+        # bound Asset). The decider partitions each row on
+        # `permit_status == "Permitted" AND lifecycle == "Active"`.
+        referencing_enclosures = tuple(
+            await deps.enclosure_lookup.find_for_assets(asset_ids=scoped_asset_ids)
+        )
+
         # cross-BC caution snapshot: query the Caution
         # projection for Active cautions referencing the Run's scope.
         # NON-BLOCKING by construction (anti-pattern #5: cautions
@@ -285,6 +298,7 @@ def bind(deps: Kernel) -> Handler:
             referencing_clearances=referencing_clearances,
             active_cautions=active_cautions,
             needed_supplies_satisfaction=needed_supplies_satisfaction,
+            referencing_enclosures=referencing_enclosures,
             campaign=campaign,
         )
 

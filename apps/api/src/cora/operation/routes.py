@@ -49,9 +49,11 @@ from cora.operation.aggregates.procedure import (
     ProcedureCannotStartError,
     ProcedureCannotTruncateError,
     ProcedureCapabilityExecutorMismatchError,
+    ProcedureEnclosureCoverageMismatchError,
     ProcedureNotFoundError,
     ProcedurePlanAssetDecommissionedError,
     ProcedureRequiresAvailableSupplyError,
+    ProcedureRequiresPermittedEnclosureError,
     ProcedureStepsForbiddenForRecipeDrivenError,
     ProcedureStepsLogbookClosedError,
     ProcedureSupplyCoverageMismatchError,
@@ -263,6 +265,10 @@ def register_operation_routes(app: FastAPI) -> None:
         # cross-BC Supply pre-flight gate (Phase-of-Run only).
         ProcedureRequiresAvailableSupplyError,
         ProcedureSupplyCoverageMismatchError,
+        # cross-BC Enclosure pre-flight gate per
+        # [[project_enclosure_stage1_design]] L-pre-1.
+        ProcedureRequiresPermittedEnclosureError,
+        ProcedureEnclosureCoverageMismatchError,
         # PseudoAxis pre-Conductor expansion ([[project-pseudoaxis-design]]
         # v3): the routing layer dispatched a virtual-axis setpoint
         # into the evaluator for an Asset whose Family is not PseudoAxis

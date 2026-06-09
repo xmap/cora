@@ -79,11 +79,13 @@ from cora.run.aggregates.run import (
     RunCannotTruncateError,
     RunCapabilitiesNotSatisfiedError,
     RunClearanceCoverageMismatchError,
+    RunEnclosureCoverageMismatchError,
     RunNotFoundError,
     RunPlanAssetDecommissionedError,
     RunReadingLogbookClosedError,
     RunRequiresActiveClearanceError,
     RunRequiresAvailableSupplyError,
+    RunRequiresPermittedEnclosureError,
     RunSubjectNotMountableError,
     RunSupplyCoverageMismatchError,
 )
@@ -210,6 +212,10 @@ def register_run_routes(app: FastAPI) -> None:
         # Run-start supply pre-flight gate.
         RunRequiresAvailableSupplyError,
         RunSupplyCoverageMismatchError,
+        # Run-start enclosure pre-flight gate per
+        # [[project_enclosure_stage1_design]] L-pre-1.
+        RunRequiresPermittedEnclosureError,
+        RunEnclosureCoverageMismatchError,
         # Run-start campaign-membership gate (6i-c).
         RunCannotJoinCampaignError,
         # Run-side campaign-membership invariant (6i-c).

@@ -570,6 +570,76 @@ class ProcedureSupplyCoverageMismatchError(Exception):
         self.supply_status_summary = supply_status_summary
 
 
+class ProcedureRequiresPermittedEnclosureError(Exception):
+    """A referencing Enclosure is not currently Permitted-and-Active.
+
+    Cross-BC gate: `start_procedure` derives the set of referencing
+    Enclosures by walking `EnclosureLookup.find_for_assets` against
+    the Procedure's `target_asset_ids`. Per L-pre-1 (always-derive-
+    from-Asset-chain), the Procedure does NOT declare an explicit
+    needed-enclosure list; the Asset chain IS the declaration. This
+    error fires when EVERY referencing Enclosure is in
+    `permit_status != "Permitted"` OR `lifecycle != "Active"` (the
+    universally-not-permitted branch). When at least one row passes
+    and at least one fails, the sibling
+    `ProcedureEnclosureCoverageMismatchError` raises instead. An
+    empty `target_asset_ids` (facility-envelope Procedure) yields
+    zero referencing Enclosures and passes Permit-by-default;
+    neither error fires.
+
+    `enclosure_status_summary` carries `(enclosure_id, label)` tuples
+    where `label` is the joined `permit_status|lifecycle` string for
+    every failing Enclosure. Mirrors
+    `RunRequiresPermittedEnclosureError` exactly. Mapped to HTTP 409
+    per [[project_enclosure_stage1_design]].
+    """
+
+    def __init__(
+        self,
+        procedure_id: UUID,
+        enclosure_status_summary: frozenset[tuple[UUID, str]],
+    ) -> None:
+        summary_sorted = sorted((str(eid), label) for eid, label in enclosure_status_summary)
+        super().__init__(
+            f"Procedure {procedure_id} cannot start: one or more referencing "
+            f"Enclosures are not Permitted-and-Active. Current statuses: "
+            f"{summary_sorted}. Walk each Enclosure to Permitted (and keep it "
+            f"Active) before starting."
+        )
+        self.procedure_id = procedure_id
+        self.enclosure_status_summary = enclosure_status_summary
+
+
+class ProcedureEnclosureCoverageMismatchError(Exception):
+    """Some referencing Enclosure rows resolved but coverage is incomplete.
+
+    Cross-BC gate sibling to `ProcedureRequiresPermittedEnclosureError`,
+    reserved for the symmetric-with-Supply two-error shape: this
+    error fires when at least one referencing Enclosure is loaded
+    AND at least one of those rows fails the Permitted-and-Active
+    check while at least one OTHER row passes.
+
+    Two error classes so operator-facing messaging can distinguish
+    "no Enclosure rows pass" from "Enclosure rows exist, coverage
+    incomplete". Mirrors `RunEnclosureCoverageMismatchError` exactly.
+    Mapped to HTTP 409.
+    """
+
+    def __init__(
+        self,
+        procedure_id: UUID,
+        enclosure_status_summary: frozenset[tuple[UUID, str]],
+    ) -> None:
+        summary_sorted = sorted((str(eid), label) for eid, label in enclosure_status_summary)
+        super().__init__(
+            f"Procedure {procedure_id} cannot start: referencing Enclosure(s) "
+            f"failed the Permitted-and-Active gate. Current statuses: "
+            f"{summary_sorted}. Walk each Enclosure to Permitted before starting."
+        )
+        self.procedure_id = procedure_id
+        self.enclosure_status_summary = enclosure_status_summary
+
+
 class ProcedureCannotStartError(Exception):
     """Attempted to start a Procedure not in `Defined`.
 

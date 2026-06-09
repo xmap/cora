@@ -544,6 +544,78 @@ class RunSupplyCoverageMismatchError(Exception):
         self.supply_status_summary = supply_status_summary
 
 
+class RunRequiresPermittedEnclosureError(Exception):
+    """A referencing Enclosure is not currently Permitted-and-Active.
+
+    Cross-BC gate: `start_run` derives the set of referencing
+    Enclosures by walking `EnclosureLookup.find_for_assets` against
+    the Run's `scoped_asset_ids`. Per L-pre-1 (always-derive-from-
+    Asset-chain), Methods do NOT declare an explicit needed-enclosure
+    list; the chain IS the declaration. This error fires when EVERY
+    referencing Enclosure is in `permit_status != "Permitted"` OR
+    `lifecycle != "Active"` (the "universally not permitted" branch
+    of the two-error pair). When at least one row passes and at
+    least one fails, the mixed-status case, the decider raises the
+    sibling `RunEnclosureCoverageMismatchError` instead. Empty
+    referencing rows is Permit-by-default: neither error fires.
+
+    `enclosure_status_summary` carries `(enclosure_id, label)` tuples
+    where `label` is the joined `permit_status|lifecycle` string for
+    every failing Enclosure so the 409 message can name each one. An
+    Asset with NO referencing Enclosure rows is Permit-by-default
+    (per the port docstring) and never raises this error.
+
+    Sibling of `RunRequiresAvailableSupplyError` /
+    `RunSupplyCoverageMismatchError`. Mapped to HTTP 409 per
+    [[project_enclosure_stage1_design]].
+    """
+
+    def __init__(
+        self,
+        run_id: UUID,
+        enclosure_status_summary: frozenset[tuple[UUID, str]],
+    ) -> None:
+        summary_sorted = sorted((str(eid), label) for eid, label in enclosure_status_summary)
+        super().__init__(
+            f"Run {run_id} cannot start: one or more referencing Enclosures "
+            f"are not Permitted-and-Active. Current statuses: {summary_sorted}. "
+            f"Walk each Enclosure to Permitted (and keep it Active) before starting."
+        )
+        self.run_id = run_id
+        self.enclosure_status_summary = enclosure_status_summary
+
+
+class RunEnclosureCoverageMismatchError(Exception):
+    """Some referencing Enclosure rows resolved but coverage is incomplete.
+
+    Cross-BC gate sibling to `RunRequiresPermittedEnclosureError`,
+    the mixed-status branch of the two-error pair: this error fires
+    when at least one referencing Enclosure passes the
+    Permitted-and-Active check AND at least one OTHER row fails it.
+
+    The sibling `Requires` error covers the universally-not-permitted
+    branch (every row failed). Empty referencing rows is Permit-by-
+    default and never raises either error. Two error classes so
+    operator-facing messaging can distinguish "everything is wrong"
+    (rebuild the whole chain) from "a subset is wrong" (walk just
+    the failing rows to Permitted). Mapped to HTTP 409.
+    """
+
+    def __init__(
+        self,
+        run_id: UUID,
+        enclosure_status_summary: frozenset[tuple[UUID, str]],
+    ) -> None:
+        summary_sorted = sorted((str(eid), label) for eid, label in enclosure_status_summary)
+        super().__init__(
+            f"Run {run_id} cannot start: referencing Enclosure(s) failed the "
+            f"Permitted-and-Active gate. Current statuses: {summary_sorted}. "
+            f"Walk each Enclosure to Permitted before starting."
+        )
+        self.run_id = run_id
+        self.enclosure_status_summary = enclosure_status_summary
+
+
 class RunCannotCompleteError(Exception):
     """Attempted to complete a Run not in `Running`.
 

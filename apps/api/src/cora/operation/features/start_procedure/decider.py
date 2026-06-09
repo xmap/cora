@@ -43,9 +43,11 @@ from cora.equipment.aggregates.asset import AssetLifecycle
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureCannotStartError,
+    ProcedureEnclosureCoverageMismatchError,
     ProcedureNotFoundError,
     ProcedurePlanAssetDecommissionedError,
     ProcedureRequiresAvailableSupplyError,
+    ProcedureRequiresPermittedEnclosureError,
     ProcedureStarted,
     ProcedureStatus,
     ProcedureSupplyCoverageMismatchError,
@@ -75,6 +77,11 @@ def decide(
         one registered Supply -> ProcedureRequiresAvailableSupplyError
       - Every kind in needed_supplies_snapshot must have at least
         one AVAILABLE Supply -> ProcedureSupplyCoverageMismatchError
+      - Every referencing Enclosure (every Enclosure containing any
+        target Asset) must be Permitted-and-Active. When EVERY row
+        fails the check -> ProcedureRequiresPermittedEnclosureError;
+        when some rows pass and some fail ->
+        ProcedureEnclosureCoverageMismatchError
     """
     if state is None:
         raise ProcedureNotFoundError(command.procedure_id)
@@ -108,5 +115,28 @@ def decide(
                 kind,
                 frozenset((s.supply_id, s.status) for s in candidates),
             )
+
+    # cross-BC Enclosure gate per [[project_enclosure_stage1_design]]:
+    # mirrors start_run's enclosure gate. Empty
+    # `context.referencing_enclosures` is Permit-by-default (facility-
+    # envelope Procedures with empty target_asset_ids, or Procedures
+    # whose Assets are not contained by any Enclosure). When any
+    # referencing Enclosure row fails the
+    # Permitted-and-Active check, the decider raises with the failing
+    # set; per the sibling-error convention the "every row failed"
+    # shape raises `Requires`, the "some passed, some failed" shape
+    # raises `CoverageMismatch`.
+    failing_rows = tuple(
+        e
+        for e in context.referencing_enclosures
+        if not (e.permit_status == "Permitted" and e.lifecycle == "Active")
+    )
+    if failing_rows:
+        failing_summary = frozenset(
+            (e.enclosure_id, f"{e.permit_status}|{e.lifecycle}") for e in failing_rows
+        )
+        if len(failing_rows) == len(context.referencing_enclosures):
+            raise ProcedureRequiresPermittedEnclosureError(state.id, failing_summary)
+        raise ProcedureEnclosureCoverageMismatchError(state.id, failing_summary)
 
     return [ProcedureStarted(procedure_id=state.id, occurred_at=now)]

@@ -251,14 +251,6 @@ EXEMPT_FROM_INTEGRATION: frozenset[str] = frozenset(
         # remove_facility_trust_anchor_credential (Slice 6 Sub-Slice B):
         # same deferral as the add sibling.
         "cora.federation.features.remove_facility_trust_anchor_credential",
-        # register_enclosure: integration test deferred to a follow-up.
-        # Decider + PBT + handler + projection apply tests + endpoint +
-        # MCP contract tests cover the behavior surface; the integration
-        # tier locks event-store version sequencing + projection apply
-        # against real Postgres. Backfill alongside the EnclosureLookup
-        # cross-BC port (which needs Postgres-backed integration tests
-        # for the lookup port's two adapters).
-        "cora.enclosure.features.register_enclosure",
         # observe_enclosure_status: Monitor-trigger inbound slice with no
         # HTTP/MCP surface by design (L-D3 / D6.L2 per
         # project_enclosure_stage1_design). Mirrors Supply

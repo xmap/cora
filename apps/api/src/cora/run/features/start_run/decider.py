@@ -94,10 +94,12 @@ from cora.run.aggregates.run import (
     RunCannotJoinCampaignError,
     RunCapabilitiesNotSatisfiedError,
     RunClearanceCoverageMismatchError,
+    RunEnclosureCoverageMismatchError,
     RunName,
     RunPlanAssetDecommissionedError,
     RunRequiresActiveClearanceError,
     RunRequiresAvailableSupplyError,
+    RunRequiresPermittedEnclosureError,
     RunStarted,
     RunSubjectNotMountableError,
     RunSupplyCoverageMismatchError,
@@ -163,6 +165,11 @@ def decide(
         one registered Supply -> RunRequiresAvailableSupplyError
       - Every kind in Method.needed_supplies must have at least
         one AVAILABLE Supply -> RunSupplyCoverageMismatchError
+      - Every referencing Enclosure (every Enclosure containing any
+        scoped Asset) must be Permitted-and-Active. When EVERY row
+        fails the check -> RunRequiresPermittedEnclosureError;
+        when some rows pass and some fail ->
+        RunEnclosureCoverageMismatchError
       - Plan must not be Deprecated -> RunBoundPlanDeprecatedError
       - Subject (when set) must be Mounted or Measured
         -> RunSubjectNotMountableError
@@ -243,6 +250,39 @@ def decide(
                 kind,
                 frozenset((s.supply_id, s.status) for s in candidates),
             )
+
+    # cross-BC Enclosure gate per [[project_enclosure_stage1_design]]:
+    # every referencing Enclosure row must be `permit_status ==
+    # "Permitted"` AND `lifecycle == "Active"`. Per L-pre-1 (always-
+    # derive-from-Asset-chain), the scope set is derived in the
+    # handler via `EnclosureLookup.find_for_assets`; this decider
+    # treats an empty `context.referencing_enclosures` as Permit-by-
+    # default (no Enclosure binds any scoped Asset). When any row
+    # fails, the decider raises with `enclosure_status_summary`
+    # carrying the `(enclosure_id, "permit_status|lifecycle")` tuple
+    # for every failing Enclosure so the 409 names each blocker.
+    # Default-strict: NotPermitted / Unknown / Decommissioned all fail
+    # (the adapter excludes most Decommissioned rows at the read
+    # layer; the decider treats any non-"Active" non-"Permitted" row
+    # as a fail defensively).
+    failing_rows = tuple(
+        e
+        for e in context.referencing_enclosures
+        if not (e.permit_status == "Permitted" and e.lifecycle == "Active")
+    )
+    if failing_rows:
+        # Build the user-facing summary as a frozenset (dedupes on
+        # (id, label) for noise reduction in the 409 message). The
+        # branch decision uses raw tuple lengths so a future adapter
+        # that returns duplicate rows still classifies correctly.
+        failing_summary = frozenset(
+            (e.enclosure_id, f"{e.permit_status}|{e.lifecycle}") for e in failing_rows
+        )
+        if len(failing_rows) == len(context.referencing_enclosures):
+            # Every referencing Enclosure failed the gate.
+            raise RunRequiresPermittedEnclosureError(new_id, failing_summary)
+        # Mixed: at least one passed, at least one failed.
+        raise RunEnclosureCoverageMismatchError(new_id, failing_summary)
 
     if context.plan.status is PlanStatus.DEPRECATED:
         raise RunBoundPlanDeprecatedError(context.plan.id)

@@ -142,6 +142,28 @@ def bind(deps: Kernel) -> Handler:
                 raise AssetNotFoundError(asset_id)
             assets[asset_id] = asset
 
+        # cross-BC Enclosure pre-flight gate per
+        # [[project_enclosure_stage1_design]]: derive the set of
+        # referencing Enclosures from `target_asset_ids` AND each
+        # Asset's `controller_id` back-reference via
+        # `EnclosureLookup.find_for_assets`. Mirrors Run's scope
+        # expansion (handler.py controller_id widening per commit
+        # 76bcdf856) so a Procedure targeting a stage whose controller
+        # has its own Enclosure binding honors that gate too. Per
+        # L-pre-1 (always-derive-from-Asset-chain), the Procedure does
+        # NOT declare an explicit needed-enclosure list; the chain IS
+        # the declaration. Empty result is Permit-by-default. The
+        # decider partitions each row on `permit_status == "Permitted"
+        # AND lifecycle == "Active"`. Facility-envelope Procedures
+        # (empty target_asset_ids) pass with an empty scope and the
+        # gate trivially passes.
+        scoped_asset_ids: frozenset[UUID] = state.target_asset_ids | frozenset(
+            asset.controller_id for asset in assets.values() if asset.controller_id is not None
+        )
+        referencing_enclosures = tuple(
+            await deps.enclosure_lookup.find_for_assets(asset_ids=scoped_asset_ids)
+        )
+
         # cross-BC Supply preflight per
         # [[project_supply_preflight_gate_design]]: for Phase-of-Run
         # Procedures, resolve parent_run_id -> Run -> Plan -> Practice
@@ -181,6 +203,7 @@ def bind(deps: Kernel) -> Handler:
         context = ProcedureStartContext(
             assets=assets,
             needed_supplies_satisfaction=needed_supplies_satisfaction,
+            referencing_enclosures=referencing_enclosures,
         )
 
         now = deps.clock.now()
