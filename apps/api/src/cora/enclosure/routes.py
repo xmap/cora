@@ -20,9 +20,24 @@ Enclosure owns one aggregate (Enclosure). Domain errors share
 response shape and get collapsed via the Supply / Facility-style
 loop pattern:
 
-  - 400 (validation): InvalidEnclosureName
+  - 400 (validation): InvalidEnclosureName, InvalidEnclosureReason,
+    InvalidMonitorRef, MonitorTriggerNotPermitted
+  - 404 (not-found): EnclosureNotFound
+  - 409 (state-transition guards): EnclosureCannotDecommission,
+    EnclosureCannotObserveWhileDecommissioned
   - 409 (defensive guard for AlreadyExists): EnclosureAlreadyExists
   - 403 (application-layer auth): UnauthorizedError
+
+`MonitorTriggerNotPermittedError` rides the 400 family rather than
+the 409 cannot-transition family: it rejects command intent (an
+inbound observation carrying a non-Monitor trigger), not aggregate
+state. The mapping is defense-in-depth: the
+`observe_enclosure_status` slice is invoked in-process by the
+EnclosureObserver adapter loop and exposes no public HTTP surface,
+so the handler is unreachable through routes today. The entry
+future-proofs an eventual operator-override REST surface and keeps
+the error well-formed if any other code path surfaces it through
+FastAPI.
 
 Adding a new aggregate (or a new transition error) becomes one tuple
 entry per family.
@@ -31,24 +46,30 @@ entry per family.
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from cora.enclosure.aggregates._value_types import InvalidEnclosureReasonError
+from cora.enclosure.aggregates._value_types import (
+    InvalidEnclosureReasonError,
+    InvalidMonitorRefError,
+)
 from cora.enclosure.aggregates.enclosure import (
     EnclosureAlreadyExistsError,
     EnclosureCannotDecommissionError,
     EnclosureCannotObserveWhileDecommissionedError,
     EnclosureNotFoundError,
     InvalidEnclosureNameError,
+    MonitorTriggerNotPermittedError,
 )
 from cora.enclosure.errors import UnauthorizedError
-from cora.enclosure.features import register_enclosure
+from cora.enclosure.features import observe_enclosure_status, register_enclosure
 
 
 async def _handle_validation_error(request: Request, exc: Exception) -> JSONResponse:
     """Shared 400 handler for every domain validation error.
 
-    Covers Invalid<X>NameError VOs. All map to the same HTTP 400 +
-    `{"detail": str(exc)}` body. Adding a new validation-style error
-    is one extra entry in the tuple in `register_enclosure_routes`.
+    Covers Invalid<X>NameError VOs and command-intent rejections
+    such as `MonitorTriggerNotPermittedError`. All map to the same
+    HTTP 400 + `{"detail": str(exc)}` body. Adding a new
+    validation-style error is one extra entry in the tuple in
+    `register_enclosure_routes`.
     """
     _ = request
     return JSONResponse(
@@ -103,7 +124,17 @@ async def _handle_unauthorized(request: Request, exc: Exception) -> JSONResponse
 def register_enclosure_routes(app: FastAPI) -> None:
     """Attach Enclosure slice routers and exception handlers to the FastAPI app."""
     app.include_router(register_enclosure.router)
-    for validation_cls in (InvalidEnclosureNameError, InvalidEnclosureReasonError):
+    # Stub router inclusion for the in-process-only observe slice. The
+    # router carries no routes by design; this include satisfies the
+    # routes-completeness architecture fitness without exposing a
+    # public HTTP surface.
+    app.include_router(observe_enclosure_status.router)
+    for validation_cls in (
+        InvalidEnclosureNameError,
+        InvalidEnclosureReasonError,
+        InvalidMonitorRefError,
+        MonitorTriggerNotPermittedError,
+    ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     for not_found_cls in (EnclosureNotFoundError,):
         app.add_exception_handler(not_found_cls, _handle_not_found)

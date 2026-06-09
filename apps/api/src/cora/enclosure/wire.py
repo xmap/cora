@@ -19,12 +19,17 @@ Subject / Equipment (composition order matters, innermost first):
 ## Wired handlers
 
   - `register_enclosure` (create-style; idempotency-wrapped)
+  - `observe_enclosure_status` (Monitor-trigger transition; no
+    idempotency wrap, mirrors Supply `observe_supply_status`. The
+    monitor_ref carried on the event payload is the natural dedup
+    key, and the status-change-only short-circuit in the decider
+    silently absorbs re-emission of identical-status observations.)
 """
 
 from dataclasses import dataclass
 from uuid import UUID
 
-from cora.enclosure.features import register_enclosure
+from cora.enclosure.features import observe_enclosure_status, register_enclosure
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
@@ -37,6 +42,7 @@ class EnclosureHandlers:
     """The Enclosure BC's handler bundle, each closed over Kernel."""
 
     register_enclosure: register_enclosure.IdempotentHandler
+    observe_enclosure_status: observe_enclosure_status.Handler
 
 
 def wire_enclosure(deps: Kernel) -> EnclosureHandlers:
@@ -52,6 +58,11 @@ def wire_enclosure(deps: Kernel) -> EnclosureHandlers:
                 lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
             ),
             command_name="RegisterEnclosure",
+            bc=_BC,
+        ),
+        observe_enclosure_status=with_tracing(
+            observe_enclosure_status.bind(deps),
+            command_name="ObserveEnclosureStatus",
             bc=_BC,
         ),
     )

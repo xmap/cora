@@ -18,6 +18,8 @@ from cora.enclosure.aggregates._value_types import (
     EnclosureId,
     EnclosureReason,
     InvalidEnclosureReasonError,
+    InvalidMonitorRefError,
+    MonitorRef,
 )
 from cora.enclosure.aggregates.enclosure.events import (
     EnclosureDecommissioned,
@@ -40,6 +42,7 @@ from cora.enclosure.aggregates.enclosure.state import (
     EnclosureNotFoundError,
     EnclosurePermitStatus,
     InvalidEnclosureNameError,
+    MonitorTriggerNotPermittedError,
 )
 
 __all__ = [
@@ -61,6 +64,9 @@ __all__ = [
     "EnclosureRegistered",
     "InvalidEnclosureNameError",
     "InvalidEnclosureReasonError",
+    "InvalidMonitorRefError",
+    "MonitorRef",
+    "MonitorTriggerNotPermittedError",
     "event_type_name",
     "evolve",
     "fold",

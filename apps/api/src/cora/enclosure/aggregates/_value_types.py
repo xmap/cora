@@ -52,7 +52,7 @@ EnclosureId = NewType("EnclosureId", UUID)
 ENCLOSURE_REASON_MAX_LENGTH = 500
 
 
-class InvalidEnclosureReasonError(ValueError):
+class InvalidEnclosureReasonError(Exception):
     """The supplied transition reason is empty, whitespace-only, or too long.
 
     Validated at API boundary AND defensively at the decider so direct
@@ -89,9 +89,69 @@ class EnclosureReason:
         object.__setattr__(self, "value", trimmed)
 
 
+ENCLOSURE_MONITOR_SOURCE_KIND_MAX_LENGTH = 50
+ENCLOSURE_MONITOR_SOURCE_ID_MAX_LENGTH = 200
+
+
+class InvalidMonitorRefError(Exception):
+    """`MonitorRef` constructed with an invalid source_kind or source_id.
+
+    Raised when source_kind or source_id is empty (after trim) or
+    exceeds the per-component length cap. Mirrors Supply's
+    `InvalidMonitorRefError` shape (HTTP 400).
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"MonitorRef component must be 1-"
+            f"{ENCLOSURE_MONITOR_SOURCE_KIND_MAX_LENGTH} (kind) or 1-"
+            f"{ENCLOSURE_MONITOR_SOURCE_ID_MAX_LENGTH} (id) chars after "
+            f"trimming (got: {value!r})"
+        )
+        self.value = value
+
+
+@dataclass(frozen=True)
+class MonitorRef:
+    """Audit reference identifying the substrate source of an observation.
+
+    Carries `source_kind` (the adapter family, e.g. EpicsPv, P4P,
+    Tango, Stub) and `source_id` (the substrate-specific identifier
+    the adapter parsed at the seam). Joined into the colon-delimited
+    wire string `{source_kind}:{source_id}` on the emitted
+    `EnclosurePermitObserved` payload.
+
+    BC-local per [[project_enclosure_stage1_design]]: Supply has its
+    own `MonitorRef` and the rule-of-three trigger for hoisting to
+    `cora.shared` has not yet fired. Two BCs at n=2; hoist when a
+    third lands.
+    """
+
+    source_kind: str
+    source_id: str
+
+    def __post_init__(self) -> None:
+        trimmed_kind = validate_bounded_text(
+            self.source_kind,
+            max_length=ENCLOSURE_MONITOR_SOURCE_KIND_MAX_LENGTH,
+            error_class=InvalidMonitorRefError,
+        )
+        trimmed_id = validate_bounded_text(
+            self.source_id,
+            max_length=ENCLOSURE_MONITOR_SOURCE_ID_MAX_LENGTH,
+            error_class=InvalidMonitorRefError,
+        )
+        object.__setattr__(self, "source_kind", trimmed_kind)
+        object.__setattr__(self, "source_id", trimmed_id)
+
+
 __all__ = [
+    "ENCLOSURE_MONITOR_SOURCE_ID_MAX_LENGTH",
+    "ENCLOSURE_MONITOR_SOURCE_KIND_MAX_LENGTH",
     "ENCLOSURE_REASON_MAX_LENGTH",
     "EnclosureId",
     "EnclosureReason",
     "InvalidEnclosureReasonError",
+    "InvalidMonitorRefError",
+    "MonitorRef",
 ]

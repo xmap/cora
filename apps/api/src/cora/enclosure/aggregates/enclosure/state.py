@@ -243,3 +243,35 @@ class Enclosure:
     registered_by: ActorId
     decommissioned_at: datetime | None
     decommissioned_by: ActorId | None
+
+
+class MonitorTriggerNotPermittedError(Exception):
+    """`observe_enclosure_status` carried a non-Monitor trigger.
+
+    Per [[project_enclosure_stage1_design]] D6.L2 observation-axis-
+    only anti-lock, the operational `permit_status` axis is reachable
+    only via Monitor-driven inbound observation from the substrate;
+    there is no operator path to Permitted / NotPermitted / Unknown.
+    The command surface types `monitor_source_id` as `MonitorSourceId`
+    so an operator cannot supply non-Monitor attribution at the type
+    level; this error fences the same invariant defensively at the
+    decider so a programmer mistake in a custom handler, test
+    fixture, or future adapter cannot smuggle an operator-asserted
+    permit status onto the spine.
+
+    HTTP 400 (semantically a request the caller cannot issue, not a
+    state-transition conflict).
+    """
+
+    def __init__(
+        self,
+        enclosure_id: EnclosureId,
+        trigger: str,
+    ) -> None:
+        super().__init__(
+            f"Enclosure {enclosure_id}: trigger {trigger!r} is not permitted on "
+            f"observe_enclosure_status; only 'Monitor' is accepted per the "
+            f"observation-axis-only anti-lock in project_enclosure_stage1_design."
+        )
+        self.enclosure_id = enclosure_id
+        self.trigger = trigger

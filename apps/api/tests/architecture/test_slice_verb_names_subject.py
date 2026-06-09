@@ -51,6 +51,7 @@ _AGGREGATE_NAMES: frozenset[str] = frozenset(
         "credential",
         "dataset",
         "decision",
+        "enclosure",
         "facility",
         "family",
         "fixture",

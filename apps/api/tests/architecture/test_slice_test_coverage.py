@@ -101,6 +101,11 @@ EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
         # endpoint by design ("operators have buttons; machines have ports").
         # In-process adapters call via SupplyHandlers.observe_supply_status.
         "cora.supply.features.observe_supply_status",
+        # Enclosure monitor trigger: Monitor-trigger inbound slice with
+        # no REST surface by design (L-D3 / D6.L2 per
+        # project_enclosure_stage1_design). Mirrors Supply precedent.
+        # In-process adapters call via EnclosureHandlers.observe_enclosure_status.
+        "cora.enclosure.features.observe_enclosure_status",
         # Frame slices: contract tests deferred to a follow-up commit
         # so the Frame + Mount REST + MCP suite can be authored together
         # against the shared PlacementBody surface. Decider tests +
@@ -154,6 +159,9 @@ EXEMPT_FROM_MCP_CONTRACT: frozenset[str] = frozenset(
         # Supply monitor trigger (Port B): in-process-only per
         # [[project_supply_monitor_trigger_design]]; no MCP tool by design.
         "cora.supply.features.observe_supply_status",
+        # Enclosure monitor trigger: in-process-only per L-D3 / D6.L2
+        # in project_enclosure_stage1_design. Mirrors Supply.
+        "cora.enclosure.features.observe_enclosure_status",
         # --- TODO: real gaps to fill -----------------------------------
         # The slice is MCP-registered in `cora.<bc>.tools.py` but no
         # contract test exercises the tool schema or call surface. Each
@@ -251,6 +259,14 @@ EXEMPT_FROM_INTEGRATION: frozenset[str] = frozenset(
         # cross-BC port (which needs Postgres-backed integration tests
         # for the lookup port's two adapters).
         "cora.enclosure.features.register_enclosure",
+        # observe_enclosure_status: Monitor-trigger inbound slice with no
+        # HTTP/MCP surface by design (L-D3 / D6.L2 per
+        # project_enclosure_stage1_design). Mirrors Supply
+        # observe_supply_status precedent. Postgres-backed integration
+        # arrives with the EnclosureObserver substrate adapters per the
+        # 2-BM Audit C deferral; current AlwaysPermittedEnclosureObserver
+        # stub exercises the port shape unit-tier.
+        "cora.enclosure.features.observe_enclosure_status",
     }
 )
 
