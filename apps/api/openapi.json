@@ -9927,6 +9927,46 @@
         "title": "RegisterDecisionResponse",
         "type": "object"
       },
+      "RegisterEnclosureRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /enclosures`.",
+        "properties": {
+          "containing_asset_id": {
+            "description": "Opaque cross-BC pointer to the Asset that physically contains this Enclosure (the hutch's beamline, the cabinet's instrument). Cross-aggregate existence is not checked at the decider; the address tuple (containing_asset_id, name) is unique while lifecycle=Active.",
+            "format": "uuid",
+            "title": "Containing Asset Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "Operator-readable display name for this Enclosure instance (for example '2-BM-A hutch', 'sample-prep cabinet'). Uniqueness within a containing Asset (while Active) is enforced by the projection-tier UNIQUE INDEX.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "containing_asset_id"
+        ],
+        "title": "RegisterEnclosureRequest",
+        "type": "object"
+      },
+      "RegisterEnclosureResponse": {
+        "description": "Response body for `POST /enclosures`.",
+        "properties": {
+          "enclosure_id": {
+            "format": "uuid",
+            "title": "Enclosure Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enclosure_id"
+        ],
+        "title": "RegisterEnclosureResponse",
+        "type": "object"
+      },
       "RegisterFacilityAlternateIdentifierBody": {
         "additionalProperties": false,
         "description": "Wire format for one `AlternateIdentifier` value object on the request body.",
@@ -23721,6 +23761,109 @@
         "summary": "Append a batch of AI-decider reasoning entries to a Decision's reasoning logbook (lazy open-on-first-write).",
         "tags": [
           "decision"
+        ]
+      }
+    },
+    "/enclosures": {
+      "post": {
+        "operationId": "post_enclosures_enclosures_post",
+        "parameters": [
+          {
+            "description": "Optional client-supplied unique key per logical request. Retries with the same key + same body return the cached response instead of re-creating the enclosure.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional client-supplied unique key per logical request. Retries with the same key + same body return the cached response instead of re-creating the enclosure.",
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterEnclosureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterEnclosureResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (for example whitespace-only name rejected by the EnclosureName value object past the Pydantic length bounds)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The address tuple (containing_asset_id, name) collides with an Active Enclosure already registered against the same containing Asset."
+          },
+          "422": {
+            "description": "Request body failed schema validation (missing field, invalid UUID, length out of bounds), OR Idempotency-Key was reused with a different request body."
+          }
+        },
+        "summary": "Register a new interlock-gated Enclosure (lands in Unknown)",
+        "tags": [
+          "enclosure"
         ]
       }
     },

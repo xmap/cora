@@ -50,6 +50,7 @@ BCS: tuple[str, ...] = (
     "caution",
     "data",
     "decision",
+    "enclosure",
     "equipment",
     "federation",
     "operation",

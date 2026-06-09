@@ -20,14 +20,25 @@ scalars, D10-L1 no Bypassed state).
 
 Layout:
     aggregates/<aggregate>/   -- aggregate state, events union, evolver
+    features/<verb>/          -- one vertical slice per command
+    projections/              -- read-side summary writers
     routes.py                 -- register_enclosure_routes(app)
     tools.py                  -- register_enclosure_tools(mcp, get_handlers=...)
+    wire.py                   -- wire_enclosure(deps) -> EnclosureHandlers
+    _projections.py           -- register_enclosure_projections(registry, deps)
 """
 
+from cora.enclosure._projections import register_enclosure_projections
+from cora.enclosure.errors import UnauthorizedError
 from cora.enclosure.routes import register_enclosure_routes
 from cora.enclosure.tools import register_enclosure_tools
+from cora.enclosure.wire import EnclosureHandlers, wire_enclosure
 
 __all__ = [
+    "EnclosureHandlers",
+    "UnauthorizedError",
+    "register_enclosure_projections",
     "register_enclosure_routes",
     "register_enclosure_tools",
+    "wire_enclosure",
 ]

@@ -95,6 +95,13 @@ from cora.decision import (
     register_decision_tools,
     wire_decision,
 )
+from cora.enclosure import (
+    EnclosureHandlers,
+    register_enclosure_projections,
+    register_enclosure_routes,
+    register_enclosure_tools,
+    wire_enclosure,
+)
 from cora.equipment import (
     EquipmentHandlers,
     register_equipment_projections,
@@ -344,6 +351,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         handlers: DecisionHandlers = fastapi_app.state.decision
         return handlers
 
+    def _get_enclosure_handlers() -> EnclosureHandlers:
+        handlers: EnclosureHandlers = fastapi_app.state.enclosure
+        return handlers
+
     def _get_supply_handlers() -> SupplyHandlers:
         handlers: SupplyHandlers = fastapi_app.state.supply
         return handlers
@@ -382,6 +393,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_data_tools(mcp, get_handlers=_get_data_handlers)
     register_decision_tools(mcp, get_handlers=_get_decision_handlers)
     register_supply_tools(mcp, get_handlers=_get_supply_handlers)
+    register_enclosure_tools(mcp, get_handlers=_get_enclosure_handlers)
     register_operation_tools(mcp, get_handlers=_get_operation_handlers)
     register_safety_tools(mcp, get_handlers=_get_safety_handlers)
     register_caution_tools(mcp, get_handlers=_get_caution_handlers)
@@ -430,6 +442,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             app.state.data = wire_data(deps)
             app.state.decision = wire_decision(deps)
             app.state.supply = wire_supply(deps)
+            app.state.enclosure = wire_enclosure(deps)
             app.state.operation = wire_operation(deps)
             app.state.safety = wire_safety(deps)
             app.state.caution = wire_caution(deps)
@@ -471,6 +484,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             register_data_projections(registry, deps)
             register_decision_projections(registry, deps)
             register_supply_projections(registry, deps)
+            register_enclosure_projections(registry, deps)
             register_operation_projections(registry, deps)
             register_safety_projections(registry, deps)
             register_caution_projections(registry, deps)
@@ -584,6 +598,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_data_routes(fastapi_app)
     register_decision_routes(fastapi_app)
     register_supply_routes(fastapi_app)
+    register_enclosure_routes(fastapi_app)
     register_operation_routes(fastapi_app)
     register_safety_routes(fastapi_app)
     register_caution_routes(fastapi_app)
