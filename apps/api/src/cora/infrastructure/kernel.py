@@ -47,6 +47,7 @@ from cora.infrastructure.ports import (
     ClearanceLookup,
     Clock,
     CredentialLookup,
+    EnclosureLookup,
     EventStore,
     FacilityLookup,
     IdempotencyStore,
@@ -227,6 +228,7 @@ class Kernel:
     credential_lookup: CredentialLookup
     facility_lookup: FacilityLookup
     asset_lookup: AssetLookup
+    enclosure_lookup: EnclosureLookup
     profile_store: ProfileStore
     canonicalization_registry: CanonicalizationRegistry
     signing_registry: SigningRegistry

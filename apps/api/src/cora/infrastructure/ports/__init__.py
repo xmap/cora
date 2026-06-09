@@ -37,6 +37,11 @@ from cora.infrastructure.ports.credential_lookup import (
     CredentialLookup,
     CredentialLookupResult,
 )
+from cora.infrastructure.ports.enclosure_lookup import (
+    AlwaysPermittedEnclosureLookup,
+    EnclosureLookup,
+    EnclosureReference,
+)
 from cora.infrastructure.ports.event_publisher import EventPublisher
 from cora.infrastructure.ports.event_store import (
     ConcurrencyError,
@@ -117,6 +122,7 @@ __all__ = [
     "AllowAllAuthorize",
     "AlwaysCoveredClearanceLookup",
     "AlwaysEmptyCapabilityLookup",
+    "AlwaysPermittedEnclosureLookup",
     "AlwaysQuietCautionLookup",
     "AssetLookup",
     "AssetLookupResult",
@@ -140,6 +146,8 @@ __all__ = [
     "CredentialLookup",
     "CredentialLookupResult",
     "Deny",
+    "EnclosureLookup",
+    "EnclosureReference",
     "EventPublisher",
     "EventStore",
     "FacilityLookup",

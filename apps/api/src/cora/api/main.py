@@ -102,6 +102,7 @@ from cora.enclosure import (
     register_enclosure_tools,
     wire_enclosure,
 )
+from cora.enclosure.adapters import PostgresEnclosureLookup
 from cora.equipment import (
     EquipmentHandlers,
     register_equipment_projections,
@@ -416,6 +417,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 credential_lookup_factory=PostgresCredentialLookup,
                 facility_lookup_factory=PostgresFacilityLookup,
                 asset_lookup_factory=PostgresAssetLookup,
+                enclosure_lookup_factory=PostgresEnclosureLookup,
                 # publish_revision slice deps: in-memory adapters
                 # wired by default until the rule-of-two trigger
                 # fires per project_federation_port_design.md.

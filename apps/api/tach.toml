@@ -82,6 +82,10 @@ path = "cora.enclosure.aggregates"
 depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
+path = "cora.enclosure.adapters"
+depends_on = ["cora.infrastructure", "cora.shared", "cora.enclosure.aggregates"]
+
+[[modules]]
 path = "cora.equipment.aggregates"
 depends_on = ["cora.infrastructure", "cora.shared"]
 
@@ -189,7 +193,7 @@ depends_on = ["cora.infrastructure", "cora.shared", "cora.supply.aggregates"]
 # deferred per the Stage-1 Sub-Slice A open ambiguity on Asset binding).
 [[modules]]
 path = "cora.enclosure"
-depends_on = ["cora.infrastructure", "cora.shared", "cora.enclosure.aggregates"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.enclosure.aggregates", "cora.enclosure.adapters"]
 
 [[modules]]
 path = "cora.trust"
@@ -378,6 +382,7 @@ depends_on = [
     "cora.data",
     "cora.decision",
     "cora.enclosure",
+    "cora.enclosure.adapters",
     "cora.equipment",
     "cora.equipment.adapters",
     "cora.federation",

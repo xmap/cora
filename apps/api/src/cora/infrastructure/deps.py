@@ -77,6 +77,7 @@ from cora.infrastructure.ports import (
     AllSatisfiedSupplyLookup,
     AlwaysCoveredClearanceLookup,
     AlwaysEmptyCapabilityLookup,
+    AlwaysPermittedEnclosureLookup,
     AlwaysQuietCautionLookup,
     AssetLookup,
     Authorize,
@@ -85,6 +86,7 @@ from cora.infrastructure.ports import (
     ClearanceLookup,
     Clock,
     CredentialLookup,
+    EnclosureLookup,
     EventStore,
     FacilityLookup,
     IdempotencyStore,
@@ -149,6 +151,7 @@ def make_postgres_kernel(
     credential_lookup: CredentialLookup | None = None,
     facility_lookup: FacilityLookup | None = None,
     asset_lookup: AssetLookup | None = None,
+    enclosure_lookup: EnclosureLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
@@ -265,6 +268,9 @@ def make_postgres_kernel(
             facility_lookup if facility_lookup is not None else InMemoryFacilityLookup()
         ),
         asset_lookup=(asset_lookup if asset_lookup is not None else InMemoryAssetLookup()),
+        enclosure_lookup=(
+            enclosure_lookup if enclosure_lookup is not None else AlwaysPermittedEnclosureLookup()
+        ),
         profile_store=(profile_store if profile_store is not None else PostgresProfileStore(pool)),
         canonicalization_registry=_build_default_canonicalization_registry(),
         signing_registry=SigningRegistry(),
@@ -293,6 +299,7 @@ def make_inmemory_kernel(
     credential_lookup: CredentialLookup | None = None,
     facility_lookup: FacilityLookup | None = None,
     asset_lookup: AssetLookup | None = None,
+    enclosure_lookup: EnclosureLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
@@ -399,6 +406,9 @@ def make_inmemory_kernel(
             facility_lookup if facility_lookup is not None else InMemoryFacilityLookup()
         ),
         asset_lookup=(asset_lookup if asset_lookup is not None else InMemoryAssetLookup()),
+        enclosure_lookup=(
+            enclosure_lookup if enclosure_lookup is not None else AlwaysPermittedEnclosureLookup()
+        ),
         profile_store=profile_store if profile_store is not None else InMemoryProfileStore(),
         canonicalization_registry=_build_default_canonicalization_registry(),
         signing_registry=SigningRegistry(),
@@ -557,6 +567,25 @@ class AssetLookupFactory(Protocol):
     ) -> AssetLookup: ...
 
 
+class EnclosureLookupFactory(Protocol):
+    """Builds the production EnclosureLookup port for the Kernel.
+
+    Enclosure BC's `cora.enclosure.adapters.PostgresEnclosureLookup`
+    is the production factory; `cora.api.main` binds it. Same factory-
+    injection shape as `FacilityLookupFactory` so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to a fresh
+    `AlwaysPermittedEnclosureLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> EnclosureLookup: ...
+
+
 class LLMFactory(Protocol):
     """Builds the production LLM for the Kernel.
 
@@ -593,6 +622,7 @@ async def build_kernel(
     credential_lookup_factory: CredentialLookupFactory | None = None,
     facility_lookup_factory: FacilityLookupFactory | None = None,
     asset_lookup_factory: AssetLookupFactory | None = None,
+    enclosure_lookup_factory: EnclosureLookupFactory | None = None,
     publish_port_factory: "Callable[[], PublishPort] | None" = None,
     signature_port_factory: "Callable[[], SignaturePort] | None" = None,
     permit_lookup_factory: "Callable[[], PermitLookup] | None" = None,
@@ -704,6 +734,11 @@ async def build_kernel(
     asset_lookup: AssetLookup = (
         asset_lookup_factory(pool) if asset_lookup_factory is not None else InMemoryAssetLookup()
     )
+    enclosure_lookup: EnclosureLookup = (
+        enclosure_lookup_factory(pool)
+        if enclosure_lookup_factory is not None
+        else AlwaysPermittedEnclosureLookup()
+    )
     llm: LLM | None = llm_factory(settings) if llm_factory is not None else None
     kernel = make_postgres_kernel(
         pool,
@@ -720,6 +755,7 @@ async def build_kernel(
         credential_lookup=credential_lookup,
         facility_lookup=facility_lookup,
         asset_lookup=asset_lookup,
+        enclosure_lookup=enclosure_lookup,
         llm=llm,
         token_verifier=token_verifier,
         publish_port=publish_port_factory() if publish_port_factory is not None else None,
@@ -797,6 +833,7 @@ __all__ = [
     "CautionLookupFactory",
     "ClearanceLookupFactory",
     "CredentialLookupFactory",
+    "EnclosureLookupFactory",
     "FacilityLookupFactory",
     "LLMFactory",
     "build_kernel",

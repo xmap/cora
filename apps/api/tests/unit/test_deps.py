@@ -188,6 +188,56 @@ async def test_make_inmemory_kernel_accepts_fake_llm_override(
     assert kernel.llm is fake
 
 
+@pytest.mark.unit
+def test_make_inmemory_kernel_defaults_enclosure_lookup_to_always_permitted_stub() -> None:
+    """`enclosure_lookup` defaults to `AlwaysPermittedEnclosureLookup` so
+    existing Run / Procedure tests don't have to seed enclosures.
+
+    Pins the L-port-7 stub-only roster: the kernel always has an
+    EnclosureLookup wired, never `None`. Regression here would let
+    pre-flight gate handlers crash with AttributeError on tests that
+    never opt in to seeded enclosures.
+    """
+    from cora.infrastructure.deps import make_inmemory_kernel
+    from cora.infrastructure.ports import (
+        AlwaysPermittedEnclosureLookup,
+        SystemClock,
+        UUIDv7Generator,
+    )
+
+    settings = Settings()  # type: ignore[call-arg]
+    kernel = make_inmemory_kernel(
+        settings=settings,
+        clock=SystemClock(),
+        id_generator=UUIDv7Generator(),
+        authz=AllowAllAuthorize(),
+    )
+    assert isinstance(kernel.enclosure_lookup, AlwaysPermittedEnclosureLookup)
+
+
+@pytest.mark.unit
+def test_make_inmemory_kernel_accepts_enclosure_lookup_override() -> None:
+    """Pre-flight gate tests that need to seed enclosures inject an
+    InMemoryEnclosureLookup via make_inmemory_kernel(..., enclosure_lookup=...).
+    Pins the override seam mirroring facility_lookup."""
+    from cora.infrastructure.adapters.in_memory_enclosure_lookup import (
+        InMemoryEnclosureLookup,
+    )
+    from cora.infrastructure.deps import make_inmemory_kernel
+    from cora.infrastructure.ports import SystemClock, UUIDv7Generator
+
+    fake = InMemoryEnclosureLookup()
+    settings = Settings()  # type: ignore[call-arg]
+    kernel = make_inmemory_kernel(
+        settings=settings,
+        clock=SystemClock(),
+        id_generator=UUIDv7Generator(),
+        authz=AllowAllAuthorize(),
+        enclosure_lookup=fake,
+    )
+    assert kernel.enclosure_lookup is fake
+
+
 # ---------- token_verifier wiring ----------
 
 

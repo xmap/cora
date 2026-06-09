@@ -1,0 +1,83 @@
+"""In-memory `EnclosureLookup` adapter for unit tests and the `test` app environment.
+
+Mirrors the production adapter contract: same `lookup` and
+`find_for_assets` operations, same None-on-missing /
+empty-list-on-no-match semantics, same Decommissioned-exclusion
+posture on `find_for_assets`. A `threading.Lock` guards the dict so
+concurrent tasks see consistent state.
+
+Not durable across process restarts and not safe for production
+(`PostgresEnclosureLookup` in `cora.enclosure.adapters` is the
+production option, reading `proj_enclosure_summary`).
+
+Separate from the `AlwaysPermittedEnclosureLookup` inline stub on
+the port: this adapter lets tests seed specific enclosure rows and
+assert on the exact reference returned, whereas the stub
+blanket-permits every id without holding state.
+"""
+
+from collections.abc import Mapping
+from threading import Lock
+from uuid import UUID
+
+from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
+
+
+class InMemoryEnclosureLookup:
+    """Thread-safe in-memory implementation of the `EnclosureLookup` port."""
+
+    def __init__(
+        self,
+        seed: Mapping[UUID, EnclosureReference] | None = None,
+    ) -> None:
+        self._records: dict[UUID, EnclosureReference] = dict(seed) if seed is not None else {}
+        self._lock = Lock()
+
+    def register(
+        self,
+        enclosure_id: UUID,
+        name: str,
+        containing_asset_id: UUID,
+        permit_status: str = "Permitted",
+        lifecycle: str = "Active",
+        observed_at: str | None = None,
+        source_kind: str | None = None,
+        source_id: str | None = None,
+    ) -> None:
+        """Test helper: install an enclosure reference keyed by `enclosure_id`.
+
+        Default `permit_status="Permitted"` + `lifecycle="Active"`
+        matches the most common happy-path shape consumers expect
+        when seeding an active enclosure. Tests for non-permitted /
+        tombstoned cases pass the matching strings explicitly.
+        Observation fields default to `None` so callers only set them
+        when the scenario under test cares about provenance.
+        """
+        with self._lock:
+            self._records[enclosure_id] = EnclosureReference(
+                enclosure_id=enclosure_id,
+                name=name,
+                containing_asset_id=containing_asset_id,
+                permit_status=permit_status,
+                lifecycle=lifecycle,
+                observed_at=observed_at,
+                source_kind=source_kind,
+                source_id=source_id,
+            )
+
+    async def lookup(self, enclosure_id: UUID) -> EnclosureReference | None:
+        with self._lock:
+            return self._records.get(enclosure_id)
+
+    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureReference]:
+        if not asset_ids:
+            return []
+        with self._lock:
+            return [
+                reference
+                for reference in self._records.values()
+                if reference.containing_asset_id in asset_ids and reference.lifecycle == "Active"
+            ]
+
+
+__all__ = ["InMemoryEnclosureLookup"]
