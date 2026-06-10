@@ -41,7 +41,7 @@ def _entry(
 def test_post_steps_returns_200_with_event_count_for_running_procedure() -> None:
     with TestClient(create_app()) as client:
         pid = _register_and_start(client)
-        response = client.post(f"/procedures/{pid}/steps", json={"entries": [_entry()]})
+        response = client.post(f"/procedures/{pid}/activities", json={"entries": [_entry()]})
     assert response.status_code == 200
     assert response.json() == {"event_count": 1}
 
@@ -63,7 +63,7 @@ def test_post_steps_accepts_polymorphic_batch() -> None:
                 ),
             ]
         }
-        response = client.post(f"/procedures/{pid}/steps", json=body)
+        response = client.post(f"/procedures/{pid}/activities", json=body)
     assert response.status_code == 200
     assert response.json() == {"event_count": 3}
 
@@ -74,9 +74,11 @@ def test_post_steps_dedups_silently_on_repeat_event_id() -> None:
     eid = uuid4()
     with TestClient(create_app()) as client:
         pid = _register_and_start(client)
-        first = client.post(f"/procedures/{pid}/steps", json={"entries": [_entry(event_id=eid)]})
+        first = client.post(
+            f"/procedures/{pid}/activities", json={"entries": [_entry(event_id=eid)]}
+        )
         second = client.post(
-            f"/procedures/{pid}/steps",
+            f"/procedures/{pid}/activities",
             json={"entries": [_entry(event_id=eid, step_kind="action")]},
         )
     assert first.status_code == 200
@@ -90,7 +92,7 @@ def test_post_steps_dedups_silently_on_repeat_event_id() -> None:
 @pytest.mark.contract
 def test_post_steps_returns_404_for_unknown_procedure() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(f"/procedures/{uuid4()}/steps", json={"entries": [_entry()]})
+        response = client.post(f"/procedures/{uuid4()}/activities", json={"entries": [_entry()]})
     assert response.status_code == 404
 
 
@@ -101,7 +103,7 @@ def test_post_steps_returns_409_for_defined_procedure() -> None:
         body: dict[str, Any] = {"name": "X", "kind": "bakeout"}
         pid = UUID(client.post("/procedures", json=body).json()["procedure_id"])
         # Skip start; Procedure stays Defined.
-        response = client.post(f"/procedures/{pid}/steps", json={"entries": [_entry()]})
+        response = client.post(f"/procedures/{pid}/activities", json={"entries": [_entry()]})
     assert response.status_code == 409
     assert "closed" in response.json()["detail"].lower()
 
@@ -111,7 +113,7 @@ def test_post_steps_returns_409_for_completed_procedure() -> None:
     with TestClient(create_app()) as client:
         pid = _register_and_start(client)
         client.post(f"/procedures/{pid}/complete")
-        response = client.post(f"/procedures/{pid}/steps", json={"entries": [_entry()]})
+        response = client.post(f"/procedures/{pid}/activities", json={"entries": [_entry()]})
     assert response.status_code == 409
 
 
@@ -120,7 +122,7 @@ def test_post_steps_returns_422_for_invalid_step_kind() -> None:
     with TestClient(create_app()) as client:
         pid = _register_and_start(client)
         response = client.post(
-            f"/procedures/{pid}/steps",
+            f"/procedures/{pid}/activities",
             json={"entries": [_entry(step_kind="not-a-kind")]},
         )
     assert response.status_code == 422
@@ -130,7 +132,7 @@ def test_post_steps_returns_422_for_invalid_step_kind() -> None:
 def test_post_steps_returns_422_for_empty_batch() -> None:
     with TestClient(create_app()) as client:
         pid = _register_and_start(client)
-        response = client.post(f"/procedures/{pid}/steps", json={"entries": []})
+        response = client.post(f"/procedures/{pid}/activities", json={"entries": []})
     assert response.status_code == 422
 
 
@@ -140,7 +142,7 @@ def test_post_steps_returns_422_for_batch_over_cap() -> None:
         pid = _register_and_start(client)
         # 501 entries exceeds the 500 cap.
         body = {"entries": [_entry() for _ in range(501)]}
-        response = client.post(f"/procedures/{pid}/steps", json=body)
+        response = client.post(f"/procedures/{pid}/activities", json=body)
     assert response.status_code == 422
 
 
@@ -154,12 +156,12 @@ def test_post_steps_returns_422_for_missing_required_field() -> None:
             "step_kind": "setpoint",
             "payload": {"channel": "X"},
         }
-        response = client.post(f"/procedures/{pid}/steps", json={"entries": [bad_entry]})
+        response = client.post(f"/procedures/{pid}/activities", json={"entries": [bad_entry]})
     assert response.status_code == 422
 
 
 @pytest.mark.contract
 def test_post_steps_returns_422_for_malformed_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.post("/procedures/not-a-uuid/steps", json={"entries": [_entry()]})
+        response = client.post("/procedures/not-a-uuid/activities", json={"entries": [_entry()]})
     assert response.status_code == 422
