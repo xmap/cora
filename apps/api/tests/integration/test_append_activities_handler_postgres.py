@@ -183,7 +183,7 @@ async def test_append_activities_lazy_open_and_polymorphic_round_trip(
     open_payload = events[2].payload
     assert open_payload["procedure_id"] == str(procedure_id)
     assert open_payload["logbook_id"] == str(logbook_id)
-    assert open_payload["kind"] == "steps"
+    assert open_payload["kind"] == "activity"
     assert "schema" in open_payload  # full schema dict serialized
     state = fold([from_stored(s) for s in events])
     assert state is not None
