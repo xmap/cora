@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_6d59b7ec6f288c13_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-10 05:27 +0000
+            created at 2026-06-10 08:45 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -105,7 +105,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">    additive on the same triggers documented at</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">    `InvalidProcedureAbortReasonError`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">`ProcedureStepsLogbookOpened` is the lazy envelope event for the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">`ProcedureActivitiesLogbookOpened` is the lazy envelope event for the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">per-step logbook table. `ProcedureTruncated` mirrors RunTruncated.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">`ProcedureHeld` / `ProcedureResumed` are deferred until the pilot</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">needs the surface.</span>&nbsp;</span><span class="r"></span></p>
@@ -194,8 +194,8 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t"><span class="str">    Captures the template-invocation grain provenance per the design</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t"><span class="str">    lock ([[project-recipe-aggregate-design]]): one event per Recipe</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t"><span class="str">    invocation, NOT one per expanded step. Per-step records live in</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t"><span class="str">    `entries_operation_procedure_steps` via the existing</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t"><span class="str">    `append_procedure_steps` handler; this event lifts the binding</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t"><span class="str">    `entries_operation_procedure_activities` via the existing</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t"><span class="str">    `append_activities` handler; this event lifts the binding</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t"><span class="str">    context above the per-step granularity so PROV-O / 21 CFR Part 11</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t"><span class="str">    audit trails point at the activity that produced the entity, not</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t"><span class="str">    at every intermediate state.</span>&nbsp;</span><span class="r"></span></p>
@@ -275,36 +275,36 @@
     <p class="pln"><span class="n"><a id="t191" href="#t191">191</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t193" href="#t193">193</a></span><span class="t"><span class="op">@</span><span class="nam">dataclass</span><span class="op">(</span><span class="nam">frozen</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t194" href="#t194">194</a></span><span class="t"><span class="key">class</span> <span class="nam">ProcedureStepsLogbookOpened</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t194" href="#t194">194</a></span><span class="t"><span class="key">class</span> <span class="nam">ProcedureActivitiesLogbookOpened</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t195" href="#t195">195</a></span><span class="t">    <span class="str">"""A steps logbook was attached to this Procedure.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t196" href="#t196">196</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t197" href="#t197">197</a></span><span class="t"><span class="str">    Naming note: this event carries the entry-noun (`Steps`) in its name,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t198" href="#t198">198</a></span><span class="t"><span class="str">    vs. Conduit/Decision's bare `&lt;Aggregate>LogbookOpened`. Same rationale</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t"><span class="str">    as Run BC's `RunReadingLogbookOpened`: Procedure is planned to host</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t"><span class="str">    as Run BC's `RunObservationLogbookOpened`: Procedure is planned to host</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t"><span class="str">    multiple logbook kinds in the future (operator-action audit, hazard</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t"><span class="str">    observations are likely future additions), so the event name carries</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t"><span class="str">    the entry-noun discriminator upfront. Per</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t"><span class="str">    [[project_logbook_entry_storage]] cross-BC family table.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t"><span class="str">    Lazy open-on-first-write: emitted by the `append_procedure_steps`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t"><span class="str">    Lazy open-on-first-write: emitted by the `append_activities`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t"><span class="str">    handler the first time a step is appended for this Procedure, NOT by</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t207" href="#t207">207</a></span><span class="t"><span class="str">    `start_procedure` (mirrors Decision BC's precedent for</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t208" href="#t208">208</a></span><span class="t"><span class="str">    `DecisionLogbookOpened` and Run BC's precedent for</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t209" href="#t209">209</a></span><span class="t"><span class="str">    `RunReadingLogbookOpened`). Subsequent appends find the logbook</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t209" href="#t209">209</a></span><span class="t"><span class="str">    `RunObservationLogbookOpened`). Subsequent appends find the logbook</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t210" href="#t210">210</a></span><span class="t"><span class="str">    already attached and skip the open-event emission.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t211" href="#t211">211</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t212" href="#t212">212</a></span><span class="t"><span class="str">    `kind` discriminates the logbook category. Today only</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t"><span class="str">    `LOGBOOK_KIND_STEPS` from state.py; future per-Procedure logbook</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t"><span class="str">    `LOGBOOK_KIND_ACTIVITY` from state.py; future per-Procedure logbook</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t"><span class="str">    kinds (operator-action audit, hazard) would use distinct constants</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t"><span class="str">    and distinct state fields, not additional values for `kind` here.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t"><span class="str">    `schema` declares the row shape of `entries_operation_procedure_steps`,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t"><span class="str">    `schema` declares the row shape of `entries_operation_procedure_activities`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t218" href="#t218">218</a></span><span class="t"><span class="str">    documenting the polymorphic `(step_kind, payload, sampled_at,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t"><span class="str">    occurred_at, recorded_at)` shape for downstream projections.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t220" href="#t220">220</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t"><span class="str">    No `ProcedureStepsLogbookClosed` event today: Procedure.status</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t"><span class="str">    terminals (Completed | Aborted | Truncated) are the implicit close</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t"><span class="str">    signal; `append_procedure_steps` rejects writes when status is not</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t"><span class="str">    signal; `append_activities` rejects writes when status is not</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t224" href="#t224">224</a></span><span class="t"><span class="str">    Running via `ProcedureStepsLogbookClosedError`. Audit fidelity is</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t225" href="#t225">225</a></span><span class="t"><span class="str">    preserved: the open event timestamps the logbook lifecycle start;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t"><span class="str">    the terminal ProcedureCompleted / ProcedureAborted / etc. event</span>&nbsp;</span><span class="r"></span></p>
@@ -374,7 +374,7 @@
     <p class="pln"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t"><span class="com"># Discriminated union of every event the Procedure aggregate emits.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t"><span class="com"># The FSM is closed by the three transition events; the per-step</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t293" href="#t293">293</a></span><span class="t"><span class="com"># logbook envelope event `ProcedureStepsLogbookOpened` opens lazily</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t293" href="#t293">293</a></span><span class="t"><span class="com"># logbook envelope event `ProcedureActivitiesLogbookOpened` opens lazily</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t294" href="#t294">294</a></span><span class="t"><span class="com"># on first append.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t295" href="#t295">295</a></span><span class="t"><span class="nam">ProcedureEvent</span> <span class="op">=</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t296" href="#t296">296</a></span><span class="t">    <span class="nam">ProcedureRegistered</span>&nbsp;</span><span class="r"></span></p>
@@ -382,7 +382,7 @@
     <p class="run run2"><span class="n"><a id="t298" href="#t298">298</a></span><span class="t">    <span class="op">|</span> <span class="nam">ProcedureCompleted</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t299" href="#t299">299</a></span><span class="t">    <span class="op">|</span> <span class="nam">ProcedureAborted</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t300" href="#t300">300</a></span><span class="t">    <span class="op">|</span> <span class="nam">ProcedureTruncated</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t301" href="#t301">301</a></span><span class="t">    <span class="op">|</span> <span class="nam">ProcedureStepsLogbookOpened</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t301" href="#t301">301</a></span><span class="t">    <span class="op">|</span> <span class="nam">ProcedureActivitiesLogbookOpened</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t302" href="#t302">302</a></span><span class="t">    <span class="op">|</span> <span class="nam">RecipeExpansionRecorded</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t303" href="#t303">303</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t304" href="#t304">304</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -458,7 +458,7 @@
     <p class="run run2"><span class="n"><a id="t374" href="#t374">374</a></span><span class="t">                <span class="str">"interrupted_at"</span><span class="op">:</span> <span class="nam">interrupted_at_iso</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t375" href="#t375">375</a></span><span class="t">                <span class="str">"occurred_at"</span><span class="op">:</span> <span class="nam">occurred_at</span><span class="op">.</span><span class="nam">isoformat</span><span class="op">(</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t376" href="#t376">376</a></span><span class="t">            <span class="op">}</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t377" href="#t377">377</a></span><span class="t">        <span class="key">case</span> <span class="nam">ProcedureStepsLogbookOpened</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t377" href="#t377">377</a></span><span class="t">        <span class="key">case</span> <span class="nam">ProcedureActivitiesLogbookOpened</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t378" href="#t378">378</a></span><span class="t">            <span class="nam">procedure_id</span><span class="op">=</span><span class="nam">procedure_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t379" href="#t379">379</a></span><span class="t">            <span class="nam">logbook_id</span><span class="op">=</span><span class="nam">logbook_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t380" href="#t380">380</a></span><span class="t">            <span class="nam">kind</span><span class="op">=</span><span class="nam">kind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -591,10 +591,10 @@
     <p class="run run2"><span class="n"><a id="t507" href="#t507">507</a></span><span class="t">                <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t508" href="#t508">508</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t509" href="#t509">509</a></span><span class="t">            <span class="key">return</span> <span class="nam">deserialize_or_raise</span><span class="op">(</span><span class="str">"ProcedureTruncated"</span><span class="op">,</span> <span class="nam">_build_truncated</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t510" href="#t510">510</a></span><span class="t">        <span class="key">case</span> <span class="str">"ProcedureStepsLogbookOpened"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t510" href="#t510">510</a></span><span class="t">        <span class="key">case</span> <span class="str">"ProcedureActivitiesLogbookOpened"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t511" href="#t511">511</a></span><span class="t">            <span class="key">return</span> <span class="nam">deserialize_or_raise</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t512" href="#t512">512</a></span><span class="t">                <span class="str">"ProcedureStepsLogbookOpened"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t513" href="#t513">513</a></span><span class="t">                <span class="key">lambda</span><span class="op">:</span> <span class="nam">ProcedureStepsLogbookOpened</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t512" href="#t512">512</a></span><span class="t">                <span class="str">"ProcedureActivitiesLogbookOpened"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t513" href="#t513">513</a></span><span class="t">                <span class="key">lambda</span><span class="op">:</span> <span class="nam">ProcedureActivitiesLogbookOpened</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t514" href="#t514">514</a></span><span class="t">                    <span class="nam">procedure_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"procedure_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t515" href="#t515">515</a></span><span class="t">                    <span class="nam">logbook_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"logbook_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t516" href="#t516">516</a></span><span class="t">                    <span class="nam">kind</span><span class="op">=</span><span class="nam">payload</span><span class="op">[</span><span class="str">"kind"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -627,11 +627,11 @@
     <p class="pln"><span class="n"><a id="t543" href="#t543">543</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t544" href="#t544">544</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t545" href="#t545">545</a></span><span class="t">    <span class="str">"ProcedureAborted"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t546" href="#t546">546</a></span><span class="t">    <span class="str">"ProcedureCompleted"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t547" href="#t547">547</a></span><span class="t">    <span class="str">"ProcedureEvent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t548" href="#t548">548</a></span><span class="t">    <span class="str">"ProcedureRegistered"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t549" href="#t549">549</a></span><span class="t">    <span class="str">"ProcedureStarted"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t550" href="#t550">550</a></span><span class="t">    <span class="str">"ProcedureStepsLogbookOpened"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t546" href="#t546">546</a></span><span class="t">    <span class="str">"ProcedureActivitiesLogbookOpened"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t547" href="#t547">547</a></span><span class="t">    <span class="str">"ProcedureCompleted"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t548" href="#t548">548</a></span><span class="t">    <span class="str">"ProcedureEvent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t549" href="#t549">549</a></span><span class="t">    <span class="str">"ProcedureRegistered"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t550" href="#t550">550</a></span><span class="t">    <span class="str">"ProcedureStarted"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t551" href="#t551">551</a></span><span class="t">    <span class="str">"ProcedureTruncated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t552" href="#t552">552</a></span><span class="t">    <span class="str">"RecipeExpansionRecorded"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t553" href="#t553">553</a></span><span class="t">    <span class="str">"event_type_name"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -647,7 +647,7 @@
             <a class="nav" href="z_6d59b7ec6f288c13_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-10 05:27 +0000
+            created at 2026-06-10 08:45 +0000
         </p>
     </div>
 </footer>

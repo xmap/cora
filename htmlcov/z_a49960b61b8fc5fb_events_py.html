@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_a49960b61b8fc5fb_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-10 05:27 +0000
+            created at 2026-06-10 08:45 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -236,7 +236,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t"><span class="str">    id, prior-run id, automation id). Optional (None when omitted).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t"><span class="str">    Forward-compat via `payload.get("trigger_source")`. Future</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t"><span class="str">    Decision-BC integration may populate this from</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="str">    `DecisionReasoning.entries` references.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="str">    `Inference.entries` references.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">    <span class="nam">run_id</span><span class="op">:</span> <span class="nam">UUID</span>&nbsp;</span><span class="r"></span></p>
@@ -470,12 +470,12 @@
     <p class="pln"><span class="n"><a id="t386" href="#t386">386</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t387" href="#t387">387</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t388" href="#t388">388</a></span><span class="t"><span class="op">@</span><span class="nam">dataclass</span><span class="op">(</span><span class="nam">frozen</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t389" href="#t389">389</a></span><span class="t"><span class="key">class</span> <span class="nam">RunReadingLogbookOpened</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t390" href="#t390">390</a></span><span class="t">    <span class="str">"""A reading logbook was attached to this Run.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t389" href="#t389">389</a></span><span class="t"><span class="key">class</span> <span class="nam">RunObservationLogbookOpened</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t390" href="#t390">390</a></span><span class="t">    <span class="str">"""A observation logbook was attached to this Run.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t391" href="#t391">391</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t392" href="#t392">392</a></span><span class="t"><span class="str">    Naming note: this event carries the entry-noun (`Reading`) in its</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t393" href="#t393">393</a></span><span class="t"><span class="str">    name, vs. Conduit/Decision's bare `&lt;Aggregate>LogbookOpened`. Why:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t394" href="#t394">394</a></span><span class="t"><span class="str">    Run is planned to host MULTIPLE logbook kinds (reading now;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t394" href="#t394">394</a></span><span class="t"><span class="str">    Run is planned to host MULTIPLE logbook kinds (observation now;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t395" href="#t395">395</a></span><span class="t"><span class="str">    hazard events and operator-action audit are likely future</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t396" href="#t396">396</a></span><span class="t"><span class="str">    additions), so the event name needs the entry-noun discriminator</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t397" href="#t397">397</a></span><span class="t"><span class="str">    upfront. Conduit and Decision currently host one kind each and</span>&nbsp;</span><span class="r"></span></p>
@@ -483,19 +483,19 @@
     <p class="pln"><span class="n"><a id="t399" href="#t399">399</a></span><span class="t"><span class="str">    follow the `&lt;Aggregate>&lt;EntryNoun>LogbookOpened` skeleton then.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t400" href="#t400">400</a></span><span class="t"><span class="str">    Per [[project_logbook_entry_storage]] cross-BC family table.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t401" href="#t401">401</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t402" href="#t402">402</a></span><span class="t"><span class="str">    Lazy open-on-first-write: emitted by the `append_run_readings`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t403" href="#t403">403</a></span><span class="t"><span class="str">    handler the first time a reading is appended for this Run, NOT</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t402" href="#t402">402</a></span><span class="t"><span class="str">    Lazy open-on-first-write: emitted by the `append_observations`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t403" href="#t403">403</a></span><span class="t"><span class="str">    handler the first time a observation is appended for this Run, NOT</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t404" href="#t404">404</a></span><span class="t"><span class="str">    by `start_run` (mirrors Decision BC's 8c-b precedent for</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t405" href="#t405">405</a></span><span class="t"><span class="str">    `DecisionLogbookOpened`). Subsequent appends find the logbook</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t406" href="#t406">406</a></span><span class="t"><span class="str">    already attached and skip the open-event emission.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t407" href="#t407">407</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t408" href="#t408">408</a></span><span class="t"><span class="str">    `kind` discriminates the logbook category. Today only</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t409" href="#t409">409</a></span><span class="t"><span class="str">    `LOGBOOK_KIND_READING` from state.py; future per-Run logbook</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t409" href="#t409">409</a></span><span class="t"><span class="str">    `LOGBOOK_KIND_OBSERVATION` from state.py; future per-Run logbook</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t410" href="#t410">410</a></span><span class="t"><span class="str">    kinds (hazard events, operator-action audit) would use distinct</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t411" href="#t411">411</a></span><span class="t"><span class="str">    constants and distinct state fields, not additional values for</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t412" href="#t412">412</a></span><span class="t"><span class="str">    `kind` here.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t413" href="#t413">413</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t414" href="#t414">414</a></span><span class="t"><span class="str">    `schema` declares the row shape of `entries_run_readings`,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t414" href="#t414">414</a></span><span class="t"><span class="str">    `schema` declares the row shape of `entries_run_observations`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t415" href="#t415">415</a></span><span class="t"><span class="str">    documenting the polymorphic `(channel_name, value, units?,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t416" href="#t416">416</a></span><span class="t"><span class="str">    sampling_procedure, sampled_at, occurred_at, recorded_at)` shape</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t417" href="#t417">417</a></span><span class="t"><span class="str">    for downstream projections. Per</span>&nbsp;</span><span class="r"></span></p>
@@ -505,10 +505,10 @@
     <p class="pln"><span class="n"><a id="t421" href="#t421">421</a></span><span class="t"><span class="str">    at run boundary) + `monitor` (6f-5c, sub-Hz time-series during</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t422" href="#t422">422</a></span><span class="t"><span class="str">    the run); future-additive without schema migration.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t423" href="#t423">423</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t424" href="#t424">424</a></span><span class="t"><span class="str">    No `RunReadingLogbookClosed` event today: Run.status terminals</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t424" href="#t424">424</a></span><span class="t"><span class="str">    No `RunObservationLogbookClosed` event today: Run.status terminals</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t425" href="#t425">425</a></span><span class="t"><span class="str">    (Completed | Aborted | Stopped | Truncated) are the implicit</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t426" href="#t426">426</a></span><span class="t"><span class="str">    close signal; `append_run_readings` rejects writes when status is</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t427" href="#t427">427</a></span><span class="t"><span class="str">    terminal via `RunReadingLogbookClosedError`. Audit fidelity is</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t426" href="#t426">426</a></span><span class="t"><span class="str">    close signal; `append_observations` rejects writes when status is</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t427" href="#t427">427</a></span><span class="t"><span class="str">    terminal via `RunObservationLogbookClosedError`. Audit fidelity is</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t428" href="#t428">428</a></span><span class="t"><span class="str">    preserved: the open event timestamps the logbook lifecycle start;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t429" href="#t429">429</a></span><span class="t"><span class="str">    the terminal RunCompleted / RunAborted / etc. event timestamps</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t430" href="#t430">430</a></span><span class="t"><span class="str">    the lifecycle end.</span>&nbsp;</span><span class="r"></span></p>
@@ -618,7 +618,7 @@
     <p class="run run2"><span class="n"><a id="t534" href="#t534">534</a></span><span class="t">    <span class="op">|</span> <span class="nam">RunStopped</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t535" href="#t535">535</a></span><span class="t">    <span class="op">|</span> <span class="nam">RunTruncated</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t536" href="#t536">536</a></span><span class="t">    <span class="op">|</span> <span class="nam">RunAdjusted</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t537" href="#t537">537</a></span><span class="t">    <span class="op">|</span> <span class="nam">RunReadingLogbookOpened</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t537" href="#t537">537</a></span><span class="t">    <span class="op">|</span> <span class="nam">RunObservationLogbookOpened</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t538" href="#t538">538</a></span><span class="t">    <span class="op">|</span> <span class="nam">RunAddedToCampaign</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t539" href="#t539">539</a></span><span class="t">    <span class="op">|</span> <span class="nam">RunRemovedFromCampaign</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t540" href="#t540">540</a></span><span class="t">    <span class="op">|</span> <span class="nam">DecisionDebriefRequested</span>&nbsp;</span><span class="r"></span></p>
@@ -754,7 +754,7 @@
     <p class="run run2"><span class="n"><a id="t670" href="#t670">670</a></span><span class="t">                <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t671" href="#t671">671</a></span><span class="t">                <span class="str">"occurred_at"</span><span class="op">:</span> <span class="nam">occurred_at</span><span class="op">.</span><span class="nam">isoformat</span><span class="op">(</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t672" href="#t672">672</a></span><span class="t">            <span class="op">}</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t673" href="#t673">673</a></span><span class="t">        <span class="key">case</span> <span class="nam">RunReadingLogbookOpened</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t673" href="#t673">673</a></span><span class="t">        <span class="key">case</span> <span class="nam">RunObservationLogbookOpened</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t674" href="#t674">674</a></span><span class="t">            <span class="nam">run_id</span><span class="op">=</span><span class="nam">run_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t675" href="#t675">675</a></span><span class="t">            <span class="nam">logbook_id</span><span class="op">=</span><span class="nam">logbook_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t676" href="#t676">676</a></span><span class="t">            <span class="nam">kind</span><span class="op">=</span><span class="nam">kind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -954,10 +954,10 @@
     <p class="run run2"><span class="n"><a id="t870" href="#t870">870</a></span><span class="t">                <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t871" href="#t871">871</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t872" href="#t872">872</a></span><span class="t">            <span class="key">return</span> <span class="nam">deserialize_or_raise</span><span class="op">(</span><span class="str">"RunAdjusted"</span><span class="op">,</span> <span class="nam">_build_run_adjusted</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t873" href="#t873">873</a></span><span class="t">        <span class="key">case</span> <span class="str">"RunReadingLogbookOpened"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t873" href="#t873">873</a></span><span class="t">        <span class="key">case</span> <span class="str">"RunObservationLogbookOpened"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t874" href="#t874">874</a></span><span class="t">            <span class="key">return</span> <span class="nam">deserialize_or_raise</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t875" href="#t875">875</a></span><span class="t">                <span class="str">"RunReadingLogbookOpened"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t876" href="#t876">876</a></span><span class="t">                <span class="key">lambda</span><span class="op">:</span> <span class="nam">RunReadingLogbookOpened</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t875" href="#t875">875</a></span><span class="t">                <span class="str">"RunObservationLogbookOpened"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t876" href="#t876">876</a></span><span class="t">                <span class="key">lambda</span><span class="op">:</span> <span class="nam">RunObservationLogbookOpened</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t877" href="#t877">877</a></span><span class="t">                    <span class="nam">run_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"run_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t878" href="#t878">878</a></span><span class="t">                    <span class="nam">logbook_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"logbook_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t879" href="#t879">879</a></span><span class="t">                    <span class="nam">kind</span><span class="op">=</span><span class="nam">payload</span><span class="op">[</span><span class="str">"kind"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -1008,7 +1008,7 @@
     <p class="run run2"><span class="n"><a id="t924" href="#t924">924</a></span><span class="t">    <span class="str">"RunCompleted"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t925" href="#t925">925</a></span><span class="t">    <span class="str">"RunEvent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t926" href="#t926">926</a></span><span class="t">    <span class="str">"RunHeld"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t927" href="#t927">927</a></span><span class="t">    <span class="str">"RunReadingLogbookOpened"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t927" href="#t927">927</a></span><span class="t">    <span class="str">"RunObservationLogbookOpened"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t928" href="#t928">928</a></span><span class="t">    <span class="str">"RunRemovedFromCampaign"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t929" href="#t929">929</a></span><span class="t">    <span class="str">"RunResumed"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t930" href="#t930">930</a></span><span class="t">    <span class="str">"RunStarted"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -1027,7 +1027,7 @@
             <a class="nav" href="z_a49960b61b8fc5fb_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-10 05:27 +0000
+            created at 2026-06-10 08:45 +0000
         </p>
     </div>
 </footer>

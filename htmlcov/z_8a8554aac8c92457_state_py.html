@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_fd3cd1c5409f6931_catalog_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-10 05:27 +0000
+            created at 2026-06-10 08:45 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -188,7 +188,7 @@
     <p class="pln"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t"><span class="str">## Thirteenth bounded-name VO</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t"><span class="str">`DecisionChoice` and `DecisionReasoning` use the shared</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t"><span class="str">`DecisionChoice` and the `Decision.reasoning` field use the shared</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t"><span class="str">`validate_bounded_text` helper hoisted at the rule-of-three trigger, with a higher max-length</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t"><span class="str">cap (reasoning text is naturally longer than display names).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t"><span class="str">`DecisionContext` is intentionally an open string with documented</span>&nbsp;</span><span class="r"></span></p>
@@ -232,9 +232,9 @@
     <p class="pln"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t"><span class="com"># this kind on the Decision aggregate and appends per-trace</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t"><span class="com"># entries (one per LLM call / tool invocation / agent span)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t"><span class="com"># carrying OpenTelemetry GenAI semantic-convention attributes</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t"><span class="com"># (gen_ai.*). Mirrors `LOGBOOK_KIND_TRAVERSALS` in Conduit BC</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t"><span class="com"># (gen_ai.*). Mirrors `LOGBOOK_KIND_VERDICT` in Conduit BC</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t"><span class="com"># (6f-5a precedent).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t"><span class="nam">LOGBOOK_KIND_REASONING</span><span class="op">:</span> <span class="nam">Final</span> <span class="op">=</span> <span class="str">"reasoning"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t"><span class="nam">LOGBOOK_KIND_INFERENCE</span><span class="op">:</span> <span class="nam">Final</span> <span class="op">=</span> <span class="str">"inference"</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="com"># Well-known context discriminators per BC map. Open-ended: new</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t"><span class="com"># contexts arrive without schema migration. Validated at</span>&nbsp;</span><span class="r"></span></p>
@@ -1035,7 +1035,7 @@
     <p class="run"><span class="n"><a id="t951" href="#t951">951</a></span><span class="t">    <span class="nam">inputs</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t952" href="#t952">952</a></span><span class="t">    <span class="nam">reasoning_signature</span><span class="op">:</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t953" href="#t953">953</a></span><span class="t">    <span class="com"># 8c: logbooks attached to this Decision, keyed by kind. Today</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t954" href="#t954">954</a></span><span class="t">    <span class="com"># the only kind is `LOGBOOK_KIND_REASONING` (AI-decider trace</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t954" href="#t954">954</a></span><span class="t">    <span class="com"># the only kind is `LOGBOOK_KIND_INFERENCE` (AI-decider trace</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t955" href="#t955">955</a></span><span class="t">    <span class="com"># entries with OTel gen_ai.* attrs). Future kinds (evidence</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t956" href="#t956">956</a></span><span class="t">    <span class="com"># chains, evaluator votes, etc.) follow the same shape.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t957" href="#t957">957</a></span><span class="t">    <span class="com"># At-most-one-open-per-kind enforced by the evolver.</span>&nbsp;</span><span class="r"></span></p>
@@ -1056,7 +1056,7 @@
             <a class="nav" href="z_fd3cd1c5409f6931_catalog_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-10 05:27 +0000
+            created at 2026-06-10 08:45 +0000
         </p>
     </div>
 </footer>
