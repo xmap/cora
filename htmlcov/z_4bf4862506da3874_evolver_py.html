@@ -55,8 +55,8 @@
             </div>
         </aside>
         <h2>
-            <span class="text">47 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">47<span class="text"> run</span></button>
+            <span class="text">48 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">48<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">20<span class="text"> excluded</span></button>
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_4bf4862506da3874_hazard_classification_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-10 19:18 +0000
+            created at 2026-06-10 22:55 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -132,11 +132,11 @@
     <p class="run"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">safety</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">clearance</span><span class="op">.</span><span class="nam">hazard_classification</span> <span class="key">import</span> <span class="nam">RiskBand</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">safety</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">clearance</span><span class="op">.</span><span class="nam">state</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">    <span class="nam">Clearance</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">    <span class="nam">ClearanceKind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="nam">ClearanceStatus</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">    <span class="nam">ClearanceTitle</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">    <span class="nam">ReviewStep</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">    <span class="nam">ClearanceStatus</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="nam">ClearanceTitle</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">    <span class="nam">ReviewStep</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">safety</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">clearance_template</span> <span class="key">import</span> <span class="nam">ClearanceTemplateId</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">facility_code</span> <span class="key">import</span> <span class="nam">FacilityCode</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -145,7 +145,7 @@
     <p class="run"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="key">match</span> <span class="nam">event</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">        <span class="key">case</span> <span class="nam">ClearanceRegistered</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">            <span class="nam">clearance_id</span><span class="op">=</span><span class="nam">clearance_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">            <span class="nam">kind</span><span class="op">=</span><span class="nam">kind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">            <span class="nam">template_id</span><span class="op">=</span><span class="nam">template_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">            <span class="nam">facility_code</span><span class="op">=</span><span class="nam">facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">            <span class="nam">title</span><span class="op">=</span><span class="nam">title</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">            <span class="nam">bindings</span><span class="op">=</span><span class="nam">bindings</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -159,7 +159,7 @@
     <p class="run"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">            <span class="nam">_</span> <span class="op">=</span> <span class="nam">state</span>  <span class="com"># ClearanceRegistered is the genesis event; prior state ignored</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">            <span class="key">return</span> <span class="nam">Clearance</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">                <span class="nam">id</span><span class="op">=</span><span class="nam">clearance_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">                <span class="nam">kind</span><span class="op">=</span><span class="nam">ClearanceKind</span><span class="op">(</span><span class="nam">kind</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">                <span class="nam">template_id</span><span class="op">=</span><span class="nam">ClearanceTemplateId</span><span class="op">(</span><span class="nam">template_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">                <span class="nam">facility_code</span><span class="op">=</span><span class="nam">FacilityCode</span><span class="op">(</span><span class="nam">facility_code</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">                <span class="nam">title</span><span class="op">=</span><span class="nam">ClearanceTitle</span><span class="op">(</span><span class="nam">title</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">                <span class="nam">bindings</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">deserialize_binding</span><span class="op">(</span><span class="nam">b</span><span class="op">)</span> <span class="key">for</span> <span class="nam">b</span> <span class="key">in</span> <span class="nam">bindings</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -227,7 +227,7 @@
     <p class="pln"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">    <span class="str">"""Return a new Clearance with `status` updated; identity + most fields preserved."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">    <span class="key">return</span> <span class="nam">Clearance</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">        <span class="nam">id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">        <span class="nam">kind</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">kind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">        <span class="nam">template_id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">template_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">        <span class="nam">facility_code</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">        <span class="nam">title</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">title</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">        <span class="nam">bindings</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">bindings</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -247,7 +247,7 @@
     <p class="exc show_exc"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">    <span class="str">"""Return a new Clearance with `review_steps` updated; status preserved."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t164" href="#t164">164</a></span><span class="t">    <span class="key">return</span> <span class="nam">Clearance</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t165" href="#t165">165</a></span><span class="t">        <span class="nam">id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">        <span class="nam">kind</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">kind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">        <span class="nam">template_id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">template_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t167" href="#t167">167</a></span><span class="t">        <span class="nam">facility_code</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t168" href="#t168">168</a></span><span class="t">        <span class="nam">title</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">title</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t169" href="#t169">169</a></span><span class="t">        <span class="nam">bindings</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">bindings</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -273,7 +273,7 @@
     <p class="pln"><span class="n"><a id="t189" href="#t189">189</a></span><span class="t"><span class="str">    valid_from / valid_until overwritten if explicit values provided."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t190" href="#t190">190</a></span><span class="t">    <span class="key">return</span> <span class="nam">Clearance</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t191" href="#t191">191</a></span><span class="t">        <span class="nam">id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t">        <span class="nam">kind</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">kind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t">        <span class="nam">template_id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">template_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t193" href="#t193">193</a></span><span class="t">        <span class="nam">facility_code</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t194" href="#t194">194</a></span><span class="t">        <span class="nam">title</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">title</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t195" href="#t195">195</a></span><span class="t">        <span class="nam">bindings</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">bindings</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -304,7 +304,7 @@
             <a class="nav" href="z_4bf4862506da3874_hazard_classification_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-10 19:18 +0000
+            created at 2026-06-10 22:55 +0000
         </p>
     </div>
 </footer>

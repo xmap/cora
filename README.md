@@ -1596,7 +1596,7 @@
 | src/cora/safety/\_\_init\_\_.py                                                          |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/\_bootstrap.py                                                           |        2 |        2 |        0 |        0 |      0.0% |     14-16 |
 | src/cora/safety/\_clearance\_dtos.py                                                     |       45 |        1 |       14 |        1 |     96.6% |       193 |
-| src/cora/safety/\_clearance\_template\_seed.py                                           |       32 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/safety/\_clearance\_template\_seed.py                                           |       39 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/safety/\_clearance\_template\_update\_handler.py                                |        6 |        6 |        0 |        0 |      0.0% |     38-75 |
 | src/cora/safety/\_clearance\_update\_handler.py                                          |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/\_projections.py                                                         |        8 |        0 |        0 |        0 |    100.0% |           |
@@ -1606,17 +1606,17 @@
 | src/cora/safety/aggregates/\_\_init\_\_.py                                               |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/aggregates/clearance/\_\_init\_\_.py                                     |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/aggregates/clearance/events.py                                           |      145 |        0 |       66 |        0 |    100.0% |           |
-| src/cora/safety/aggregates/clearance/evolver.py                                          |       47 |        0 |       18 |        0 |    100.0% |           |
+| src/cora/safety/aggregates/clearance/evolver.py                                          |       48 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/safety/aggregates/clearance/hazard\_classification.py                           |       76 |        0 |       20 |        0 |    100.0% |           |
 | src/cora/safety/aggregates/clearance/read.py                                             |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/safety/aggregates/clearance/state.py                                            |      193 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/safety/aggregates/clearance/state.py                                            |      183 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/safety/aggregates/clearance\_template/\_\_init\_\_.py                           |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/aggregates/clearance\_template/\_stream\_id.py                           |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/aggregates/clearance\_template/\_value\_types.py                         |       36 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/safety/aggregates/clearance\_template/events.py                                 |       51 |        1 |       18 |        1 |     97.1% |       222 |
 | src/cora/safety/aggregates/clearance\_template/evolver.py                                |       38 |       10 |       18 |        4 |     71.4% |68-69, 75-78, 85-86, 90-91 |
 | src/cora/safety/aggregates/clearance\_template/read.py                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/safety/aggregates/clearance\_template/state.py                                  |       56 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/safety/aggregates/clearance\_template/state.py                                  |       61 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/errors.py                                                                |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/\_\_init\_\_.py                                                 |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/activate\_clearance/\_\_init\_\_.py                             |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -1632,12 +1632,12 @@
 | src/cora/safety/features/activate\_clearance\_template/route.py                          |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/activate\_clearance\_template/tool.py                           |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/amend\_clearance/\_\_init\_\_.py                                |        7 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/safety/features/amend\_clearance/command.py                                     |       12 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/safety/features/amend\_clearance/command.py                                     |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/amend\_clearance/context.py                                     |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/safety/features/amend\_clearance/decider.py                                     |       37 |        5 |       16 |        3 |     81.1% |104, 117-120, 130-\>129 |
-| src/cora/safety/features/amend\_clearance/handler.py                                     |       43 |        2 |        4 |        1 |     93.6% |   113-122 |
-| src/cora/safety/features/amend\_clearance/route.py                                       |       28 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/safety/features/amend\_clearance/tool.py                                        |       25 |        5 |        0 |        0 |     80.0% |   117-141 |
+| src/cora/safety/features/amend\_clearance/decider.py                                     |       44 |        5 |       20 |        3 |     84.4% |117, 137-140, 150-\>149 |
+| src/cora/safety/features/amend\_clearance/handler.py                                     |       44 |        2 |        4 |        1 |     93.8% |   113-122 |
+| src/cora/safety/features/amend\_clearance/route.py                                       |       29 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/safety/features/amend\_clearance/tool.py                                        |       26 |        5 |        0 |        0 |     80.8% |   125-149 |
 | src/cora/safety/features/append\_clearance\_review\_step/\_\_init\_\_.py                 |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/append\_clearance\_review\_step/command.py                      |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/append\_clearance\_review\_step/decider.py                      |       26 |        0 |       14 |        0 |    100.0% |           |
@@ -1689,11 +1689,11 @@
 | src/cora/safety/features/list\_clearances/route.py                                       |       37 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/list\_clearances/tool.py                                        |       37 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/register\_clearance/\_\_init\_\_.py                             |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/safety/features/register\_clearance/command.py                                  |       11 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/safety/features/register\_clearance/decider.py                                  |       29 |        0 |       16 |        0 |    100.0% |           |
-| src/cora/safety/features/register\_clearance/handler.py                                  |       33 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/safety/features/register\_clearance/route.py                                    |       28 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/safety/features/register\_clearance/tool.py                                     |       59 |        9 |       14 |        1 |     78.1% |146, 151-165, 173 |
+| src/cora/safety/features/register\_clearance/command.py                                  |       12 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/safety/features/register\_clearance/decider.py                                  |       36 |        0 |       20 |        0 |    100.0% |           |
+| src/cora/safety/features/register\_clearance/handler.py                                  |       34 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/safety/features/register\_clearance/route.py                                    |       29 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/safety/features/register\_clearance/tool.py                                     |       60 |        9 |       14 |        1 |     78.4% |146, 151-165, 173 |
 | src/cora/safety/features/reject\_clearance/\_\_init\_\_.py                               |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/reject\_clearance/command.py                                    |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/features/reject\_clearance/decider.py                                    |       12 |        0 |        4 |        0 |    100.0% |           |
@@ -2076,7 +2076,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   147-148 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **40305** |  **764** | **5416** |  **208** | **97.6%** |           |
+| **TOTAL**                                                                                | **40330** |  **764** | **5426** |  **208** | **97.6%** |           |
 
 
 ## Setup coverage badge
