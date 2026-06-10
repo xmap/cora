@@ -1076,7 +1076,7 @@
 | src/cora/federation/projections/credential.py                                            |       39 |        7 |       10 |        3 |     79.6% |155-160, 163-168, 179 |
 | src/cora/federation/projections/facility.py                                              |       33 |        1 |        8 |        1 |     95.1% |       181 |
 | src/cora/federation/projections/permit.py                                                |       48 |       21 |       14 |        2 |     46.8% |111-125, 179-215 |
-| src/cora/federation/projections/seal.py                                                  |       39 |       11 |       10 |        3 |     67.3% |131-140, 143-149, 159-169 |
+| src/cora/federation/projections/seal.py                                                  |       39 |        5 |       10 |        1 |     83.7% |   159-169 |
 | src/cora/federation/routes.py                                                            |       71 |        2 |       10 |        0 |     97.5% |   162-163 |
 | src/cora/federation/tools.py                                                             |       56 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/wire.py                                                              |       12 |        0 |        0 |        0 |    100.0% |           |
@@ -1212,7 +1212,7 @@
 | src/cora/operation/features/append\_activities/\_\_init\_\_.py                           |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/append\_activities/command.py                                |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/append\_activities/handler.py                                |       63 |        3 |       12 |        0 |     96.0% |   216-223 |
-| src/cora/operation/features/append\_activities/route.py                                  |       26 |        5 |        0 |        0 |     80.8% |143-144, 201-217 |
+| src/cora/operation/features/append\_activities/route.py                                  |       26 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/append\_activities/tool.py                                   |       20 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/complete\_procedure/\_\_init\_\_.py                          |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/complete\_procedure/command.py                               |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -1231,7 +1231,7 @@
 | src/cora/operation/features/get\_procedure/route.py                                      |       19 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/operation/features/get\_procedure/tool.py                                       |       21 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/operation/features/list\_procedures/\_\_init\_\_.py                             |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/list\_procedures/handler.py                                  |       22 |        1 |        0 |        0 |     95.5% |        81 |
+| src/cora/operation/features/list\_procedures/handler.py                                  |       22 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/list\_procedures/query.py                                    |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/list\_procedures/route.py                                    |       25 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/list\_procedures/tool.py                                     |       26 |        0 |        0 |        0 |    100.0% |           |
@@ -2076,7 +2076,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   147-148 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **40289** |  **775** | **5412** |  **209** | **97.6%** |           |
+| **TOTAL**                                                                                | **40289** |  **763** | **5412** |  **207** | **97.6%** |           |
 
 
 ## Setup coverage badge
