@@ -29,6 +29,7 @@ import asyncpg
 import pytest
 
 from cora.federation.aggregates.credential import CredentialPurpose, CredentialStatus
+from cora.federation.aggregates.facility._stream_id import facility_stream_id
 from cora.federation.aggregates.seal import SealStatus, load_seal
 from cora.federation.aggregates.seal._stream_id import seal_stream_id
 from cora.federation.features import initialize_seal, sign_seal_pointer
@@ -38,7 +39,11 @@ from cora.federation.projections import SealSummaryProjection
 from cora.infrastructure.adapters.in_memory_credential_lookup import (
     InMemoryCredentialLookup,
 )
+from cora.infrastructure.adapters.in_memory_facility_lookup import (
+    InMemoryFacilityLookup,
+)
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.shared.facility_code import FacilityCode
 from tests.integration._helpers import build_postgres_deps
 
 _INIT_NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
@@ -57,6 +62,19 @@ def _init_command(*, facility_code: str) -> InitializeSeal:
         online_credential_id=_ONLINE_KEY_REF,
         offline_credential_id=_OFFLINE_KEY_REF,
     )
+
+
+def _facility_lookup_for(facility_code: str) -> InMemoryFacilityLookup:
+    """Seed the self-Facility row with both seal-slot credentials as
+    trust anchors (Slice 6 Sub-Slice C structural set-membership check)."""
+    lookup = InMemoryFacilityLookup()
+    lookup.register(
+        facility_id=facility_stream_id(FacilityCode(facility_code)),
+        code=facility_code,
+        kind="Site",
+        trust_anchor_credential_ids=frozenset({_ONLINE_KEY_REF, _OFFLINE_KEY_REF}),
+    )
+    return lookup
 
 
 def _credential_lookup_for(facility_code: str) -> InMemoryCredentialLookup:
@@ -96,6 +114,7 @@ async def test_sign_seal_pointer_roundtrip_lands_on_same_stream(
         now=_INIT_NOW,
         ids=[uuid4() for _ in range(5)],
         credential_lookup=_credential_lookup_for(facility_code),
+        facility_lookup=_facility_lookup_for(facility_code),
     )
     init_stream_id = await initialize_seal.bind(init_deps)(
         _init_command(facility_code=facility_code),
@@ -104,7 +123,12 @@ async def test_sign_seal_pointer_roundtrip_lands_on_same_stream(
     )
     assert init_stream_id == expected_stream_id
 
-    sign_deps = build_postgres_deps(db_pool, now=_SIGN_NOW, ids=[uuid4() for _ in range(3)])
+    sign_deps = build_postgres_deps(
+        db_pool,
+        now=_SIGN_NOW,
+        ids=[uuid4() for _ in range(3)],
+        facility_lookup=_facility_lookup_for(facility_code),
+    )
     await sign_seal_pointer.bind(sign_deps)(
         _sign_command(facility_code=facility_code),
         principal_id=_PRINCIPAL_ID,

@@ -29,6 +29,7 @@ from cora.federation.aggregates.credential import (
     CredentialPurpose,
     CredentialStatus,
 )
+from cora.federation.aggregates.facility._stream_id import facility_stream_id
 from cora.federation.aggregates.seal import (
     SealStatus,
     load_seal,
@@ -41,13 +42,39 @@ from cora.federation.projections import SealSummaryProjection
 from cora.infrastructure.adapters.in_memory_credential_lookup import (
     InMemoryCredentialLookup,
 )
+from cora.infrastructure.adapters.in_memory_facility_lookup import (
+    InMemoryFacilityLookup,
+)
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.shared.facility_code import FacilityCode
 from tests.integration._helpers import build_postgres_deps
 
 _INITIALIZED_AT = datetime(2026, 5, 30, 10, 0, 0, tzinfo=UTC)
 _ROTATED_AT = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000fed401")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-000000fed402")
+
+
+def _build_facility_lookup_for(
+    facility_code: str,
+    *,
+    trust_anchors: frozenset[UUID] = frozenset(),
+) -> InMemoryFacilityLookup:
+    """Seed an `InMemoryFacilityLookup` for the test's self-Facility.
+
+    `trust_anchors` must include the credential IDs the seal handler
+    will validate via Slice 6 Sub-Slice C's structural set-membership
+    check; otherwise `SealCredentialNotTrustAnchorError` fires before
+    `FacilityNotFoundError` is even reached.
+    """
+    lookup = InMemoryFacilityLookup()
+    lookup.register(
+        facility_id=facility_stream_id(FacilityCode(facility_code)),
+        code=facility_code,
+        kind="Site",
+        trust_anchor_credential_ids=trust_anchors,
+    )
+    return lookup
 
 
 async def _seed_live_seal(db_pool: asyncpg.Pool, facility_id: str) -> tuple[UUID, UUID, UUID]:
@@ -57,6 +84,8 @@ async def _seed_live_seal(db_pool: asyncpg.Pool, facility_id: str) -> tuple[UUID
     can assert the post-rotation state against the seeded refs. The
     handler's Pass-3 credential-lookup gate is satisfied by threading
     an `InMemoryCredentialLookup` pre-seeded with both refs Active.
+    The Slice 6 Sub-Slice C trust-anchor check is satisfied by seeding
+    both credential refs into the Facility's trust_anchor_credential_ids.
     """
     online_credential_id = uuid4()
     offline_credential_id = uuid4()
@@ -78,6 +107,10 @@ async def _seed_live_seal(db_pool: asyncpg.Pool, facility_id: str) -> tuple[UUID
         now=_INITIALIZED_AT,
         ids=[uuid4() for _ in range(5)],
         credential_lookup=seed_lookup,
+        facility_lookup=_build_facility_lookup_for(
+            facility_id,
+            trust_anchors=frozenset({online_credential_id, offline_credential_id}),
+        ),
     )
     stream_id = await initialize_seal.bind(seed_deps)(
         InitializeSeal(
@@ -128,6 +161,10 @@ async def test_rotate_seal_online_key_writes_both_streams_atomically(
         now=_ROTATED_AT,
         ids=[uuid4() for _ in range(5)],
         credential_lookup=_credential_lookup_with(new_online_credential_id, facility_id),
+        facility_lookup=_build_facility_lookup_for(
+            facility_id,
+            trust_anchors=frozenset({new_online_credential_id, offline_credential_id}),
+        ),
     )
     await rotate_seal_online_key.bind(rotate_deps)(
         RotateSealOnlineKey(
@@ -168,7 +205,7 @@ async def test_rotate_seal_online_key_shared_xid8_across_streams(
     (`context = 'SealOnlineKeyRotated'`)."""
     suffix = uuid4().hex[:8]
     facility_id = f"aps-2bm-{suffix}"
-    stream_id, _, _ = await _seed_live_seal(db_pool, facility_id)
+    stream_id, _, offline_credential_id = await _seed_live_seal(db_pool, facility_id)
     new_online_credential_id = uuid4()
 
     rotate_deps = build_postgres_deps(
@@ -176,6 +213,10 @@ async def test_rotate_seal_online_key_shared_xid8_across_streams(
         now=_ROTATED_AT,
         ids=[uuid4() for _ in range(5)],
         credential_lookup=_credential_lookup_with(new_online_credential_id, facility_id),
+        facility_lookup=_build_facility_lookup_for(
+            facility_id,
+            trust_anchors=frozenset({new_online_credential_id, offline_credential_id}),
+        ),
     )
     await rotate_seal_online_key.bind(rotate_deps)(
         RotateSealOnlineKey(
@@ -231,6 +272,10 @@ async def test_rotate_seal_online_key_projection_lands_new_online_ref(
         now=_ROTATED_AT,
         ids=[uuid4() for _ in range(5)],
         credential_lookup=_credential_lookup_with(new_online_credential_id, facility_id),
+        facility_lookup=_build_facility_lookup_for(
+            facility_id,
+            trust_anchors=frozenset({new_online_credential_id, offline_credential_id}),
+        ),
     )
     await rotate_seal_online_key.bind(rotate_deps)(
         RotateSealOnlineKey(
@@ -277,7 +322,7 @@ async def test_rotate_seal_online_key_targets_deterministic_stream_id(
     genesis went to."""
     suffix = uuid4().hex[:8]
     facility_id = f"aps-2bm-{suffix}"
-    seeded_stream_id, _, _ = await _seed_live_seal(db_pool, facility_id)
+    seeded_stream_id, _, offline_credential_id = await _seed_live_seal(db_pool, facility_id)
     expected_stream_id = seal_stream_id(facility_id)
     assert seeded_stream_id == expected_stream_id
 
@@ -287,6 +332,10 @@ async def test_rotate_seal_online_key_targets_deterministic_stream_id(
         now=_ROTATED_AT,
         ids=[uuid4() for _ in range(5)],
         credential_lookup=_credential_lookup_with(new_online_credential_id, facility_id),
+        facility_lookup=_build_facility_lookup_for(
+            facility_id,
+            trust_anchors=frozenset({new_online_credential_id, offline_credential_id}),
+        ),
     )
     await rotate_seal_online_key.bind(rotate_deps)(
         RotateSealOnlineKey(
