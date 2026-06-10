@@ -53,9 +53,11 @@ def test_get_federation_credential_returns_200_with_full_state() -> None:
     assert body["status"] == "Active"
     assert body["rotation_pending_secret_ref"] is None
     assert body["rotation_pending_public_material_ref"] is None
-    # In-memory test mode lacks a Postgres pool, so projection-sourced
-    # lifecycle timestamps fold to None per the Path C contract.
-    assert body["registered_at"] is None
+    # `registered_at` is aggregate-state-sourced (folded from
+    # CredentialRegistered.occurred_at by the fold-symmetry refactor),
+    # so it is always populated regardless of projection backend.
+    assert datetime.fromisoformat(body["registered_at"]) is not None
+    # `rotation_started_at` stays None when no rotation has occurred.
     assert body["rotation_started_at"] is None
 
 

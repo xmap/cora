@@ -17,6 +17,7 @@ from cora.equipment.aggregates.asset import (
     AssetLevel,
     AssetLifecycle,
     AssetName,
+    AssetTier,
 )
 from cora.equipment.features import (
     activate_asset,
@@ -80,6 +81,7 @@ async def test_handler_returns_asset_for_known_id() -> None:
         lifecycle=AssetLifecycle.COMMISSIONED,
         commissioned_at=_NOW,
         commissioned_by=ActorId(_PRINCIPAL_ID),
+        tier=AssetTier.UNIT,
     )
 
 

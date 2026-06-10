@@ -58,7 +58,7 @@ def test_post_revisions_accepts_each_source_kind() -> None:
         for source in [
             {"kind": "Measured", "procedure_id": str(uuid4())},
             {"kind": "Computed", "dataset_id": str(uuid4())},
-            {"kind": "Asserted", "actor_id": str(uuid4())},
+            {"kind": "Asserted", "asserted_by": str(uuid4())},
         ]:
             response = client.post(
                 f"/calibrations/{cid}/revisions",

@@ -12,6 +12,7 @@ from cora.equipment.aggregates.asset import (
     AssetLevel,
     AssetLifecycle,
     AssetName,
+    AssetTier,
     evolve,
     fold,
 )
@@ -167,6 +168,7 @@ def test_fold_single_asset_registered_returns_asset() -> None:
         lifecycle=AssetLifecycle.COMMISSIONED,
         commissioned_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
+        tier=AssetTier.DEVICE,
     )
 
 
@@ -237,6 +239,7 @@ def test_decider_and_evolver_round_trip_for_device_with_parent() -> None:
         lifecycle=AssetLifecycle.COMMISSIONED,
         commissioned_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
+        tier=AssetTier.DEVICE,
     )
 
 
