@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_ca0daf7f4a7ee722_postgres_clearance_template_lookup_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-10 15:52 +0000
+            created at 2026-06-10 19:18 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -126,7 +126,7 @@
     <p class="run"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span><span class="op">.</span><span class="nam">clearance_lookup</span> <span class="key">import</span> <span class="nam">ClearanceReference</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t"><span class="nam">_FIND_REFERENCING_RUN_SQL</span> <span class="op">=</span> <span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t"><span class="str">SELECT clearance_id, status, kind, facility_asset_id</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t"><span class="str">SELECT clearance_id, status, kind, facility_code</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t"><span class="str">FROM proj_safety_clearance_summary</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t"><span class="str">WHERE $1 = ANY(run_binding_ids)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="str">   OR ($2::uuid IS NOT NULL AND $2 = ANY(subject_binding_ids))</span>&nbsp;</span><span class="r"></span></p>
@@ -165,7 +165,7 @@
     <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">        <span class="nam">clearance_id</span><span class="op">=</span><span class="nam">row</span><span class="op">[</span><span class="str">"clearance_id"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">        <span class="nam">status</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"status"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">        <span class="nam">kind</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"kind"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">        <span class="nam">facility_asset_id</span><span class="op">=</span><span class="nam">row</span><span class="op">[</span><span class="str">"facility_asset_id"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">        <span class="nam">facility_code</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">row</span><span class="op">[</span><span class="str">"facility_code"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
@@ -176,7 +176,7 @@
             <a class="nav" href="z_ca0daf7f4a7ee722_postgres_clearance_template_lookup_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-10 15:52 +0000
+            created at 2026-06-10 19:18 +0000
         </p>
     </div>
 </footer>
