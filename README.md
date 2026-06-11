@@ -155,7 +155,7 @@
 | src/cora/agent/tools.py                                                                  |       34 |        1 |        2 |        1 |     94.4% |       105 |
 | src/cora/agent/wire.py                                                                   |       14 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/api/\_\_init\_\_.py                                                             |        0 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/api/main.py                                                                     |      227 |        0 |       14 |        2 |     99.2% |271-\>270, 574-\>577 |
+| src/cora/api/main.py                                                                     |      230 |        0 |       14 |        2 |     99.2% |275-\>274, 591-\>594 |
 | src/cora/api/middleware.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/api/protected\_resource\_metadata.py                                            |       30 |        0 |        8 |        1 |     97.4% | 127-\>125 |
 | src/cora/calibration/\_\_init\_\_.py                                                     |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -335,16 +335,51 @@
 | src/cora/caution/tools.py                                                                |       14 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/caution/wire.py                                                                 |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/\_\_init\_\_.py                                                            |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/data/\_bootstrap.py                                                             |        2 |        2 |        0 |        0 |      0.0% |     13-15 |
-| src/cora/data/\_projections.py                                                           |        7 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/\_bootstrap.py                                                             |       85 |       10 |       28 |        6 |     85.8% |152-158, 225-226, 264-268, 272-276, 282-286, 323-\>245 |
+| src/cora/data/\_projections.py                                                           |       11 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/adapters/\_\_init\_\_.py                                                   |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/adapters/http\_range\_checksum.py                                          |       61 |       48 |       16 |        0 |     16.9% |62-64, 73-139 |
+| src/cora/data/adapters/in\_memory\_distribution\_lookup.py                               |       18 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/data/adapters/postgres\_distribution\_lookup.py                                 |       24 |        2 |        4 |        2 |     85.7% |    37, 53 |
+| src/cora/data/adapters/rocrate12\_serializer.py                                          |       28 |        0 |        2 |        1 |     96.7% |   94-\>96 |
+| src/cora/data/adapters/stub\_edition\_serializer.py                                      |       16 |        1 |        0 |        0 |     93.8% |       121 |
 | src/cora/data/aggregates/\_\_init\_\_.py                                                 |        0 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/aggregates/acquisition/\_\_init\_\_.py                                     |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/aggregates/acquisition/events.py                                           |       28 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/data/aggregates/acquisition/evolver.py                                          |       14 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/data/aggregates/acquisition/read.py                                             |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/aggregates/acquisition/state.py                                            |       74 |        1 |       16 |        1 |     97.8% |       221 |
+| src/cora/data/aggregates/attestation/\_\_init\_\_.py                                     |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/aggregates/attestation/events.py                                           |       44 |       20 |        4 |        0 |     54.2% |   136-180 |
+| src/cora/data/aggregates/attestation/evolver.py                                          |       38 |       30 |       14 |        0 |     15.4% |64-89, 101-116, 133-136 |
+| src/cora/data/aggregates/attestation/read.py                                             |       10 |        3 |        0 |        0 |     70.0% |     22-24 |
+| src/cora/data/aggregates/attestation/state.py                                            |       94 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/data/aggregates/dataset/\_\_init\_\_.py                                         |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/aggregates/dataset/events.py                                               |       51 |        0 |       14 |        0 |    100.0% |           |
 | src/cora/data/aggregates/dataset/evolver.py                                              |       24 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/data/aggregates/dataset/read.py                                                 |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/data/aggregates/dataset/state.py                                                |      201 |        0 |       32 |        0 |    100.0% |           |
+| src/cora/data/aggregates/dataset/state.py                                                |      205 |        0 |       32 |        0 |    100.0% |           |
+| src/cora/data/aggregates/distribution/\_\_init\_\_.py                                    |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/aggregates/distribution/\_backfill\_errors.py                              |       14 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/aggregates/distribution/\_namespaces.py                                    |        2 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/aggregates/distribution/events.py                                          |       29 |        3 |        2 |        1 |     87.1% |   175-177 |
+| src/cora/data/aggregates/distribution/evolver.py                                         |       15 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/data/aggregates/distribution/read.py                                            |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/aggregates/distribution/state.py                                           |      100 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/data/aggregates/edition/\_\_init\_\_.py                                         |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/aggregates/edition/events.py                                               |       67 |       10 |       22 |        2 |     84.3% |361-369, 398-411 |
+| src/cora/data/aggregates/edition/evolver.py                                              |       39 |        2 |       14 |        1 |     94.3% |     49-50 |
+| src/cora/data/aggregates/edition/read.py                                                 |       11 |        3 |        0 |        0 |     72.7% |     22-24 |
+| src/cora/data/aggregates/edition/state.py                                                |      200 |        2 |       22 |        0 |     99.1% |   520-524 |
 | src/cora/data/errors.py                                                                  |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/\_\_init\_\_.py                                                   |        0 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/add\_dataset\_to\_edition/\_\_init\_\_.py                         |        7 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/add\_dataset\_to\_edition/command.py                              |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/add\_dataset\_to\_edition/context.py                              |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/add\_dataset\_to\_edition/decider.py                              |       16 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/data/features/add\_dataset\_to\_edition/handler.py                              |       39 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/data/features/add\_dataset\_to\_edition/route.py                                |       14 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/add\_dataset\_to\_edition/tool.py                                 |       19 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/demote\_dataset/\_\_init\_\_.py                                   |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/demote\_dataset/command.py                                        |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/demote\_dataset/decider.py                                        |       15 |        0 |        8 |        0 |    100.0% |           |
@@ -374,6 +409,27 @@
 | src/cora/data/features/promote\_dataset/handler.py                                       |       40 |        0 |        8 |        1 |     97.9% | 148-\>146 |
 | src/cora/data/features/promote\_dataset/route.py                                         |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/promote\_dataset/tool.py                                          |       16 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/publish\_edition/\_\_init\_\_.py                                  |        3 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/publish\_edition/command.py                                       |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/publish\_edition/context.py                                       |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/publish\_edition/decider.py                                       |       12 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/data/features/publish\_edition/handler.py                                       |       80 |       10 |       20 |        5 |     85.0% |132, 149, 157-158, 168, 180, 200-203 |
+| src/cora/data/features/publish\_edition/route.py                                         |       14 |        1 |        0 |        0 |     92.9% |        69 |
+| src/cora/data/features/publish\_edition/tool.py                                          |       18 |        1 |        0 |        0 |     94.4% |        45 |
+| src/cora/data/features/record\_acquisition/\_\_init\_\_.py                               |        7 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/record\_acquisition/command.py                                    |        9 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/record\_acquisition/context.py                                    |        7 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/record\_acquisition/decider.py                                    |       24 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/data/features/record\_acquisition/handler.py                                    |       47 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/data/features/record\_acquisition/route.py                                      |       22 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/record\_acquisition/tool.py                                       |       19 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/record\_attestation/\_\_init\_\_.py                               |        7 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/record\_attestation/command.py                                    |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/record\_attestation/context.py                                    |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/record\_attestation/decider.py                                    |       42 |        0 |       24 |        1 |     98.5% | 213-\>235 |
+| src/cora/data/features/record\_attestation/handler.py                                    |       50 |        2 |       10 |        1 |     95.0% |134-136, 147-\>152 |
+| src/cora/data/features/record\_attestation/route.py                                      |       25 |        1 |        0 |        0 |     96.0% |       222 |
+| src/cora/data/features/record\_attestation/tool.py                                       |       20 |        1 |        0 |        0 |     95.0% |       158 |
 | src/cora/data/features/register\_dataset/\_\_init\_\_.py                                 |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/register\_dataset/command.py                                      |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/register\_dataset/context.py                                      |       10 |        0 |        0 |        0 |    100.0% |           |
@@ -381,11 +437,53 @@
 | src/cora/data/features/register\_dataset/handler.py                                      |       55 |        0 |       16 |        0 |    100.0% |           |
 | src/cora/data/features/register\_dataset/route.py                                        |       27 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/register\_dataset/tool.py                                         |       19 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/data/projections/\_\_init\_\_.py                                                |        2 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/register\_distribution/\_\_init\_\_.py                            |        7 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/register\_distribution/command.py                                 |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/register\_distribution/context.py                                 |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/register\_distribution/decider.py                                 |       33 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/data/features/register\_distribution/handler.py                                 |       41 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/data/features/register\_distribution/route.py                                   |       23 |        1 |        0 |        0 |     95.7% |       234 |
+| src/cora/data/features/register\_distribution/tool.py                                    |       20 |        1 |        0 |        0 |     95.0% |       144 |
+| src/cora/data/features/register\_edition/\_\_init\_\_.py                                 |        7 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/register\_edition/command.py                                      |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/register\_edition/context.py                                      |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/register\_edition/decider.py                                      |       30 |        0 |       12 |        0 |    100.0% |           |
+| src/cora/data/features/register\_edition/handler.py                                      |       41 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/data/features/register\_edition/route.py                                        |       24 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/register\_edition/tool.py                                         |       21 |        1 |        0 |        0 |     95.2% |       108 |
+| src/cora/data/features/remove\_dataset\_from\_edition/\_\_init\_\_.py                    |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/remove\_dataset\_from\_edition/command.py                         |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/remove\_dataset\_from\_edition/decider.py                         |       14 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/data/features/remove\_dataset\_from\_edition/handler.py                         |       33 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/data/features/remove\_dataset\_from\_edition/route.py                           |       14 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/remove\_dataset\_from\_edition/tool.py                            |       19 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/seal\_edition/\_\_init\_\_.py                                     |        3 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/seal\_edition/command.py                                          |        7 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/seal\_edition/context.py                                          |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/seal\_edition/decider.py                                          |       27 |        0 |       14 |        0 |    100.0% |           |
+| src/cora/data/features/seal\_edition/handler.py                                          |      101 |        8 |       38 |        7 |     89.2% |104, 107, 164, 166, 184, 236, 252, 275 |
+| src/cora/data/features/seal\_edition/route.py                                            |       21 |        1 |        0 |        0 |     95.2% |       124 |
+| src/cora/data/features/seal\_edition/tool.py                                             |       19 |        1 |        0 |        0 |     94.7% |        78 |
+| src/cora/data/features/withdraw\_edition/\_\_init\_\_.py                                 |        3 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/withdraw\_edition/command.py                                      |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/withdraw\_edition/context.py                                      |        3 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/features/withdraw\_edition/decider.py                                      |       12 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/data/features/withdraw\_edition/handler.py                                      |       44 |        1 |        8 |        1 |     96.2% |       117 |
+| src/cora/data/features/withdraw\_edition/route.py                                        |       17 |        1 |        0 |        0 |     94.1% |        92 |
+| src/cora/data/features/withdraw\_edition/tool.py                                         |       19 |        1 |        0 |        0 |     94.7% |        58 |
+| src/cora/data/ports/\_\_init\_\_.py                                                      |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/ports/checksum\_verifier.py                                                |       37 |       12 |        0 |        0 |     67.6% |132-133, 151-152, 170-171, 178, 187-188, 199, 208-209 |
+| src/cora/data/ports/distribution\_lookup.py                                              |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/ports/edition\_serializer.py                                               |       14 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/projections/\_\_init\_\_.py                                                |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/projections/acquisition\_summary.py                                        |       18 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/data/projections/attestation\_summary.py                                        |       26 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/data/projections/distribution\_summary.py                                       |       60 |        4 |       14 |        2 |     91.9% |194, 197, 200-201 |
+| src/cora/data/projections/edition\_summary.py                                            |       45 |        2 |       12 |        1 |     94.7% |   180-181 |
 | src/cora/data/projections/summary.py                                                     |       22 |        0 |        4 |        0 |    100.0% |           |
-| src/cora/data/routes.py                                                                  |       42 |        0 |       10 |        0 |    100.0% |           |
-| src/cora/data/tools.py                                                                   |       16 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/data/wire.py                                                                    |       11 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/routes.py                                                                  |       69 |        2 |       16 |        0 |     97.6% |   242-243 |
+| src/cora/data/tools.py                                                                   |       34 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/wire.py                                                                    |       30 |        0 |        4 |        1 |     97.1% | 111-\>121 |
 | src/cora/decision/\_\_init\_\_.py                                                        |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/decision/\_bootstrap.py                                                         |        2 |        2 |        0 |        0 |      0.0% |      8-10 |
 | src/cora/decision/\_projections.py                                                       |        8 |        0 |        0 |        0 |    100.0% |           |
@@ -488,8 +586,7 @@
 | src/cora/equipment/\_template\_slot\_body.py                                             |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/\_template\_wire\_body.py                                             |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/adapters/\_\_init\_\_.py                                              |        2 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/equipment/adapters/postgres\_asset\_lookup.py                                   |       18 |        6 |        2 |        0 |     60.0% | 68-72, 76 |
-| src/cora/equipment/adapters/stub\_doi\_minter.py                                         |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/adapters/postgres\_asset\_lookup.py                                   |       18 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/\_\_init\_\_.py                                            |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/\_drawing.py                                               |       32 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/\_partition\_rule.py                                       |      173 |        0 |       60 |        3 |     98.7% |525-\>exit, 627-\>exit, 673-\>exit |
@@ -507,7 +604,7 @@
 | src/cora/equipment/aggregates/asset/settings\_validation.py                              |       60 |        0 |       24 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/asset/state.py                                             |      304 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/family/\_\_init\_\_.py                                     |        7 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/equipment/aggregates/family/affordance.py                                       |       63 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/aggregates/family/affordance.py                                       |       65 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/family/events.py                                           |       48 |        0 |       14 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/family/evolver.py                                          |       24 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/family/read.py                                             |       52 |        3 |       10 |        3 |     90.3% |139, 203, 233 |
@@ -868,8 +965,7 @@
 | src/cora/equipment/features/version\_model/handler.py                                    |       31 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/equipment/features/version\_model/route.py                                      |       22 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/version\_model/tool.py                                       |       22 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/equipment/ports/\_\_init\_\_.py                                                 |        2 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/equipment/ports/doi\_minter.py                                                  |        9 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/ports/\_\_init\_\_.py                                                 |        1 |        1 |        0 |        0 |      0.0% |         9 |
 | src/cora/equipment/projections/\_\_init\_\_.py                                           |       14 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/projections/assembly\_summary.py                                      |       25 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/equipment/projections/asset.py                                                  |       98 |        7 |       40 |        5 |     91.3% |359, 365, 375-377, 388, 526 |
@@ -884,7 +980,7 @@
 | src/cora/equipment/projections/mount\_children.py                                        |       21 |        2 |        6 |        1 |     88.9% |     84-85 |
 | src/cora/equipment/projections/mount\_slot\_code.py                                      |       23 |        2 |        6 |        1 |     89.7% |     84-85 |
 | src/cora/equipment/projections/mount\_summary.py                                         |       30 |        3 |       10 |        2 |     87.5% |96, 113-114 |
-| src/cora/equipment/routes.py                                                             |      120 |        6 |       12 |        0 |     95.5% |352-353, 369-370, 384-385 |
+| src/cora/equipment/routes.py                                                             |      120 |        8 |       12 |        0 |     93.9% |332-333, 352-353, 369-370, 384-385 |
 | src/cora/equipment/tools.py                                                              |      114 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/wire.py                                                               |       21 |        1 |        2 |        1 |     91.3% |       224 |
 | src/cora/federation/\_\_init\_\_.py                                                      |        8 |        0 |        0 |        0 |    100.0% |           |
@@ -1100,6 +1196,7 @@
 | src/cora/infrastructure/adapters/postgres\_idempotency\_store.py                         |       40 |        2 |       12 |        2 |     92.3% |  127, 153 |
 | src/cora/infrastructure/adapters/postgres\_profile\_store.py                             |       36 |        5 |        4 |        0 |     82.5% |    99-103 |
 | src/cora/infrastructure/adapters/signing\_registry.py                                    |       28 |        1 |       14 |        1 |     95.2% |        70 |
+| src/cora/infrastructure/adapters/stub\_doi\_minter.py                                    |       12 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/\_\_init\_\_.py                                             |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/\_routed\_path.py                                           |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/bearer\_auth\_middleware.py                                 |       66 |        4 |       14 |        1 |     93.8% |267-283, 322 |
@@ -1107,7 +1204,7 @@
 | src/cora/infrastructure/auth/config.py                                                   |       56 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/exception\_handlers.py                                      |       44 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/idp\_registry.py                                            |       48 |        0 |       18 |        0 |    100.0% |           |
-| src/cora/infrastructure/config.py                                                        |       67 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/infrastructure/config.py                                                        |       68 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/infrastructure/control\_port\_route.py                                          |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/deps.py                                                          |       98 |        0 |       14 |        1 |     99.1% | 863-\>859 |
 | src/cora/infrastructure/event\_envelope.py                                               |        7 |        0 |        0 |        0 |    100.0% |           |
@@ -1155,7 +1252,7 @@
 | src/cora/infrastructure/ports/secret\_store.py                                           |       15 |       15 |        0 |        0 |      0.0% |    58-133 |
 | src/cora/infrastructure/ports/signer.py                                                  |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/signing.py                                                 |       39 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/ports/supply\_lookup.py                                          |       16 |        4 |        0 |        0 |     75.0% |111-113, 141-142 |
+| src/cora/infrastructure/ports/supply\_lookup.py                                          |       40 |       11 |        2 |        1 |     71.4% |152-154, 190-191, 194-195, 214-215, 240-241, 246 |
 | src/cora/infrastructure/ports/token\_verifier.py                                         |       24 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/postgres/\_\_init\_\_.py                                         |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/postgres/pool.py                                                 |        8 |        0 |        0 |        0 |    100.0% |           |
@@ -1741,6 +1838,8 @@
 | src/cora/shared/json\_schema\_subset.py                                                  |       76 |        0 |       38 |        0 |    100.0% |           |
 | src/cora/shared/json\_schema\_validation.py                                              |       80 |        4 |       34 |        1 |     95.6% |140, 257-259 |
 | src/cora/shared/logbook.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/shared/ports/\_\_init\_\_.py                                                    |        2 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/shared/ports/doi\_minter.py                                                     |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/shared/scope\_markers.py                                                        |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/subject/\_\_init\_\_.py                                                         |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/subject/\_bootstrap.py                                                          |        2 |        2 |        0 |        0 |      0.0% |     13-15 |
@@ -1823,7 +1922,7 @@
 | src/cora/supply/\_projections.py                                                         |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/supply/\_supply\_update\_handler.py                                             |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/supply/adapters/\_\_init\_\_.py                                                 |        2 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/supply/adapters/postgres\_supply\_lookup.py                                     |       20 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/supply/adapters/postgres\_supply\_lookup.py                                     |       28 |        1 |        6 |        1 |     94.1% |       107 |
 | src/cora/supply/aggregates/\_\_init\_\_.py                                               |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/supply/aggregates/supply/\_\_init\_\_.py                                        |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/supply/aggregates/supply/events.py                                              |      103 |        7 |       32 |        2 |     90.4% |446, 477-485 |
@@ -2076,7 +2175,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   147-148 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **40330** |  **764** | **5426** |  **208** | **97.6%** |           |
+| **TOTAL**                                                                                | **42892** |  **954** | **5840** |  **243** | **97.2%** |           |
 
 
 ## Setup coverage badge
