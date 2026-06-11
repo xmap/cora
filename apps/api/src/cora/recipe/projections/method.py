@@ -204,12 +204,19 @@ class MethodSummaryProjection:
                 # projection rebuild) keeps the latest entry; the
                 # SQL's ORDER BY role_name sorts the output for byte-
                 # stable persistence.
+                # Layer 3 sub-slice 3D: role_kind conditionally
+                # rendered (only when non-None) for byte-stable
+                # legacy payload preservation. family_id may be
+                # None for the role_kind path.
                 role_jsonb: dict[str, object] = {
                     "role_name": event.payload["role_name"],
-                    "family_id": event.payload["family_id"],
+                    "family_id": event.payload.get("family_id"),
                     "required_ports": list(event.payload.get("required_ports", [])),
                     "optional": bool(event.payload.get("optional", False)),
                 }
+                role_kind = event.payload.get("role_kind")
+                if role_kind is not None:
+                    role_jsonb["role_kind"] = role_kind
                 await conn.execute(
                     _UPDATE_REQUIRED_ROLE_ADDED_SQL,
                     UUID(event.payload["method_id"]),

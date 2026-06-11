@@ -987,6 +987,78 @@ class PlanRoleFamilyMismatchError(Exception):
         self.asset_family_ids = asset_family_ids
 
 
+class PlanRoleFamilyNotResolvableError(Exception):
+    """One of the bound Asset's family_ids does not resolve to a Family stream.
+
+    Layer 3 sub-slice 3D: when `bind_plan_role` follows the role_kind
+    path, the handler walks `Asset.family_ids` through
+    `FamilyLookup.lookup` to gather candidate Family rows. A None
+    result signals a stale or missing Family projection row, which
+    is a load-side integrity problem rather than an operator authoring
+    fault. Mapped to HTTP 409 (the role binding cannot be evaluated;
+    the operator must fix the Family stream or pick a different Asset).
+    """
+
+    def __init__(
+        self,
+        plan_id: UUID,
+        role_name: "RoleName",
+        asset_id: UUID,
+        missing_family_id: UUID,
+    ) -> None:
+        super().__init__(
+            f"Plan {plan_id} cannot bind role {role_name.value!r} to "
+            f"Asset {asset_id}: Family {missing_family_id} (on the "
+            "Asset's family_ids) does not resolve via FamilyLookup "
+            "(stale projection or unknown Family). Investigate the "
+            "Family stream before retrying."
+        )
+        self.plan_id = plan_id
+        self.role_name = role_name
+        self.asset_id = asset_id
+        self.missing_family_id = missing_family_id
+
+
+class PlanRoleAssetCannotPresentError(Exception):
+    """No Family on the bound Asset advertises the required Role contract.
+
+    Layer 3 sub-slice 3D, ANY-single-family disjunction per Lock 17:
+    the role_kind-path satisfaction check walks `Asset.family_ids` and
+    accepts iff AT LEAST ONE Family both (a) declares `role_kind` in
+    its `presents_as` AND (b) has `affordances` superset
+    `Role.required_affordances`. If no single Family satisfies BOTH,
+    this fires.
+
+    Mapped to HTTP 409. Diagnostic carries the role, the Asset's
+    Family ids, and the required Role's id so the operator can
+    diagnose whether to widen Family.presents_as / Family.affordances
+    or pick a different Asset.
+    """
+
+    def __init__(
+        self,
+        plan_id: UUID,
+        role_name: "RoleName",
+        asset_id: UUID,
+        role_kind: UUID,
+        asset_family_ids: frozenset[UUID],
+    ) -> None:
+        super().__init__(
+            f"Plan {plan_id} cannot bind role {role_name.value!r} to "
+            f"Asset {asset_id}: no Family on the Asset advertises Role "
+            f"{role_kind} via presents_as with covering affordances. "
+            f"Asset.family_ids = {sorted(str(f) for f in asset_family_ids)}; "
+            "either add the Role to a Family's presents_as (and widen "
+            "its affordances if needed) or pick an Asset whose Families "
+            "already advertise the Role."
+        )
+        self.plan_id = plan_id
+        self.role_name = role_name
+        self.asset_id = asset_id
+        self.role_kind = role_kind
+        self.asset_family_ids = asset_family_ids
+
+
 class PlanRolePortCoverageNotSatisfiedError(Exception):
     """The Asset bound to a role does not expose all of the role's
     required_ports.

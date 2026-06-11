@@ -17,7 +17,7 @@ A Run carries five roles:
 Out of scope
 {: .cora-kicker }
 
-- **High-frequency telemetry.** Per-frame triggers and sub-millisecond timing edges live on observation channels, not on the Run's main event stream.
+- **High-frequency telemetry.** Per-frame triggers and sub-millisecond timing edges live on observation channels, not on the Run's main event stream. See [the recording spine and the optional execution edge](../../standards.md#the-recording-spine-and-the-optional-execution-edge) for where this line sits.
 - **Bulk data.** Frame bytes and reconstructed volumes live in the Data module's Datasets, referenced from the Run by URI plus checksum.
 
 </div>

@@ -29,10 +29,10 @@
 ## Pending in code
 
 - `cora.capability.energy_scan` — Method-binding for `energy_change` style scans (currently `energy_change` binds to `tomography`).
-- `cora.capability.steering` — Method-binding for closed-loop autonomous-CT `adjust_run` flows.
+- `cora.capability.steering` — Method-binding for mid-flight `adjust_run` steering flows.
 
 ## Related
 
 - [Methods](methods.md) — the Method catalog, with each Method's Capability binding in the second column.
-- [Affordances](../reference/affordances.md) — the closed 28-item primitive set Capabilities declare as `required_affordances`.
+- [Affordances](../reference/affordances.md) — the closed 29-item primitive set Capabilities declare as `required_affordances`.
 - [Glossary](../reference/glossary.md) — Capability vs Family vs Affordance vs Method distinctions.

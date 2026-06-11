@@ -44,6 +44,7 @@ from cora.data.features import (
     list_datasets,
     promote_dataset,
     publish_edition,
+    record_acquisition,
     record_attestation,
     register_dataset,
     register_distribution,
@@ -73,6 +74,7 @@ class DataHandlers:
     demote_dataset: demote_dataset.Handler
     get_dataset: get_dataset.Handler
     list_datasets: list_datasets.Handler
+    record_acquisition: record_acquisition.IdempotentHandler
     register_distribution: register_distribution.IdempotentHandler
     register_edition: register_edition.IdempotentHandler
     add_dataset_to_edition: add_dataset_to_edition.Handler
@@ -157,6 +159,18 @@ def wire_data(deps: Kernel) -> DataHandlers:
             command_name="ListDatasets",
             bc=_BC,
             kind="query",
+        ),
+        record_acquisition=with_tracing(
+            with_idempotency(
+                record_acquisition.bind(deps),
+                deps.idempotency_store,
+                command_name="RecordAcquisition",
+                serialize_result=str,
+                deserialize_result=UUID,
+                lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
+            ),
+            command_name="RecordAcquisition",
+            bc=_BC,
         ),
         register_distribution=with_tracing(
             with_idempotency(

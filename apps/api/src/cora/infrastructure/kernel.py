@@ -40,6 +40,7 @@ from cora.infrastructure.adapters.signing_registry import SigningRegistry
 from cora.infrastructure.config import Settings
 from cora.infrastructure.ports import (
     LLM,
+    AssemblyLookup,
     AssetLookup,
     Authorize,
     CapabilityLookup,
@@ -51,10 +52,12 @@ from cora.infrastructure.ports import (
     EnclosureLookup,
     EventStore,
     FacilityLookup,
+    FamilyLookup,
     IdempotencyStore,
     IdGenerator,
     LogbookMirror,
     ProfileStore,
+    RoleLookup,
     Signer,
     SupplyLookup,
     TokenVerifier,
@@ -185,6 +188,45 @@ class Kernel:
     cross-BC binding tests seed assets via the adapter's
     `register(...)` helper.
 
+    `family_lookup`: cross-aggregate port consumed by Layer-3 sub-slice
+    3D's `bind_plan_role` handler (per
+    [[project-role-aggregate-design]] Lock 17). Walks
+    Asset.family_ids -> FamilyLookup.lookup -> presents_as ∩
+    affordance-superset using the ANY-single-family disjunction
+    semantic. Equipment BC ships `PostgresFamilyLookup` as the
+    production adapter (reads `proj_equipment_family_summary` with
+    the Layer-3 sub-slice 3B presents_as + affordances columns).
+    Test environments default to `InMemoryFamilyLookup`; 3D consumer
+    tests seed Families via the adapter's `register(...)` helper.
+
+    `assembly_lookup`: cross-aggregate port consumed by 3D's
+    `bind_plan_role` handler for the Assembly satisfaction branch.
+    When the candidate Asset carries `fixture_id`, the handler
+    loads the Fixture, then `AssemblyLookup.lookup(fixture.assembly_id)`,
+    and the decider ORs-in `role_kind in assembly.presents_as` on
+    top of the Family disjunction (closes the MCTOptics-Assembly
+    worked example from the design memo). Equipment BC ships
+    `PostgresAssemblyLookup` as the production adapter (reads
+    `proj_equipment_assembly_summary` with the 3C presents_as
+    column). Test environments default to `InMemoryAssemblyLookup`.
+
+    `role_lookup`: cross-aggregate port consumed by Layer-3 sub-slices
+    of [[project-role-aggregate-design]]. 3B `add_family_presents_as`
+    decider validates role_id resolves AND that the Family's
+    Affordances superset Role.required_affordances. 3C
+    `add_assembly_presents_as` decider validates role_id resolves
+    (affordance-superset deferred to register_fixture layer). 3D
+    `bind_plan_role` handler walks Asset.family_ids ->
+    FamilyLookup.batch_lookup -> RoleLookup.lookup for the role_kind
+    satisfaction path (Lock 17 ANY-single-family disjunction). 3E
+    `update_capability_suggested_roles` handler validates every
+    proposed RoleId resolves (Lock 10 documentation-only event).
+    Equipment BC ships `PostgresRoleLookup` as the production adapter
+    (reads `proj_equipment_role_summary` shipped Layer-3 sub-slice
+    3A). Test environments default to `InMemoryRoleLookup`; consumer
+    tests seed Roles via the adapter's `register(...)` helper or
+    leave the registry empty for the missing-role path.
+
     `llm`: optional LLM-chat port consumed by Agent BC subscribers
     (RunDebriefer, CautionDrafter). Production wires
     `AnthropicLLM` when `Settings.anthropic_api_key` is set;
@@ -241,6 +283,9 @@ class Kernel:
     credential_lookup: CredentialLookup
     facility_lookup: FacilityLookup
     asset_lookup: AssetLookup
+    family_lookup: FamilyLookup
+    assembly_lookup: AssemblyLookup
+    role_lookup: RoleLookup
     enclosure_lookup: EnclosureLookup
     profile_store: ProfileStore
     canonicalization_registry: CanonicalizationRegistry

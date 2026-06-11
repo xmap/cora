@@ -205,17 +205,15 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
             )
         case MethodRequiredRoleAdded(
             role_name=role_name,
+            role_kind=role_kind,
             family_id=family_id,
             required_ports=required_ports,
             optional=optional,
         ):
             prior = require_state(state, "MethodRequiredRoleAdded")
             # Reconstruct the RoleRequirement VO from the payload dicts.
-            # The PortRequirement VO re-validates the per-port strings;
-            # this is defensive against a stored payload whose strings
-            # somehow drift out of bounds (would surface as
-            # InvalidPortRequirementError, wrapped by from_stored's
-            # deserialize_or_raise).
+            # XOR invariant enforced by RoleRequirement.__post_init__:
+            # exactly one of role_kind / family_id is set (3D Lock 5).
             ports = frozenset(
                 PortRequirement(
                     port_name=p["port_name"],
@@ -226,6 +224,7 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
             )
             new_role = RoleRequirement(
                 role_name=RoleName(role_name),
+                role_kind=role_kind,
                 family_id=family_id,
                 required_ports=ports,
                 optional=optional,

@@ -375,25 +375,92 @@ class PortRequirement:
         object.__setattr__(self, "signal_type", trimmed_signal)
 
 
+class RoleRequirementBindingDuplicateError(ValueError):
+    """RoleRequirement has BOTH `role_kind` and `family_id` set.
+
+    Per [[project-role-aggregate-design]] Lock 5: exactly one of
+    `role_kind` (global Role contract; federation-portable path) or
+    `family_id` (anatomical escape hatch; slice-1 path) must be
+    present. Both-set signals operator confusion: the bind would be
+    ambiguous about which satisfaction path to take.
+
+    Subclasses ValueError so it satisfies VO-error conventions
+    (mirrors `InvalidRoleNameError` posture).
+    """
+
+    def __init__(
+        self,
+        role_name: "RoleName",
+        role_kind: UUID,
+        family_id: UUID,
+    ) -> None:
+        super().__init__(
+            f"RoleRequirement {role_name.value!r} has BOTH role_kind "
+            f"{role_kind} AND family_id {family_id}; exactly one must "
+            "be set (XOR invariant per role-aggregate-design Lock 5)"
+        )
+        self.role_name = role_name
+        self.role_kind = role_kind
+        self.family_id = family_id
+
+
+class InvalidRoleRequirementTargetError(ValueError):
+    """RoleRequirement has NEITHER `role_kind` nor `family_id` set.
+
+    Per [[project-role-aggregate-design]] Lock 5 XOR invariant: a
+    naked `role_name` without a binding target is ambiguous about
+    what Asset satisfies. Subclasses ValueError so it satisfies VO-
+    error conventions.
+    """
+
+    def __init__(self, role_name: "RoleName") -> None:
+        super().__init__(
+            f"RoleRequirement {role_name.value!r} has NEITHER role_kind "
+            "nor family_id; exactly one must be set (XOR invariant per "
+            "role-aggregate-design Lock 5)"
+        )
+        self.role_name = role_name
+
+
 @dataclass(frozen=True)
 class RoleRequirement:
     """A named positional role slot the Method declares.
 
-    Tuple `(role_name, family_id, required_ports, optional)`.
+    Tuple `(role_name, role_kind, family_id, required_ports, optional)`.
 
     `role_name` is the Method-local label (`RoleName` VO).
+
+    `role_kind` is the global Role contract id this slot targets
+    (per [[project-role-aggregate-design]] Lock 5; Layer 3 sub-slice
+    3D). Federation-portable path: any Asset whose Family.presents_as
+    contains role_kind AND whose Family.affordances superset
+    Role.required_affordances (Lock 17 ANY-single-family disjunction)
+    satisfies. Bare `UUID` (not `RoleId` NewType) per cross-BC
+    convention: avoids Recipe -> Equipment NewType import; symmetric
+    with `family_id: UUID`.
+
     `family_id` is the Family the Asset bound to this role must
-    satisfy (`Asset.family_ids` superset check at the Plan decider;
-    eventual-consistency on the family stream's existence, same
-    precedent as `Method.needed_family_ids`).
+    satisfy via direct family-id membership (anatomical escape
+    hatch). KEPT after 3D for backward compatibility with slice-1
+    Methods (anti-hook #6: removal is a separate slice gated on the
+    "6 months on main + zero new family_id-only RoleRequirements"
+    trigger).
+
+    ## XOR invariant
+
+    Exactly one of `role_kind` / `family_id` must be set. Both-set
+    raises `RoleRequirementBindingDuplicateError`; neither-set
+    raises `InvalidRoleRequirementTargetError`. The decider's
+    handler also fail-fast resolves `role_kind` via RoleLookup
+    before threading into the decider so callers see
+    RoleNotFoundError rather than a satisfaction-side failure.
 
     `required_ports` is the set of ports the bound Asset must expose
     for this role; empty means "pure Asset-binding role, no port
     contract." Non-empty means the
     `PlanWireRoleEndpointMismatchError` invariant requires any Wire
     whose endpoint port is named here to terminate at the Asset bound
-    to THIS role (closes the role-table-vs-wire-graph divergence the
-    2026-06-06 critique surfaced).
+    to THIS role.
 
     `optional` is False by default; a True role may be omitted from a
     Plan's role_bindings without triggering Plan-side
@@ -401,16 +468,27 @@ class RoleRequirement:
 
     Uniqueness of `role_name` within a single Method's `required_roles`
     is enforced by the `add_method_required_role` decider, not by the
-    VO (frozenset deduplicates on tuple equality, which includes
-    family_id + required_ports — two roles with the same name but
-    different families would NOT collide structurally; the decider
-    catches the role_name conflict).
+    VO.
     """
 
     role_name: RoleName
-    family_id: UUID
+    role_kind: UUID | None = None
+    family_id: UUID | None = None
     required_ports: frozenset[PortRequirement] = field(default_factory=frozenset[PortRequirement])
     optional: bool = False
+
+    def __post_init__(self) -> None:
+        # XOR invariant: exactly one of role_kind / family_id is set.
+        # Both-set + neither-set both surface as dedicated errors so
+        # the operator response distinguishes the two confusions.
+        if self.role_kind is not None and self.family_id is not None:
+            raise RoleRequirementBindingDuplicateError(
+                role_name=self.role_name,
+                role_kind=self.role_kind,
+                family_id=self.family_id,
+            )
+        if self.role_kind is None and self.family_id is None:
+            raise InvalidRoleRequirementTargetError(role_name=self.role_name)
 
 
 class MethodRoleNameAlreadyDeclaredError(Exception):
@@ -618,32 +696,60 @@ class Method:
             # alongside parameters_schema / needed_family_ids / etc.
             # Sort by role_name for byte-stable persistence; each
             # entry materializes as a JSON-friendly dict (role_name,
-            # family_id as str, sorted required_ports, optional).
+            # XOR-target as str, sorted required_ports, optional).
             # required_ports inside each role sort by port_name +
             # direction for deterministic serialization.
+            #
+            # role_kind (Layer 3 sub-slice 3D) is conditionally
+            # rendered: only included when non-None. Preserves
+            # slice-1 content_hash byte stability for Methods whose
+            # RoleRequirements were authored before 3D (no spurious
+            # `"role_kind": null` key in the canonical bytes). New
+            # role_kind-based RoleRequirements canonically include
+            # `role_kind` and omit `family_id` per the XOR
+            # invariant.
             "required_roles": sorted(
-                (
-                    {
-                        "role_name": role.role_name.value,
-                        "family_id": str(role.family_id),
-                        "required_ports": sorted(
-                            (
-                                {
-                                    "port_name": port.port_name,
-                                    "direction": port.direction.value,
-                                    "signal_type": port.signal_type,
-                                }
-                                for port in role.required_ports
-                            ),
-                            key=lambda p: (p["port_name"], p["direction"]),
-                        ),
-                        "optional": role.optional,
-                    }
-                    for role in self.required_roles
-                ),
-                key=lambda r: r["role_name"],
+                (_canonical_role_requirement(role) for role in self.required_roles),
+                key=lambda r: str(r["role_name"]),
             ),
         }
+
+
+def _canonical_role_requirement(role: RoleRequirement) -> dict[str, object]:
+    """Canonical JSON-friendly dict for one RoleRequirement.
+
+    Lifted to module scope so the conditional-render rule for
+    `role_kind` lives in ONE place. Per [[project-role-aggregate-
+    design]] sub-slice 3D content_subset gate: `role_kind` only
+    appears in the canonical bytes when non-None, preserving slice-1
+    content_hash byte stability for Methods whose required_roles
+    were all family_id-based.
+
+    The XOR invariant on RoleRequirement guarantees exactly one of
+    role_kind / family_id is set, so the conditional logic here
+    cannot produce an ambiguous bytes-shape: a role_kind-based VO
+    omits `family_id` (renders null), a family_id-based VO omits
+    `role_kind` from the dict entirely.
+    """
+    body: dict[str, object] = {
+        "role_name": role.role_name.value,
+        "family_id": str(role.family_id) if role.family_id is not None else None,
+        "required_ports": sorted(
+            (
+                {
+                    "port_name": port.port_name,
+                    "direction": port.direction.value,
+                    "signal_type": port.signal_type,
+                }
+                for port in role.required_ports
+            ),
+            key=lambda p: (p["port_name"], p["direction"]),
+        ),
+        "optional": role.optional,
+    }
+    if role.role_kind is not None:
+        body["role_kind"] = str(role.role_kind)
+    return body
 
 
 class MethodCapabilityExecutorMismatchError(Exception):

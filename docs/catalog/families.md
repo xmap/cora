@@ -11,7 +11,7 @@
 | `Shutter` | `first_light`, `dark_baseline`, `flat_baseline` |
 | `ProbeGeneric` | `dark_baseline` (APS facility-scope template — abstract detector probe-chain) |
 | `Hexapod` | `hexapod_reboot` |
-| `ImagingDetector` | `mctoptics_image_acquisition` (presenter Family for detector Assemblies; 2-BM Optique Peter detector materializes as the `MCTOptics` Assembly + Fixture) |
+| `Imager` | `mctoptics_image_acquisition` (presenter Family for detector Assemblies; 2-BM Optique Peter detector materializes as the `MCTOptics` Assembly + Fixture; was `ImagingDetector` before the role-aggregate-design rename) |
 | `Objective` | `mctoptics_image_acquisition` (per-lens identity inside the MCTOptics Assembly) |
 | `PseudoAxis` | `mctoptics_image_acquisition` (virtual-axis Family; the `MCTOptics_lens_select` Asset carries a `LookupTable` partition rule decomposing lens index to turret rotation) |
 
@@ -19,4 +19,10 @@ Source of truth: [`test_aps_facility.py`](../../apps/api/tests/integration/scena
 
 ## Pending in code
 
-Beamline-typical Families (`HighSpeedCamera`, `Goniometer`, `Monochromator`, `Slit`, `Mirror`, `TriggerFPGA`) are not yet defined. Each lands as a row above when a scenario test or seed script defines it.
+Beamline-typical Families (`Goniometer`, `Monochromator`, `Slit`, `Mirror`, `TimingController`) are not yet defined. Each lands as a row above when a scenario test or seed script defines it.
+
+Per the [role-aggregate-design](../../../.claude/projects/-Users-dgursoy-Documents-Github-cora/memory/project_role_aggregate_design.md) pre-pilot rename plan:
+
+- **`HighSpeedCamera`** is NOT a future Family; high-framerate cameras land as `Camera` Assets with extended settings (`max_framerate_hz`, `sensor_kind`, `shutter_kind`, `readout_mode`). Pattern mirrors the locked `MultilayerMirror` -> `Mirror` precedent: speed is a settings-field axis, not a Family axis.
+- **`TimingController`** is the future Family name for hardware that generates timing signals (triggers, gates, sync pulses). Replaces the pre-rename `TriggerFPGA` candidate, which named hardware substrate (FPGA) rather than role. Second `<Domain>Controller` Family after `MotionController`; see the equipment module index `<Domain>Controller` convention.
+- **`OpticalRelay`** is the future composing-Family name for scintillator-objective-camera relay assemblies. The pre-rename `Microscope` candidate was retired in favor of unifying the presenter and composing roles under `Imager`; when the Assembly + Fixture migration splits MCTOptics's composing-Family from its presenter, `OpticalRelay` is the composing name and `Imager` stays as the presenter.

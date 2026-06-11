@@ -10,6 +10,7 @@ from cora.infrastructure.ports.event_store import StoredEvent
 from cora.recipe.aggregates.capability import (
     CapabilityDefined,
     CapabilityDeprecated,
+    CapabilitySuggestedRolesUpdated,
     CapabilityVersioned,
     ExecutorShape,
     event_type_name,
@@ -219,6 +220,7 @@ def test_from_stored_rejects_unknown_executor_shape_string() -> None:
         "CapabilityDefined",
         "CapabilityVersioned",
         "CapabilityDeprecated",
+        "CapabilitySuggestedRolesUpdated",
     ],
 )
 def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:
@@ -230,3 +232,71 @@ def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:
     in the load path."""
     with pytest.raises(ValueError, match=f"Malformed {event_type} payload"):
         from_stored(_stored(event_type, {}))
+
+
+@pytest.mark.unit
+def test_event_type_name_returns_capability_suggested_roles_updated_class_name() -> None:
+    """Layer 3 sub-slice 3E: new event class name discriminator."""
+    cid = uuid4()
+    event = CapabilitySuggestedRolesUpdated(
+        capability_id=cid, suggested_role_ids=frozenset(), occurred_at=_NOW
+    )
+    assert event_type_name(event) == "CapabilitySuggestedRolesUpdated"
+
+
+@pytest.mark.unit
+def test_to_payload_capability_suggested_roles_updated_sorts_role_ids() -> None:
+    """Deterministic byte-stable payload: role_ids sorted as strings."""
+    cid = uuid4()
+    rid_a = uuid4()
+    rid_b = uuid4()
+    payload = to_payload(
+        CapabilitySuggestedRolesUpdated(
+            capability_id=cid,
+            suggested_role_ids=frozenset({rid_a, rid_b}),
+            occurred_at=_NOW,
+        )
+    )
+    assert payload["capability_id"] == str(cid)
+    assert payload["suggested_role_ids"] == sorted([str(rid_a), str(rid_b)])
+    assert payload["occurred_at"] == _NOW.isoformat()
+
+
+@pytest.mark.unit
+def test_round_trip_capability_suggested_roles_updated() -> None:
+    cid = uuid4()
+    rid = uuid4()
+    original = CapabilitySuggestedRolesUpdated(
+        capability_id=cid, suggested_role_ids=frozenset({rid}), occurred_at=_NOW
+    )
+    payload = to_payload(original)
+    rebuilt = from_stored(_stored("CapabilitySuggestedRolesUpdated", payload))
+    assert rebuilt == original
+
+
+@pytest.mark.unit
+def test_to_payload_capability_suggested_roles_updated_with_empty_set() -> None:
+    cid = uuid4()
+    payload = to_payload(
+        CapabilitySuggestedRolesUpdated(
+            capability_id=cid, suggested_role_ids=frozenset(), occurred_at=_NOW
+        )
+    )
+    assert payload["suggested_role_ids"] == []
+
+
+@pytest.mark.unit
+def test_from_stored_capability_suggested_roles_updated_malformed_uuid_raises() -> None:
+    """Defensive: malformed UUID strings surface as Malformed
+    CapabilitySuggestedRolesUpdated."""
+    with pytest.raises(ValueError, match="Malformed CapabilitySuggestedRolesUpdated"):
+        from_stored(
+            _stored(
+                "CapabilitySuggestedRolesUpdated",
+                {
+                    "capability_id": str(uuid4()),
+                    "suggested_role_ids": ["not-a-uuid"],
+                    "occurred_at": _NOW.isoformat(),
+                },
+            )
+        )

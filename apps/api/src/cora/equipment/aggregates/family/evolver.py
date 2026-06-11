@@ -21,10 +21,13 @@ Transition events applied to empty state raise ValueError.
 from collections.abc import Sequence
 from typing import assert_never
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.family.events import (
     FamilyDefined,
     FamilyDeprecated,
     FamilyEvent,
+    FamilyPresentsAsAdded,
+    FamilyPresentsAsRemoved,
     FamilySettingsSchemaUpdated,
     FamilyVersioned,
 )
@@ -59,6 +62,13 @@ def evolve(state: Family | None, event: FamilyEvent) -> Family:
                 # replace-on-version precedent.
                 affordances=affordances,
                 settings_schema=prior.settings_schema,
+                # presents_as PRESERVED across version: a new
+                # affordance declaration does not implicitly revoke
+                # role advertisements (orthogonal-axis; matches
+                # settings_schema precedent). Operators who want to
+                # withdraw a role on version do so explicitly via
+                # `remove_family_presents_as`.
+                presents_as=prior.presents_as,
             )
         case FamilyDeprecated():
             prior = require_state(state, "FamilyDeprecated")
@@ -71,6 +81,9 @@ def evolve(state: Family | None, event: FamilyEvent) -> Family:
                 # historical declaration stays visible for audit.
                 affordances=prior.affordances,
                 settings_schema=prior.settings_schema,
+                # presents_as PRESERVED across deprecation: audit
+                # trail of what role contracts this Family advertised.
+                presents_as=prior.presents_as,
             )
         case FamilySettingsSchemaUpdated(settings_schema=settings_schema):
             prior = require_state(state, "FamilySettingsSchemaUpdated")
@@ -84,6 +97,29 @@ def evolve(state: Family | None, event: FamilyEvent) -> Family:
                 # Shallow-copy settings_schema so payload mutation can't alias state (B1).
                 affordances=prior.affordances,
                 settings_schema=(dict(settings_schema) if settings_schema is not None else None),
+                presents_as=prior.presents_as,
+            )
+        case FamilyPresentsAsAdded(role_id=role_id):
+            prior = require_state(state, "FamilyPresentsAsAdded")
+            return Family(
+                id=prior.id,
+                name=prior.name,
+                status=prior.status,
+                version=prior.version,
+                affordances=prior.affordances,
+                settings_schema=prior.settings_schema,
+                presents_as=prior.presents_as | {RoleId(role_id)},
+            )
+        case FamilyPresentsAsRemoved(role_id=role_id):
+            prior = require_state(state, "FamilyPresentsAsRemoved")
+            return Family(
+                id=prior.id,
+                name=prior.name,
+                status=prior.status,
+                version=prior.version,
+                affordances=prior.affordances,
+                settings_schema=prior.settings_schema,
+                presents_as=prior.presents_as - {RoleId(role_id)},
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

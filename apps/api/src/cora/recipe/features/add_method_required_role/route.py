@@ -66,7 +66,11 @@ router = APIRouter(tags=["recipe"])
         },
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
-            "description": "No method exists with the given id.",
+            "description": (
+                "No Method exists with the given id, OR the supplied "
+                "role_kind does not resolve to a registered Role "
+                "(handler-side RoleLookup precondition; Layer 3 3D)."
+            ),
         },
         status.HTTP_409_CONFLICT: {
             "model": ErrorResponse,

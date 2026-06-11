@@ -16,8 +16,9 @@ infrastructure ports; matches the cross-BC create-style command shape
 locked in Access / Trust / Subject / Equipment / Supply / Operation.
 
 Per [[project_safety_clearance_design]]:
-  - `kind`: ClearanceKind StrEnum, day-one lock; Pydantic at boundary
-    enforces enum membership (-> 422).
+  - `template_id`: ClearanceTemplateId (UUID FK into the
+    ClearanceTemplate aggregate); resolved at the handler via
+    ClearanceTemplateLookup (-> 404 unknown / 409 not Active).
   - `title`: bare str, validated 1-200 chars via ClearanceTitle VO at
     decider; Pydantic at boundary also enforces (-> 422 / 400 split).
   - `bindings`: frozenset; non-empty enforced at decider (-> 400).

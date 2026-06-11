@@ -32,13 +32,16 @@ class InMemoryAssetLookup:
         name: str,
         tier: str = "Unit",
         lifecycle: str = "Active",
+        family_affordances: frozenset[str] | None = None,
     ) -> None:
         """Test helper: install an asset summary keyed by `asset_id`.
 
         Default `tier="Unit"` matches the most common beamline-tier
         binding shape; tests for Component / Device cases pass the tier
         explicitly. Default `lifecycle="Active"` matches the post-
-        commissioning steady-state.
+        commissioning steady-state. Default `family_affordances=None`
+        seeds an empty set; affordance-gated consumers (Data BC
+        `record_acquisition` Capturing gate) pass an explicit set.
         """
         with self._lock:
             self._records[asset_id] = AssetLookupResult(
@@ -46,6 +49,9 @@ class InMemoryAssetLookup:
                 name=name,
                 tier=tier,
                 lifecycle=lifecycle,
+                family_affordances=(
+                    family_affordances if family_affordances is not None else frozenset[str]()
+                ),
             )
 
     async def lookup(self, asset_id: UUID) -> AssetLookupResult | None:

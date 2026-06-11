@@ -1,6 +1,6 @@
 """Unit tests for the Affordance closed StrEnum.
 
-Pins the 28-item closed v1 list, the 2-pattern split, and the
+Pins the 29-item closed v1 list, the 2-pattern split, and the
 serialization shape used by event payloads and REST/MCP bodies.
 """
 
@@ -11,15 +11,15 @@ from cora.equipment.aggregates.family import Affordance, InvalidAffordanceError
 
 @pytest.mark.unit
 def test_affordance_v1_member_count() -> None:
-    """v1 ships 28 items. Adding a value requires a CORA release;
+    """v1 ships 29 items. Adding a value requires a CORA release;
     this test fails if the enum grew or shrunk so the design lock
     requires explicit acknowledgement."""
-    assert len(list(Affordance)) == 28
+    assert len(list(Affordance)) == 29
 
 
 @pytest.mark.unit
 def test_affordance_pattern_a_operational_count() -> None:
-    """Pattern A (Operational affordances, -able/-ible/-ing): 27 items.
+    """Pattern A (Operational affordances, -able/-ible/-ing): 28 items.
 
     Mixed action (`-able`/`-ible`, "device supports doing X") and
     role/flow (`-ing` gerund, "device performs X"). Consumable ends
@@ -29,15 +29,16 @@ def test_affordance_pattern_a_operational_count() -> None:
         for a in Affordance
         if a.value.endswith(("able", "ible", "ing")) and a is not Affordance.CONSUMABLE
     }
-    assert len(operational) == 27
+    assert len(operational) == 28
 
 
 @pytest.mark.unit
 def test_affordance_pattern_a_gerund_members() -> None:
-    """The `-ing` gerund subset of Pattern A. Five role/flow items where the
+    """The `-ing` gerund subset of Pattern A. Role/flow items where the
     device IS the actor: Marking (PCOMP), Pulsing (pulse-train generator),
     Following (encoder-input slave), Leading (encoder-output master),
-    Recording (file output)."""
+    Recording (file output), Capturing (produces a Data BC Acquisition
+    fact on every capture)."""
     gerunds = {a for a in Affordance if a.value.endswith("ing")}
     assert gerunds == {
         Affordance.MARKING,
@@ -45,6 +46,7 @@ def test_affordance_pattern_a_gerund_members() -> None:
         Affordance.FOLLOWING,
         Affordance.LEADING,
         Affordance.RECORDING,
+        Affordance.CAPTURING,
     }
 
 
@@ -93,7 +95,7 @@ def test_invalid_affordance_error_carries_value() -> None:
     err = InvalidAffordanceError("Bogus")
     assert err.value == "Bogus"
     assert "Bogus" in str(err)
-    assert "28" in str(err)  # message references the closed-enum size
+    assert "29" in str(err)  # message references the closed-enum size
 
 
 @pytest.mark.unit

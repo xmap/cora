@@ -40,6 +40,9 @@ from cora.recipe.features.remove_method_required_role import (
 )
 from cora.recipe.features.remove_plan_wire import tool as remove_plan_wire_tool
 from cora.recipe.features.unbind_plan_role import tool as unbind_plan_role_tool
+from cora.recipe.features.update_capability_suggested_roles import (
+    tool as update_capability_suggested_roles_tool,
+)
 from cora.recipe.features.update_method_parameters_schema import (
     tool as update_method_parameters_schema_tool,
 )
@@ -163,6 +166,10 @@ def register_recipe_tools(
     deprecate_capability_tool.register(
         mcp,
         get_handler=lambda: get_handlers().deprecate_capability,
+    )
+    update_capability_suggested_roles_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().update_capability_suggested_roles,
     )
     get_capability_tool.register(
         mcp,

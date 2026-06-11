@@ -18,6 +18,11 @@ referenced Family stream exists. Same precedent as
 surfaces at Plan binding (`bind_plan_role`) when the role cannot be
 filled by an Asset carrying that Family.
 
+Fail-fast on `role_kind`: handler-side `RoleLookup` precondition
+fires before this decider runs (Layer 3 sub-slice 3D); a missing
+Role surfaces as `RoleNotFoundError` at the handler edge, not as a
+silent satisfaction-side failure later at Plan binding.
+
 `RoleRequirement` + `PortRequirement` + `RoleName` VOs validate their
 own bounded text in `__post_init__`; reaching the decider means the
 VO is already shape-valid.
@@ -82,5 +87,11 @@ def decide(
             required_ports=required_ports_payload,
             optional=requirement.optional,
             occurred_at=now,
+            # Layer 3 sub-slice 3D: role_kind threads through the
+            # event payload as additive evolution. XOR with family_id
+            # is enforced by RoleRequirement.__post_init__ before the
+            # decider sees the requirement, so exactly one of the two
+            # is non-None here.
+            role_kind=requirement.role_kind,
         )
     ]

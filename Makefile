@@ -191,4 +191,4 @@ docs-serve: docs-stage
 clean:
 	cd $(API_DIR) && rm -rf .pytest_cache .ruff_cache .pyright_cache build dist *.egg-info
 	find . -type d -name __pycache__ -exec rm -rf {} +
-	rm -rf site docs/index.md docs/contributing.md
+	rm -rf site docs/reference/contributing.md

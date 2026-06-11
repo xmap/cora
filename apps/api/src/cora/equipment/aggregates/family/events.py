@@ -80,8 +80,49 @@ class FamilySettingsSchemaUpdated:
     occurred_at: datetime
 
 
+@dataclass(frozen=True)
+class FamilyPresentsAsAdded:
+    """The Family advertised an additional global Role contract.
+
+    Additive on `presents_as`. Strict-not-idempotent: re-adding the
+    same `role_id` surfaces `FamilyRolePresentsAsAlreadyError` at the
+    decider. The decider also enforces that the Family's current
+    `affordances` is a superset of the Role's `required_affordances`
+    (handler-side `RoleLookup`); failure surfaces
+    `FamilyCannotPresentAsError`.
+    """
+
+    family_id: UUID
+    role_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class FamilyPresentsAsRemoved:
+    """The Family withdrew a previously-advertised global Role contract.
+
+    Removes one `role_id` from `presents_as`. Strict-not-idempotent:
+    removing a Role the Family does not advertise surfaces
+    `FamilyRolePresentsAsNotPresentError`. The decider does NOT
+    consult `RoleLookup` (a Role that no longer resolves may still
+    have been previously advertised; the operator can still withdraw
+    it cleanly).
+    """
+
+    family_id: UUID
+    role_id: UUID
+    occurred_at: datetime
+
+
 # Discriminated union of every event the Family aggregate emits.
-FamilyEvent = FamilyDefined | FamilyVersioned | FamilyDeprecated | FamilySettingsSchemaUpdated
+FamilyEvent = (
+    FamilyDefined
+    | FamilyVersioned
+    | FamilyDeprecated
+    | FamilySettingsSchemaUpdated
+    | FamilyPresentsAsAdded
+    | FamilyPresentsAsRemoved
+)
 
 
 def event_type_name(event: FamilyEvent) -> str:
@@ -130,6 +171,18 @@ def to_payload(event: FamilyEvent) -> dict[str, Any]:
             return {
                 "family_id": str(family_id),
                 "settings_schema": settings_schema,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case FamilyPresentsAsAdded(family_id=family_id, role_id=role_id, occurred_at=occurred_at):
+            return {
+                "family_id": str(family_id),
+                "role_id": str(role_id),
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case FamilyPresentsAsRemoved(family_id=family_id, role_id=role_id, occurred_at=occurred_at):
+            return {
+                "family_id": str(family_id),
+                "role_id": str(role_id),
                 "occurred_at": occurred_at.isoformat(),
             }
         case _:  # pragma: no cover  # exhaustiveness guard
@@ -190,6 +243,26 @@ def from_stored(stored: StoredEvent) -> FamilyEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
+        case "FamilyPresentsAsAdded":
+            return deserialize_or_raise(
+                "FamilyPresentsAsAdded",
+                lambda: FamilyPresentsAsAdded(
+                    family_id=UUID(payload["family_id"]),
+                    role_id=UUID(payload["role_id"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+                extra=(ValueError,),
+            )
+        case "FamilyPresentsAsRemoved":
+            return deserialize_or_raise(
+                "FamilyPresentsAsRemoved",
+                lambda: FamilyPresentsAsRemoved(
+                    family_id=UUID(payload["family_id"]),
+                    role_id=UUID(payload["role_id"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+                extra=(ValueError,),
+            )
         case _:
             msg = f"Unknown FamilyEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -199,6 +272,8 @@ __all__ = [
     "FamilyDefined",
     "FamilyDeprecated",
     "FamilyEvent",
+    "FamilyPresentsAsAdded",
+    "FamilyPresentsAsRemoved",
     "FamilySettingsSchemaUpdated",
     "FamilyVersioned",
     "event_type_name",

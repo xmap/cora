@@ -29,10 +29,13 @@ can never appear before `AssemblyDefined` in a well-formed stream.
 from collections.abc import Sequence
 from typing import assert_never
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly.events import (
     AssemblyDefined,
     AssemblyDeprecated,
     AssemblyEvent,
+    AssemblyPresentsAsAdded,
+    AssemblyPresentsAsRemoved,
     AssemblyVersioned,
 )
 from cora.equipment.aggregates.assembly.state import Assembly, AssemblyStatus
@@ -88,6 +91,10 @@ def evolve(state: Assembly | None, event: AssemblyEvent) -> Assembly:
                 status=AssemblyStatus.VERSIONED,
                 version=version,
                 content_hash=content_hash,
+                # presents_as PRESERVED across version: orthogonal-axis
+                # field per 3C (matches Family.presents_as preservation
+                # in 3B + settings_schema preservation precedent).
+                presents_as=prior.presents_as,
             )
         case AssemblyDeprecated():
             prior = require_state(state, "AssemblyDeprecated")
@@ -102,6 +109,37 @@ def evolve(state: Assembly | None, event: AssemblyEvent) -> Assembly:
                 status=AssemblyStatus.DEPRECATED,
                 version=prior.version,
                 content_hash=prior.content_hash,
+                presents_as=prior.presents_as,
+            )
+        case AssemblyPresentsAsAdded(role_id=role_id):
+            prior = require_state(state, "AssemblyPresentsAsAdded")
+            return Assembly(
+                id=prior.id,
+                name=prior.name,
+                presents_as_family_id=prior.presents_as_family_id,
+                required_slots=prior.required_slots,
+                required_wires=prior.required_wires,
+                parameter_overrides_schema=prior.parameter_overrides_schema,
+                drawing=prior.drawing,
+                status=prior.status,
+                version=prior.version,
+                content_hash=prior.content_hash,
+                presents_as=prior.presents_as | {RoleId(role_id)},
+            )
+        case AssemblyPresentsAsRemoved(role_id=role_id):
+            prior = require_state(state, "AssemblyPresentsAsRemoved")
+            return Assembly(
+                id=prior.id,
+                name=prior.name,
+                presents_as_family_id=prior.presents_as_family_id,
+                required_slots=prior.required_slots,
+                required_wires=prior.required_wires,
+                parameter_overrides_schema=prior.parameter_overrides_schema,
+                drawing=prior.drawing,
+                status=prior.status,
+                version=prior.version,
+                content_hash=prior.content_hash,
+                presents_as=prior.presents_as - {RoleId(role_id)},
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

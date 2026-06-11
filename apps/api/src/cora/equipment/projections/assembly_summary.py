@@ -3,19 +3,21 @@ events into the `proj_equipment_assembly_summary` read model.
 
 Subscribed events (per slice):
   - AssemblyDefined  -> INSERT (status=Defined, version + content_hash
-                                from payload). Shipped with B.0
-                                scaffold.
+                                from payload, presents_as=[]).
+                                Shipped with B.0 scaffold.
   - AssemblyVersioned -> UPDATE status=Versioned + name +
                                 presents_as_family_id + version +
                                 content_hash. Replace-on-version
                                 semantic mirrors the aggregate state.
-                                Shipped with version_assembly slice.
-  - AssemblyDeprecated -> UPDATE status=Deprecated (added with
-                                deprecate_assembly slice).
+  - AssemblyDeprecated -> UPDATE status=Deprecated.
+  - AssemblyPresentsAsAdded -> UPDATE
+                                presents_as = (DISTINCT append).
+                                Layer 3 sub-slice 3C.
+  - AssemblyPresentsAsRemoved -> UPDATE
+                                presents_as = array_remove(...).
+                                Layer 3 sub-slice 3C.
 
-All branches idempotent (INSERT uses ON CONFLICT DO NOTHING; UPDATEs
-write fixed values per event type so re-application is a no-op).
-Mirrors FamilySummaryProjection's shape.
+All branches idempotent. Mirrors FamilySummaryProjection's shape.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -34,8 +36,8 @@ def _id(payload: dict[str, object]) -> UUID:
 _INSERT_ASSEMBLY_SQL = """
 INSERT INTO proj_equipment_assembly_summary
     (assembly_id, name, presents_as_family_id, status, version,
-     content_hash, created_at)
-VALUES ($1, $2, $3, 'Defined', $4, $5, $6)
+     content_hash, created_at, presents_as)
+VALUES ($1, $2, $3, 'Defined', $4, $5, $6, ARRAY[]::UUID[])
 ON CONFLICT (assembly_id) DO NOTHING
 """
 
@@ -57,6 +59,24 @@ SET status = 'Deprecated',
 WHERE assembly_id = $1
 """
 
+_UPDATE_PRESENTS_AS_ADDED_SQL = """
+UPDATE proj_equipment_assembly_summary
+SET presents_as = (
+    SELECT ARRAY(
+        SELECT DISTINCT unnest(presents_as || ARRAY[$2]::UUID[])
+    )
+),
+    updated_at = now()
+WHERE assembly_id = $1
+"""
+
+_UPDATE_PRESENTS_AS_REMOVED_SQL = """
+UPDATE proj_equipment_assembly_summary
+SET presents_as = array_remove(presents_as, $2),
+    updated_at = now()
+WHERE assembly_id = $1
+"""
+
 
 class AssemblySummaryProjection:
     """Maintains the `proj_equipment_assembly_summary` read model."""
@@ -67,6 +87,8 @@ class AssemblySummaryProjection:
             "AssemblyDefined",
             "AssemblyVersioned",
             "AssemblyDeprecated",
+            "AssemblyPresentsAsAdded",
+            "AssemblyPresentsAsRemoved",
         }
     )
 
@@ -101,6 +123,18 @@ class AssemblySummaryProjection:
                 await conn.execute(
                     _UPDATE_DEPRECATED_SQL,
                     _id(event.payload),
+                )
+            case "AssemblyPresentsAsAdded":
+                await conn.execute(
+                    _UPDATE_PRESENTS_AS_ADDED_SQL,
+                    _id(event.payload),
+                    UUID(str(event.payload["role_id"])),
+                )
+            case "AssemblyPresentsAsRemoved":
+                await conn.execute(
+                    _UPDATE_PRESENTS_AS_REMOVED_SQL,
+                    _id(event.payload),
+                    UUID(str(event.payload["role_id"])),
                 )
             case _:
                 pass

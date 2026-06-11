@@ -58,6 +58,7 @@ from cora.infrastructure.adapters.canonicalization_registry import (
 from cora.infrastructure.adapters.default_canonicalization_adapter import (
     DefaultCanonicalizationAdapter,
 )
+from cora.infrastructure.adapters.in_memory_assembly_lookup import InMemoryAssemblyLookup
 from cora.infrastructure.adapters.in_memory_asset_lookup import InMemoryAssetLookup
 from cora.infrastructure.adapters.in_memory_clearance_template_lookup import (
     InMemoryClearanceTemplateLookup,
@@ -65,8 +66,10 @@ from cora.infrastructure.adapters.in_memory_clearance_template_lookup import (
 from cora.infrastructure.adapters.in_memory_credential_lookup import InMemoryCredentialLookup
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.adapters.in_memory_facility_lookup import InMemoryFacilityLookup
+from cora.infrastructure.adapters.in_memory_family_lookup import InMemoryFamilyLookup
 from cora.infrastructure.adapters.in_memory_idempotency_store import InMemoryIdempotencyStore
 from cora.infrastructure.adapters.in_memory_profile_store import InMemoryProfileStore
+from cora.infrastructure.adapters.in_memory_role_lookup import InMemoryRoleLookup
 from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
 from cora.infrastructure.adapters.postgres_idempotency_store import PostgresIdempotencyStore
 from cora.infrastructure.adapters.postgres_profile_store import PostgresProfileStore
@@ -82,6 +85,7 @@ from cora.infrastructure.ports import (
     AlwaysEmptyCapabilityLookup,
     AlwaysPermittedEnclosureLookup,
     AlwaysQuietCautionLookup,
+    AssemblyLookup,
     AssetLookup,
     Authorize,
     CapabilityLookup,
@@ -93,10 +97,12 @@ from cora.infrastructure.ports import (
     EnclosureLookup,
     EventStore,
     FacilityLookup,
+    FamilyLookup,
     IdempotencyStore,
     IdGenerator,
     LogbookMirror,
     ProfileStore,
+    RoleLookup,
     SupplyLookup,
     SystemClock,
     TokenVerifier,
@@ -156,6 +162,9 @@ def make_postgres_kernel(
     credential_lookup: CredentialLookup | None = None,
     facility_lookup: FacilityLookup | None = None,
     asset_lookup: AssetLookup | None = None,
+    family_lookup: FamilyLookup | None = None,
+    assembly_lookup: AssemblyLookup | None = None,
+    role_lookup: RoleLookup | None = None,
     enclosure_lookup: EnclosureLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
@@ -233,6 +242,23 @@ def make_postgres_kernel(
     `build_kernel` injects the real `PostgresAssetLookup` via the
     `asset_lookup_factory` argument.
 
+    `family_lookup` defaults to a fresh `InMemoryFamilyLookup` (empty
+    record map). Layer-3 consumer tests (3D `bind_plan_role`
+    role_kind satisfaction path) seed Families explicitly via the
+    adapter's `register(...)` helper; tests that don't bind via
+    role_kind never touch it. Production's `build_kernel` injects
+    the real `PostgresFamilyLookup` via the `family_lookup_factory`
+    argument.
+
+    `role_lookup` defaults to a fresh `InMemoryRoleLookup` (empty
+    record map). Layer-3 consumer tests (3B add_family_presents_as,
+    3C add_assembly_presents_as, 3D bind_plan_role, 3E
+    update_capability_suggested_roles) seed Roles explicitly via the
+    adapter's `register(...)` helper; tests that don't touch a Role
+    leave the dict empty (the default). Production's `build_kernel`
+    injects the real `PostgresRoleLookup` via the
+    `role_lookup_factory` argument.
+
     `llm` defaults to `None` because most BCs and tests don't need
     an LLM; only Agent BC subscribers consume it. Production's
     `build_kernel` injects `AnthropicLLM` when
@@ -278,6 +304,11 @@ def make_postgres_kernel(
             facility_lookup if facility_lookup is not None else InMemoryFacilityLookup()
         ),
         asset_lookup=(asset_lookup if asset_lookup is not None else InMemoryAssetLookup()),
+        family_lookup=(family_lookup if family_lookup is not None else InMemoryFamilyLookup()),
+        assembly_lookup=(
+            assembly_lookup if assembly_lookup is not None else InMemoryAssemblyLookup()
+        ),
+        role_lookup=(role_lookup if role_lookup is not None else InMemoryRoleLookup()),
         enclosure_lookup=(
             enclosure_lookup if enclosure_lookup is not None else AlwaysPermittedEnclosureLookup()
         ),
@@ -310,6 +341,9 @@ def make_inmemory_kernel(
     credential_lookup: CredentialLookup | None = None,
     facility_lookup: FacilityLookup | None = None,
     asset_lookup: AssetLookup | None = None,
+    family_lookup: FamilyLookup | None = None,
+    assembly_lookup: AssemblyLookup | None = None,
+    role_lookup: RoleLookup | None = None,
     enclosure_lookup: EnclosureLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
@@ -377,6 +411,19 @@ def make_inmemory_kernel(
     adapter's `register(...)` helper; tests that don't bind to an
     Asset never touch it.
 
+    `family_lookup` defaults to a fresh `InMemoryFamilyLookup` for
+    the same reason: no projection worker, no
+    `proj_equipment_family_summary` table to read from. Layer-3
+    consumer tests (3D `bind_plan_role`) seed Families via the
+    adapter's `register(...)` helper; tests that don't bind via
+    role_kind leave the dict empty (the default).
+
+    `role_lookup` defaults to a fresh `InMemoryRoleLookup` for the
+    same reason: no projection worker, no `proj_equipment_role_summary`
+    table to read from. Layer-3 consumer tests seed Roles via the
+    adapter's `register(...)` helper; tests that don't touch a Role
+    leave the dict empty (the default).
+
     `llm` defaults to `None`; the in-memory kernel is for unit /
     contract tests that don't exercise LLM subscribers. Subscriber
     tests that DO exercise the LLM path inject `FakeLLM`
@@ -422,6 +469,11 @@ def make_inmemory_kernel(
             facility_lookup if facility_lookup is not None else InMemoryFacilityLookup()
         ),
         asset_lookup=(asset_lookup if asset_lookup is not None else InMemoryAssetLookup()),
+        family_lookup=(family_lookup if family_lookup is not None else InMemoryFamilyLookup()),
+        assembly_lookup=(
+            assembly_lookup if assembly_lookup is not None else InMemoryAssemblyLookup()
+        ),
+        role_lookup=(role_lookup if role_lookup is not None else InMemoryRoleLookup()),
         enclosure_lookup=(
             enclosure_lookup if enclosure_lookup is not None else AlwaysPermittedEnclosureLookup()
         ),
@@ -583,6 +635,62 @@ class AssetLookupFactory(Protocol):
     ) -> AssetLookup: ...
 
 
+class FamilyLookupFactory(Protocol):
+    """Builds the production FamilyLookup port for the Kernel.
+
+    Equipment BC's `cora.equipment.adapters.PostgresFamilyLookup` is
+    the production factory; `cora.api.main` binds it. Same factory-
+    injection shape as `AssetLookupFactory` so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to a fresh
+    `InMemoryFamilyLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> FamilyLookup: ...
+
+
+class AssemblyLookupFactory(Protocol):
+    """Builds the production AssemblyLookup port for the Kernel.
+
+    Equipment BC's `cora.equipment.adapters.PostgresAssemblyLookup`
+    is the production factory; `cora.api.main` binds it. Same
+    factory-injection shape as `FamilyLookupFactory`.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to a fresh
+    `InMemoryAssemblyLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> AssemblyLookup: ...
+
+
+class RoleLookupFactory(Protocol):
+    """Builds the production RoleLookup port for the Kernel.
+
+    Equipment BC's `cora.equipment.adapters.PostgresRoleLookup` is
+    the production factory; `cora.api.main` binds it. Same factory-
+    injection shape as `AssetLookupFactory` so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to a fresh
+    `InMemoryRoleLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> RoleLookup: ...
+
+
 class ClearanceTemplateLookupFactory(Protocol):
     """Builds the production ClearanceTemplateLookup port for the Kernel.
 
@@ -658,6 +766,9 @@ async def build_kernel(
     credential_lookup_factory: CredentialLookupFactory | None = None,
     facility_lookup_factory: FacilityLookupFactory | None = None,
     asset_lookup_factory: AssetLookupFactory | None = None,
+    family_lookup_factory: FamilyLookupFactory | None = None,
+    assembly_lookup_factory: AssemblyLookupFactory | None = None,
+    role_lookup_factory: RoleLookupFactory | None = None,
     enclosure_lookup_factory: EnclosureLookupFactory | None = None,
     publish_port_factory: "Callable[[], PublishPort] | None" = None,
     signature_port_factory: "Callable[[], SignaturePort] | None" = None,
@@ -770,6 +881,17 @@ async def build_kernel(
     asset_lookup: AssetLookup = (
         asset_lookup_factory(pool) if asset_lookup_factory is not None else InMemoryAssetLookup()
     )
+    family_lookup: FamilyLookup = (
+        family_lookup_factory(pool) if family_lookup_factory is not None else InMemoryFamilyLookup()
+    )
+    assembly_lookup: AssemblyLookup = (
+        assembly_lookup_factory(pool)
+        if assembly_lookup_factory is not None
+        else InMemoryAssemblyLookup()
+    )
+    role_lookup: RoleLookup = (
+        role_lookup_factory(pool) if role_lookup_factory is not None else InMemoryRoleLookup()
+    )
     clearance_template_lookup: ClearanceTemplateLookup = (
         clearance_template_lookup_factory(pool)
         if clearance_template_lookup_factory is not None
@@ -797,6 +919,9 @@ async def build_kernel(
         credential_lookup=credential_lookup,
         facility_lookup=facility_lookup,
         asset_lookup=asset_lookup,
+        family_lookup=family_lookup,
+        assembly_lookup=assembly_lookup,
+        role_lookup=role_lookup,
         enclosure_lookup=enclosure_lookup,
         llm=llm,
         token_verifier=token_verifier,
@@ -869,6 +994,7 @@ def _compose_teardowns(teardowns: list[Teardown]) -> Teardown:
 
 
 __all__ = [
+    "AssemblyLookupFactory",
     "AssetLookupFactory",
     "AuthorizeFactory",
     "CapabilityLookupFactory",
@@ -878,7 +1004,10 @@ __all__ = [
     "CredentialLookupFactory",
     "EnclosureLookupFactory",
     "FacilityLookupFactory",
+    "FamilyLookupFactory",
     "LLMFactory",
+    "RoleLookupFactory",
+    "SupplyLookupFactory",
     "build_kernel",
     "make_inmemory_kernel",
     "make_postgres_kernel",

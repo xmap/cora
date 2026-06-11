@@ -12,6 +12,9 @@ from collections.abc import Callable
 from mcp.server.fastmcp import FastMCP
 
 from cora.equipment.features.activate_asset import tool as activate_asset_tool
+from cora.equipment.features.add_assembly_presents_as import (
+    tool as add_assembly_presents_as_tool,
+)
 from cora.equipment.features.add_asset_alternate_identifier import (
     tool as add_asset_alternate_identifier_tool,
 )
@@ -20,6 +23,7 @@ from cora.equipment.features.add_asset_family import (
 )
 from cora.equipment.features.add_asset_owner import tool as add_asset_owner_tool
 from cora.equipment.features.add_asset_port import tool as add_asset_port_tool
+from cora.equipment.features.add_family_presents_as import tool as add_family_presents_as_tool
 from cora.equipment.features.add_model_family import tool as add_model_family_tool
 from cora.equipment.features.assign_asset_persistent_id import (
     tool as assign_asset_persistent_id_tool,
@@ -35,6 +39,7 @@ from cora.equipment.features.decommission_mount import tool as decommission_moun
 from cora.equipment.features.define_assembly import tool as define_assembly_tool
 from cora.equipment.features.define_family import tool as define_family_tool
 from cora.equipment.features.define_model import tool as define_model_tool
+from cora.equipment.features.define_role import tool as define_role_tool
 from cora.equipment.features.degrade_asset import tool as degrade_asset_tool
 from cora.equipment.features.deprecate_assembly import tool as deprecate_assembly_tool
 from cora.equipment.features.deprecate_family import (
@@ -67,6 +72,9 @@ from cora.equipment.features.register_fixture import tool as register_fixture_to
 from cora.equipment.features.register_frame import tool as register_frame_tool
 from cora.equipment.features.register_mount import tool as register_mount_tool
 from cora.equipment.features.relocate_asset import tool as relocate_asset_tool
+from cora.equipment.features.remove_assembly_presents_as import (
+    tool as remove_assembly_presents_as_tool,
+)
 from cora.equipment.features.remove_asset_alternate_identifier import (
     tool as remove_asset_alternate_identifier_tool,
 )
@@ -75,6 +83,9 @@ from cora.equipment.features.remove_asset_family import (
 )
 from cora.equipment.features.remove_asset_owner import tool as remove_asset_owner_tool
 from cora.equipment.features.remove_asset_port import tool as remove_asset_port_tool
+from cora.equipment.features.remove_family_presents_as import (
+    tool as remove_family_presents_as_tool,
+)
 from cora.equipment.features.remove_model_family import tool as remove_model_family_tool
 from cora.equipment.features.restore_asset import tool as restore_asset_tool
 from cora.equipment.features.uninstall_asset import tool as uninstall_asset_tool
@@ -125,6 +136,19 @@ def register_equipment_tools(
     list_families_tool.register(
         mcp,
         get_handler=lambda: get_handlers().list_families,
+    )
+    add_family_presents_as_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().add_family_presents_as,
+    )
+    remove_family_presents_as_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().remove_family_presents_as,
+    )
+    # Role aggregate
+    define_role_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().define_role,
     )
     # Model aggregate
     define_model_tool.register(
@@ -293,6 +317,14 @@ def register_equipment_tools(
     deprecate_assembly_tool.register(
         mcp,
         get_handler=lambda: get_handlers().deprecate_assembly,
+    )
+    add_assembly_presents_as_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().add_assembly_presents_as,
+    )
+    remove_assembly_presents_as_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().remove_assembly_presents_as,
     )
     register_fixture_tool.register(
         mcp,

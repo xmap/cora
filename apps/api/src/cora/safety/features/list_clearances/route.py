@@ -1,7 +1,7 @@
 """HTTP route for the `list_clearances` query slice.
 
 `GET /clearances` accepts these optional query params: `cursor`,
-`limit`, `kind`, `status`, `risk_band`, `facility_asset_id`,
+`limit`, `template_id`, `template_code`, `status`, `risk_band`, `facility_code`,
 `binds_to_subject_id`, `binds_to_asset_id`, `binds_to_run_id`,
 `binds_to_procedure_id`. Returns `{"items": [...], "next_cursor": "..." | null}`.
 
@@ -11,7 +11,7 @@ BTR / LabVisit / Session) are NOT filterable via this endpoint.** The
 projection's 4 UUID[] columns only carry the typed CORA-aggregate
 bindings (Subject / Asset / Run / Procedure). Clearances with only
 ExternalRefBinding entries are returned only when filters other than
-`binds_to_*_id` match (kind / status / risk_band / facility_asset_id).
+`binds_to_*_id` match (template_id / template_code / status / risk_band / facility_code).
 Fetch by id via `get_clearance` when ExternalRefBinding inspection is
 required.
 
@@ -118,8 +118,9 @@ router = APIRouter(tags=["safety"])
         },
     },
     summary=(
-        "List clearances with cursor pagination + kind / status / risk_band / "
-        "facility_asset_id / binds_to_*_id filters. ExternalRefBinding refs "
+        "List clearances with cursor pagination + template_id / template_code / "
+        "status / risk_band / facility_code / binds_to_*_id filters. "
+        "ExternalRefBinding refs "
         "not filterable; review_steps chain not surfaced (fetch get_clearance "
         "for both)."
     ),

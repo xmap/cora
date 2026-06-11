@@ -47,6 +47,7 @@ from cora.infrastructure.ports import (
     LLM,
     Allow,
     AllowAllAuthorize,
+    AssemblyLookup,
     AssetLookup,
     Authorize,
     AuthzResult,
@@ -55,8 +56,10 @@ from cora.infrastructure.ports import (
     EventStore,
     FacilityLookup,
     FakeClock,
+    FamilyLookup,
     FixedIdGenerator,
     ProfileStore,
+    RoleLookup,
 )
 from cora.recipe.aggregates.capability import (
     CapabilityCode,
@@ -124,6 +127,9 @@ def build_deps(
     credential_lookup: CredentialLookup | None = None,
     facility_lookup: FacilityLookup | None = None,
     asset_lookup: AssetLookup | None = None,
+    family_lookup: FamilyLookup | None = None,
+    assembly_lookup: AssemblyLookup | None = None,
+    role_lookup: RoleLookup | None = None,
 ) -> Kernel:
     """Build a Kernel for unit-test handler invocation.
 
@@ -167,6 +173,14 @@ def build_deps(
     invoking the decider. Defaults to a fresh empty
     `InMemoryAssetLookup` per call; tests that don't bind to an
     Asset never touch it.
+
+    `family_lookup` / `assembly_lookup` / `role_lookup` inject
+    pre-built Equipment-BC cross-aggregate adapters so Layer-3
+    `bind_plan_role` (role_kind path) + `update_capability_suggested_roles`
+    handler tests can pre-register the Roles / Families / Assemblies
+    the slice resolves at the handler edge. Each defaults to a fresh
+    empty in-memory adapter per call; tests on the slice-1 family_id
+    path never touch them.
     """
     if authz is None:
         authz = DenyAllAuthorize() if deny else AllowAllAuthorize()
@@ -204,6 +218,9 @@ def build_deps(
         credential_lookup=credential_lookup,
         facility_lookup=facility_lookup,
         asset_lookup=asset_lookup,
+        family_lookup=family_lookup,
+        assembly_lookup=assembly_lookup,
+        role_lookup=role_lookup,
         publish_port=InMemoryPublishPort(),
         signature_port=InMemorySignaturePort(),
         permit_lookup=InMemoryPermitLookup(),

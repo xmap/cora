@@ -19,8 +19,9 @@ Plan wires connecting the presenter to its motor siblings, camera
 child, and PseudoAxis constituent feedback.
 
 Aligned with the current Family catalog at docs/catalog/families.md:
-MCTOptics presents as `ImagingDetector` (not the older `Microscope`
-inline-Family the prior revision of this test used) and the
+MCTOptics presents as `Imager` (the presenter Family was previously
+`ImagingDetector`, retired in the role-aggregate-design rename;
+even earlier it was the inline `Microscope` Family) and the
 lens_select PseudoAxis carries a LookupTable partition rule that the
 runtime evaluator decomposes into a turret rotation setpoint.
 
@@ -77,7 +78,7 @@ and represent placeholder assumptions until 2-BM staff verify:
 
 ```
 2-BM (Unit)
-+-- MCTOptics (Component, NEW)                     Family: ImagingDetector
++-- MCTOptics (Component, NEW)                     Family: Imager
 |   +-- MCTOptics_objective_0 (Device, NEW)        Family: Objective    10x
 |   +-- MCTOptics_objective_1 (Device, NEW)        Family: Objective     5x
 |   +-- MCTOptics_objective_2 (Device, NEW)        Family: Objective    1.1x
@@ -187,7 +188,7 @@ _CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000420c11")
 _CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000420c21")
 
 # Family ids (NEW for MCTOptics composition)
-_CAP_IMAGING_DETECTOR_ID = UUID("01900000-0000-7000-8000-000000420c31")
+_CAP_IMAGER_ID = UUID("01900000-0000-7000-8000-000000420c31")
 _CAP_OBJECTIVE_ID = UUID("01900000-0000-7000-8000-000000420c41")
 # Pending(2-BM operator confirmation): confirm lens turret Family (RotaryStage vs LinearStage).
 # Assumed RotaryStage based on Optique Peter doc motor positions observation
@@ -197,7 +198,7 @@ _CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000420c51")
 # partition rule decomposes the operator-issued lens index (0/1/2)
 # into the corresponding turret-rotation setpoint at runtime; the
 # mctoptics_image_acquisition Method declares this Family in
-# needed_family_ids alongside ImagingDetector + Camera.
+# needed_family_ids alongside Imager + Camera.
 _CAP_PSEUDO_AXIS_ID = UUID("01900000-0000-7000-8000-000000420c61")
 
 # Asset ids (facility-install Devices, sibling under 2-BM)
@@ -307,10 +308,11 @@ _SCHEMA_LINEAR_STAGE: dict[str, Any] = {
     "required": ["min_position", "max_position", "max_speed", "encoder_resolution"],
 }
 
-# NEW Family schemas: ImagingDetector (presenter Family for the
-# MCTOptics presenter Asset) + Objective (per-lens identity inside
-# MCTOptics). Match the [[mctoptics-2bm-assets-design]] locked shapes,
-# adapted for the Family settings_schema validator subset (exclusiveMinimum
+# NEW Family schemas: Imager (presenter Family for the MCTOptics
+# presenter Asset; was ImagingDetector before the role-aggregate-design
+# rename) + Objective (per-lens identity inside MCTOptics). Match the
+# [[mctoptics-2bm-assets-design]] locked shapes, adapted for the Family
+# settings_schema validator subset (exclusiveMinimum
 # is not in the allow-list; using minimum: 0 instead. Watch item: loosen
 # the subset to support exclusiveMinimum so Family schemas can match the
 # design lock verbatim). The detector-shaped settings (camera_objective,
@@ -318,7 +320,7 @@ _SCHEMA_LINEAR_STAGE: dict[str, Any] = {
 # MCTOptics remains an Asset; the eventual Assembly + Fixture migration
 # will move these onto the Assembly's parameter_overrides_schema and the
 # constituent Asset settings respectively.
-_SCHEMA_IMAGING_DETECTOR: dict[str, Any] = {
+_SCHEMA_IMAGER: dict[str, Any] = {
     "$schema": _DRAFT,
     "type": "object",
     "properties": {
@@ -500,9 +502,9 @@ def _id_queue() -> list[UUID]:
         e(),
         e(),
         e(),
-        # define_family x 4 (ImagingDetector + Objective + RotaryStage + PseudoAxis):
+        # define_family x 4 (Imager + Objective + RotaryStage + PseudoAxis):
         # family_id, event_id
-        _CAP_IMAGING_DETECTOR_ID,
+        _CAP_IMAGER_ID,
         e(),
         _CAP_OBJECTIVE_ID,
         e(),
@@ -622,14 +624,14 @@ _FACILITY_SETTINGS_SPECS: tuple[tuple[UUID, dict[str, Any]], ...] = (
 )
 
 _NEW_FAMILY_DEFS: tuple[tuple[UUID, str], ...] = (
-    (_CAP_IMAGING_DETECTOR_ID, "ImagingDetector"),
+    (_CAP_IMAGER_ID, "Imager"),
     (_CAP_OBJECTIVE_ID, "Objective"),
     (_CAP_ROTARY_STAGE_ID, "RotaryStage"),
     (_CAP_PSEUDO_AXIS_ID, "PseudoAxis"),
 )
 
 _NEW_FAMILY_SCHEMAS: tuple[tuple[UUID, dict[str, Any]], ...] = (
-    (_CAP_IMAGING_DETECTOR_ID, _SCHEMA_IMAGING_DETECTOR),
+    (_CAP_IMAGER_ID, _SCHEMA_IMAGER),
     (_CAP_OBJECTIVE_ID, _SCHEMA_OBJECTIVE),
     (_CAP_ROTARY_STAGE_ID, _SCHEMA_ROTARY_STAGE),
     (_CAP_PSEUDO_AXIS_ID, _SCHEMA_PSEUDO_AXIS),
@@ -661,7 +663,7 @@ _NEW_ASSET_REGISTRATIONS: tuple[tuple[UUID, UUID, str, AssetTier], ...] = (
 )
 
 _NEW_ASSET_FAMILY_LINKS: tuple[tuple[UUID, UUID], ...] = (
-    (_ASSET_MCTOPTICS_ID, _CAP_IMAGING_DETECTOR_ID),
+    (_ASSET_MCTOPTICS_ID, _CAP_IMAGER_ID),
     (_ASSET_MCTOPTICS_OBJECTIVE_0_ID, _CAP_OBJECTIVE_ID),
     (_ASSET_MCTOPTICS_OBJECTIVE_1_ID, _CAP_OBJECTIVE_ID),
     (_ASSET_MCTOPTICS_OBJECTIVE_2_ID, _CAP_OBJECTIVE_ID),
@@ -1059,9 +1061,7 @@ async def test_mctoptics_deployment_plays_out_end_to_end(
         DefineMethod(
             capability_id=_CAPABILITY_RECIPE_ID,
             name="mctoptics_image_acquisition",
-            needed_family_ids=frozenset(
-                {_CAP_IMAGING_DETECTOR_ID, _CAP_CAMERA_ID, _CAP_PSEUDO_AXIS_ID}
-            ),
+            needed_family_ids=frozenset({_CAP_IMAGER_ID, _CAP_CAMERA_ID, _CAP_PSEUDO_AXIS_ID}),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

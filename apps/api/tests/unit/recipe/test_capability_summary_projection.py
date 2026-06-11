@@ -50,6 +50,7 @@ def test_projection_metadata() -> None:
             "CapabilityDefined",
             "CapabilityVersioned",
             "CapabilityDeprecated",
+            "CapabilitySuggestedRolesUpdated",
         }
     )
 
@@ -325,3 +326,80 @@ async def test_method_defined_is_silently_dropped() -> None:
     event = _stored("MethodDefined", {"method_id": str(uuid4())})
     await proj.apply(event, conn)
     conn.execute.assert_not_awaited()
+
+
+@pytest.mark.unit
+async def test_capability_defined_seeds_empty_suggested_roles() -> None:
+    """Layer 3 sub-slice 3E: INSERT defaults suggested_roles to
+    ARRAY[]::UUID[]."""
+    proj = CapabilitySummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "CapabilityDefined",
+        {
+            "capability_id": str(_CAPABILITY_ID),
+            "code": "cora.capability.acquire",
+            "name": "Acquire",
+            "description": None,
+            "required_affordances": [],
+            "executor_shapes": ["Method"],
+            "parameters_schema": None,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "ARRAY[]::UUID[]" in sql  # suggested_role_ids defaults empty
+    assert "suggested_role_ids" in sql
+
+
+@pytest.mark.unit
+async def test_capability_suggested_roles_updated_writes_wholesale_replacement() -> None:
+    """Wholesale-replace shape: UPDATE writes the FULL new set."""
+    proj = CapabilitySummaryProjection()
+    conn = AsyncMock()
+    rid_a = uuid4()
+    rid_b = uuid4()
+    event = _stored(
+        "CapabilitySuggestedRolesUpdated",
+        {
+            "capability_id": str(_CAPABILITY_ID),
+            "suggested_role_ids": [str(rid_a), str(rid_b)],
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    conn.execute.assert_awaited_once()
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "SET suggested_role_ids = $2" in sql
+    assert args.args[1] == _CAPABILITY_ID
+    assert set(args.args[2]) == {rid_a, rid_b}
+
+
+@pytest.mark.unit
+async def test_capability_suggested_roles_updated_clears_with_empty_set() -> None:
+    """Empty payload clears the column wholesale."""
+    proj = CapabilitySummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "CapabilitySuggestedRolesUpdated",
+        {
+            "capability_id": str(_CAPABILITY_ID),
+            "suggested_role_ids": [],
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[2] == []

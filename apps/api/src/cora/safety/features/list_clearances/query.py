@@ -1,7 +1,8 @@
 """The `ListClearances` query -- intent dataclass for this read slice.
 
-Mirrors `ListProcedures`: cursor pagination + optional kind / status /
-risk_band / facility_asset_id / binds_to_*_id filters. Each filter is
+Mirrors `ListProcedures`: cursor pagination + optional template_id /
+template_code / status / risk_band / facility_code / binds_to_*_id
+filters. Each filter is
 optional; passing None means "don't filter on this dimension".
 
 `limit` defaults to 50 (capped at 100 in the route layer per the

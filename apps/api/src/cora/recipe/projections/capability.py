@@ -8,13 +8,17 @@ device-class; Capability = operations-layer template per
 Subscribed events:
   - CapabilityDefined   -> INSERT (status=Defined, version_tag=NULL,
                                    replaced_by_capability_id=NULL,
-                                   declarative fields from payload)
+                                   declarative fields from payload,
+                                   suggested_role_ids=[])
   - CapabilityVersioned -> UPDATE status=Versioned + version_tag +
                                    REFRESH declarative fields
                                    (a new version IS a new declaration)
   - CapabilityDeprecated -> UPDATE status=Deprecated +
                                    replaced_by_capability_id
                                    (declarative fields PRESERVED for audit)
+  - CapabilitySuggestedRolesUpdated -> UPDATE suggested_role_ids
+                                   wholesale-replace (Pattern P;
+                                   Layer 3 sub-slice 3E).
 
 All branches idempotent. `version_tag` lands ONLY on Versioned;
 Defined INSERT leaves it NULL and Deprecated UPDATE doesn't touch it.
@@ -37,8 +41,8 @@ _INSERT_CAPABILITY_SQL = """
 INSERT INTO proj_recipe_capability_summary
     (capability_id, code, name, status, version_tag, description,
      required_affordances, executor_shapes, parameters_schema_present,
-     replaced_by_capability_id, created_at)
-VALUES ($1, $2, $3, 'Defined', NULL, $4, $5, $6, $7, NULL, $8)
+     replaced_by_capability_id, created_at, suggested_role_ids)
+VALUES ($1, $2, $3, 'Defined', NULL, $4, $5, $6, $7, NULL, $8, ARRAY[]::UUID[])
 ON CONFLICT (capability_id) DO NOTHING
 """
 
@@ -64,6 +68,13 @@ SET status = 'Deprecated',
 WHERE capability_id = $1
 """
 
+_UPDATE_SUGGESTED_ROLES_SQL = """
+UPDATE proj_recipe_capability_summary
+SET suggested_role_ids = $2,
+    updated_at = now()
+WHERE capability_id = $1
+"""
+
 
 class CapabilitySummaryProjection:
     """Maintains the `proj_recipe_capability_summary` read model."""
@@ -74,6 +85,7 @@ class CapabilitySummaryProjection:
             "CapabilityDefined",
             "CapabilityVersioned",
             "CapabilityDeprecated",
+            "CapabilitySuggestedRolesUpdated",
         }
     )
 
@@ -113,6 +125,16 @@ class CapabilitySummaryProjection:
                     UUID(event.payload["capability_id"]),
                     UUID(replaced_raw) if replaced_raw is not None else None,
                     datetime.fromisoformat(event.payload["occurred_at"]),
+                )
+            case "CapabilitySuggestedRolesUpdated":
+                # Wholesale-replace (Pattern P): the payload carries
+                # the FULL new set; the projection mirrors via array
+                # parameter binding. asyncpg encodes a list of UUIDs
+                # as a UUID[] column natively.
+                await conn.execute(
+                    _UPDATE_SUGGESTED_ROLES_SQL,
+                    UUID(event.payload["capability_id"]),
+                    [UUID(s) for s in event.payload.get("suggested_role_ids", [])],
                 )
             case _:
                 pass

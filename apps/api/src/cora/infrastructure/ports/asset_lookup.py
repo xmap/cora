@@ -72,6 +72,18 @@ class AssetLookupResult:
     `AssetName` VO); useful for surfacing in cross-BC error messages
     that name the Asset operators recognize rather than a bare UUID.
 
+    `family_affordances` is the union of the closed-enum Affordance
+    value strings across every Family the Asset belongs to. Typed
+    `frozenset[str]` (not `frozenset[Affordance]`) so this port stays
+    inside `cora.infrastructure`'s `depends_on = []` tach contract,
+    free of any Equipment BC import; consumer deciders compare against
+    literal value strings (for example `"Capturing" in family_affordances`)
+    and cast to the typed enum at their boundary if they need the
+    discipline. Empty when the Asset belongs to no Family or none of
+    its Families declare any affordance. The Data BC `record_acquisition`
+    decider gates on `"Capturing"` membership; future cross-BC
+    affordance-gated consumers read the same set.
+
     Future columns (parent_id, controller_id, facility_id post-7B,
     fixture_id) can be added additively as cross-BC consumers need
     them; the slice 6A `FacilityLookupResult.trust_anchor_credential_ids`
@@ -82,6 +94,7 @@ class AssetLookupResult:
     name: str
     tier: str
     lifecycle: str
+    family_affordances: frozenset[str]
 
 
 class AssetLookup(Protocol):

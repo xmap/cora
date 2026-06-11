@@ -39,6 +39,7 @@ from cora.recipe.aggregates.method.state import (
     InvalidMethodVersionTagError,
     InvalidPortRequirementError,
     InvalidRoleNameError,
+    InvalidRoleRequirementTargetError,
     Method,
     MethodAlreadyExistsError,
     MethodCannotDeprecateError,
@@ -54,6 +55,7 @@ from cora.recipe.aggregates.method.state import (
     PortRequirement,
     RoleName,
     RoleRequirement,
+    RoleRequirementBindingDuplicateError,
 )
 
 __all__ = [
@@ -69,6 +71,7 @@ __all__ = [
     "InvalidMethodVersionTagError",
     "InvalidPortRequirementError",
     "InvalidRoleNameError",
+    "InvalidRoleRequirementTargetError",
     "Method",
     "MethodAlreadyExistsError",
     "MethodCannotDeprecateError",
@@ -92,6 +95,7 @@ __all__ = [
     "PortRequirement",
     "RoleName",
     "RoleRequirement",
+    "RoleRequirementBindingDuplicateError",
     "event_type_name",
     "evolve",
     "fold",

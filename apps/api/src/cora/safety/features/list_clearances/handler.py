@@ -1,10 +1,10 @@
 """Application handler for the `list_clearances` query slice.
 
 Reads `proj_safety_clearance_summary` via the cross-BC
-`infrastructure.list_query.make_list_query_handler` factory. Eight
-optional filters: four scalar (`kind` / `status` / `risk_band` /
-`facility_asset_id`) plus four array-membership over the
-per-category GIN-indexed binding-id arrays (`binds_to_subject_id`
+`infrastructure.list_query.make_list_query_handler` factory. Nine
+optional filters: five scalar (`template_id` / `template_code` /
+`status` / `risk_band` / `facility_code`) plus four array-membership
+over the per-category GIN-indexed binding-id arrays (`binds_to_subject_id`
 matches `subject_binding_ids`, and likewise for asset / run /
 procedure). Cursor pagination keyed on `(registered_at,
 clearance_id)`.

@@ -16,7 +16,7 @@ does not re-register them.
 
 ## Loop-collapse pattern
 
-Equipment owns five aggregates (Family, Model, Asset, Frame, Mount).
+Equipment owns six aggregates (Family, Model, Asset, Frame, Mount, Role).
 Three error families share the same response shape and get collapsed
 via Trust's `_handle_invalid_name`-style loop pattern:
 
@@ -44,6 +44,8 @@ from cora.equipment.aggregates.assembly import (
     AssemblyCannotInstantiateError,
     AssemblyCannotVersionError,
     AssemblyNotFoundError,
+    AssemblyRolePresentsAsAlreadyError,
+    AssemblyRolePresentsAsNotPresentError,
     FamilyNotFoundForAssemblyError,
     FixtureAssetFamilyMismatchError,
     FixtureAssetNotAttachableError,
@@ -104,8 +106,11 @@ from cora.equipment.aggregates.asset import (
 from cora.equipment.aggregates.family import (
     FamilyAlreadyExistsError,
     FamilyCannotDeprecateError,
+    FamilyCannotPresentAsError,
     FamilyCannotVersionError,
     FamilyNotFoundError,
+    FamilyRolePresentsAsAlreadyError,
+    FamilyRolePresentsAsNotPresentError,
     InvalidAffordanceError,
     InvalidFamilyNameError,
     InvalidFamilySettingsSchemaError,
@@ -161,6 +166,14 @@ from cora.equipment.aggregates.mount import (
     MountIsEmptyError,
     MountNotFoundError,
 )
+from cora.equipment.aggregates.role import (
+    InvalidRoleDocstringError,
+    InvalidRoleNameError,
+    InvalidSignalTypeError,
+    RoleAffordanceOverlapError,
+    RoleAlreadyExistsError,
+    RoleNotFoundError,
+)
 from cora.equipment.errors import (
     AssetNameMissingError,
     FixtureLandingPageMissingError,
@@ -176,10 +189,12 @@ from cora.equipment.errors import (
 )
 from cora.equipment.features import (
     activate_asset,
+    add_assembly_presents_as,
     add_asset_alternate_identifier,
     add_asset_family,
     add_asset_owner,
     add_asset_port,
+    add_family_presents_as,
     add_model_family,
     assign_asset_persistent_id,
     assign_fixture_persistent_id,
@@ -191,6 +206,7 @@ from cora.equipment.features import (
     define_assembly,
     define_family,
     define_model,
+    define_role,
     degrade_asset,
     deprecate_assembly,
     deprecate_family,
@@ -215,10 +231,12 @@ from cora.equipment.features import (
     register_frame,
     register_mount,
     relocate_asset,
+    remove_assembly_presents_as,
     remove_asset_alternate_identifier,
     remove_asset_family,
     remove_asset_owner,
     remove_asset_port,
+    remove_family_presents_as,
     remove_model_family,
     restore_asset,
     uninstall_asset,
@@ -397,6 +415,10 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(update_family_settings_schema.router)
     app.include_router(get_family.router)
     app.include_router(list_families.router)
+    app.include_router(add_family_presents_as.router)
+    app.include_router(remove_family_presents_as.router)
+    # Role aggregate
+    app.include_router(define_role.router)
     # Model aggregate
     app.include_router(define_model.router)
     app.include_router(version_model.router)
@@ -442,6 +464,8 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(define_assembly.router)
     app.include_router(version_assembly.router)
     app.include_router(deprecate_assembly.router)
+    app.include_router(add_assembly_presents_as.router)
+    app.include_router(remove_assembly_presents_as.router)
     app.include_router(register_fixture.router)
     app.include_router(attach_asset_to_fixture.router)
     app.include_router(bind_asset_to_facility.router)
@@ -455,6 +479,10 @@ def register_equipment_routes(app: FastAPI) -> None:
         InvalidFamilyNameError,
         InvalidFamilySettingsSchemaError,
         InvalidFamilyVersionTagError,
+        InvalidRoleNameError,
+        InvalidRoleDocstringError,
+        InvalidSignalTypeError,
+        RoleAffordanceOverlapError,
         InvalidAssetNameError,
         InvalidAssetParentError,
         InvalidAssetPortNameError,
@@ -497,6 +525,7 @@ def register_equipment_routes(app: FastAPI) -> None:
         app.add_exception_handler(validation_cls, _handle_validation_error)
     for not_found_cls in (
         FamilyNotFoundError,
+        RoleNotFoundError,
         AssetNotFoundError,
         AssetOwnerNotPresentError,
         AssetFacilityNotFoundError,
@@ -513,6 +542,7 @@ def register_equipment_routes(app: FastAPI) -> None:
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for already_exists_cls in (
         FamilyAlreadyExistsError,
+        RoleAlreadyExistsError,
         AssetAlreadyExistsError,
         FrameAlreadyExistsError,
         MountAlreadyExistsError,
@@ -545,6 +575,9 @@ def register_equipment_routes(app: FastAPI) -> None:
         AssetModelMismatchError,
         FamilyCannotVersionError,
         FamilyCannotDeprecateError,
+        FamilyCannotPresentAsError,
+        FamilyRolePresentsAsAlreadyError,
+        FamilyRolePresentsAsNotPresentError,
         FrameCannotUpdateError,
         FrameCannotDecommissionError,
         FrameCannotSupersedeError,
@@ -566,6 +599,8 @@ def register_equipment_routes(app: FastAPI) -> None:
         ModelFamilyNotPresentError,
         AssemblyCannotVersionError,
         AssemblyCannotDeprecateError,
+        AssemblyRolePresentsAsAlreadyError,
+        AssemblyRolePresentsAsNotPresentError,
         AssemblyCannotInstantiateError,
         AssetAlreadyAttachedToFixtureError,
         AssetCannotAttachToFixtureError,

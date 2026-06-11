@@ -1,6 +1,7 @@
 """Data BC's projection-registration entry point."""
 
 from cora.data.projections import (
+    AcquisitionSummaryProjection,
     AttestationSummaryProjection,
     DatasetSummaryProjection,
     DistributionSummaryProjection,
@@ -17,6 +18,7 @@ def register_data_projections(
     """Register every Data-owned projection on the worker registry."""
     _ = deps
     registry.register(DatasetSummaryProjection())
+    registry.register(AcquisitionSummaryProjection())
     registry.register(DistributionSummaryProjection())
     registry.register(EditionSummaryProjection())
     registry.register(AttestationSummaryProjection())

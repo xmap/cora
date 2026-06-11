@@ -35,6 +35,7 @@ from cora.recipe.aggregates.capability.events import (
     CapabilityDefined,
     CapabilityDeprecated,
     CapabilityEvent,
+    CapabilitySuggestedRolesUpdated,
     CapabilityVersioned,
 )
 from cora.recipe.aggregates.capability.state import (
@@ -95,6 +96,12 @@ def evolve(state: Capability | None, event: CapabilityEvent) -> Capability:
                     dict(parameters_schema) if parameters_schema is not None else None
                 ),
                 replaced_by_capability_id=prior.replaced_by_capability_id,
+                # suggested_role_ids PRESERVED across version: orthogonal-
+                # axis editorial set per memo Lock 10 (3E). Operators
+                # who want to clear the set on version do so explicitly
+                # via update_capability_suggested_roles with an empty
+                # frozenset.
+                suggested_role_ids=prior.suggested_role_ids,
             )
         case CapabilityDeprecated(replaced_by_capability_id=replaced_by_capability_id):
             prior = require_state(state, "CapabilityDeprecated")
@@ -112,6 +119,26 @@ def evolve(state: Capability | None, event: CapabilityEvent) -> Capability:
                 parameters_schema=prior.parameters_schema,
                 # Set the replaced_by pointer (None if not supplied).
                 replaced_by_capability_id=replaced_by_capability_id,
+                # suggested_role_ids PRESERVED across deprecation: audit
+                # trail of what the editorial mapping said at retire
+                # time.
+                suggested_role_ids=prior.suggested_role_ids,
+            )
+        case CapabilitySuggestedRolesUpdated(suggested_role_ids=suggested_role_ids):
+            prior = require_state(state, "CapabilitySuggestedRolesUpdated")
+            return Capability(
+                id=prior.id,
+                code=prior.code,
+                name=prior.name,
+                status=prior.status,
+                version=prior.version,
+                description=prior.description,
+                required_affordances=prior.required_affordances,
+                executor_shapes=prior.executor_shapes,
+                parameters_schema=prior.parameters_schema,
+                replaced_by_capability_id=prior.replaced_by_capability_id,
+                # Wholesale-replace per Pattern P (set-edit semantic).
+                suggested_role_ids=suggested_role_ids,
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

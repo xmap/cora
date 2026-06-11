@@ -39,7 +39,7 @@ declared; the AST walker preserves that order.
 
 ## Documented deviations
 
-Two aggregates do not match the rule. Both are intentional and load-bearing:
+Four aggregates do not match the rule. All are intentional and load-bearing:
 
   - `run/run` emits `RunStarted` at genesis. The Run aggregate collapses
     register + start into a single event; renaming to `RunRegistered`
@@ -51,7 +51,16 @@ Two aggregates do not match the rule. Both are intentional and load-bearing:
     the verb encodes the chain-genesis semantic rather than the
     instance-registration framing.
 
-Both deviations are pinned in `_GENESIS_VERB_DEVIATIONS` below. A
+  - `data/acquisition` emits `AcquisitionRecorded`. The Acquisition
+    aggregate is a recorded-fact-chain (terminal at genesis); the verb
+    encodes a stated fact at a moment rather than instance registration.
+
+  - `data/attestation` emits `AttestationRecorded`. The Attestation
+    aggregate is a terminal-at-genesis recorded-fact-chain; the verb
+    encodes the recording of a verify/format/bit-rot fact rather than
+    instance registration.
+
+All deviations are pinned in `_GENESIS_VERB_DEVIATIONS` below. A
 sibling test enforces that each allowlisted aggregate STILL has a
 non-matching genesis (so that if a future refactor renames the genesis
 event to `<Aggregate>Defined` or `<Aggregate>Registered`, the allowlist
@@ -88,6 +97,14 @@ _GENESIS_VERB_DEVIATIONS: dict[tuple[str, str], str] = {
         "The Seal aggregate is the genesis of a per-Facility append-only "
         "event stream; the verb encodes chain-initialization rather than "
         "the instance-registration framing covered by the convention."
+    ),
+    ("data", "acquisition"): (
+        "AcquisitionRecorded reflects recorded-fact-chain semantics: an "
+        "Acquisition is the birth-certificate fact that a producing Asset "
+        "captured bytes into a Dataset, terminal at genesis (one event "
+        "ever per stream). The `record` verb encodes a stated fact at a "
+        "moment, not an instance template or a runtime binding; renaming "
+        "to AcquisitionRegistered would mislabel a fact as an instance."
     ),
     ("data", "attestation"): (
         "AttestationRecorded is a terminal-at-genesis recorded-fact-chain "

@@ -69,7 +69,11 @@ router = APIRouter(tags=["recipe"])
         },
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
-            "description": ("No plan, method, or asset exists with the given id."),
+            "description": (
+                "No plan, method, or asset exists with the given id, "
+                "OR the matching RoleRequirement's role_kind does not "
+                "resolve to a registered Role (Layer 3 3D edge-load)."
+            ),
         },
         status.HTTP_409_CONFLICT: {
             "model": ErrorResponse,
@@ -78,8 +82,13 @@ router = APIRouter(tags=["recipe"])
                 "Plan is Versioned/Deprecated, role_name already "
                 "bound, role_name not declared on the bound Method, "
                 "asset_id not in Plan.asset_ids, Asset missing the "
-                "role's required Family, OR Asset missing one or more "
-                "of the role's required port triples."
+                "role's required Family (family_id path), OR for the "
+                "3D role_kind path: no Family on the Asset advertises "
+                "the Role with covering affordances "
+                "(PlanRoleAssetCannotPresentError), or a Family "
+                "id on the Asset does not resolve via FamilyLookup "
+                "(PlanRoleFamilyNotResolvableError), OR Asset missing "
+                "one or more of the role's required port triples."
             ),
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {

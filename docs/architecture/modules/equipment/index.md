@@ -1,8 +1,8 @@
-# Equipment module <span class="md-maturity md-maturity--stable" title="Seven aggregates, six-level Asset hierarchy, vendor catalog, composition blueprints, placement frames, settings schema validation, typed ports">stable</span>
+# Equipment module <span class="md-maturity md-maturity--stable" title="Eight aggregates, six-level Asset hierarchy, vendor catalog, composition blueprints, placement frames, global Role contracts, settings schema validation, typed ports">stable</span>
 
 ## Purpose & Scope
 
-The Equipment module owns CORA's record of what physical devices the facility runs, how they are catalogued and composed, where they are mounted, and what operational state each one is in. Seven aggregates carry the responsibility. `Family` is the device-class abstraction (what kind of thing a rotary stage, camera, or scintillator is). `Asset` is one physical instance the facility commissions, maintains, moves, and eventually decommissions. `Model` is the vendor catalog entry that pins a manufacturer plus part number to a set of declared Families. `Mount` is a named installation slot the facility provisions in advance; an Asset is later installed into that slot. `Frame` is a coordinate frame in the placement hierarchy that Mounts use to anchor their position. `Assembly` is a reusable composition blueprint that declares a slot map and wiring for a cluster of Assets, and presents the cluster as a single Family. `Fixture` is the materialization of an Assembly into concrete Asset instances on a particular Trust Surface.
+The Equipment module owns CORA's record of what physical devices the facility runs, how they are catalogued and composed, where they are mounted, and what operational state each one is in. Eight aggregates carry the responsibility. `Family` is the device-class abstraction (what kind of thing a rotary stage, camera, or scintillator is). `Asset` is one physical instance the facility commissions, maintains, moves, and eventually decommissions. `Model` is the vendor catalog entry that pins a manufacturer plus part number to a set of declared Families. `Mount` is a named installation slot the facility provisions in advance; an Asset is later installed into that slot. `Frame` is a coordinate frame in the placement hierarchy that Mounts use to anchor their position. `Assembly` is a reusable composition blueprint that declares a slot map and wiring for a cluster of Assets, and presents the cluster as a single Family. `Fixture` is the materialization of an Assembly into concrete Asset instances on a particular Trust Surface. `Role` is the global functional binding contract (Imager, Positioner, Controller, Detector) that names WHAT operational shape a Method needs without pinning the anatomical Family that provides it; Families and Assemblies advertise which Roles they satisfy through a `presents_as` set.
 
 Equipment is Foundation: every other module that needs to point at a specific piece of hardware references an `Asset.id`. The recipe ladder binds Methods to Assets through Plans, and a Method may now require not only Families but specific Assembly blueprints. Procedures target Assets. Calibrations key off an `Asset.id` plus a quantity. Supplies advertise resources whose physical delivery infrastructure lives as Assets. Trust groups Assets into Zones for security policy.
 
@@ -25,19 +25,22 @@ Out of scope
 
 | Name | Identity | State summary | FSM |
 |---|---|---|---|
-| `Family` | `id: UUID` | `id`, `name: FamilyName`, `status: FamilyStatus`, `version: str?`, `affordances: frozenset[Affordance]`, `settings_schema: dict?` | yes (3-state) |
+| `Family` | `id: UUID` | `id`, `name: FamilyName`, `status: FamilyStatus`, `version: str?`, `affordances: frozenset[Affordance]`, `presents_as: frozenset[RoleId]`, `settings_schema: dict?` | yes (3-state) |
 | `Model` | `id: UUID` | `id`, `name`, `manufacturer: Manufacturer`, `part_number`, `declared_family_ids: frozenset[UUID]`, `status: ModelStatus`, `version: str?` | yes (3-state) |
 | `Asset` | `id: UUID` | `id`, `name`, `level`, `parent_id?`, `lifecycle`, `condition`, `family_ids: frozenset[UUID]`, `settings: dict`, `ports: frozenset[AssetPort]`, `model_id?`, `owners: frozenset[AssetOwner]`, `alternate_identifiers: frozenset[AlternateIdentifier]`, `fixture_id?`, `drawing?`, `commissioned_at?`, `decommissioned_at?`, `controller_id?`, `facility_code?`, `tier?` | yes (4-state lifecycle, 3-state condition) |
 | `Frame` | `id: UUID` | `id`, `name`, `parent_id?`, `placement: Placement?`, `supersedes: FrameRevisionLink?`, `status` | yes (2-state) |
 | `Mount` | `id: UUID` | `id`, `slot_code`, `parent_id?`, `placement: Placement`, `drawing?`, `installed_asset_id?`, `status` | yes (2-state) |
-| `Assembly` | `id: UUID` | `id`, `name`, `presents_as_family_id: UUID`, `required_slots: frozenset[TemplateSlot]`, `required_wires: frozenset[TemplateWire]`, `parameter_overrides_schema: dict?`, `drawing?`, `status: AssemblyStatus`, `version: str?`, `content_hash: str?` | yes (3-state) |
+| `Assembly` | `id: UUID` | `id`, `name`, `presents_as_family_id: UUID`, `presents_as: frozenset[RoleId]`, `required_slots: frozenset[TemplateSlot]`, `required_wires: frozenset[TemplateWire]`, `parameter_overrides_schema: dict?`, `drawing?`, `status: AssemblyStatus`, `version: str?`, `content_hash: str?` | yes (3-state) |
 | `Fixture` | `id: UUID` | `id`, `assembly_id`, `assembly_content_hash`, `surface_id`, `slot_asset_bindings: frozenset[SlotAssetBinding]`, `parameter_overrides: dict`, `persistent_id?`, `registered_at` | no (genesis + set-once persistent-id assign) |
+| `Role` | `id: RoleId` | `id`, `name: RoleName`, `docstring: str`, `required_affordances: frozenset[Affordance]`, `optional_affordances: frozenset[Affordance]`, `produces: frozenset[SignalType]`, `consumes: frozenset[SignalType]` | no (terminal at genesis; status implicit `Defined`) |
 
-`Family` is the device-class abstraction: "RotaryStage", "Camera", "Hexapod", "Mirror", "TriggerFPGA". It carries the affordance set (what device-level primitives this class supports) and the JSON Schema that constrains the operational settings any Asset of that class may carry. `Model` is the vendor catalog entry that names a specific manufacturer plus part number and declares which Families that catalog row belongs to. `Asset` is one physical instance: a Site, a beamline, a detector, a sample changer. Assets form a single-parent tree through `parent_id`; an Asset may belong to multiple Families simultaneously, and each membership widens what the Asset's settings dict may contain. An Asset may optionally bind to a Model, in which case the Asset's family set must be a subset of the Model's declared families.
+`Family` is the device-class abstraction: "RotaryStage", "Camera", "Hexapod", "Mirror", "TimingController". It carries the affordance set (what device-level primitives this class supports) and the JSON Schema that constrains the operational settings any Asset of that class may carry. `Model` is the vendor catalog entry that names a specific manufacturer plus part number and declares which Families that catalog row belongs to. `Asset` is one physical instance: a Site, a beamline, a detector, a sample changer. Assets form a single-parent tree through `parent_id`; an Asset may belong to multiple Families simultaneously, and each membership widens what the Asset's settings dict may contain. An Asset may optionally bind to a Model, in which case the Asset's family set must be a subset of the Model's declared families.
 
 `Frame` and `Mount` add the placement axis the facility uses to provision physical space ahead of installation. A Frame is a named coordinate frame; Frames form a parent tree, and a child Frame carries its placement relative to its parent. A Mount is a named installation slot the facility provisions in advance, carries a 6-DoF placement relative to its parent Frame or Mount, and may eventually have an Asset installed into it. Slot codes are facility-unique across active Mounts.
 
 `Assembly` and `Fixture` form a template-realization pair. An Assembly is a reusable composition blueprint that declares a slot map (which Families must occupy which named positions), an intra-cluster wiring map (which slot port connects to which other slot port), and an optional parameter-overrides schema. The Assembly presents through a single declared Family for the purposes of Capability binding, even though the cluster contains several underlying Assets. A Fixture is the materialization of an Assembly into concrete Assets on a particular Trust Surface; the Fixture binds named slots to specific `Asset.id` values, freezes the Assembly's content hash at registration time for federation matching, and carries any parameter overrides applied at this materialization.
+
+`Role` is the global functional binding contract: WHAT operational shape a Method needs (`Imager`, `Positioner`, `Controller`, `Detector`) without pinning the anatomical Family that provides it. Role is a sister aggregate to Family, not a kind of Family: it carries its own registry, events, and identifier (`RoleId`). A Role is a lightweight contract, `required_affordances` plus `optional_affordances` plus `produces` plus `consumes` plus a `docstring`; it has no settings schema, no instances, and no ports. A Family or Assembly declares it satisfies a Role through `presents_as: frozenset[RoleId]`, and a Method binds a positional role slot to a Role through its `RoleRequirement` in the [Recipe](../recipe/index.md) module. `RoleId` values are uuid5-derived from a fixed namespace (`role_stream_id(name) = uuid5(_ROLE_NAMESPACE, name.value.lower())`, `_ROLE_NAMESPACE = uuid5(NAMESPACE_DNS, 'cora.role')`) so the same Role gets the same id across deployments, which federation portability requires. Four seed Roles (Imager, Positioner, Controller, Detector) are auto-seeded at lifespan by `bootstrap_equipment`; defining a Role whose case-insensitive name collides with an existing one (a seed or any prior Role) returns `409 Conflict` via the deterministic stream id. Role ships no FSM today: status is implicit (`Defined`) on every Role, and the SiLA-2 FQN-terminal-major versioning slices are deferred until the first satisfaction-breaking affordance change forces them.
 
 ## Value Objects
 
@@ -68,6 +71,9 @@ Out of scope
 | `TemplateSlot` | `(slot_name, required_family_ids, cardinality)` per-slot Family requirement | members of `Assembly.required_slots` |
 | `TemplateWire` | `(source_slot, source_port, target_slot, target_port)` intra-Assembly wiring | members of `Assembly.required_wires` |
 | `SlotAssetBinding` | `(slot_name, asset_id)` materialization pair | members of `Fixture.slot_asset_bindings` |
+| `RoleId` | `NewType` over `UUID`; uuid5-derived from a fixed namespace so a Role gets the same id across deployments; lives at `cora/equipment/aggregates/_value_types.py` | `Role.id`, members of `Family.presents_as` and `Assembly.presents_as` |
+| `RoleName` | trimmed string, 1-200 chars | `Role.name` |
+| `SignalType` | `NewType` over `str`; open-vocabulary label, trimmed 1-50 chars at decider time (matches `AssetPort.signal_type`) | members of `Role.produces`, `Role.consumes` |
 
 The six `AssetLevel` values are ISA-95-derived with single-word names. Levels are conventional: the decider checks that an Enterprise-level Asset has no parent and that every other level has one, but it does not enforce that a `Device` parents to a `Component`. Smart instruments with addressable sub-modules legitimately put a `Device` under another `Device`.
 
@@ -89,9 +95,44 @@ Addressability wins ties: if any other module references the sub-component by id
 
 `Assembly.content_hash` is a SHA-256 over the canonical serialization of the structural content (`name`, `presents_as_family_id`, `required_slots`, `required_wires`, `parameter_overrides_schema`); engineering metadata (drawing, version label) is intentionally excluded so two Assemblies with the same structural intent share a hash even when sourced from different facilities. `Fixture.assembly_content_hash` snapshots that hash at registration time, decoupling the materialization from any later Assembly revision.
 
+## Family naming conventions
+
+Family names are cross-facility vocabulary. Three conventions are load-bearing today:
+
+### Anatomical names, not vendor or hardware-substrate names
+
+A Family names what something IS, device-agnostic across facilities. `Camera`, `Mirror`, `Scintillator`, `Hexapod` are anatomical. Vendor designations live in `Asset.metadata.vendor_designation` and on the bound `Model` row; they never enter the Family name. Hardware-substrate names (FPGA, VME card, PCIe board, the chip technology behind the function) likewise stay out of the Family name. A `MotionController` Family covers an Aerotech Ensemble drive, an Oregon Micro Systems VME58 card, and a hypothetical PCIe servo board with equal honesty; the substrate distinction lives in `MotionController.settings.protocol` or on the bound `Model`. The same convention rules out names like `TriggerFPGA`: the role is timing-signal generation and distribution, not "FPGA"; the right Family name is `TimingController`.
+
+### `<Domain>Controller` for separately-modelled active-control electronics
+
+Any field-replaceable, firmware-versioned active-control-electronics box gets a `<Domain>Controller` Family with a `<stage>.controller_id` back-reference from the driven stage. Two `<Domain>Controller` Families are anchored today:
+
+| Family | Drives | Anchored at |
+|---|---|---|
+| `MotionController` | Stages, hexapods, sample motors | Aerotech Ensemble (`Aerotech_Ensemble_drive`), Aerotech Hexapod drive, Aerotech 2bmbAERO drive, OMS VME58 a-station + b-station drives at 2-BM |
+| `TimingController` | Hardware timing signal generation (triggers, gates, sync pulses) | softGlueZynq + future trigger sources (slot reserved, not yet defined; replaces the pre-rename `TriggerFPGA` candidate) |
+
+Plausible siblings that have NOT yet earned a slot (rule-of-three): `TemperatureController` (Lakeshore cryostats), `FlowController` (Bronkhorst mass flow), `PressureController` (MKS Baratron + PID), `DAQController` (Quantum Detectors Merlin, FPGA frame grabbers), `HVPSU` / `BiasController` (CAEN HV crate). Each lands per its own trigger. The convention is suffix-LAST per the locked R3 family-noun primacy rule.
+
+### Function × anatomy matrix
+
+A useful cross-check on Family naming and gap detection: the function-and-anatomy matrix collects each Family by what it DOES (operational role) and what it IS (substrate). Empty cells are either real gaps or evidence the axes need refinement; cross-anatomy entries flag Families that straddle two substrates.
+
+|              | **Optical**                                   | **Mechanical**                                    | **Electronic**                          | **Composite (Assembly)** |
+|--------------|-----------------------------------------------|----------------------------------------------------|-----------------------------------------|--------------------------|
+| **Defining** | -                                             | Mask, Slit, Collimator, Baffle                     | -                                       | Slits-with-Filters       |
+| **Modifying**| Mirror, Monochromator, Filter, Window         | Foil                                               | -                                       | DMM                      |
+| **Sensing**  | Camera, Scintillator, Objective               | -                                                  | -                                       | OpticalRelay (presenter: Imager) |
+| **Positioning** | -                                          | LinearStage, RotaryStage, Hexapod, Blade, PseudoAxis | -                                     | SampleStack              |
+| **Terminating** | -                                          | BeamStop                                           | Shutter                                 | -                        |
+| **Controlling** | -                                          | -                                                  | MotionController, TimingController, `<Domain>Controller` siblings | - |
+| **Containing** | Window                                       | BeamPipe                                           | -                                       | -                        |
+
+`Window` straddles Modifying + Containing (attenuates AND bounds vacuum); `Shutter` straddles Electronic + Mechanical (electromechanical). Both are intentional single-Family typings today; either may split if a future use case forces it. The matrix is the operator-side companion to the beam-path inventory in `docs/deployments/<id>/assets.md`.
+
 ## FSM
 
-The Family, Model, and Assembly aggregates run a shared three-state lifecycle (Defined / Versioned / Deprecated). Asset runs a four-state lifecycle plus an orthogonal three-state condition. Frame and Mount each run a two-state lifecycle (Active / Decommissioned). Fixture has no FSM: a Fixture is registered in a genesis event and can later have a persistent identifier assigned once; otherwise it is never updated, and if a materialization needs to change, a new Fixture is registered against the same Assembly.
+The Family, Model, and Assembly aggregates run a shared three-state lifecycle (Defined / Versioned / Deprecated). Asset runs a four-state lifecycle plus an orthogonal three-state condition. Frame and Mount each run a two-state lifecycle (Active / Decommissioned). Fixture has no FSM: a Fixture is registered in a genesis event and can later have a persistent identifier assigned once; otherwise it is never updated, and if a materialization needs to change, a new Fixture is registered against the same Assembly. Role also has no FSM today: it is terminal at genesis with status implicit (`Defined`), and the versioning slices that would add a Versioned / Deprecated lifecycle are deferred.
 
 ### Family
 
@@ -235,7 +276,7 @@ stateDiagram-v2
 
 ## Events
 
-The seven aggregates emit forty-four distinct event types, grouped by aggregate.
+The eight aggregates emit forty-eight distinct event types, grouped by aggregate.
 
 ### Family events
 
@@ -245,6 +286,8 @@ The seven aggregates emit forty-four distinct event types, grouped by aggregate.
 | `FamilyVersioned` | `family_id`, `version_tag`, `affordances`, `occurred_at` | `version_family` succeeds; affordance set is the replacement declared at this version |
 | `FamilyDeprecated` | `family_id`, `occurred_at` | `deprecate_family` succeeds |
 | `FamilySettingsSchemaUpdated` | `family_id`, `settings_schema?`, `occurred_at` | `update_family_settings_schema` succeeds; payload carries the full replacement schema |
+| `FamilyPresentsAsAdded` | `family_id`, `role_id`, `occurred_at` | `add_family_presents_as` succeeds; the Family advertises one additional Role contract |
+| `FamilyPresentsAsRemoved` | `family_id`, `role_id`, `occurred_at` | `remove_family_presents_as` succeeds; the Family withdraws one previously-advertised Role |
 
 ### Model events
 
@@ -307,6 +350,8 @@ The seven aggregates emit forty-four distinct event types, grouped by aggregate.
 | `AssemblyDefined` | `assembly_id`, `name`, `presents_as_family_id`, `required_slots`, `required_wires`, `parameter_overrides_schema?`, `drawing?`, `content_hash`, `occurred_at` | `define_assembly` succeeds (genesis) |
 | `AssemblyVersioned` | `assembly_id`, `version_tag`, `required_slots`, `required_wires`, `parameter_overrides_schema?`, `drawing?`, `content_hash`, `occurred_at` | `version_assembly` succeeds; payload carries the replacement structural content |
 | `AssemblyDeprecated` | `assembly_id`, `occurred_at` | `deprecate_assembly` succeeds |
+| `AssemblyPresentsAsAdded` | `assembly_id`, `role_id`, `occurred_at` | `add_assembly_presents_as` succeeds; the Assembly advertises one additional Role contract |
+| `AssemblyPresentsAsRemoved` | `assembly_id`, `role_id`, `occurred_at` | `remove_assembly_presents_as` succeeds; the Assembly withdraws one previously-advertised Role |
 
 ### Fixture events
 
@@ -315,11 +360,17 @@ The seven aggregates emit forty-four distinct event types, grouped by aggregate.
 | `FixtureRegistered` | `fixture_id`, `assembly_id`, `assembly_content_hash`, `surface_id`, `slot_asset_bindings`, `parameter_overrides`, `occurred_at` | `register_fixture` succeeds (genesis) |
 | `FixturePersistentIdAssigned` | `fixture_id`, `persistent_id_scheme`, `persistent_id_value`, `occurred_at` | `assign_fixture_persistent_id` succeeds; set-once at the aggregate level |
 
+### Role events
+
+| Event | Payload sketch | When emitted |
+|---|---|---|
+| `RoleDefined` | `role_id`, `name`, `docstring`, `required_affordances`, `optional_affordances`, `produces`, `consumes`, `occurred_at` | `define_role` succeeds (genesis); the only Role event today, status is implicit `Defined` |
+
 `AssetRelocated` is the only event in the Equipment module that carries source state in its payload, because `parent_id` is a mutable value across many possible prior states rather than a discrete enum. `AssetDetachedFromFixture` and `MountAssetUninstalled` follow the same pattern for their respective back-references. `Assembly` versioning events carry the full replacement structural content so a downstream consumer can fold to the post-version state without loading the prior version.
 
 ## Slices
 
-The seven aggregates expose fifty-four slices end to end.
+The eight aggregates expose fifty-six slices end to end.
 
 ### Family slices
 
@@ -329,6 +380,8 @@ The seven aggregates expose fifty-four slices end to end.
 | `VersionFamily` | MODIFIED | `POST /families/{family_id}/version` | `version_family` | none |
 | `DeprecateFamily` | MODIFIED | `POST /families/{family_id}/deprecate` | `deprecate_family` | none |
 | `UpdateFamilySettingsSchema` | MODIFIED | `POST /families/{family_id}/settings-schema` | `update_family_settings_schema` | none |
+| `AddFamilyPresentsAs` | MODIFIED | `POST /families/{family_id}/add-presents-as` | `add_family_presents_as` | none |
+| `RemoveFamilyPresentsAs` | MODIFIED | `POST /families/{family_id}/remove-presents-as` | `remove_family_presents_as` | none |
 | `GetFamily` | QUERY | `GET /families/{family_id}` | `get_family` | none |
 | `ListFamilies` | QUERY | `GET /families` | `list_families` | none |
 
@@ -398,6 +451,8 @@ The seven aggregates expose fifty-four slices end to end.
 | `DefineAssembly` | NEW | `POST /assemblies` | `define_assembly` | required |
 | `VersionAssembly` | MODIFIED | `POST /assemblies/{assembly_id}/versions` | `version_assembly` | none |
 | `DeprecateAssembly` | MODIFIED | `POST /assemblies/{assembly_id}/deprecate` | `deprecate_assembly` | none |
+| `AddAssemblyPresentsAs` | MODIFIED | `POST /assemblies/{assembly_id}/add-presents-as` | `add_assembly_presents_as` | none |
+| `RemoveAssemblyPresentsAs` | MODIFIED | `POST /assemblies/{assembly_id}/remove-presents-as` | `remove_assembly_presents_as` | none |
 
 ### Fixture slices
 
@@ -406,6 +461,12 @@ The seven aggregates expose fifty-four slices end to end.
 | `RegisterFixture` | NEW | `POST /assemblies/{assembly_id}/fixtures` | `register_fixture` | required |
 | `GetFixture` | QUERY | `GET /fixtures/{fixture_id}` | `get_fixture` | none |
 | `ListFixtures` | QUERY | `GET /fixtures` | `list_fixtures` | none |
+
+### Role slices
+
+| Command | Category | REST | MCP tool | Idempotency |
+|---|---|---|---|---|
+| `DefineRole` | NEW | `POST /roles` | `define_role` | required |
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 
@@ -417,6 +478,9 @@ The seven aggregates expose fifty-four slices end to end.
 
 `UpdateFamilySettingsSchema`
 : `FamilyNotFound`, `InvalidFamilySettingsSchema`, `Unauthorized`
+
+`AddFamilyPresentsAs` / `RemoveFamilyPresentsAs`
+: `FamilyNotFound`, `RoleNotFound` (add only, the `role_id` does not resolve via `RoleLookup`), `FamilyCannotPresentAs` (add only, `Family.affordances` does not superset the Role's `required_affordances`), `FamilyRolePresentsAsAlready` (add only) / `FamilyRolePresentsAsNotPresent` (remove only), `Unauthorized`
 
 `DefineModel`
 : `InvalidModelName`, `ModelAlreadyExists`, `InvalidDeclaredFamilies`, `FamilyNotFound`, `Unauthorized`
@@ -466,8 +530,14 @@ The seven aggregates expose fifty-four slices end to end.
 `DefineAssembly` / `VersionAssembly` / `DeprecateAssembly`
 : `AssemblyAlreadyExists` (define only), `AssemblyNotFound`, `AssemblyCannotVersion` / `AssemblyCannotDeprecate`, `FamilyNotFoundForAssembly` (define / version, when `presents_as_family_id` or a slot's `required_family_ids` references a missing Family), `WireReferencesUnknownSlot` (define / version, when a TemplateWire endpoint cites a slot the same Assembly does not declare), `Unauthorized`
 
+`AddAssemblyPresentsAs` / `RemoveAssemblyPresentsAs`
+: `AssemblyNotFound`, `RoleNotFound` (add only, the `role_id` does not resolve via `RoleLookup`), `AssemblyRolePresentsAsAlready` (add only) / `AssemblyRolePresentsAsNotPresent` (remove only), `Unauthorized`. No affordance-superset check at the template tier: Assembly affordances derive from the constituent Family union at `register_fixture` time.
+
 `RegisterFixture`
 : `AssemblyNotFound`, `AssemblyCannotInstantiate` (Assembly is Deprecated), `FixtureAlreadyExists`, `FixtureAssetNotFound` (a binding references a missing Asset), `FixtureAssetNotAttachable` (a binding's Asset is Decommissioned), `FixtureAssetNotInstalled` (a binding's Asset is not currently installed in any Mount), `FixtureAssetFamilyMismatch` (a binding's Asset does not include the slot's required Family in its `family_ids`), `FixtureMappingIncomplete` (a required slot has no covering binding), `Unauthorized`
+
+`DefineRole`
+: `InvalidRoleName`, `InvalidRoleDocstring`, `RoleAffordanceOverlap` (required and optional Affordance sets are not disjoint), `InvalidSignalType` (a `produces` / `consumes` entry is empty or too long), `RoleAlreadyExists` (a Role with the same case-insensitive name already exists, including the four auto-seeded Roles), `Unauthorized`
 
 `GetFamily` / `GetModel` / `GetAsset` / `GetAssetIntegrationView` / `GetFixture`
 : `<X>NotFound`
@@ -525,7 +595,7 @@ Steps 5-9 may repeat many times across runs while a single physical install (ste
 
 ## Storage & Projections
 
-Thirteen read-side tables back the Equipment module: per-aggregate summaries for the six aggregates that have one (Asset, Family, Model, Frame, Mount, Assembly, Fixture), join projections for membership and parent-child relations, and uniqueness helpers that back decide-time precondition checks.
+Fourteen read-side tables back the Equipment module: per-aggregate summaries for the eight aggregates that have one (Asset, Family, Model, Frame, Mount, Assembly, Fixture, Role), join projections for membership and parent-child relations, and uniqueness helpers that back decide-time precondition checks.
 
 ```sql title="proj_equipment_asset_summary"
 CREATE TABLE proj_equipment_asset_summary (
@@ -574,6 +644,8 @@ CREATE TABLE proj_equipment_family_summary (
     ),
     version_tag              TEXT,
     settings_schema_present  BOOLEAN     NOT NULL DEFAULT FALSE,
+    affordances              TEXT[]      NOT NULL DEFAULT ARRAY[]::TEXT[],
+    presents_as              UUID[]      NOT NULL DEFAULT ARRAY[]::UUID[],
     versioned_at             TIMESTAMPTZ,
     deprecated_at            TIMESTAMPTZ,
     created_at               TIMESTAMPTZ NOT NULL,
@@ -584,7 +656,7 @@ CREATE INDEX proj_equipment_family_summary_keyset_idx
     ON proj_equipment_family_summary (created_at, family_id);
 ```
 
-The Family summary backs `GET /families`. `settings_schema_present` is a boolean indicator of whether the Family has any settings schema declared (the schema content itself is folded from the event stream on demand); `versioned_at` and `deprecated_at` are lifecycle timestamps mirrored from the events.
+The Family summary backs `GET /families`. `settings_schema_present` is a boolean indicator of whether the Family has any settings schema declared (the schema content itself is folded from the event stream on demand); `versioned_at` and `deprecated_at` are lifecycle timestamps mirrored from the events. `affordances` mirrors the Family's Affordance value strings (wholesale-replaced on `FamilyVersioned`) and backs the affordance-superset check in the `add_family_presents_as` slice and Recipe's Role satisfaction path; `presents_as` is the array of Role ids the Family advertises, mutated incrementally by `add_family_presents_as` (append) and `remove_family_presents_as` (remove).
 
 ```sql title="proj_equipment_asset_family_membership"
 CREATE TABLE proj_equipment_asset_family_membership (
@@ -754,6 +826,7 @@ CREATE TABLE proj_equipment_assembly_summary (
     ),
     version                TEXT,
     content_hash           TEXT,
+    presents_as            UUID[]      NOT NULL DEFAULT ARRAY[]::UUID[],
     created_at             TIMESTAMPTZ NOT NULL,
     updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -769,7 +842,33 @@ CREATE INDEX proj_equipment_assembly_summary_presents_as_family_id_idx
     ON proj_equipment_assembly_summary (presents_as_family_id);
 ```
 
-The Assembly summary is the read-side anchor for content-hash and `presents_as_family_id` lookups. The content-hash index supports federation dedup queries (find the Assembly that materializes the same canonical content); the family-id index supports `Method.needed_family_ids` satisfaction lookups when an Assembly presents through a given Family. Read slices on Assembly itself (`get_assembly`, `list_assemblies`) are deferred today; operators consume Assembly state indirectly through `get_fixture` and `list_fixtures`, which carry the `assembly_id` and the frozen `assembly_content_hash` for each materialization.
+The Assembly summary is the read-side anchor for content-hash and `presents_as_family_id` lookups. The content-hash index supports federation dedup queries (find the Assembly that materializes the same canonical content); the family-id index supports `Method.needed_family_ids` satisfaction lookups when an Assembly presents through a given Family. The `presents_as` array carries the Role ids the Assembly advertises, parallel to the scalar `presents_as_family_id` (retained for one migration cycle); it is mutated by `add_assembly_presents_as` (append) and `remove_assembly_presents_as` (remove) and backs the Role-based binding path. Read slices on Assembly itself (`get_assembly`, `list_assemblies`) are deferred today; operators consume Assembly state indirectly through `get_fixture` and `list_fixtures`, which carry the `assembly_id` and the frozen `assembly_content_hash` for each materialization.
+
+```sql title="proj_equipment_role_summary"
+CREATE TABLE proj_equipment_role_summary (
+    role_id                UUID         PRIMARY KEY,
+    name                   TEXT         NOT NULL CHECK (
+        length(name) > 0
+    ),
+    docstring              TEXT         NOT NULL CHECK (
+        length(docstring) > 0
+    ),
+    required_affordances   TEXT[]       NOT NULL DEFAULT ARRAY[]::TEXT[],
+    optional_affordances   TEXT[]       NOT NULL DEFAULT ARRAY[]::TEXT[],
+    produces               TEXT[]       NOT NULL DEFAULT ARRAY[]::TEXT[],
+    consumes               TEXT[]       NOT NULL DEFAULT ARRAY[]::TEXT[],
+    created_at             TIMESTAMPTZ  NOT NULL,
+    updated_at             TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX proj_equipment_role_summary_name_lower_uq
+    ON proj_equipment_role_summary (LOWER(name));
+
+CREATE INDEX proj_equipment_role_summary_keyset_idx
+    ON proj_equipment_role_summary (created_at, role_id);
+```
+
+The Role summary folds `RoleDefined` and is the read-side anchor for the cross-aggregate satisfaction checks (`Family.presents_as` validation, `Assembly.presents_as` validation, Recipe's `bind_plan_role` role_kind path, `Capability.suggested_roles` existence check) and for future operator-facing list / get endpoints. The `LOWER(name)` unique index enforces case-insensitive name uniqueness, matching the deterministic `role_stream_id(name)` derivation so a `define_role` race on the same name collides at the event store before the projection writer. The four affordance / signal arrays default to empty; disjointness of `required_affordances` and `optional_affordances` is enforced at the decider, not the DB.
 
 ```sql title="proj_equipment_fixture_summary"
 CREATE TABLE proj_equipment_fixture_summary (
@@ -801,6 +900,8 @@ The Fixture summary backs `GET /fixtures` plus filters by `assembly_id`, `surfac
 |---|---|---|
 | [Recipe](../recipe/index.md) | reads-from | `Method.needed_family_ids` references Family ids; Plan binding matches a Method's required Families against `Asset.family_ids` |
 | [Recipe](../recipe/index.md) | reads-from | `Method.needed_assembly_ids` references Assembly ids; Plan binding requires each id to be materialized as a `Fixture` whose `assembly_id` matches and whose bound Assets are among the Plan's bound Assets |
+| [Recipe](../recipe/index.md) | reads-from (via `FamilyLookup` + `AssemblyLookup` ports) | A Method's `RoleRequirement.role_kind` references a `Role.id`; Recipe's `bind_plan_role` satisfaction path reads each candidate's `presents_as` set through `FamilyLookup` / `AssemblyLookup` and requires the Family's `affordances` to superset the Role's `required_affordances` |
+| [Recipe](../recipe/index.md) | reads-from (via `RoleLookup` port) | `Capability.suggested_roles` and the `add_family_presents_as` / `add_assembly_presents_as` slices resolve a `Role.id` to its contract through `RoleLookup`; an unresolved id raises `RoleNotFoundError` (HTTP 404) |
 | [Recipe](../recipe/index.md) | reads-from | `Plan.wiring` references Asset ports by `(asset_id, port_name)` |
 | [Run](../run/index.md) | reads-from | Each Run's effective parameters are validated against the Method's parameters schema; Run pinned calibrations reference Asset ids transitively |
 | [Operation](../operation/index.md) | reads-from | `Procedure.target_asset_ids` references the Assets the procedure acts on |

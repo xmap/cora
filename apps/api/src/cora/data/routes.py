@@ -44,6 +44,15 @@ other BC.
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
+from cora.data.aggregates.acquisition import (
+    AcquisitionAlreadyExistsError,
+    AcquisitionAssetNotFoundError,
+    AcquisitionCannotRecordWithoutCapturingError,
+    AcquisitionRunNotFoundError,
+    InvalidAcquisitionCapturedAtError,
+    InvalidAcquisitionEvidenceError,
+    InvalidAcquisitionSettingsError,
+)
 from cora.data.aggregates.attestation import (
     AttestationAlreadyExistsError,
     AttestationChecksumEvidenceMismatchError,
@@ -132,6 +141,7 @@ from cora.data.features import (
     list_datasets,
     promote_dataset,
     publish_edition,
+    record_acquisition,
     record_attestation,
     register_dataset,
     register_distribution,
@@ -244,6 +254,7 @@ def register_data_routes(app: FastAPI) -> None:
     app.include_router(demote_dataset.router)
     app.include_router(get_dataset.router)
     app.include_router(list_datasets.router)
+    app.include_router(record_acquisition.router)
     app.include_router(register_distribution.router)
     app.include_router(register_edition.router)
     app.include_router(add_dataset_to_edition.router)
@@ -266,6 +277,10 @@ def register_data_routes(app: FastAPI) -> None:
         InvalidDemotionReasonError,
         # 12c validation guard: cardinality cap on AsShot citation set.
         InvalidUsedCalibrationsError,
+        # Acquisition shape-only guards (settings / evidence / captured_at).
+        InvalidAcquisitionSettingsError,
+        InvalidAcquisitionEvidenceError,
+        InvalidAcquisitionCapturedAtError,
         # Distribution VO validation + lifespan-bootstrap fail-loud branches.
         # All produce {"detail": str(exc)} 400 responses. The bootstrap
         # classes are raised at app startup before any route opens; the
@@ -315,6 +330,9 @@ def register_data_routes(app: FastAPI) -> None:
         ProducingRunNotFoundError,
         LinkedSubjectNotFoundError,
         DerivedFromDatasetsNotFoundError,
+        # Acquisition cross-aggregate not-found (producing Asset / Run).
+        AcquisitionAssetNotFoundError,
+        AcquisitionRunNotFoundError,
         # Distribution cross-BC not-found family.
         DistributionSupplyNotFoundError,
         # Attestation Distribution-binding not-found family. The Dataset
@@ -326,12 +344,15 @@ def register_data_routes(app: FastAPI) -> None:
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for already_exists_cls in (
         DatasetAlreadyExistsError,
+        AcquisitionAlreadyExistsError,
         DistributionAlreadyExistsError,
         # Edition defensive 409: same-stream-id race at register decider.
         EditionAlreadyExistsError,
         AttestationAlreadyExistsError,
     ):
         app.add_exception_handler(already_exists_cls, _handle_already_exists)
+    for cannot_record_cls in (AcquisitionCannotRecordWithoutCapturingError,):
+        app.add_exception_handler(cannot_record_cls, _handle_cannot_transition)
     for lineage_state_cls in (DerivedFromDatasetsDiscardedError,):
         app.add_exception_handler(lineage_state_cls, _handle_lineage_state_conflict)
     for cannot_transition_cls in (

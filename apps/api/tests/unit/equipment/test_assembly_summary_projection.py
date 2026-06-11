@@ -49,6 +49,8 @@ def test_projection_metadata() -> None:
             "AssemblyDefined",
             "AssemblyVersioned",
             "AssemblyDeprecated",
+            "AssemblyPresentsAsAdded",
+            "AssemblyPresentsAsRemoved",
         }
     )
 
@@ -172,3 +174,79 @@ async def test_unrelated_event_type_is_silently_ignored() -> None:
     event = _stored("UnrelatedEvent", {"assembly_id": str(_ASSEMBLY_ID)})
     await proj.apply(event, conn)
     assert conn.execute.await_count == 0
+
+
+@pytest.mark.unit
+async def test_assembly_defined_seeds_empty_presents_as() -> None:
+    """Layer 3 3C: INSERT defaults presents_as to ARRAY[]::UUID[]."""
+    proj = AssemblySummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "AssemblyDefined",
+        {
+            "assembly_id": str(_ASSEMBLY_ID),
+            "name": "MCTOptics",
+            "presents_as_family_id": str(_FAMILY_ID),
+            "version": None,
+            "content_hash": "abc",
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "ARRAY[]::UUID[]" in sql
+
+
+@pytest.mark.unit
+async def test_assembly_presents_as_added_appends_distinct_role_id() -> None:
+    proj = AssemblySummaryProjection()
+    conn = AsyncMock()
+    role_id = uuid4()
+    event = _stored(
+        "AssemblyPresentsAsAdded",
+        {
+            "assembly_id": str(_ASSEMBLY_ID),
+            "role_id": str(role_id),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    conn.execute.assert_awaited_once()
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "presents_as" in sql
+    assert "DISTINCT" in sql
+    assert args.args[1] == _ASSEMBLY_ID
+    assert args.args[2] == role_id
+
+
+@pytest.mark.unit
+async def test_assembly_presents_as_removed_uses_array_remove() -> None:
+    proj = AssemblySummaryProjection()
+    conn = AsyncMock()
+    role_id = uuid4()
+    event = _stored(
+        "AssemblyPresentsAsRemoved",
+        {
+            "assembly_id": str(_ASSEMBLY_ID),
+            "role_id": str(role_id),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    conn.execute.assert_awaited_once()
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "array_remove(presents_as, $2)" in sql
+    assert args.args[1] == _ASSEMBLY_ID
+    assert args.args[2] == role_id

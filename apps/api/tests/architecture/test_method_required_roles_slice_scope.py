@@ -60,33 +60,38 @@ def test_role_requirement_carries_required_ports_field() -> None:
     structural closure the 2026-06-06 critique demanded). A future
     refactor that drops the field would silently re-introduce the
     role-table-vs-wire-graph divergence Option A was originally
-    refuted on."""
+    refuted on. Layer 3 sub-slice 3D widens the VO with the XOR-
+    bound `role_kind` field (federation-portable path) alongside
+    the slice-1 `family_id` field (anatomical escape hatch)."""
     field_names = {f for f in RoleRequirement.__dataclass_fields__}
     assert "required_ports" in field_names
     assert "role_name" in field_names
     assert "family_id" in field_names
     assert "optional" in field_names
+    # Layer 3 3D additive field. XOR with family_id enforced by VO
+    # __post_init__.
+    assert "role_kind" in field_names
 
 
 @pytest.mark.architecture
 def test_method_state_reuses_port_direction_from_equipment_bc() -> None:
     """The PortDirection enum from Equipment BC is the ONLY new cross-
-    BC type dependency added by slice 1. Pinned: Method state imports
-    PortDirection (and the two re-exported port-length constants) and
-    nothing else from equipment.aggregates.asset.
+    BC type dependency added by slice 1, and Layer 3 sub-slice 3D
+    deliberately preserves this minimal surface: `RoleRequirement.role_kind`
+    types as bare `UUID` rather than the `RoleId` NewType (per the 3D
+    design memo's cross-BC NewType-avoidance rule), so 3D adds NO new
+    cora.equipment import to Method state.py. Symmetric with the
+    pre-existing `family_id: UUID` field.
 
-    A future addition of a new cross-BC import would surface here and
-    require an explicit design review (per project_bc_map.md and
-    [[project-method-required-roles-design]] §"Cross-BC impact")."""
+    A future addition of a new cora.equipment import line would
+    surface here and require explicit design review (per
+    project_bc_map.md)."""
     source = inspect.getsource(method_state)
     # Positive: PortDirection + two length constants ARE imported.
     assert "PortDirection" in source
     assert "PORT_NAME_MAX_LENGTH" in source
     assert "PORT_SIGNAL_TYPE_MAX_LENGTH" in source
     # Negative: no other cora.equipment surface leaks into state.py.
-    # All cross-BC lines must be the single "from cora.equipment..."
-    # block. Counting "from cora.equipment" anchors detection without
-    # depending on exact whitespace formatting.
     cross_bc_lines = [
         line for line in source.splitlines() if line.strip().startswith("from cora.equipment")
     ]

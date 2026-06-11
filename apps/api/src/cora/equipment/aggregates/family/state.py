@@ -2,7 +2,7 @@
 
 `Family` is the device-class abstraction: WHAT kind of equipment this is,
 device-agnostic. Examples: "RotaryStage", "LinearStage", "Camera",
-"Scintillator", "Hexapod", "Mirror", "TriggerFPGA". Referenced by
+"Scintillator", "Hexapod", "Mirror", "TimingController". Referenced by
 `Asset.family_ids` to declare what classes a Device belongs to, and by
 `Method.needed_family_ids` to express a Method's hardware contract;
 resolved at `Plan` binding when the contract is matched against
@@ -52,6 +52,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.family.affordance import Affordance
 from cora.shared.bounded_text import bounded_name
 
@@ -146,6 +147,71 @@ class InvalidFamilyVersionTagError(ValueError):
         self.value = value
 
 
+class FamilyCannotPresentAsError(Exception):
+    """Family cannot present the requested Role.
+
+    Raised by `add_family_presents_as` when the requested Role's
+    `required_affordances` is not a subset of the Family's current
+    `affordances`. Per Lock 17 ANY-single-family disjunction, a Family
+    that does not cover the Role's required Affordances cannot
+    advertise the role, regardless of what other Families on the
+    same Asset may cover.
+
+    Taxonomy: `<X>Cannot<Verb>Error` (mirrors `FamilyCannotVersionError`
+    + `FamilyCannotDeprecateError`); the verb is "PresentAs" (the
+    add/remove pair operates on the presents_as set).
+    """
+
+    def __init__(
+        self,
+        family_id: UUID,
+        role_id: UUID,
+        missing_affordances: frozenset[Affordance],
+    ) -> None:
+        super().__init__(
+            f"Family {family_id} cannot present as Role {role_id}: "
+            f"missing required Affordances "
+            f"{sorted(a.value for a in missing_affordances)!r} "
+            "(Family.affordances must superset Role.required_affordances)"
+        )
+        self.family_id = family_id
+        self.role_id = role_id
+        self.missing_affordances = missing_affordances
+
+
+class FamilyRolePresentsAsAlreadyError(Exception):
+    """`role_id` is already present in the Family's `presents_as` set.
+
+    Strict-not-idempotent: re-adding the same Role surfaces this
+    rather than no-op. Mirrors `add_asset_family` /
+    `add_method_required_role` precedent.
+    """
+
+    def __init__(self, family_id: UUID, role_id: UUID) -> None:
+        super().__init__(
+            f"Family {family_id} already presents as Role {role_id} (strict-not-idempotent)"
+        )
+        self.family_id = family_id
+        self.role_id = role_id
+
+
+class FamilyRolePresentsAsNotPresentError(Exception):
+    """`role_id` is not in the Family's `presents_as` set.
+
+    Strict-not-idempotent: removing a Role the Family does not
+    advertise surfaces this rather than no-op. Mirrors
+    `remove_asset_family` / `remove_method_required_role` precedent.
+    """
+
+    def __init__(self, family_id: UUID, role_id: UUID) -> None:
+        super().__init__(
+            f"Family {family_id} does not present as Role {role_id} "
+            "(strict-not-idempotent on remove)"
+        )
+        self.family_id = family_id
+        self.role_id = role_id
+
+
 @bounded_name(max_length=FAMILY_NAME_MAX_LENGTH, error_class=InvalidFamilyNameError)
 @dataclass(frozen=True)
 class FamilyName:
@@ -174,6 +240,20 @@ class Family:
     `settings_schema` is the optional JSON Schema (Draft 2020-12,
     constrained subset) declaring the shape of `Asset.settings` keys
     this Family "owns".
+
+    `presents_as` is the set of global Role contracts this Family
+    advertises (Layer 3 sub-slice 3B; see
+    [[project-role-aggregate-design]] Lock 4 universal
+    `Family.presents_as`). Direct-detection Camera Families advertise
+    `{Imager}`; LinearStage / RotaryStage / Hexapod advertise
+    `{Positioner}`; the empty-Affordances <Domain>Controller leaves
+    advertise `{Controller}`. Added incrementally via
+    `add_family_presents_as` (strict-not-idempotent; validates that
+    `Family.affordances` supersets the Role's `required_affordances`);
+    removed via `remove_family_presents_as`. PRESERVED across
+    `version_family`, `deprecate_family`, and
+    `update_family_settings_schema` (orthogonal-axis: matches
+    `settings_schema` preservation precedent).
     """
 
     id: UUID
@@ -182,3 +262,4 @@ class Family:
     version: str | None = None
     affordances: frozenset[Affordance] = field(default_factory=frozenset[Affordance])
     settings_schema: dict[str, Any] | None = field(default=None)
+    presents_as: frozenset[RoleId] = field(default_factory=frozenset[RoleId])

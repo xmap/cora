@@ -6,16 +6,16 @@ An **Affordance** is a claim about what a device can do. Affordances are declare
 
 ## Two patterns
 
-The v1 closed enum carries 28 items in two explicit patterns:
+The v1 closed enum carries 29 items in two explicit patterns:
 
-- **Pattern A — Operational affordances (`-able` / `-ible` / `-ing`)**: 27 items. The device is the actor.
+- **Pattern A — Operational affordances (`-able` / `-ible` / `-ing`)**: 28 items. The device is the actor.
   - **`-able` / `-ible` form (22 items)**: "device supports doing X" — `Rotatable`, `Triggerable`, `Bendable`, …
-  - **`-ing` gerund form (5 items)**: "device performs X" / "device is X-ing" — `Marking`, `Pulsing`, `Following`, `Leading`, `Recording`. Used where the device's role in a signal chain or data flow is the primitive being claimed; `-able` would invert the direction.
+  - **`-ing` gerund form (6 items)**: "device performs X" / "device is X-ing" — `Marking`, `Pulsing`, `Following`, `Leading`, `Recording`, `Capturing`. Used where the device's role in a signal chain or data flow is the primitive being claimed; `-able` would invert the direction.
 - **Pattern C — Lifecycle affordances (noun)**: 1 item — `Consumable`. Passive parts whose identity is operationally tracked even though they have no command surface (scintillator screens, filters, sample holders, target foils).
 
 The convention is grounded in [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) ("Protocols that describe a _capability_ should be named using the suffixes `able`, `ible`, or `ing`"), [.NET Framework Design Guidelines](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-classes-structs-and-interfaces) ("DO name interfaces with adjective phrases"), and [W3C SOSA](https://www.w3.org/TR/vocab-ssn/) `ObservableProperty` / `ActuatableProperty`. The pre-rename v1 enum had a third Pattern B for noun-named signal flows (`EncoderInput` / `EncoderOutput` / `PulseGenerator`); those dissolved into Pattern A's `-ing` form (`Following` / `Leading` / `Pulsing`) once the role-based reframing made the device-as-actor reading natural.
 
-## Pattern A — Operational affordances (27)
+## Pattern A — Operational affordances (28)
 
 ### Motion (9)
 
@@ -31,12 +31,13 @@ The convention is grounded in [Swift API Design Guidelines](https://www.swift.or
 | `Following` | Device follows an external encoder source as its position feedback (slave role in a master/slave chain). |
 | `Leading` | Device emits its position as an encoder signal for downstream followers (master role in a master/slave chain). |
 
-### Imaging (2)
+### Imaging (3)
 
 | Affordance | Contract |
 |---|---|
 | `Imageable` | Device acquires 2D image frames on exposure/trigger; supports basic capture. |
 | `Binnable` | Device supports on-sensor pixel binning (N×N combining) to trade resolution for SNR/speed. |
+| `Capturing` | Device captures a 2D or 3D data sample on operator command or external trigger; produces a Data BC Acquisition fact on every capture. |
 
 ### Triggering and timing (5)
 
@@ -94,6 +95,7 @@ Affordance ⇄ adjacent-vocabulary cross-walk for adapter authors:
 | `Triggerable` | — | `ActionAffordance` | `NXdetector.acquisition_mode=triggered` | — | `PULSE` | — |
 | `Gateable` | — | — | `NXdetector.acquisition_mode=gated` | — | `GATE` | — |
 | `Imageable` | — | — | `NXdetector` | — | — | `areaDetector` |
+| `Capturing` | — | — | `NXdetector` / `NXdata` (W3C SOSA `Observation` cross-walk) | — | — | `areaDetector` |
 | `Streamable` | — | `EventAffordance` | — | — | — | `areaDetector NDPluginStream` |
 | `Recording` | — | — | — | — | — | `areaDetector NDFileHDF5/TIFF` |
 | `Bendable` | — | — | `NXmirror.bend_angle_x/y` | — | — | — |

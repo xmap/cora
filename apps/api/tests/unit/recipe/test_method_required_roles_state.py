@@ -4,7 +4,7 @@ tagging workstream; IEC 81346 Function aspect).
 """
 
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -287,3 +287,85 @@ def test_method_content_subset_serializes_role_payload_shape() -> None:
         "data_out",
         "trigger_in",
     ]
+
+
+# ---------- Layer 3 sub-slice 3D content_subset byte-stability --------------
+#
+# `_canonical_role_requirement` conditionally renders `role_kind`: only
+# included when non-None. This preserves byte-stability of content_hash
+# for Methods authored before 3D (no spurious `"role_kind": null` key).
+# Pin both halves of the conditional + a golden content_hash so a
+# future cleanup that flips the if-guard to unconditional render
+# breaks the test instead of silently changing every pre-3D Method's
+# hash.
+
+
+@pytest.mark.unit
+def test_method_content_subset_omits_role_kind_key_when_family_id_only() -> None:
+    """Slice-1 (family_id-only) RoleRequirements MUST NOT include a
+    `role_kind` key in the canonical bytes. Preserves content_hash
+    stability across the 3D upgrade for Methods authored pre-3D."""
+    family_id = uuid4()
+    role = RoleRequirement(role_name=RoleName("detector"), family_id=family_id)
+    m = Method(
+        id=uuid4(),
+        name=MethodName("Tomography"),
+        required_roles=frozenset({role}),
+    )
+    subset = m.content_subset()
+    required_roles_payload: list[dict[str, Any]] = subset["required_roles"]  # type: ignore[assignment]
+    payload = required_roles_payload[0]
+    assert "role_kind" not in payload
+    assert payload["family_id"] == str(family_id)
+
+
+@pytest.mark.unit
+def test_method_content_subset_includes_role_kind_when_role_kind_set() -> None:
+    """3D (role_kind) RoleRequirements MUST include `role_kind` in the
+    canonical bytes (stringified UUID) and MUST set `family_id` to None
+    (the XOR invariant renders family_id=null)."""
+    role_kind = uuid4()
+    role = RoleRequirement(role_name=RoleName("imager"), role_kind=role_kind)
+    m = Method(
+        id=uuid4(),
+        name=MethodName("Tomography"),
+        required_roles=frozenset({role}),
+    )
+    subset = m.content_subset()
+    required_roles_payload: list[dict[str, Any]] = subset["required_roles"]  # type: ignore[assignment]
+    payload = required_roles_payload[0]
+    assert payload["role_kind"] == str(role_kind)
+    assert payload["family_id"] is None
+
+
+@pytest.mark.unit
+def test_method_content_subset_byte_stable_for_family_id_only_method() -> None:
+    """Golden vector: a Method authored entirely with family_id
+    RoleRequirements produces byte-identical canonical JSON whether
+    or not the 3D code path is active. The hash pins SHA-256 over
+    the canonical JSON-serialized subset for one fixed input.
+
+    A future cleanup that flips the conditional render to
+    unconditional (`body['role_kind'] = ...` outside the `if`) will
+    inject `"role_kind": null` keys into the canonical bytes and
+    break this hash, surfacing the byte-stability regression
+    before it silently changes every pre-3D Method's content_hash.
+    """
+    import hashlib
+    import json
+
+    # Pinned UUIDs so the hash is reproducible.
+    method_id = UUID("01900000-0000-7000-8000-000000000301")
+    family_id = UUID("01900000-0000-7000-8000-000000000401")
+    role = RoleRequirement(role_name=RoleName("detector"), family_id=family_id)
+    m = Method(
+        id=method_id,
+        name=MethodName("Tomography"),
+        required_roles=frozenset({role}),
+    )
+    subset = m.content_subset()
+    canonical_bytes = json.dumps(subset, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    digest = hashlib.sha256(canonical_bytes).hexdigest()
+    # If this hash changes, the canonical bytes shape changed.
+    # Investigate before re-pinning.
+    assert digest == "a3313840c0146f37c7af75de1fa67eb8b4a7416b3a92de36c586994e65fb0ebf"

@@ -17,9 +17,10 @@ boundary so malformed requests reject early as 422 rather than
 slipping into the decider as 400.
 """
 
+from typing import Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from cora.equipment.aggregates.asset import PortDirection
 from cora.recipe.aggregates.method import (
@@ -73,7 +74,15 @@ class PortRequirementBody(BaseModel):
 
 
 class RoleRequirementBody(BaseModel):
-    """Wire format for a `RoleRequirement` value object."""
+    """Wire format for a `RoleRequirement` value object.
+
+    Layer 3 sub-slice 3D widens this body with `role_kind` for the
+    federation-portable binding path. Exactly one of `role_kind` /
+    `family_id` must be set per the memo Lock 5 XOR invariant; the
+    `_xor_role_kind_and_family_id` model_validator catches both-set
+    + neither-set at the wire layer (422) before the domain VO
+    raises its sister error (400).
+    """
 
     role_name: str = Field(
         ...,
@@ -86,12 +95,23 @@ class RoleRequirementBody(BaseModel):
             "operator convention, not a kernel invariant."
         ),
     )
-    family_id: UUID = Field(
-        ...,
+    role_kind: UUID | None = Field(
+        default=None,
         description=(
-            "The Family the bound Asset must satisfy at Plan binding "
-            "time. Eventual-consistency: existence is not verified at "
-            "decide time."
+            "Global Role contract id this slot targets (Layer 3 "
+            "sub-slice 3D; federation-portable path). Existence is "
+            "verified at the handler edge against the Role projection. "
+            "Exactly one of `role_kind` / `family_id` must be set."
+        ),
+    )
+    family_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Anatomical-pinning escape hatch (slice-1 path). When "
+            "set, the bound Asset must carry this Family id at Plan "
+            "binding time. Eventual-consistency: existence is not "
+            "verified at decide time. Exactly one of `role_kind` / "
+            "`family_id` must be set."
         ),
     )
     required_ports: list[PortRequirementBody] = Field(
@@ -112,9 +132,25 @@ class RoleRequirementBody(BaseModel):
         ),
     )
 
+    @model_validator(mode="after")
+    def _xor_role_kind_and_family_id(self) -> Self:
+        """Wire-layer XOR check (422 before the domain VO raises 400)."""
+        has_role_kind = self.role_kind is not None
+        has_family_id = self.family_id is not None
+        if has_role_kind == has_family_id:
+            msg = (
+                "RoleRequirement must carry EXACTLY one of role_kind / "
+                "family_id (XOR invariant per role-aggregate-design "
+                f"Lock 5; got role_kind={self.role_kind!r}, "
+                f"family_id={self.family_id!r})"
+            )
+            raise ValueError(msg)
+        return self
+
     def to_domain(self) -> RoleRequirement:
         return RoleRequirement(
             role_name=RoleName(self.role_name),
+            role_kind=self.role_kind,
             family_id=self.family_id,
             required_ports=frozenset(p.to_domain() for p in self.required_ports),
             optional=self.optional,

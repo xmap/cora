@@ -74,8 +74,9 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
     @mcp.tool(
         name="list_clearances",
         description=(
-            "List clearances with cursor pagination + 8 optional filters. "
-            "Filters: kind / status / risk_band / facility_asset_id + 4 "
+            "List clearances with cursor pagination + 9 optional filters. "
+            "Filters: template_id / template_code / status / risk_band / "
+            "facility_code + 4 "
             "binding-id filters (binds_to_subject_id / binds_to_asset_id / "
             "binds_to_run_id / binds_to_procedure_id). Returns sorted by "
             "registered_at ASC. ExternalRefBinding refs (for example, proposal / btr / "

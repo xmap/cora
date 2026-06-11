@@ -35,10 +35,12 @@ from uuid import UUID
 from cora.equipment._bootstrap import check_pidinst_landing_page_template
 from cora.equipment.features import (
     activate_asset,
+    add_assembly_presents_as,
     add_asset_alternate_identifier,
     add_asset_family,
     add_asset_owner,
     add_asset_port,
+    add_family_presents_as,
     add_model_family,
     assign_asset_persistent_id,
     assign_fixture_persistent_id,
@@ -50,6 +52,7 @@ from cora.equipment.features import (
     define_assembly,
     define_family,
     define_model,
+    define_role,
     degrade_asset,
     deprecate_assembly,
     deprecate_family,
@@ -74,10 +77,12 @@ from cora.equipment.features import (
     register_frame,
     register_mount,
     relocate_asset,
+    remove_assembly_presents_as,
     remove_asset_alternate_identifier,
     remove_asset_family,
     remove_asset_owner,
     remove_asset_port,
+    remove_family_presents_as,
     remove_model_family,
     restore_asset,
     uninstall_asset,
@@ -128,6 +133,11 @@ class EquipmentHandlers:
     update_family_settings_schema: update_family_settings_schema.Handler
     get_family: get_family.Handler
     list_families: list_families.Handler
+    add_family_presents_as: add_family_presents_as.Handler
+    remove_family_presents_as: remove_family_presents_as.Handler
+
+    # Role aggregate
+    define_role: define_role.IdempotentHandler
 
     # Model aggregate
     define_model: define_model.IdempotentHandler
@@ -177,6 +187,8 @@ class EquipmentHandlers:
     define_assembly: define_assembly.IdempotentHandler
     version_assembly: version_assembly.Handler
     deprecate_assembly: deprecate_assembly.Handler
+    add_assembly_presents_as: add_assembly_presents_as.Handler
+    remove_assembly_presents_as: remove_assembly_presents_as.Handler
     register_fixture: register_fixture.IdempotentHandler
     attach_asset_to_fixture: attach_asset_to_fixture.Handler
     bind_asset_to_facility: bind_asset_to_facility.Handler
@@ -265,6 +277,29 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
             command_name="ListFamilies",
             bc=_BC,
             kind="query",
+        ),
+        add_family_presents_as=with_tracing(
+            add_family_presents_as.bind(deps),
+            command_name="AddFamilyPresentsAs",
+            bc=_BC,
+        ),
+        remove_family_presents_as=with_tracing(
+            remove_family_presents_as.bind(deps),
+            command_name="RemoveFamilyPresentsAs",
+            bc=_BC,
+        ),
+        # Role aggregate
+        define_role=with_tracing(
+            with_idempotency(
+                define_role.bind(deps),
+                deps.idempotency_store,
+                command_name="DefineRole",
+                serialize_result=str,
+                deserialize_result=UUID,
+                lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
+            ),
+            command_name="DefineRole",
+            bc=_BC,
         ),
         # Model aggregate
         define_model=with_tracing(
@@ -513,6 +548,16 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
         deprecate_assembly=with_tracing(
             deprecate_assembly.bind(deps),
             command_name="DeprecateAssembly",
+            bc=_BC,
+        ),
+        add_assembly_presents_as=with_tracing(
+            add_assembly_presents_as.bind(deps),
+            command_name="AddAssemblyPresentsAs",
+            bc=_BC,
+        ),
+        remove_assembly_presents_as=with_tracing(
+            remove_assembly_presents_as.bind(deps),
+            command_name="RemoveAssemblyPresentsAs",
             bc=_BC,
         ),
         register_fixture=with_tracing(

@@ -49,6 +49,8 @@ def test_projection_metadata() -> None:
             "FamilyVersioned",
             "FamilyDeprecated",
             "FamilySettingsSchemaUpdated",
+            "FamilyPresentsAsAdded",
+            "FamilyPresentsAsRemoved",
         }
     )
 
@@ -87,6 +89,77 @@ async def test_capability_defined_inserts_with_defined_status_and_null_version()
     assert args.args[1] == _CAPABILITY_ID
     assert args.args[2] == "Continuous Rotation Tomography"
     assert args.args[3] == _NOW
+
+
+@pytest.mark.unit
+async def test_family_defined_inserts_affordances_array() -> None:
+    """FamilyDefined lands the declared affordance set on the
+    projection so the AssetLookup PG adapter can JOIN and gate on it
+    without folding the Family stream."""
+    proj = FamilySummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "FamilyDefined",
+        {
+            "family_id": str(_CAPABILITY_ID),
+            "name": "Tomography Detector",
+            "occurred_at": _NOW.isoformat(),
+            "affordances": ["Capturing", "Imageable"],
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert "affordances" in args.args[0]
+    assert args.args[4] == ["Capturing", "Imageable"]
+
+
+@pytest.mark.unit
+async def test_family_defined_missing_affordances_key_defaults_empty() -> None:
+    """Legacy FamilyDefined payloads without the affordances key fold
+    to an empty array (additive-state pattern)."""
+    proj = FamilySummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "FamilyDefined",
+        {
+            "family_id": str(_CAPABILITY_ID),
+            "name": "Legacy Family",
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[4] == []
+
+
+@pytest.mark.unit
+async def test_family_versioned_replaces_affordances_array() -> None:
+    """FamilyVersioned replaces the affordance set (the versioned set
+    is the new declaration)."""
+    proj = FamilySummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "FamilyVersioned",
+        {
+            "family_id": str(_CAPABILITY_ID),
+            "version_tag": "v2.0.0",
+            "occurred_at": _NOW.isoformat(),
+            "affordances": ["Capturing"],
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert "affordances = $4" in args.args[0]
+    assert args.args[4] == ["Capturing"]
 
 
 @pytest.mark.unit
@@ -329,3 +402,102 @@ async def test_capability_defined_inserts_with_schema_present_false() -> None:
     assert args is not None
     sql = args.args[0]
     assert "FALSE" in sql  # explicit FALSE in INSERT
+
+
+@pytest.mark.unit
+async def test_family_defined_passes_affordances_payload_to_insert() -> None:
+    """Affordances now ride the INSERT (Layer 3 3B added the column)."""
+    proj = FamilySummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "FamilyDefined",
+        {
+            "family_id": str(_CAPABILITY_ID),
+            "name": "Camera",
+            "occurred_at": _NOW.isoformat(),
+            "affordances": ["Imageable", "Binnable"],
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "ARRAY[]::UUID[]" in sql  # presents_as defaults empty
+    assert args.args[4] == ["Imageable", "Binnable"]
+
+
+@pytest.mark.unit
+async def test_family_versioned_refreshes_affordances() -> None:
+    """FamilyVersioned now writes the replacement affordance list."""
+    proj = FamilySummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "FamilyVersioned",
+        {
+            "family_id": str(_CAPABILITY_ID),
+            "version_tag": "v2",
+            "occurred_at": _NOW.isoformat(),
+            "affordances": ["Streamable"],
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "affordances = $4" in sql
+    assert args.args[4] == ["Streamable"]
+
+
+@pytest.mark.unit
+async def test_family_presents_as_added_appends_distinct_role_id() -> None:
+    proj = FamilySummaryProjection()
+    conn = AsyncMock()
+    role_id = uuid4()
+    event = _stored(
+        "FamilyPresentsAsAdded",
+        {
+            "family_id": str(_CAPABILITY_ID),
+            "role_id": str(role_id),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    conn.execute.assert_awaited_once()
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "presents_as" in sql
+    assert "DISTINCT" in sql  # idempotent append
+    assert args.args[1] == _CAPABILITY_ID
+    assert args.args[2] == role_id
+
+
+@pytest.mark.unit
+async def test_family_presents_as_removed_uses_array_remove() -> None:
+    proj = FamilySummaryProjection()
+    conn = AsyncMock()
+    role_id = uuid4()
+    event = _stored(
+        "FamilyPresentsAsRemoved",
+        {
+            "family_id": str(_CAPABILITY_ID),
+            "role_id": str(role_id),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    conn.execute.assert_awaited_once()
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "array_remove(presents_as, $2)" in sql
+    assert args.args[1] == _CAPABILITY_ID
+    assert args.args[2] == role_id

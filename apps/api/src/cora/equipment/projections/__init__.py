@@ -20,6 +20,7 @@ from cora.equipment.projections.model import ModelSummaryProjection
 from cora.equipment.projections.mount_children import MountChildrenProjection
 from cora.equipment.projections.mount_slot_code import MountSlotCodeProjection
 from cora.equipment.projections.mount_summary import MountSummaryProjection
+from cora.equipment.projections.role import RoleSummaryProjection
 
 __all__ = [
     "AssemblySummaryProjection",
@@ -35,4 +36,5 @@ __all__ = [
     "MountChildrenProjection",
     "MountSlotCodeProjection",
     "MountSummaryProjection",
+    "RoleSummaryProjection",
 ]

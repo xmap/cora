@@ -71,6 +71,7 @@ from uuid import UUID
 
 from cora.equipment.aggregates._drawing import Drawing
 from cora.equipment.aggregates._placement import Placement
+from cora.equipment.aggregates._value_types import RoleId
 from cora.shared.bounded_text import bounded_name
 
 ASSEMBLY_NAME_MAX_LENGTH = 200
@@ -378,6 +379,38 @@ class FixtureParameterOverridesInvalidError(ValueError):
         self.reason = reason
 
 
+class AssemblyRolePresentsAsAlreadyError(Exception):
+    """`role_id` is already in the Assembly's `presents_as` set.
+
+    Strict-not-idempotent: re-adding the same Role surfaces this
+    rather than no-op. Mirrors `FamilyRolePresentsAsAlreadyError`
+    (3B) and the wider Equipment-BC `add_*` convention.
+    """
+
+    def __init__(self, assembly_id: UUID, role_id: UUID) -> None:
+        super().__init__(
+            f"Assembly {assembly_id} already presents as Role {role_id} (strict-not-idempotent)"
+        )
+        self.assembly_id = assembly_id
+        self.role_id = role_id
+
+
+class AssemblyRolePresentsAsNotPresentError(Exception):
+    """`role_id` is not in the Assembly's `presents_as` set.
+
+    Strict-not-idempotent on remove. Mirrors
+    `FamilyRolePresentsAsNotPresentError` (3B).
+    """
+
+    def __init__(self, assembly_id: UUID, role_id: UUID) -> None:
+        super().__init__(
+            f"Assembly {assembly_id} does not present as Role {role_id} "
+            "(strict-not-idempotent on remove)"
+        )
+        self.assembly_id = assembly_id
+        self.role_id = role_id
+
+
 @bounded_name(max_length=ASSEMBLY_NAME_MAX_LENGTH, error_class=InvalidAssemblyNameError)
 @dataclass(frozen=True)
 class AssemblyName:
@@ -565,6 +598,25 @@ class Assembly:
     status: AssemblyStatus = AssemblyStatus.DEFINED
     version: str | None = None
     content_hash: str | None = None
+    presents_as: frozenset[RoleId] = field(default_factory=frozenset[RoleId])
+    """Layer 3 sub-slice 3C: the set of global Role contracts this
+    composed Assembly advertises (Lock 4 universal presents_as).
+    Parallel mechanism to the scalar `presents_as_family_id`: 3C
+    keeps the scalar (per anti-hook #6, one migration cycle), and
+    layers `presents_as` alongside for Role-based binding via 3D's
+    bind_plan_role role_kind path. MCTOptics-Assembly seeds
+    `{Imager}` at scenario-fixture time.
+
+    NOT included in `content_subset()` -- additive orthogonal-axis
+    field, parallel to Family.settings_schema; adding or removing a
+    Role advertisement does not produce a structurally-distinct
+    Assembly identity.
+
+    Affordance-superset check (Family.affordances >=
+    Role.required_affordances) DEFERRED at 3C: Assembly affordances
+    derive from the constituent Family union at register_fixture
+    time, not Assembly template time, so the check belongs at the
+    fixture-registration layer. Watch item logged."""
 
     def __post_init__(self) -> None:
         slot_names = {slot.slot_name.value for slot in self.required_slots}

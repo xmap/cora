@@ -56,6 +56,7 @@ from cora.recipe.features import (
     remove_method_required_role,
     remove_plan_wire,
     unbind_plan_role,
+    update_capability_suggested_roles,
     update_method_parameters_schema,
     update_plan_default_parameters,
     version_capability,
@@ -98,6 +99,7 @@ class RecipeHandlers:
     define_capability: define_capability.IdempotentHandler
     version_capability: version_capability.Handler
     deprecate_capability: deprecate_capability.Handler
+    update_capability_suggested_roles: update_capability_suggested_roles.Handler
     get_capability: get_capability.Handler
     define_recipe: define_recipe.IdempotentHandler
     version_recipe: version_recipe.Handler
@@ -273,6 +275,11 @@ def wire_recipe(deps: Kernel) -> RecipeHandlers:
         deprecate_capability=with_tracing(
             deprecate_capability.bind(deps),
             command_name="DeprecateCapability",
+            bc=_BC,
+        ),
+        update_capability_suggested_roles=with_tracing(
+            update_capability_suggested_roles.bind(deps),
+            command_name="UpdateCapabilitySuggestedRoles",
             bc=_BC,
         ),
         get_capability=with_tracing(

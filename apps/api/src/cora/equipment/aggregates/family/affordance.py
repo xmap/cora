@@ -8,9 +8,9 @@ research in [[project-capability-research]]:
   Family.affordances). Matches type-class membership semantics (Swift
   API Design Guidelines / .NET Framework Design Guidelines / Java
   java.lang / Python collections.abc / W3C SOSA ObservableProperty).
-- 28 items in 2 patterns:
+- 29 items in 2 patterns:
     A. Operational affordances (`-able` / `-ible` / `-ing`): "device
-       supports doing X" or "device performs X" — 27 items across
+       supports doing X" or "device performs X" — 28 items across
        Motion / Imaging / Triggering / Streaming / Optics+Environment /
        Reporting.
     C. Lifecycle affordances (noun): "device has lifecycle property X"
@@ -23,7 +23,7 @@ research in [[project-capability-research]]:
 
 The dominant computing-vocabulary convention is `-able`/`-ible`/`-ing`
 for capability claims (Swift codifies the full triad, .NET endorses it,
-Java/Python/Ruby follow informally). All 27 operational affordances
+Java/Python/Ruby follow informally). All 28 operational affordances
 follow this rule, mixing `-able`/`-ible` (action: "device supports
 doing X") and `-ing` gerund (role/flow: "device is X-ing"). Examples
 of the `-ing` form: `Marking` (device marks positions with output
@@ -75,14 +75,14 @@ from enum import StrEnum
 
 
 class Affordance(StrEnum):
-    """Device-level operational primitive. Closed v1 enum (28 items, 2 patterns).
+    """Device-level operational primitive. Closed v1 enum (29 items, 2 patterns).
 
     Values are PascalCase strings so they serialize naturally as JSON
     discriminators without translation.
 
     Pattern A, Operational affordances (`-able` / `-ible` / `-ing`):
         "device supports doing X" (action) or "device performs X"
-        (role/flow). Set-membership claim. 27 items.
+        (role/flow). Set-membership claim. 28 items.
 
     Pattern C, Lifecycle affordances (noun):
         "device has lifecycle property X". 1 item.
@@ -113,11 +113,14 @@ class Affordance(StrEnum):
     """Emits its position as an encoder signal for downstream followers (master role
     in master/slave chain). Replaces the EncoderOutput signal noun."""
 
-    # Imaging (2)
+    # Imaging (3)
     IMAGEABLE = "Imageable"
     """Acquires 2D image frames on exposure/trigger; supports basic capture."""
     BINNABLE = "Binnable"
     """Supports on-sensor pixel binning (NxN combining) to trade resolution for SNR/speed."""
+    CAPTURING = "Capturing"
+    """Captures a 2D or 3D data sample on operator command or external trigger;
+    produces a Data BC Acquisition fact on every capture."""
 
     # Triggering and timing (5)
     TRIGGERABLE = "Triggerable"
@@ -181,7 +184,7 @@ class InvalidAffordanceError(ValueError):
 
     def __init__(self, value: object) -> None:
         super().__init__(
-            f"Invalid Affordance value: {value!r}; must be one of the 28 "
+            f"Invalid Affordance value: {value!r}; must be one of the 29 "
             f"closed-enum members (see cora.equipment.aggregates.family.affordance)"
         )
         self.value = value

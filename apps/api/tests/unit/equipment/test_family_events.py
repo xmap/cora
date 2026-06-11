@@ -9,6 +9,8 @@ from cora.equipment.aggregates.family.affordance import Affordance
 from cora.equipment.aggregates.family.events import (
     FamilyDefined,
     FamilyDeprecated,
+    FamilyPresentsAsAdded,
+    FamilyPresentsAsRemoved,
     FamilySettingsSchemaUpdated,
     FamilyVersioned,
     event_type_name,
@@ -356,6 +358,8 @@ def test_load_affordances_raises_on_unknown_enum_string() -> None:
         "FamilyVersioned",
         "FamilyDeprecated",
         "FamilySettingsSchemaUpdated",
+        "FamilyPresentsAsAdded",
+        "FamilyPresentsAsRemoved",
     ],
 )
 def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:
@@ -367,3 +371,71 @@ def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:
     in the load path."""
     with pytest.raises(ValueError, match=f"Malformed {event_type} payload"):
         from_stored(_stored(event_type, {}))
+
+
+@pytest.mark.unit
+def test_event_type_name_returns_family_presents_as_added_class_name() -> None:
+    fid = uuid4()
+    rid = uuid4()
+    event = FamilyPresentsAsAdded(family_id=fid, role_id=rid, occurred_at=_NOW)
+    assert event_type_name(event) == "FamilyPresentsAsAdded"
+
+
+@pytest.mark.unit
+def test_to_payload_family_presents_as_added_serializes_uuids() -> None:
+    fid = uuid4()
+    rid = uuid4()
+    payload = to_payload(FamilyPresentsAsAdded(family_id=fid, role_id=rid, occurred_at=_NOW))
+    assert payload == {
+        "family_id": str(fid),
+        "role_id": str(rid),
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+def test_to_payload_family_presents_as_removed_serializes_uuids() -> None:
+    fid = uuid4()
+    rid = uuid4()
+    payload = to_payload(FamilyPresentsAsRemoved(family_id=fid, role_id=rid, occurred_at=_NOW))
+    assert payload == {
+        "family_id": str(fid),
+        "role_id": str(rid),
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+def test_round_trip_family_presents_as_added() -> None:
+    fid = uuid4()
+    rid = uuid4()
+    original = FamilyPresentsAsAdded(family_id=fid, role_id=rid, occurred_at=_NOW)
+    payload = to_payload(original)
+    rebuilt = from_stored(_stored("FamilyPresentsAsAdded", payload))
+    assert rebuilt == original
+
+
+@pytest.mark.unit
+def test_round_trip_family_presents_as_removed() -> None:
+    fid = uuid4()
+    rid = uuid4()
+    original = FamilyPresentsAsRemoved(family_id=fid, role_id=rid, occurred_at=_NOW)
+    payload = to_payload(original)
+    rebuilt = from_stored(_stored("FamilyPresentsAsRemoved", payload))
+    assert rebuilt == original
+
+
+@pytest.mark.unit
+def test_from_stored_family_presents_as_added_with_malformed_uuid_raises() -> None:
+    """Defensive: bad UUID strings surface as Malformed FamilyPresentsAsAdded."""
+    with pytest.raises(ValueError, match="Malformed FamilyPresentsAsAdded"):
+        from_stored(
+            _stored(
+                "FamilyPresentsAsAdded",
+                {
+                    "family_id": "not-a-uuid",
+                    "role_id": str(uuid4()),
+                    "occurred_at": _NOW.isoformat(),
+                },
+            )
+        )

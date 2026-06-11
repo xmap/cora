@@ -18,8 +18,16 @@ shared asyncpg pool.
 
 ## Query shape
 
-Single SELECT keyed by the `asset_id` primary key (LIMIT 1),
-returning `None` when no row matches. Assets in every lifecycle
+Single SELECT keyed by the `asset_id` primary key, LEFT JOINing
+`proj_equipment_asset_family_membership` and
+`proj_equipment_family_summary` so the Asset's Family affordances
+aggregate into one set in the same round-trip. `LEFT JOIN` +
+`array_agg(... FILTER ...)` keeps an Asset with no Family (or whose
+Families declare no affordance) resolvable with an empty affordance
+set, rather than returning no row. `GROUP BY` collapses the
+one-row-per-Family-membership fan-out back to one row per Asset.
+
+Returns `None` when no Asset row matches. Assets in every lifecycle
 (`Commissioned`, `Active`, `Maintenance`, `Decommissioned`) are
 returned; consumer deciders partition on `lifecycle` if needed.
 Slice 7B Supply consumer does NOT filter on lifecycle (mirrors
@@ -51,10 +59,23 @@ from cora.equipment.aggregates.asset import AssetLifecycle, AssetTier
 from cora.infrastructure.ports.asset_lookup import AssetLookupResult
 
 _LOOKUP_SQL = """
-SELECT asset_id, name, tier, lifecycle
-FROM proj_equipment_asset_summary
-WHERE asset_id = $1
-LIMIT 1
+SELECT
+    a.asset_id,
+    a.name,
+    a.tier,
+    a.lifecycle,
+    COALESCE(
+        array_agg(DISTINCT aff.affordance) FILTER (WHERE aff.affordance IS NOT NULL),
+        ARRAY[]::text[]
+    ) AS family_affordances
+FROM proj_equipment_asset_summary a
+LEFT JOIN proj_equipment_asset_family_membership m
+    ON m.asset_id = a.asset_id
+LEFT JOIN proj_equipment_family_summary f
+    ON f.family_id = m.family_id
+LEFT JOIN LATERAL unnest(f.affordances) AS aff(affordance) ON TRUE
+WHERE a.asset_id = $1
+GROUP BY a.asset_id, a.name, a.tier, a.lifecycle
 """
 
 
@@ -78,6 +99,7 @@ def _row_to_result(row: Any) -> AssetLookupResult:
         name=str(row["name"]),
         tier=AssetTier(row["tier"]),
         lifecycle=AssetLifecycle(row["lifecycle"]),
+        family_affordances=frozenset(str(a) for a in row["family_affordances"]),
     )
 
 

@@ -100,7 +100,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
     @mcp.tool(
         name="get_clearance",
         description=(
-            "Look up a safety-form clearance by id. Returns kind, title, "
+            "Look up a safety-form clearance by id. Returns template_id, title, "
             "bindings, declarations, risk_band, reviewer chain, current FSM "
             "status, and validity window. Polymorphic fields (bindings, "
             "declarations, review_steps) carry JSON objects with a `kind` "

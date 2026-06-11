@@ -21,6 +21,7 @@ from cora.equipment.projections import (
     MountChildrenProjection,
     MountSlotCodeProjection,
     MountSummaryProjection,
+    RoleSummaryProjection,
 )
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry
@@ -45,6 +46,7 @@ def register_equipment_projections(
     registry.register(AssetLocationProjection())
     registry.register(AssemblySummaryProjection())
     registry.register(FixtureSummaryProjection())
+    registry.register(RoleSummaryProjection())
 
 
 __all__ = ["register_equipment_projections"]

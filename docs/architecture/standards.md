@@ -37,6 +37,16 @@ Implemented on the wire or conformed to as a behavioural contract. Clients and s
 
 Michael Polanyi's observation that "we know more than we can tell" is the operating reality of every beamline. Operators carry years of practice that never makes it into the standard operating procedure (SOP), which is why software modeling only the SOP fails on contact with the floor. The ladder gives that tacit layer four steps. A **Method** is a reusable template, the portion that fits on paper. A **Practice** binds it to a site, capturing the local know-how that makes the Method operable. A **Plan** binds a Practice to specific assets and a window. A **Run** executes a Plan with a lifecycle FSM, recording the gap between plan and reality where the tacit layer becomes visible. Site-specific behaviour lives at Practice and Plan; Methods stay portable.
 
+## The recording spine and the optional execution edge
+
+CORA is two regions with one fixed identity and one movable line.
+
+- **The spine (always CORA).** The event log, decisions, the recipe ladder, trust, and audit. This is what CORA is, in every deployment. It runs at decision-grade latency and never sits inside a deterministic real-time loop.
+- **The execution edge (optional, the facility's choice).** Driving operations step by step, and in time the experiment scan loop, plus the agent loops that steer them. CORA offers a substrate-neutral `ControlPort` and a `Conductor` here: today it drives operational procedures (setpoint, action, check) over shipped EPICS Channel Access and PVA adapters. A facility may adopt this edge, or keep its own execution and scan tools and port into CORA only what it chooses. Driving the experiment scan loop directly over EPICS is exploratory work in the 2-BM pilot.
+- **The floor (never CORA).** The deterministic real-time loop, servo control, position-synchronised output and FPGA trigger fan-out, sub-millisecond timing, runs in EPICS IOCs, FPGAs, and motion controllers regardless of where a facility draws the spine/edge line.
+
+Only the spine and the floor are fixed. The line between them is a per-deployment choice.
+
 ## On the horizon
 
 Standards already shaping internal designs but not yet landed in shipped code. Listed here so a reader who knows them recognises the direction.

@@ -200,6 +200,35 @@ class CapabilityCannotVersionError(Exception):
         self.current_status = current_status
 
 
+class CapabilityCannotUpdateSuggestedRolesError(Exception):
+    """The Capability cannot accept suggested_role_ids in its current state.
+
+    Layer 3 sub-slice 3E. `update_capability_suggested_roles` is
+    restricted to Defined + Versioned status; Deprecated rejects
+    (per [[project-role-aggregate-design]] Lock 10: documentation-
+    only field; allowing it to mutate on Deprecated would be
+    operator confusion about a retired template).
+
+    Mapped to HTTP 409. Mirrors the
+    `<X>Cannot<Verb>Error` taxonomy used by
+    CapabilityCannotVersionError + CapabilityCannotDeprecateError.
+    """
+
+    def __init__(
+        self,
+        capability_id: UUID,
+        current_status: "CapabilityStatus",
+    ) -> None:
+        super().__init__(
+            f"Capability {capability_id} cannot update suggested_role_ids: "
+            f"currently in status {current_status.value}; updates "
+            f"require {CapabilityStatus.DEFINED.value} or "
+            f"{CapabilityStatus.VERSIONED.value}"
+        )
+        self.capability_id = capability_id
+        self.current_status = current_status
+
+
 class CapabilityCannotDeprecateError(Exception):
     """Attempted to deprecate a Capability not in `Defined` or `Versioned`.
 
@@ -317,6 +346,20 @@ class Capability:
     `replaced_by_capability_id`: pointer to a successor Capability
     when this one is deprecated with replacement. None on
     Deprecated-without-replacement and on Defined/Versioned.
+
+    `suggested_role_ids` (Layer 3 sub-slice 3E; documentation-only per
+    memo Lock 10): editorial set of global Role contract ids an
+    operator suggests this Capability is naturally satisfied by.
+    Authored via `update_capability_suggested_roles` (wholesale-
+    replace, Pattern P). NOT fitness-enforced: a Method whose
+    capability_id points here is NOT required to declare role_kind
+    requirements drawn from this set; it is informative for Method
+    authoring. Rule-of-three trigger fires the future
+    Capability.required_roles enforcement (deferred to Layer 4).
+    Bare frozenset[UUID] (not frozenset[RoleId] NewType) per the
+    cross-BC convention symmetric with RoleRequirement.role_kind.
+    PRESERVED across Versioned + Deprecated (orthogonal-axis
+    additive precedent matching presents_as in 3B/3C).
     """
 
     id: UUID
@@ -329,3 +372,4 @@ class Capability:
     executor_shapes: frozenset[ExecutorShape] = field(default_factory=frozenset[ExecutorShape])
     parameters_schema: dict[str, Any] | None = None
     replaced_by_capability_id: UUID | None = None
+    suggested_role_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])

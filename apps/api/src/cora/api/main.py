@@ -109,12 +109,18 @@ from cora.enclosure import (
 from cora.enclosure.adapters import PostgresEnclosureLookup
 from cora.equipment import (
     EquipmentHandlers,
+    bootstrap_equipment,
     register_equipment_projections,
     register_equipment_routes,
     register_equipment_tools,
     wire_equipment,
 )
-from cora.equipment.adapters import PostgresAssetLookup
+from cora.equipment.adapters import (
+    PostgresAssemblyLookup,
+    PostgresAssetLookup,
+    PostgresFamilyLookup,
+    PostgresRoleLookup,
+)
 from cora.federation import (
     FederationHandlers,
     bootstrap_federation,
@@ -424,6 +430,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 credential_lookup_factory=PostgresCredentialLookup,
                 facility_lookup_factory=PostgresFacilityLookup,
                 asset_lookup_factory=PostgresAssetLookup,
+                family_lookup_factory=PostgresFamilyLookup,
+                assembly_lookup_factory=PostgresAssemblyLookup,
+                role_lookup_factory=PostgresRoleLookup,
                 enclosure_lookup_factory=PostgresEnclosureLookup,
                 # publish_revision slice deps: in-memory adapters
                 # wired by default until the rule-of-two trigger
@@ -477,6 +486,18 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # SELF_FACILITY_CODE fails the lifespan fast via
             # InvalidFacilityCodeError raised in FacilityCode(...).
             await bootstrap_federation(deps)
+
+            # Equipment BC seed Roles per project-role-aggregate-design
+            # 3A lifespan-seeding decision (2026-06-10). Idempotent
+            # (ConcurrencyError-as-already-seeded). LOAD-BEARING ORDER:
+            # MUST run BEFORE any handler that resolves a Role via
+            # RoleLookup (bind_plan_role role_kind path,
+            # update_capability_suggested_roles, future Method authoring
+            # gates). The 4 SEED_ROLES (Imager, Positioner, Controller,
+            # Detector) ship at deterministic uuid5 ids so a Method
+            # authored at APS 2-BM that binds role_kind=Imager resolves
+            # to the same id when shipped to MAX IV or DLS.
+            await bootstrap_equipment(deps)
 
             # Data BC Distribution backfill per
             # project_data_distribution_design Slice 2 (L23 + L24). Two

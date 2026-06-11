@@ -106,7 +106,7 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     ---
 
-    Seven aggregates (`Family`, `Model`, `Assembly`, `Fixture`, `Asset`, `Frame`, `Mount`), six-level Asset hierarchy, four-state Asset lifecycle, three-state condition orthogonal to lifecycle, settings-schema validation against the Family-declared Capability, and typed ports for wiring devices into Plans.
+    Seven aggregates (`Family`, `Model`, `Assembly`, `Fixture`, `Asset`, `Frame`, `Mount`), four-state Asset lifecycle, three-state condition orthogonal to lifecycle, a three-tier intrinsic Asset tree (`Unit`/`Component`/`Device` via `AssetTier`) bound to its owning Facility by `facility_code`, settings-schema validation against the Family-declared Capability, and typed ports for wiring devices into Plans.
 
     [Read →](equipment/index.md)
 
@@ -138,7 +138,7 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     ---
 
-    One aggregate (`Dataset`), two-state lifecycle plus orthogonal three-state Intent axis (`Trial`, `Production`, `Retracted`), lineage edges with existence and status guards, immutable AsShot calibration citation set.
+    Five aggregates across a dataset's life: `Dataset` (logical content identity, Trial / Production / Retracted intent, lineage edges, AsShot calibration citation), `Distribution` (byte-copies at storage Supplies, DCAT-3 shaped, four-state availability FSM), `Attestation` (recorded checksum / format / bit-rot fact-chain that flips Distribution status), `Edition` (citable, sealable, DOI-mintable publication packages, four-state FSM), and `Acquisition` (the birth-certificate fact linking a producing Asset and Run to the Dataset it captured).
 
     [Read →](data/index.md)
 
@@ -149,5 +149,21 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
     One aggregate, atomic-immutable for decision facts, `parent_id` chains for corrections, appeals, supersessions, and invalidations. PROV-AGENT-aligned field names, ISO 17025 `decision_rule` citation, operator rating accrual channel.
 
     [Read →](decision/index.md)
+
+-   :material-link-variant-outline:{ .lg .middle } __Federation__ <span class="md-maturity md-maturity--beta">beta</span>
+
+    ---
+
+    Cross-facility data flows: peer-facility identity (`Facility`), flow authorization (`Permit`), secret-material binding (`Credential`), and per-facility registry-head signing (`Seal`). Trust gates who may act inside the facility; Federation gates what crosses the boundary.
+
+    [Read →](federation/index.md)
+
+-   :material-lock-alert-outline:{ .lg .middle } __Enclosure__ <span class="md-maturity md-maturity--alpha">alpha</span>
+
+    ---
+
+    Permit-status observation for spaces that gate experiments (hutches, sample-prep cabinets, instrument vaults). Three-state status (`Permitted`, `NotPermitted`, `Unknown`) driven only by monitor-side observations, plus an orthogonal operator-driven decommission lifecycle. Sibling to Supply.
+
+    [Read →](enclosure/index.md)
 
 </div>

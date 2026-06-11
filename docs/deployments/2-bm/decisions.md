@@ -16,4 +16,4 @@ A Decision is a structured-audit record of a consequential choice, attributed to
 | --- | --- | --- |
 | `RunDebriefer` agent | `RunDebrief` | `OperatorAbort` |
 | `RunDebriefer` agent | `RunDebrief` | `DataSuspect` |
-| Strategy agent (8g) | | |
+| Strategy agent | | |

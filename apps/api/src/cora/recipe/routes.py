@@ -33,6 +33,7 @@ from fastapi.responses import JSONResponse
 from cora.recipe.aggregates.capability import (
     CapabilityAlreadyExistsError,
     CapabilityCannotDeprecateError,
+    CapabilityCannotUpdateSuggestedRolesError,
     CapabilityCannotVersionError,
     CapabilityNotFoundError,
     InvalidCapabilityCodeError,
@@ -49,6 +50,7 @@ from cora.recipe.aggregates.method import (
     InvalidMethodVersionTagError,
     InvalidPortRequirementError,
     InvalidRoleNameError,
+    InvalidRoleRequirementTargetError,
     MethodAlreadyExistsError,
     MethodCannotDeprecateError,
     MethodCannotMutateRequiredRolesError,
@@ -58,6 +60,7 @@ from cora.recipe.aggregates.method import (
     MethodParametersNotSubsetError,
     MethodRoleNameAlreadyDeclaredError,
     MethodRoleNameNotFoundError,
+    RoleRequirementBindingDuplicateError,
 )
 from cora.recipe.aggregates.plan import (
     InvalidPlanDefaultParametersError,
@@ -79,8 +82,10 @@ from cora.recipe.aggregates.plan import (
     PlanPseudoAxisFanoutSignalTypeMismatchError,
     PlanPseudoAxisOutputCardinalityError,
     PlanRoleAlreadyBoundError,
+    PlanRoleAssetCannotPresentError,
     PlanRoleAssetNotBoundError,
     PlanRoleFamilyMismatchError,
+    PlanRoleFamilyNotResolvableError,
     PlanRoleNameNotDeclaredError,
     PlanRoleNotBoundError,
     PlanRolePortCoverageNotSatisfiedError,
@@ -143,6 +148,7 @@ from cora.recipe.features import (
     remove_method_required_role,
     remove_plan_wire,
     unbind_plan_role,
+    update_capability_suggested_roles,
     update_method_parameters_schema,
     update_plan_default_parameters,
     version_capability,
@@ -254,6 +260,7 @@ def register_recipe_routes(app: FastAPI) -> None:
     app.include_router(define_capability.router)
     app.include_router(version_capability.router)
     app.include_router(deprecate_capability.router)
+    app.include_router(update_capability_suggested_roles.router)
     app.include_router(get_capability.router)
     app.include_router(define_recipe.router)
     app.include_router(version_recipe.router)
@@ -276,6 +283,13 @@ def register_recipe_routes(app: FastAPI) -> None:
         # name or signal_type). Mapped to 400.
         InvalidRoleNameError,
         InvalidPortRequirementError,
+        # Layer 3 sub-slice 3D RoleRequirement XOR invariant
+        # failures: both-set / neither-set surface as 400 at the
+        # domain VO (the wire-layer Pydantic body validator catches
+        # the same case as 422 first; this is the second line of
+        # defense for direct in-process callers).
+        RoleRequirementBindingDuplicateError,
+        InvalidRoleRequirementTargetError,
         InvalidPracticeNameError,
         InvalidPracticeVersionTagError,
         InvalidPlanNameError,
@@ -298,6 +312,12 @@ def register_recipe_routes(app: FastAPI) -> None:
         # declared (strict-not-idempotent symmetry with
         # MethodRoleNameAlreadyDeclaredError).
         MethodRoleNameNotFoundError,
+        # Layer 3 sub-slice 3D: RoleNotFoundError is raised by the
+        # Recipe-BC handlers (add_method_required_role precondition,
+        # bind_plan_role role_kind path) BUT registered globally by
+        # Equipment routes.py per the per-BC-error-scope rule. The
+        # FastAPI exception handler is app-scoped, so the 404
+        # mapping fires regardless of which BC's route raised it.
         PracticeNotFoundError,
         PlanNotFoundError,
         # 6h: removing a Wire that's not currently in the Plan's wire
@@ -325,6 +345,7 @@ def register_recipe_routes(app: FastAPI) -> None:
     for cannot_transition_cls in (
         CapabilityCannotVersionError,
         CapabilityCannotDeprecateError,
+        CapabilityCannotUpdateSuggestedRolesError,
         # cross-BC guard: Method binds to Capability whose
         # executor_shapes does not include Method.
         MethodCapabilityExecutorMismatchError,
@@ -376,8 +397,10 @@ def register_recipe_routes(app: FastAPI) -> None:
         PlanRoleAlreadyBoundError,
         PlanRoleAssetNotBoundError,
         PlanRoleFamilyMismatchError,
+        PlanRoleFamilyNotResolvableError,
         PlanRoleNameNotDeclaredError,
         PlanRolePortCoverageNotSatisfiedError,
+        PlanRoleAssetCannotPresentError,
         # Structural closure between role_bindings and wires: a Wire
         # endpoint port matches a role's required_ports but terminates
         # at a different Asset than the one bound to that role.

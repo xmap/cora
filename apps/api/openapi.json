@@ -236,6 +236,22 @@
         "title": "ActorSummaryDTO",
         "type": "object"
       },
+      "AddAssemblyPresentsAsRequest": {
+        "description": "Body for `POST /assemblies/{assembly_id}/add-presents-as`.",
+        "properties": {
+          "role_id": {
+            "description": "Global Role contract id to add to the Assembly's presents_as set. Existence is verified at the handler edge against the read-side Role projection. The affordance-superset gate is NOT enforced at template time; satisfaction lands at register_fixture layer.",
+            "format": "uuid",
+            "title": "Role Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role_id"
+        ],
+        "title": "AddAssemblyPresentsAsRequest",
+        "type": "object"
+      },
       "AddAssetAlternateIdentifierRequest": {
         "description": "Body for `POST /assets/{asset_id}/add-alternate-identifier`.\n\nBoth fields required. Pydantic enforces non-empty value at the\nboundary; the `AlternateIdentifier` VO then trims and re-validates\nlength within the decider (the VO construction site).",
         "properties": {
@@ -330,6 +346,22 @@
           "credential_id"
         ],
         "title": "AddFacilityTrustAnchorCredentialBody",
+        "type": "object"
+      },
+      "AddFamilyPresentsAsRequest": {
+        "description": "Body for `POST /families/{family_id}/add-presents-as`.",
+        "properties": {
+          "role_id": {
+            "description": "Global Role contract id to add to the Family's presents_as set. Existence is verified at the handler edge against the read-side Role projection; the Family's affordances must superset the Role's required_affordances or the add is rejected.",
+            "format": "uuid",
+            "title": "Role Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role_id"
+        ],
+        "title": "AddFamilyPresentsAsRequest",
         "type": "object"
       },
       "AddMethodRequiredRoleRequest": {
@@ -472,7 +504,7 @@
         "type": "object"
       },
       "Affordance": {
-        "description": "Device-level operational primitive. Closed v1 enum (28 items, 2 patterns).\n\nValues are PascalCase strings so they serialize naturally as JSON\ndiscriminators without translation.\n\nPattern A, Operational affordances (`-able` / `-ible` / `-ing`):\n    \"device supports doing X\" (action) or \"device performs X\"\n    (role/flow). Set-membership claim. 27 items.\n\nPattern C, Lifecycle affordances (noun):\n    \"device has lifecycle property X\". 1 item.",
+        "description": "Device-level operational primitive. Closed v1 enum (29 items, 2 patterns).\n\nValues are PascalCase strings so they serialize naturally as JSON\ndiscriminators without translation.\n\nPattern A, Operational affordances (`-able` / `-ible` / `-ing`):\n    \"device supports doing X\" (action) or \"device performs X\"\n    (role/flow). Set-membership claim. 28 items.\n\nPattern C, Lifecycle affordances (noun):\n    \"device has lifecycle property X\". 1 item.",
         "enum": [
           "Rotatable",
           "Translatable",
@@ -485,6 +517,7 @@
           "Leading",
           "Imageable",
           "Binnable",
+          "Capturing",
           "Triggerable",
           "Gateable",
           "Synchronizable",
@@ -5452,6 +5485,82 @@
         "title": "DefineRecipeResponse",
         "type": "object"
       },
+      "DefineRoleRequest": {
+        "description": "Body for `POST /roles`.",
+        "properties": {
+          "consumes": {
+            "description": "Open-vocabulary SignalType labels satisfying Assets accept (in-direction port signal_type). Each entry trimmed server-side to 1-50 chars; empty list accepted.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Consumes",
+            "type": "array"
+          },
+          "docstring": {
+            "description": "Operator-readable one-paragraph contract explanation. Surfaced at Method-authoring time when operators pick among candidate Roles. Required; non-empty after trim.",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Docstring",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name for the new global Role contract.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "optional_affordances": {
+            "description": "Affordance value strings a satisfying Family MAY advertise. Deduplicated server-side. Must be disjoint with required_affordances.",
+            "items": {
+              "$ref": "#/components/schemas/Affordance"
+            },
+            "title": "Optional Affordances",
+            "type": "array"
+          },
+          "produces": {
+            "description": "Open-vocabulary SignalType labels satisfying Assets emit (out-direction port signal_type). Each entry trimmed server-side to 1-50 chars; empty list accepted.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Produces",
+            "type": "array"
+          },
+          "required_affordances": {
+            "description": "Affordance value strings every satisfying Family MUST advertise. Deduplicated server-side. Must be disjoint with optional_affordances.",
+            "items": {
+              "$ref": "#/components/schemas/Affordance"
+            },
+            "title": "Required Affordances",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "docstring",
+          "required_affordances",
+          "optional_affordances",
+          "produces",
+          "consumes"
+        ],
+        "title": "DefineRoleRequest",
+        "type": "object"
+      },
+      "DefineRoleResponse": {
+        "description": "Response body for `POST /roles`.",
+        "properties": {
+          "role_id": {
+            "format": "uuid",
+            "title": "Role Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role_id"
+        ],
+        "title": "DefineRoleResponse",
+        "type": "object"
+      },
       "DefineSurfaceRequest": {
         "description": "Body for `POST /surfaces`.",
         "properties": {
@@ -9549,6 +9658,77 @@
         "title": "RecipeResponse",
         "type": "object"
       },
+      "RecordAcquisitionRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /acquisitions`.",
+        "properties": {
+          "captured_at": {
+            "description": "Instrument wall-clock moment the bytes were physically produced (caller-asserted provenance). May precede the CORA-side recording time by any amount (backfills are legitimate); a captured_at in the future beyond the clock-skew tolerance is rejected with 400.",
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "dataset_id": {
+            "description": "Id of the logical Dataset this capture produced.",
+            "format": "uuid",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "description": "Capture-specific evidence (freeform placeholder today; shape-only validated). Per-Family evidence schemas are a future slice.",
+            "title": "Evidence",
+            "type": "object"
+          },
+          "producing_asset_id": {
+            "description": "Id of the capturing Asset. Its Family must declare the Capturing affordance or the request is rejected with 409.",
+            "format": "uuid",
+            "title": "Producing Asset Id",
+            "type": "string"
+          },
+          "producing_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional id of the Run context. None for calibration / dark-field / autonomous-agent standalone captures with no Run context.",
+            "title": "Producing Run Id"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "description": "Operator / system settings active at capture. Shape-only validated today (primitive leaves); per-Family schema validation is a future slice.",
+            "title": "Settings",
+            "type": "object"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "producing_asset_id",
+          "captured_at"
+        ],
+        "title": "RecordAcquisitionRequest",
+        "type": "object"
+      },
+      "RecordAcquisitionResponse": {
+        "description": "Response body for `POST /acquisitions`.",
+        "properties": {
+          "acquisition_id": {
+            "format": "uuid",
+            "title": "Acquisition Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "acquisition_id"
+        ],
+        "title": "RecordAcquisitionResponse",
+        "type": "object"
+      },
       "RecordAttestationRequest": {
         "additionalProperties": false,
         "description": "Body for ``POST /attestations``.",
@@ -11386,6 +11566,22 @@
         "title": "RelocateAssetRequest",
         "type": "object"
       },
+      "RemoveAssemblyPresentsAsRequest": {
+        "description": "Body for `POST /assemblies/{assembly_id}/remove-presents-as`.",
+        "properties": {
+          "role_id": {
+            "description": "Global Role contract id to withdraw from the Assembly's presents_as set. Strict-not-idempotent: removing a Role the Assembly does not advertise raises.",
+            "format": "uuid",
+            "title": "Role Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role_id"
+        ],
+        "title": "RemoveAssemblyPresentsAsRequest",
+        "type": "object"
+      },
       "RemoveAssetAlternateIdentifierRequest": {
         "description": "Body for `POST /assets/{asset_id}/remove-alternate-identifier`.\n\nBoth fields required. Pydantic enforces non-empty value at the\nboundary; the AlternateIdentifier VO then trims and re-validates\nlength within the decider.",
         "properties": {
@@ -11477,6 +11673,22 @@
           "credential_id"
         ],
         "title": "RemoveFacilityTrustAnchorCredentialBody",
+        "type": "object"
+      },
+      "RemoveFamilyPresentsAsRequest": {
+        "description": "Body for `POST /families/{family_id}/remove-presents-as`.",
+        "properties": {
+          "role_id": {
+            "description": "Global Role contract id to withdraw from the Family's presents_as set. Strict-not-idempotent: removing a Role the Family does not advertise raises.",
+            "format": "uuid",
+            "title": "Role Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role_id"
+        ],
+        "title": "RemoveFamilyPresentsAsRequest",
         "type": "object"
       },
       "RemoveMethodRequiredRoleRequest": {
@@ -11850,13 +12062,20 @@
         "type": "object"
       },
       "RoleRequirementBody": {
-        "description": "Wire format for a `RoleRequirement` value object.",
+        "description": "Wire format for a `RoleRequirement` value object.\n\nLayer 3 sub-slice 3D widens this body with `role_kind` for the\nfederation-portable binding path. Exactly one of `role_kind` /\n`family_id` must be set per the memo Lock 5 XOR invariant; the\n`_xor_role_kind_and_family_id` model_validator catches both-set\n+ neither-set at the wire layer (422) before the domain VO\nraises its sister error (400).",
         "properties": {
           "family_id": {
-            "description": "The Family the bound Asset must satisfy at Plan binding time. Eventual-consistency: existence is not verified at decide time.",
-            "format": "uuid",
-            "title": "Family Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Anatomical-pinning escape hatch (slice-1 path). When set, the bound Asset must carry this Family id at Plan binding time. Eventual-consistency: existence is not verified at decide time. Exactly one of `role_kind` / `family_id` must be set.",
+            "title": "Family Id"
           },
           "optional": {
             "default": false,
@@ -11872,6 +12091,19 @@
             "title": "Required Ports",
             "type": "array"
           },
+          "role_kind": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Global Role contract id this slot targets (Layer 3 sub-slice 3D; federation-portable path). Existence is verified at the handler edge against the Role projection. Exactly one of `role_kind` / `family_id` must be set.",
+            "title": "Role Kind"
+          },
           "role_name": {
             "description": "Method-local positional role label (for example, 'detector', 'sample_monitor', 'axis'). Uniqueness is scoped to the Method; cross-Method consistency is an operator convention, not a kernel invariant.",
             "maxLength": 50,
@@ -11881,8 +12113,7 @@
           }
         },
         "required": [
-          "role_name",
-          "family_id"
+          "role_name"
         ],
         "title": "RoleRequirementBody",
         "type": "object"
@@ -13606,6 +13837,25 @@
         "title": "UpdateAssetSettingsRequest",
         "type": "object"
       },
+      "UpdateCapabilitySuggestedRolesRequest": {
+        "description": "Body for `POST /capabilities/{capability_id}/suggested-roles`.",
+        "properties": {
+          "suggested_role_ids": {
+            "description": "FULL replacement set of global Role contract ids the operator suggests this Capability is naturally satisfied by (Layer 3 sub-slice 3E; documentation-only per memo Lock 10). Each role_id is verified to resolve via the Role projection at the handler edge. Empty list clears the set. Deduplicated server-side.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Suggested Role Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suggested_role_ids"
+        ],
+        "title": "UpdateCapabilitySuggestedRolesRequest",
+        "type": "object"
+      },
       "UpdateFamilySettingsSchemaRequest": {
         "description": "Body for `POST /families/{family_id}/settings-schema`.",
         "properties": {
@@ -14726,6 +14976,119 @@
         "summary": "RFC 9728 Protected Resource Metadata",
         "tags": [
           "edge-auth"
+        ]
+      }
+    },
+    "/acquisitions": {
+      "post": {
+        "operationId": "post_acquisitions_acquisitions_post",
+        "parameters": [
+          {
+            "description": "Optional client-supplied unique key per logical request. Retries with the same key + same body return the cached response instead of re-recording the Acquisition.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional client-supplied unique key per logical request. Retries with the same key + same body return the cached response instead of re-recording the Acquisition.",
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordAcquisitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordAcquisitionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated: malformed settings / evidence shape, or a captured_at in the future beyond the clock-skew tolerance."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Cross-aggregate reference does not exist: dataset_id, producing_asset_id, or producing_run_id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Business-invariant violation: the producing Asset's Family does not declare the Capturing affordance, or the minted Acquisition stream already exists."
+          },
+          "422": {
+            "description": "Request body failed schema validation OR Idempotency-Key was reused with a different request body."
+          }
+        },
+        "summary": "Record a new Acquisition",
+        "tags": [
+          "data"
         ]
       }
     },
@@ -16475,6 +16838,96 @@
         ]
       }
     },
+    "/assemblies/{assembly_id}/add-presents-as": {
+      "post": {
+        "operationId": "post_assemblies_add_presents_as_assemblies__assembly_id__add_presents_as_post",
+        "parameters": [
+          {
+            "description": "Target Assembly's id.",
+            "in": "path",
+            "name": "assembly_id",
+            "required": true,
+            "schema": {
+              "description": "Target Assembly's id.",
+              "format": "uuid",
+              "title": "Assembly Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddAssemblyPresentsAsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Assembly exists with the given id, OR no Role exists with the supplied role_id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "role_id is already in the Assembly's presents_as set (strict-not-idempotent), OR a concurrent write to the same Assembly stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Add a global Role contract to an Assembly's presents_as set",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
     "/assemblies/{assembly_id}/deprecate": {
       "post": {
         "operationId": "post_assemblies_deprecate_assemblies__assembly_id__deprecate_post",
@@ -16685,6 +17138,96 @@
           }
         },
         "summary": "Register a new Fixture against an Assembly blueprint",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/assemblies/{assembly_id}/remove-presents-as": {
+      "post": {
+        "operationId": "post_assemblies_remove_presents_as_assemblies__assembly_id__remove_presents_as_post",
+        "parameters": [
+          {
+            "description": "Target Assembly's id.",
+            "in": "path",
+            "name": "assembly_id",
+            "required": true,
+            "schema": {
+              "description": "Target Assembly's id.",
+              "format": "uuid",
+              "title": "Assembly Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveAssemblyPresentsAsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Assembly exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "role_id is not in the Assembly's presents_as set (strict-not-idempotent), OR a concurrent write to the same Assembly stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Remove a global Role contract from an Assembly's presents_as set",
         "tags": [
           "equipment"
         ]
@@ -21378,6 +21921,96 @@
         ]
       }
     },
+    "/capabilities/{capability_id}/suggested-roles": {
+      "post": {
+        "operationId": "post_capabilities_suggested_roles_capabilities__capability_id__suggested_roles_post",
+        "parameters": [
+          {
+            "description": "Target Capability's id.",
+            "in": "path",
+            "name": "capability_id",
+            "required": true,
+            "schema": {
+              "description": "Target Capability's id.",
+              "format": "uuid",
+              "title": "Capability Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCapabilitySuggestedRolesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize policy denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Capability exists with the given id, OR one or more supplied role_ids do not resolve to a registered Role (handler-side RoleLookup precondition)."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Capability is Deprecated; suggested_role_ids updates require Defined or Versioned status."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Author the editorial suggested_role_ids set on a Capability",
+        "tags": [
+          "recipe"
+        ]
+      }
+    },
     "/capabilities/{capability_id}/version": {
       "post": {
         "operationId": "post_capabilities_version_capabilities__capability_id__version_post",
@@ -23091,7 +23724,7 @@
             "description": "Query parameters failed validation OR `cursor` was malformed."
           }
         },
-        "summary": "List clearances with cursor pagination + kind / status / risk_band / facility_asset_id / binds_to_*_id filters. ExternalRefBinding refs not filterable; review_steps chain not surfaced (fetch get_clearance for both).",
+        "summary": "List clearances with cursor pagination + template_id / template_code / status / risk_band / facility_code / binds_to_*_id filters. ExternalRefBinding refs not filterable; review_steps chain not surfaced (fetch get_clearance for both).",
         "tags": [
           "safety"
         ]
@@ -26665,6 +27298,96 @@
         ]
       }
     },
+    "/families/{family_id}/add-presents-as": {
+      "post": {
+        "operationId": "post_families_add_presents_as_families__family_id__add_presents_as_post",
+        "parameters": [
+          {
+            "description": "Target Family's id.",
+            "in": "path",
+            "name": "family_id",
+            "required": true,
+            "schema": {
+              "description": "Target Family's id.",
+              "format": "uuid",
+              "title": "Family Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddFamilyPresentsAsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Family exists with the given id, OR no Role exists with the supplied role_id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Family cannot present the requested Role (missing required Affordances), OR the role_id is already in the Family's presents_as set (strict-not-idempotent), OR a concurrent write to the same Family stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Add a global Role contract to a Family's presents_as set",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
     "/families/{family_id}/deprecate": {
       "post": {
         "operationId": "post_families_deprecate_families__family_id__deprecate_post",
@@ -26747,6 +27470,96 @@
           }
         },
         "summary": "Mark an existing family as deprecated",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/families/{family_id}/remove-presents-as": {
+      "post": {
+        "operationId": "post_families_remove_presents_as_families__family_id__remove_presents_as_post",
+        "parameters": [
+          {
+            "description": "Target Family's id.",
+            "in": "path",
+            "name": "family_id",
+            "required": true,
+            "schema": {
+              "description": "Target Family's id.",
+              "format": "uuid",
+              "title": "Family Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveFamilyPresentsAsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Family exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "role_id is not in the Family's presents_as set (strict-not-idempotent), OR a concurrent write to the same Family stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Remove a global Role contract from a Family's presents_as set",
         "tags": [
           "equipment"
         ]
@@ -30584,7 +31397,7 @@
                 }
               }
             },
-            "description": "No method exists with the given id."
+            "description": "No Method exists with the given id, OR the supplied role_kind does not resolve to a registered Role (handler-side RoleLookup precondition; Layer 3 3D)."
           },
           "409": {
             "content": {
@@ -32611,7 +33424,7 @@
                 }
               }
             },
-            "description": "No plan, method, or asset exists with the given id."
+            "description": "No plan, method, or asset exists with the given id, OR the matching RoleRequirement's role_kind does not resolve to a registered Role (Layer 3 3D edge-load)."
           },
           "409": {
             "content": {
@@ -32621,7 +33434,7 @@
                 }
               }
             },
-            "description": "Plan cannot bind the role under current conditions: Plan is Versioned/Deprecated, role_name already bound, role_name not declared on the bound Method, asset_id not in Plan.asset_ids, Asset missing the role's required Family, OR Asset missing one or more of the role's required port triples."
+            "description": "Plan cannot bind the role under current conditions: Plan is Versioned/Deprecated, role_name already bound, role_name not declared on the bound Method, asset_id not in Plan.asset_ids, Asset missing the role's required Family (family_id path), OR for the 3D role_kind path: no Family on the Asset advertises the Role with covering affordances (PlanRoleAssetCannotPresentError), or a Family id on the Asset does not resolve via FamilyLookup (PlanRoleFamilyNotResolvableError), OR Asset missing one or more of the role's required port triples."
           },
           "422": {
             "description": "Path parameter or request body failed schema validation."
@@ -35384,6 +36197,99 @@
         "summary": "Issue a new version label + replacement steps for a Recipe",
         "tags": [
           "recipe"
+        ]
+      }
+    },
+    "/roles": {
+      "post": {
+        "operationId": "post_roles_roles_post",
+        "parameters": [
+          {
+            "description": "Optional client-supplied unique key per logical request. Retries with the same key + same body return the cached response instead of re-creating the Role.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional client-supplied unique key per logical request. Retries with the same key + same body return the cached response instead of re-creating the Role.",
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefineRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefineRoleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated: whitespace-only name or docstring, required and optional Affordance sets overlap, or a SignalType entry is empty or too long."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "422": {
+            "description": "Request body failed schema validation OR Idempotency-Key was reused with a different request body."
+          }
+        },
+        "summary": "Define a new global Role contract",
+        "tags": [
+          "equipment"
         ]
       }
     },

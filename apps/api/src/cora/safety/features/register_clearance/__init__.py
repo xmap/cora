@@ -5,7 +5,7 @@ command slices:
 
     from cora.safety.features import register_clearance
 
-    cmd = register_clearance.RegisterClearance(kind=..., title="...", bindings=...)
+    cmd = register_clearance.RegisterClearance(template_id=..., title="...", bindings=...)
     handler = register_clearance.bind(deps)
     clearance_id = await handler(cmd, principal_id=..., correlation_id=...)
 """

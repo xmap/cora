@@ -167,26 +167,31 @@ class MethodRequiredRoleAdded:
     Part of the positional role-tagging workstream (IEC 81346
     Function aspect). Strict-not-idempotent: a duplicate role_name
     surfaces as `MethodRoleNameAlreadyDeclaredError` rather than
-    silently no-opping. Restricted to Methods in `Defined` status
-    (a `Versioned` Method has an attested content_hash that covers
-    required_roles, a `Deprecated` Method is out of use entirely).
+    silently no-opping. Restricted to Methods in `Defined` status.
+
+    ## Additive evolution (Layer 3 sub-slice 3D)
+
+    `role_kind` is the additive field landing in 3D per memo Lock 5:
+    the global Role contract this slot targets (federation-portable
+    path). KEPT alongside the slice-1 `family_id` field for the XOR
+    invariant; exactly one is set per instance. Defaults to None
+    here so streams predating 3D rebuild as family_id-only
+    RoleRequirements without needing payload backfill.
 
     `required_ports` is stored as a `tuple[dict[str, Any], ...]` in
     the payload (each dict = {port_name, direction, signal_type})
     for JSON-friendly persistence; the evolver converts to
     `frozenset[PortRequirement]` when folding into state. Sorted by
-    `(port_name, direction)` for deterministic payload bytes —
-    matches the `to_payload` convention for `needed_family_ids` and
-    `needed_assembly_ids`. See [[project-method-required-roles-design]]
-    for the full lock.
+    `(port_name, direction)` for deterministic payload bytes.
     """
 
     method_id: UUID
     role_name: str
-    family_id: UUID
+    family_id: UUID | None
     required_ports: tuple[dict[str, Any], ...]
     optional: bool
     occurred_at: datetime
+    role_kind: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -294,14 +299,20 @@ def to_payload(event: MethodEvent) -> dict[str, Any]:
             required_ports=required_ports,
             optional=optional,
             occurred_at=occurred_at,
+            role_kind=role_kind,
         ):
             # required_ports comes in already as tuple[dict, ...] from
             # the decider; sort by (port_name, direction) for byte-
             # stable persistence regardless of insertion order.
-            return {
+            #
+            # role_kind + family_id are XOR-bound on the VO; both
+            # rendered as str-or-null per the additive-evolution
+            # convention (sparse legacy payloads round-trip cleanly
+            # via from_stored's payload.get with default None).
+            payload: dict[str, Any] = {
                 "method_id": str(method_id),
                 "role_name": role_name,
-                "family_id": str(family_id),
+                "family_id": str(family_id) if family_id is not None else None,
                 "required_ports": sorted(
                     required_ports,
                     key=lambda p: (p["port_name"], p["direction"]),
@@ -309,6 +320,13 @@ def to_payload(event: MethodEvent) -> dict[str, Any]:
                 "optional": optional,
                 "occurred_at": occurred_at.isoformat(),
             }
+            # Conditional render: role_kind only appears in the
+            # payload when non-None. Preserves legacy payload byte
+            # stability for streams predating 3D (no spurious
+            # `"role_kind": null` key in the on-disk bytes).
+            if role_kind is not None:
+                payload["role_kind"] = str(role_kind)
+            return payload
         case MethodRequiredRoleRemoved(
             method_id=method_id,
             role_name=role_name,
@@ -390,16 +408,29 @@ def from_stored(stored: StoredEvent) -> MethodEvent:
                 ),
             )
         case "MethodRequiredRoleAdded":
-            return deserialize_or_raise(
-                "MethodRequiredRoleAdded",
-                lambda: MethodRequiredRoleAdded(
+
+            def _build_method_required_role_added() -> MethodRequiredRoleAdded:
+                # Both fields are XOR-bound on the VO but the payload
+                # may legitimately carry either: legacy (pre-3D)
+                # payloads have family_id only; 3D-era role_kind
+                # payloads have role_kind only. Defaults via .get
+                # preserve round-trip.
+                raw_family = payload.get("family_id")
+                raw_role_kind = payload.get("role_kind")
+                return MethodRequiredRoleAdded(
                     method_id=UUID(payload["method_id"]),
                     role_name=payload["role_name"],
-                    family_id=UUID(payload["family_id"]),
+                    family_id=UUID(raw_family) if raw_family is not None else None,
                     required_ports=tuple(payload.get("required_ports", ())),
                     optional=bool(payload.get("optional", False)),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
-                ),
+                    role_kind=UUID(raw_role_kind) if raw_role_kind is not None else None,
+                )
+
+            return deserialize_or_raise(
+                "MethodRequiredRoleAdded",
+                _build_method_required_role_added,
+                extra=(ValueError,),
             )
         case "MethodRequiredRoleRemoved":
             return deserialize_or_raise(

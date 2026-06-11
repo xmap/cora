@@ -128,7 +128,7 @@ Don't extract until **three real usages with identical, stable logic** (Rule of 
 - `cora/shared/` — modules with zero `cora.*` imports outside `cora.shared.*` itself. Pure value objects, NewType aliases, and validation helpers (Identifier VOs, identity NewTypes, bounded-text, canonical-JSON, JSON Schema). Adapter-free and side-effect-free.
 - `cora/infrastructure/` — composition root, adapters, ports, event-sourcing machinery, cross-cutting concerns. Anything that depends on `ports/`, `kernel.py`, or external systems.
 
-Layer direction: `BCs -> infrastructure -> shared`, plus `BCs -> shared` directly. `cora.shared` depends on nothing under `cora.*`. Pinned by [apps/api/tach.toml](apps/api/tach.toml) and architecture fitness tests.
+Layer direction: `BCs -> infrastructure -> shared`, plus `BCs -> shared` directly. `cora.shared` depends on nothing under `cora.*`. Pinned by [apps/api/tach.toml](../../apps/api/tach.toml) and architecture fitness tests.
 
 ### When the Rule of Three yields to local clarity
 

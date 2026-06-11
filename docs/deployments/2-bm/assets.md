@@ -44,11 +44,11 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `Hexapod` | `Posable`, `Homeable`, `Limitable` |
 | `Scintillator` | `Consumable` |
 | `Camera` | `Imageable`, `Binnable`, `Triggerable`, `Streamable`, `Recording` |
-| `ImagingDetector` | (empty; this Family exists as the `presents_as_family_id` target for detector Assemblies, including MCTOptics) |
+| `Imager` | (empty; this Family exists as the `presents_as_family_id` target for detector Assemblies, including MCTOptics; was `ImagingDetector` before the role-aggregate-design rename) |
 | `Objective` | (pending — empty at initial registration) |
 | `PseudoAxis` | (empty; partition rules live on `Asset.partition_rule`, not as affordances) |
 
-`Scintillator` is the lone Pattern-C consumer at v1 (passive optical screen; tracked via `Consumable` lifecycle, no command surface). `ImagingDetector` and `PseudoAxis` are presenter / facet Families: they carry no affordances, but Methods bind against them via `needed_family_ids` (for `ImagingDetector` the Assembly's `presents_as_family_id` is the satisfaction handle; for `PseudoAxis` the Family membership is the gate that lets an Asset carry a `partition_rule`).
+`Scintillator` is the lone Pattern-C consumer at v1 (passive optical screen; tracked via `Consumable` lifecycle, no command surface). `Imager` and `PseudoAxis` are presenter / facet Families: they carry no affordances, but Methods bind against them via `needed_family_ids` (for `Imager` the Assembly's `presents_as_family_id` is the satisfaction handle; for `PseudoAxis` the Family membership is the gate that lets an Asset carry a `partition_rule`).
 
 `MotionController` is the first separately-modelled drive-electronics Family. v1 ships empty affordances by design: the meaningful state on a controller is configuration (firmware version, IP address, axis count, protocol) and identity (serial number), captured in `settings` and `alternate_identifiers`. Command-tier affordances (firmware-update, reboot, sync-output toggling) are deferred until an operator-side Procedure demands them, at which point they grow on the existing add-only affordance amendment path.
 
@@ -75,7 +75,7 @@ The Aerotech Ensemble HLE10-40-A-MXH (companion drive for `aerotech_abs250mp_m_a
 
 ## Family settings schemas
 
-NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, `Camera`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. `ImagingDetector` and `PseudoAxis` carry no settings schema (they are presenter / facet Families).
+NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, `Camera`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. `Imager` and `PseudoAxis` carry no settings schema (they are presenter / facet Families).
 
 ### `Objective`
 

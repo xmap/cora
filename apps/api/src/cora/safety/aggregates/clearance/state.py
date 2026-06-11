@@ -41,9 +41,7 @@ Form-type identity is now carried by `template_id` (FK into the
 `ClearanceTemplate` aggregate). The earlier closed-enum
 `ClearanceKind` was retired in favour of an aggregate so future
 per-facility schema-validation + template-versioning can land
-additively (see [[project_slice9_design]] L11; cross-facility
-portability research v3 at /tmp/cora_hazard_research_v3.md retained
-for design context).
+additively (see [[project_slice9_design]] L11).
 
 ## Bindings: multi (frozenset), polymorphic (5 typed arms + ExternalRefBinding)
 

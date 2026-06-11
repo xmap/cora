@@ -92,7 +92,33 @@ class CapabilityDeprecated:
     replaced_by_capability_id: UUID | None = None
 
 
-CapabilityEvent = CapabilityDefined | CapabilityVersioned | CapabilityDeprecated
+@dataclass(frozen=True)
+class CapabilitySuggestedRolesUpdated:
+    """The Capability's `suggested_role_ids` set was authored.
+
+    Wholesale-replace semantic (Pattern P; matches the editorial
+    set-edit pattern, NOT the add-pair / remove-pair pattern used
+    by Family.presents_as). The payload carries the FULL new set;
+    the evolver replaces state.suggested_role_ids wholesale.
+
+    Per memo Lock 10: documentation-only. The handler validates that
+    every role_id resolves via `Kernel.role_lookup.lookup` (parallel
+    `asyncio.gather` edge-load) so callers see `RoleNotFoundError`
+    rather than a satisfaction-side mis-record; no decider gates on
+    the set membership itself.
+
+    Restricted to Defined + Versioned status by the decider
+    (`CapabilityCannotUpdateSuggestedRolesError`).
+    """
+
+    capability_id: UUID
+    suggested_role_ids: frozenset[UUID]
+    occurred_at: datetime
+
+
+CapabilityEvent = (
+    CapabilityDefined | CapabilityVersioned | CapabilityDeprecated | CapabilitySuggestedRolesUpdated
+)
 
 
 def event_type_name(event: CapabilityEvent) -> str:
@@ -156,6 +182,20 @@ def to_payload(event: CapabilityEvent) -> dict[str, Any]:
                     if replaced_by_capability_id is not None
                     else None
                 ),
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case CapabilitySuggestedRolesUpdated(
+            capability_id=capability_id,
+            suggested_role_ids=suggested_role_ids,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "capability_id": str(capability_id),
+                # Sorted UUID strings for deterministic payload bytes
+                # (Pattern P set-edit wholesale-replace semantic;
+                # mirrors required_affordances + executor_shapes
+                # sort convention).
+                "suggested_role_ids": sorted(str(r) for r in suggested_role_ids),
                 "occurred_at": occurred_at.isoformat(),
             }
         case _:  # pragma: no cover  # exhaustiveness guard
@@ -232,6 +272,22 @@ def from_stored(stored: StoredEvent) -> CapabilityEvent:
                 )
 
             return deserialize_or_raise("CapabilityDeprecated", _build_capability_deprecated)
+        case "CapabilitySuggestedRolesUpdated":
+
+            def _build_capability_suggested_role_ids_updated() -> CapabilitySuggestedRolesUpdated:
+                return CapabilitySuggestedRolesUpdated(
+                    capability_id=UUID(payload["capability_id"]),
+                    suggested_role_ids=frozenset(
+                        UUID(s) for s in payload.get("suggested_role_ids", [])
+                    ),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                )
+
+            return deserialize_or_raise(
+                "CapabilitySuggestedRolesUpdated",
+                _build_capability_suggested_role_ids_updated,
+                extra=(ValueError,),
+            )
         case _:
             msg = f"Unknown CapabilityEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -241,6 +297,7 @@ __all__ = [
     "CapabilityDefined",
     "CapabilityDeprecated",
     "CapabilityEvent",
+    "CapabilitySuggestedRolesUpdated",
     "CapabilityVersioned",
     "event_type_name",
     "from_stored",

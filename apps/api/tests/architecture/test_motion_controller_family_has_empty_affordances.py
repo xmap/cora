@@ -21,7 +21,7 @@ not the full runtime invariant. The full runtime check belongs in a
 conftest-style event-store interceptor that lands when the trigger
 fires (an actual controller activation attempt).
 
-Future leaves (e.g. `TriggerFPGA`, `Lantronix XPort`, IOC compute
+Future leaves (e.g. `TimingController`, `Lantronix XPort`, IOC compute
 hosts) extend this fitness by adding their Family name to
 `_LEAF_FAMILIES`. Per the design memo's anti-hook, each new addition
 needs its own intentional-design call confirming the leaf shape fits.

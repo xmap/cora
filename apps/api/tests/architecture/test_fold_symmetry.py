@@ -99,6 +99,13 @@ _INTRINSIC_ALLOWLIST: dict[str, str] = {
         "provenance-source identity-ref (vendor datasheet operator); "
         "contrast with fact-act-authority `CalibrationRevision.established_by`"
     ),
+    "data.Acquisition.captured_at": (
+        "caller-asserted instrument wall-clock (PROV-O generatedAtTime); "
+        "the physical capturing entity is the `producing_asset_id` device, "
+        "not an Actor, so there is no `captured_by` fact-act partner. The "
+        "CORA-side recording act folds as the proper `recorded_at` / "
+        "`recorded_by` pair on the same dataclass"
+    ),
     "data.Edition.Creator.actor_id": (
         "publication-author identity-ref (credited creator on the citable Edition); "
         "ordered tuple semantics, NOT a fact-act fold"

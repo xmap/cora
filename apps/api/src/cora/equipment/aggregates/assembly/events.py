@@ -184,7 +184,49 @@ class AssemblyDeprecated:
     occurred_at: datetime
 
 
-AssemblyEvent = AssemblyDefined | AssemblyVersioned | AssemblyDeprecated
+@dataclass(frozen=True)
+class AssemblyPresentsAsAdded:
+    """The Assembly advertised an additional global Role contract.
+
+    Additive on `presents_as` (Layer 3 sub-slice 3C). Strict-not-
+    idempotent: re-adding the same `role_id` surfaces
+    `AssemblyRolePresentsAsAlreadyError` at the decider. Existence
+    of the Role is verified at the handler edge via `RoleLookup`
+    (RoleNotFoundError on miss).
+
+    Affordance-superset check (Family.affordances >=
+    Role.required_affordances) is intentionally NOT enforced at
+    3C: Assembly affordances derive from constituent Family union
+    at register_fixture time, not template time. Watch item logged.
+    """
+
+    assembly_id: UUID
+    role_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class AssemblyPresentsAsRemoved:
+    """The Assembly withdrew a previously-advertised global Role.
+
+    Strict-not-idempotent on remove. The decider does NOT consult
+    `RoleLookup`: a Role that no longer resolves may still have
+    been previously advertised, and the operator can withdraw it
+    cleanly.
+    """
+
+    assembly_id: UUID
+    role_id: UUID
+    occurred_at: datetime
+
+
+AssemblyEvent = (
+    AssemblyDefined
+    | AssemblyVersioned
+    | AssemblyDeprecated
+    | AssemblyPresentsAsAdded
+    | AssemblyPresentsAsRemoved
+)
 
 
 def event_type_name(event: AssemblyEvent) -> str:
@@ -277,6 +319,22 @@ def to_payload(event: AssemblyEvent) -> dict[str, Any]:
                 "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
             }
+        case AssemblyPresentsAsAdded(
+            assembly_id=assembly_id, role_id=role_id, occurred_at=occurred_at
+        ):
+            return {
+                "assembly_id": str(assembly_id),
+                "role_id": str(role_id),
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case AssemblyPresentsAsRemoved(
+            assembly_id=assembly_id, role_id=role_id, occurred_at=occurred_at
+        ):
+            return {
+                "assembly_id": str(assembly_id),
+                "role_id": str(role_id),
+                "occurred_at": occurred_at.isoformat(),
+            }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 
@@ -350,6 +408,26 @@ def from_stored(stored: StoredEvent) -> AssemblyEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
+        case "AssemblyPresentsAsAdded":
+            return deserialize_or_raise(
+                "AssemblyPresentsAsAdded",
+                lambda: AssemblyPresentsAsAdded(
+                    assembly_id=UUID(payload["assembly_id"]),
+                    role_id=UUID(payload["role_id"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+                extra=(ValueError,),
+            )
+        case "AssemblyPresentsAsRemoved":
+            return deserialize_or_raise(
+                "AssemblyPresentsAsRemoved",
+                lambda: AssemblyPresentsAsRemoved(
+                    assembly_id=UUID(payload["assembly_id"]),
+                    role_id=UUID(payload["role_id"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+                extra=(ValueError,),
+            )
         case _:
             msg = f"Unknown AssemblyEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -359,6 +437,8 @@ __all__ = [
     "AssemblyDefined",
     "AssemblyDeprecated",
     "AssemblyEvent",
+    "AssemblyPresentsAsAdded",
+    "AssemblyPresentsAsRemoved",
     "AssemblyVersioned",
     "event_type_name",
     "from_stored",
