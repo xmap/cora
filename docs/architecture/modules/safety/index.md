@@ -30,7 +30,7 @@ Out of scope
 |---|---|---|---|
 | `Clearance` | `id: UUID` (+ optional facility-minted `external_id: str`) | `kind`, `facility_asset_id`, `title`, `bindings`, `declarations`, `risk_band?`, `review_steps`, `status`, `parent_id?`, `valid_from?`, `valid_until?`, `next_review_due_at?` | yes |
 
-`facility_asset_id` references the `Asset.Level.Site` for the facility that owns this clearance. The Equipment hierarchy carries facility identity; the Safety module does not duplicate it as a parallel enum.
+`facility_code` is the `FacilityCode` of the Federation `Facility` (a `Facility` with `FacilityKind = Site`) that owns this clearance. Facility identity is owned by the Federation module; the Safety module references it by code and does not duplicate it as a parallel enum.
 
 `parent_id` is populated only on a Clearance that supersedes a prior one via the amendment flow.
 
@@ -212,7 +212,8 @@ The `CHECK` constraints encode the closed `ClearanceKind` and `ClearanceStatus` 
 | Module | Relationship | What's exchanged |
 |---|---|---|
 | Trust | gated-by | `register_clearance`, the review-board step slices, `approve_clearance`, and `activate_clearance` are all gated by the Authorize port resolving a `Policy` for the `(principal, command, conduit, surface)` tuple |
-| Equipment | shared-id-with | `Clearance.facility_asset_id` references an `Asset.Level.Site`; `AssetBinding.asset_id` references any `Asset` the Clearance gates |
+| Federation | shared-id-with | `Clearance.facility_code` references the `FacilityCode` of a `Facility` with `FacilityKind = Site` |
+| Equipment | shared-id-with | `AssetBinding.asset_id` references any `Asset` the Clearance gates |
 | Subject | shared-id-with | `SubjectBinding.subject_id` references a Subject the Clearance gates |
 | Run | reads-from | Run.start calls `ClearanceLookup.find_referencing_run(run_id, subject_id, asset_ids)` against `proj_safety_clearance_summary`; at least one `Active` Clearance must cover the Run scope or `start_run` rejects with `RunRequiresActiveClearance` |
 | Operation | reads-from | Procedure.start performs the analogous check via `ProcedureBinding` references |

@@ -10,7 +10,8 @@ Borrowed names and structure, not wire formats. A reader fluent in any of these 
 
 | Standard | Provides | Lands in |
 | --- | --- | --- |
-| ISA-95 | asset hierarchy (Enterprise / Site / Area / Unit / Component / Device) | `equipment` |
+| ISA-88 | equipment tiers (`AssetTier`: Unit / Component / Device) | `equipment` |
+| ISA-95 | facility-envelope scope (`FacilityKind`: Site / Area) | `federation` (Facility) |
 | ISA-88 | episodic procedures (recipe ladder: Method / Practice / Plan / Run) | `recipe`, `run` |
 | ISA-106 | continuous operations | `operation`, `supply` (planned) |
 | ISA-99 / IEC 62443 | trust topology (Zones, Conduits, Surfaces, Policies) | `trust` |

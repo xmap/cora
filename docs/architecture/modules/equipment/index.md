@@ -1,4 +1,4 @@
-# Equipment module <span class="md-maturity md-maturity--stable" title="Eight aggregates, six-level Asset hierarchy, vendor catalog, composition blueprints, placement frames, global Role contracts, settings schema validation, typed ports">stable</span>
+# Equipment module <span class="md-maturity md-maturity--stable" title="Eight aggregates, three-tier Asset structure, vendor catalog, composition blueprints, placement frames, global Role contracts, settings schema validation, typed ports">stable</span>
 
 ## Purpose & Scope
 
@@ -27,14 +27,14 @@ Out of scope
 |---|---|---|---|
 | `Family` | `id: UUID` | `id`, `name: FamilyName`, `status: FamilyStatus`, `version: str?`, `affordances: frozenset[Affordance]`, `presents_as: frozenset[RoleId]`, `settings_schema: dict?` | yes (3-state) |
 | `Model` | `id: UUID` | `id`, `name`, `manufacturer: Manufacturer`, `part_number`, `declared_family_ids: frozenset[UUID]`, `status: ModelStatus`, `version: str?` | yes (3-state) |
-| `Asset` | `id: UUID` | `id`, `name`, `level`, `parent_id?`, `lifecycle`, `condition`, `family_ids: frozenset[UUID]`, `settings: dict`, `ports: frozenset[AssetPort]`, `model_id?`, `owners: frozenset[AssetOwner]`, `alternate_identifiers: frozenset[AlternateIdentifier]`, `fixture_id?`, `drawing?`, `commissioned_at?`, `decommissioned_at?`, `controller_id?`, `facility_code?`, `tier?` | yes (4-state lifecycle, 3-state condition) |
+| `Asset` | `id: UUID` | `id`, `name`, `tier`, `parent_id?`, `lifecycle`, `condition`, `family_ids: frozenset[UUID]`, `settings: dict`, `ports: frozenset[AssetPort]`, `model_id?`, `owners: frozenset[AssetOwner]`, `alternate_identifiers: frozenset[AlternateIdentifier]`, `fixture_id?`, `drawing?`, `commissioned_at?`, `decommissioned_at?`, `controller_id?`, `facility_code?` | yes (4-state lifecycle, 3-state condition) |
 | `Frame` | `id: UUID` | `id`, `name`, `parent_id?`, `placement: Placement?`, `supersedes: FrameRevisionLink?`, `status` | yes (2-state) |
 | `Mount` | `id: UUID` | `id`, `slot_code`, `parent_id?`, `placement: Placement`, `drawing?`, `installed_asset_id?`, `status` | yes (2-state) |
 | `Assembly` | `id: UUID` | `id`, `name`, `presents_as_family_id: UUID`, `presents_as: frozenset[RoleId]`, `required_slots: frozenset[TemplateSlot]`, `required_wires: frozenset[TemplateWire]`, `parameter_overrides_schema: dict?`, `drawing?`, `status: AssemblyStatus`, `version: str?`, `content_hash: str?` | yes (3-state) |
 | `Fixture` | `id: UUID` | `id`, `assembly_id`, `assembly_content_hash`, `surface_id`, `slot_asset_bindings: frozenset[SlotAssetBinding]`, `parameter_overrides: dict`, `persistent_id?`, `registered_at` | no (genesis + set-once persistent-id assign) |
 | `Role` | `id: RoleId` | `id`, `name: RoleName`, `docstring: str`, `required_affordances: frozenset[Affordance]`, `optional_affordances: frozenset[Affordance]`, `produces: frozenset[SignalType]`, `consumes: frozenset[SignalType]` | no (terminal at genesis; status implicit `Defined`) |
 
-`Family` is the device-class abstraction: "RotaryStage", "Camera", "Hexapod", "Mirror", "TimingController". It carries the affordance set (what device-level primitives this class supports) and the JSON Schema that constrains the operational settings any Asset of that class may carry. `Model` is the vendor catalog entry that names a specific manufacturer plus part number and declares which Families that catalog row belongs to. `Asset` is one physical instance: a Site, a beamline, a detector, a sample changer. Assets form a single-parent tree through `parent_id`; an Asset may belong to multiple Families simultaneously, and each membership widens what the Asset's settings dict may contain. An Asset may optionally bind to a Model, in which case the Asset's family set must be a subset of the Model's declared families.
+`Family` is the device-class abstraction: "RotaryStage", "Camera", "Hexapod", "Mirror", "TimingController". It carries the affordance set (what device-level primitives this class supports) and the JSON Schema that constrains the operational settings any Asset of that class may carry. `Model` is the vendor catalog entry that names a specific manufacturer plus part number and declares which Families that catalog row belongs to. `Asset` is one physical instance: a beamline, a detector, a sample changer. Assets form a single-parent tree through `parent_id`; an Asset may belong to multiple Families simultaneously, and each membership widens what the Asset's settings dict may contain. An Asset may optionally bind to a Model, in which case the Asset's family set must be a subset of the Model's declared families.
 
 `Frame` and `Mount` add the placement axis the facility uses to provision physical space ahead of installation. A Frame is a named coordinate frame; Frames form a parent tree, and a child Frame carries its placement relative to its parent. A Mount is a named installation slot the facility provisions in advance, carries a 6-DoF placement relative to its parent Frame or Mount, and may eventually have an Asset installed into it. Slot codes are facility-unique across active Mounts.
 
@@ -50,8 +50,7 @@ Out of scope
 | `FamilyStatus` | closed StrEnum: `Defined` \| `Versioned` \| `Deprecated` | `Family.status` |
 | `Affordance` | closed StrEnum, ~28 values in three patterns (motion, signal, lifecycle) | members of `Family.affordances` |
 | `AssetName` | trimmed string, 1-200 chars | `Asset.name` |
-| `AssetLevel` | closed StrEnum: `Enterprise` \| `Site` \| `Area` \| `Unit` \| `Component` \| `Device` | `Asset.level` (upper tiers ENTERPRISE / SITE / AREA deprecated 2026-06-10 in favor of `facility_code` + `AssetTier`; runtime tolerates them, arch fitness rejects new usage) |
-| `AssetTier` | closed StrEnum: `Unit` \| `Component` \| `Device` | `Asset.tier` (evolver-derived from `Asset.level`; null for upper-tier facility-envelope Assets); the honest intrinsic-tier facet introduced in Slice 8B, orthogonal to the structural Facility binding |
+| `AssetTier` | closed StrEnum: `Unit` \| `Component` \| `Device` (ISA-88 equipment tiers) | `Asset.tier` (set once at registration, never mutated; the intrinsic-tier facet, orthogonal to the structural Facility binding) |
 | `AssetLifecycle` | closed StrEnum: `Commissioned` \| `Active` \| `Maintenance` \| `Decommissioned` | `Asset.lifecycle` |
 | `AssetCondition` | closed StrEnum: `Nominal` \| `Degraded` \| `Faulted` | `Asset.condition` |
 | `AssetPort` | `(name, direction, signal_type)` triple; direction is `Input` \| `Output`; signal_type is free text, 1-50 chars | members of `Asset.ports` |
@@ -75,9 +74,11 @@ Out of scope
 | `RoleName` | trimmed string, 1-200 chars | `Role.name` |
 | `SignalType` | `NewType` over `str`; open-vocabulary label, trimmed 1-50 chars at decider time (matches `AssetPort.signal_type`) | members of `Role.produces`, `Role.consumes` |
 
-The six `AssetLevel` values are ISA-95-derived with single-word names. Levels are conventional: the decider checks that an Enterprise-level Asset has no parent and that every other level has one, but it does not enforce that a `Device` parents to a `Component`. Smart instruments with addressable sub-modules legitimately put a `Device` under another `Device`.
+The three `AssetTier` values are ISA-88 equipment tiers with single-word names. The tier is intrinsic to one Asset, set once at registration and never mutated; the decider does not enforce that a `Device` parents to a `Component`. Smart instruments with addressable sub-modules legitimately put a `Device` under another `Device`.
 
-`AssetLevel` is a tree-depth label, not the aggregate ladder. The aggregate ladder (`Family`, `Model`, `Assembly`, `Fixture`, `Asset`) answers what kind of identity each row carries; `AssetLevel` answers where one registered Asset sits in the org and facility tree. The two axes are orthogonal: a Family has no level, a Fixture has no level, only an Asset carries one. ISA-88 and ISA-95 readers should note that in those traditions the equipment hierarchy is the type ladder, but in CORA the two are kept apart.
+Facility-envelope scope (institution, site, area) is NOT a tier. It is owned by the Federation `Facility` aggregate, and an Asset binds its owning Facility through `Asset.facility_code` rather than through a tier value. The anchoring rule is XOR, enforced by the `register_asset` decider: a root Asset has `parent_id = None` and binds `facility_code`; a non-root Asset has a `parent_id` and does NOT bind `facility_code`, inheriting facility scope through the `parent_id` tree.
+
+`AssetTier` is an intrinsic-shape label, not the aggregate ladder. The aggregate ladder (`Family`, `Model`, `Assembly`, `Fixture`, `Asset`) answers what kind of identity each row carries; `AssetTier` answers what equipment shape one registered Asset has. The two axes are orthogonal: a Family has no tier, a Fixture has no tier, only an Asset carries one. ISA-88 and ISA-95 readers should note that in those traditions the equipment hierarchy is the type ladder, but in CORA the two are kept apart.
 
 Whether a composite vendor unit is one Asset with a wide settings dict or a parent Asset with several child Assets follows three tests. Any one is sufficient to spawn a child Asset:
 
@@ -239,7 +240,7 @@ stateDiagram-v2
 **Guards.** Beyond the source-state check, several slices enforce cross-state and cross-aggregate invariants:
 
 `relocate_asset`
-: The target parent is not the Asset itself (no single-element cycle). The target parent differs from the current parent (no-op rejection). Enterprise-level Assets cannot relocate (they are the root). Decommissioned Assets cannot relocate. Cycle detection beyond the trivial self-loop case is deferred.
+: The target parent is not the Asset itself (no single-element cycle). The target parent differs from the current parent (no-op rejection). Root Assets cannot relocate (a root has `parent_id = None` and binds `facility_code`). Decommissioned Assets cannot relocate. Cycle detection beyond the trivial self-loop case is deferred.
 
 `add_asset_family` / `remove_asset_family`
 : The Asset is not Decommissioned. The Family id is not already present (or is present, for remove). When the Asset has a `model_id` set, the resulting `family_ids` set must remain a subset of `Model.declared_family_ids` (cross-aggregate subset invariant; raises `AssetModelMismatchError` otherwise). The referenced Family is not verified to exist in the Family event stream at write time, matching the eventual-consistency stance on cross-aggregate references.
@@ -303,7 +304,7 @@ The eight aggregates emit forty-eight distinct event types, grouped by aggregate
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
-| `AssetRegistered` | `asset_id`, `name`, `level`, `parent_id?`, `model_id?`, `facility_code?`, `owners`, `occurred_at` | `register_asset` succeeds (genesis); optional `model_id`, `facility_code`, and seed `owners` may be carried |
+| `AssetRegistered` | `asset_id`, `name`, `tier`, `parent_id?`, `model_id?`, `facility_code?`, `owners`, `occurred_at` | `register_asset` succeeds (genesis); a root Asset carries `facility_code` and no `parent_id`, a non-root Asset carries `parent_id` and no `facility_code`; optional `model_id` and seed `owners` may be carried |
 | `AssetActivated` | `asset_id`, `occurred_at` | `activate_asset` succeeds |
 | `AssetMaintenanceEntered` | `asset_id`, `occurred_at` | `enter_asset_maintenance` succeeds |
 | `AssetMaintenanceExited` | `asset_id`, `occurred_at` | `exit_asset_maintenance` succeeds |
@@ -492,13 +493,13 @@ The eight aggregates expose fifty-six slices end to end.
 : `ModelNotFound`, `ModelCannotAddFamily` / `ModelCannotRemoveFamily`, `ModelFamilyAlreadyPresent` / `ModelFamilyNotPresent`, `FamilyNotFound` (add only), `Unauthorized`
 
 `RegisterAsset`
-: `InvalidAssetName`, `InvalidAssetParent` (Enterprise with parent, or non-Enterprise without parent), `AssetAlreadyExists`, `ModelNotFound`, `AssetOwnerAlreadyPresent` (seed owners with duplicate names), `AssetFacilityNotFound` (facility_code supplied but the Facility is not visible in the Federation projection; Slice 8A binding), `Unauthorized`
+: `InvalidAssetName`, `InvalidAssetParent` (the XOR anchoring rule is violated: a root Asset that supplies a `parent_id`, or a non-root Asset that supplies `facility_code` instead of a `parent_id`), `AssetAlreadyExists`, `ModelNotFound`, `AssetOwnerAlreadyPresent` (seed owners with duplicate names), `AssetFacilityNotFound` (facility_code supplied but the Facility is not visible in the Federation projection; Slice 8A binding), `Unauthorized`
 
 `ActivateAsset` / `EnterAssetMaintenance` / `ExitAssetMaintenance` / `DecommissionAsset`
 : `AssetNotFound`, `AssetCannot<Activate|EnterMaintenance|ExitMaintenance|Decommission>`, `Unauthorized`
 
 `RelocateAsset`
-: `AssetNotFound`, `AssetCannotRelocate` (Enterprise-level, Decommissioned, self-loop, or no-op), `Unauthorized`
+: `AssetNotFound`, `AssetCannotRelocate` (root Asset, Decommissioned, self-loop, or no-op), `Unauthorized`
 
 `AddAssetFamily` / `RemoveAssetFamily`
 : `AssetNotFound`, `AssetCannotAddFamily` / `AssetCannotRemoveFamily` (Decommissioned, or duplicate-add / missing-remove), `AssetModelMismatch` (add only, when Model is bound and the new family set escapes `Model.declared_family_ids`), `ModelNotFound` (add only, when the Asset's `model_id` no longer resolves), `Unauthorized`
@@ -548,7 +549,7 @@ The eight aggregates expose fifty-six slices end to end.
 `ListFamilies` / `ListAssets` / `ListFixtures`
 : (boundary 422 only)
 
-`GetAssetIntegrationView` is a read-time composition slice that joins the Asset's current state with the schema declarations of its assigned Families, the Capabilities those Families' affordances satisfy, and the active Cautions targeting the Asset. The composition runs at query time; there is no integration-view projection today. The view is the read-side primitive that integration code (a control-system adapter, a measurement broker) uses to discover "what can this Asset actually do". The response carries `asset_id`, `name`, `level`, `lifecycle`, `condition`, `parent_id`, `families` (each with its settings schema), `ports`, `settings`, `active_cautions`, `applicable_capabilities`, and an `incomplete` boolean that flags partial composition when a referenced Family failed to load (eventual-consistency tolerance).
+`GetAssetIntegrationView` is a read-time composition slice that joins the Asset's current state with the schema declarations of its assigned Families, the Capabilities those Families' affordances satisfy, and the active Cautions targeting the Asset. The composition runs at query time; there is no integration-view projection today. The view is the read-side primitive that integration code (a control-system adapter, a measurement broker) uses to discover "what can this Asset actually do". The response carries `asset_id`, `name`, `tier`, `lifecycle`, `condition`, `parent_id`, `families` (each with its settings schema), `ports`, `settings`, `active_cautions`, `applicable_capabilities`, and an `incomplete` boolean that flags partial composition when a referenced Family failed to load (eventual-consistency tolerance).
 
 `GetAssetPidinst` is a read-time serializer slice at `GET /assets/{asset_id}/pidinst`. A feature-local view assembler loads the Asset, its bound `Model`, the Families behind the Model, the Asset's owners, and its alternate identifiers, then hands the assembled view to the `to_pidinst_record` pure function at the module root (`_pidinst_serializer.py` plus `_pidinst_types.py`). The response body is the PIDINST record shape used by external persistent-identifier registries, returned directly so a downstream caller can post it to DataCite or another mint surface without further transformation. Errors map: `AssetNotFound` to 404, `PidinstRecordInvariant` to 422 (the assembled view violated a PIDINST schema invariant), the four pre-construction subclasses (`AssetNameMissing`, `LandingPageMissing`, `OwnerStateNotAvailable`, `ManufacturerStateNotAvailable`) to 409 (the input view was loaded but failed serializer preconditions), and any unexpected failure to 500.
 
@@ -601,8 +602,8 @@ Fourteen read-side tables back the Equipment module: per-aggregate summaries for
 CREATE TABLE proj_equipment_asset_summary (
     asset_id               UUID        PRIMARY KEY,
     name                   TEXT        NOT NULL,
-    level                  TEXT        NOT NULL CHECK (
-        level IN ('Enterprise', 'Site', 'Area', 'Unit', 'Component', 'Device')
+    tier                   TEXT        NOT NULL CHECK (
+        tier IN ('Unit', 'Component', 'Device')
     ),
     lifecycle              TEXT        NOT NULL CHECK (
         lifecycle IN ('Commissioned', 'Active', 'Maintenance', 'Decommissioned')
@@ -633,7 +634,7 @@ CREATE INDEX proj_equipment_asset_summary_parent_idx
     WHERE parent_id IS NOT NULL;
 ```
 
-The Asset summary is the canonical list source for `GET /assets`. The partial index on `parent_id` supports direct-children lookups. The level, lifecycle, and condition CHECKs match the corresponding closed enums exactly. The summary surfaces every projection-friendly Asset facet: lifecycle and condition states, parent and model and fixture back-references, the optional `Drawing` VO unpacked into three columns, and the JSONB-folded owners and alternate-identifier sets that feed the PIDINST view. `Asset.family_ids`, `Asset.settings`, and `Asset.ports` remain off the summary; single-Asset reads fold the event stream and return them. The reserved `persistent_id` column is empty today and is wired for the future mint-write slice.
+The Asset summary is the canonical list source for `GET /assets`. The partial index on `parent_id` supports direct-children lookups. The tier, lifecycle, and condition CHECKs match the corresponding closed enums exactly. The summary surfaces every projection-friendly Asset facet: lifecycle and condition states, parent and model and fixture back-references, the optional `Drawing` VO unpacked into three columns, and the JSONB-folded owners and alternate-identifier sets that feed the PIDINST view. `Asset.family_ids`, `Asset.settings`, and `Asset.ports` remain off the summary; single-Asset reads fold the event stream and return them. The reserved `persistent_id` column is empty today and is wired for the future mint-write slice.
 
 ```sql title="proj_equipment_family_summary"
 CREATE TABLE proj_equipment_family_summary (
@@ -908,10 +909,10 @@ The Fixture summary backs `GET /fixtures` plus filters by `assembly_id`, `surfac
 | [Calibration](../calibration/index.md) | reads-from | `Calibration.target_id` references the Asset whose behaviour is being measured |
 | [Supply](../supply/index.md) | reads-from | Physical infrastructure delivering a supply (a gas cabinet, a mass-flow controller) lives as Assets; the resource itself is a Supply |
 | [Trust](../trust/index.md) | gated-by | Every write-side Equipment slice (Family / Model / Asset / Frame / Mount / Assembly / Fixture mutations) is gated by the Authorize port resolving a `Policy` for the `(principal, command, conduit, surface)` tuple |
-| [Trust](../trust/index.md) | reads-from | Zones group Assets by trust-requirement homogeneity (orthogonal to the level hierarchy) |
+| [Trust](../trust/index.md) | reads-from | Zones group Assets by trust-requirement homogeneity (orthogonal to the `parent_id` structural tree and the `tier` facet) |
 | [Trust](../trust/index.md) | shared-id-with | `Fixture.surface_id` references a Trust `Surface` and scopes the Fixture's authorization context |
 | [Caution](../caution/index.md) | targeted-by | Cautions with `AssetTarget` point at `Asset.id` values; with `propagate_to_children: true` the Caution surfaces on descendant Assets via projection walk of `Asset.parent_id` |
-| [Safety](../safety/index.md) | shared-id-with | `Clearance.facility_asset_id` references an `Asset.Level.Site`; `AssetBinding.asset_id` references any `Asset` a Clearance gates |
+| [Safety](../safety/index.md) | shared-id-with | `Clearance.facility_code` references the owning Site `Facility` (a Federation aggregate, not an Asset); `AssetBinding.asset_id` references any `Asset` a Clearance gates |
 | [Access](../access/index.md) | shared-id-with | Every Equipment event envelope carries the actor id that authored the change |
 | [Federation](../federation/index.md) | shared-content-hash-with | `Assembly.content_hash` and `Fixture.assembly_content_hash` are stable across facilities for federation dedup and cross-facility composition sharing |
 | [Federation](../federation/index.md) | reads-from (via `FacilityLookup` port) | `Asset.facility_code` (optional) binds an Asset to its owning Federation Facility via the cross-deployment convergent slug. The `register_asset` handler resolves the slug via `FacilityLookup.lookup_by_code` and rejects unknown codes with `AssetFacilityNotFoundError` (HTTP 404). Decommissioned-Facility binding is allowed. Set-once at registration; rebind path is decommission + re-register. |
@@ -970,7 +971,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
 
     {
       "name": "Aerotech ABRS-200MP",
-      "level": "Device",
+      "tier": "Device",
       "parent_id": "aaaa1111-2222-3333-4444-555555555555"
     }
     ```
@@ -984,7 +985,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
         "register_asset",
         {
             "name": "Aerotech ABRS-200MP",
-            "level": "Device",
+            "tier": "Device",
             "parent_id": "aaaa1111-2222-3333-4444-555555555555",
         },
     )
