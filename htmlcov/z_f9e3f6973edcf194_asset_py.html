@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f9e3f6973edcf194_asset_family_membership_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-11 08:11 +0000
+            created at 2026-06-11 15:53 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -88,7 +88,7 @@
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">Subscribed events:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">  - AssetRegistered                   -> INSERT (lifecycle=Commissioned,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">                                         condition=Nominal; level + parent_id</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">                                         condition=Nominal; tier + parent_id</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">                                         + drawing trio + model_id +</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">                                         alternate_identifiers + owners +</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">                                         commissioned_at from payload)</span>&nbsp;</span><span class="r"></span></p>
@@ -147,7 +147,7 @@
     <p class="pln"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="nam">_INSERT_ASSET_SQL</span> <span class="op">=</span> <span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t"><span class="str">INSERT INTO proj_equipment_asset_summary</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="str">    (asset_id, name, level, lifecycle, condition, parent_id,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="str">    (asset_id, name, tier, lifecycle, condition, parent_id,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t"><span class="str">     drawing_system, drawing_number, drawing_revision, model_id,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t"><span class="str">     alternate_identifiers, owners, commissioned_at, commissioned_by,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t"><span class="str">     facility_code, created_at)</span>&nbsp;</span><span class="r"></span></p>
@@ -368,7 +368,7 @@
     <p class="run run2"><span class="n"><a id="t284" href="#t284">284</a></span><span class="t">                    <span class="nam">_INSERT_ASSET_SQL</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t285" href="#t285">285</a></span><span class="t">                    <span class="nam">UUID</span><span class="op">(</span><span class="nam">event</span><span class="op">.</span><span class="nam">payload</span><span class="op">[</span><span class="str">"asset_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t286" href="#t286">286</a></span><span class="t">                    <span class="nam">event</span><span class="op">.</span><span class="nam">payload</span><span class="op">[</span><span class="str">"name"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t">                    <span class="nam">event</span><span class="op">.</span><span class="nam">payload</span><span class="op">[</span><span class="str">"level"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t">                    <span class="nam">event</span><span class="op">.</span><span class="nam">payload</span><span class="op">[</span><span class="str">"tier"</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t288" href="#t288">288</a></span><span class="t">                    <span class="nam">parent_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t">                    <span class="nam">drawing_system</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">                    <span class="nam">drawing_number</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -621,7 +621,7 @@
             <a class="nav" href="z_f9e3f6973edcf194_asset_family_membership_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-11 08:11 +0000
+            created at 2026-06-11 15:53 +0000
         </p>
     </div>
 </footer>
