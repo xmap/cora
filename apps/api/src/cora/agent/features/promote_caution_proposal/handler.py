@@ -5,6 +5,15 @@ DIRECTLY to the Caution BC's event stream via
 `EventStore.append_streams`. Mirrors `define_agent` (which writes
 `ActorRegistered` on the Access BC stream the same way).
 
+When the promotion supersedes a prior Caution (the `via_supersede`
+branch), the parent's `CautionSuperseded` event AND the child's
+`CautionRegistered` genesis event are appended to their two streams in
+ONE Postgres transaction. All-or-nothing: either both commit or a
+`ConcurrencyError` rolls back the whole batch, so the predecessor can
+never be retired without its successor existing (and vice versa). A
+fresh promotion (no prior Caution) takes the ordinary single-stream
+`append` path. See [[project_cross_bc_atomic_writes]].
+
 ## Why not call Caution BC's bind() factory
 
 CORA's architecture rule (see `apps/api/tach.toml` header):

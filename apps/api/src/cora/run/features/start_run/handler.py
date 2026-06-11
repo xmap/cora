@@ -42,6 +42,17 @@ decider gates on at-least-one-AVAILABLE per kind per
 [[project_supply_preflight_gate_design]]. Empty needed_supplies
 short-circuits: no port call, decider sees empty satisfaction map,
 gate trivially passes.
+
+## Atomic co-write when started into a campaign
+
+If `command.campaign_id` is set, the new Run's genesis events AND the
+Campaign's `CampaignRunAdded` membership event are committed in ONE
+Postgres transaction via `EventStore.append_streams` (Run stream +
+Campaign stream). All-or-nothing: either both streams commit or a
+`ConcurrencyError` rolls back the whole batch, so a Run can never exist
+referencing a campaign that never recorded the membership (and vice
+versa). Started without a campaign, the handler takes the ordinary
+single-stream `append` path. See [[project_cross_bc_atomic_writes]].
 """
 
 from typing import Protocol
