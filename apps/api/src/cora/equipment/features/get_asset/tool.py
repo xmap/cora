@@ -36,7 +36,7 @@ class AssetOutput(BaseModel):
 
     id: UUID
     name: str = Field(..., max_length=ASSET_NAME_MAX_LENGTH)
-    level: str
+    tier: str
     parent_id: UUID | None
     lifecycle: str
     condition: str
@@ -72,7 +72,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         return AssetOutput(
             id=asset.id,
             name=asset.name.value,
-            level=asset.level.value,
+            tier=asset.tier.value,
             parent_id=asset.parent_id,
             lifecycle=asset.lifecycle.value,
             condition=asset.condition.value,

@@ -11,8 +11,8 @@ from pydantic import BaseModel, Field
 from cora.equipment.aggregates.asset import ASSET_NAME_MAX_LENGTH
 from cora.equipment.features.list_assets.handler import Handler
 from cora.equipment.features.list_assets.query import (
-    AssetLevelFilter,
     AssetLifecycleFilter,
+    AssetTierFilter,
     ListAssets,
 )
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
@@ -23,7 +23,7 @@ from cora.infrastructure.routing import get_mcp_surface_id
 class AssetSummaryRow(BaseModel):
     asset_id: UUID
     name: str = Field(..., max_length=ASSET_NAME_MAX_LENGTH)
-    level: AssetLevelFilter
+    tier: AssetTierFilter
     lifecycle: AssetLifecycleFilter
     parent_id: UUID | None
     created_at: datetime
@@ -43,7 +43,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         name="list_assets",
         description=(
             "Cursor-paginated list of assets. Optional filters: "
-            "level (Enterprise/Site/Area/Unit/Component/Device), "
+            "tier (Unit/Component/Device), "
             "lifecycle (Commissioned/Active/Maintenance/Decommissioned), "
             "parent_id (direct-children-of). Pass `cursor` from a "
             "previous page's `next_cursor` to fetch the next page."
@@ -59,9 +59,9 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             int,
             Field(ge=1, le=100, description="Page size cap (max 100)."),
         ] = 50,
-        level: Annotated[
-            AssetLevelFilter | None,
-            Field(description="Optional hierarchy level filter."),
+        tier: Annotated[
+            AssetTierFilter | None,
+            Field(description="Optional operational tier filter."),
         ] = None,
         lifecycle: Annotated[
             AssetLifecycleFilter | None,
@@ -77,7 +77,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             ListAssets(
                 cursor=cursor,
                 limit=limit,
-                level=level,
+                tier=tier,
                 lifecycle=lifecycle,
                 parent_id=parent_id,
             ),
@@ -90,7 +90,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                 AssetSummaryRow(
                     asset_id=item.asset_id,
                     name=item.name,
-                    level=item.level,
+                    tier=item.tier,
                     lifecycle=item.lifecycle,
                     parent_id=item.parent_id,
                     created_at=item.created_at,

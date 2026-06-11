@@ -2,7 +2,7 @@
 
 Reads `proj_equipment_asset_summary` via the cross-BC
 `infrastructure.list_query.make_list_query_handler` factory.
-Three optional filters (level + lifecycle + parent_id) plus cursor
+Three optional filters (tier + lifecycle + parent_id) plus cursor
 pagination on `(created_at, asset_id)`.
 
 BOLA: command-name gating only. Per-row scoping deferred until ReBAC
@@ -18,8 +18,8 @@ from uuid import UUID
 
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.list_assets.query import (
-    AssetLevelFilter,
     AssetLifecycleFilter,
+    AssetTierFilter,
     ListAssets,
 )
 from cora.infrastructure.kernel import Kernel
@@ -33,7 +33,7 @@ class AssetSummaryItem:
 
     asset_id: UUID
     name: str
-    level: AssetLevelFilter
+    tier: AssetTierFilter
     lifecycle: AssetLifecycleFilter
     parent_id: UUID | None
     created_at: datetime
@@ -60,14 +60,14 @@ class Handler(Protocol):
     ) -> AssetListPage: ...
 
 
-_SELECT_COLUMNS = "asset_id, name, level, lifecycle, parent_id, created_at"
+_SELECT_COLUMNS = "asset_id, name, tier, lifecycle, parent_id, created_at"
 
 
 def _row_to_item(row: Any) -> AssetSummaryItem:
     return AssetSummaryItem(
         asset_id=row["asset_id"],
         name=str(row["name"]),
-        level=cast("AssetLevelFilter", str(row["level"])),
+        tier=cast("AssetTierFilter", str(row["tier"])),
         lifecycle=cast("AssetLifecycleFilter", str(row["lifecycle"])),
         parent_id=row["parent_id"],
         created_at=row["created_at"],
@@ -76,7 +76,7 @@ def _row_to_item(row: Any) -> AssetSummaryItem:
 
 def _log_fields(query: ListAssets) -> dict[str, Any]:
     return {
-        "level": query.level,
+        "tier": query.tier,
         "lifecycle": query.lifecycle,
         "parent_id": str(query.parent_id) if query.parent_id else None,
     }
@@ -94,7 +94,7 @@ def bind(deps: Kernel) -> Handler:
         time_column="created_at",
         id_column="asset_id",
         filters=[
-            ScalarFilter(attr="level"),
+            ScalarFilter(attr="tier"),
             ScalarFilter(attr="lifecycle"),
             ScalarFilter(attr="parent_id"),
         ],

@@ -30,13 +30,13 @@ class InMemoryAssetLookup:
         self,
         asset_id: UUID,
         name: str,
-        level: str = "Unit",
+        tier: str = "Unit",
         lifecycle: str = "Active",
     ) -> None:
         """Test helper: install an asset summary keyed by `asset_id`.
 
-        Default `level="Unit"` matches the most common beamline-tier
-        binding shape; tests for Area / Site cases pass the level
+        Default `tier="Unit"` matches the most common beamline-tier
+        binding shape; tests for Component / Device cases pass the tier
         explicitly. Default `lifecycle="Active"` matches the post-
         commissioning steady-state.
         """
@@ -44,7 +44,7 @@ class InMemoryAssetLookup:
             self._records[asset_id] = AssetLookupResult(
                 id=asset_id,
                 name=name,
-                level=level,
+                tier=tier,
                 lifecycle=lifecycle,
             )
 

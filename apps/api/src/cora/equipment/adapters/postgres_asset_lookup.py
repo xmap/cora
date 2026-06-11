@@ -28,14 +28,14 @@ chose to keep the lineage visible).
 
 ## Enum coercion
 
-`level` and `lifecycle` are stored as `TEXT` columns and typed as
+`tier` and `lifecycle` are stored as `TEXT` columns and typed as
 `str` on the port's `AssetLookupResult` (to keep
 `cora.infrastructure.ports.asset_lookup` import-free of Equipment
-BC types). The adapter still constructs `AssetLevel(row["level"])`
+BC types). The adapter still constructs `AssetTier(row["tier"])`
 / `AssetLifecycle(row["lifecycle"])` as a validation step: a
-corrupted row whose `level` or `lifecycle` is not a known enum
+corrupted row whose `tier` or `lifecycle` is not a known enum
 value surfaces as `ValueError` from the adapter rather than as a
-silent wrong-level match downstream. The validated `StrEnum` value
+silent wrong-tier match downstream. The validated `StrEnum` value
 IS-A `str`, so the assignment into the dataclass's `str`-typed
 fields is exact.
 """
@@ -47,11 +47,11 @@ from uuid import UUID
 
 import asyncpg
 
-from cora.equipment.aggregates.asset import AssetLevel, AssetLifecycle
+from cora.equipment.aggregates.asset import AssetLifecycle, AssetTier
 from cora.infrastructure.ports.asset_lookup import AssetLookupResult
 
 _LOOKUP_SQL = """
-SELECT asset_id, name, level, lifecycle
+SELECT asset_id, name, tier, lifecycle
 FROM proj_equipment_asset_summary
 WHERE asset_id = $1
 LIMIT 1
@@ -76,7 +76,7 @@ def _row_to_result(row: Any) -> AssetLookupResult:
     return AssetLookupResult(
         id=row["asset_id"],
         name=str(row["name"]),
-        level=AssetLevel(row["level"]),
+        tier=AssetTier(row["tier"]),
         lifecycle=AssetLifecycle(row["lifecycle"]),
     )
 

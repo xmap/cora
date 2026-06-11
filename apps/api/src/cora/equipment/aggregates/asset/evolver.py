@@ -37,7 +37,7 @@ payloads). Same precedent as Subject / Family. Condition
 mapping follows the same pattern (event type encodes the target
 condition; no condition field in payload).
 
-`level` IS reconstructed from the payload of AssetRegistered (set
+`tier` IS reconstructed from the payload of AssetRegistered (set
 at registration, never changes; payload-carried by design — see
 events.py docstring). `parent_id` IS reconstructed from
 AssetRegistered's payload AND mutated by AssetRelocated's
@@ -53,13 +53,13 @@ mutated incrementally by `AssetFamilyAdded` /
 AND `fixture_id` AND `partition_rule` AND `commissioned_at` AND
 `decommissioned_at` AND `persistent_id` AND `controller_id` AND
 `facility_code` AND `tier` through from prior state. The genesis
-arm derives `tier` from `level` via `tier_from_level(...)`;
-transition arms inherit it (level never changes post-genesis, so
-the derived tier never changes either, but the explicit thread
-keeps the field-list discipline uniform).
+arm reconstructs `tier` from the AssetRegistered payload via
+`AssetTier(tier)`; transition arms inherit it (tier never changes
+post-genesis, but the explicit thread keeps the field-list
+discipline uniform).
 `partition_rule` toggles None <-> Some(rule) <-> Some(rule') <-> None
 via AssetPartitionRuleUpdated; every other transition arm preserves it. Constructing
-`Asset(id=..., name=..., level=..., parent_id=..., lifecycle=...)`
+`Asset(id=..., name=..., tier=..., parent_id=..., lifecycle=...)`
 without explicitly passing them would silently WIPE the fields to
 their defaults (empty frozenset / NOMINAL / empty dict / empty
 frozenset / None / None / empty frozenset / empty frozenset /
@@ -127,12 +127,11 @@ from cora.equipment.aggregates.asset.events import (
 from cora.equipment.aggregates.asset.state import (
     Asset,
     AssetCondition,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetPort,
+    AssetTier,
     PortDirection,
-    tier_from_level,
 )
 from cora.infrastructure.evolver import require_state
 from cora.shared.identifier import (
@@ -147,7 +146,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
         case AssetRegistered(
             asset_id=asset_id,
             name=name,
-            level=level,
+            tier=tier,
             parent_id=parent_id,
             occurred_at=occurred_at,
             commissioned_by=commissioned_by,
@@ -162,7 +161,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=asset_id,
                 name=AssetName(name),
-                level=AssetLevel(level),
+                tier=AssetTier(tier),
                 parent_id=parent_id,
                 lifecycle=AssetLifecycle.COMMISSIONED,
                 drawing=drawing,
@@ -172,7 +171,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 fixture_id=None,
                 controller_id=controller_id,
                 facility_code=facility_code,
-                tier=tier_from_level(AssetLevel(level)),
                 # Asset enters Commissioned at genesis; AssetRegistered
                 # IS the commissioning event per L2 of the persistent-id
                 # design memo. Folding occurred_at avoids a new
@@ -197,7 +195,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=AssetLifecycle.ACTIVE,
                 condition=prior.condition,
@@ -227,7 +224,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=AssetLifecycle.DECOMMISSIONED,
                 condition=prior.condition,
@@ -250,7 +246,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 tier=prior.tier,
             )
         case AssetRelocated(to_parent_id=to_parent_id):
-            # Hierarchy mutation: only parent_id changes; lifecycle / level
+            # Hierarchy mutation: only parent_id changes; lifecycle / tier
             # / name / family_ids / condition / settings carry over from
             # prior state. The from_parent_id and reason fields in the
             # event aren't read here (audit metadata; prior state's
@@ -259,7 +255,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=to_parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -286,7 +281,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=AssetLifecycle.MAINTENANCE,
                 condition=prior.condition,
@@ -313,7 +307,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=AssetLifecycle.ACTIVE,
                 condition=prior.condition,
@@ -345,7 +338,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -378,7 +370,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -410,7 +401,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=AssetCondition.DEGRADED,
@@ -437,7 +427,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=AssetCondition.FAULTED,
@@ -464,7 +453,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=AssetCondition.NOMINAL,
@@ -498,7 +486,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -534,7 +521,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -576,7 +562,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -611,7 +596,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -645,7 +629,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -675,7 +658,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -708,7 +690,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -747,7 +728,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -784,7 +764,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -815,7 +794,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -847,7 +825,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,
@@ -880,7 +857,6 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             return Asset(
                 id=prior.id,
                 name=prior.name,
-                level=prior.level,
                 parent_id=prior.parent_id,
                 lifecycle=prior.lifecycle,
                 condition=prior.condition,

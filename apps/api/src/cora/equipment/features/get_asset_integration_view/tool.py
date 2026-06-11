@@ -64,7 +64,7 @@ class AssetIntegrationViewOutput(BaseModel):
 
     asset_id: UUID
     name: str
-    level: str
+    tier: str
     lifecycle: str
     condition: str
     parent_id: UUID | None
@@ -83,7 +83,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         name="get_asset_integration_view",
         description=(
             "Get the consolidated integration-view bundle for an Asset: "
-            "core fields (level/lifecycle/condition/parent_id) + families "
+            "core fields (tier/lifecycle/condition/parent_id) + families "
             "(id+name+affordances) + ports + settings + active Cautions + "
             "applicable Capabilities (those whose required_affordances are "
             "covered by the Asset's combined Family affordances; Deprecated "
@@ -113,7 +113,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         return AssetIntegrationViewOutput(
             asset_id=view.asset_id,
             name=view.name,
-            level=view.level,
+            tier=view.tier,
             lifecycle=view.lifecycle,
             condition=view.condition,
             parent_id=view.parent_id,

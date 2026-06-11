@@ -7,7 +7,7 @@ route + MCP tool layers serialize independently. See
 the rationale for keeping these as domain types rather than DTOs.
 
 Bundle scope (CLOSED at v1):
-  - Asset core (id, name, level, lifecycle, condition, parent_id)
+  - Asset core (id, name, tier, lifecycle, condition, parent_id)
   - families: list of (family_id, name, affordances)
   - ports: list of (name, direction, signal_type)
   - settings: raw dict[str, Any]
@@ -93,7 +93,7 @@ class AssetIntegrationView:
 
     asset_id: UUID
     name: str
-    level: str
+    tier: str
     lifecycle: str
     condition: str
     parent_id: UUID | None

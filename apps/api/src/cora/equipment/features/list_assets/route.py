@@ -1,6 +1,6 @@
 """HTTP route for the `list_assets` query slice.
 
-`GET /assets?cursor=...&limit=50&level=Site&lifecycle=Active&parent_id=<uuid>`
+`GET /assets?cursor=...&limit=50&tier=Unit&lifecycle=Active&parent_id=<uuid>`
 returns `{"items": [...], "next_cursor": "..." | null}`.
 """
 
@@ -14,8 +14,8 @@ from pydantic import BaseModel, Field
 from cora.equipment.aggregates.asset import ASSET_NAME_MAX_LENGTH
 from cora.equipment.features.list_assets.handler import Handler
 from cora.equipment.features.list_assets.query import (
-    AssetLevelFilter,
     AssetLifecycleFilter,
+    AssetTierFilter,
     ListAssets,
 )
 from cora.infrastructure.routing import (
@@ -31,7 +31,7 @@ class AssetSummaryDTO(BaseModel):
 
     asset_id: UUID
     name: str = Field(..., max_length=ASSET_NAME_MAX_LENGTH)
-    level: AssetLevelFilter
+    tier: AssetTierFilter
     lifecycle: AssetLifecycleFilter
     parent_id: UUID | None
     created_at: datetime
@@ -69,7 +69,7 @@ router = APIRouter(tags=["equipment"])
             ),
         },
     },
-    summary="List assets with cursor pagination + level/lifecycle/parent filters",
+    summary="List assets with cursor pagination + tier/lifecycle/parent filters",
 )
 async def list_assets(
     handler: Annotated[Handler, Depends(_get_handler)],
@@ -84,9 +84,9 @@ async def list_assets(
         int,
         Query(ge=1, le=100, description="Page size; capped at 100."),
     ] = 50,
-    level: Annotated[
-        AssetLevelFilter | None,
-        Query(description="Optional hierarchy level filter."),
+    tier: Annotated[
+        AssetTierFilter | None,
+        Query(description="Optional operational tier filter."),
     ] = None,
     lifecycle: Annotated[
         AssetLifecycleFilter | None,
@@ -101,7 +101,7 @@ async def list_assets(
         ListAssets(
             cursor=cursor,
             limit=limit,
-            level=level,
+            tier=tier,
             lifecycle=lifecycle,
             parent_id=parent_id,
         ),
@@ -114,7 +114,7 @@ async def list_assets(
             AssetSummaryDTO(
                 asset_id=item.asset_id,
                 name=item.name,
-                level=item.level,
+                tier=item.tier,
                 lifecycle=item.lifecycle,
                 parent_id=item.parent_id,
                 created_at=item.created_at,

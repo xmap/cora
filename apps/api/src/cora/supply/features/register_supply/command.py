@@ -25,8 +25,9 @@ at the port edge before calling `FacilityLookup.lookup_by_code`.
 `containing_asset_id` is OPTIONAL: `None` semantically means
 "facility-scope resource" (the photon beam, central LN2 plant,
 building electrical power); non-None binds the Supply to a specific
-Asset in the Equipment BC hierarchy (Sector 2 as
-`Asset(level=Area)`, 2-BM as `Asset(level=Unit)`) per
+Asset in the Equipment BC hierarchy (the containing beamline as
+`Asset(tier=Unit)`; site/area scope is the Facility aggregate, bound
+via `facility_code`) per
 [[project_supply_sector_disposition]] Option A. The handler resolves
 it via `AssetLookup.lookup` when present; the decider rejects
 unknown ids with `SupplyContainingAssetNotFoundError` (HTTP 404)

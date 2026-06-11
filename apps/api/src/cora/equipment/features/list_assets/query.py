@@ -1,7 +1,7 @@
 """The `ListAssets` query — intent dataclass for keyset-paginated
 list of assets from the projection.
 
-Three optional filters: level (hierarchy tier), lifecycle (state),
+Three optional filters: tier (operational tier), lifecycle (state),
 parent_id (direct children of). Combine for queries like "all
 Active Devices under this Unit". Cursor encodes (created_at, asset_id).
 """
@@ -10,10 +10,7 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
-AssetLevelFilter = Literal[
-    "Enterprise",
-    "Site",
-    "Area",
+AssetTierFilter = Literal[
     "Unit",
     "Component",
     "Device",
@@ -37,8 +34,8 @@ class ListAssets:
     limit: int = 50
     """Page size cap. Default 50, max 100 (route enforces)."""
 
-    level: AssetLevelFilter | None = None
-    """Optional level filter (one of the AssetLevel enum values)."""
+    tier: AssetTierFilter | None = None
+    """Optional tier filter (one of the AssetTier enum values)."""
 
     lifecycle: AssetLifecycleFilter | None = None
     """Optional lifecycle filter."""

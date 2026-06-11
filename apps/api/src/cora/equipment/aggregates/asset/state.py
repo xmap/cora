@@ -3,8 +3,8 @@
 `Asset` is the physical equipment instance: a beamline, a detector,
 a sample changer, an HPC node. Hierarchical via `parent_id` (forms
 a tree, NOT a DAG — single-parent rule per BC map). Carries a
-`level` discriminator (Enterprise / Site / Area / Unit / Component /
-Device, ISA-88-derived), a `lifecycle` FSM
+`tier` discriminator (Unit / Component / Device, ISA-88-derived), a
+`lifecycle` FSM
 (Commissioned -> Active -> Maintenance -> Decommissioned), a
 `condition` enum (Nominal / Degraded / Faulted, 5g-b: orthogonal to
 lifecycle), a `settings` dict (5g-c: slow-changing operational
@@ -15,7 +15,7 @@ of what ports the equipment HAS — Plan.wiring (6h) carries the
 actual port-to-port connections).
 
 
-Minimal Asset: `id` + `name` + `level` + `lifecycle` (defaults
+Minimal Asset: `id` + `name` + `tier` + `lifecycle` (defaults
 `Commissioned`) + `parent_id: UUID | None`. Lifecycle transitions
 cover activate, decommission, and the maintenance cycle.
 Hierarchy mutation (`AssetRelocated`) is a sibling slice. Additive
@@ -24,10 +24,15 @@ facets — `condition`, `settings`, `ports`, `owner`,
 
 ## Hierarchy rule
 
-Per the BC map:
-  - `Enterprise` is the root level — `parent_id` MUST be null.
-  - All other levels (Site / Area / Unit / Component / Device) MUST
-    have a `parent_id`.
+Per the BC map, an Asset is anchored exactly one way:
+  - A root Asset binds `facility_code` (its owning Federation
+    Facility) and MUST have `parent_id=None`.
+  - A non-root Asset has a `parent_id` and MUST NOT bind
+    `facility_code` (it inherits facility scope through the tree).
+
+This `{parent_id, facility_code}` XOR rule lives in the
+register_asset decider; facility-envelope scope (institution / site
+/ area) is owned by the `Facility` aggregate, not by an Asset tier.
 
 Eventual-consistency stance for the parent ref: the decider does
 NOT verify the referenced parent Asset exists in the event store.
@@ -37,25 +42,25 @@ walking the parent chain via additional event-store queries; defer
 to projection-worker era. Single-parent tree is enforced
 structurally (one `parent_id` field, can't be a list).
 
-**Levels are conventional, not enforced** per the BC map: the
+**Tiers are conventional, not enforced** per the BC map: the
 decider does NOT check that a Device's parent is a Component.
 `Device`-in-`Device` is allowed when reality demands it (smart
 instruments with addressable sub-modules).
 
-## AssetLevel is a tree-depth label, not the aggregate ladder
+## AssetTier is a tree-depth label, not the aggregate ladder
 
-`AssetLevel` (Enterprise / Site / Area / Unit / Component / Device)
-is an ISA-95-derived hierarchy-depth tag stored on a single Asset
-row, set at registration and never mutated. It is NOT the Equipment
-aggregate ladder (Family, Model, Assembly, Fixture, Asset). The
-aggregate ladder answers WHAT KIND of identity each row carries
-(catalog entry, composition template, materialization, physical
-instance); `AssetLevel` answers WHERE this particular Asset sits in
-the org and facility tree. The two axes are orthogonal: a Family
-has no level, a Fixture has no level, only a registered Asset
-carries one. An ISA-88 or ISA-95 reader will be tempted to map
-`AssetLevel` onto the aggregate ladder because in those traditions
-the equipment hierarchy IS the type ladder; in CORA it is not.
+`AssetTier` (Unit / Component / Device) is an ISA-88-derived
+tier tag stored on a single Asset row, set at registration and
+never mutated. It is NOT the Equipment aggregate ladder (Family,
+Model, Assembly, Fixture, Asset). The aggregate ladder answers WHAT
+KIND of identity each row carries (catalog entry, composition
+template, materialization, physical instance); `AssetTier` answers
+WHERE this particular Asset sits in the equipment tree. The two axes
+are orthogonal: a Family has no tier, a Fixture has no tier, only a
+registered Asset carries one. An ISA-88 or ISA-95 reader will be
+tempted to map `AssetTier` onto the aggregate ladder because in those
+traditions the equipment hierarchy IS the type ladder; in CORA it is
+not.
 
 ## Status as enum-in-state, derived-from-event-type-in-evolver
 
@@ -65,10 +70,10 @@ the enum (typed); evolver derives lifecycle from event type
 (`AssetRegistered → COMMISSIONED`, future `AssetActivated → ACTIVE`).
 Same precedent as `SubjectStatus` / `FamilyStatus`.
 
-`AssetLevel` is also a StrEnum but its value DOES travel in event
-payloads (level is set at registration and doesn't change — there
-are no AssetLevelChanged events). The payload carries the string;
-the evolver reconstructs via `AssetLevel(payload["level"])`.
+`AssetTier` is also a StrEnum but its value DOES travel in event
+payloads (tier is set at registration and doesn't change — there
+are no AssetTierChanged events). The payload carries the string;
+the evolver reconstructs via `AssetTier(payload["tier"])`.
 
 ## Seventh bounded-name VO
 
@@ -103,108 +108,43 @@ ASSET_OWNER_IDENTIFIER_MAX_LENGTH = 255
 ASSET_OWNER_IDENTIFIER_TYPE_MAX_LENGTH = 64
 
 
-class AssetLevel(StrEnum):
-    """The hierarchical level of an Asset.
+class AssetTier(StrEnum):
+    """The intrinsic operational tier of an Asset.
 
     Per the BC map (ISA-88-derived, single-word convention):
-      - `Enterprise`: root; the institution itself
-      - `Site`: a facility (for example, APS)
-      - `Area`: a section of a site (for example, the experimental hall)
       - `Unit`: an operational unit (for example, a beamline)
       - `Component`: a composed sub-system (ISA-88 "Equipment Module" tier)
       - `Device`: an addressable control surface (ISA-88 "Control Module")
 
     Common pattern is the strict ordering above, but Device-in-Device
-    is allowed when reality demands it (smart instruments). Levels
+    is allowed when reality demands it (smart instruments). Tiers
     are conventional, not enforced: the decider does not check that
     a Device's parent is a Component.
 
-    ## Upper tiers DEPRECATED in favor of facility_code + AssetTier
+    Facility-envelope scope (institution / site / area) is NOT a tier;
+    it is owned by the Federation `Facility` aggregate
+    (`FacilityKind{Site, Area}`) and bound on an Asset via
+    `Asset.facility_code`. A root Asset (the top of an equipment tree,
+    for example a beamline) anchors to its Facility through
+    `facility_code` and carries `parent_id=None`; its sub-Assets nest
+    via `parent_id` and inherit facility scope through the tree. See
+    the register_asset decider's `{parent_id, facility_code}` XOR rule.
 
-    Per [[project-slice8-design]] L4: the upper tiers
-    `ENTERPRISE` / `SITE` / `AREA` are DEPRECATED. New Assets that
-    represent facility-envelope concerns should bind to the owning
-    Federation Facility via `Asset.facility_code` (Slice 8A binding,
-    shipped 2026-06-09) rather than carry an upper-tier level. The
-    lower tiers `UNIT` / `COMPONENT` / `DEVICE` continue to carry an
-    honest intrinsic-tier meaning and are exposed as the closed
-    `AssetTier` StrEnum (Slice 8B, shipped 2026-06-10) for cross-BC
-    consumers that need the intrinsic facet without the facility-
-    envelope ambiguity.
-
-    The architecture fitness test
-    `tests/architecture/test_asset_level_upper_tier_deprecated.py`
-    rejects new occurrences of `AssetLevel.ENTERPRISE` /
-    `AssetLevel.SITE` / `AssetLevel.AREA` in `cora/equipment/`,
-    `cora/run/`, and `cora/operation/` source trees outside an
-    explicit allowlist (enum definition + parent-id-null invariant +
-    evolver case arms + canonical APS facility fixture). Post-pilot,
-    a forward-only migration drops the deprecated members entirely.
-    """
-
-    ENTERPRISE = "Enterprise"
-    SITE = "Site"
-    AREA = "Area"
-    UNIT = "Unit"
-    COMPONENT = "Component"
-    DEVICE = "Device"
-
-
-class AssetTier(StrEnum):
-    """The intrinsic operational tier of an Asset.
-
-    Per [[project-slice8-design]] L3 + L9: the lower three
-    `AssetLevel` values graduate to a separate closed StrEnum that
-    carries an honest intrinsic meaning (does this Asset model an
-    operational unit, a composed sub-system, or an addressable
-    control surface?), orthogonal to the structural Facility
-    binding. The upper three AssetLevel values
-    (ENTERPRISE / SITE / AREA) are deprecated by
-    `Asset.facility_code` and DO NOT participate in the tier
-    enum.
-
-    `AssetTier` is an evolver-derived facet on `Asset` state, NOT a
-    command field, NOT an event payload key. The derivation is a
-    pure function of `Asset.level`: `UNIT -> Unit`, `COMPONENT ->
-    Component`, `DEVICE -> Device`, and any upper tier maps to
-    `None` (the Asset has no intrinsic tier when it represents a
-    facility envelope). Legacy AssetRegistered events fold cleanly
-    because the derivation operates on existing payload data.
+    `tier` is a first-class field: a register_asset command field, an
+    `AssetRegistered` payload key, and a projection column. It is set
+    once at registration and never mutated (there is no
+    AssetTierChanged event); the evolver reconstructs it via
+    `AssetTier(payload["tier"])`.
 
     The Component / Device ophyd-collision rename
     (Component -> Module, Device -> Instrument per
     [[project-equipment-naming-latent-risks]] risks #3+#4) is OUT
-    OF SCOPE for this slice per master memo line 162; defer to its
-    own slice on its own trigger.
+    OF SCOPE here; defer to its own slice on its own trigger.
     """
 
     UNIT = "Unit"
     COMPONENT = "Component"
     DEVICE = "Device"
-
-
-_LEVEL_TO_TIER: dict[AssetLevel, AssetTier] = {
-    AssetLevel.UNIT: AssetTier.UNIT,
-    AssetLevel.COMPONENT: AssetTier.COMPONENT,
-    AssetLevel.DEVICE: AssetTier.DEVICE,
-}
-
-
-def tier_from_level(level: AssetLevel) -> AssetTier | None:
-    """Derive `AssetTier` from `AssetLevel` per [[project-slice8-design]] L9.
-
-    Returns the matching `AssetTier` for the three lower
-    `AssetLevel` values (`UNIT`, `COMPONENT`, `DEVICE`); returns
-    `None` for the three upper values (`ENTERPRISE`, `SITE`,
-    `AREA`) because those are facility-envelope levels deprecated
-    by `Asset.facility_code`.
-
-    Pure function used by the evolver to compute `Asset.tier` from
-    the on-disk `level` payload. Legacy AssetRegistered streams
-    fold cleanly because the derivation depends only on a field
-    that has always been present.
-    """
-    return _LEVEL_TO_TIER.get(level)
 
 
 class AssetLifecycle(StrEnum):
@@ -743,13 +683,14 @@ class InvalidAssetSettingsError(ValueError):
 
 
 class InvalidAssetParentError(ValueError):
-    """The hierarchy rule was violated.
+    """The `{parent_id, facility_code}` anchoring rule was violated.
 
     Two failure modes:
-      - Enterprise-level Asset supplied a non-null `parent_id`
-        (Enterprise is the root; cannot have a parent)
-      - Non-Enterprise-level Asset supplied a null `parent_id`
-        (Site / Area / Unit / Component / Device must have a parent)
+      - A root Asset (`parent_id=None`) supplied no `facility_code`
+        (a root must anchor to its owning Federation Facility)
+      - A non-root Asset (with `parent_id`) also supplied a
+        `facility_code` (children inherit facility scope through the
+        tree; only the root binds it)
 
     Eventual-consistency stance: this decider rule does NOT check
     that the referenced parent Asset exists. Cycle detection
@@ -1081,7 +1022,7 @@ class AssetCannotRelocateError(Exception):
     all collapse into one error class with a diagnostic `reason`
     string that surfaces in the route's 409 body:
 
-      - asset is `Enterprise` level (root; cannot have a parent at all)
+      - asset is a root (`parent_id=None`, facility-anchored; cannot be relocated)
       - asset is `Decommissioned` (retired; no further hierarchy changes)
       - target_parent_id == asset_id (single-parent-tree self-loop)
       - target_parent_id == current parent_id (no-op)
@@ -1223,8 +1164,8 @@ class Asset:
     """Aggregate root: a physical equipment instance.
 
     `parent_id` is the immediate parent in the hierarchy tree.
-    `None` only when `level == Enterprise` (root). Mutable across
-    `AssetRelocated` events.
+    `None` only for a root Asset (which instead binds `facility_code`).
+    Mutable across `AssetRelocated` events.
 
     `family_ids` is the set of Family ids this asset belongs to.
     Operationally curated: operators add via `add_asset_family` when
@@ -1310,7 +1251,7 @@ class Asset:
 
     id: UUID
     name: AssetName
-    level: AssetLevel
+    tier: AssetTier
     parent_id: UUID | None
     lifecycle: AssetLifecycle = AssetLifecycle.COMMISSIONED
     condition: AssetCondition = AssetCondition.NOMINAL
@@ -1418,14 +1359,3 @@ class Asset:
     # field fold cleanly via the additive-state pattern. See
     # [[project-slice8-design]] L1.
     facility_code: FacilityCode | None = None
-    # Evolver-derived intrinsic operational tier per
-    # [[project-slice8-design]] L3 + L9. Pure function of `level`:
-    # UNIT / COMPONENT / DEVICE map to the matching `AssetTier` value;
-    # upper levels (ENTERPRISE / SITE / AREA) map to None. NOT a
-    # command field, NOT an event payload key; the evolver computes
-    # the value via `tier_from_level(level)` on every Asset
-    # construction. Defaults to None so legacy AssetRegistered streams
-    # fold cleanly via the additive-state pattern; legacy events
-    # produce the correctly-derived value because the derivation reads
-    # the on-disk level only.
-    tier: AssetTier | None = None

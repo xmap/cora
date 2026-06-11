@@ -60,7 +60,6 @@ from datetime import datetime
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetCannotRelocateError,
-    AssetLevel,
     AssetLifecycle,
     AssetNotFoundError,
     AssetRelocated,
@@ -78,7 +77,7 @@ def decide(
 
     Invariants:
       - State must not be None -> AssetNotFoundError
-      - Asset must not be Enterprise-level
+      - Asset must not be a root (parent_id=None, facility-anchored)
         -> AssetCannotRelocateError
       - Asset must not be Decommissioned
         -> AssetCannotRelocateError
@@ -90,12 +89,12 @@ def decide(
     if state is None:
         raise AssetNotFoundError(command.asset_id)
 
-    if state.level is AssetLevel.ENTERPRISE:
+    if state.parent_id is None:
         raise AssetCannotRelocateError(
             state.id,
             reason=(
-                "Enterprise-level assets are roots and cannot be "
-                "relocated (would violate the Enterprise-null-parent invariant)"
+                "Root Assets (parent_id=None) are facility-anchored and cannot "
+                "be relocated (would violate the root-anchoring invariant)"
             ),
         )
 

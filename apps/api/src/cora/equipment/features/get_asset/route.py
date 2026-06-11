@@ -42,9 +42,9 @@ class AssetResponse(BaseModel):
 
     Carries primitives, not domain VOs. Decouples the wire format
     from the domain model so the two can evolve independently.
-    `level`, `lifecycle`, and `condition` are the StrEnum string
+    `tier`, `lifecycle`, and `condition` are the StrEnum string
     values (PascalCase per the BC map). `parent_id` is null only for
-    Enterprise-level roots. `family_ids` serializes as a sorted list
+    facility-rooted Assets. `family_ids` serializes as a sorted list
     of UUIDs (frozenset semantics in domain state, list at the JSON
     boundary; sorted by UUID string form for response determinism).
     `settings` is the operator-supplied dict (operationally typed by
@@ -54,7 +54,7 @@ class AssetResponse(BaseModel):
 
     id: UUID
     name: str = Field(..., max_length=ASSET_NAME_MAX_LENGTH)
-    level: str
+    tier: str
     parent_id: UUID | None
     lifecycle: str
     condition: str
@@ -107,7 +107,7 @@ async def get_assets(
     return AssetResponse(
         id=asset.id,
         name=asset.name.value,
-        level=asset.level.value,
+        tier=asset.tier.value,
         parent_id=asset.parent_id,
         lifecycle=asset.lifecycle.value,
         condition=asset.condition.value,

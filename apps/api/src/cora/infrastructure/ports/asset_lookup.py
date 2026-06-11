@@ -1,7 +1,7 @@
 """AssetLookup port: cross-aggregate query for Equipment BC's Asset projection.
 
 Used by cross-BC consumers that hold an `AssetId` from the wire and
-need to validate the Asset exists (and optionally inspect its level
+need to validate the Asset exists (and optionally inspect its tier
 or lifecycle) before committing a command. First consumer is the
 Supply BC's `register_supply` handler (Session 5 Slice 7B): it
 resolves `command.containing_asset_id` to an `AssetLookupResult` at
@@ -20,7 +20,7 @@ multiple BC handlers consume it). Lives in
 `CredentialLookup`, `FacilityLookup`).
 
 The port is shaped around the CONSUMER's need: cross-BC binding sites
-need "does this Asset exist and what's its identity + level + lifecycle"
+need "does this Asset exist and what's its identity + tier + lifecycle"
 to validate before commit. The decommissioned-Asset binding question
 is decided per-consumer at the decider boundary (slice 7B Supply
 follows the slice 6A FacilityLookup precedent: bind anyway, the
@@ -38,11 +38,11 @@ covers the hierarchy + lifecycle FSM.
 
 ## No BC imports in the port
 
-`level` and `lifecycle` are typed as `str` (not Equipment BC's
-`AssetLevel` / `AssetLifecycle` StrEnums) so this port stays inside
+`tier` and `lifecycle` are typed as `str` (not Equipment BC's
+`AssetTier` / `AssetLifecycle` StrEnums) so this port stays inside
 `cora.infrastructure`'s `depends_on = []` tach contract. The values
 match the StrEnum string values; consumer deciders partition by
-literal comparison (`level == "Unit"`, `lifecycle == "Active"`) and
+literal comparison (`tier == "Unit"`, `lifecycle == "Active"`) and
 cast to typed enums at their boundary if they need the discipline.
 
 `id` is typed `UUID` (Equipment BC's Asset.id is bare UUID, not a
@@ -64,7 +64,7 @@ class AssetLookupResult:
     via `AssetLookup.lookup` and handed to the decider in the slice's
     context object (mirrors `FacilityLookupResult` shape).
 
-    `level` and `lifecycle` are the StrEnum values as plain strings
+    `tier` and `lifecycle` are the StrEnum values as plain strings
     (matches the projection's `TEXT` columns); the consumer decider
     partitions on the literals it cares about.
 
@@ -80,7 +80,7 @@ class AssetLookupResult:
 
     id: UUID
     name: str
-    level: str
+    tier: str
     lifecycle: str
 
 

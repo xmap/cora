@@ -88,8 +88,9 @@ equipment containment back-reference per
 [[project_supply_sector_disposition]] Option A: structural roles
 formerly carried by the (now-retired) `SupplyScope.Sector` /
 `SupplyScope.Beamline` enum values are modeled relationally as
-references to the Equipment BC's Asset hierarchy (Sector 2 is an
-`Asset(level=Area)`; 2-BM is an `Asset(level=Unit)`). `None`
+references to the Equipment BC's Asset hierarchy (the containing
+beamline is an `Asset(tier=Unit)`; site/area scope is owned by the
+Facility aggregate, bound via `facility_code`). `None`
 semantically means "facility-scope resource" (paired with non-None
 `facility_code`). When non-None, the register_supply handler resolves
 it via `AssetLookup.lookup` and rejects unknown ids with

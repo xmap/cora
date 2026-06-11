@@ -4,10 +4,10 @@ Pydantic request/response schemas + APIRouter for `POST /assets`.
 The slice's BC-level wiring (`cora.equipment.routes.register_equipment_routes`)
 includes this router on the FastAPI app.
 
-Pydantic enforces `level` is a valid `AssetLevel` value at the API
-boundary (Pydantic→422 on unknown level strings); the decider
-trusts its inputs and only enforces domain invariants (hierarchy
-rule, name VO).
+Pydantic enforces `tier` is a valid `AssetTier` value at the API
+boundary (Pydantic→422 on unknown tier strings); the decider
+trusts its inputs and only enforces domain invariants (anchoring
+XOR rule, name VO).
 """
 
 from typing import Annotated
@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from cora.equipment._alternate_identifier_body import AlternateIdentifierBody
 from cora.equipment._asset_owner_body import AssetOwnerBody
 from cora.equipment._drawing_body import DrawingBody
-from cora.equipment.aggregates.asset import ASSET_NAME_MAX_LENGTH, AssetLevel
+from cora.equipment.aggregates.asset import ASSET_NAME_MAX_LENGTH, AssetTier
 from cora.equipment.features.register_asset.command import RegisterAsset
 from cora.equipment.features.register_asset.handler import IdempotentHandler
 from cora.infrastructure.routing import (
@@ -34,14 +34,15 @@ from cora.shared.facility_code import FACILITY_CODE_MAX_LENGTH
 class RegisterAssetRequest(BaseModel):
     """Body for `POST /assets`.
 
-    `level` accepts the StrEnum's PascalCase string values
-    ("Enterprise" / "Site" / "Area" / "Unit" / "Component" /
-    "Device"); Pydantic rejects unknowns with 422.
+    `tier` accepts the StrEnum's PascalCase string values
+    ("Unit" / "Component" / "Device"); Pydantic rejects unknowns
+    with 422.
 
-    `parent_id` is required for non-Enterprise levels and must be
-    null for Enterprise; that's a domain invariant enforced by
-    the decider (raises InvalidAssetParentError → 400), not by
-    Pydantic, since the rule is conditional on `level`.
+    `parent_id` and `facility_code` follow the anchoring XOR rule:
+    a root Asset has null `parent_id` + a `facility_code`; a
+    non-root has a `parent_id` + null `facility_code`. That's a
+    domain invariant enforced by the decider (raises
+    InvalidAssetParentError → 400), not by Pydantic.
     """
 
     name: str = Field(
@@ -50,19 +51,17 @@ class RegisterAssetRequest(BaseModel):
         max_length=ASSET_NAME_MAX_LENGTH,
         description="Display name for the new asset.",
     )
-    level: AssetLevel = Field(
+    tier: AssetTier = Field(
         ...,
-        description=(
-            "Hierarchical level. One of: Enterprise (root, requires "
-            "null parent_id), Site, Area, Unit, Component, Device."
-        ),
+        description="Operational tier. One of: Unit, Component, Device.",
     )
     parent_id: UUID | None = Field(
         ...,
         description=(
-            "Immediate parent in the hierarchy tree. Must be null "
-            "for Enterprise-level assets; required for all others. "
-            "Eventual-consistency: parent's existence is NOT verified."
+            "Immediate parent in the hierarchy tree. Must be null for a "
+            "root Asset (which binds facility_code instead); required for "
+            "all non-roots. Eventual-consistency: parent's existence is "
+            "NOT verified."
         ),
     )
     drawing: DrawingBody | None = Field(
@@ -160,11 +159,11 @@ router = APIRouter(tags=["equipment"])
             "model": ErrorResponse,
             "description": (
                 "Domain invariant violated: whitespace-only name, "
-                "hierarchy rule (Enterprise must have null parent_id; "
-                "other levels must have non-null parent_id), invalid "
-                "Drawing (empty number, overlong revision, etc.), or "
-                "invalid AlternateIdentifier value (empty after "
-                "trimming, exceeds 200 chars)."
+                "anchoring XOR rule (a root must have null parent_id + a "
+                "facility_code; a non-root must have a parent_id + no "
+                "facility_code), invalid Drawing (empty number, overlong "
+                "revision, etc.), or invalid AlternateIdentifier value "
+                "(empty after trimming, exceeds 200 chars)."
             ),
         },
         status.HTTP_403_FORBIDDEN: {
@@ -194,7 +193,7 @@ router = APIRouter(tags=["equipment"])
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
             "description": (
-                "Request body failed schema validation (unknown level, "
+                "Request body failed schema validation (unknown tier, "
                 "missing fields, malformed UUID) OR Idempotency-Key was "
                 "reused with a different request body."
             ),
@@ -223,7 +222,7 @@ async def post_assets(
     asset_id = await handler(
         RegisterAsset(
             name=body.name,
-            level=body.level,
+            tier=body.tier,
             parent_id=body.parent_id,
             drawing=body.drawing.to_domain() if body.drawing is not None else None,
             model_id=body.model_id,

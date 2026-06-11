@@ -22,9 +22,9 @@ restored.
 
 ## Payload conventions for Asset
 
-`level` IS carried in the payload (set at registration, never
-changes; no `AssetLevelChanged` event in scope). The evolver
-reconstructs via `AssetLevel(payload["level"])`.
+`tier` IS carried in the payload (set at registration, never
+changes; no `AssetTierChanged` event in scope). The evolver
+reconstructs via `AssetTier(payload["tier"])`.
 
 `parent_id` IS carried in the AssetRegistered payload (sets the
 initial value). For mutations, AssetRelocated carries BOTH
@@ -130,9 +130,9 @@ class AssetRegistered:
     """A new asset was registered with the facility.
 
     Lifecycle is implicit (`Commissioned`) — the evolver sets it.
-    `parent_id` is optional: only `level=Enterprise` has a null
-    parent (the root); other levels enforce non-null at the
-    decider per the hierarchy rule.
+    `parent_id` is optional: a root Asset has a null parent and binds
+    `facility_code` instead; a non-root carries `parent_id`. The
+    `{parent_id, facility_code}` XOR rule is enforced at the decider.
 
     `drawing` is an optional Drawing VO captured at registration:
     the engineering build-to spec for the physical specimen. Defaults
@@ -200,7 +200,7 @@ class AssetRegistered:
 
     asset_id: UUID
     name: str
-    level: str  # AssetLevel.value; carried as primitive in the payload
+    tier: str  # AssetTier.value; carried as primitive in the payload
     parent_id: UUID | None
     occurred_at: datetime
     commissioned_by: ActorId
@@ -693,7 +693,7 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
         case AssetRegistered(
             asset_id=asset_id,
             name=name,
-            level=level,
+            tier=tier,
             parent_id=parent_id,
             occurred_at=occurred_at,
             commissioned_by=commissioned_by,
@@ -707,7 +707,7 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
             payload: dict[str, Any] = {
                 "asset_id": str(asset_id),
                 "name": name,
-                "level": level,
+                "tier": tier,
                 "parent_id": str(parent_id) if parent_id is not None else None,
                 "occurred_at": occurred_at.isoformat(),
                 "commissioned_by": str(commissioned_by),
@@ -1017,7 +1017,7 @@ def from_stored(stored: StoredEvent) -> AssetEvent:
                 return AssetRegistered(
                     asset_id=UUID(payload["asset_id"]),
                     name=payload["name"],
-                    level=payload["level"],
+                    tier=payload["tier"],
                     parent_id=UUID(raw_parent) if raw_parent is not None else None,
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     commissioned_by=ActorId(UUID(payload["commissioned_by"])),

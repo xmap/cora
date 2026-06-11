@@ -213,7 +213,7 @@ def bind(deps: Kernel) -> Handler:
         view = AssetIntegrationView(
             asset_id=asset.id,
             name=asset.name.value,
-            level=asset.level.value,
+            tier=asset.tier.value,
             lifecycle=asset.lifecycle.value,
             condition=asset.condition.value,
             parent_id=asset.parent_id,

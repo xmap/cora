@@ -1,23 +1,24 @@
 """The `RegisterAsset` command, intent dataclass for this slice.
 
 Carries the caller-controlled fields: the asset's display name,
-its hierarchical level, its parent_id (None only for
-Enterprise-level roots, enforced by the decider), an optional
-Drawing reference, and an optional `model_id` Model-binding ref.
-Server-side concerns (new aggregate id, wall-clock timestamp,
-correlation id, per-event ids) are injected by the handler from
-infrastructure ports, matching the cross-BC create-style command
-shape locked in Access / Trust / Subject / Equipment.
+its operational tier, its parent_id (None only for facility-rooted
+Assets, enforced by the decider), an optional Drawing reference, and
+an optional `model_id` Model-binding ref. Server-side concerns (new
+aggregate id, wall-clock timestamp, correlation id, per-event ids)
+are injected by the handler from infrastructure ports, matching the
+cross-BC create-style command shape locked in Access / Trust /
+Subject / Equipment.
 
-`level` is typed as `AssetLevel` (the StrEnum) so callers cannot
+`tier` is typed as `AssetTier` (the StrEnum) so callers cannot
 pass an invalid value; the route's Pydantic body and the MCP
 tool's argument schema both enforce this at the API boundary.
 
-`parent_id` is `UUID | None`, required for non-Enterprise
-levels, must be null for Enterprise. Eventual-consistency stance
-for the parent ref: the decider does NOT verify the referenced
-parent Asset exists in the event store (same precedent as Trust's
-Conduit zone refs).
+`parent_id` is `UUID | None`. Per the `{parent_id, facility_code}`
+XOR rule, a root Asset has `parent_id=None` and binds
+`facility_code`; a non-root carries `parent_id` and no
+`facility_code`. Eventual-consistency stance for the parent ref:
+the decider does NOT verify the referenced parent Asset exists in
+the event store (same precedent as Trust's Conduit zone refs).
 
 `model_id` is `UUID | None`, optional reference to the Model
 catalog entry this Asset is an instance of. Set ONCE at
@@ -72,8 +73,8 @@ from uuid import UUID
 
 from cora.equipment.aggregates._drawing import Drawing
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
     AssetOwner,
+    AssetTier,
 )
 from cora.shared.identifier import AlternateIdentifier
 
@@ -82,13 +83,13 @@ from cora.shared.identifier import AlternateIdentifier
 class RegisterAsset:
     """Register a new asset.
 
-    Carries the display name, hierarchical level, parent_id, optional
+    Carries the display name, operational tier, parent_id, optional
     Drawing reference, optional `model_id` Model-binding ref, optional
     `alternate_identifiers` seed set, and optional `owners` seed set.
     """
 
     name: str
-    level: AssetLevel
+    tier: AssetTier
     parent_id: UUID | None
     drawing: Drawing | None = None
     model_id: UUID | None = None

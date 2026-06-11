@@ -4,7 +4,7 @@ hierarchy + condition + alternate-identifier + owner events into the
 
 Subscribed events:
   - AssetRegistered                   -> INSERT (lifecycle=Commissioned,
-                                         condition=Nominal; level + parent_id
+                                         condition=Nominal; tier + parent_id
                                          + drawing trio + model_id +
                                          alternate_identifiers + owners +
                                          commissioned_at from payload)
@@ -63,7 +63,7 @@ if TYPE_CHECKING:
 
 _INSERT_ASSET_SQL = """
 INSERT INTO proj_equipment_asset_summary
-    (asset_id, name, level, lifecycle, condition, parent_id,
+    (asset_id, name, tier, lifecycle, condition, parent_id,
      drawing_system, drawing_number, drawing_revision, model_id,
      alternate_identifiers, owners, commissioned_at, commissioned_by,
      facility_code, created_at)
@@ -284,7 +284,7 @@ class AssetSummaryProjection:
                     _INSERT_ASSET_SQL,
                     UUID(event.payload["asset_id"]),
                     event.payload["name"],
-                    event.payload["level"],
+                    event.payload["tier"],
                     parent_id,
                     drawing_system,
                     drawing_number,

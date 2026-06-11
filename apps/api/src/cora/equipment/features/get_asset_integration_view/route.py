@@ -75,7 +75,7 @@ class AssetIntegrationViewResponse(BaseModel):
 
     asset_id: UUID
     name: str
-    level: str
+    tier: str
     lifecycle: str
     condition: str
     parent_id: UUID | None
@@ -135,7 +135,7 @@ async def get_assets_integration_view(
     return AssetIntegrationViewResponse(
         asset_id=view.asset_id,
         name=view.name,
-        level=view.level,
+        tier=view.tier,
         lifecycle=view.lifecycle,
         condition=view.condition,
         parent_id=view.parent_id,

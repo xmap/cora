@@ -14,16 +14,17 @@ Family and/or Asset. Built before Recipe so Method's
 bare UUIDs (the eventual-consistency fallback that Trust uses for
 Conduit's zone refs).
 
-## Asset.level posture (ISA-88-derived, conventional not enforced)
+## Asset.tier posture (ISA-88-derived, conventional not enforced)
 
-`Asset.level` follows the ISA-88 hierarchy (Enterprise / Site / Area
-/ Unit / Component / Device) as a single-word StrEnum. The
-single-parent tree rule (`parent_id` chain, no cycles) IS structurally
-enforced; the level ordering is NOT. CORA permits Device-in-Device
-parent chains when the parent is an addressable control surface
-(smart instruments, networked subassemblies). Operator guidance:
-default to strict ordering; reach for nesting only when the physical
-hardware genuinely composes that way (per [[project-bc-map]] +
+`Asset.tier` follows the ISA-88 equipment tiers (Unit / Component /
+Device) as a single-word StrEnum; facility-envelope scope is owned by
+the Facility aggregate, not an Asset tier. The single-parent tree rule
+(`parent_id` chain, no cycles) IS structurally enforced; the tier
+ordering is NOT. CORA permits Device-in-Device parent chains when the
+parent is an addressable control surface (smart instruments,
+networked subassemblies). Operator guidance: default to strict
+ordering; reach for nesting only when the physical hardware genuinely
+composes that way (per [[project-bc-map]] +
 glossary). The state.py docstring carries the canonical phrasing;
 this BC docstring surfaces the posture so operators reading the BC
 introduction find it without spelunking into the aggregate file.

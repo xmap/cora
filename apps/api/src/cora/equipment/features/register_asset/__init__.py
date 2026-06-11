@@ -5,7 +5,7 @@ command slices:
 
     from cora.equipment.features import register_asset
 
-    cmd = register_asset.RegisterAsset(name=..., level=..., parent_id=...)
+    cmd = register_asset.RegisterAsset(name=..., tier=..., parent_id=...)
     handler = register_asset.bind(deps)
     asset_id = await handler(cmd, principal_id=..., correlation_id=...)
 """

@@ -68,7 +68,6 @@ from cora.equipment.aggregates.asset.state import (
     AssetFacilityNotFoundError,
     AssetHasFixtureBindingError,
     AssetIsInstalledError,
-    AssetLevel,
     AssetLifecycle,
     AssetModelMismatchError,
     AssetName,
@@ -97,7 +96,6 @@ from cora.equipment.aggregates.asset.state import (
     InvalidAssetPortSignalTypeError,
     InvalidAssetSettingsError,
     PortDirection,
-    tier_from_level,
 )
 
 __all__ = [
@@ -144,7 +142,6 @@ __all__ = [
     "AssetFaulted",
     "AssetHasFixtureBindingError",
     "AssetIsInstalledError",
-    "AssetLevel",
     "AssetLifecycle",
     "AssetMaintenanceEntered",
     "AssetMaintenanceExited",
@@ -191,6 +188,5 @@ __all__ = [
     "from_stored",
     "load_asset",
     "load_partition_rule",
-    "tier_from_level",
     "to_payload",
 ]

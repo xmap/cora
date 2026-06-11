@@ -3,7 +3,7 @@
 Surfaces the same handler the REST route uses, exposed as a Model
 Context Protocol tool.
 
-`level` accepts the StrEnum's string values; FastMCP's argument
+`tier` accepts the StrEnum's string values; FastMCP's argument
 schema enforces this. `parent_id` is `UUID | None`.
 """
 
@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from cora.equipment._alternate_identifier_body import AlternateIdentifierBody
 from cora.equipment._asset_owner_body import AssetOwnerBody
 from cora.equipment._drawing_body import DrawingBody
-from cora.equipment.aggregates.asset import ASSET_NAME_MAX_LENGTH, AssetLevel
+from cora.equipment.aggregates.asset import ASSET_NAME_MAX_LENGTH, AssetTier
 from cora.equipment.features.register_asset.command import RegisterAsset
 from cora.equipment.features.register_asset.handler import IdempotentHandler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
@@ -39,8 +39,9 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         name="register_asset",
         description=(
             "Register a new physical equipment asset with the given "
-            "name, hierarchical level, and parent. parent_id must be "
-            "null for Enterprise-level roots; required for all others."
+            "name, operational tier, and parent. A root Asset has null "
+            "parent_id and binds facility_code; a non-root has a "
+            "parent_id and no facility_code."
         ),
     )
     async def register_asset_tool(  # pyright: ignore[reportUnusedFunction]
@@ -53,13 +54,10 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 description="Display name for the new asset.",
             ),
         ],
-        level: Annotated[
-            AssetLevel,
+        tier: Annotated[
+            AssetTier,
             Field(
-                description=(
-                    "Hierarchical level: Enterprise (root, requires "
-                    "null parent_id), Site, Area, Unit, Component, Device."
-                ),
+                description="Operational tier: Unit, Component, or Device.",
             ),
         ],
         parent_id: Annotated[
@@ -67,8 +65,8 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             Field(
                 description=(
                     "Immediate parent in the hierarchy tree. Must be "
-                    "null for Enterprise-level assets; required for "
-                    "all others."
+                    "null for a root Asset (which binds facility_code); "
+                    "required for all non-roots."
                 ),
             ),
         ],
@@ -159,7 +157,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         asset_id = await handler(
             RegisterAsset(
                 name=name,
-                level=level,
+                tier=tier,
                 parent_id=parent_id,
                 drawing=drawing.to_domain() if drawing is not None else None,
                 model_id=model_id,

@@ -5,7 +5,7 @@ authority entity that other CORA aggregates bind to (Asset.facility_id
 in slice 8, Supply.facility_id in slice 7, Seal/Permit/Credential
 facility_id binding in slice 6, ClearanceTemplate.facility_id in slice
 9). Per [[project_structural_scope_design]] the aggregate resolves the
-upper-tier AssetLevel / SupplyScope.Facility / Federation.facility_id
+upper Asset tiers / SupplyScope.Facility / Federation.facility_id
 masquerade family in one promotion.
 
 Two-tier identity per locked design:

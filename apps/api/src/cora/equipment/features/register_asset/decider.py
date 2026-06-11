@@ -7,12 +7,16 @@ append. No I/O, no awaits, no side effects.
 `now` and `new_id` are injected by the application handler from
 the Clock and IdGenerator ports.
 
-## Hierarchy rule
+## Anchoring rule
 
-Per the BC map's hierarchy semantics:
-  - `Enterprise` is the root level — `parent_id` MUST be null.
-  - All other levels (Site / Area / Unit / Component / Device)
-    MUST have a non-null `parent_id`.
+An Asset is anchored exactly one way (XOR over {parent_id, facility_code}):
+  - A root Asset binds `facility_code` (its owning Federation
+    Facility) and MUST have `parent_id=None`.
+  - A non-root Asset has a `parent_id` and MUST NOT bind
+    `facility_code` (it inherits facility scope through the tree).
+
+Facility-envelope scope (institution / site / area) is owned by the
+`Facility` aggregate (`FacilityKind{Site, Area}`), not by an Asset tier.
 
 Eventual-consistency stance: the decider does NOT verify the
 referenced parent Asset exists in the event store. Cycle
@@ -21,7 +25,7 @@ requires walking the parent chain and is deferred to projection-
 worker era. The single-parent tree rule is enforced structurally
 (one `parent_id` field, can't be a list).
 
-**Levels are conventional, not enforced**: the decider does NOT
+**Tiers are conventional, not enforced**: the decider does NOT
 check that a Device's parent is a Component (etc). Device-in-
 Device is allowed when reality demands it (smart instruments
 with addressable sub-modules).
@@ -98,7 +102,6 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetAlreadyExistsError,
     AssetFacilityNotFoundError,
-    AssetLevel,
     AssetName,
     AssetOwnerAlreadyPresentError,
     AssetRegistered,
@@ -124,9 +127,9 @@ def decide(
       - State must be None (genesis-only) -> AssetAlreadyExistsError
       - Name must be valid -> InvalidAssetNameError
         (via AssetName VO)
-      - Enterprise-level Assets must have parent_id=None
-        -> InvalidAssetParentError
-      - Non-Enterprise-level Assets must have a non-null parent_id
+      - Anchoring XOR: exactly one of {parent_id, facility_code}.
+        A root Asset (parent_id=None) must bind facility_code; a
+        non-root (with parent_id) must NOT bind facility_code
         -> InvalidAssetParentError
       - Owner names must be unique within the payload (Lock 6)
         -> AssetOwnerAlreadyPresentError
@@ -142,14 +145,18 @@ def decide(
 
     name = AssetName(command.name)  # validates + trims; raises InvalidAssetNameError
 
-    # Hierarchy rule: Enterprise → null parent; others → required parent.
-    if command.level is AssetLevel.ENTERPRISE and command.parent_id is not None:
-        msg = f"Enterprise-level Asset cannot have a parent (got parent_id={command.parent_id})"
-        raise InvalidAssetParentError(msg)
-    if command.level is not AssetLevel.ENTERPRISE and command.parent_id is None:
+    # Anchoring rule: an Asset is either facility-rooted or parent-nested.
+    # Exactly one of {parent_id, facility_code} is set. Facility-envelope
+    # scope is owned by the Facility aggregate, not by an Asset tier.
+    if command.parent_id is None and command.facility_code is None:
         msg = (
-            f"{command.level.value}-level Asset must have a parent "
-            f"(parent_id=None is reserved for Enterprise roots)"
+            "Root Asset (parent_id=None) must bind a facility_code (its owning Federation Facility)"
+        )
+        raise InvalidAssetParentError(msg)
+    if command.parent_id is not None and command.facility_code is not None:
+        msg = (
+            f"Non-root Asset (parent_id={command.parent_id}) must not also bind "
+            "facility_code (children inherit facility scope through the tree)"
         )
         raise InvalidAssetParentError(msg)
 
@@ -167,7 +174,7 @@ def decide(
         AssetRegistered(
             asset_id=new_id,
             name=name.value,
-            level=command.level.value,
+            tier=command.tier.value,
             parent_id=command.parent_id,
             occurred_at=now,
             commissioned_by=commissioned_by,
