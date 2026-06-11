@@ -16,10 +16,10 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetCannotRemoveFamilyError,
     AssetFamilyRemoved,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import remove_asset_family
 from cora.equipment.features.remove_asset_family import RemoveAssetFamily
@@ -35,7 +35,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         family_ids=family_ids,  # type: ignore[arg-type]

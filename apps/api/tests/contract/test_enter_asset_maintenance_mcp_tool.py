@@ -23,7 +23,7 @@ def _register_and_activate_via_tool(client: TestClient, headers: dict[str, str])
                 "name": "register_asset",
                 "arguments": {
                     "name": "APS-2BM",
-                    "level": "Unit",
+                    "tier": "Unit",
                     "parent_id": str(uuid4()),
                 },
             },
@@ -122,7 +122,7 @@ def test_mcp_enter_asset_maintenance_tool_returns_iserror_when_commissioned() ->
                     "name": "register_asset",
                     "arguments": {
                         "name": "APS-2BM",
-                        "level": "Unit",
+                        "tier": "Unit",
                         "parent_id": str(uuid4()),
                     },
                 },

@@ -29,7 +29,7 @@ from cora.equipment.aggregates._partition_rule import (
     Aggregation,
     AggregatorKind,
 )
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -99,7 +99,7 @@ async def _setup_pseudoaxis_asset_with_aggregation(
         correlation_id=_CORRELATION_ID,
     )
     pseudoaxis_asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="VirtualY", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="VirtualY", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -120,7 +120,7 @@ async def _setup_pseudoaxis_asset_with_aggregation(
     constituent_ids: list[UUID] = []
     for i in range(constituent_count):
         constituent_id = await register_asset.bind(deps)(
-            RegisterAsset(name=f"PhysicalY{i}", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+            RegisterAsset(name=f"PhysicalY{i}", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -251,7 +251,7 @@ async def test_conduct_pseudoaxis_setpoint_with_affine_rule_fans_out_to_one_cons
         correlation_id=_CORRELATION_ID,
     )
     pseudoaxis_asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="VirtualY", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="VirtualY", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -269,7 +269,7 @@ async def test_conduct_pseudoaxis_setpoint_with_affine_rule_fans_out_to_one_cons
         correlation_id=_CORRELATION_ID,
     )
     constituent_id = await register_asset.bind(deps)(
-        RegisterAsset(name="PhysicalY", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="PhysicalY", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

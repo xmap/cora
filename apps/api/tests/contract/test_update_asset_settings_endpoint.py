@@ -33,7 +33,7 @@ def _set_capability_schema(client: TestClient, family_id: UUID, schema: dict[str
 def _register_asset(client: TestClient) -> UUID:
     response = client.post(
         "/assets",
-        json={"name": "Detector-X", "level": "Device", "parent_id": str(uuid4())},
+        json={"name": "Detector-X", "tier": "Device", "parent_id": str(uuid4())},
     )
     assert response.status_code == 201, response.text
     return UUID(response.json()["asset_id"])

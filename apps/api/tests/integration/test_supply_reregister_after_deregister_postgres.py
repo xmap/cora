@@ -261,8 +261,8 @@ async def test_same_kind_name_across_containing_assets_coexist(
     asset_a_id = uuid4()
     asset_b_id = uuid4()
     asset_lookup = InMemoryAssetLookup()
-    asset_lookup.register(asset_id=asset_a_id, name="2-BM-A", level="Unit")
-    asset_lookup.register(asset_id=asset_b_id, name="2-BM-B", level="Unit")
+    asset_lookup.register(asset_id=asset_a_id, name="2-BM-A", tier="Unit")
+    asset_lookup.register(asset_id=asset_b_id, name="2-BM-B", tier="Unit")
 
     first_supply_id = uuid4()
     first_deps = build_postgres_deps(

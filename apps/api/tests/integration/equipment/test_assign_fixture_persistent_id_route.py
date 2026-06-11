@@ -63,7 +63,7 @@ def _define_family(client: TestClient, *, name: str = "Camera") -> str:
 def _register_asset(client: TestClient, family_id: str, *, name: str = "Camera-1") -> str:
     response = client.post(
         "/assets",
-        json={"name": name, "level": "Device", "parent_id": str(uuid4())},
+        json={"name": name, "tier": "Device", "parent_id": str(uuid4())},
     )
     assert response.status_code == 201, response.text
     asset_id: str = response.json()["asset_id"]

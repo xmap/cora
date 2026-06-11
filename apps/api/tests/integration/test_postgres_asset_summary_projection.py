@@ -46,7 +46,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates._drawing import Drawing, DrawingSystem
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_asset import bind as bind_register_asset
 from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
@@ -75,7 +75,7 @@ async def _register_asset(
     await bind_register_asset(deps)(
         RegisterAsset(
             name=name,
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=uuid4(),
             drawing=drawing,
         ),
@@ -165,7 +165,7 @@ async def test_check_constraint_rejects_unknown_drawing_system(
         with pytest.raises(asyncpg.CheckViolationError):
             await conn.execute(
                 "INSERT INTO proj_equipment_asset_summary "
-                "(asset_id, name, level, lifecycle, condition, parent_id, "
+                "(asset_id, name, tier, lifecycle, condition, parent_id, "
                 "drawing_system, drawing_number, drawing_revision, created_at) "
                 "VALUES ($1, 'x', 'Device', 'Commissioned', 'Nominal', NULL, "
                 "'UnknownSystem', '123', NULL, now())",
@@ -187,7 +187,7 @@ async def _append_asset_registered(
     payload: dict[str, object] = {
         "asset_id": str(asset_id),
         "name": "synthetic-asset",
-        "level": "Device",
+        "tier": "Device",
         "parent_id": str(uuid4()),
         "occurred_at": _NOW.isoformat(),
         "commissioned_by": str(_PRINCIPAL_ID),

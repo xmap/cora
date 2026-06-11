@@ -27,8 +27,8 @@ from cora.equipment.aggregates.model import (
 )
 
 
-def _body(name: str = "APS-2BM", level: str = "Unit") -> dict[str, object]:
-    return {"name": name, "level": level, "parent_id": str(uuid4())}
+def _body(name: str = "APS-2BM", tier: str = "Unit") -> dict[str, object]:
+    return {"name": name, "tier": tier, "parent_id": str(uuid4())}
 
 
 @pytest.mark.contract
@@ -136,7 +136,7 @@ def test_post_assets_with_known_model_id_returns_201(accept_model: UUID) -> None
     handler appends AssetRegistered and returns 201 + new asset id."""
     body: dict[str, object] = {
         "name": "APS-2BM-Det",
-        "level": "Device",
+        "tier": "Device",
         "parent_id": str(uuid4()),
         "model_id": str(accept_model),
     }
@@ -156,7 +156,7 @@ def test_post_assets_with_unknown_model_id_returns_404(accept_model: UUID) -> No
     unknown_id = UUID("01900000-0000-7000-8000-00000000def0")
     body: dict[str, object] = {
         "name": "APS-2BM-Det",
-        "level": "Device",
+        "tier": "Device",
         "parent_id": str(uuid4()),
         "model_id": str(unknown_id),
     }
@@ -172,7 +172,7 @@ def test_post_assets_with_malformed_model_id_returns_422() -> None:
     fails request-body validation before the handler runs."""
     body: dict[str, object] = {
         "name": "APS-2BM",
-        "level": "Unit",
+        "tier": "Unit",
         "parent_id": str(uuid4()),
         "model_id": "not-a-uuid",
     }
@@ -189,7 +189,7 @@ def test_post_assets_without_model_id_still_returns_201() -> None:
     do not know about the binding are unaffected."""
     body: dict[str, object] = {
         "name": "APS",
-        "level": "Site",
+        "tier": "Unit",
         "parent_id": str(uuid4()),
     }
     with TestClient(create_app()) as client:
@@ -257,7 +257,7 @@ def test_post_assets_with_alternate_identifiers_returns_201() -> None:
     (kind, value) tuples; handler appends AssetRegistered and returns 201."""
     body: dict[str, object] = {
         "name": "APS-2BM-RotaryStage",
-        "level": "Device",
+        "tier": "Device",
         "parent_id": str(uuid4()),
         "alternate_identifiers": [
             {"kind": "SerialNumber", "value": "ANT130L-12345"},
@@ -279,7 +279,7 @@ def test_post_assets_with_invalid_alternate_identifier_kind_returns_422() -> Non
     alternate identifiers."""
     body: dict[str, object] = {
         "name": "APS",
-        "level": "Site",
+        "tier": "Unit",
         "parent_id": str(uuid4()),
         "alternate_identifiers": [{"kind": "ROR", "value": "01y2jtd41"}],
     }
@@ -295,7 +295,7 @@ def test_post_assets_with_missing_alternate_identifier_value_returns_422() -> No
     alternate-identifier entries fails schema validation."""
     body: dict[str, object] = {
         "name": "APS",
-        "level": "Site",
+        "tier": "Unit",
         "parent_id": str(uuid4()),
         "alternate_identifiers": [{"kind": "SerialNumber"}],
     }
@@ -311,7 +311,7 @@ def test_post_assets_with_alternate_identifiers_same_key_and_body_returns_same_a
     alternate_identifiers list) returns the cached asset_id."""
     body: dict[str, object] = {
         "name": "APS-2BM-RotaryStage",
-        "level": "Device",
+        "tier": "Device",
         "parent_id": str(uuid4()),
         "alternate_identifiers": [
             {"kind": "SerialNumber", "value": "ANT130L-12345"},
@@ -337,7 +337,7 @@ def test_post_assets_same_key_different_alternate_identifiers_returns_422() -> N
     parent = str(uuid4())
     base_body: dict[str, object] = {
         "name": "APS-2BM-RotaryStage",
-        "level": "Device",
+        "tier": "Device",
         "parent_id": parent,
     }
     body_a = {

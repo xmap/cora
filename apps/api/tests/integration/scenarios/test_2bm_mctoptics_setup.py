@@ -127,7 +127,7 @@ from cora.calibration.features.define_calibration import DefineCalibration
 from cora.calibration.features.define_calibration import bind as bind_define_calibration
 from cora.calibration.quantities import CalibrationQuantity
 from cora.equipment.aggregates._partition_rule import LookupTable, ReadbackAggregatorKind
-from cora.equipment.aggregates.asset import AssetLevel, PortDirection
+from cora.equipment.aggregates.asset import AssetTier, PortDirection
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.equipment.features.add_asset_family import AddAssetFamily
@@ -178,9 +178,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000420bb")
 # Scenario tag: 420 (MCTOptics deployment ceremony).
 
 # Facility hierarchy
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000420e01")
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000420501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000420701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000420a01")
 
 # Family ids (facility install)
@@ -491,9 +489,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -640,29 +635,29 @@ _NEW_FAMILY_SCHEMAS: tuple[tuple[UUID, dict[str, Any]], ...] = (
     (_CAP_PSEUDO_AXIS_ID, _SCHEMA_PSEUDO_AXIS),
 )
 
-# (asset_id, parent_id, asset_name, level)
-_NEW_ASSET_REGISTRATIONS: tuple[tuple[UUID, UUID, str, AssetLevel], ...] = (
-    (_ASSET_MCTOPTICS_ID, _2BM_UNIT_ID, "MCTOptics", AssetLevel.COMPONENT),
+# (asset_id, parent_id, asset_name, tier)
+_NEW_ASSET_REGISTRATIONS: tuple[tuple[UUID, UUID, str, AssetTier], ...] = (
+    (_ASSET_MCTOPTICS_ID, _2BM_UNIT_ID, "MCTOptics", AssetTier.COMPONENT),
     (
         _ASSET_MCTOPTICS_OBJECTIVE_0_ID,
         _ASSET_MCTOPTICS_ID,
         "MCTOptics_objective_0",
-        AssetLevel.DEVICE,
+        AssetTier.DEVICE,
     ),
     (
         _ASSET_MCTOPTICS_OBJECTIVE_1_ID,
         _ASSET_MCTOPTICS_ID,
         "MCTOptics_objective_1",
-        AssetLevel.DEVICE,
+        AssetTier.DEVICE,
     ),
     (
         _ASSET_MCTOPTICS_OBJECTIVE_2_ID,
         _ASSET_MCTOPTICS_ID,
         "MCTOptics_objective_2",
-        AssetLevel.DEVICE,
+        AssetTier.DEVICE,
     ),
-    (_ASSET_MCTOPTICS_LENS_TURRET_ID, _2BM_UNIT_ID, "MCTOptics_lens_turret", AssetLevel.DEVICE),
-    (_ASSET_MCTOPTICS_LENS_SELECT_ID, _2BM_UNIT_ID, "MCTOptics_lens_select", AssetLevel.DEVICE),
+    (_ASSET_MCTOPTICS_LENS_TURRET_ID, _2BM_UNIT_ID, "MCTOptics_lens_turret", AssetTier.DEVICE),
+    (_ASSET_MCTOPTICS_LENS_SELECT_ID, _2BM_UNIT_ID, "MCTOptics_lens_select", AssetTier.DEVICE),
 )
 
 _NEW_ASSET_FAMILY_LINKS: tuple[tuple[UUID, UUID], ...] = (
@@ -889,9 +884,6 @@ async def test_mctoptics_deployment_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
     )
@@ -928,9 +920,9 @@ async def test_mctoptics_deployment_plays_out_end_to_end(
 
     # ----- 5 NEW Asset registrations (MCTOptics + children + turret) -----
 
-    for _asset_id, parent_id, name, level in _NEW_ASSET_REGISTRATIONS:
+    for _asset_id, parent_id, name, tier in _NEW_ASSET_REGISTRATIONS:
         await bind_register_asset(deps)(
-            RegisterAsset(name=name, level=level, parent_id=parent_id),
+            RegisterAsset(name=name, tier=tier, parent_id=parent_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

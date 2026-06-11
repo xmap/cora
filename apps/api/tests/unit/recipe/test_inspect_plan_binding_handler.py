@@ -24,9 +24,9 @@ import pytest
 
 from cora.equipment.aggregates.asset import (
     AssetCondition,
-    AssetLevel,
     AssetLifecycle,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.aggregates.asset.events import (
     AssetActivated,
@@ -245,7 +245,7 @@ async def _seed_asset(
     register_event = AssetRegistered(
         asset_id=asset_id,
         name=name,
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=ActorId(uuid4()),

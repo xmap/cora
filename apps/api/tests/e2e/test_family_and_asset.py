@@ -23,7 +23,7 @@ async def test_register_asset_then_add_family_round_trips(
 
     asset_response = await e2e_client.post(
         "/assets",
-        json={"name": "APS-2BM", "level": "Unit", "parent_id": str(uuid4())},
+        json={"name": "APS-2BM", "tier": "Unit", "parent_id": str(uuid4())},
     )
     assert asset_response.status_code == 201
     asset_id = UUID(asset_response.json()["asset_id"])

@@ -7,7 +7,7 @@ infrastructure stays focused on domain / application errors raised
 deeper in the stack).
 
 Response carries the full Asset state including the hierarchy
-(`parent_id` is `UUID | None` — null only for Enterprise roots),
+(`parent_id` is `UUID | None` — null only for facility-rooted Assets),
 the `lifecycle` enum string, the `condition` enum string (5g-b),
 the `settings` dict (5g-c), and the `ports` list (5h).
 """

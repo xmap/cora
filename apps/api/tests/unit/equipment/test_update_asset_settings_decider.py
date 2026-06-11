@@ -18,11 +18,11 @@ import pytest
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetCondition,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
     AssetSettingsUpdated,
+    AssetTier,
     InvalidAssetSettingsError,
 )
 from cora.equipment.aggregates.family.state import (
@@ -43,7 +43,7 @@ def _asset(*, settings: dict[str, Any] | None = None) -> Asset:
     return Asset(
         id=uuid4(),
         name=AssetName("Detector-X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         condition=AssetCondition.NOMINAL,

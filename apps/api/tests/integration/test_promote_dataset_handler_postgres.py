@@ -122,7 +122,7 @@ async def test_register_dataset_persists_producing_run_end_state_in_payload(
     and survives a real PG round-trip (no silent drop, no field
     rename in storage). This is the audit trail that powers the
     promote_dataset Run-must-be-Completed guard."""
-    from cora.equipment.aggregates.asset import AssetLevel
+    from cora.equipment.aggregates.asset import AssetTier
     from cora.equipment.features import (
         add_asset_family,
         define_family,
@@ -164,7 +164,7 @@ async def test_register_dataset_persists_producing_run_end_state_in_payload(
         correlation_id=_CORRELATION_ID,
     )
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="A", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="A", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

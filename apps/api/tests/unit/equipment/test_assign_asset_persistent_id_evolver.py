@@ -18,7 +18,6 @@ from cora.equipment.aggregates.asset import (
     AssetFamilyAdded,
     AssetFamilyRemoved,
     AssetFaulted,
-    AssetLevel,
     AssetLifecycle,
     AssetMaintenanceEntered,
     AssetMaintenanceExited,
@@ -34,6 +33,7 @@ from cora.equipment.aggregates.asset import (
     AssetRelocated,
     AssetRestored,
     AssetSettingsUpdated,
+    AssetTier,
     evolve,
     fold,
 )
@@ -76,7 +76,7 @@ def _prior(
     return Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         persistent_id=persistent_id,
@@ -121,7 +121,7 @@ def test_evolver_preserves_unrelated_state_fields() -> None:
     """Persistent-id mutation only touches `persistent_id`; every other
     facet (lifecycle, condition, family_ids, settings, ports, drawing,
     model_id, alternate_identifiers, owners, fixture_id, parent_id,
-    level, name, id) carries through. Pin against the evolver
+    tier, name, id) carries through. Pin against the evolver
     explicitly constructing Asset(...) so a future evolver refactor
     that drops a field is caught."""
     asset_id = uuid4()
@@ -134,7 +134,7 @@ def test_evolver_preserves_unrelated_state_fields() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("Eiger-2X-9M"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.MAINTENANCE,
         condition=AssetCondition.DEGRADED,
@@ -157,7 +157,7 @@ def test_evolver_preserves_unrelated_state_fields() -> None:
     assert state.persistent_id == _DOI
     assert state.id == asset_id
     assert state.name == AssetName("Eiger-2X-9M")
-    assert state.level is AssetLevel.DEVICE
+    assert state.tier is AssetTier.DEVICE
     assert state.parent_id == parent_id
     assert state.lifecycle is AssetLifecycle.MAINTENANCE
     assert state.condition is AssetCondition.DEGRADED
@@ -213,7 +213,7 @@ def test_fold_register_then_assign_persistent_id_yields_asset_with_persistent_id
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -242,7 +242,7 @@ def test_evolver_asset_registered_defaults_persistent_id_to_none() -> None:
         AssetRegistered(
             asset_id=uuid4(),
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -325,7 +325,7 @@ def test_evolve_non_persistent_id_transition_preserves_persistent_id(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=_pick_lifecycle_for(transition),
         persistent_id=_DOI,
@@ -345,7 +345,7 @@ def test_evolve_relocate_preserves_persistent_id() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=old_parent,
         persistent_id=_HANDLE,
     )

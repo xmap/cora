@@ -20,7 +20,7 @@ from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
     AssetAlternateIdentifierAlreadyPresentError,
     AssetCannotAddAlternateIdentifierError,
-    AssetLevel,
+    AssetTier,
 )
 from cora.equipment.features import (
     add_asset_alternate_identifier,
@@ -74,7 +74,7 @@ def _build_deps(
 
 async def _register_asset_helper(deps: Kernel) -> UUID:
     return await register_asset.bind(deps)(
-        RegisterAsset(name="Detector-X", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="Detector-X", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

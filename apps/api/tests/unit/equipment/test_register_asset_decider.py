@@ -1,7 +1,8 @@
 """Unit tests for the `register_asset` slice's pure decider.
 
 Covers the create-style invariants (state empty, name validation)
-plus the hierarchy rule (Enterprise null-parent, others required).
+plus the anchoring XOR rule: a root Asset (parent_id=None) must bind
+`facility_code`; a non-root (with parent_id) must NOT bind one.
 """
 
 from datetime import UTC, datetime
@@ -13,7 +14,6 @@ from cora.equipment.aggregates._drawing import Drawing, DrawingSystem
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetAlreadyExistsError,
-    AssetLevel,
     AssetName,
     AssetOwner,
     AssetOwnerAlreadyPresentError,
@@ -22,11 +22,14 @@ from cora.equipment.aggregates.asset import (
     AssetOwnerIdentifierType,
     AssetOwnerName,
     AssetRegistered,
+    AssetTier,
     InvalidAssetNameError,
     InvalidAssetParentError,
 )
 from cora.equipment.features import register_asset
 from cora.equipment.features.register_asset import RegisterAsset
+from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identifier import (
     AlternateIdentifier,
     AlternateIdentifierKind,
@@ -39,36 +42,49 @@ _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 
 
+def _facility_result(code: str = "cora") -> FacilityLookupResult:
+    return FacilityLookupResult(
+        id=uuid4(),
+        code=FacilityCode(code),
+        kind="Site",
+        status="Active",
+        trust_anchor_credential_ids=frozenset(),
+    )
+
+
 @pytest.mark.unit
-def test_decide_emits_asset_registered_for_enterprise_with_null_parent() -> None:
+def test_decide_emits_asset_registered_for_facility_rooted_root() -> None:
     new_id = uuid4()
     events = register_asset.decide(
         state=None,
-        command=RegisterAsset(name="ANL", level=AssetLevel.ENTERPRISE, parent_id=None),
+        command=RegisterAsset(
+            name="2-BM", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"
+        ),
         now=_NOW,
         new_id=new_id,
         commissioned_by=_TEST_ACTOR_ID,
-        facility_lookup_result=None,
+        facility_lookup_result=_facility_result("cora"),
     )
     assert events == [
         AssetRegistered(
             asset_id=new_id,
-            name="ANL",
-            level="Enterprise",
+            name="2-BM",
+            tier="Unit",
             parent_id=None,
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
+            facility_code=FacilityCode("cora"),
         )
     ]
 
 
 @pytest.mark.unit
-def test_decide_emits_asset_registered_for_site_with_parent() -> None:
+def test_decide_emits_asset_registered_for_child_with_parent() -> None:
     new_id = uuid4()
     parent_id = uuid4()
     events = register_asset.decide(
         state=None,
-        command=RegisterAsset(name="APS", level=AssetLevel.SITE, parent_id=parent_id),
+        command=RegisterAsset(name="Eiger", tier=AssetTier.DEVICE, parent_id=parent_id),
         now=_NOW,
         new_id=new_id,
         commissioned_by=_TEST_ACTOR_ID,
@@ -77,8 +93,8 @@ def test_decide_emits_asset_registered_for_site_with_parent() -> None:
     assert events == [
         AssetRegistered(
             asset_id=new_id,
-            name="APS",
-            level="Site",
+            name="Eiger",
+            tier="Device",
             parent_id=parent_id,
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -92,7 +108,7 @@ def test_decide_trims_name_via_value_object() -> None:
     parent_id = uuid4()
     events = register_asset.decide(
         state=None,
-        command=RegisterAsset(name="  Eiger-2X-9M  ", level=AssetLevel.DEVICE, parent_id=parent_id),
+        command=RegisterAsset(name="  Eiger-2X-9M  ", tier=AssetTier.DEVICE, parent_id=parent_id),
         now=_NOW,
         new_id=new_id,
         commissioned_by=_TEST_ACTOR_ID,
@@ -106,7 +122,7 @@ def test_decide_rejects_invalid_name() -> None:
     with pytest.raises(InvalidAssetNameError):
         register_asset.decide(
             state=None,
-            command=RegisterAsset(name="", level=AssetLevel.SITE, parent_id=uuid4()),
+            command=RegisterAsset(name="", tier=AssetTier.UNIT, parent_id=uuid4()),
             now=_NOW,
             new_id=uuid4(),
             commissioned_by=_TEST_ACTOR_ID,
@@ -118,14 +134,14 @@ def test_decide_rejects_invalid_name() -> None:
 def test_decide_rejects_existing_state() -> None:
     existing = Asset(
         id=uuid4(),
-        name=AssetName("APS"),
-        level=AssetLevel.SITE,
+        name=AssetName("2-BM"),
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
     )
     with pytest.raises(AssetAlreadyExistsError) as exc_info:
         register_asset.decide(
             state=existing,
-            command=RegisterAsset(name="Other", level=AssetLevel.SITE, parent_id=uuid4()),
+            command=RegisterAsset(name="Other", tier=AssetTier.UNIT, parent_id=uuid4()),
             now=_NOW,
             new_id=uuid4(),
             commissioned_by=_TEST_ACTOR_ID,
@@ -134,58 +150,46 @@ def test_decide_rejects_existing_state() -> None:
     assert exc_info.value.asset_id == existing.id
 
 
-# ---------- Hierarchy rule (the 5b-locked invariant) ----------
+# ---------- Anchoring XOR rule: exactly one of {parent_id, facility_code} ----------
 
 
 @pytest.mark.unit
-def test_decide_rejects_enterprise_with_non_null_parent() -> None:
-    """Enterprise is the root level — supplying a parent violates the
-    single-parent-tree contract. Pin so a future relaxation that
-    treats Enterprise as just-another-level (for example, for federated
-    multi-Enterprise setups) is a deliberate change."""
+def test_decide_rejects_root_without_facility_code() -> None:
+    """A root Asset (parent_id=None) MUST bind a facility_code (its
+    owning Federation Facility). Supplying neither violates the
+    anchoring rule."""
+    with pytest.raises(InvalidAssetParentError) as exc_info:
+        register_asset.decide(
+            state=None,
+            command=RegisterAsset(name="Orphan", tier=AssetTier.UNIT, parent_id=None),
+            now=_NOW,
+            new_id=uuid4(),
+            commissioned_by=_TEST_ACTOR_ID,
+            facility_lookup_result=None,
+        )
+    assert "facility_code" in str(exc_info.value)
+
+
+@pytest.mark.unit
+def test_decide_rejects_child_that_also_binds_facility_code() -> None:
+    """A non-root Asset (with parent_id) must NOT also bind
+    facility_code; children inherit facility scope through the tree."""
     parent_id = uuid4()
     with pytest.raises(InvalidAssetParentError) as exc_info:
         register_asset.decide(
             state=None,
             command=RegisterAsset(
-                name="Federated-ANL",
-                level=AssetLevel.ENTERPRISE,
+                name="Eiger",
+                tier=AssetTier.DEVICE,
                 parent_id=parent_id,
+                facility_code="cora",
             ),
             now=_NOW,
             new_id=uuid4(),
             commissioned_by=_TEST_ACTOR_ID,
-            facility_lookup_result=None,
+            facility_lookup_result=_facility_result("cora"),
         )
-    assert "Enterprise" in str(exc_info.value)
     assert str(parent_id) in str(exc_info.value)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "level",
-    [
-        AssetLevel.SITE,
-        AssetLevel.AREA,
-        AssetLevel.UNIT,
-        AssetLevel.COMPONENT,
-        AssetLevel.DEVICE,
-    ],
-)
-def test_decide_rejects_non_enterprise_with_null_parent(level: AssetLevel) -> None:
-    """All non-Enterprise levels MUST have a parent. Five wrong-state
-    cases tested explicitly so a future relaxation has to flip every
-    parametrized case deliberately."""
-    with pytest.raises(InvalidAssetParentError) as exc_info:
-        register_asset.decide(
-            state=None,
-            command=RegisterAsset(name="Any", level=level, parent_id=None),
-            now=_NOW,
-            new_id=uuid4(),
-            commissioned_by=_TEST_ACTOR_ID,
-            facility_lookup_result=None,
-        )
-    assert level.value in str(exc_info.value)
 
 
 @pytest.mark.unit
@@ -197,7 +201,7 @@ def test_decide_carries_drawing_through_to_emitted_event() -> None:
         state=None,
         command=RegisterAsset(
             name="Microscope-2BM-A",
-            level=AssetLevel.COMPONENT,
+            tier=AssetTier.COMPONENT,
             parent_id=uuid4(),
             drawing=drawing,
         ),
@@ -214,8 +218,8 @@ def test_decide_defaults_drawing_to_none_when_omitted() -> None:
     events = register_asset.decide(
         state=None,
         command=RegisterAsset(
-            name="APS",
-            level=AssetLevel.SITE,
+            name="Microscope",
+            tier=AssetTier.COMPONENT,
             parent_id=uuid4(),
         ),
         now=_NOW,
@@ -237,7 +241,7 @@ def test_decide_propagates_model_id_to_emitted_event() -> None:
         state=None,
         command=RegisterAsset(
             name="Microscope-2BM-A",
-            level=AssetLevel.COMPONENT,
+            tier=AssetTier.COMPONENT,
             parent_id=uuid4(),
             model_id=model_id,
         ),
@@ -254,8 +258,8 @@ def test_decide_defaults_model_id_to_none_when_omitted() -> None:
     events = register_asset.decide(
         state=None,
         command=RegisterAsset(
-            name="APS",
-            level=AssetLevel.SITE,
+            name="Microscope",
+            tier=AssetTier.COMPONENT,
             parent_id=uuid4(),
         ),
         now=_NOW,
@@ -278,7 +282,7 @@ def test_decide_propagates_controller_id_to_emitted_event() -> None:
         state=None,
         command=RegisterAsset(
             name="Aerotech_ABRS_rotary",
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=uuid4(),
             controller_id=controller_id,
         ),
@@ -298,7 +302,7 @@ def test_decide_defaults_controller_id_to_none_when_omitted() -> None:
         state=None,
         command=RegisterAsset(
             name="Sample_top_X",
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=uuid4(),
         ),
         now=_NOW,
@@ -326,7 +330,7 @@ def test_decide_passes_alternate_identifiers_through_to_emitted_event() -> None:
         state=None,
         command=RegisterAsset(
             name="APS-2BM-RotaryStage",
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=uuid4(),
             alternate_identifiers=identifiers,
         ),
@@ -343,8 +347,8 @@ def test_decide_defaults_alternate_identifiers_to_empty_when_omitted() -> None:
     events = register_asset.decide(
         state=None,
         command=RegisterAsset(
-            name="APS",
-            level=AssetLevel.SITE,
+            name="Stage",
+            tier=AssetTier.DEVICE,
             parent_id=uuid4(),
         ),
         now=_NOW,
@@ -362,15 +366,16 @@ def test_register_asset_with_zero_owners_succeeds() -> None:
     events = register_asset.decide(
         state=None,
         command=RegisterAsset(
-            name="APS-2BM",
-            level=AssetLevel.SITE,
-            parent_id=uuid4(),
+            name="2-BM",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
             owners=frozenset(),
         ),
         now=_NOW,
         new_id=uuid4(),
         commissioned_by=_TEST_ACTOR_ID,
-        facility_lookup_result=None,
+        facility_lookup_result=_facility_result("cora"),
     )
     assert events[0].owners == frozenset()
 
@@ -387,14 +392,15 @@ def test_register_asset_with_one_owner_succeeds() -> None:
         state=None,
         command=RegisterAsset(
             name="HZB-Instrument",
-            level=AssetLevel.UNIT,
-            parent_id=uuid4(),
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
             owners=frozenset({owner}),
         ),
         now=_NOW,
         new_id=uuid4(),
         commissioned_by=_TEST_ACTOR_ID,
-        facility_lookup_result=None,
+        facility_lookup_result=_facility_result("cora"),
     )
     assert events[0].owners == frozenset({owner})
 
@@ -412,14 +418,15 @@ def test_register_asset_with_three_owners_succeeds() -> None:
         state=None,
         command=RegisterAsset(
             name="Shared-Instrument",
-            level=AssetLevel.UNIT,
-            parent_id=uuid4(),
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
             owners=owners,
         ),
         now=_NOW,
         new_id=uuid4(),
         commissioned_by=_TEST_ACTOR_ID,
-        facility_lookup_result=None,
+        facility_lookup_result=_facility_result("cora"),
     )
     assert events[0].owners == owners
 
@@ -436,7 +443,7 @@ def test_register_asset_with_duplicate_owner_names_raises_already_present_error(
             state=None,
             command=RegisterAsset(
                 name="X",
-                level=AssetLevel.UNIT,
+                tier=AssetTier.UNIT,
                 parent_id=uuid4(),
                 owners=frozenset({first, second}),
             ),
@@ -455,7 +462,7 @@ def test_register_asset_emits_owners_in_payload() -> None:
         state=None,
         command=RegisterAsset(
             name="X",
-            level=AssetLevel.UNIT,
+            tier=AssetTier.UNIT,
             parent_id=uuid4(),
             owners=owners,
         ),
@@ -473,8 +480,8 @@ def test_decide_defaults_owners_to_empty_when_omitted() -> None:
     events = register_asset.decide(
         state=None,
         command=RegisterAsset(
-            name="APS",
-            level=AssetLevel.SITE,
+            name="Stage",
+            tier=AssetTier.DEVICE,
             parent_id=uuid4(),
         ),
         now=_NOW,
@@ -489,7 +496,7 @@ def test_decide_defaults_owners_to_empty_when_omitted() -> None:
 def test_decide_is_pure_same_inputs_same_outputs() -> None:
     new_id = uuid4()
     parent_id = uuid4()
-    command = RegisterAsset(name="APS", level=AssetLevel.SITE, parent_id=parent_id)
+    command = RegisterAsset(name="Stage", tier=AssetTier.DEVICE, parent_id=parent_id)
     first = register_asset.decide(
         state=None,
         command=command,

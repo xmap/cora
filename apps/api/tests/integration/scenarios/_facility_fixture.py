@@ -72,9 +72,6 @@ _PRINCIPAL_ID = operator_for(__file__)
 def _id_queue() -> list[UUID]:
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ID,
-            aps_site_id=_APS_ID,
-            sector_id=_SECTOR_ID,
             unit_id=_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -86,14 +83,16 @@ async def test_...(db_pool):
     await install_aps_unit(
         deps,
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ID,
-        aps_site_id=_APS_ID,
-        sector_id=_SECTOR_ID,
         unit_id=_UNIT_ID,
         devices=_DEVICES,
     )
     # ... scenario-specific commands follow, using _PRINCIPAL_ID
 ```
+
+The beamline Unit is the ROOT Asset: it binds `facility_code`
+(default "cora", the seeded self-Facility) and carries `parent_id=None`.
+Its Devices nest under the Unit. Site/Area/institution scope is owned
+by the Federation Facility aggregate, not by an Asset tier.
 """
 
 import hashlib
@@ -106,7 +105,7 @@ from cora.access.aggregates.actor import ProfileStore
 from cora.access.features.register_actor import RegisterActor
 from cora.access.features.register_actor import bind as bind_register_actor
 from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.add_asset_family import bind as bind_add_family
 from cora.equipment.features.define_family import DefineFamily
@@ -254,9 +253,6 @@ class FacilityIds:
     operator_pool_ids: tuple[UUID, UUID, UUID]
     beamline_scientist_actor_id: UUID
     esrb_actor_id: UUID
-    argonne_id: UUID
-    aps_site_id: UUID
-    sector_id: UUID
     unit_id: UUID
     device_ids: tuple[UUID, ...]
     cap_ids: tuple[UUID, ...]
@@ -268,9 +264,6 @@ class FacilityIds:
 
 def facility_id_prefix(
     *,
-    argonne_id: UUID,
-    aps_site_id: UUID,
-    sector_id: UUID,
     unit_id: UUID,
     devices: Sequence[DeviceSpec],
 ) -> list[UUID]:
@@ -279,17 +272,14 @@ def facility_id_prefix(
     Ordering mirrors the ceremony exactly:
       1. register_actor x 3 (operator pool, canonical ids): actor_id, event
       2. register_actor x 2 (BS + ESRB review-chain reviewers): actor_id, event
-      3. register_asset Argonne (Enterprise): argonne_id, event
-      4. register_asset APS (Site): aps_site_id, event
-      5. register_asset Sector (Area, parent=APS): sector_id, event
-      6. register_asset Unit (parent=Sector): unit_id, event
-      7. define_family x N (in `devices` order): cap_id, event
-      8. register_asset + add_asset_family x N: asset_id, register_event, addcap_event
-      9. define_zone (2-BM Zone, canonical id): zone_id, event
-     10. define_conduit (2-BM Local Conduit, self-loop): conduit_id, event
-     11. define_policy x 2 (Operations + Agent, canonical ids): policy_id, event
+      3. register_asset Unit (root, facility-anchored): unit_id, event
+      4. define_family x N (in `devices` order): cap_id, event
+      5. register_asset + add_asset_family x N: asset_id, register_event, addcap_event
+      6. define_zone (2-BM Zone, canonical id): zone_id, event
+      7. define_conduit (2-BM Local Conduit, self-loop): conduit_id, event
+      8. define_policy x 2 (Operations + Agent, canonical ids): policy_id, event
 
-    Anonymous event ids use `uuid4()`. Total length = 10 + 8 + 5 * N + 10 = 28 + 5 * N.
+    Anonymous event ids use `uuid4()`. Total length = 10 + 2 + 5 * N + 10 = 22 + 5 * N.
     (Trust block = 10: zone[2] + conduit[4 — agg + logbook + 2 events] + 2 policies[2 each].)
     """
     e = uuid4
@@ -306,13 +296,7 @@ def facility_id_prefix(
         e(),
         ESRB_ACTOR_ID,
         e(),
-        # Asset hierarchy (scenario-supplied UUIDs)
-        argonne_id,
-        e(),
-        aps_site_id,
-        e(),
-        sector_id,
-        e(),
+        # Root Asset: the beamline Unit (scenario-supplied UUID)
         unit_id,
         e(),
     ]
@@ -351,34 +335,32 @@ async def install_aps_unit(
     *,
     profile_store: ProfileStore,
     correlation_id: UUID,
-    argonne_id: UUID,
-    aps_site_id: UUID,
-    sector_id: UUID,
     unit_id: UUID,
     devices: Sequence[DeviceSpec],
     unit_name: str = "2-BM",
-    sector_name: str = "Sector 2",
+    facility_code: str = "cora",
 ) -> FacilityIds:
     """Execute the canonical facility-install ceremony for a 2-BM-shape Unit.
 
     Order matches `facility_id_prefix()` exactly: 3 operators, BS + ESRB
-    reviewers, then Argonne -> APS -> Sector -> Unit, then all
-    Capabilities defined, then all Devices registered + their
-    Capabilities linked, then the 2-BM Trust shape (Zone + Conduit +
-    Operations Policy + Agent Policy).
+    reviewers, then the beamline Unit (root), then all Capabilities
+    defined, then all Devices registered + their Capabilities linked,
+    then the 2-BM Trust shape (Zone + Conduit + Operations Policy +
+    Agent Policy).
 
     All install events are attributed to `OPERATOR_1_ID` (bootstrap
     convention; the first operator-registration event is self-attributed
     by necessity, and the rest follow for narrative consistency — "the
     lead operator installed the beamline equipment").
 
-    APS organizes beamlines into sectors; the Sector sits at the
-    `Area` level between `APS` (Site) and the beamline (Unit). The
-    Unit's parent is the Sector, not APS directly.
+    The beamline Unit is the ROOT Asset: it binds `facility_code`
+    (default "cora", the seeded self-Facility) and carries
+    `parent_id=None`. Its Devices nest under the Unit. Site / area /
+    institution scope is owned by the Federation Facility aggregate,
+    bound via `facility_code`, not by an Asset tier.
 
-    `unit_name` defaults to "2-BM" and `sector_name` to "Sector 2";
-    both parameterize for future beamline scenarios (2-BM under
-    Sector 35, 7-BM under Sector 7, etc.).
+    `unit_name` defaults to "2-BM"; it parameterizes for future
+    beamline scenarios (7-BM, 32-ID, etc.).
     """
     principal_id = OPERATOR_1_ID
 
@@ -405,24 +387,14 @@ async def install_aps_unit(
         correlation_id=correlation_id,
     )
 
-    # ----- Equipment BC: Asset hierarchy + Devices -----
+    # ----- Equipment BC: root beamline Unit (facility-anchored) + Devices -----
     await bind_register_asset(deps)(
-        RegisterAsset(name="Argonne", level=AssetLevel.ENTERPRISE, parent_id=None),
-        principal_id=principal_id,
-        correlation_id=correlation_id,
-    )
-    await bind_register_asset(deps)(
-        RegisterAsset(name="APS", level=AssetLevel.SITE, parent_id=argonne_id),
-        principal_id=principal_id,
-        correlation_id=correlation_id,
-    )
-    await bind_register_asset(deps)(
-        RegisterAsset(name=sector_name, level=AssetLevel.AREA, parent_id=aps_site_id),
-        principal_id=principal_id,
-        correlation_id=correlation_id,
-    )
-    await bind_register_asset(deps)(
-        RegisterAsset(name=unit_name, level=AssetLevel.UNIT, parent_id=sector_id),
+        RegisterAsset(
+            name=unit_name,
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code=facility_code,
+        ),
         principal_id=principal_id,
         correlation_id=correlation_id,
     )
@@ -436,7 +408,7 @@ async def install_aps_unit(
         await bind_register_asset(deps)(
             RegisterAsset(
                 name=d.name,
-                level=AssetLevel.DEVICE,
+                tier=AssetTier.DEVICE,
                 parent_id=unit_id,
                 controller_id=d.controller_id,
             ),
@@ -489,9 +461,6 @@ async def install_aps_unit(
         operator_pool_ids=OPERATOR_POOL_IDS,
         beamline_scientist_actor_id=BEAMLINE_SCIENTIST_ACTOR_ID,
         esrb_actor_id=ESRB_ACTOR_ID,
-        argonne_id=argonne_id,
-        aps_site_id=aps_site_id,
-        sector_id=sector_id,
         unit_id=unit_id,
         device_ids=tuple(d.asset_id for d in devices),
         cap_ids=tuple(d.cap_id for d in devices),

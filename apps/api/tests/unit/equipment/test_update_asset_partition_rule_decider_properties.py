@@ -38,11 +38,11 @@ from cora.equipment.aggregates._partition_rule import (
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetCannotUpdatePartitionRuleError,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
     AssetPartitionRuleUpdated,
+    AssetTier,
 )
 from cora.equipment.features import update_asset_partition_rule
 from cora.equipment.features.update_asset_partition_rule import UpdateAssetPartitionRule
@@ -95,8 +95,8 @@ def _asset(
     return Asset(
         id=asset_id,
         name=AssetName("PseudoAxis-A"),
-        level=AssetLevel.DEVICE,
-        parent_id=asset_id,  # any UUID; non-Enterprise requires non-null
+        tier=AssetTier.DEVICE,
+        parent_id=asset_id,  # any UUID; non-root requires non-null parent_id
         lifecycle=lifecycle,
         partition_rule=partition_rule,
     )

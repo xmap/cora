@@ -22,10 +22,10 @@ import pytest
 
 from cora.equipment.aggregates.asset import (
     Asset,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetPort,
+    AssetTier,
     PortDirection,
 )
 from cora.infrastructure.ports.caution_lookup import CautionReference
@@ -105,7 +105,7 @@ def _asset(
     return Asset(
         id=asset_id or uuid4(),
         name=AssetName("EigerDetector"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         family_ids=family_ids if family_ids is not None else frozenset(),
@@ -706,7 +706,7 @@ def test_decide_passes_when_plan_wires_endpoints_still_valid() -> None:
     src_asset = Asset(
         id=src_id,
         name=AssetName("PandABox"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset({cap}),
@@ -717,7 +717,7 @@ def test_decide_passes_when_plan_wires_endpoints_still_valid() -> None:
     tgt_asset = Asset(
         id=tgt_id,
         name=AssetName("Camera"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset({cap}),
@@ -775,7 +775,7 @@ def test_decide_rejects_when_plan_wire_references_removed_port() -> None:
     src_asset = Asset(
         id=src_id,
         name=AssetName("PandABox"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset({cap}),
@@ -784,7 +784,7 @@ def test_decide_rejects_when_plan_wire_references_removed_port() -> None:
     tgt_asset = Asset(
         id=tgt_id,
         name=AssetName("Camera"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset({cap}),
@@ -846,7 +846,7 @@ def _wire_capable_assets(
     src_asset = Asset(
         id=src_id,
         name=AssetName("PandABox"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset({cap}),
@@ -857,7 +857,7 @@ def _wire_capable_assets(
     tgt_asset = Asset(
         id=tgt_id,
         name=AssetName("Camera"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset({cap}),
@@ -1009,7 +1009,7 @@ def test_decide_revalidation_fails_fast_on_first_invalid_wire_in_a_set() -> None
     src_asset = Asset(
         id=src_id,
         name=AssetName("PandABox"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset({cap}),
@@ -1023,7 +1023,7 @@ def test_decide_revalidation_fails_fast_on_first_invalid_wire_in_a_set() -> None
     tgt_asset_1 = Asset(
         id=tgt_id_1,
         name=AssetName("Camera1"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset({cap}),
@@ -1035,7 +1035,7 @@ def test_decide_revalidation_fails_fast_on_first_invalid_wire_in_a_set() -> None
     tgt_asset_2 = Asset(
         id=tgt_id_2,
         name=AssetName("Camera2"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset({cap}),

@@ -9,11 +9,11 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetAttachedToDifferentFixtureError,
     AssetDetachedFromFixture,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotAttachedToFixtureError,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import detach_asset_from_fixture
 from cora.equipment.features.detach_asset_from_fixture import DetachAssetFromFixture
@@ -30,7 +30,7 @@ def _asset(
     return Asset(
         id=asset_id,
         name=AssetName("Cam-1"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         fixture_id=fixture_id,

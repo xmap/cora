@@ -16,10 +16,10 @@ from cora.equipment.aggregates.asset import (
     AssetFacilityCodeAlreadyAssignedError,
     AssetFacilityCodeAssigned,
     AssetFacilityNotFoundError,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features.bind_asset_to_facility import BindAssetToFacility, decide
 from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
@@ -38,7 +38,7 @@ def _asset(
     return Asset(
         id=asset_id,
         name=AssetName("Sample beamline"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.COMMISSIONED,
         facility_code=facility_code,

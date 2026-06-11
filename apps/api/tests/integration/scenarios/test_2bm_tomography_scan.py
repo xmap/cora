@@ -128,10 +128,8 @@ _NOW = datetime(2026, 5, 17, 10, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000403bb")
 
-# Facility hierarchy. Scenario tag: 403 (operations / tomography scan).
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000403e01")
+# Facility. Scenario tag: 403 (operations / tomography scan).
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000403501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000403701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000403a01")
 
 # Capabilities (full imaging chain)
@@ -157,14 +155,11 @@ _CAPABILITY_ID = UUID("01900000-0000-7000-8000-000000c0d508")
 _PRACTICE_TOMO_ID = UUID("01900000-0000-7000-8000-000000403d11")
 _PLAN_TOMO_ID = UUID("01900000-0000-7000-8000-000000403d21")
 
-# Run + Dataset (avoid clash with _ARGONNE_ENTERPRISE_ID's _e01 tag).
+# Run + Dataset (f-tagged; f02 avoids clashing with the f01 Dataset tag).
 _RUN_ID = UUID("01900000-0000-7000-8000-000000403f02")
 _DATASET_ID = UUID("01900000-0000-7000-8000-000000403f01")
 
 _TOMO_ASSETS = TomographyAssetIds(
-    argonne_id=_ARGONNE_ENTERPRISE_ID,
-    aps_site_id=_APS_SITE_ID,
-    sector_id=_SECTOR_2_AREA_ID,
     unit_id=_2BM_UNIT_ID,
     rotary_cap_id=_CAP_ROTARY_STAGE_ID,
     linear_x_cap_id=_CAP_LINEAR_STAGE_ID,

@@ -28,12 +28,12 @@ import pytest
 from cora.equipment._pidinst_serializer import to_fixture_pidinst_record
 from cora.equipment.aggregates.assembly import SlotCardinality, SlotName, TemplateSlot
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
     AssetOwner,
     AssetOwnerContact,
     AssetOwnerIdentifier,
     AssetOwnerIdentifierType,
     AssetOwnerName,
+    AssetTier,
 )
 from cora.equipment.aggregates.fixture import SlotAssetBinding
 from cora.equipment.aggregates.model import (
@@ -182,7 +182,7 @@ async def _seed_asset_with_owner_and_model(
     await register_asset.bind(deps)(
         RegisterAsset(
             name=name,
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=_PARENT_ID,
             model_id=model_id,
         ),

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 def register_active_asset(client: TestClient, *, name: str = "Goniometer-1") -> str:
-    """Register + activate a Unit-level Asset; return its id.
+    """Register + activate a Unit-tier Asset; return its id.
 
     Synthetic parent_id (uuid4) is acceptable because the
     Equipment register decider does not pre-validate parent
@@ -24,7 +24,7 @@ def register_active_asset(client: TestClient, *, name: str = "Goniometer-1") -> 
     """
     response = client.post(
         "/assets",
-        json={"name": name, "level": "Unit", "parent_id": str(uuid4())},
+        json={"name": name, "tier": "Unit", "parent_id": str(uuid4())},
     )
     assert response.status_code == 201, response.text
     asset_id: str = response.json()["asset_id"]

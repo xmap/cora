@@ -39,7 +39,12 @@ def _setup_full_chain(client: TestClient) -> tuple[str, str]:
     ).json()["practice_id"]
     asset_id = client.post(
         "/assets",
-        json={"name": "TestAsset", "level": "Enterprise", "parent_id": None},
+        json={
+            "name": "TestAsset",
+            "tier": "Unit",
+            "parent_id": None,
+            "facility_code": "cora",
+        },
     ).json()["asset_id"]
     add_resp = client.post(f"/assets/{asset_id}/add-family", json={"family_id": cap_id})
     assert add_resp.status_code == 204
@@ -272,7 +277,13 @@ def test_post_runs_returns_409_when_asset_decommissioned_after_plan_bind() -> No
             json={"name": "P", "method_id": method_id, "site_id": str(uuid4())},
         ).json()["practice_id"]
         asset_id = client.post(
-            "/assets", json={"name": "A", "level": "Enterprise", "parent_id": None}
+            "/assets",
+            json={
+                "name": "A",
+                "tier": "Unit",
+                "parent_id": None,
+                "facility_code": "cora",
+            },
         ).json()["asset_id"]
         client.post(f"/assets/{asset_id}/add-family", json={"family_id": cap_id})
         plan_id = client.post(
@@ -302,7 +313,13 @@ def test_post_runs_returns_409_when_asset_capabilities_drifted_off() -> None:
             json={"name": "P", "method_id": method_id, "site_id": str(uuid4())},
         ).json()["practice_id"]
         asset_id = client.post(
-            "/assets", json={"name": "A", "level": "Enterprise", "parent_id": None}
+            "/assets",
+            json={
+                "name": "A",
+                "tier": "Unit",
+                "parent_id": None,
+                "facility_code": "cora",
+            },
         ).json()["asset_id"]
         client.post(f"/assets/{asset_id}/add-family", json={"family_id": cap_id})
         plan_id = client.post(

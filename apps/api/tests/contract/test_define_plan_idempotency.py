@@ -99,7 +99,7 @@ def test_post_plans_same_key_with_reordered_asset_ids_returns_same_plan_id() -> 
         client.post(f"/assets/{asset_id_1}/add-family", json={"family_id": cap_id})
         asset_id_2 = client.post(
             "/assets",
-            json={"name": "Asset2", "level": "Enterprise", "parent_id": None},
+            json={"name": "Asset2", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
         ).json()["asset_id"]
         # asset_id_2 doesn't need any capability beyond what's already
         # required (the single FlyMotion). Add it.

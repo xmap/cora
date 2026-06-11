@@ -82,12 +82,12 @@ def _asset(
     family_ids: frozenset[UUID] | None = None,
     ports: frozenset[AssetPort] | None = None,
 ) -> Asset:
-    from cora.equipment.aggregates.asset import AssetLevel
+    from cora.equipment.aggregates.asset import AssetTier
 
     return Asset(
         id=uuid4(),
         name=AssetName("a"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=family_ids if family_ids is not None else frozenset(),
         ports=ports if ports is not None else frozenset(),
@@ -160,9 +160,7 @@ def test_duplicate_role_name_raises_already_bound() -> None:
     asset = Asset(
         id=aid,
         name=AssetName("a"),
-        level=__import__(
-            "cora.equipment.aggregates.asset", fromlist=["AssetLevel"]
-        ).AssetLevel.DEVICE,
+        tier=__import__("cora.equipment.aggregates.asset", fromlist=["AssetTier"]).AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=frozenset(),
         ports=frozenset(),
@@ -211,9 +209,7 @@ def test_role_name_not_declared_on_method_raises_not_declared() -> None:
     asset = Asset(
         id=aid,
         name=AssetName("a"),
-        level=__import__(
-            "cora.equipment.aggregates.asset", fromlist=["AssetLevel"]
-        ).AssetLevel.DEVICE,
+        tier=__import__("cora.equipment.aggregates.asset", fromlist=["AssetTier"]).AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=frozenset(),
         ports=frozenset(),
@@ -271,9 +267,7 @@ def test_family_mismatch_raises_family_mismatch() -> None:
     asset = Asset(
         id=aid,
         name=AssetName("a"),
-        level=__import__(
-            "cora.equipment.aggregates.asset", fromlist=["AssetLevel"]
-        ).AssetLevel.DEVICE,
+        tier=__import__("cora.equipment.aggregates.asset", fromlist=["AssetTier"]).AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=frozenset({uuid4()}),  # different family
         ports=frozenset(),
@@ -320,9 +314,7 @@ def test_port_coverage_missing_raises_port_coverage_not_satisfied() -> None:
     asset = Asset(
         id=aid,
         name=AssetName("a"),
-        level=__import__(
-            "cora.equipment.aggregates.asset", fromlist=["AssetLevel"]
-        ).AssetLevel.DEVICE,
+        tier=__import__("cora.equipment.aggregates.asset", fromlist=["AssetTier"]).AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=frozenset({fid}),
         ports=frozenset(
@@ -371,9 +363,7 @@ def test_happy_path_emits_plan_role_bound_event() -> None:
     asset = Asset(
         id=aid,
         name=AssetName("a"),
-        level=__import__(
-            "cora.equipment.aggregates.asset", fromlist=["AssetLevel"]
-        ).AssetLevel.DEVICE,
+        tier=__import__("cora.equipment.aggregates.asset", fromlist=["AssetTier"]).AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=frozenset({fid}),
         ports=frozenset(
@@ -406,12 +396,12 @@ def _device_asset(
     family_ids: frozenset[UUID],
     ports: frozenset[AssetPort],
 ) -> Asset:
-    from cora.equipment.aggregates.asset import AssetLevel
+    from cora.equipment.aggregates.asset import AssetTier
 
     return Asset(
         id=asset_id,
         name=AssetName("a"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=family_ids,
         ports=ports,

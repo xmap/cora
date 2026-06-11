@@ -15,8 +15,8 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
     AssetLifecycle,
+    AssetTier,
 )
 from cora.equipment.features import decommission_asset, register_asset
 from cora.equipment.features.decommission_asset import DecommissionAsset
@@ -64,7 +64,7 @@ async def test_start_procedure_persists_event_to_postgres_with_active_target_ass
 
     # Seed Asset (Active by default after register).
     await register_asset.bind(deps)(
-        RegisterAsset(name="EigerDetector", level=AssetLevel.DEVICE, parent_id=site_id),
+        RegisterAsset(name="EigerDetector", tier=AssetTier.DEVICE, parent_id=site_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -128,7 +128,7 @@ async def test_start_procedure_rejects_decommissioned_target_asset_in_postgres(
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="StaleDetector", level=AssetLevel.DEVICE, parent_id=site_id),
+        RegisterAsset(name="StaleDetector", tier=AssetTier.DEVICE, parent_id=site_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

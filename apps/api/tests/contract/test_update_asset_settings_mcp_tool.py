@@ -71,7 +71,7 @@ def _setup_asset_with_schemaful_capability(client: TestClient, headers: dict[str
         headers,
         call_id=12,
         name="register_asset",
-        arguments={"name": "ANL", "level": "Enterprise", "parent_id": None},
+        arguments={"name": "ANL", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
     )
     asset_id = UUID(asset_body["result"]["structuredContent"]["asset_id"])  # type: ignore[index]
 

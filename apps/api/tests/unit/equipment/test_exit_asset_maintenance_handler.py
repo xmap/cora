@@ -13,9 +13,9 @@ import pytest
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
     AssetCannotExitMaintenanceError,
-    AssetLevel,
     AssetLifecycle,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import (
     activate_asset,
@@ -59,7 +59,7 @@ def _build_deps(
 async def _register_activate_enter(deps: Kernel) -> UUID:
     """Helper: drive an asset all the way to Maintenance lifecycle."""
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -135,7 +135,7 @@ async def test_handler_raises_cannot_exit_when_already_active() -> None:
     store = InMemoryEventStore()
     deps = _build_deps(event_store=store)
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

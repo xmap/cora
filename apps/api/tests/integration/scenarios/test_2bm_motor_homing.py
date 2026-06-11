@@ -111,12 +111,12 @@ _NOW = datetime(2026, 5, 17, 9, 30, 0, tzinfo=UTC)
 _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000352bb")
 
-# Facility hierarchy mnemonic hex tags: e=enterprise, 5=site, 7=area (sector), a=unit.
-# The facility-install block (actor + Argonne/APS/Unit + Devices) is consumed
-# by `install_aps_unit` via `facility_id_prefix(...)`.
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000352e01")
+# The beamline Unit is the ROOT Asset (facility-anchored via facility_code);
+# Devices hang off it. The facility-install block (actor + Unit + Devices) is
+# consumed by `install_aps_unit` via `facility_id_prefix(...)`.
+# `_APS_SITE_ID` is an opaque practice-site UUID for the Practice (NOT an
+# Asset tier); it is unrelated to the facility hierarchy.
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000352501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000352701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000352a01")
 
 # Capabilities (5: 3 motion controllers + rotary + linear). Each
@@ -230,9 +230,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -362,9 +359,6 @@ async def test_motor_homing_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
     )
@@ -589,8 +583,6 @@ async def test_motor_homing_plays_out_end_to_end(
     # ----- Assert: facility hierarchy landed -----
 
     for asset_id in (
-        _ARGONNE_ENTERPRISE_ID,
-        _APS_SITE_ID,
         _2BM_UNIT_ID,
         _ASSET_AEROTECH_ENSEMBLE_ID,
         _ASSET_OMS_VME58_2BMB_DRIVE_ID,

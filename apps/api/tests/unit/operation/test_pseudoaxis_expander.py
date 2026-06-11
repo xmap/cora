@@ -67,7 +67,7 @@ async def _seed_pseudoaxis_asset(
     registered = AssetRegistered(
         asset_id=asset_id,
         name="VirtualAxis",
-        level="Device",
+        tier="Device",
         parent_id=UUID("01900000-0000-7000-8000-00000000b000"),
         occurred_at=_NOW,
         commissioned_by=ActorId(uuid4()),

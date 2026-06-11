@@ -11,7 +11,7 @@ from cora.api.main import create_app
 def _register_asset(client: TestClient) -> str:
     response = client.post(
         "/assets",
-        json={"name": "Detector-X", "level": "Device", "parent_id": str(uuid4())},
+        json={"name": "Detector-X", "tier": "Device", "parent_id": str(uuid4())},
     )
     assert response.status_code == 201, response.text
     asset_id: str = response.json()["asset_id"]
@@ -111,7 +111,7 @@ def test_register_asset_route_accepts_owners_field() -> None:
             "/assets",
             json={
                 "name": "Detector-X",
-                "level": "Device",
+                "tier": "Device",
                 "parent_id": str(uuid4()),
                 "owners": [
                     {
@@ -133,7 +133,7 @@ def test_register_asset_route_owners_field_optional() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/assets",
-            json={"name": "Detector-X", "level": "Device", "parent_id": str(uuid4())},
+            json={"name": "Detector-X", "tier": "Device", "parent_id": str(uuid4())},
         )
     assert response.status_code == 201, response.text
 
@@ -145,7 +145,7 @@ def test_register_asset_route_owners_field_validates_pairing() -> None:
             "/assets",
             json={
                 "name": "Detector-X",
-                "level": "Device",
+                "tier": "Device",
                 "parent_id": str(uuid4()),
                 "owners": [
                     {
@@ -166,7 +166,7 @@ def test_register_asset_route_409_when_payload_owner_names_collide() -> None:
             "/assets",
             json={
                 "name": "Detector-X",
-                "level": "Device",
+                "tier": "Device",
                 "parent_id": str(uuid4()),
                 "owners": [
                     {"name": "HZB", "contact": "a@hzb.de"},

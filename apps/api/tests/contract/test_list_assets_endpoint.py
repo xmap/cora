@@ -22,12 +22,12 @@ def test_get_assets_returns_empty_page_with_no_data(client: TestClient) -> None:
 
 @pytest.mark.contract
 @pytest.mark.parametrize(
-    "level",
-    ["Enterprise", "Site", "Area", "Unit", "Component", "Device"],
+    "tier",
+    ["Unit", "Component", "Device"],
 )
-def test_get_assets_accepts_each_level(client: TestClient, level: str) -> None:
+def test_get_assets_accepts_each_tier(client: TestClient, tier: str) -> None:
     with client:
-        response = client.get(f"/assets?level={level}")
+        response = client.get(f"/assets?tier={tier}")
     assert response.status_code == 200
 
 
@@ -43,10 +43,10 @@ def test_get_assets_accepts_each_lifecycle(client: TestClient, lifecycle: str) -
 
 
 @pytest.mark.contract
-def test_get_assets_rejects_unknown_level_with_422(client: TestClient) -> None:
-    """Lowercase 'site' is NOT in the Literal."""
+def test_get_assets_rejects_unknown_tier_with_422(client: TestClient) -> None:
+    """Lowercase 'unit' is NOT in the Literal (PascalCase only)."""
     with client:
-        response = client.get("/assets?level=site")
+        response = client.get("/assets?tier=unit")
     assert response.status_code == 422
 
 
@@ -98,5 +98,5 @@ def test_get_assets_combines_filters(client: TestClient) -> None:
     import uuid
 
     with client:
-        response = client.get(f"/assets?level=Device&lifecycle=Active&parent_id={uuid.uuid4()}")
+        response = client.get(f"/assets?tier=Device&lifecycle=Active&parent_id={uuid.uuid4()}")
     assert response.status_code == 200

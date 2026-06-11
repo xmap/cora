@@ -29,8 +29,8 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
     AssetRegistered,
+    AssetTier,
 )
 from cora.equipment.features import register_asset
 from cora.equipment.features.register_asset import RegisterAsset
@@ -50,13 +50,11 @@ if TYPE_CHECKING:
 
 
 _NAME = printable_ascii_text(min_size=1, max_size=200)
-_NON_ENTERPRISE_LEVELS = st.sampled_from(
+_TIERS = st.sampled_from(
     [
-        AssetLevel.SITE,
-        AssetLevel.AREA,
-        AssetLevel.UNIT,
-        AssetLevel.COMPONENT,
-        AssetLevel.DEVICE,
+        AssetTier.UNIT,
+        AssetTier.COMPONENT,
+        AssetTier.DEVICE,
     ]
 )
 _ALTERNATE_IDENTIFIER_KINDS = st.sampled_from(list(AlternateIdentifierKind))
@@ -76,7 +74,7 @@ _ALTERNATE_IDENTIFIERS = st.frozensets(
 @pytest.mark.unit
 @given(
     name=_NAME,
-    level=_NON_ENTERPRISE_LEVELS,
+    tier=_TIERS,
     parent_id=st.uuids(),
     model_id=st.one_of(st.none(), st.uuids()),
     now=aware_datetimes(),
@@ -84,7 +82,7 @@ _ALTERNATE_IDENTIFIERS = st.frozensets(
 )
 def test_register_asset_propagates_model_id_verbatim_into_event(
     name: str,
-    level: AssetLevel,
+    tier: AssetTier,
     parent_id: UUID,
     model_id: UUID | None,
     now: datetime,
@@ -95,7 +93,7 @@ def test_register_asset_propagates_model_id_verbatim_into_event(
     stream; that is the handler's responsibility per Lock B."""
     command = RegisterAsset(
         name=name,
-        level=level,
+        tier=tier,
         parent_id=parent_id,
         model_id=model_id,
     )
@@ -116,7 +114,7 @@ def test_register_asset_propagates_model_id_verbatim_into_event(
 @pytest.mark.unit
 @given(
     name=_NAME,
-    level=_NON_ENTERPRISE_LEVELS,
+    tier=_TIERS,
     parent_id=st.uuids(),
     model_id=st.one_of(st.none(), st.uuids()),
     now=aware_datetimes(),
@@ -124,7 +122,7 @@ def test_register_asset_propagates_model_id_verbatim_into_event(
 )
 def test_register_asset_is_pure_across_model_id_inputs(
     name: str,
-    level: AssetLevel,
+    tier: AssetTier,
     parent_id: UUID,
     model_id: UUID | None,
     now: datetime,
@@ -134,7 +132,7 @@ def test_register_asset_is_pure_across_model_id_inputs(
     events. Pins decider purity over the new model_id axis."""
     command = RegisterAsset(
         name=name,
-        level=level,
+        tier=tier,
         parent_id=parent_id,
         model_id=model_id,
     )
@@ -160,7 +158,7 @@ def test_register_asset_is_pure_across_model_id_inputs(
 @pytest.mark.unit
 @given(
     name=_NAME,
-    level=_NON_ENTERPRISE_LEVELS,
+    tier=_TIERS,
     parent_id=st.uuids(),
     alternate_identifiers=_ALTERNATE_IDENTIFIERS,
     now=aware_datetimes(),
@@ -168,7 +166,7 @@ def test_register_asset_is_pure_across_model_id_inputs(
 )
 def test_register_asset_propagates_alternate_identifiers_verbatim_into_event(
     name: str,
-    level: AssetLevel,
+    tier: AssetTier,
     parent_id: UUID,
     alternate_identifiers: frozenset[AlternateIdentifier],
     now: datetime,
@@ -180,7 +178,7 @@ def test_register_asset_propagates_alternate_identifiers_verbatim_into_event(
     semantics on the command structurally forbid in-Asset duplicates."""
     command = RegisterAsset(
         name=name,
-        level=level,
+        tier=tier,
         parent_id=parent_id,
         alternate_identifiers=alternate_identifiers,
     )
@@ -201,7 +199,7 @@ def test_register_asset_propagates_alternate_identifiers_verbatim_into_event(
 @pytest.mark.unit
 @given(
     name=_NAME,
-    level=_NON_ENTERPRISE_LEVELS,
+    tier=_TIERS,
     parent_id=st.uuids(),
     alternate_identifiers=_ALTERNATE_IDENTIFIERS,
     now=aware_datetimes(),
@@ -209,7 +207,7 @@ def test_register_asset_propagates_alternate_identifiers_verbatim_into_event(
 )
 def test_register_asset_is_pure_across_alternate_identifiers_inputs(
     name: str,
-    level: AssetLevel,
+    tier: AssetTier,
     parent_id: UUID,
     alternate_identifiers: frozenset[AlternateIdentifier],
     now: datetime,
@@ -220,7 +218,7 @@ def test_register_asset_is_pure_across_alternate_identifiers_inputs(
     alternate_identifiers axis."""
     command = RegisterAsset(
         name=name,
-        level=level,
+        tier=tier,
         parent_id=parent_id,
         alternate_identifiers=alternate_identifiers,
     )

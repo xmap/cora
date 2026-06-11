@@ -42,7 +42,7 @@ def _setup_chain(client: TestClient) -> tuple[str, str, str]:
     ).json()["practice_id"]
     asset_id = client.post(
         "/assets",
-        json={"name": "TestAsset", "level": "Enterprise", "parent_id": None},
+        json={"name": "TestAsset", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
     ).json()["asset_id"]
     add_resp = client.post(f"/assets/{asset_id}/add-family", json={"family_id": cap_id})
     assert add_resp.status_code == 204
@@ -186,7 +186,7 @@ def test_post_plans_returns_404_when_referenced_method_does_not_exist() -> None:
         ).json()["practice_id"]
         asset_id = client.post(
             "/assets",
-            json={"name": "TestAsset", "level": "Enterprise", "parent_id": None},
+            json={"name": "TestAsset", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
         ).json()["asset_id"]
         response = client.post(
             "/plans",
@@ -255,7 +255,7 @@ def test_post_plans_returns_409_when_method_is_deprecated() -> None:
         ).json()["practice_id"]
         asset_id = client.post(
             "/assets",
-            json={"name": "TestAsset", "level": "Enterprise", "parent_id": None},
+            json={"name": "TestAsset", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
         ).json()["asset_id"]
         client.post(f"/assets/{asset_id}/add-family", json={"family_id": cap_id})
         # Deprecate Method AFTER Practice has been bound to it.
@@ -321,7 +321,7 @@ def test_post_plans_returns_409_when_capabilities_not_satisfied() -> None:
         ).json()["practice_id"]
         asset_id = client.post(
             "/assets",
-            json={"name": "TestAsset", "level": "Enterprise", "parent_id": None},
+            json={"name": "TestAsset", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
         ).json()["asset_id"]
         # Asset has different capability than Method needs.
         client.post(f"/assets/{asset_id}/add-family", json={"family_id": different_cap})

@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel, AssetNotFoundError
+from cora.equipment.aggregates.asset import AssetNotFoundError, AssetTier
 from cora.equipment.aggregates.asset.events import (
     AssetDecommissioned,
     AssetRegistered,
@@ -104,7 +104,7 @@ async def _seed_asset(
     register_event = AssetRegistered(
         asset_id=asset_id,
         name="TestAsset",
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         occurred_at=_PRIOR,
         commissioned_by=ActorId(uuid4()),

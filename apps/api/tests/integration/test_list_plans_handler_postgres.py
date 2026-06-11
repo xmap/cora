@@ -22,7 +22,7 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.add_asset_family import bind as bind_add_family
 from cora.equipment.features.define_family import DefineFamily
@@ -79,7 +79,9 @@ async def _seed_chain(deps: Kernel) -> tuple[UUID, UUID, UUID]:
         correlation_id=_CORRELATION_ID,
     )
     asset_id = await bind_register_asset(deps)(
-        RegisterAsset(name="EigerDetector", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="EigerDetector", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

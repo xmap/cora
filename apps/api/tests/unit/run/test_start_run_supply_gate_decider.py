@@ -21,9 +21,9 @@ import pytest
 
 from cora.equipment.aggregates.asset import (
     Asset,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
+    AssetTier,
 )
 from cora.infrastructure.ports.clearance_lookup import ClearanceReference
 from cora.infrastructure.ports.supply_lookup import SupplyReference
@@ -78,7 +78,7 @@ def _context(
     asset = Asset(
         id=asset_id,
         name=AssetName("EigerDetector"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset({cap}),

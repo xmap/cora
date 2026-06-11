@@ -14,7 +14,6 @@ import pytest
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
     Asset,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetTier,
@@ -61,7 +60,7 @@ async def test_handler_returns_asset_for_known_id() -> None:
     """Round-trip: register + get."""
     deps = _build_deps()
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -76,7 +75,6 @@ async def test_handler_returns_asset_for_known_id() -> None:
     assert asset == Asset(
         id=_NEW_ID,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
         parent_id=_PARENT_ID,
         lifecycle=AssetLifecycle.COMMISSIONED,
         commissioned_at=_NOW,
@@ -86,13 +84,13 @@ async def test_handler_returns_asset_for_known_id() -> None:
 
 
 @pytest.mark.unit
-async def test_handler_returns_asset_with_null_parent_for_enterprise_root() -> None:
-    """Pinned: Enterprise roots round-trip through fold-on-read with
-    parent_id=None preserved (this is the only level where parent_id
-    is null; payload null → Python None must survive the fold)."""
+async def test_handler_returns_asset_with_null_parent_for_root() -> None:
+    """Pinned: roots round-trip through fold-on-read with
+    parent_id=None preserved (a root has a null parent; payload null →
+    Python None must survive the fold)."""
     deps = _build_deps()
     await register_asset.bind(deps)(
-        RegisterAsset(name="ANL", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="ANL", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -105,7 +103,7 @@ async def test_handler_returns_asset_with_null_parent_for_enterprise_root() -> N
     )
 
     assert asset is not None
-    assert asset.level is AssetLevel.ENTERPRISE
+    assert asset.tier is AssetTier.UNIT
     assert asset.parent_id is None
 
 
@@ -115,7 +113,7 @@ async def test_handler_reflects_lifecycle_after_activate() -> None:
     A change after register must surface in the next read."""
     deps = _build_deps()
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -142,7 +140,7 @@ async def test_handler_reflects_parent_after_relocate() -> None:
     AssetRelocated evolver arm must be wired into the read path."""
     deps = _build_deps()
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

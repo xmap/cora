@@ -43,7 +43,6 @@ from cora.equipment.aggregates.asset import (
     AssetFamilyAdded,
     AssetFamilyRemoved,
     AssetFaulted,
-    AssetLevel,
     AssetLifecycle,
     AssetMaintenanceEntered,
     AssetMaintenanceExited,
@@ -58,6 +57,7 @@ from cora.equipment.aggregates.asset import (
     AssetRelocated,
     AssetRestored,
     AssetSettingsUpdated,
+    AssetTier,
     evolve,
     fold,
 )
@@ -77,7 +77,7 @@ def _prior(*, lifecycle: AssetLifecycle = AssetLifecycle.ACTIVE) -> Asset:
     return Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         commissioned_at=_COMMISSIONED_AT,
@@ -172,7 +172,7 @@ def _seed_prior_for(transition: type) -> Asset:
     return Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=_pick_lifecycle_for(transition),
         owners=owners,
@@ -246,7 +246,7 @@ def test_evolve_asset_registered_sets_commissioned_at_from_occurred_at() -> None
         AssetRegistered(
             asset_id=uuid4(),
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -266,7 +266,7 @@ def test_evolve_asset_decommissioned_sets_decommissioned_at_and_preserves_commis
             AssetRegistered(
                 asset_id=asset_id,
                 name="X",
-                level="Unit",
+                tier="Unit",
                 parent_id=uuid4(),
                 occurred_at=_COMMISSIONED_AT,
                 commissioned_by=_TEST_ACTOR_ID,

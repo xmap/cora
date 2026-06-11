@@ -18,7 +18,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import activate_asset, register_asset, relocate_asset
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.register_asset import RegisterAsset
@@ -49,7 +49,7 @@ async def test_relocate_asset_persists_event_from_commissioned_state(
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -93,7 +93,7 @@ async def test_relocate_asset_persists_event_from_active_state(
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-32-ID", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-32-ID", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

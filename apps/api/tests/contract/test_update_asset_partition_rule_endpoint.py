@@ -28,7 +28,7 @@ def _define_family(client: TestClient, *, name: str = "PseudoAxis") -> UUID:
 def _register_asset(client: TestClient) -> UUID:
     response = client.post(
         "/assets",
-        json={"name": "VirtualAxis-X", "level": "Device", "parent_id": str(uuid4())},
+        json={"name": "VirtualAxis-X", "tier": "Device", "parent_id": str(uuid4())},
     )
     assert response.status_code == 201, response.text
     return UUID(response.json()["asset_id"])

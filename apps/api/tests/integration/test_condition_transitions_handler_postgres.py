@@ -19,7 +19,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import (
     activate_asset,
     degrade_asset,
@@ -59,7 +59,7 @@ async def test_degrade_asset_persists_event_with_reason(
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="Detector-FLIR-Oryx-001", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="Detector-FLIR-Oryx-001", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -106,7 +106,7 @@ async def test_fault_then_restore_round_trip(
     deps = build_postgres_deps(db_pool, now=_NOW, ids=ids)
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="Pump-XDS35i", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="Pump-XDS35i", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -156,7 +156,7 @@ async def test_no_op_when_already_in_target_condition(
     deps = build_postgres_deps(db_pool, now=_NOW, ids=ids)
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="Stage-A3200", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="Stage-A3200", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -205,7 +205,7 @@ async def test_condition_preserved_across_lifecycle_transition(
     deps = build_postgres_deps(db_pool, now=_NOW, ids=ids)
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="Pump-Y", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="Pump-Y", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

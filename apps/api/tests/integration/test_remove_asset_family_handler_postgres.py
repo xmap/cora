@@ -10,7 +10,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel, load_asset
+from cora.equipment.aggregates.asset import AssetTier, load_asset
 from cora.equipment.features import (
     add_asset_family,
     register_asset,
@@ -44,7 +44,7 @@ async def test_remove_asset_family_persists_event_and_drops_from_fold(
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

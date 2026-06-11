@@ -70,7 +70,7 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_asset import bind as bind_register_asset
 from cora.infrastructure.adapters.in_memory_asset_lookup import (
@@ -125,8 +125,9 @@ async def test_supply_containing_asset_id_resolves_to_real_asset_row(
     await bind_register_asset(asset_deps)(
         RegisterAsset(
             name=f"APS-{asset_id.hex[:8]}",
-            level=AssetLevel.ENTERPRISE,
+            tier=AssetTier.UNIT,
             parent_id=None,
+            facility_code="cora",
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -139,7 +140,7 @@ async def test_supply_containing_asset_id_resolves_to_real_asset_row(
     asset_lookup.register(
         asset_id=asset_id,
         name=f"APS-{asset_id.hex[:8]}",
-        level="Enterprise",
+        tier="Unit",
     )
     supply_id = uuid4()
     supply_deps = build_postgres_deps(

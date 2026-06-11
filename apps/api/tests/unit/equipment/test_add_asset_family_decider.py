@@ -17,10 +17,10 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetCannotAddFamilyError,
     AssetFamilyAdded,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import add_asset_family
 from cora.equipment.features.add_asset_family import AddAssetFamily
@@ -36,7 +36,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         family_ids=family_ids,  # type: ignore[arg-type]

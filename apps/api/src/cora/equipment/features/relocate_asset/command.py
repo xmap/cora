@@ -9,9 +9,9 @@ emits an `AssetRelocated` event carrying both. This keeps the
 caller-side API tight (no need to assert current parent) while
 the audit log still records both sides.
 
-`to_parent_id` is `UUID` (non-null in the type) — Enterprise
-assets cannot relocate (they're roots) per the decider's
-hierarchy guard, so there's no scenario where you'd "relocate to
+`to_parent_id` is `UUID` (non-null in the type) — root Assets
+(parent_id=None) cannot relocate per the decider's anchoring
+guard, so there's no scenario where you'd "relocate to
 no-parent". `reason` is operator-supplied free text (validated at
 the API boundary, not by a domain VO).
 """

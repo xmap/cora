@@ -23,7 +23,7 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
-from cora.equipment.aggregates.asset import AssetCondition, AssetLevel, AssetLifecycle
+from cora.equipment.aggregates.asset import AssetCondition, AssetLifecycle, AssetTier
 from cora.equipment.aggregates.family import Affordance
 from cora.equipment.features import (
     add_asset_family,
@@ -95,7 +95,12 @@ async def test_inspect_plan_binding_returns_satisfied_against_real_postgres(
         correlation_id=_CORRELATION_ID,
     )
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="Camera-04", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="Camera-04",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -187,7 +192,12 @@ async def test_inspect_plan_binding_enumerates_candidates_for_missing_affordance
         correlation_id=_CORRELATION_ID,
     )
     wired_asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="Wired-Rotary", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="Wired-Rotary",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -197,7 +207,12 @@ async def test_inspect_plan_binding_enumerates_candidates_for_missing_affordance
         correlation_id=_CORRELATION_ID,
     )
     candidate_a_id = await register_asset.bind(deps)(
-        RegisterAsset(name="MarkingPandA", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="MarkingPandA",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -207,7 +222,12 @@ async def test_inspect_plan_binding_enumerates_candidates_for_missing_affordance
         correlation_id=_CORRELATION_ID,
     )
     candidate_b_id = await register_asset.bind(deps)(
-        RegisterAsset(name="FullCoverageStage", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="FullCoverageStage",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -303,7 +323,12 @@ async def test_inspect_plan_binding_enumerates_candidates_for_multiple_missing_a
     )
     # No wired Asset; both Rotatable + Marking are missing.
     candidate_id = await register_asset.bind(deps)(
-        RegisterAsset(name="FullStage", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="FullStage",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -313,7 +338,12 @@ async def test_inspect_plan_binding_enumerates_candidates_for_multiple_missing_a
         correlation_id=_CORRELATION_ID,
     )
     bystander_id = await register_asset.bind(deps)(
-        RegisterAsset(name="Bystander", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="Bystander",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -388,7 +418,12 @@ async def test_inspect_plan_binding_returns_empty_candidates_when_no_facility_fa
         correlation_id=_CORRELATION_ID,
     )
     wired_id = await register_asset.bind(deps)(
-        RegisterAsset(name="WiredRotary", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="WiredRotary",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -460,12 +495,22 @@ async def test_inspect_plan_binding_surfaces_degraded_candidate_state(
         correlation_id=_CORRELATION_ID,
     )
     bystander_id = await register_asset.bind(deps)(
-        RegisterAsset(name="Bystander", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="Bystander",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     degraded_candidate_id = await register_asset.bind(deps)(
-        RegisterAsset(name="TouchyPandA", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="TouchyPandA",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

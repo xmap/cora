@@ -24,10 +24,10 @@ from cora.equipment.aggregates.asset import (
     AssetDecommissioned,
     AssetHasFixtureBindingError,
     AssetIsInstalledError,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import decommission_asset
 from cora.equipment.features.decommission_asset import (
@@ -50,7 +50,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         fixture_id=fixture_id,

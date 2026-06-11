@@ -45,7 +45,7 @@ async def seed_active_asset(
     registered = AssetRegistered(
         asset_id=asset_id,
         name="Goniometer-1",
-        level="Enterprise",
+        tier="Unit",
         parent_id=None,
         occurred_at=now,
         commissioned_by=ActorId(uuid4()),

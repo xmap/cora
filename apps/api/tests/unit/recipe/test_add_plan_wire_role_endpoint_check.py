@@ -43,12 +43,12 @@ def _asset(
     *,
     ports: frozenset[AssetPort] | None = None,
 ) -> Asset:
-    from cora.equipment.aggregates.asset import AssetLevel
+    from cora.equipment.aggregates.asset import AssetTier
 
     return Asset(
         id=asset_id,
         name=AssetName("a"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=frozenset(),
         ports=ports if ports is not None else frozenset(),

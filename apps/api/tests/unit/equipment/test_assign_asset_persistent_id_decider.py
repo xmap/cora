@@ -7,13 +7,13 @@ import pytest
 
 from cora.equipment.aggregates.asset import (
     Asset,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
     AssetPersistentIdAlreadyAssignedError,
     AssetPersistentIdAssigned,
     AssetPersistentIdAssignmentForbiddenError,
+    AssetTier,
 )
 from cora.equipment.features import assign_asset_persistent_id
 from cora.equipment.features.assign_asset_persistent_id.command import AssignAssetPersistentId
@@ -35,7 +35,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("Detector-X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         persistent_id=persistent_id,

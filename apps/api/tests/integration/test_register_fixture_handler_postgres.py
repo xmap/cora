@@ -20,7 +20,7 @@ from cora.equipment.aggregates.assembly import (
     SlotName,
     TemplateSlot,
 )
-from cora.equipment.aggregates.asset import AssetLevel, AssetLifecycle
+from cora.equipment.aggregates.asset import AssetLifecycle, AssetTier
 from cora.equipment.aggregates.fixture import SlotAssetBinding
 from cora.equipment.features import (
     add_asset_family,
@@ -166,7 +166,7 @@ async def test_register_fixture_rejects_decommissioned_asset_with_not_attachable
     # decommission guards do not fire because the Asset is not
     # bound to a Fixture and not installed in any Mount).
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="RetiredCam", level=AssetLevel.DEVICE, parent_id=uuid4()),
+        RegisterAsset(name="RetiredCam", tier=AssetTier.DEVICE, parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -235,7 +235,7 @@ async def test_register_fixture_rejects_orphan_asset_with_not_installed_error(
         correlation_id=_CORRELATION_ID,
     )
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="OrphanCam-1", level=AssetLevel.DEVICE, parent_id=uuid4()),
+        RegisterAsset(name="OrphanCam-1", tier=AssetTier.DEVICE, parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

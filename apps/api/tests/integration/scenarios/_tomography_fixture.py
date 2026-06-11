@@ -45,8 +45,7 @@ shapes today.
 
 ```python
 _TOMO_ASSETS = TomographyAssetIds(
-    argonne_id=_ARGONNE_ID, aps_site_id=_APS_ID,
-    sector_id=_SECTOR_ID, unit_id=_UNIT_ID,
+    unit_id=_UNIT_ID,
     rotary_cap_id=_CAP_ROTARY_ID, linear_x_cap_id=_CAP_LINEAR_ID,
     camera_cap_id=_CAP_CAMERA_ID, scintillator_cap_id=_CAP_SCIN_ID,
     rotary_id=_ASSET_ROTARY_ID, linear_x_id=_ASSET_LINEAR_ID,
@@ -132,11 +131,8 @@ SCINTILLATOR_CAP_NAME = "Scintillator"
 @dataclass(frozen=True)
 class TomographyAssetIds:
     """Scenario-supplied UUIDs for the canonical 4-Device tomography chain
-    plus the facility hierarchy that hosts them."""
+    plus the root beamline Unit that hosts them."""
 
-    argonne_id: UUID
-    aps_site_id: UUID
-    sector_id: UUID
     unit_id: UUID
     rotary_cap_id: UUID
     linear_x_cap_id: UUID
@@ -171,9 +167,6 @@ def tomography_install_id_prefix(*, asset_ids: TomographyAssetIds) -> list[UUID]
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=asset_ids.argonne_id,
-            aps_site_id=asset_ids.aps_site_id,
-            sector_id=asset_ids.sector_id,
             unit_id=asset_ids.unit_id,
             devices=_tomography_devices(asset_ids),
         ),
@@ -203,13 +196,9 @@ async def install_and_activate_tomography_assets(
         deps,
         profile_store=profile_store,
         correlation_id=correlation_id,
-        argonne_id=asset_ids.argonne_id,
-        aps_site_id=asset_ids.aps_site_id,
-        sector_id=asset_ids.sector_id,
         unit_id=asset_ids.unit_id,
         devices=_tomography_devices(asset_ids),
         unit_name="2-BM",
-        sector_name="Sector 2",
     )
     for aid in (
         asset_ids.rotary_id,

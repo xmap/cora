@@ -14,7 +14,7 @@ from cora.api.main import create_app
 def _register_and_add_family(client: TestClient, family_id: str) -> str:
     asset_response = client.post(
         "/assets",
-        json={"name": "APS-2BM", "level": "Unit", "parent_id": str(uuid4())},
+        json={"name": "APS-2BM", "tier": "Unit", "parent_id": str(uuid4())},
     )
     assert asset_response.status_code == 201
     asset_id: str = asset_response.json()["asset_id"]
@@ -72,7 +72,7 @@ def test_post_remove_family_returns_409_when_family_not_present() -> None:
         # Register but don't add the family.
         asset_response = client.post(
             "/assets",
-            json={"name": "APS-2BM", "level": "Unit", "parent_id": str(uuid4())},
+            json={"name": "APS-2BM", "tier": "Unit", "parent_id": str(uuid4())},
         )
         asset_id: str = asset_response.json()["asset_id"]
         response = client.post(f"/assets/{asset_id}/remove-family", json={"family_id": cap})

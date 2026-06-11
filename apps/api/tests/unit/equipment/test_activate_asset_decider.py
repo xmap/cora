@@ -9,10 +9,10 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetActivated,
     AssetCannotActivateError,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import activate_asset
 from cora.equipment.features.activate_asset import ActivateAsset
@@ -24,7 +24,7 @@ def _asset(*, lifecycle: AssetLifecycle = AssetLifecycle.COMMISSIONED) -> Asset:
     return Asset(
         id=uuid4(),
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=lifecycle,
     )

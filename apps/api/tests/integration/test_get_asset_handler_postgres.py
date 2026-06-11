@@ -13,9 +13,9 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
     AssetLifecycle,
     AssetName,
+    AssetTier,
 )
 from cora.equipment.features import get_asset, register_asset, relocate_asset
 from cora.equipment.features.get_asset import GetAsset
@@ -40,7 +40,7 @@ async def test_get_asset_loads_state_from_real_postgres(
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[asset_id, register_event_id])
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -54,7 +54,7 @@ async def test_get_asset_loads_state_from_real_postgres(
     assert asset is not None
     assert asset.id == asset_id
     assert asset.name == AssetName("APS-2BM")
-    assert asset.level is AssetLevel.UNIT
+    assert asset.tier is AssetTier.UNIT
     assert asset.parent_id == _PARENT_ID
     assert asset.lifecycle is AssetLifecycle.COMMISSIONED
 
@@ -77,7 +77,7 @@ async def test_get_asset_reflects_relocate_against_real_postgres(
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

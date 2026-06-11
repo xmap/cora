@@ -127,9 +127,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-00000003b5bb")
 
 # Facility hierarchy
 _ACTOR_OPERATOR_ID = _PRINCIPAL_ID
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-00000035be01")
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-00000035b501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-00000035b701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-00000035ba01")
 
 # Capabilities
@@ -171,9 +169,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -298,9 +293,6 @@ async def test_flat_baseline_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
     )

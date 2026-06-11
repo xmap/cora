@@ -13,7 +13,7 @@ def _register_asset_with_owner(client: TestClient, owner_name: str = "HZB") -> s
         "/assets",
         json={
             "name": "Detector-X",
-            "level": "Device",
+            "tier": "Device",
             "parent_id": str(uuid4()),
             "owners": [{"name": owner_name}],
         },

@@ -50,7 +50,7 @@ async def test_projection_writes_owners_on_register() -> None:
         {
             "asset_id": str(_ASSET_ID),
             "name": "X",
-            "level": "Unit",
+            "tier": "Unit",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -91,7 +91,7 @@ async def test_projection_omits_owners_defaults_to_empty_list_on_register() -> N
         {
             "asset_id": str(_ASSET_ID),
             "name": "X",
-            "level": "Unit",
+            "tier": "Unit",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -114,7 +114,7 @@ async def test_projection_sorts_owners_by_name_ascending_on_register() -> None:
         {
             "asset_id": str(_ASSET_ID),
             "name": "X",
-            "level": "Unit",
+            "tier": "Unit",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),

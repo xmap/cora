@@ -37,7 +37,7 @@ def _register_asset(client: TestClient, headers: dict[str, str], family_id: UUID
                 "name": "register_asset",
                 "arguments": {
                     "name": "Cam-1",
-                    "level": "Device",
+                    "tier": "Device",
                     "parent_id": str(uuid4()),
                 },
             },

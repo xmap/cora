@@ -20,7 +20,7 @@ def _register_asset_via_tool(client: TestClient, headers: dict[str, str]) -> UUI
                 "name": "register_asset",
                 "arguments": {
                     "name": "Detector-X",
-                    "level": "Device",
+                    "tier": "Device",
                     "parent_id": str(uuid4()),
                 },
             },
@@ -129,7 +129,7 @@ def test_mcp_register_equipment_asset_tool_accepts_owners_argument() -> None:
                     "name": "register_asset",
                     "arguments": {
                         "name": "X",
-                        "level": "Device",
+                        "tier": "Device",
                         "parent_id": str(uuid4()),
                         "owners": [{"name": "HZB", "contact": "ops@hzb.de"}],
                     },

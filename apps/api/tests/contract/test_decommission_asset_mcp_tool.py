@@ -25,7 +25,7 @@ def _register_asset_via_tool(client: TestClient, headers: dict[str, str]) -> UUI
                 "name": "register_asset",
                 "arguments": {
                     "name": "APS-2BM",
-                    "level": "Unit",
+                    "tier": "Unit",
                     "parent_id": str(uuid4()),
                 },
             },

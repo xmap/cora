@@ -33,11 +33,11 @@ def _setup_plan_with_two_assets_and_ports(client: TestClient) -> dict[str, Any]:
     ).json()["practice_id"]
     src_asset_id = client.post(
         "/assets",
-        json={"name": "PandABox", "level": "Enterprise", "parent_id": None},
+        json={"name": "PandABox", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
     ).json()["asset_id"]
     tgt_asset_id = client.post(
         "/assets",
-        json={"name": "Camera", "level": "Enterprise", "parent_id": None},
+        json={"name": "Camera", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
     ).json()["asset_id"]
     for asset_id in (src_asset_id, tgt_asset_id):
         client.post(f"/assets/{asset_id}/add-family", json={"family_id": cap_id})
@@ -119,7 +119,7 @@ def test_post_add_plan_wire_returns_409_on_fan_in_attempt() -> None:
         # Add a SECOND source-capable asset to the Plan
         second_src_id = client.post(
             "/assets",
-            json={"name": "PandABox2", "level": "Enterprise", "parent_id": None},
+            json={"name": "PandABox2", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
         ).json()["asset_id"]
         cap_id = client.post("/families", json={"name": "Trigger2", "affordances": []}).json()[
             "family_id"

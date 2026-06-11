@@ -27,10 +27,10 @@ from cora.equipment.aggregates._partition_rule import (
 )
 from cora.equipment.aggregates.asset.state import (
     Asset,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetPort,
+    AssetTier,
     PortDirection,
 )
 from cora.recipe.aggregates.plan import (
@@ -53,7 +53,7 @@ def _asset(
     return Asset(
         id=asset_id,
         name=AssetName("Test Asset"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=None,
         lifecycle=AssetLifecycle.ACTIVE,
         ports=ports,

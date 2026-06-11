@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.equipment.aggregates.assembly import SlotCardinality, SlotName, TemplateSlot
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.aggregates.fixture import Fixture, SlotAssetBinding
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features import (
@@ -53,7 +53,7 @@ async def _seed_fixture(deps: Kernel) -> UUID:
         correlation_id=_CORRELATION_ID,
     )
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="Cam-1", level=AssetLevel.DEVICE, parent_id=uuid4()),
+        RegisterAsset(name="Cam-1", tier=AssetTier.DEVICE, parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -143,9 +143,7 @@ _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000421bb")
 
 # Scenario tag: 421 (operations / debrief variant: EquipmentAbort).
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000421e01")
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000421501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000421701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000421a01")
 
 _CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000421c01")
@@ -230,9 +228,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -272,13 +267,9 @@ async def test_run_debrief_agent_fires_on_equipment_abort(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
         unit_name="2-BM",
-        sector_name="Sector 2",
     )
 
     for asset_id in (

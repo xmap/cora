@@ -14,10 +14,10 @@ from cora.api.main import create_app
 
 
 def _register_asset(client: TestClient, name: str = "APS-2BM") -> str:
-    """Helper: register a Unit-level asset under a synthetic parent."""
+    """Helper: register a Unit-tier asset under a synthetic parent."""
     response = client.post(
         "/assets",
-        json={"name": name, "level": "Unit", "parent_id": str(uuid4())},
+        json={"name": name, "tier": "Unit", "parent_id": str(uuid4())},
     )
     assert response.status_code == 201
     asset_id: str = response.json()["asset_id"]

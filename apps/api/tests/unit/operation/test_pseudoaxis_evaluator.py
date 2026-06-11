@@ -23,7 +23,7 @@ from cora.equipment.aggregates._partition_rule import (
     LookupTable,
     PartitionRuleKind,
 )
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.aggregates.asset.state import AssetNotFoundError
 from cora.equipment.features import (
     add_asset_family,
@@ -118,7 +118,7 @@ async def _setup_pseudoaxis_asset(
     """
     family_id = await _define_family_named(deps, name="PseudoAxis")
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="VirtualY", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="VirtualY", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

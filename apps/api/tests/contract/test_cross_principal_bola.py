@@ -63,7 +63,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.infrastructure.event_envelope import to_new_event
 from cora.safety.aggregates.clearance_template import clearance_template_stream_id
 from cora.trust.aggregates.policy.events import (
@@ -211,8 +211,9 @@ def _create_asset_as(client: TestClient, principal: UUID) -> UUID:
         "/assets",
         json={
             "name": "P1's asset",
-            "level": AssetLevel.ENTERPRISE.value,
+            "tier": AssetTier.UNIT.value,
             "parent_id": None,
+            "facility_code": "cora",
         },
         headers={"X-Principal-Id": str(principal)},
     )

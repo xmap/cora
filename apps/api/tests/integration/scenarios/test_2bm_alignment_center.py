@@ -167,12 +167,11 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000035bb")
 # block (actor + Argonne/APS/Unit + Devices) is consumed by `install_aps_unit`
 # via `facility_id_prefix(...)`; everything below is scenario-specific.
 
-# Asset hierarchy: Argonne (Enterprise) → APS (Site) → 2-BM (Unit). Devices
-# below hang off _2BM_UNIT_ID. Practice's site_id references _APS_SITE_ID.
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000350e01")
-_APS_SITE_ID = UUID("01900000-0000-7000-8000-000000350501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000350701")
+# Asset hierarchy: 2-BM (Unit, root) anchored to the self-Facility via
+# facility_code. Devices below hang off _2BM_UNIT_ID. Practice's site_id
+# references _APS_SITE_ID (an opaque practice-site UUID, NOT an Asset tier).
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000350a01")
+_APS_SITE_ID = UUID("01900000-0000-7000-8000-000000350501")
 
 # Family ids (4 caps x 2 ids/define = 8)
 _CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000035c01")
@@ -378,9 +377,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4  # alias for brevity
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -516,9 +512,6 @@ async def test_center_alignment_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
     )

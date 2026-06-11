@@ -155,9 +155,9 @@ def test_bind_plan_role_decider_rejects_wire_then_bind_ordering_behaviorally() -
 
     from cora.equipment.aggregates.asset import (
         Asset,
-        AssetLevel,
         AssetName,
         AssetPort,
+        AssetTier,
         PortDirection,
     )
     from cora.recipe.aggregates.method import (
@@ -224,7 +224,7 @@ def test_bind_plan_role_decider_rejects_wire_then_bind_ordering_behaviorally() -
     asset = Asset(
         id=candidate_aid,
         name=AssetName("a"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=frozenset({fid}),
         ports=frozenset(

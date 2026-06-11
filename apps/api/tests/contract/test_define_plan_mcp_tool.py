@@ -27,7 +27,7 @@ def _setup_chain_via_rest(client: TestClient) -> tuple[str, str]:
     ).json()["practice_id"]
     asset_id = client.post(
         "/assets",
-        json={"name": "TestAsset", "level": "Enterprise", "parent_id": None},
+        json={"name": "TestAsset", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
     ).json()["asset_id"]
     client.post(f"/assets/{asset_id}/add-family", json={"family_id": cap_id})
     return practice_id, asset_id

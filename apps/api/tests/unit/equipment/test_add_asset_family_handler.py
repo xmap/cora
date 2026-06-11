@@ -21,9 +21,9 @@ import pytest
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
     AssetCannotAddFamilyError,
-    AssetLevel,
     AssetModelMismatchError,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.aggregates.asset.events import AssetRegistered
 from cora.equipment.aggregates.asset.events import (
@@ -84,7 +84,7 @@ def _build_deps(
 
 async def _register_asset_helper(deps: Kernel) -> UUID:
     return await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -288,7 +288,7 @@ async def _seed_asset_with_model_id(
     registered = AssetRegistered(
         asset_id=asset_id,
         name="APS-2BM",
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=_PARENT_ID,
         occurred_at=_PRIOR,
         model_id=model_id,

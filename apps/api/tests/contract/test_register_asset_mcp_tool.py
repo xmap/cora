@@ -40,7 +40,7 @@ def test_mcp_lists_register_asset_tool() -> None:
 
 
 @pytest.mark.contract
-def test_mcp_register_asset_tool_returns_structured_asset_id_for_enterprise_root() -> None:
+def test_mcp_register_asset_tool_returns_structured_asset_id_for_root() -> None:
     with TestClient(create_app()) as client:
         session_headers = open_session(client)
         response = client.post(
@@ -53,8 +53,9 @@ def test_mcp_register_asset_tool_returns_structured_asset_id_for_enterprise_root
                     "name": "register_asset",
                     "arguments": {
                         "name": "ANL",
-                        "level": "Enterprise",
+                        "tier": "Unit",
                         "parent_id": None,
+                        "facility_code": "cora",
                     },
                 },
             },
@@ -69,7 +70,7 @@ def test_mcp_register_asset_tool_returns_structured_asset_id_for_enterprise_root
 
 
 @pytest.mark.contract
-def test_mcp_register_asset_tool_returns_structured_asset_id_for_site_with_parent() -> None:
+def test_mcp_register_asset_tool_returns_structured_asset_id_for_unit_with_parent() -> None:
     with TestClient(create_app()) as client:
         session_headers = open_session(client)
         response = client.post(
@@ -82,7 +83,7 @@ def test_mcp_register_asset_tool_returns_structured_asset_id_for_site_with_paren
                     "name": "register_asset",
                     "arguments": {
                         "name": "APS",
-                        "level": "Site",
+                        "tier": "Unit",
                         "parent_id": str(uuid4()),
                     },
                 },
@@ -110,7 +111,7 @@ def test_mcp_register_asset_tool_returns_iserror_on_invalid_name() -> None:
                     "name": "register_asset",
                     "arguments": {
                         "name": "   ",
-                        "level": "Site",
+                        "tier": "Unit",
                         "parent_id": str(uuid4()),
                     },
                 },
@@ -124,8 +125,9 @@ def test_mcp_register_asset_tool_returns_iserror_on_invalid_name() -> None:
 
 
 @pytest.mark.contract
-def test_mcp_register_asset_tool_returns_iserror_on_hierarchy_violation() -> None:
-    """Enterprise with non-null parent → InvalidAssetParentError →
+def test_mcp_register_asset_tool_returns_iserror_on_anchoring_violation() -> None:
+    """A non-root (with parent_id) that ALSO binds facility_code
+    violates the anchoring XOR rule → InvalidAssetParentError →
     FastMCP isError. Same shape as the REST 400 response."""
     parent_id = str(uuid4())
     with TestClient(create_app()) as client:
@@ -140,8 +142,9 @@ def test_mcp_register_asset_tool_returns_iserror_on_hierarchy_violation() -> Non
                     "name": "register_asset",
                     "arguments": {
                         "name": "Federated",
-                        "level": "Enterprise",
+                        "tier": "Unit",
                         "parent_id": parent_id,
+                        "facility_code": "cora",
                     },
                 },
             },
@@ -150,13 +153,13 @@ def test_mcp_register_asset_tool_returns_iserror_on_hierarchy_violation() -> Non
     body = parse_sse_data(response.text)
     result = body["result"]
     assert result["isError"] is True
-    assert "Enterprise" in result["content"][0]["text"]
+    assert "facility_code" in result["content"][0]["text"]
 
 
 @pytest.mark.contract
-def test_mcp_register_asset_tool_rejects_unknown_level() -> None:
+def test_mcp_register_asset_tool_rejects_unknown_tier() -> None:
     """FastMCP's argument schema enforces the StrEnum vocabulary;
-    unknown levels surface as isError before the handler runs."""
+    unknown tiers surface as isError before the handler runs."""
     with TestClient(create_app()) as client:
         session_headers = open_session(client)
         response = client.post(
@@ -169,7 +172,7 @@ def test_mcp_register_asset_tool_rejects_unknown_level() -> None:
                     "name": "register_asset",
                     "arguments": {
                         "name": "X",
-                        "level": "Beamline",
+                        "tier": "Beamline",
                         "parent_id": str(uuid4()),
                     },
                 },
@@ -246,7 +249,7 @@ def test_mcp_register_asset_tool_accepts_model_id_arg(accept_model_mcp: UUID) ->
                     "name": "register_asset",
                     "arguments": {
                         "name": "APS-2BM-Det",
-                        "level": "Device",
+                        "tier": "Device",
                         "parent_id": str(uuid4()),
                         "model_id": str(accept_model_mcp),
                     },
@@ -280,7 +283,7 @@ def test_mcp_register_asset_tool_returns_iserror_on_unknown_model_id(
                     "name": "register_asset",
                     "arguments": {
                         "name": "APS-2BM-Det",
-                        "level": "Device",
+                        "tier": "Device",
                         "parent_id": str(uuid4()),
                         "model_id": str(unknown_id),
                     },
@@ -309,7 +312,7 @@ def test_mcp_register_asset_tool_omits_model_id_arg_remains_201_path() -> None:
                     "name": "register_asset",
                     "arguments": {
                         "name": "APS",
-                        "level": "Site",
+                        "tier": "Unit",
                         "parent_id": str(uuid4()),
                     },
                 },
@@ -342,7 +345,7 @@ def test_mcp_register_asset_tool_accepts_alternate_identifiers_arg() -> None:
                     "name": "register_asset",
                     "arguments": {
                         "name": "APS-2BM-RotaryStage",
-                        "level": "Device",
+                        "tier": "Device",
                         "parent_id": str(uuid4()),
                         "alternate_identifiers": [
                             {"kind": "SerialNumber", "value": "ANT130L-12345"},
@@ -376,7 +379,7 @@ def test_mcp_register_asset_tool_returns_iserror_on_invalid_alternate_identifier
                     "name": "register_asset",
                     "arguments": {
                         "name": "APS",
-                        "level": "Site",
+                        "tier": "Unit",
                         "parent_id": str(uuid4()),
                         "alternate_identifiers": [{"kind": "ROR", "value": "01y2jtd41"}],
                     },

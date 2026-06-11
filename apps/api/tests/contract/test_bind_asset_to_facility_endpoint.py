@@ -21,7 +21,7 @@ def _register_asset(client: TestClient, *, name: str = "Beamline 2-BM") -> UUID:
     """Register an Asset without facility_code (so the bind slice can set it)."""
     body: dict[str, object] = {
         "name": name,
-        "level": "Unit",
+        "tier": "Unit",
         "parent_id": str(uuid4()),
     }
     response = client.post("/assets", json=body)

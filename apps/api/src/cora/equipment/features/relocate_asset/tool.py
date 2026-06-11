@@ -28,7 +28,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         name="relocate_asset",
         description=(
             "Move an existing asset under a new parent in the hierarchy. "
-            "Enterprise-level assets are roots and cannot be relocated; "
+            "Root Assets (parent_id=None) are facility-anchored and cannot be relocated; "
             "Decommissioned assets are retired and cannot be moved."
         ),
     )

@@ -52,7 +52,7 @@ def _setup_pseudoaxis_asset(client: TestClient, headers: dict[str, str]) -> UUID
         headers,
         call_id=11,
         name="register_asset",
-        arguments={"name": "ANL", "level": "Enterprise", "parent_id": None},
+        arguments={"name": "ANL", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
     )
     asset_id = UUID(asset_body["result"]["structuredContent"]["asset_id"])  # type: ignore[index]
 

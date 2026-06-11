@@ -30,12 +30,12 @@ from mcp.server.fastmcp import FastMCP
 
 from cora.equipment.aggregates.assembly import SlotCardinality, SlotName, TemplateSlot
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
     AssetOwner,
     AssetOwnerContact,
     AssetOwnerIdentifier,
     AssetOwnerIdentifierType,
     AssetOwnerName,
+    AssetTier,
 )
 from cora.equipment.aggregates.fixture import FixtureNotFoundError, SlotAssetBinding
 from cora.equipment.aggregates.model import (
@@ -157,7 +157,7 @@ async def _seed_minted_fixture(db_pool: asyncpg.Pool) -> UUID:
     asset_id = await register_asset.bind(deps)(
         RegisterAsset(
             name="Camera-1",
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=_PARENT_ID,
             model_id=model_id,
         ),

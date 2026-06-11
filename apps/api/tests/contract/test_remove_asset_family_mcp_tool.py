@@ -24,7 +24,7 @@ def _register_and_add_via_tools(
                 "name": "register_asset",
                 "arguments": {
                     "name": "APS-2BM",
-                    "level": "Unit",
+                    "tier": "Unit",
                     "parent_id": str(uuid4()),
                 },
             },
@@ -132,7 +132,7 @@ def test_mcp_remove_asset_family_tool_returns_iserror_when_not_present() -> None
                     "name": "register_asset",
                     "arguments": {
                         "name": "APS-2BM",
-                        "level": "Unit",
+                        "tier": "Unit",
                         "parent_id": str(uuid4()),
                     },
                 },

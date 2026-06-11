@@ -23,7 +23,7 @@ def _drive_to_maintenance_via_tools(client: TestClient, headers: dict[str, str])
                 "name": "register_asset",
                 "arguments": {
                     "name": "APS-2BM",
-                    "level": "Unit",
+                    "tier": "Unit",
                     "parent_id": str(uuid4()),
                 },
             },
@@ -135,7 +135,7 @@ def test_mcp_exit_tool_returns_iserror_when_active() -> None:
                     "name": "register_asset",
                     "arguments": {
                         "name": "APS-2BM",
-                        "level": "Unit",
+                        "tier": "Unit",
                         "parent_id": str(uuid4()),
                     },
                 },

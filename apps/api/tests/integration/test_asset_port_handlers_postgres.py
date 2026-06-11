@@ -11,7 +11,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel, PortDirection
+from cora.equipment.aggregates.asset import AssetTier, PortDirection
 from cora.equipment.features import (
     add_asset_port,
     register_asset,
@@ -48,7 +48,7 @@ async def test_add_then_remove_port_round_trip(
     deps = _deps(db_pool, ids)
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="Detector-X", level=AssetLevel.DEVICE, parent_id=UUID(int=1)),
+        RegisterAsset(name="Detector-X", tier=AssetTier.DEVICE, parent_id=UUID(int=1)),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -50,7 +50,7 @@ _STUB_HANDLE_PREFIX = "20.500.0000/cora-stub"
 def _register_asset(client: TestClient, *, name: str = "Detector-X") -> str:
     response = client.post(
         "/assets",
-        json={"name": name, "level": "Device", "parent_id": str(uuid4())},
+        json={"name": name, "tier": "Device", "parent_id": str(uuid4())},
     )
     assert response.status_code == 201, response.text
     asset_id: str = response.json()["asset_id"]

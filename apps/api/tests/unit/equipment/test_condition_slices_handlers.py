@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import (
     degrade_asset,
     fault_asset,
@@ -69,7 +69,7 @@ def _build_deps(
 
 async def _register_asset_helper(deps: Kernel) -> UUID:
     return await register_asset.bind(deps)(
-        RegisterAsset(name="Detector-X", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="Detector-X", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

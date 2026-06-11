@@ -101,9 +101,6 @@ _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000401bb")
 
 # Facility hierarchy. Scenario tag: 401 (operations / beamtime intake).
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000401e01")
-_APS_SITE_ID = UUID("01900000-0000-7000-8000-000000401501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000401701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000401a01")
 
 # Operations-phase aggregates registered by intake
@@ -122,9 +119,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=(),
         ),
@@ -159,9 +153,6 @@ async def test_beamtime_intake_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=(),
         unit_name="2-BM",
@@ -245,8 +236,7 @@ async def test_beamtime_intake_plays_out_end_to_end(
     assert "tomography" in campaign_payload["tags"]
     assert "porous_media" in campaign_payload["tags"]
 
-    # ----- Assert: facility Asset hierarchy landed (no Devices) -----
+    # ----- Assert: root Unit Asset landed (no Devices) -----
 
-    for asset_id in (_ARGONNE_ENTERPRISE_ID, _APS_SITE_ID, _2BM_UNIT_ID):
-        _events, version = await deps.event_store.load("Asset", asset_id)
-        assert version >= 1, f"Asset {asset_id} did not land"
+    _events, version = await deps.event_store.load("Asset", _2BM_UNIT_ID)
+    assert version >= 1, f"Asset {_2BM_UNIT_ID} did not land"

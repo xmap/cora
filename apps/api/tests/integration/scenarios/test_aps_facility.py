@@ -58,7 +58,7 @@ from cora.caution.aggregates.caution import (
 )
 from cora.caution.features.register_caution import RegisterCaution
 from cora.caution.features.register_caution import bind as bind_register_caution
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_family import bind as bind_define_family
 from cora.equipment.features.register_asset import RegisterAsset
@@ -168,17 +168,17 @@ async def test_facility_install_plays_out_end_to_end(
     # ----- Equipment BC: Enterprise + Site Assets -----
 
     await bind_register_asset(deps)(
-        RegisterAsset(name="Argonne", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="Argonne", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     await bind_register_asset(deps)(
-        RegisterAsset(name="APS", level=AssetLevel.SITE, parent_id=_ARGONNE_ENTERPRISE_ID),
+        RegisterAsset(name="APS", tier=AssetTier.UNIT, parent_id=_ARGONNE_ENTERPRISE_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     await bind_register_asset(deps)(
-        RegisterAsset(name="Sector 2", level=AssetLevel.AREA, parent_id=_APS_SITE_ID),
+        RegisterAsset(name="Sector 2", tier=AssetTier.COMPONENT, parent_id=_APS_SITE_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -317,7 +317,7 @@ async def test_facility_install_plays_out_end_to_end(
     assert sector2_version == 1
     assert [e.event_type for e in sector2_events] == ["AssetRegistered"]
     sector2_payload = sector2_events[0].payload
-    assert sector2_payload["level"] == AssetLevel.AREA.value
+    assert sector2_payload["tier"] == AssetTier.COMPONENT.value
     assert UUID(sector2_payload["parent_id"]) == _APS_SITE_ID
 
     operator = await load_actor(deps.event_store, _ACTOR_OPERATOR_ID)

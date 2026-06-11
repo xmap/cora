@@ -29,8 +29,8 @@ _REASON_MAX_LENGTH = 500
 class RelocateAssetRequest(BaseModel):
     """Body for `POST /assets/{asset_id}/relocate`.
 
-    `to_parent_id` is required (non-null); Enterprise assets cannot
-    relocate, and non-Enterprise assets always have a parent. Per
+    `to_parent_id` is required (non-null); root Assets (parent_id=None)
+    cannot relocate, and non-root Assets always have a parent. Per
     eventual-consistency stance, the parent's existence is NOT
     verified by the decider.
 
@@ -79,7 +79,7 @@ router = APIRouter(tags=["equipment"])
             "model": ErrorResponse,
             "description": (
                 "Asset cannot be relocated under current conditions "
-                "(asset is Enterprise / Decommissioned, target is the "
+                "(asset is a root / Decommissioned, target is the "
                 "asset itself, or target equals current parent), OR a "
                 "concurrent write to the same asset stream conflicted "
                 "(optimistic concurrency)."

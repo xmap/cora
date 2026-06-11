@@ -52,7 +52,7 @@ def setup_plan_with_role(client: TestClient) -> dict[str, Any]:
     ).json()["practice_id"]
     asset_id = client.post(
         "/assets",
-        json={"name": "camera", "level": "Enterprise", "parent_id": None},
+        json={"name": "camera", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
     ).json()["asset_id"]
     client.post(f"/assets/{asset_id}/add-family", json={"family_id": family_id})
     client.post(

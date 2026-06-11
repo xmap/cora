@@ -12,8 +12,8 @@ import pytest
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
     AssetCannotRemoveFamilyError,
-    AssetLevel,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import (
     add_asset_family,
@@ -54,7 +54,7 @@ def _build_deps(
 
 async def _register_and_add_family(deps: Kernel) -> UUID:
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -124,7 +124,7 @@ async def test_handler_raises_cannot_remove_when_capability_not_present() -> Non
     store = InMemoryEventStore()
     deps = _build_deps(event_store=store)
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

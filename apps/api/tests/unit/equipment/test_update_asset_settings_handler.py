@@ -17,8 +17,8 @@ import pytest
 
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
     AssetNotFoundError,
+    AssetTier,
     InvalidAssetSettingsError,
 )
 from cora.equipment.features import (
@@ -113,7 +113,7 @@ async def _setup_asset_with_schemaful_capability(deps: Kernel) -> UUID:
         correlation_id=_CORRELATION_ID,
     )
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="Detector", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="Detector", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

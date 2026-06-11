@@ -17,7 +17,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel, InvalidAssetSettingsError
+from cora.equipment.aggregates.asset import AssetTier, InvalidAssetSettingsError
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -93,7 +93,7 @@ async def test_update_asset_settings_persists_event_with_full_post_merge_dict(
         correlation_id=_CORRELATION_ID,
     )
     await register_asset.bind(deps)(
-        RegisterAsset(name="Detector", level=AssetLevel.DEVICE, parent_id=UUID(int=1)),
+        RegisterAsset(name="Detector", tier=AssetTier.DEVICE, parent_id=UUID(int=1)),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -161,7 +161,7 @@ async def test_update_asset_settings_merges_across_two_patches(
         correlation_id=_CORRELATION_ID,
     )
     await register_asset.bind(deps)(
-        RegisterAsset(name="Detector", level=AssetLevel.DEVICE, parent_id=UUID(int=1)),
+        RegisterAsset(name="Detector", tier=AssetTier.DEVICE, parent_id=UUID(int=1)),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -250,7 +250,7 @@ async def test_update_asset_settings_rejects_true_type_conflict_across_capabilit
         correlation_id=_CORRELATION_ID,
     )
     await register_asset.bind(deps)(
-        RegisterAsset(name="X", level=AssetLevel.DEVICE, parent_id=UUID(int=1)),
+        RegisterAsset(name="X", tier=AssetTier.DEVICE, parent_id=UUID(int=1)),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

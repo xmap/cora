@@ -24,13 +24,13 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
     AssetNotFoundError,
     AssetOwner,
     AssetOwnerContact,
     AssetOwnerIdentifier,
     AssetOwnerIdentifierType,
     AssetOwnerName,
+    AssetTier,
 )
 from cora.equipment.aggregates.model import (
     Manufacturer,
@@ -159,7 +159,7 @@ async def _seed_minimal_asset_with_owners(
     await register_asset.bind(deps)(
         RegisterAsset(
             name="Rotary Stage A",
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=_PARENT_ID,
             model_id=model_id,
         ),

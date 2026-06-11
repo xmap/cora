@@ -6,7 +6,7 @@ Stresses the framework against:
     only Asset events here)
   - Hierarchy: parent_id column + parent_id filter
   - Lifecycle FSM with maintenance round-trip
-  - Combined filters (level + lifecycle + parent_id)
+  - Combined filters (tier + lifecycle + parent_id)
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -18,7 +18,7 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate
 from cora.equipment.features.decommission_asset import DecommissionAsset
@@ -53,11 +53,16 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
 
 
 async def _register_root(db_pool: asyncpg.Pool) -> tuple[UUID, Kernel]:
-    """Register an Enterprise-level root asset and return (root_id, deps)."""
+    """Register a Unit-tier root asset and return (root_id, deps)."""
     root_id = uuid4()
     deps = _build_deps(db_pool, [root_id, uuid4()])
     await bind_register(deps)(
-        RegisterAsset(name="Argonne", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="Argonne",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -68,19 +73,19 @@ async def _register_root(db_pool: asyncpg.Pool) -> tuple[UUID, Kernel]:
 async def test_register_emits_commissioned_lifecycle(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """Sanity: register lands as Commissioned + correct level."""
+    """Sanity: register lands as Commissioned + correct tier."""
     root_id, _ = await _register_root(db_pool)
     await _drain(db_pool)
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT name, level, lifecycle, parent_id "
+            "SELECT name, tier, lifecycle, parent_id "
             "FROM proj_equipment_asset_summary WHERE asset_id = $1",
             root_id,
         )
     assert row is not None
     assert row["name"] == "Argonne"
-    assert row["level"] == "Enterprise"
+    assert row["tier"] == "Unit"
     assert row["lifecycle"] == "Commissioned"
     assert row["parent_id"] is None
 
@@ -96,7 +101,7 @@ async def test_lifecycle_round_trip_active_maintenance_active(
     asset_id = uuid4()
     deps = _build_deps(db_pool, [asset_id, uuid4(), uuid4(), uuid4(), uuid4()])
     await bind_register(deps)(
-        RegisterAsset(name="EigerDetector", level=AssetLevel.DEVICE, parent_id=uuid4()),
+        RegisterAsset(name="EigerDetector", tier=AssetTier.DEVICE, parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -130,7 +135,7 @@ async def test_decommission_terminal(db_pool: asyncpg.Pool) -> None:
     asset_id = uuid4()
     deps = _build_deps(db_pool, [asset_id, uuid4(), uuid4()])
     await bind_register(deps)(
-        RegisterAsset(name="OldDevice", level=AssetLevel.DEVICE, parent_id=uuid4()),
+        RegisterAsset(name="OldDevice", tier=AssetTier.DEVICE, parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -151,7 +156,7 @@ async def test_relocate_updates_parent_id(db_pool: asyncpg.Pool) -> None:
     parent_b = uuid4()
     deps = _build_deps(db_pool, [asset_id, uuid4(), uuid4()])
     await bind_register(deps)(
-        RegisterAsset(name="MovingDevice", level=AssetLevel.DEVICE, parent_id=parent_a),
+        RegisterAsset(name="MovingDevice", tier=AssetTier.DEVICE, parent_id=parent_a),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -213,18 +218,18 @@ async def test_filter_by_parent_returns_direct_children_only(
     )
     register = bind_register(deps)
     await register(
-        RegisterAsset(name="Site", level=AssetLevel.SITE, parent_id=uuid4()),
+        RegisterAsset(name="Site", tier=AssetTier.UNIT, parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     for name in ("DevA", "DevB", "DevC"):
         await register(
-            RegisterAsset(name=name, level=AssetLevel.DEVICE, parent_id=site_id),
+            RegisterAsset(name=name, tier=AssetTier.DEVICE, parent_id=site_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
     await register(
-        RegisterAsset(name="Outsider", level=AssetLevel.DEVICE, parent_id=other_parent),
+        RegisterAsset(name="Outsider", tier=AssetTier.DEVICE, parent_id=other_parent),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -240,10 +245,10 @@ async def test_filter_by_parent_returns_direct_children_only(
 
 
 @pytest.mark.integration
-async def test_combined_filters_level_and_lifecycle(
+async def test_combined_filters_tier_and_lifecycle(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """Compound filter: only Active Devices (no Sites, no Commissioned
+    """Compound filter: only Active Devices (no Units, no Commissioned
     Devices). Tests the multi-condition WHERE shape."""
     parent = uuid4()
     site_id = uuid4()
@@ -262,12 +267,12 @@ async def test_combined_filters_level_and_lifecycle(
         ],
     )
     await bind_register(deps)(
-        RegisterAsset(name="Site", level=AssetLevel.SITE, parent_id=parent),
+        RegisterAsset(name="Site", tier=AssetTier.UNIT, parent_id=parent),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     await bind_register(deps)(
-        RegisterAsset(name="ActiveDev", level=AssetLevel.DEVICE, parent_id=site_id),
+        RegisterAsset(name="ActiveDev", tier=AssetTier.DEVICE, parent_id=site_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -277,7 +282,7 @@ async def test_combined_filters_level_and_lifecycle(
         correlation_id=_CORRELATION_ID,
     )
     await bind_register(deps)(
-        RegisterAsset(name="CommissionedDev", level=AssetLevel.DEVICE, parent_id=site_id),
+        RegisterAsset(name="CommissionedDev", tier=AssetTier.DEVICE, parent_id=site_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -285,13 +290,13 @@ async def test_combined_filters_level_and_lifecycle(
     await _drain(db_pool)
     handler = bind_list(deps)
     page = await handler(
-        ListAssets(level="Device", lifecycle="Active", limit=10),
+        ListAssets(tier="Device", lifecycle="Active", limit=10),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     assert len(page.items) == 1
     assert page.items[0].asset_id == active_dev
-    assert page.items[0].level == "Device"
+    assert page.items[0].tier == "Device"
     assert page.items[0].lifecycle == "Active"
 
 
@@ -308,14 +313,14 @@ async def test_cursor_walks_pages_with_filter(db_pool: asyncpg.Pool) -> None:
         fixed_ids.extend([dev, uuid4()])
     deps = _build_deps(db_pool, fixed_ids)
     await bind_register(deps)(
-        RegisterAsset(name="Site", level=AssetLevel.SITE, parent_id=uuid4()),
+        RegisterAsset(name="Site", tier=AssetTier.UNIT, parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     register = bind_register(deps)
     for i in range(5):
         await register(
-            RegisterAsset(name=f"Dev{i:02d}", level=AssetLevel.DEVICE, parent_id=site_id),
+            RegisterAsset(name=f"Dev{i:02d}", tier=AssetTier.DEVICE, parent_id=site_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

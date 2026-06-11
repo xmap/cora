@@ -1,12 +1,12 @@
 """Contract tests for `GET /assets/{asset_id}`.
 
 Mirrors `test_get_family_endpoint.py` / `test_get_subject_endpoint.py`.
-Pinned response shape: `{id, name, level, parent_id, lifecycle,
-condition, capabilities, settings}` where `level`, `lifecycle`, and
+Pinned response shape: `{id, name, tier, parent_id, lifecycle,
+condition, capabilities, settings}` where `tier`, `lifecycle`, and
 `condition` are the StrEnum string values (PascalCase per the BC
-map). `parent_id` is null only for Enterprise-level roots.
-`condition` (5g-b) and `settings` (5g-c) were added alongside their
-respective state-field landings.
+map). `parent_id` is null only for facility-rooted roots (which bind
+a facility_code instead). `condition` (5g-b) and `settings` (5g-c)
+were added alongside their respective state-field landings.
 """
 
 from uuid import UUID, uuid4
@@ -21,12 +21,14 @@ def _register_asset(
     client: TestClient,
     *,
     name: str = "APS-2BM",
-    level: str = "Unit",
+    tier: str = "Unit",
     parent_id: str | None = None,
+    root: bool = False,
 ) -> UUID:
-    body: dict[str, str | None] = {"name": name, "level": level}
-    if level == "Enterprise":
+    body: dict[str, str | None] = {"name": name, "tier": tier}
+    if root:
         body["parent_id"] = None
+        body["facility_code"] = "cora"
     else:
         body["parent_id"] = parent_id if parent_id is not None else str(uuid4())
     response = client.post("/assets", json=body)
@@ -46,7 +48,7 @@ def test_get_asset_returns_200_with_commissioned_lifecycle_for_new_asset() -> No
     assert body == {
         "id": str(asset_id),
         "name": "APS-2BM",
-        "level": "Unit",
+        "tier": "Unit",
         "parent_id": parent_id,
         "lifecycle": "Commissioned",
         # 5g-b: condition defaults to Nominal at registration.
@@ -61,16 +63,16 @@ def test_get_asset_returns_200_with_commissioned_lifecycle_for_new_asset() -> No
 
 
 @pytest.mark.contract
-def test_get_asset_returns_200_with_null_parent_for_enterprise_root() -> None:
-    """Pinned: Enterprise-level Assets serialize parent_id as JSON null."""
+def test_get_asset_returns_200_with_null_parent_for_facility_rooted_root() -> None:
+    """Pinned: facility-rooted Assets serialize parent_id as JSON null."""
     with TestClient(create_app()) as client:
-        asset_id = _register_asset(client, name="ANL", level="Enterprise")
+        asset_id = _register_asset(client, name="ANL", tier="Unit", root=True)
         response = client.get(f"/assets/{asset_id}")
 
     assert response.status_code == 200
     body = response.json()
     assert body["parent_id"] is None
-    assert body["level"] == "Enterprise"
+    assert body["tier"] == "Unit"
 
 
 @pytest.mark.contract

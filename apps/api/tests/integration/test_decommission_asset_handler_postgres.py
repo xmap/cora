@@ -24,7 +24,7 @@ from cora.equipment.aggregates.assembly import SlotCardinality, SlotName, Templa
 from cora.equipment.aggregates.asset import (
     AssetHasFixtureBindingError,
     AssetIsInstalledError,
-    AssetLevel,
+    AssetTier,
 )
 from cora.equipment.aggregates.fixture import SlotAssetBinding
 from cora.equipment.features import (
@@ -83,7 +83,7 @@ async def test_decommission_asset_persists_event_from_commissioned_state(
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -121,7 +121,7 @@ async def test_decommission_asset_persists_event_from_active_state(
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-32-ID", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-32-ID", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -172,7 +172,7 @@ async def test_decommission_asset_persists_event_from_maintenance_state(
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-7BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-7BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -320,7 +320,7 @@ async def test_decommission_asset_rejects_when_still_installed_in_mount(
 
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[asset_id, uuid4()])
     await register_asset.bind(deps)(
-        RegisterAsset(name="specimen-decom", level=AssetLevel.DEVICE, parent_id=uuid4()),
+        RegisterAsset(name="specimen-decom", tier=AssetTier.DEVICE, parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

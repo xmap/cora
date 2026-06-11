@@ -25,7 +25,7 @@ from cora.equipment.aggregates._placement import (
     ReferenceSurface,
     UnitSystem,
 )
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.equipment.features.install_asset import InstallAsset
@@ -99,7 +99,7 @@ async def seed_installed_asset(
     now: datetime,
     slot_code: str,
     asset_name: str | None = None,
-    asset_level: AssetLevel = AssetLevel.DEVICE,
+    asset_tier: AssetTier = AssetTier.DEVICE,
 ) -> tuple[UUID, UUID, UUID]:
     """Register Frame + Mount + Asset, activate Asset, install Asset; drain.
 
@@ -145,7 +145,7 @@ async def seed_installed_asset(
 
     deps = build_postgres_deps(pool, now=now, ids=[asset_id, uuid4()])
     await bind_register_asset(deps)(
-        RegisterAsset(name=asset_name, level=asset_level, parent_id=uuid4()),
+        RegisterAsset(name=asset_name, tier=asset_tier, parent_id=uuid4()),
         principal_id=_SEED_PRINCIPAL_ID,
         correlation_id=_SEED_CORRELATION_ID,
     )

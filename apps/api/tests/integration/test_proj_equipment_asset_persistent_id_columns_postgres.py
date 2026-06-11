@@ -71,7 +71,7 @@ async def test_pidinst_columns_default_to_null_for_freshly_inserted_row(
         await conn.execute(
             """
             INSERT INTO proj_equipment_asset_summary
-                (asset_id, name, level, lifecycle, condition, parent_id, created_at)
+                (asset_id, name, tier, lifecycle, condition, parent_id, created_at)
             VALUES ($1, 'X', 'Unit', 'Commissioned', 'Nominal', NULL, now())
             """,
             asset_id,

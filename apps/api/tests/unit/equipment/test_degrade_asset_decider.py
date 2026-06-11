@@ -18,10 +18,10 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetCondition,
     AssetDegraded,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import degrade_asset
 from cora.equipment.features.degrade_asset import DegradeAsset
@@ -37,7 +37,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("Detector-FLIR-Oryx-001"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         condition=condition,

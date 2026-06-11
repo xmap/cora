@@ -134,12 +134,22 @@ def _setup_plan_with_two_wired_assets(client: TestClient, principal: UUID) -> di
     ).json()["practice_id"]
     src_id = client.post(
         "/assets",
-        json={"name": "PandABox", "level": "Enterprise", "parent_id": None},
+        json={
+            "name": "PandABox",
+            "tier": "Unit",
+            "parent_id": None,
+            "facility_code": "cora",
+        },
         headers=h,
     ).json()["asset_id"]
     tgt_id = client.post(
         "/assets",
-        json={"name": "Camera", "level": "Enterprise", "parent_id": None},
+        json={
+            "name": "Camera",
+            "tier": "Unit",
+            "parent_id": None,
+            "facility_code": "cora",
+        },
         headers=h,
     ).json()["asset_id"]
     for asset_id in (src_id, tgt_id):

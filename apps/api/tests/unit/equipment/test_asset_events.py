@@ -75,7 +75,7 @@ def test_event_type_name_returns_class_name() -> None:
     event = AssetRegistered(
         asset_id=uuid4(),
         name="APS-2BM",
-        level="Site",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -90,7 +90,7 @@ def test_to_payload_serializes_asset_registered_with_parent() -> None:
     event = AssetRegistered(
         asset_id=asset_id,
         name="APS-2BM",
-        level="Site",
+        tier="Unit",
         parent_id=parent_id,
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -98,7 +98,7 @@ def test_to_payload_serializes_asset_registered_with_parent() -> None:
     assert to_payload(event) == {
         "asset_id": str(asset_id),
         "name": "APS-2BM",
-        "level": "Site",
+        "tier": "Unit",
         "parent_id": str(parent_id),
         "occurred_at": _NOW.isoformat(),
         "commissioned_by": str(_TEST_ACTOR_ID),
@@ -114,14 +114,14 @@ def test_to_payload_serializes_asset_registered_with_null_parent() -> None:
     event = AssetRegistered(
         asset_id=asset_id,
         name="ANL",
-        level="Enterprise",
+        tier="Unit",
         parent_id=None,
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
     )
     payload = to_payload(event)
     assert payload["parent_id"] is None
-    assert payload["level"] == "Enterprise"
+    assert payload["tier"] == "Unit"
 
 
 @pytest.mark.unit
@@ -133,7 +133,7 @@ def test_from_stored_rebuilds_asset_registered_with_parent() -> None:
         {
             "asset_id": str(asset_id),
             "name": "APS-2BM",
-            "level": "Site",
+            "tier": "Unit",
             "parent_id": str(parent_id),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -143,7 +143,7 @@ def test_from_stored_rebuilds_asset_registered_with_parent() -> None:
     assert rebuilt == AssetRegistered(
         asset_id=asset_id,
         name="APS-2BM",
-        level="Site",
+        tier="Unit",
         parent_id=parent_id,
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -159,7 +159,7 @@ def test_from_stored_rebuilds_asset_registered_with_null_parent() -> None:
         {
             "asset_id": str(asset_id),
             "name": "ANL",
-            "level": "Enterprise",
+            "tier": "Unit",
             "parent_id": None,
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -168,7 +168,7 @@ def test_from_stored_rebuilds_asset_registered_with_null_parent() -> None:
     rebuilt = from_stored(stored)
     assert isinstance(rebuilt, AssetRegistered)
     assert rebuilt.parent_id is None
-    assert rebuilt.level == "Enterprise"
+    assert rebuilt.tier == "Unit"
 
 
 @pytest.mark.unit
@@ -177,7 +177,7 @@ def test_to_payload_then_from_stored_round_trips_with_parent() -> None:
     original = AssetRegistered(
         asset_id=uuid4(),
         name="Eiger-2X-9M",
-        level="Device",
+        tier="Device",
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -192,7 +192,7 @@ def test_to_payload_then_from_stored_round_trips_without_parent() -> None:
     original = AssetRegistered(
         asset_id=uuid4(),
         name="ANL",
-        level="Enterprise",
+        tier="Unit",
         parent_id=None,
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -210,7 +210,7 @@ def test_to_payload_omits_drawing_key_when_drawing_is_none() -> None:
     event = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Site",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -224,7 +224,7 @@ def test_to_payload_includes_drawing_block_when_set() -> None:
     event = AssetRegistered(
         asset_id=uuid4(),
         name="Microscope-2BM-A",
-        level="Component",
+        tier="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         drawing=Drawing(system=DrawingSystem.ICMS, number="P4105", revision="A"),
@@ -243,7 +243,7 @@ def test_from_stored_rebuilds_asset_registered_with_drawing() -> None:
         {
             "asset_id": str(asset_id),
             "name": "Microscope-2BM-A",
-            "level": "Component",
+            "tier": "Component",
             "parent_id": str(parent_id),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -254,7 +254,7 @@ def test_from_stored_rebuilds_asset_registered_with_drawing() -> None:
     assert rebuilt == AssetRegistered(
         asset_id=asset_id,
         name="Microscope-2BM-A",
-        level="Component",
+        tier="Component",
         parent_id=parent_id,
         occurred_at=_NOW,
         drawing=Drawing(system=DrawingSystem.EDMS, number="9001", revision=None),
@@ -273,7 +273,7 @@ def test_from_stored_folds_legacy_payload_without_drawing_to_none() -> None:
         {
             "asset_id": str(asset_id),
             "name": "Pre-widen Asset",
-            "level": "Unit",
+            "tier": "Unit",
             "parent_id": str(uuid4()),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -292,7 +292,7 @@ def test_to_payload_then_from_stored_round_trips_without_drawing_explicit() -> N
     original = AssetRegistered(
         asset_id=uuid4(),
         name="No-Drawing Asset",
-        level="Site",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -309,7 +309,7 @@ def test_to_payload_then_from_stored_round_trips_with_drawing() -> None:
     original = AssetRegistered(
         asset_id=uuid4(),
         name="Microscope-2BM-A",
-        level="Component",
+        tier="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         drawing=Drawing(system=DrawingSystem.DOI, number="10.5281/zenodo.X", revision="v2"),
@@ -331,7 +331,7 @@ def test_to_payload_omits_model_id_key_when_model_id_is_none() -> None:
     event = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Site",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -348,7 +348,7 @@ def test_to_payload_includes_model_id_when_set() -> None:
     event = AssetRegistered(
         asset_id=asset_id,
         name="Microscope-2BM-A",
-        level="Component",
+        tier="Component",
         parent_id=parent_id,
         occurred_at=_NOW,
         model_id=model_id,
@@ -368,7 +368,7 @@ def test_from_stored_rebuilds_asset_registered_with_model_id() -> None:
         {
             "asset_id": str(asset_id),
             "name": "Microscope-2BM-A",
-            "level": "Component",
+            "tier": "Component",
             "parent_id": str(parent_id),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -379,7 +379,7 @@ def test_from_stored_rebuilds_asset_registered_with_model_id() -> None:
     assert rebuilt == AssetRegistered(
         asset_id=asset_id,
         name="Microscope-2BM-A",
-        level="Component",
+        tier="Component",
         parent_id=parent_id,
         occurred_at=_NOW,
         model_id=model_id,
@@ -399,7 +399,7 @@ def test_from_stored_folds_legacy_payload_without_model_id_to_none() -> None:
         {
             "asset_id": str(asset_id),
             "name": "Pre-widen Asset",
-            "level": "Unit",
+            "tier": "Unit",
             "parent_id": str(uuid4()),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -418,7 +418,7 @@ def test_to_payload_then_from_stored_round_trips_without_model_id_explicit() -> 
     original = AssetRegistered(
         asset_id=uuid4(),
         name="No-Model Asset",
-        level="Site",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -435,7 +435,7 @@ def test_to_payload_then_from_stored_round_trips_with_model_id() -> None:
     original = AssetRegistered(
         asset_id=uuid4(),
         name="Microscope-2BM-A",
-        level="Component",
+        tier="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         model_id=uuid4(),
@@ -452,7 +452,7 @@ def test_to_payload_then_from_stored_round_trips_with_drawing_and_model_id() -> 
     original = AssetRegistered(
         asset_id=uuid4(),
         name="Microscope-2BM-A",
-        level="Component",
+        tier="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         drawing=Drawing(system=DrawingSystem.ICMS, number="P4105", revision="A"),
@@ -476,7 +476,7 @@ def test_to_payload_omits_controller_id_key_when_controller_id_is_none() -> None
     event = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Site",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -493,7 +493,7 @@ def test_to_payload_includes_controller_id_when_set() -> None:
     event = AssetRegistered(
         asset_id=asset_id,
         name="Aerotech_ABRS_rotary",
-        level="Device",
+        tier="Device",
         parent_id=parent_id,
         occurred_at=_NOW,
         controller_id=controller_id,
@@ -513,7 +513,7 @@ def test_from_stored_rebuilds_asset_registered_with_controller_id() -> None:
         {
             "asset_id": str(asset_id),
             "name": "Aerotech_ABRS_rotary",
-            "level": "Device",
+            "tier": "Device",
             "parent_id": str(parent_id),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -524,7 +524,7 @@ def test_from_stored_rebuilds_asset_registered_with_controller_id() -> None:
     assert rebuilt == AssetRegistered(
         asset_id=asset_id,
         name="Aerotech_ABRS_rotary",
-        level="Device",
+        tier="Device",
         parent_id=parent_id,
         occurred_at=_NOW,
         controller_id=controller_id,
@@ -544,7 +544,7 @@ def test_from_stored_folds_legacy_payload_without_controller_id_to_none() -> Non
         {
             "asset_id": str(asset_id),
             "name": "Pre-widen Asset",
-            "level": "Unit",
+            "tier": "Unit",
             "parent_id": str(uuid4()),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -560,7 +560,7 @@ def test_to_payload_then_from_stored_round_trips_with_controller_id() -> None:
     original = AssetRegistered(
         asset_id=uuid4(),
         name="Aerotech_ABRS_rotary",
-        level="Device",
+        tier="Device",
         parent_id=uuid4(),
         occurred_at=_NOW,
         controller_id=uuid4(),
@@ -1266,7 +1266,7 @@ def test_to_payload_omits_alternate_identifiers_when_empty() -> None:
     event = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Site",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -1280,7 +1280,7 @@ def test_to_payload_includes_alternate_identifiers_when_set() -> None:
     event = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Component",
+        tier="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A}),
@@ -1301,7 +1301,7 @@ def test_to_payload_emits_alternate_identifiers_sorted_for_stable_bytes() -> Non
     event = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Component",
+        tier="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_B, _SAMPLE_ALT_ID_A}),
@@ -1323,7 +1323,7 @@ def test_from_stored_rebuilds_asset_registered_with_alternate_identifiers() -> N
         {
             "asset_id": str(asset_id),
             "name": "X",
-            "level": "Component",
+            "tier": "Component",
             "parent_id": str(parent_id),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -1337,7 +1337,7 @@ def test_from_stored_rebuilds_asset_registered_with_alternate_identifiers() -> N
     assert rebuilt == AssetRegistered(
         asset_id=asset_id,
         name="X",
-        level="Component",
+        tier="Component",
         parent_id=parent_id,
         occurred_at=_NOW,
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A, _SAMPLE_ALT_ID_B}),
@@ -1357,7 +1357,7 @@ def test_from_stored_folds_legacy_payload_without_alternate_identifiers_to_empty
         {
             "asset_id": str(asset_id),
             "name": "Pre-widen Asset",
-            "level": "Unit",
+            "tier": "Unit",
             "parent_id": str(uuid4()),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -1376,7 +1376,7 @@ def test_to_payload_then_from_stored_round_trips_without_alternate_identifiers_e
     original = AssetRegistered(
         asset_id=uuid4(),
         name="No-AltIds Asset",
-        level="Site",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -1393,7 +1393,7 @@ def test_to_payload_then_from_stored_round_trips_with_alternate_identifiers() ->
     original = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Component",
+        tier="Component",
         parent_id=uuid4(),
         occurred_at=_NOW,
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A, _SAMPLE_ALT_ID_B}),
@@ -1544,7 +1544,7 @@ def test_to_payload_serializes_asset_registered_with_owners() -> None:
     event = AssetRegistered(
         asset_id=asset_id,
         name="X",
-        level="Unit",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         owners=frozenset({_HZB_OWNER}),
@@ -1570,7 +1570,7 @@ def test_to_payload_omits_owners_when_empty() -> None:
     event = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Unit",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
@@ -1589,7 +1589,7 @@ def test_from_stored_rebuilds_asset_registered_without_owners_key_defaults_to_em
         {
             "asset_id": str(asset_id),
             "name": "X",
-            "level": "Unit",
+            "tier": "Unit",
             "parent_id": str(uuid4()),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -1605,7 +1605,7 @@ def test_round_trip_for_asset_registered_with_owners() -> None:
     original = AssetRegistered(
         asset_id=uuid4(),
         name="X",
-        level="Unit",
+        tier="Unit",
         parent_id=uuid4(),
         occurred_at=_NOW,
         owners=frozenset({_HZB_OWNER}),
@@ -1699,7 +1699,7 @@ def test_replay_asset_registered_back_compat_paths(
     base_payload: dict[str, object] = {
         "asset_id": str(uuid4()),
         "name": "X",
-        "level": "Unit",
+        "tier": "Unit",
         "parent_id": str(uuid4()),
         "occurred_at": _NOW.isoformat(),
     }

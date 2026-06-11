@@ -5,7 +5,7 @@ disqualifying conditions collapsed into one error class
 (`AssetCannotRelocateError`) plus the standard `AssetNotFoundError`
 guard:
 
-  - Enterprise level (root; cannot have a parent at all)
+  - root (parent_id=None; facility-anchored, cannot be relocated)
   - Decommissioned lifecycle (retired)
   - target == asset_id (self-loop; trivial cycle case)
   - target == current parent_id (no-op; strict semantics)
@@ -22,11 +22,11 @@ import pytest
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetCannotRelocateError,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
     AssetRelocated,
+    AssetTier,
 )
 from cora.equipment.features import relocate_asset
 from cora.equipment.features.relocate_asset import RelocateAsset
@@ -36,7 +36,7 @@ _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 
 def _asset(
     *,
-    level: AssetLevel = AssetLevel.UNIT,
+    tier: AssetTier = AssetTier.DEVICE,
     lifecycle: AssetLifecycle = AssetLifecycle.COMMISSIONED,
     parent_id: object = "auto",
 ) -> Asset:
@@ -45,7 +45,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("APS-2BM"),
-        level=level,
+        tier=tier,
         parent_id=pid,  # type: ignore[arg-type]
         lifecycle=lifecycle,
     )
@@ -95,11 +95,11 @@ def test_decide_raises_asset_not_found_when_state_is_none() -> None:
 
 
 @pytest.mark.unit
-def test_decide_raises_cannot_relocate_when_asset_is_enterprise_level() -> None:
-    """Enterprise is the root; cannot have a parent at all per the
-    asset-hierarchy rule. Allowing relocate would force the
-    invariant to break."""
-    state = _asset(level=AssetLevel.ENTERPRISE, parent_id=None)
+def test_decide_raises_cannot_relocate_when_asset_is_root() -> None:
+    """A root Asset (parent_id=None) is facility-anchored and has no
+    parent to move from; allowing relocate would break the
+    root-anchoring invariant."""
+    state = _asset(parent_id=None)
     with pytest.raises(AssetCannotRelocateError) as exc_info:
         relocate_asset.decide(
             state=state,
@@ -111,7 +111,7 @@ def test_decide_raises_cannot_relocate_when_asset_is_enterprise_level() -> None:
             now=_NOW,
         )
     assert exc_info.value.asset_id == state.id
-    assert "Enterprise" in exc_info.value.reason
+    assert "Root" in exc_info.value.reason
 
 
 @pytest.mark.unit

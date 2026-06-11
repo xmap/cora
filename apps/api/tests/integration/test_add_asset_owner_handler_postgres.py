@@ -44,7 +44,7 @@ async def _append_asset_registered(
     payload: dict[str, object] = {
         "asset_id": str(asset_id),
         "name": "synthetic-asset",
-        "level": "Device",
+        "tier": "Device",
         "parent_id": str(uuid4()),
         "occurred_at": _NOW.isoformat(),
         "commissioned_by": str(_PRINCIPAL_ID),

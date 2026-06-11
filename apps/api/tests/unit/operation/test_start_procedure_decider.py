@@ -18,9 +18,9 @@ import pytest
 
 from cora.equipment.aggregates.asset import (
     Asset,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
+    AssetTier,
 )
 from cora.operation.aggregates.procedure import (
     Procedure,
@@ -61,7 +61,7 @@ def _asset(
     return Asset(
         id=asset_id or uuid4(),
         name=AssetName("EigerDetector"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         family_ids=frozenset(),

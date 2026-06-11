@@ -167,10 +167,10 @@ _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000423bb")
 
 # Scenario tag: 423 (operations / energy_change).
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000423e01")
-_APS_SITE_ID = UUID("01900000-0000-7000-8000-000000423501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000423701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000423a01")
+
+# Opaque Practice-site UUID (the practice site, unrelated to Asset tier).
+_PRACTICE_SITE_ID = UUID("01900000-0000-7000-8000-000000423501")
 
 _CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000423c01")
 _CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000423c11")
@@ -225,9 +225,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -291,13 +288,9 @@ async def test_energy_change_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
         unit_name="2-BM",
-        sector_name="Sector 2",
     )
 
     for asset_id in (
@@ -382,7 +375,7 @@ async def test_energy_change_plays_out_end_to_end(
         DefinePractice(
             name="2BM_multi_energy_practice",
             method_id=_METHOD_TOMO_ID,
-            site_id=_APS_SITE_ID,
+            site_id=_PRACTICE_SITE_ID,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

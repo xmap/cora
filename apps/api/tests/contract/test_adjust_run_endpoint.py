@@ -66,7 +66,8 @@ def _setup_full_run(
         json={"name": "P", "method_id": method_id, "site_id": str(uuid4())},
     ).json()["practice_id"]
     asset_id = client.post(
-        "/assets", json={"name": "A", "level": "Enterprise", "parent_id": None}
+        "/assets",
+        json={"name": "A", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
     ).json()["asset_id"]
     client.post(f"/assets/{asset_id}/add-family", json={"family_id": cap_id})
     plan_id = client.post(

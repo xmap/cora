@@ -24,7 +24,7 @@ def _register_asset_via_tool(client: TestClient, headers: dict[str, str]) -> UUI
                 "name": "register_asset",
                 "arguments": {
                     "name": "Detector-X",
-                    "level": "Device",
+                    "tier": "Device",
                     "parent_id": str(uuid4()),
                 },
             },

@@ -1,7 +1,7 @@
 """Contract tests for the `get_asset` MCP tool.
 
 Mirrors `test_get_family_mcp_tool.py` / `test_get_subject_mcp_tool.py`.
-Pinned structured output shape: `{id, name, level, parent_id, lifecycle}`.
+Pinned structured output shape: `{id, name, tier, parent_id, lifecycle}`.
 """
 
 from uuid import UUID, uuid4
@@ -18,12 +18,14 @@ def _register_asset_via_tool(
     headers: dict[str, str],
     *,
     name: str = "APS-2BM",
-    level: str = "Unit",
+    tier: str = "Unit",
     parent_id: str | None = None,
+    root: bool = False,
 ) -> UUID:
-    arguments: dict[str, str | None] = {"name": name, "level": level}
-    if level == "Enterprise":
+    arguments: dict[str, str | None] = {"name": name, "tier": tier}
+    if root:
         arguments["parent_id"] = None
+        arguments["facility_code"] = "cora"
     else:
         arguments["parent_id"] = parent_id if parent_id is not None else str(uuid4())
     response = client.post(
@@ -83,7 +85,7 @@ def test_mcp_get_asset_tool_returns_structured_asset_for_known_id() -> None:
     structured = result["structuredContent"]
     assert structured["id"] == str(asset_id)
     assert structured["name"] == "APS-2BM"
-    assert structured["level"] == "Unit"
+    assert structured["tier"] == "Unit"
     assert structured["parent_id"] == parent_id
     assert structured["lifecycle"] == "Commissioned"
     # Empty until add_asset_family runs (5f-1).
@@ -91,10 +93,10 @@ def test_mcp_get_asset_tool_returns_structured_asset_for_known_id() -> None:
 
 
 @pytest.mark.contract
-def test_mcp_get_asset_tool_returns_null_parent_for_enterprise_root() -> None:
+def test_mcp_get_asset_tool_returns_null_parent_for_facility_rooted_root() -> None:
     with TestClient(create_app()) as client:
         headers = open_session(client)
-        asset_id = _register_asset_via_tool(client, headers, name="ANL", level="Enterprise")
+        asset_id = _register_asset_via_tool(client, headers, name="ANL", tier="Unit", root=True)
         response = client.post(
             "/mcp",
             json={
@@ -112,7 +114,7 @@ def test_mcp_get_asset_tool_returns_null_parent_for_enterprise_root() -> None:
     body = parse_sse_data(response.text)
     structured = body["result"]["structuredContent"]
     assert structured["parent_id"] is None
-    assert structured["level"] == "Enterprise"
+    assert structured["tier"] == "Unit"
 
 
 @pytest.mark.contract

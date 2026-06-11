@@ -13,9 +13,9 @@ import pytest
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
     AssetCannotEnterMaintenanceError,
-    AssetLevel,
     AssetLifecycle,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import activate_asset, enter_asset_maintenance, register_asset
 from cora.equipment.features.activate_asset import ActivateAsset
@@ -51,7 +51,7 @@ def _build_deps(
 
 async def _register_and_activate(deps: Kernel) -> UUID:
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -120,7 +120,7 @@ async def test_handler_raises_cannot_enter_asset_maintenance_from_commissioned()
     store = InMemoryEventStore()
     deps = _build_deps(event_store=store)
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

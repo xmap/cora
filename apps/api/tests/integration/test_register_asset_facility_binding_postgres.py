@@ -30,7 +30,7 @@ import pytest
 from cora.equipment._projections import register_equipment_projections
 from cora.equipment.aggregates.asset import (
     AssetFacilityNotFoundError,
-    AssetLevel,
+    AssetTier,
     load_asset,
 )
 from cora.equipment.features import register_asset
@@ -82,8 +82,8 @@ async def test_register_asset_with_facility_code_round_trips_typed_vo(
     new_asset_id = await register_asset.bind(deps)(
         RegisterAsset(
             name="2-BM-facility-binding-test",
-            level=AssetLevel.UNIT,
-            parent_id=uuid4(),
+            tier=AssetTier.UNIT,
+            parent_id=None,
             facility_code=facility_code,
         ),
         principal_id=_PRINCIPAL_ID,
@@ -126,8 +126,8 @@ async def test_register_asset_raises_facility_not_found_on_unknown_facility_code
         await register_asset.bind(deps)(
             RegisterAsset(
                 name="Asset bound to unknown facility",
-                level=AssetLevel.UNIT,
-                parent_id=uuid4(),
+                tier=AssetTier.UNIT,
+                parent_id=None,
                 facility_code=unknown_facility_code,
             ),
             principal_id=_PRINCIPAL_ID,
@@ -158,7 +158,7 @@ async def test_register_asset_with_omitted_facility_code_stores_null(
     new_asset_id = await register_asset.bind(deps)(
         RegisterAsset(
             name="Asset without facility binding",
-            level=AssetLevel.UNIT,
+            tier=AssetTier.UNIT,
             parent_id=uuid4(),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -222,8 +222,8 @@ async def test_register_asset_with_facility_code_explicit_register_facility_firs
     new_asset_id = await register_asset.bind(asset_deps)(
         RegisterAsset(
             name=f"MAX IV beamline {uuid4().hex[:6]}",
-            level=AssetLevel.UNIT,
-            parent_id=uuid4(),
+            tier=AssetTier.UNIT,
+            parent_id=None,
             facility_code=new_code,
         ),
         principal_id=_PRINCIPAL_ID,

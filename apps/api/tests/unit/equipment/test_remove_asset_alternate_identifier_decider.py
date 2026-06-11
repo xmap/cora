@@ -10,10 +10,10 @@ from cora.equipment.aggregates.asset import (
     AssetAlternateIdentifierNotPresentError,
     AssetAlternateIdentifierRemoved,
     AssetCannotAddAlternateIdentifierError,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import remove_asset_alternate_identifier
 from cora.equipment.features.remove_asset_alternate_identifier import (
@@ -35,7 +35,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("Detector-X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         alternate_identifiers=alternate_identifiers,

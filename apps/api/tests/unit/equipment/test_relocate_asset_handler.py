@@ -20,8 +20,8 @@ import pytest
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
     AssetCannotRelocateError,
-    AssetLevel,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import register_asset, relocate_asset
 from cora.equipment.features.register_asset import RegisterAsset
@@ -56,7 +56,7 @@ def _build_deps(
 
 async def _register_asset_helper(deps: Kernel) -> UUID:
     return await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -25,7 +25,7 @@ def _register_asset_via_tool(
                 "name": "register_asset",
                 "arguments": {
                     "name": "Beamline 2-BM",
-                    "level": "Unit",
+                    "tier": "Unit",
                     "parent_id": str(uuid4()),
                 },
             },

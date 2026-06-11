@@ -15,11 +15,11 @@ import pytest
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetCondition,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
     AssetRestored,
+    AssetTier,
 )
 from cora.equipment.features import restore_asset
 from cora.equipment.features.restore_asset import RestoreAsset
@@ -35,7 +35,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("Stage-Aerotech-A3200"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         condition=condition,

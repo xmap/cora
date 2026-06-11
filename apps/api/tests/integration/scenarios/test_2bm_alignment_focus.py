@@ -134,10 +134,9 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000356bb")
 
 # Facility hierarchy + operator Actor (Actor.id == _PRINCIPAL_ID)
 _ACTOR_OPERATOR_ID = _PRINCIPAL_ID
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000356e01")
-_APS_SITE_ID = UUID("01900000-0000-7000-8000-000000356501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000356701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000356a01")
+# Practice site_id: an opaque practice-site UUID (NOT an Asset tier).
+_APS_SITE_ID = UUID("01900000-0000-7000-8000-000000356501")
 
 # Capabilities (sample-Z motor needs LinearStage + the drive electronics
 # behind it needs MotionController; image chain needs Camera + Scintillator)
@@ -202,9 +201,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -333,9 +329,6 @@ async def test_focus_alignment_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
     )

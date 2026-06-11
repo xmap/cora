@@ -46,7 +46,12 @@ def _seed_practice_with_capability(
     ).json()["practice_id"]
     asset_id = client.post(
         "/assets",
-        json={"name": "Camera-04", "level": "Enterprise", "parent_id": None},
+        json={
+            "name": "Camera-04",
+            "tier": "Unit",
+            "parent_id": None,
+            "facility_code": "cora",
+        },
     ).json()["asset_id"]
     client.post(f"/assets/{asset_id}/add-family", json={"family_id": family_id})
     return practice_id, family_id, asset_id
@@ -135,7 +140,12 @@ def test_endpoint_returns_missing_families_when_asset_lacks_required_family() ->
         # Register an Asset but DO NOT add the required family.
         asset_id = client.post(
             "/assets",
-            json={"name": "Bare-Asset", "level": "Enterprise", "parent_id": None},
+            json={
+                "name": "Bare-Asset",
+                "tier": "Unit",
+                "parent_id": None,
+                "facility_code": "cora",
+            },
         ).json()["asset_id"]
 
         response = client.post(
@@ -203,7 +213,12 @@ def test_endpoint_returns_sorted_wired_assets_for_deterministic_response() -> No
         for i in range(3):
             asset_id = client.post(
                 "/assets",
-                json={"name": f"Asset{i}", "level": "Enterprise", "parent_id": None},
+                json={
+                    "name": f"Asset{i}",
+                    "tier": "Unit",
+                    "parent_id": None,
+                    "facility_code": "cora",
+                },
             ).json()["asset_id"]
             client.post(f"/assets/{asset_id}/add-family", json={"family_id": family_id})
             extra_asset_ids.append(asset_id)

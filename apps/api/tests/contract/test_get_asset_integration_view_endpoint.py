@@ -18,7 +18,7 @@ from cora.api.main import create_app
 
 
 def _register_asset(client: TestClient) -> str:
-    body = {"name": "APS-2BM", "level": "Unit", "parent_id": str(uuid4())}
+    body = {"name": "APS-2BM", "tier": "Unit", "parent_id": str(uuid4())}
     return client.post("/assets", json=body).json()["asset_id"]
 
 
@@ -32,7 +32,7 @@ def test_get_integration_view_returns_200_on_known_asset() -> None:
     body = response.json()
     assert body["asset_id"] == asset_id
     assert body["name"] == "APS-2BM"
-    assert body["level"] == "Unit"
+    assert body["tier"] == "Unit"
     assert body["lifecycle"] == "Commissioned"
     assert body["condition"] == "Nominal"
     assert body["families"] == []

@@ -53,11 +53,11 @@ def _seeded_asset_lookup(
     *,
     asset_id: UUID = _CONTAINING_ASSET_ID,
     name: str = "2-BM",
-    level: str = "Unit",
+    tier: str = "Unit",
     lifecycle: str = "Active",
 ) -> InMemoryAssetLookup:
     lookup = InMemoryAssetLookup()
-    lookup.register(asset_id=asset_id, name=name, level=level, lifecycle=lifecycle)
+    lookup.register(asset_id=asset_id, name=name, tier=tier, lifecycle=lifecycle)
     return lookup
 
 

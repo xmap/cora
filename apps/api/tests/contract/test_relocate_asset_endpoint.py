@@ -18,16 +18,18 @@ def _register_asset(
     client: TestClient,
     *,
     name: str = "APS-2BM",
-    level: str = "Unit",
+    tier: str = "Unit",
     parent_id: str | None = None,
+    root: bool = False,
 ) -> str:
     body: dict[str, str | None] = {
         "name": name,
-        "level": level,
+        "tier": tier,
         "parent_id": parent_id if parent_id is not None else str(uuid4()),
     }
-    if level == "Enterprise":
+    if root:
         body["parent_id"] = None
+        body["facility_code"] = "cora"
     response = client.post("/assets", json=body)
     assert response.status_code == 201, response.text
     asset_id: str = response.json()["asset_id"]
@@ -61,17 +63,17 @@ def test_post_relocate_returns_404_when_asset_does_not_exist() -> None:
 
 
 @pytest.mark.contract
-def test_post_relocate_returns_409_when_asset_is_enterprise_level() -> None:
-    """Enterprise is the root; cannot have a parent. Diagnostic
+def test_post_relocate_returns_409_when_asset_is_root() -> None:
+    """A root Asset is facility-anchored; cannot have a parent. Diagnostic
     `reason` surfaces the rule in the body."""
     with TestClient(create_app()) as client:
-        asset_id = _register_asset(client, name="ANL", level="Enterprise")
+        asset_id = _register_asset(client, name="ANL", root=True)
         response = client.post(
             f"/assets/{asset_id}/relocate",
             json={"to_parent_id": str(uuid4()), "reason": "moved"},
         )
     assert response.status_code == 409
-    assert "Enterprise" in response.json()["detail"]
+    assert "Root" in response.json()["detail"]
 
 
 @pytest.mark.contract

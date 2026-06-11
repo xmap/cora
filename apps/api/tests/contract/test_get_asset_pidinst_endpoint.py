@@ -32,7 +32,7 @@ from cora.api.main import create_app
 def _register_asset_unit(client: TestClient) -> UUID:
     response = client.post(
         "/assets",
-        json={"name": "APS-2BM", "level": "Unit", "parent_id": str(uuid4())},
+        json={"name": "APS-2BM", "tier": "Unit", "parent_id": str(uuid4())},
     )
     assert response.status_code == 201, response.text
     return UUID(response.json()["asset_id"])

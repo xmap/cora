@@ -12,11 +12,11 @@ import pytest
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetCannotExitMaintenanceError,
-    AssetLevel,
     AssetLifecycle,
     AssetMaintenanceExited,
     AssetName,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import exit_asset_maintenance
 from cora.equipment.features.exit_asset_maintenance import ExitAssetMaintenance
@@ -28,7 +28,7 @@ def _asset(*, lifecycle: AssetLifecycle = AssetLifecycle.MAINTENANCE) -> Asset:
     return Asset(
         id=uuid4(),
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=lifecycle,
     )

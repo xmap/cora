@@ -17,7 +17,7 @@ from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
     AssetFacilityCodeAlreadyAssignedError,
     AssetFacilityNotFoundError,
-    AssetLevel,
+    AssetTier,
 )
 from cora.equipment.features import bind_asset_to_facility, register_asset
 from cora.equipment.features.bind_asset_to_facility import BindAssetToFacility
@@ -54,13 +54,21 @@ def _build_deps(
 
 
 async def _register_asset_helper(deps: Kernel, *, facility_code: str | None = None) -> UUID:
-    return await register_asset.bind(deps)(
-        RegisterAsset(
+    if facility_code is not None:
+        command = RegisterAsset(
             name="Beamline 2-BM",
-            level=AssetLevel.UNIT,
-            parent_id=_PARENT_ID,
+            tier=AssetTier.UNIT,
+            parent_id=None,
             facility_code=facility_code,
-        ),
+        )
+    else:
+        command = RegisterAsset(
+            name="Beamline 2-BM",
+            tier=AssetTier.UNIT,
+            parent_id=_PARENT_ID,
+        )
+    return await register_asset.bind(deps)(
+        command,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

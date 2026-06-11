@@ -19,7 +19,7 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -58,7 +58,7 @@ async def test_asset_family_added_inserts_row_with_added_at(
         correlation_id=_CORRELATION_ID,
     )
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="ABRS-1", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="ABRS-1", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -96,7 +96,7 @@ async def test_asset_family_removed_deletes_join_row(
         correlation_id=_CORRELATION_ID,
     )
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="Newport-X", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="Newport-X", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -138,12 +138,12 @@ async def test_reverse_index_supports_assets_carrying_family_lookup(
         correlation_id=_CORRELATION_ID,
     )
     asset_a = await register_asset.bind(deps)(
-        RegisterAsset(name="Hex-A", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="Hex-A", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     asset_b = await register_asset.bind(deps)(
-        RegisterAsset(name="Hex-B", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="Hex-B", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -181,7 +181,9 @@ async def test_replay_from_zero_produces_consistent_join_state(
         correlation_id=_CORRELATION_ID,
     )
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="FastShutter-1", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="FastShutter-1", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

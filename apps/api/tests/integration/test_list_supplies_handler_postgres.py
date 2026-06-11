@@ -158,7 +158,7 @@ async def test_list_filters_by_containing_asset_kind_status(db_pool: asyncpg.Poo
 
     bm_asset_id = uuid4()
     asset_lookup = InMemoryAssetLookup()
-    asset_lookup.register(asset_id=bm_asset_id, name="2-BM", level="Unit")
+    asset_lookup.register(asset_id=bm_asset_id, name="2-BM", tier="Unit")
 
     # Register 3 supplies: 2 bound to 2-BM Asset, 1 facility-scope.
     bm_ln2_id = uuid4()
@@ -335,7 +335,7 @@ async def test_list_cursor_with_filter_paginates_within_filtered_set(
 
     bm_asset_id = uuid4()
     asset_lookup = InMemoryAssetLookup()
-    asset_lookup.register(asset_id=bm_asset_id, name="2-BM", level="Unit")
+    asset_lookup.register(asset_id=bm_asset_id, name="2-BM", tier="Unit")
 
     for i in range(3):
         deps = build_postgres_deps(

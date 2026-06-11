@@ -10,11 +10,11 @@ from cora.equipment.aggregates.asset import (
     AssetAlreadyAttachedToFixtureError,
     AssetAttachedToFixture,
     AssetCannotAttachToFixtureError,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotBoundInFixtureError,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.aggregates.fixture import (
     Fixture,
@@ -39,7 +39,7 @@ def _asset(
     return Asset(
         id=asset_id,
         name=AssetName("Cam-1"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         fixture_id=fixture_id,

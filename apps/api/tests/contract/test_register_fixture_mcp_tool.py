@@ -48,7 +48,7 @@ def _register_asset_via_tool(
                 "name": "register_asset",
                 "arguments": {
                     "name": name,
-                    "level": "Device",
+                    "tier": "Device",
                     "parent_id": str(uuid4()),
                 },
             },

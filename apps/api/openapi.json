@@ -1171,10 +1171,6 @@
             "title": "Incomplete",
             "type": "boolean"
           },
-          "level": {
-            "title": "Level",
-            "type": "string"
-          },
           "lifecycle": {
             "title": "Lifecycle",
             "type": "string"
@@ -1206,12 +1202,16 @@
             "additionalProperties": true,
             "title": "Settings",
             "type": "object"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
           }
         },
         "required": [
           "asset_id",
           "name",
-          "level",
+          "tier",
           "lifecycle",
           "condition",
           "parent_id",
@@ -1224,19 +1224,6 @@
         ],
         "title": "AssetIntegrationViewResponse",
         "type": "object"
-      },
-      "AssetLevel": {
-        "description": "The hierarchical level of an Asset.\n\nPer the BC map (ISA-88-derived, single-word convention):\n  - `Enterprise`: root; the institution itself\n  - `Site`: a facility (for example, APS)\n  - `Area`: a section of a site (for example, the experimental hall)\n  - `Unit`: an operational unit (for example, a beamline)\n  - `Component`: a composed sub-system (ISA-88 \"Equipment Module\" tier)\n  - `Device`: an addressable control surface (ISA-88 \"Control Module\")\n\nCommon pattern is the strict ordering above, but Device-in-Device\nis allowed when reality demands it (smart instruments). Levels\nare conventional, not enforced: the decider does not check that\na Device's parent is a Component.\n\n## Upper tiers DEPRECATED in favor of facility_code + AssetTier\n\nPer [[project-slice8-design]] L4: the upper tiers\n`ENTERPRISE` / `SITE` / `AREA` are DEPRECATED. New Assets that\nrepresent facility-envelope concerns should bind to the owning\nFederation Facility via `Asset.facility_code` (Slice 8A binding,\nshipped 2026-06-09) rather than carry an upper-tier level. The\nlower tiers `UNIT` / `COMPONENT` / `DEVICE` continue to carry an\nhonest intrinsic-tier meaning and are exposed as the closed\n`AssetTier` StrEnum (Slice 8B, shipped 2026-06-10) for cross-BC\nconsumers that need the intrinsic facet without the facility-\nenvelope ambiguity.\n\nThe architecture fitness test\n`tests/architecture/test_asset_level_upper_tier_deprecated.py`\nrejects new occurrences of `AssetLevel.ENTERPRISE` /\n`AssetLevel.SITE` / `AssetLevel.AREA` in `cora/equipment/`,\n`cora/run/`, and `cora/operation/` source trees outside an\nexplicit allowlist (enum definition + parent-id-null invariant +\nevolver case arms + canonical APS facility fixture). Post-pilot,\na forward-only migration drops the deprecated members entirely.",
-        "enum": [
-          "Enterprise",
-          "Site",
-          "Area",
-          "Unit",
-          "Component",
-          "Device"
-        ],
-        "title": "AssetLevel",
-        "type": "string"
       },
       "AssetListResponse": {
         "description": "Page of assets plus opaque next-page cursor.",
@@ -1350,7 +1337,7 @@
         "type": "object"
       },
       "AssetResponse": {
-        "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. Decouples the wire format\nfrom the domain model so the two can evolve independently.\n`level`, `lifecycle`, and `condition` are the StrEnum string\nvalues (PascalCase per the BC map). `parent_id` is null only for\nEnterprise-level roots. `family_ids` serializes as a sorted list\nof UUIDs (frozenset semantics in domain state, list at the JSON\nboundary; sorted by UUID string form for response determinism).\n`settings` is the operator-supplied dict (operationally typed by\nFamily schemas at write time). `ports` (5h) serializes as a\nlist sorted by port name.",
+        "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. Decouples the wire format\nfrom the domain model so the two can evolve independently.\n`tier`, `lifecycle`, and `condition` are the StrEnum string\nvalues (PascalCase per the BC map). `parent_id` is null only for\nfacility-rooted Assets. `family_ids` serializes as a sorted list\nof UUIDs (frozenset semantics in domain state, list at the JSON\nboundary; sorted by UUID string form for response determinism).\n`settings` is the operator-supplied dict (operationally typed by\nFamily schemas at write time). `ports` (5h) serializes as a\nlist sorted by port name.",
         "properties": {
           "condition": {
             "title": "Condition",
@@ -1367,10 +1354,6 @@
           "id": {
             "format": "uuid",
             "title": "Id",
-            "type": "string"
-          },
-          "level": {
-            "title": "Level",
             "type": "string"
           },
           "lifecycle": {
@@ -1405,12 +1388,16 @@
             "additionalProperties": true,
             "title": "Settings",
             "type": "object"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
           }
         },
         "required": [
           "id",
           "name",
-          "level",
+          "tier",
           "parent_id",
           "lifecycle",
           "condition",
@@ -1432,18 +1419,6 @@
           "created_at": {
             "format": "date-time",
             "title": "Created At",
-            "type": "string"
-          },
-          "level": {
-            "enum": [
-              "Enterprise",
-              "Site",
-              "Area",
-              "Unit",
-              "Component",
-              "Device"
-            ],
-            "title": "Level",
             "type": "string"
           },
           "lifecycle": {
@@ -1472,18 +1447,37 @@
               }
             ],
             "title": "Parent Id"
+          },
+          "tier": {
+            "enum": [
+              "Unit",
+              "Component",
+              "Device"
+            ],
+            "title": "Tier",
+            "type": "string"
           }
         },
         "required": [
           "asset_id",
           "name",
-          "level",
+          "tier",
           "lifecycle",
           "parent_id",
           "created_at"
         ],
         "title": "AssetSummaryDTO",
         "type": "object"
+      },
+      "AssetTier": {
+        "description": "The intrinsic operational tier of an Asset.\n\nPer the BC map (ISA-88-derived, single-word convention):\n  - `Unit`: an operational unit (for example, a beamline)\n  - `Component`: a composed sub-system (ISA-88 \"Equipment Module\" tier)\n  - `Device`: an addressable control surface (ISA-88 \"Control Module\")\n\nCommon pattern is the strict ordering above, but Device-in-Device\nis allowed when reality demands it (smart instruments). Tiers\nare conventional, not enforced: the decider does not check that\na Device's parent is a Component.\n\nFacility-envelope scope (institution / site / area) is NOT a tier;\nit is owned by the Federation `Facility` aggregate\n(`FacilityKind{Site, Area}`) and bound on an Asset via\n`Asset.facility_code`. A root Asset (the top of an equipment tree,\nfor example a beamline) anchors to its Facility through\n`facility_code` and carries `parent_id=None`; its sub-Assets nest\nvia `parent_id` and inherit facility scope through the tree. See\nthe register_asset decider's `{parent_id, facility_code}` XOR rule.\n\n`tier` is a first-class field: a register_asset command field, an\n`AssetRegistered` payload key, and a projection column. It is set\nonce at registration and never mutated (there is no\nAssetTierChanged event); the evolver reconstructs it via\n`AssetTier(payload[\"tier\"])`.\n\nThe Component / Device ophyd-collision rename\n(Component -> Module, Device -> Instrument per\n[[project-equipment-naming-latent-risks]] risks #3+#4) is OUT\nOF SCOPE here; defer to its own slice on its own trigger.",
+        "enum": [
+          "Unit",
+          "Component",
+          "Device"
+        ],
+        "title": "AssetTier",
+        "type": "string"
       },
       "AssignAssetPersistentIdRequest": {
         "description": "Body for `POST /assets/{asset_id}/assign-persistent-identifier`.\n\n`scheme` selects the PID scheme; v1 supports DOI and HANDLE.\n`suffix` is the optional operator-supplied local part; when absent\nthe configured `DoiMinter` adapter auto-generates one. No `value`\nfield per the server-mint posture (Lock 12).",
@@ -9704,7 +9698,7 @@
         "type": "object"
       },
       "RegisterAssetRequest": {
-        "description": "Body for `POST /assets`.\n\n`level` accepts the StrEnum's PascalCase string values\n(\"Enterprise\" / \"Site\" / \"Area\" / \"Unit\" / \"Component\" /\n\"Device\"); Pydantic rejects unknowns with 422.\n\n`parent_id` is required for non-Enterprise levels and must be\nnull for Enterprise; that's a domain invariant enforced by\nthe decider (raises InvalidAssetParentError \u2192 400), not by\nPydantic, since the rule is conditional on `level`.",
+        "description": "Body for `POST /assets`.\n\n`tier` accepts the StrEnum's PascalCase string values\n(\"Unit\" / \"Component\" / \"Device\"); Pydantic rejects unknowns\nwith 422.\n\n`parent_id` and `facility_code` follow the anchoring XOR rule:\na root Asset has null `parent_id` + a `facility_code`; a\nnon-root has a `parent_id` + null `facility_code`. That's a\ndomain invariant enforced by the decider (raises\nInvalidAssetParentError \u2192 400), not by Pydantic.",
         "properties": {
           "alternate_identifiers": {
             "anyOf": [
@@ -9760,10 +9754,6 @@
             "description": "Optional cross-deployment Facility slug owning this Asset (for example 'aps', 'maxiv'). Lowercase ASCII alphanumeric plus dash, 1-32 chars. Set ONCE at registration; rebind path is decommission + re-register. The handler resolves the slug via the Federation BC's FacilityLookup port; unknown codes raise HTTP 404. Decommissioned-Facility binding is allowed.",
             "title": "Facility Code"
           },
-          "level": {
-            "$ref": "#/components/schemas/AssetLevel",
-            "description": "Hierarchical level. One of: Enterprise (root, requires null parent_id), Site, Area, Unit, Component, Device."
-          },
           "model_id": {
             "anyOf": [
               {
@@ -9809,13 +9799,17 @@
                 "type": "null"
               }
             ],
-            "description": "Immediate parent in the hierarchy tree. Must be null for Enterprise-level assets; required for all others. Eventual-consistency: parent's existence is NOT verified.",
+            "description": "Immediate parent in the hierarchy tree. Must be null for a root Asset (which binds facility_code instead); required for all non-roots. Eventual-consistency: parent's existence is NOT verified.",
             "title": "Parent Id"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/AssetTier",
+            "description": "Operational tier. One of: Unit, Component, Device."
           }
         },
         "required": [
           "name",
-          "level",
+          "tier",
           "parent_id"
         ],
         "title": "RegisterAssetRequest",
@@ -11369,7 +11363,7 @@
         "type": "object"
       },
       "RelocateAssetRequest": {
-        "description": "Body for `POST /assets/{asset_id}/relocate`.\n\n`to_parent_id` is required (non-null); Enterprise assets cannot\nrelocate, and non-Enterprise assets always have a parent. Per\neventual-consistency stance, the parent's existence is NOT\nverified by the decider.\n\n`reason` is operator-supplied free text (audit-log breadcrumb).",
+        "description": "Body for `POST /assets/{asset_id}/relocate`.\n\n`to_parent_id` is required (non-null); root Assets (parent_id=None)\ncannot relocate, and non-root Assets always have a parent. Per\neventual-consistency stance, the parent's existence is NOT\nverified by the decider.\n\n`reason` is operator-supplied free text (audit-log breadcrumb).",
         "properties": {
           "reason": {
             "description": "Operator-supplied reason for the relocation (audit-log breadcrumb), for example 'site reorganization', 'moved to BL2-IBP'.",
@@ -16833,17 +16827,14 @@
             }
           },
           {
-            "description": "Optional hierarchy level filter.",
+            "description": "Optional operational tier filter.",
             "in": "query",
-            "name": "level",
+            "name": "tier",
             "required": false,
             "schema": {
               "anyOf": [
                 {
                   "enum": [
-                    "Enterprise",
-                    "Site",
-                    "Area",
                     "Unit",
                     "Component",
                     "Device"
@@ -16854,8 +16845,8 @@
                   "type": "null"
                 }
               ],
-              "description": "Optional hierarchy level filter.",
-              "title": "Level"
+              "description": "Optional operational tier filter.",
+              "title": "Tier"
             }
           },
           {
@@ -16946,7 +16937,7 @@
             "description": "Query parameters failed validation OR `cursor` was malformed (corrupt base64, missing separator, bad timestamp / UUID)."
           }
         },
-        "summary": "List assets with cursor pagination + level/lifecycle/parent filters",
+        "summary": "List assets with cursor pagination + tier/lifecycle/parent filters",
         "tags": [
           "equipment"
         ]
@@ -17021,7 +17012,7 @@
                 }
               }
             },
-            "description": "Domain invariant violated: whitespace-only name, hierarchy rule (Enterprise must have null parent_id; other levels must have non-null parent_id), invalid Drawing (empty number, overlong revision, etc.), or invalid AlternateIdentifier value (empty after trimming, exceeds 200 chars)."
+            "description": "Domain invariant violated: whitespace-only name, anchoring XOR rule (a root must have null parent_id + a facility_code; a non-root must have a parent_id + no facility_code), invalid Drawing (empty number, overlong revision, etc.), or invalid AlternateIdentifier value (empty after trimming, exceeds 200 chars)."
           },
           "403": {
             "content": {
@@ -17054,7 +17045,7 @@
             "description": "Two or more entries in the owners payload share a name (AssetOwnerAlreadyPresentError); owner names must be unique within a single Asset."
           },
           "422": {
-            "description": "Request body failed schema validation (unknown level, missing fields, malformed UUID) OR Idempotency-Key was reused with a different request body."
+            "description": "Request body failed schema validation (unknown tier, missing fields, malformed UUID) OR Idempotency-Key was reused with a different request body."
           }
         },
         "summary": "Register a new physical equipment asset",
@@ -18804,7 +18795,7 @@
                 }
               }
             },
-            "description": "Asset cannot be relocated under current conditions (asset is Enterprise / Decommissioned, target is the asset itself, or target equals current parent), OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
+            "description": "Asset cannot be relocated under current conditions (asset is a root / Decommissioned, target is the asset itself, or target equals current parent), OR a concurrent write to the same asset stream conflicted (optimistic concurrency)."
           },
           "422": {
             "description": "Request body failed schema validation (missing fields, malformed UUID, empty reason)."

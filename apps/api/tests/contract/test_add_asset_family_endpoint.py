@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.aggregates.asset.events import AssetRegistered
 from cora.equipment.aggregates.asset.events import (
     event_type_name as asset_event_type_name,
@@ -40,7 +40,7 @@ _SEED_PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 def _register_asset(client: TestClient, name: str = "APS-2BM") -> str:
     response = client.post(
         "/assets",
-        json={"name": name, "level": "Unit", "parent_id": str(uuid4())},
+        json={"name": name, "tier": "Unit", "parent_id": str(uuid4())},
     )
     assert response.status_code == 201
     asset_id: str = response.json()["asset_id"]
@@ -106,7 +106,7 @@ async def _seed_asset_bound_to_model(
     registered = AssetRegistered(
         asset_id=asset_id,
         name="APS-2BM",
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         occurred_at=_SEED_NOW,
         model_id=model_id,

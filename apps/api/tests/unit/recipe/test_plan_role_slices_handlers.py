@@ -102,7 +102,7 @@ async def _seed(store: InMemoryEventStore) -> None:
     asset_register = AssetRegistered(
         asset_id=_ASSET_ID,
         name="camera-A",
-        level="Device",
+        tier="Device",
         parent_id=None,
         occurred_at=_NOW,
         commissioned_by=ActorId(uuid4()),

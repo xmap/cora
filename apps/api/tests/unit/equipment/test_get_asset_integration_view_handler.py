@@ -30,7 +30,7 @@ from uuid import UUID
 import pytest
 
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.aggregates.family.affordance import Affordance
 from cora.equipment.features import (
     add_asset_family,
@@ -90,7 +90,7 @@ async def test_handler_returns_bundle_for_registered_asset_with_no_families() ->
         now=_NOW,
     )
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -106,7 +106,7 @@ async def test_handler_returns_bundle_for_registered_asset_with_no_families() ->
     assert isinstance(view, AssetIntegrationView)
     assert view.asset_id == _ASSET_ID
     assert view.name == "APS-2BM"
-    assert view.level == "Unit"
+    assert view.tier == "Unit"
     assert view.parent_id == _PARENT_ID
     assert view.lifecycle == "Commissioned"
     assert view.condition == "Nominal"
@@ -138,7 +138,7 @@ async def test_handler_returns_family_views_with_combined_affordances() -> None:
         now=_NOW,
     )
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -201,7 +201,7 @@ async def test_handler_marks_incomplete_when_family_missing_from_store() -> None
         now=_NOW,
     )
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -296,7 +296,7 @@ async def test_handler_maps_capability_lookup_refs_into_view() -> None:
     )
     deps = dataclasses.replace(deps, capability_lookup=fake)  # type: ignore[arg-type]
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -8,7 +8,6 @@ import pytest
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetCannotAddOwnerError,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
@@ -16,6 +15,7 @@ from cora.equipment.aggregates.asset import (
     AssetOwnerName,
     AssetOwnerNotPresentError,
     AssetOwnerRemoved,
+    AssetTier,
 )
 from cora.equipment.features import remove_asset_owner
 from cora.equipment.features.remove_asset_owner import RemoveAssetOwner
@@ -31,7 +31,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("Detector-X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         owners=owners,

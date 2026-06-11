@@ -28,7 +28,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.equipment.features.install_asset import InstallAsset
@@ -95,7 +95,7 @@ async def _seed_frame_mount_and_asset(
     await bind_register_asset(deps)(
         RegisterAsset(
             name=f"specimen-{slot_code}",
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=uuid4(),
         ),
         principal_id=_PRINCIPAL_ID,

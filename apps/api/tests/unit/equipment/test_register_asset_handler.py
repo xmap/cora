@@ -7,7 +7,7 @@ import pytest
 
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
+    AssetTier,
     InvalidAssetNameError,
     InvalidAssetParentError,
 )
@@ -53,7 +53,7 @@ async def test_handler_returns_generated_asset_id() -> None:
     handler = register_asset.bind(deps)
 
     result = await handler(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -68,7 +68,7 @@ async def test_handler_appends_asset_registered_event_to_store() -> None:
     handler = register_asset.bind(deps)
 
     await handler(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -82,7 +82,7 @@ async def test_handler_appends_asset_registered_event_to_store() -> None:
     assert stored.payload == {
         "asset_id": str(_NEW_ID),
         "name": "APS-2BM",
-        "level": "Unit",
+        "tier": "Unit",
         "parent_id": str(_PARENT_ID),
         "occurred_at": _NOW.isoformat(),
         "commissioned_by": str(_PRINCIPAL_ID),
@@ -95,23 +95,24 @@ async def test_handler_appends_asset_registered_event_to_store() -> None:
 
 
 @pytest.mark.unit
-async def test_handler_appends_enterprise_asset_with_null_parent() -> None:
-    """The other genesis path: Enterprise root, parent_id=None. Pinned
-    because the payload's null serialization is one of two paths the
-    evolver round-trip relies on."""
+async def test_handler_appends_facility_rooted_asset_with_null_parent() -> None:
+    """The other genesis path: facility-rooted asset, parent_id=None
+    with facility_code bound. Pinned because the payload's null
+    parent_id serialization is one of two paths the evolver round-trip
+    relies on."""
     store = InMemoryEventStore()
     deps = _build_deps(event_store=store)
     handler = register_asset.bind(deps)
 
     await handler(
-        RegisterAsset(name="ANL", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="ANL", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
 
     events, _ = await store.load("Asset", _NEW_ID)
     assert events[0].payload["parent_id"] is None
-    assert events[0].payload["level"] == "Enterprise"
+    assert events[0].payload["tier"] == "Unit"
 
 
 @pytest.mark.unit
@@ -121,7 +122,7 @@ async def test_handler_trims_asset_name_via_value_object() -> None:
     handler = register_asset.bind(deps)
 
     await handler(
-        RegisterAsset(name="  APS-2BM  ", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="  APS-2BM  ", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -137,7 +138,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
 
     with pytest.raises(UnauthorizedError) as exc_info:
         await handler(
-            RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+            RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -152,7 +153,7 @@ async def test_handler_does_not_append_when_denied() -> None:
 
     with pytest.raises(UnauthorizedError):
         await handler(
-            RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+            RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -169,38 +170,43 @@ async def test_handler_propagates_invalid_asset_name_error() -> None:
 
     with pytest.raises(InvalidAssetNameError):
         await handler(
-            RegisterAsset(name="   ", level=AssetLevel.SITE, parent_id=_PARENT_ID),
+            RegisterAsset(name="   ", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
 
 
 @pytest.mark.unit
-async def test_handler_propagates_invalid_asset_parent_error_for_enterprise() -> None:
-    """Hierarchy rule violation surfaces as InvalidAssetParentError;
-    the route maps it to 400. Pinned because authz happens before
-    decider, so a denied request never reaches this path — the test
-    confirms the decider error propagates through the handler chain
-    when authz allows."""
+async def test_handler_propagates_invalid_asset_parent_error_when_both_anchors_set() -> None:
+    """Anchoring XOR violation (both parent_id and facility_code set)
+    surfaces as InvalidAssetParentError; the route maps it to 400.
+    Pinned because authz happens before decider, so a denied request
+    never reaches this path — the test confirms the decider error
+    propagates through the handler chain when authz allows."""
     deps = _build_deps()
     handler = register_asset.bind(deps)
 
     with pytest.raises(InvalidAssetParentError):
         await handler(
-            RegisterAsset(name="Federated", level=AssetLevel.ENTERPRISE, parent_id=_PARENT_ID),
+            RegisterAsset(
+                name="Federated",
+                tier=AssetTier.UNIT,
+                parent_id=_PARENT_ID,
+                facility_code="cora",
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
 
 
 @pytest.mark.unit
-async def test_handler_propagates_invalid_asset_parent_error_for_non_enterprise() -> None:
+async def test_handler_propagates_invalid_asset_parent_error_when_no_anchor_set() -> None:
     deps = _build_deps()
     handler = register_asset.bind(deps)
 
     with pytest.raises(InvalidAssetParentError):
         await handler(
-            RegisterAsset(name="Orphan", level=AssetLevel.UNIT, parent_id=None),
+            RegisterAsset(name="Orphan", tier=AssetTier.UNIT, parent_id=None),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -214,7 +220,7 @@ async def test_handler_propagates_causation_id_to_appended_event() -> None:
     handler = register_asset.bind(deps)
 
     await handler(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         causation_id=causation,
@@ -258,7 +264,7 @@ async def test_handler_raises_model_not_found_when_model_stream_empty(
         await handler(
             RegisterAsset(
                 name="APS-2BM",
-                level=AssetLevel.UNIT,
+                tier=AssetTier.UNIT,
                 parent_id=_PARENT_ID,
                 model_id=unknown_model_id,
             ),
@@ -299,7 +305,7 @@ async def test_handler_proceeds_when_model_id_resolves(
     await handler(
         RegisterAsset(
             name="APS-2BM-Det",
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=_PARENT_ID,
             model_id=model_id,
         ),
@@ -326,7 +332,7 @@ async def test_handler_omits_model_id_payload_key_when_command_has_none() -> Non
     await handler(
         RegisterAsset(
             name="APS-2BM",
-            level=AssetLevel.UNIT,
+            tier=AssetTier.UNIT,
             parent_id=_PARENT_ID,
         ),
         principal_id=_PRINCIPAL_ID,
@@ -346,7 +352,7 @@ async def test_wired_handler_propagates_causation_id_through_full_composition() 
     handlers = wire_equipment(deps)
 
     await handlers.register_asset(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         causation_id=causation,

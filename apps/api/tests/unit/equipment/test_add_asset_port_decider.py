@@ -8,12 +8,12 @@ import pytest
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetCannotAddPortError,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
     AssetPort,
     AssetPortAdded,
+    AssetTier,
     InvalidAssetPortNameError,
     InvalidAssetPortSignalTypeError,
     PortDirection,
@@ -32,7 +32,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("Detector-X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         ports=ports,

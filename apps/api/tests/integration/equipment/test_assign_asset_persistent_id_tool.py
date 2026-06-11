@@ -26,10 +26,10 @@ import pytest
 from mcp.server.fastmcp import FastMCP
 
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
     AssetNotFoundError,
     AssetPersistentIdAlreadyAssignedError,
     AssetPersistentIdAssignmentForbiddenError,
+    AssetTier,
 )
 from cora.equipment.features import (
     assign_asset_persistent_id,
@@ -110,7 +110,7 @@ async def _register_seed_asset(db_pool: asyncpg.Pool, *, asset_id: UUID) -> None
     await register_asset.bind(deps)(
         RegisterAsset(
             name="Rotary Stage A",
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=_PARENT_ID,
         ),
         principal_id=_PRINCIPAL_ID,

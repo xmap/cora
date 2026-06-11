@@ -130,10 +130,10 @@ _NOW = datetime(2026, 5, 17, 11, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000404bb")
 
-# Facility hierarchy. Scenario tag: 404 (operations / RunDebriefer agent).
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000404e01")
+# Root beamline Unit (facility-anchored via facility_code). Scenario tag:
+# 404 (operations / RunDebriefer agent). `_APS_SITE_ID` is an opaque
+# practice-site UUID for the Practice (NOT an Asset tier).
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000404501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000404701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000404a01")
 
 # Capabilities (full imaging chain)
@@ -169,9 +169,6 @@ _RUN_ID = UUID("01900000-0000-7000-8000-000000404f02")
 # guessing here.
 
 _TOMO_ASSETS = TomographyAssetIds(
-    argonne_id=_ARGONNE_ENTERPRISE_ID,
-    aps_site_id=_APS_SITE_ID,
-    sector_id=_SECTOR_2_AREA_ID,
     unit_id=_2BM_UNIT_ID,
     rotary_cap_id=_CAP_ROTARY_STAGE_ID,
     linear_x_cap_id=_CAP_LINEAR_STAGE_ID,

@@ -28,7 +28,7 @@ from cora.campaign.aggregates.campaign import (
 from cora.campaign.features import register_campaign, start_campaign
 from cora.campaign.features.register_campaign import RegisterCampaign
 from cora.campaign.features.start_campaign import StartCampaign
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -131,7 +131,9 @@ async def test_start_run_with_campaign_writes_both_streams_atomically(
         correlation_id=_CORRELATION_ID,
     )
     await register_asset.bind(deps)(
-        RegisterAsset(name="EigerDetector", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="EigerDetector", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

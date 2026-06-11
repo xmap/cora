@@ -241,7 +241,7 @@ async def seed_run_upstream_chain_postgres(
     """
     from uuid import uuid4
 
-    from cora.equipment.aggregates.asset import AssetLevel
+    from cora.equipment.aggregates.asset import AssetTier
     from cora.equipment.features import (
         add_asset_family,
         define_family,
@@ -303,7 +303,7 @@ async def seed_run_upstream_chain_postgres(
         correlation_id=correlation_id,
     )
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="TestAsset", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="TestAsset", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=principal_id,
         correlation_id=correlation_id,
     )

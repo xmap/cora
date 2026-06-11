@@ -1,4 +1,4 @@
-"""Asset aggregate: state, level/lifecycle enums, errors, events, evolver, read repo.
+"""Asset aggregate: state, tier/lifecycle enums, errors, events, evolver, read repo.
 
 Vertical slices that operate on this aggregate live under
 `cora.equipment.features.<verb>_asset/` and import from here for

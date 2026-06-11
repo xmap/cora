@@ -108,9 +108,6 @@ _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000405bb")
 
 # Facility hierarchy. Scenario tag: 405 (operations / dismount sample).
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000405e01")
-_APS_SITE_ID = UUID("01900000-0000-7000-8000-000000405501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000405701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000405a01")
 
 # Aerotech (the mount apparatus)
@@ -146,9 +143,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -176,13 +170,9 @@ async def test_dismount_sample_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
         unit_name="2-BM",
-        sector_name="Sector 2",
     )
 
     await bind_activate_asset(deps)(

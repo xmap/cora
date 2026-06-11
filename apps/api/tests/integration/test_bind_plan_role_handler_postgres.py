@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel, PortDirection
+from cora.equipment.aggregates.asset import AssetTier, PortDirection
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.add_asset_family import bind as bind_add_asset_family
 from cora.equipment.features.add_asset_port import AddAssetPort
@@ -83,8 +83,9 @@ async def _seed_plan_with_required_role(db_pool: asyncpg.Pool) -> tuple[UUID, UU
     asset_id = await bind_register_asset(deps)(
         RegisterAsset(
             name="cam",
-            level=AssetLevel.ENTERPRISE,
+            tier=AssetTier.UNIT,
             parent_id=None,
+            facility_code="cora",
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

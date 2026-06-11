@@ -18,7 +18,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -102,7 +102,9 @@ async def test_start_run_persists_event_with_full_upstream_chain_against_postgre
         correlation_id=_CORRELATION_ID,
     )
     await register_asset.bind(deps)(
-        RegisterAsset(name="EigerDetector", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="EigerDetector", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -13,9 +13,9 @@ import pytest
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import (
     AssetCannotActivateError,
-    AssetLevel,
     AssetLifecycle,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import activate_asset, register_asset
 from cora.equipment.features.activate_asset import ActivateAsset
@@ -51,7 +51,7 @@ async def _register_asset_helper(deps: Kernel) -> UUID:
     """Helper: register an asset and return its id."""
     handler = register_asset.bind(deps)
     return await handler(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

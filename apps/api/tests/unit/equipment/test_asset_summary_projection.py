@@ -89,7 +89,7 @@ async def test_asset_registered_inserts_with_commissioned_lifecycle_and_parent()
         {
             "asset_id": str(_ASSET_ID),
             "name": "BeamlineEnclosure-32-ID",
-            "level": "Unit",
+            "tier": "Unit",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -140,7 +140,7 @@ async def test_asset_registered_with_drawing_backfills_three_columns() -> None:
         {
             "asset_id": str(_ASSET_ID),
             "name": "Microscope-2BM-A",
-            "level": "Component",
+            "tier": "Component",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -170,7 +170,7 @@ async def test_asset_registered_with_drawing_no_revision_keeps_revision_null() -
         {
             "asset_id": str(_ASSET_ID),
             "name": "Microscope-2BM-A",
-            "level": "Component",
+            "tier": "Component",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -198,7 +198,7 @@ async def test_asset_registered_with_model_id_populates_model_column() -> None:
         {
             "asset_id": str(_ASSET_ID),
             "name": "Microscope-2BM-A",
-            "level": "Component",
+            "tier": "Component",
             "parent_id": str(_PARENT_ID),
             "model_id": str(_MODEL_ID),
             "occurred_at": _NOW.isoformat(),
@@ -225,7 +225,7 @@ async def test_asset_registered_without_model_id_leaves_model_column_null() -> N
         {
             "asset_id": str(_ASSET_ID),
             "name": "unbound-asset",
-            "level": "Device",
+            "tier": "Device",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -240,8 +240,8 @@ async def test_asset_registered_without_model_id_leaves_model_column_null() -> N
 
 
 @pytest.mark.unit
-async def test_asset_registered_with_null_parent_for_enterprise_root() -> None:
-    """Enterprise-level Assets are the root; parent_id is None."""
+async def test_asset_registered_with_null_parent_for_root() -> None:
+    """Root Assets have parent_id None; the projection writes NULL."""
     proj = AssetSummaryProjection()
     conn = AsyncMock()
     event = _stored(
@@ -249,7 +249,7 @@ async def test_asset_registered_with_null_parent_for_enterprise_root() -> None:
         {
             "asset_id": str(_ASSET_ID),
             "name": "Argonne",
-            "level": "Enterprise",
+            "tier": "Unit",
             "parent_id": None,
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -260,7 +260,7 @@ async def test_asset_registered_with_null_parent_for_enterprise_root() -> None:
 
     args = conn.execute.await_args
     assert args is not None
-    assert args.args[3] == "Enterprise"
+    assert args.args[3] == "Unit"
     assert args.args[4] is None
 
 
@@ -448,7 +448,7 @@ async def test_asset_registered_with_alternate_identifiers_writes_sorted_list() 
         {
             "asset_id": str(_ASSET_ID),
             "name": "specimen-with-tags",
-            "level": "Device",
+            "tier": "Device",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),
@@ -483,7 +483,7 @@ async def test_asset_registered_with_empty_alternate_identifiers_writes_empty_li
         {
             "asset_id": str(_ASSET_ID),
             "name": "specimen",
-            "level": "Device",
+            "tier": "Device",
             "parent_id": str(_PARENT_ID),
             "occurred_at": _NOW.isoformat(),
             "commissioned_by": str(_TEST_ACTOR_ID),

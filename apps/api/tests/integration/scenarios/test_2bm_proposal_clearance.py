@@ -166,12 +166,10 @@ _NOW = datetime(2026, 5, 18, 0, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000440bb")
 
-# Scenario tag: 440 (safety ops / proposal clearance FSM walk). The
-# safety ops family takes 44x; future Safety scenarios (rejection
-# path, expiration, amend / supersede) take 441..449.
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000440e01")
-_APS_SITE_ID = UUID("01900000-0000-7000-8000-000000440501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000440701")
+# Root beamline Unit (facility-anchored via facility_code). Scenario tag:
+# 440 (safety ops / proposal clearance FSM walk). The safety ops family
+# takes 44x; future Safety scenarios (rejection path, expiration, amend /
+# supersede) take 441..449.
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000440a01")
 
 _CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000440c01")
@@ -229,9 +227,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -283,9 +278,6 @@ async def test_proposal_clearance_walks_to_active(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
     )

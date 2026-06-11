@@ -14,10 +14,10 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetCondition,
     AssetFaulted,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
+    AssetTier,
 )
 from cora.equipment.features import fault_asset
 from cora.equipment.features.fault_asset import FaultAsset
@@ -33,7 +33,7 @@ def _asset(
     return Asset(
         id=uuid4(),
         name=AssetName("Pump-Edwards-XDS35i"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         condition=condition,

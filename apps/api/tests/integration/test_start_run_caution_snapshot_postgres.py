@@ -33,7 +33,7 @@ from cora.caution.aggregates.caution import (
 from cora.caution.features import register_caution, retire_caution
 from cora.caution.features.register_caution import RegisterCaution
 from cora.caution.features.retire_caution import RetireCaution
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import add_asset_family, define_family, register_asset
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.define_family import DefineFamily
@@ -126,7 +126,9 @@ async def _seed_upstream_chain(
         correlation_id=_CORRELATION_ID,
     )
     await register_asset.bind(deps)(
-        RegisterAsset(name="EigerDetector", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="EigerDetector", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -375,7 +377,9 @@ async def test_run_start_snapshots_controller_caution_via_controller_id_back_ref
         correlation_id=_CORRELATION_ID,
     )
     await register_asset.bind(deps)(
-        RegisterAsset(name="ControllerBox", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="ControllerBox", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -386,8 +390,8 @@ async def test_run_start_snapshots_controller_caution_via_controller_id_back_ref
     )
 
     # Stage Family + Stage Asset bound to controller via controller_id.
-    # Stage is Enterprise level to keep parent ceremony minimal; the
-    # controller_id is the field under test, not the parent hierarchy.
+    # Stage is a root Unit-tier asset to keep parent ceremony minimal;
+    # the controller_id is the field under test, not the parent hierarchy.
     await define_family.bind(deps)(
         DefineFamily(name="StageUnderTest", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
@@ -396,8 +400,9 @@ async def test_run_start_snapshots_controller_caution_via_controller_id_back_ref
     await register_asset.bind(deps)(
         RegisterAsset(
             name="StageDrivenByController",
-            level=AssetLevel.ENTERPRISE,
+            tier=AssetTier.UNIT,
             parent_id=None,
+            facility_code="cora",
             controller_id=controller_asset_id,
         ),
         principal_id=_PRINCIPAL_ID,

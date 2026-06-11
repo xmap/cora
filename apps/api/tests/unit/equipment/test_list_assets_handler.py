@@ -70,11 +70,11 @@ async def test_handler_accepts_well_formed_cursor() -> None:
 
 @pytest.mark.unit
 async def test_handler_accepts_combined_filters() -> None:
-    """No-pool path: handler doesn't error when level + lifecycle +
+    """No-pool path: handler doesn't error when tier + lifecycle +
     parent_id are all set together."""
     handler = bind(build_deps())
     page = await handler(
-        ListAssets(level="Site", lifecycle="Active", parent_id=uuid4()),
+        ListAssets(tier="Unit", lifecycle="Active", parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

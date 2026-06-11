@@ -1,4 +1,4 @@
-"""AssetName VO + AssetLevel + AssetLifecycle enum tests."""
+"""AssetName VO + AssetTier + AssetLifecycle enum tests."""
 
 from uuid import uuid4
 
@@ -8,13 +8,11 @@ from cora.equipment.aggregates.asset import (
     Asset,
     AssetAlternateIdentifierAlreadyPresentError,
     AssetAlternateIdentifierNotPresentError,
-    AssetLevel,
     AssetLifecycle,
     AssetModelMismatchError,
     AssetName,
     AssetTier,
     InvalidAssetNameError,
-    tier_from_level,
 )
 from cora.shared.identifier import (
     AlternateIdentifier,
@@ -68,104 +66,44 @@ def test_asset_name_is_frozen() -> None:
         name.value = "Other"  # type: ignore[misc]
 
 
-# ---------- AssetLevel enum ----------
+# ---------- AssetTier enum ----------
 
 
 @pytest.mark.unit
-def test_asset_level_has_all_six_isa88_levels() -> None:
-    """Pin the full level vocabulary from the BC map (ISA-88-derived,
-    single-word convention). Adding / removing values should be a
-    deliberate change visible here."""
-    assert {lvl.value for lvl in AssetLevel} == {
-        "Enterprise",
-        "Site",
-        "Area",
-        "Unit",
-        "Component",
-        "Device",
-    }
-
-
-@pytest.mark.unit
-def test_asset_level_values_are_pascal_case_strings() -> None:
-    assert AssetLevel.ENTERPRISE == "Enterprise"
-    assert AssetLevel.SITE == "Site"
-    assert AssetLevel.AREA == "Area"
-    assert AssetLevel.UNIT == "Unit"
-    assert AssetLevel.COMPONENT == "Component"
-    assert AssetLevel.DEVICE == "Device"
-
-
-@pytest.mark.unit
-def test_asset_level_is_str_enum_for_natural_serialization() -> None:
-    """StrEnum so JSON serialization and string comparison Just Work
-    without `.value` access. AssetLevel is carried in event payloads
-    as the StrEnum's string value, so this matters for the wire
-    format."""
-    assert isinstance(AssetLevel.ENTERPRISE, str)
-    assert AssetLevel.ENTERPRISE == "Enterprise"
-    assert f"{AssetLevel.SITE}" == "Site"
-
-
-@pytest.mark.unit
-def test_asset_level_can_be_constructed_from_string_value() -> None:
-    """The evolver reconstructs the enum from event payload strings via
-    `AssetLevel(payload['level'])`. Pin that the round-trip works
-    for every value."""
-    for level in AssetLevel:
-        assert AssetLevel(level.value) == level
-
-
-# ---------- AssetTier enum + tier_from_level derivation (Slice 8B) ----------
-
-
-@pytest.mark.unit
-def test_asset_tier_has_three_lower_isa88_levels() -> None:
-    """Pin the closed AssetTier value set. The three lower
-    AssetLevel values (UNIT / COMPONENT / DEVICE) graduate to the
-    intrinsic tier facet per Slice 8B Lock L3; the upper three values
-    (ENTERPRISE / SITE / AREA) do NOT participate (those are facility-
-    envelope levels deprecated by Asset.facility_code)."""
+def test_asset_tier_has_three_isa88_tiers() -> None:
+    """Pin the closed AssetTier value set (ISA-88-derived equipment
+    tiers, single-word convention). Facility-envelope scope (site /
+    area / institution) is owned by the Facility aggregate, not an
+    Asset tier; adding / removing values should be a deliberate change
+    visible here."""
     assert {t.value for t in AssetTier} == {"Unit", "Component", "Device"}
 
 
 @pytest.mark.unit
+def test_asset_tier_values_are_pascal_case_strings() -> None:
+    assert AssetTier.UNIT == "Unit"
+    assert AssetTier.COMPONENT == "Component"
+    assert AssetTier.DEVICE == "Device"
+
+
+@pytest.mark.unit
 def test_asset_tier_is_str_enum_for_natural_serialization() -> None:
-    """Mirrors the AssetLevel / AssetLifecycle test pattern: StrEnum
-    means each value IS its string representation, so projection
-    column writes and JSON serialization round-trip without a
-    custom encoder."""
+    """StrEnum so JSON serialization and string comparison Just Work
+    without `.value` access. AssetTier is carried in event payloads
+    as the StrEnum's string value, so this matters for the wire
+    format."""
     assert isinstance(AssetTier.UNIT, str)
     assert AssetTier.UNIT == "Unit"
+    assert f"{AssetTier.DEVICE}" == "Device"
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(
-    ("level", "expected"),
-    [
-        (AssetLevel.UNIT, AssetTier.UNIT),
-        (AssetLevel.COMPONENT, AssetTier.COMPONENT),
-        (AssetLevel.DEVICE, AssetTier.DEVICE),
-    ],
-)
-def test_tier_from_level_maps_lower_levels_to_matching_tier(
-    level: AssetLevel, expected: AssetTier
-) -> None:
-    """The derivation function maps the three lower AssetLevel
-    values to the matching AssetTier value verbatim."""
-    assert tier_from_level(level) == expected
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "level",
-    [AssetLevel.ENTERPRISE, AssetLevel.SITE, AssetLevel.AREA],
-)
-def test_tier_from_level_maps_upper_levels_to_none(level: AssetLevel) -> None:
-    """The three upper AssetLevel values map to None (the Asset has
-    no intrinsic tier when it represents a facility envelope).
-    Pinned because the deprecation contract relies on this asymmetry."""
-    assert tier_from_level(level) is None
+def test_asset_tier_can_be_constructed_from_string_value() -> None:
+    """The evolver reconstructs the enum from event payload strings via
+    `AssetTier(payload['tier'])`. Pin that the round-trip works for
+    every value."""
+    for tier in AssetTier:
+        assert AssetTier(tier.value) == tier
 
 
 # ---------- AssetLifecycle enum ----------
@@ -208,7 +146,7 @@ def test_asset_model_id_defaults_to_none() -> None:
     asset = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
     )
     assert asset.model_id is None
@@ -221,7 +159,7 @@ def test_asset_model_id_accepts_uuid() -> None:
     asset = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         model_id=model_id,
     )
@@ -425,7 +363,7 @@ def test_asset_alternate_identifiers_defaults_to_empty_frozenset() -> None:
     asset = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
     )
     assert asset.alternate_identifiers == frozenset()
@@ -438,7 +376,7 @@ def test_asset_alternate_identifiers_accepts_non_empty_set() -> None:
     asset = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         alternate_identifiers=frozenset({ident1, ident2}),
     )

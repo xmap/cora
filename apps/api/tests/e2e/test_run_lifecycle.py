@@ -115,7 +115,7 @@ async def test_full_run_cascade_to_completed(
 
     plan_asset = await e2e_client.post(
         "/assets",
-        json={"name": "PlanAsset", "level": "Enterprise", "parent_id": None},
+        json={"name": "PlanAsset", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
     )
     plan_asset_id = plan_asset.json()["asset_id"]
     add = await e2e_client.post(
@@ -132,7 +132,7 @@ async def test_full_run_cascade_to_completed(
 
     mount_asset = await e2e_client.post(
         "/assets",
-        json={"name": "Goniometer-1", "level": "Unit", "parent_id": str(uuid4())},
+        json={"name": "Goniometer-1", "tier": "Unit", "parent_id": str(uuid4())},
     )
     mount_asset_id = mount_asset.json()["asset_id"]
     activated = await e2e_client.post(f"/assets/{mount_asset_id}/activate")

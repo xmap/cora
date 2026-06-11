@@ -16,12 +16,12 @@ from cora.equipment.aggregates.asset import (
     ASSET_OWNER_IDENTIFIER_MAX_LENGTH,
     ASSET_OWNER_IDENTIFIER_TYPE_MAX_LENGTH,
     ASSET_OWNER_NAME_MAX_LENGTH,
-    AssetLevel,
     AssetOwner,
     AssetOwnerContact,
     AssetOwnerIdentifier,
     AssetOwnerIdentifierType,
     AssetOwnerName,
+    AssetTier,
     evolve,
 )
 from cora.equipment.aggregates.asset.events import AssetRegistered
@@ -75,7 +75,7 @@ def test_add_then_remove_owner_is_identity_holds(owner: AssetOwner) -> None:
     parent_id = uuid4()
     registered_events = register_decide(
         state=None,
-        command=RegisterAsset(name="X", level=AssetLevel.UNIT, parent_id=parent_id),
+        command=RegisterAsset(name="X", tier=AssetTier.UNIT, parent_id=parent_id),
         now=_NOW,
         new_id=asset_id,
         commissioned_by=_TEST_ACTOR_ID,
@@ -124,7 +124,7 @@ def test_register_asset_with_owner_set_then_extract_preserves_set_holds(
         state=None,
         command=RegisterAsset(
             name="X",
-            level=AssetLevel.UNIT,
+            tier=AssetTier.UNIT,
             parent_id=uuid4(),
             owners=candidate,
         ),

@@ -16,7 +16,6 @@ from cora.equipment.aggregates.asset import (
     AssetFamilyAdded,
     AssetFamilyRemoved,
     AssetFaulted,
-    AssetLevel,
     AssetLifecycle,
     AssetMaintenanceEntered,
     AssetMaintenanceExited,
@@ -32,6 +31,7 @@ from cora.equipment.aggregates.asset import (
     AssetRelocated,
     AssetRestored,
     AssetSettingsUpdated,
+    AssetTier,
     evolve,
 )
 from cora.shared.identifier import (
@@ -61,7 +61,7 @@ def _prior(*, lifecycle: AssetLifecycle = AssetLifecycle.ACTIVE) -> Asset:
     return Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=lifecycle,
         owners=frozenset({_OWNER_A, _OWNER_B}),
@@ -76,7 +76,7 @@ def test_evolver_applies_asset_registered_with_owners_to_state() -> None:
         AssetRegistered(
             asset_id=asset_id,
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             owners=frozenset({_OWNER_A}),
@@ -109,7 +109,7 @@ def test_evolver_removing_last_owner_returns_to_empty() -> None:
     prior = _prior().__class__(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         owners=frozenset({_OWNER_A}),
     )
@@ -138,7 +138,7 @@ def test_evolver_from_stored_malformed_owner_raises_value_error() -> None:
         payload={
             "asset_id": str(uuid4()),
             "name": "X",
-            "level": "Unit",
+            "tier": "Unit",
             "parent_id": str(uuid4()),
             "occurred_at": _NOW.isoformat(),
             "owners": [{"name": "   "}],  # whitespace -> InvalidAssetOwnerNameError

@@ -605,8 +605,8 @@ class AssetRelocated:
     reorganization 2026-Q3").
 
     Per BC map: `from_parent_id` is the prior parent, `to_parent_id`
-    is the new parent. Both non-null for any non-Enterprise asset
-    (Enterprise can't relocate per the decider's hierarchy guard).
+    is the new parent. Both non-null for any non-root asset
+    (a root can't relocate per the decider's anchoring guard).
     """
 
     asset_id: UUID

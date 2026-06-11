@@ -24,7 +24,7 @@ def _register_asset_with_owner_via_tool(
                 "name": "register_asset",
                 "arguments": {
                     "name": "Detector-X",
-                    "level": "Device",
+                    "tier": "Device",
                     "parent_id": str(uuid4()),
                     "owners": [{"name": owner_name}],
                 },

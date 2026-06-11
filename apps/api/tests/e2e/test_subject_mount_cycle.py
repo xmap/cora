@@ -22,7 +22,7 @@ async def test_mount_then_dismount_clears_mounted_on_asset_id(
 
     asset = await e2e_client.post(
         "/assets",
-        json={"name": "Goniometer-1", "level": "Unit", "parent_id": str(uuid4())},
+        json={"name": "Goniometer-1", "tier": "Unit", "parent_id": str(uuid4())},
     )
     assert asset.status_code == 201
     asset_id = UUID(asset.json()["asset_id"])

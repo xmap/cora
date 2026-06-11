@@ -22,7 +22,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -125,7 +125,7 @@ async def _seed_full_chain(
         correlation_id=_CORRELATION_ID,
     )
     asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="TestAsset", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="TestAsset", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

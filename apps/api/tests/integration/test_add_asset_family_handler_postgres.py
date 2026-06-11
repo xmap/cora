@@ -21,7 +21,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel, AssetModelMismatchError, load_asset
+from cora.equipment.aggregates.asset import AssetModelMismatchError, AssetTier, load_asset
 from cora.equipment.aggregates.asset.events import AssetRegistered
 from cora.equipment.aggregates.asset.events import (
     event_type_name as asset_event_type_name,
@@ -99,7 +99,7 @@ async def _seed_asset_bound_to_model(
     registered = AssetRegistered(
         asset_id=asset_id,
         name="APS-2BM",
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=_PARENT_ID,
         occurred_at=_NOW,
         model_id=model_id,
@@ -134,7 +134,7 @@ async def test_add_asset_family_persists_event_and_round_trips_through_fold(
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[asset_id, register_event_id, add_event_id])
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM", level=AssetLevel.UNIT, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM", tier=AssetTier.UNIT, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -13,7 +13,7 @@ import pytest
 
 from cora.equipment.aggregates.asset import (
     AssetCannotAddAlternateIdentifierError,
-    AssetLevel,
+    AssetTier,
     load_asset,
 )
 from cora.equipment.features import (
@@ -54,7 +54,7 @@ async def test_add_asset_alternate_identifier_persists_event_and_folds_into_stat
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM-Camera", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM-Camera", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -103,7 +103,7 @@ async def test_add_asset_alternate_identifier_rejects_when_decommissioned(
     )
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS-2BM-Camera", level=AssetLevel.DEVICE, parent_id=_PARENT_ID),
+        RegisterAsset(name="APS-2BM-Camera", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

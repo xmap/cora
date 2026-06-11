@@ -14,11 +14,11 @@ from hypothesis import strategies as st
 from cora.equipment.aggregates.asset import (
     ASSET_OWNER_CONTACT_MAX_LENGTH,
     ASSET_OWNER_NAME_MAX_LENGTH,
-    AssetLevel,
     AssetOwner,
     AssetOwnerAlreadyPresentError,
     AssetOwnerContact,
     AssetOwnerName,
+    AssetTier,
 )
 from cora.equipment.features.register_asset.command import RegisterAsset
 from cora.equipment.features.register_asset.decider import decide as register_decide
@@ -68,7 +68,7 @@ def test_register_asset_rejects_payload_with_any_duplicate_owner_name_holds(
 
     command = RegisterAsset(
         name="X",
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         owners=owner_set,
     )

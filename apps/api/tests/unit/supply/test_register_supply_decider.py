@@ -48,13 +48,13 @@ def _asset_lookup_result(
     *,
     asset_id: UUID = _CONTAINING_ASSET_ID,
     name: str = "2-BM",
-    level: str = "Unit",
+    tier: str = "Unit",
     lifecycle: str = "Active",
 ) -> AssetLookupResult:
     return AssetLookupResult(
         id=asset_id,
         name=name,
-        level=level,
+        tier=tier,
         lifecycle=lifecycle,
     )
 

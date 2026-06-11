@@ -140,10 +140,10 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000359bb")
 
 # Facility hierarchy + operator Actor (Actor.id == _PRINCIPAL_ID)
 _ACTOR_OPERATOR_ID = _PRINCIPAL_ID
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000359e01")
-_APS_SITE_ID = UUID("01900000-0000-7000-8000-000000359501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000359701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000359a01")
+
+# Opaque Practice-site UUID (the practice site, unrelated to Asset tier).
+_PRACTICE_SITE_ID = UUID("01900000-0000-7000-8000-000000359501")
 
 # Capabilities (Shutter is NEW; Camera + Scintillator are already in the catalog)
 _CAP_SHUTTER_ID = UUID("01900000-0000-7000-8000-000000359c01")
@@ -181,9 +181,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -308,9 +305,6 @@ async def test_first_light_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
     )
@@ -346,7 +340,7 @@ async def test_first_light_plays_out_end_to_end(
         DefinePractice(
             name="2BM_first_light_practice",
             method_id=_METHOD_FIRST_LIGHT_ID,
-            site_id=_APS_SITE_ID,
+            site_id=_PRACTICE_SITE_ID,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

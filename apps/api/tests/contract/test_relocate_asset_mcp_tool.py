@@ -20,11 +20,13 @@ def _register_asset_via_tool(
     headers: dict[str, str],
     *,
     name: str = "APS-2BM",
-    level: str = "Unit",
+    tier: str = "Unit",
+    root: bool = False,
 ) -> UUID:
-    arguments: dict[str, str | None] = {"name": name, "level": level}
-    if level == "Enterprise":
+    arguments: dict[str, str | None] = {"name": name, "tier": tier}
+    if root:
         arguments["parent_id"] = None
+        arguments["facility_code"] = "cora"
     else:
         arguments["parent_id"] = str(uuid4())
     response = client.post(
@@ -111,11 +113,11 @@ def test_mcp_relocate_asset_tool_returns_iserror_for_unknown_asset() -> None:
 
 
 @pytest.mark.contract
-def test_mcp_relocate_asset_tool_returns_iserror_for_enterprise_level() -> None:
-    """Enterprise is the root; cannot relocate."""
+def test_mcp_relocate_asset_tool_returns_iserror_for_root() -> None:
+    """A root Asset is facility-anchored; cannot relocate."""
     with TestClient(create_app()) as client:
         headers = open_session(client)
-        asset_id = _register_asset_via_tool(client, headers, name="ANL", level="Enterprise")
+        asset_id = _register_asset_via_tool(client, headers, name="ANL", root=True)
         response = client.post(
             "/mcp",
             json={
@@ -135,7 +137,7 @@ def test_mcp_relocate_asset_tool_returns_iserror_for_enterprise_level() -> None:
         )
     body = parse_sse_data(response.text)
     assert body["result"]["isError"] is True
-    assert "Enterprise" in body["result"]["content"][0]["text"]
+    assert "Root" in body["result"]["content"][0]["text"]
 
 
 @pytest.mark.contract

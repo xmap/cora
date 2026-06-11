@@ -31,7 +31,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.aggregates.family import Affordance
 from cora.equipment.features import (
     add_asset_family,
@@ -130,7 +130,12 @@ async def test_capability_bound_full_lane_postgres(db_pool: asyncpg.Pool) -> Non
     )
     # 3. Asset registered + bound to the Family.
     await register_asset.bind(deps)(
-        RegisterAsset(name="EigerDetector", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(
+            name="EigerDetector",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code="cora",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

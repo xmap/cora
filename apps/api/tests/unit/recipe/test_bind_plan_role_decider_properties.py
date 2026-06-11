@@ -68,7 +68,7 @@ def _plan(
 
 
 def _asset_with(family_id: UUID, port: PortRequirement | None = None) -> Asset:
-    from cora.equipment.aggregates.asset import AssetLevel
+    from cora.equipment.aggregates.asset import AssetTier
 
     ports: frozenset[AssetPort] = frozenset()
     if port is not None:
@@ -78,7 +78,7 @@ def _asset_with(family_id: UUID, port: PortRequirement | None = None) -> Asset:
     return Asset(
         id=uuid4(),
         name=AssetName("a"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=frozenset({family_id}),
         ports=ports,
@@ -159,12 +159,12 @@ def test_duplicate_role_name_always_raises_already_bound(role_name: str, now: da
     )
     # Asset exists; method has the role; family + ports cover. The
     # duplicate role_name guard fires before any of those.
-    from cora.equipment.aggregates.asset import AssetLevel
+    from cora.equipment.aggregates.asset import AssetTier
 
     asset = Asset(
         id=aid,
         name=AssetName("a"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=frozenset(),
         ports=frozenset(),
@@ -199,12 +199,12 @@ def test_happy_path_emits_single_event_with_injected_fields(role_name: str, now:
         name=MethodName("m"),
         required_roles=frozenset({RoleRequirement(role_name=RoleName(role_name), family_id=fid)}),
     )
-    from cora.equipment.aggregates.asset import AssetLevel
+    from cora.equipment.aggregates.asset import AssetTier
 
     asset = Asset(
         id=aid,
         name=AssetName("a"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         family_ids=frozenset({fid}),
         ports=frozenset(),

@@ -18,7 +18,7 @@ from cora.api.main import create_app
 def _register_asset(client: TestClient) -> str:
     response = client.post(
         "/assets",
-        json={"name": "Stage-A3200", "level": "Device", "parent_id": str(uuid4())},
+        json={"name": "Stage-A3200", "tier": "Device", "parent_id": str(uuid4())},
     )
     assert response.status_code == 201, response.text
     asset_id: str = response.json()["asset_id"]

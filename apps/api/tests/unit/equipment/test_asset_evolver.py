@@ -9,7 +9,6 @@ from cora.equipment.aggregates._drawing import Drawing, DrawingSystem
 from cora.equipment.aggregates.asset import (
     Asset,
     AssetCondition,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetTier,
@@ -46,10 +45,22 @@ from cora.equipment.aggregates.asset.state import (
 )
 from cora.equipment.features import register_asset
 from cora.equipment.features.register_asset import RegisterAsset
+from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 
 _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
+
+
+def _facility_result(code: str = "cora") -> FacilityLookupResult:
+    return FacilityLookupResult(
+        id=uuid4(),
+        code=FacilityCode(code),
+        kind="Site",
+        status="Active",
+        trust_anchor_credential_ids=frozenset(),
+    )
 
 
 def _extra_kwargs_for(transition: type) -> dict[str, object]:
@@ -73,7 +84,7 @@ def test_evolve_asset_registered_sets_lifecycle_to_commissioned() -> None:
         AssetRegistered(
             asset_id=asset_id,
             name="APS-2BM",
-            level="Site",
+            tier="Unit",
             parent_id=parent_id,
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -82,7 +93,7 @@ def test_evolve_asset_registered_sets_lifecycle_to_commissioned() -> None:
     assert state == Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.SITE,
+        tier=AssetTier.UNIT,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.COMMISSIONED,
         commissioned_at=_NOW,
@@ -91,15 +102,15 @@ def test_evolve_asset_registered_sets_lifecycle_to_commissioned() -> None:
 
 
 @pytest.mark.unit
-def test_evolve_asset_registered_handles_enterprise_with_null_parent() -> None:
-    """The other genesis case: Enterprise-level root has parent_id=None."""
+def test_evolve_asset_registered_handles_unit_with_null_parent() -> None:
+    """The other genesis case: a root (Unit-tier) Asset has parent_id=None."""
     asset_id = uuid4()
     state = evolve(
         None,
         AssetRegistered(
             asset_id=asset_id,
             name="ANL",
-            level="Enterprise",
+            tier="Unit",
             parent_id=None,
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -108,7 +119,7 @@ def test_evolve_asset_registered_handles_enterprise_with_null_parent() -> None:
     assert state == Asset(
         id=asset_id,
         name=AssetName("ANL"),
-        level=AssetLevel.ENTERPRISE,
+        tier=AssetTier.UNIT,
         parent_id=None,
         lifecycle=AssetLifecycle.COMMISSIONED,
         commissioned_at=_NOW,
@@ -117,26 +128,24 @@ def test_evolve_asset_registered_handles_enterprise_with_null_parent() -> None:
 
 
 @pytest.mark.unit
-def test_evolve_reconstructs_level_from_payload_string() -> None:
-    """`level` is carried in the payload as a string and reconstructed
-    via `AssetLevel(level)`. Pin that the round-trip works for every
-    level (otherwise an AssetLevel addition would silently break
+def test_evolve_reconstructs_tier_from_payload_string() -> None:
+    """`tier` is carried in the payload as a string and reconstructed
+    via `AssetTier(tier)`. Pin that the round-trip works for every
+    tier (otherwise an AssetTier addition would silently break
     persisted streams)."""
-    for level in AssetLevel:
-        # Enterprise must have null parent; others non-null.
-        parent_id = None if level is AssetLevel.ENTERPRISE else uuid4()
+    for tier in AssetTier:
         state = evolve(
             None,
             AssetRegistered(
                 asset_id=uuid4(),
                 name="Anything",
-                level=level.value,
-                parent_id=parent_id,
+                tier=tier.value,
+                parent_id=uuid4(),
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
             ),
         )
-        assert state.level is level
+        assert state.tier is tier
 
 
 @pytest.mark.unit
@@ -153,7 +162,7 @@ def test_fold_single_asset_registered_returns_asset() -> None:
             AssetRegistered(
                 asset_id=asset_id,
                 name="Eiger-2X-9M",
-                level="Device",
+                tier="Device",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -163,7 +172,6 @@ def test_fold_single_asset_registered_returns_asset() -> None:
     assert state == Asset(
         id=asset_id,
         name=AssetName("Eiger-2X-9M"),
-        level=AssetLevel.DEVICE,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.COMMISSIONED,
         commissioned_at=_NOW,
@@ -180,7 +188,7 @@ def test_fold_is_pure_same_input_same_output() -> None:
         AssetRegistered(
             asset_id=asset_id,
             name="APS-2BM",
-            level="Site",
+            tier="Unit",
             parent_id=parent_id,
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -190,28 +198,32 @@ def test_fold_is_pure_same_input_same_output() -> None:
 
 
 @pytest.mark.unit
-def test_decider_and_evolver_round_trip_for_enterprise() -> None:
+def test_decider_and_evolver_round_trip_for_root() -> None:
     """End-to-end: decider produces events that the evolver folds back
-    to the expected state. Enterprise-level (the null-parent case)."""
+    to the expected state. Root case (the null-parent case binds a
+    facility_code)."""
     new_id = uuid4()
-    command = RegisterAsset(name="  ANL  ", level=AssetLevel.ENTERPRISE, parent_id=None)
+    command = RegisterAsset(
+        name="  ANL  ", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"
+    )
     events = register_asset.decide(
         state=None,
         command=command,
         now=_NOW,
         new_id=new_id,
         commissioned_by=_TEST_ACTOR_ID,
-        facility_lookup_result=None,
+        facility_lookup_result=_facility_result("cora"),
     )
     rebuilt = fold(events)
     assert rebuilt == Asset(
         id=new_id,
         name=AssetName("ANL"),
-        level=AssetLevel.ENTERPRISE,
+        tier=AssetTier.UNIT,
         parent_id=None,
         lifecycle=AssetLifecycle.COMMISSIONED,
         commissioned_at=_NOW,
         commissioned_by=_TEST_ACTOR_ID,
+        facility_code=FacilityCode("cora"),
     )
 
 
@@ -221,7 +233,7 @@ def test_decider_and_evolver_round_trip_for_device_with_parent() -> None:
     to the expected state. Device-level (the typical with-parent case)."""
     new_id = uuid4()
     parent_id = uuid4()
-    command = RegisterAsset(name="Eiger-2X-9M", level=AssetLevel.DEVICE, parent_id=parent_id)
+    command = RegisterAsset(name="Eiger-2X-9M", tier=AssetTier.DEVICE, parent_id=parent_id)
     events = register_asset.decide(
         state=None,
         command=command,
@@ -234,7 +246,6 @@ def test_decider_and_evolver_round_trip_for_device_with_parent() -> None:
     assert rebuilt == Asset(
         id=new_id,
         name=AssetName("Eiger-2X-9M"),
-        level=AssetLevel.DEVICE,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.COMMISSIONED,
         commissioned_at=_NOW,
@@ -257,7 +268,7 @@ def test_evolve_asset_activated_flips_lifecycle_to_active() -> None:
     commissioned = Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.COMMISSIONED,
     )
@@ -265,7 +276,7 @@ def test_evolve_asset_activated_flips_lifecycle_to_active() -> None:
     assert activated == Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.ACTIVE,
     )
@@ -282,14 +293,14 @@ def test_evolve_asset_activated_preserves_id_name_level_parent() -> None:
     commissioned = Asset(
         id=asset_id,
         name=AssetName("Original"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.COMMISSIONED,
     )
     activated = evolve(commissioned, AssetActivated(asset_id=asset_id, occurred_at=_NOW))
     assert activated.id == asset_id
     assert activated.name == AssetName("Original")
-    assert activated.level is AssetLevel.DEVICE
+    assert activated.tier is AssetTier.DEVICE
     assert activated.parent_id == parent_id
 
 
@@ -309,7 +320,7 @@ def test_fold_register_then_activate_yields_active_asset() -> None:
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -332,7 +343,7 @@ def test_evolve_asset_decommissioned_from_commissioned_flips_to_decommissioned()
     commissioned = Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.COMMISSIONED,
     )
@@ -352,7 +363,7 @@ def test_evolve_asset_decommissioned_from_active_flips_to_decommissioned() -> No
     active = Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
     )
@@ -385,7 +396,7 @@ def test_fold_register_activate_decommission_yields_decommissioned_asset() -> No
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -413,7 +424,7 @@ def test_fold_register_decommission_yields_decommissioned_asset() -> None:
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -441,7 +452,7 @@ def test_evolve_asset_relocated_mutates_parent_id_to_target() -> None:
     commissioned = Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=old_parent,
         lifecycle=AssetLifecycle.COMMISSIONED,
     )
@@ -467,7 +478,7 @@ def test_evolve_asset_relocated_preserves_lifecycle() -> None:
     active = Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
     )
@@ -492,7 +503,7 @@ def test_evolve_asset_relocated_preserves_id_name_level() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("Original"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.COMMISSIONED,
     )
@@ -508,7 +519,7 @@ def test_evolve_asset_relocated_preserves_id_name_level() -> None:
     )
     assert relocated.id == asset_id
     assert relocated.name == AssetName("Original")
-    assert relocated.level is AssetLevel.DEVICE
+    assert relocated.tier is AssetTier.DEVICE
 
 
 @pytest.mark.unit
@@ -537,7 +548,7 @@ def test_fold_register_then_relocate_yields_asset_with_new_parent() -> None:
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=old_parent,
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -568,7 +579,7 @@ def test_fold_register_activate_relocate_preserves_active_lifecycle() -> None:
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=old_parent,
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -602,7 +613,7 @@ def test_evolve_asset_maintenance_entered_flips_lifecycle_to_maintenance() -> No
     active = Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.ACTIVE,
     )
@@ -610,7 +621,7 @@ def test_evolve_asset_maintenance_entered_flips_lifecycle_to_maintenance() -> No
     assert in_maintenance == Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.MAINTENANCE,
     )
@@ -623,14 +634,14 @@ def test_evolve_asset_maintenance_entered_preserves_id_name_level_parent() -> No
     active = Asset(
         id=asset_id,
         name=AssetName("Original"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.ACTIVE,
     )
     in_maintenance = evolve(active, AssetMaintenanceEntered(asset_id=asset_id, occurred_at=_NOW))
     assert in_maintenance.id == asset_id
     assert in_maintenance.name == AssetName("Original")
-    assert in_maintenance.level is AssetLevel.DEVICE
+    assert in_maintenance.tier is AssetTier.DEVICE
     assert in_maintenance.parent_id == parent_id
 
 
@@ -650,7 +661,7 @@ def test_evolve_asset_maintenance_exited_flips_lifecycle_to_active() -> None:
     in_maintenance = Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.MAINTENANCE,
     )
@@ -679,7 +690,7 @@ def test_fold_register_activate_enter_asset_maintenance_yields_maintenance_asset
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -702,7 +713,7 @@ def test_fold_register_activate_enter_exit_yields_active_asset() -> None:
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -728,7 +739,7 @@ def test_fold_register_activate_enter_decommission_yields_decommissioned_asset()
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -756,7 +767,7 @@ def test_evolve_asset_registered_starts_with_empty_capabilities() -> None:
         AssetRegistered(
             asset_id=uuid4(),
             name="APS-2BM",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -773,7 +784,7 @@ def test_evolve_asset_capability_added_inserts_into_capabilities() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("APS-2BM"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=parent_id,
         lifecycle=AssetLifecycle.ACTIVE,
         family_ids=frozenset(),
@@ -800,7 +811,7 @@ def test_evolve_asset_capability_added_is_idempotent_at_evolver_layer() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         family_ids=frozenset({cap1}),
     )
@@ -818,7 +829,7 @@ def test_evolve_asset_capability_removed_drops_from_capabilities() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         family_ids=frozenset({cap1, cap2}),
     )
@@ -836,7 +847,7 @@ def test_evolve_asset_capability_removed_is_idempotent_at_evolver_layer() -> Non
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         family_ids=frozenset(),
     )
@@ -895,7 +906,7 @@ def test_evolve_lifecycle_transition_preserves_capabilities(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         # Set lifecycle so each transition has a valid source state at
         # the FOLD layer (decider-time guards live elsewhere).
@@ -926,7 +937,7 @@ def test_evolve_relocate_preserves_capabilities() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=old_parent,
         family_ids=frozenset({cap1}),
     )
@@ -956,7 +967,7 @@ def test_fold_register_add_remove_yields_empty_capabilities() -> None:
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=uuid4(),
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -982,7 +993,7 @@ def test_evolve_asset_registered_defaults_condition_to_nominal() -> None:
         AssetRegistered(
             asset_id=asset_id,
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -997,7 +1008,7 @@ def test_evolve_asset_degraded_sets_condition_to_degraded() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
     )
     state = evolve(prior, AssetDegraded(asset_id=asset_id, reason="hot pixel", occurred_at=_NOW))
@@ -1010,7 +1021,7 @@ def test_evolve_asset_faulted_sets_condition_to_faulted() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
     )
     state = evolve(prior, AssetFaulted(asset_id=asset_id, reason="seized", occurred_at=_NOW))
@@ -1023,7 +1034,7 @@ def test_evolve_asset_restored_sets_condition_to_nominal() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         condition=AssetCondition.FAULTED,
     )
@@ -1042,7 +1053,7 @@ def test_evolve_condition_transition_preserves_lifecycle_and_capabilities() -> N
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=parent,
         lifecycle=AssetLifecycle.MAINTENANCE,
         condition=AssetCondition.NOMINAL,
@@ -1052,7 +1063,7 @@ def test_evolve_condition_transition_preserves_lifecycle_and_capabilities() -> N
     assert state.lifecycle is AssetLifecycle.MAINTENANCE
     assert state.family_ids == frozenset({cap})
     assert state.parent_id == parent
-    assert state.level is AssetLevel.DEVICE
+    assert state.tier is AssetTier.DEVICE
     assert state.name == AssetName("X")
 
 
@@ -1078,7 +1089,7 @@ def test_evolve_lifecycle_transition_preserves_condition(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=(
             AssetLifecycle.COMMISSIONED
@@ -1106,7 +1117,7 @@ def test_evolve_relocate_preserves_condition() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=old_parent,
         condition=AssetCondition.DEGRADED,
     )
@@ -1129,7 +1140,7 @@ def test_evolve_capability_added_preserves_condition() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         condition=AssetCondition.DEGRADED,
     )
@@ -1146,7 +1157,7 @@ def test_evolve_capability_removed_preserves_condition() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         condition=AssetCondition.DEGRADED,
         family_ids=frozenset({cap}),
@@ -1169,7 +1180,7 @@ def test_fold_register_then_fault_then_restore_round_trip() -> None:
             AssetRegistered(
                 asset_id=asset_id,
                 name="X",
-                level="Unit",
+                tier="Unit",
                 parent_id=uuid4(),
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -1194,7 +1205,7 @@ def test_evolve_asset_registered_defaults_settings_to_empty_dict() -> None:
         AssetRegistered(
             asset_id=uuid4(),
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -1211,7 +1222,7 @@ def test_evolve_asset_settings_updated_replaces_settings() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         settings={"old_key": "old_value"},
     )
@@ -1237,7 +1248,7 @@ def test_evolve_settings_transition_preserves_lifecycle_condition_capabilities()
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.MAINTENANCE,
         condition=AssetCondition.DEGRADED,
@@ -1275,7 +1286,7 @@ def test_evolve_lifecycle_transition_preserves_settings(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=(
             AssetLifecycle.COMMISSIONED
@@ -1301,7 +1312,7 @@ def test_evolve_relocate_preserves_settings() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=old_parent,
         settings={"a": 1},
     )
@@ -1324,7 +1335,7 @@ def test_evolve_capability_added_preserves_settings() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         settings={"a": 1},
     )
@@ -1343,7 +1354,7 @@ def test_evolve_capability_removed_preserves_settings_orphans() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         family_ids=frozenset({cap}),
         settings={"key_owned_by_removed_cap": "value"},
@@ -1362,7 +1373,7 @@ def test_evolve_condition_event_preserves_settings() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         settings={"a": 1},
     )
@@ -1380,7 +1391,7 @@ def test_evolve_asset_registered_defaults_ports_to_empty_frozenset() -> None:
         AssetRegistered(
             asset_id=uuid4(),
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -1395,7 +1406,7 @@ def test_evolve_asset_port_added_inserts_port_into_frozenset() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
     )
     state = evolve(
@@ -1424,7 +1435,7 @@ def test_evolve_asset_port_removed_removes_by_name_only() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         ports=frozenset({keep, drop}),
     )
@@ -1441,7 +1452,7 @@ def test_evolve_lifecycle_transition_preserves_ports() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.COMMISSIONED,
         ports=frozenset({port}),
@@ -1456,7 +1467,7 @@ def test_evolve_settings_transition_preserves_ports() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         ports=frozenset({port}),
     )
@@ -1477,7 +1488,7 @@ def test_evolve_port_added_preserves_other_facets() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=parent,
         lifecycle=AssetLifecycle.MAINTENANCE,
         condition=AssetCondition.DEGRADED,
@@ -1511,7 +1522,7 @@ def test_fold_register_then_add_then_remove_yields_empty_ports() -> None:
             AssetRegistered(
                 asset_id=asset_id,
                 name="X",
-                level="Unit",
+                tier="Unit",
                 parent_id=uuid4(),
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -1541,7 +1552,7 @@ def test_evolve_register_with_drawing_carries_drawing_into_state() -> None:
         AssetRegistered(
             asset_id=asset_id,
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             drawing=_SAMPLE_DRAWING,
@@ -1558,7 +1569,7 @@ def test_evolve_register_without_drawing_yields_none() -> None:
         AssetRegistered(
             asset_id=uuid4(),
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -1587,7 +1598,7 @@ def test_evolve_lifecycle_transition_preserves_drawing(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=(
             AssetLifecycle.COMMISSIONED
@@ -1613,7 +1624,7 @@ def test_evolve_relocate_preserves_drawing() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=old_parent,
         drawing=_SAMPLE_DRAWING,
     )
@@ -1651,7 +1662,7 @@ def test_evolve_mutation_preserves_drawing(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         drawing=_SAMPLE_DRAWING,
     )
@@ -1667,7 +1678,7 @@ def test_evolve_port_added_preserves_drawing() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         drawing=_SAMPLE_DRAWING,
     )
@@ -1690,7 +1701,7 @@ def test_evolve_port_removed_preserves_drawing() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         ports=frozenset({port}),
         drawing=_SAMPLE_DRAWING,
@@ -1713,7 +1724,7 @@ def test_evolve_register_with_model_id_carries_model_id_into_state() -> None:
         AssetRegistered(
             asset_id=asset_id,
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             model_id=model_id,
@@ -1732,7 +1743,7 @@ def test_evolve_register_without_model_id_yields_none() -> None:
         AssetRegistered(
             asset_id=uuid4(),
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -1764,7 +1775,7 @@ def test_evolve_lifecycle_transition_preserves_model_id(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=(
             AssetLifecycle.COMMISSIONED
@@ -1792,7 +1803,7 @@ def test_evolve_relocate_preserves_model_id() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=old_parent,
         model_id=model_id,
     )
@@ -1833,7 +1844,7 @@ def test_evolve_mutation_preserves_model_id(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         model_id=model_id,
     )
@@ -1850,7 +1861,7 @@ def test_evolve_port_added_preserves_model_id() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         model_id=model_id,
     )
@@ -1874,7 +1885,7 @@ def test_evolve_port_removed_preserves_model_id() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         ports=frozenset({port}),
         model_id=model_id,
@@ -1896,7 +1907,7 @@ def test_fold_register_with_model_id_then_lifecycle_transitions_preserves_model_
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 model_id=model_id,
@@ -1936,7 +1947,7 @@ def test_evolve_asset_registered_defaults_alternate_identifiers_to_empty_frozens
         AssetRegistered(
             asset_id=uuid4(),
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -1954,7 +1965,7 @@ def test_evolve_asset_registered_carries_alternate_identifiers_into_state() -> N
         AssetRegistered(
             asset_id=uuid4(),
             name="X",
-            level="Unit",
+            tier="Unit",
             parent_id=uuid4(),
             occurred_at=_NOW,
             alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A, _SAMPLE_ALT_ID_B}),
@@ -1970,7 +1981,7 @@ def test_evolve_alternate_identifier_added_inserts_into_frozenset() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
     )
     state = evolve(
@@ -1993,7 +2004,7 @@ def test_evolve_alternate_identifier_added_is_idempotent_at_evolver_layer() -> N
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A}),
     )
@@ -2014,7 +2025,7 @@ def test_evolve_alternate_identifier_removed_drops_from_frozenset() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A, _SAMPLE_ALT_ID_B}),
     )
@@ -2036,7 +2047,7 @@ def test_evolve_alternate_identifier_removed_is_idempotent_at_evolver_layer() ->
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         alternate_identifiers=frozenset(),
     )
@@ -2091,7 +2102,7 @@ def test_evolve_alternate_identifier_added_preserves_other_facets() -> None:
     prior = Asset(
         id=asset_id,
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=parent,
         lifecycle=AssetLifecycle.MAINTENANCE,
         condition=AssetCondition.DEGRADED,
@@ -2142,7 +2153,7 @@ def test_evolve_lifecycle_transition_preserves_alternate_identifiers(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=(
             AssetLifecycle.COMMISSIONED
@@ -2169,7 +2180,7 @@ def test_evolve_relocate_preserves_alternate_identifiers() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=old_parent,
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A}),
     )
@@ -2210,7 +2221,7 @@ def test_evolve_mutation_preserves_alternate_identifiers(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A}),
     )
@@ -2226,7 +2237,7 @@ def test_evolve_port_added_preserves_alternate_identifiers() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_B}),
     )
@@ -2249,7 +2260,7 @@ def test_evolve_port_removed_preserves_alternate_identifiers() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         ports=frozenset({port}),
         alternate_identifiers=frozenset({_SAMPLE_ALT_ID_A}),
@@ -2271,7 +2282,7 @@ def test_fold_register_then_add_then_remove_yields_empty_alternate_identifiers()
             AssetRegistered(
                 asset_id=asset_id,
                 name="X",
-                level="Unit",
+                tier="Unit",
                 parent_id=uuid4(),
                 occurred_at=_NOW,
                 commissioned_by=_TEST_ACTOR_ID,
@@ -2307,7 +2318,7 @@ def test_fold_register_with_seed_then_lifecycle_transitions_preserves_alternate_
             AssetRegistered(
                 asset_id=asset_id,
                 name="APS-2BM",
-                level="Unit",
+                tier="Unit",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 alternate_identifiers=seed,
@@ -2341,7 +2352,7 @@ def test_evolve_asset_owner_removed_preserves_lifecycle_timestamps() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         owners=frozenset({owner_a, owner_b}),
@@ -2370,7 +2381,7 @@ def test_evolve_asset_attached_to_fixture_preserves_lifecycle_timestamps() -> No
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=AssetLifecycle.ACTIVE,
         commissioned_at=commissioned,
@@ -2398,7 +2409,7 @@ def test_evolve_register_with_controller_id_folds_to_state() -> None:
         AssetRegistered(
             asset_id=asset_id,
             name="Aerotech_ABRS_rotary",
-            level="Device",
+            tier="Device",
             parent_id=uuid4(),
             occurred_at=_NOW,
             controller_id=controller_id,
@@ -2418,7 +2429,7 @@ def test_evolve_register_without_controller_id_yields_none() -> None:
         AssetRegistered(
             asset_id=uuid4(),
             name="X",
-            level="Device",
+            tier="Device",
             parent_id=uuid4(),
             occurred_at=_NOW,
             commissioned_by=_TEST_ACTOR_ID,
@@ -2453,7 +2464,7 @@ def test_evolve_lifecycle_transition_preserves_controller_id(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         lifecycle=(
             AssetLifecycle.COMMISSIONED
@@ -2481,7 +2492,7 @@ def test_evolve_relocate_preserves_controller_id() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=old_parent,
         controller_id=controller_id,
     )
@@ -2522,7 +2533,7 @@ def test_evolve_mutation_preserves_controller_id(
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.UNIT,
+        tier=AssetTier.UNIT,
         parent_id=uuid4(),
         controller_id=controller_id,
     )
@@ -2539,7 +2550,7 @@ def test_evolve_port_added_preserves_controller_id() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         controller_id=controller_id,
     )
@@ -2563,7 +2574,7 @@ def test_evolve_port_removed_preserves_controller_id() -> None:
     prior = Asset(
         id=uuid4(),
         name=AssetName("X"),
-        level=AssetLevel.DEVICE,
+        tier=AssetTier.DEVICE,
         parent_id=uuid4(),
         ports=frozenset({port}),
         controller_id=controller_id,
@@ -2587,7 +2598,7 @@ def test_fold_register_with_controller_id_then_lifecycle_transitions_preserves_c
             AssetRegistered(
                 asset_id=asset_id,
                 name="Aerotech_ABRS_rotary",
-                level="Device",
+                tier="Device",
                 parent_id=parent_id,
                 occurred_at=_NOW,
                 controller_id=controller_id,

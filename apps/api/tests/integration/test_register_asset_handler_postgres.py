@@ -23,9 +23,9 @@ import pytest
 
 from cora.equipment._projections import register_equipment_projections
 from cora.equipment.aggregates.asset import (
-    AssetLevel,
     AssetLifecycle,
     AssetName,
+    AssetTier,
     load_asset,
 )
 from cora.equipment.aggregates.model import (
@@ -62,7 +62,7 @@ async def test_register_asset_persists_enterprise_root_to_postgres(
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[asset_id, event_id])
 
     returned_asset_id = await register_asset.bind(deps)(
-        RegisterAsset(name="ANL", level=AssetLevel.ENTERPRISE, parent_id=None),
+        RegisterAsset(name="ANL", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -75,10 +75,11 @@ async def test_register_asset_persists_enterprise_root_to_postgres(
     assert stored.payload == {
         "asset_id": str(asset_id),
         "name": "ANL",
-        "level": "Enterprise",
+        "tier": "Unit",
         "parent_id": None,
         "occurred_at": _NOW.isoformat(),
         "commissioned_by": str(_PRINCIPAL_ID),
+        "facility_code": "cora",
     }
     assert stored.event_id == event_id
 
@@ -87,7 +88,7 @@ async def test_register_asset_persists_enterprise_root_to_postgres(
     assert state is not None
     assert state.id == asset_id
     assert state.name == AssetName("ANL")
-    assert state.level is AssetLevel.ENTERPRISE
+    assert state.tier is AssetTier.UNIT
     assert state.parent_id is None
     assert state.lifecycle is AssetLifecycle.COMMISSIONED
 
@@ -105,7 +106,7 @@ async def test_register_asset_persists_site_with_parent_to_postgres(
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[asset_id, event_id])
 
     await register_asset.bind(deps)(
-        RegisterAsset(name="APS", level=AssetLevel.SITE, parent_id=parent_id),
+        RegisterAsset(name="APS", tier=AssetTier.UNIT, parent_id=parent_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -113,7 +114,7 @@ async def test_register_asset_persists_site_with_parent_to_postgres(
     state = await load_asset(deps.event_store, asset_id)
     assert state is not None
     assert state.parent_id == parent_id
-    assert state.level is AssetLevel.SITE
+    assert state.tier is AssetTier.UNIT
     assert state.lifecycle is AssetLifecycle.COMMISSIONED
 
 
@@ -177,7 +178,7 @@ async def test_register_asset_persists_model_binding_to_postgres(
     returned_asset_id = await register_asset.bind(deps)(
         RegisterAsset(
             name="APS-2BM-Det",
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=parent_id,
             model_id=model_id,
         ),
@@ -192,7 +193,7 @@ async def test_register_asset_persists_model_binding_to_postgres(
     assert stored.event_type == "AssetRegistered"
     assert stored.payload["model_id"] == str(model_id)
     assert stored.payload["asset_id"] == str(asset_id)
-    assert stored.payload["level"] == "Device"
+    assert stored.payload["tier"] == "Device"
     assert stored.payload["parent_id"] == str(parent_id)
 
     state = await load_asset(deps.event_store, asset_id)
@@ -259,7 +260,7 @@ async def test_register_asset_persists_alternate_identifiers_to_postgres(
     returned_asset_id = await register_asset.bind(deps)(
         RegisterAsset(
             name="APS-2BM-RotaryStage",
-            level=AssetLevel.DEVICE,
+            tier=AssetTier.DEVICE,
             parent_id=parent_id,
             model_id=model_id,
             alternate_identifiers=identifiers,
@@ -320,7 +321,7 @@ async def test_register_asset_raises_model_not_found_on_unknown_model_id(
         await register_asset.bind(deps)(
             RegisterAsset(
                 name="APS-2BM",
-                level=AssetLevel.UNIT,
+                tier=AssetTier.UNIT,
                 parent_id=parent_id,
                 model_id=unknown_model_id,
             ),

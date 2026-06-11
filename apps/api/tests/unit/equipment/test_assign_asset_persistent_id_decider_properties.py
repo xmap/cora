@@ -27,13 +27,13 @@ from hypothesis import strategies as st
 
 from cora.equipment.aggregates.asset import (
     Asset,
-    AssetLevel,
     AssetLifecycle,
     AssetName,
     AssetNotFoundError,
     AssetPersistentIdAlreadyAssignedError,
     AssetPersistentIdAssigned,
     AssetPersistentIdAssignmentForbiddenError,
+    AssetTier,
 )
 from cora.equipment.features import assign_asset_persistent_id
 from cora.equipment.features.assign_asset_persistent_id.command import AssignAssetPersistentId
@@ -74,8 +74,8 @@ def _asset(
     return Asset(
         id=asset_id,
         name=AssetName("Detector-X"),
-        level=AssetLevel.DEVICE,
-        parent_id=asset_id,  # any UUID; non-Enterprise requires non-null
+        tier=AssetTier.DEVICE,
+        parent_id=asset_id,  # any UUID; non-root requires non-null
         lifecycle=lifecycle,
         persistent_id=persistent_id,
     )

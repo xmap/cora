@@ -19,8 +19,8 @@ this scenario fits into.
   - **Access BC**: 3 human operator Actors (operator pool: 2-BM Operator
     1/2/3 with canonical fixture-owned UUIDs) + 2 review-chain reviewer
     Actors (2-BM Beamline Scientist + APS Experiment Safety Review Board)
-  - **Equipment BC**: Argonne (Enterprise) + APS (Site) + Sector 2 (Area)
-    + 2-BM (Unit) + 2 Devices (rotary + linear motor, with Capabilities)
+  - **Equipment BC**: 2-BM (Unit, facility-anchored root) + 2 Devices
+    (rotary + linear motor, with Capabilities)
   - **Trust BC**: 2-BM Zone + 2-BM Local Conduit (self-loop) + 2 Policies
     (Operations + Agent). The Agent Policy permits `RUN_DEBRIEF_ACTOR_ID`
     even though no Agent aggregate is registered here — Run Debrief lives
@@ -67,11 +67,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000002f00bb")
 
 # Asset hierarchy: scenario-supplied UUIDs per the fixture convention.
 # Mnemonic hex: 2f00 prefix = "2-BM facility install"; trailing kind tag
-# matches the rest of the corpus (e=enterprise, 5=site, 7=area, a=unit/device,
-# c=capability).
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-0000002f00e1")
-_APS_SITE_ID = UUID("01900000-0000-7000-8000-0000002f0051")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-0000002f0071")
+# matches the rest of the corpus (a=unit/device, c=capability).
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-0000002f00a1")
 
 _CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-0000002f00c1")
@@ -97,9 +93,6 @@ async def test_2bm_facility_install_plays_out_end_to_end(
         db_pool,
         now=_NOW,
         ids=facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -109,9 +102,6 @@ async def test_2bm_facility_install_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
     )
@@ -120,8 +110,6 @@ async def test_2bm_facility_install_plays_out_end_to_end(
     assert result.operator_pool_ids == OPERATOR_POOL_IDS
     assert result.beamline_scientist_actor_id == BEAMLINE_SCIENTIST_ACTOR_ID
     assert result.esrb_actor_id == ESRB_ACTOR_ID
-    assert result.argonne_id == _ARGONNE_ENTERPRISE_ID
-    assert result.aps_site_id == _APS_SITE_ID
     assert result.unit_id == _2BM_UNIT_ID
     assert result.bm2_zone_id == BM2_ZONE_ID
     assert result.bm2_local_conduit_id == BM2_LOCAL_CONDUIT_ID
@@ -146,8 +134,6 @@ async def test_2bm_facility_install_plays_out_end_to_end(
     assert esrb_actor.kind is ActorKind.HUMAN
 
     # ----- Equipment BC: Asset stream versions reflect register + add_family -----
-    _, argonne_version = await deps.event_store.load("Asset", _ARGONNE_ENTERPRISE_ID)
-    assert argonne_version == 1
     _, unit_version = await deps.event_store.load("Asset", _2BM_UNIT_ID)
     assert unit_version == 1
     # Devices: register_asset (v1) + add_asset_family (v2)

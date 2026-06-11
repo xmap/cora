@@ -21,7 +21,7 @@ def _define_family(client: TestClient) -> UUID:
 def _register_asset(client: TestClient, family_id: UUID) -> UUID:
     create = client.post(
         "/assets",
-        json={"name": "Camera-1", "level": "Device", "parent_id": str(uuid4())},
+        json={"name": "Camera-1", "tier": "Device", "parent_id": str(uuid4())},
     )
     assert create.status_code == 201, create.text
     asset_id = UUID(create.json()["asset_id"])

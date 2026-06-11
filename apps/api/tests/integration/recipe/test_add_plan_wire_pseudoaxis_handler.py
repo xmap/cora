@@ -129,7 +129,7 @@ async def _seed_asset(
         AssetRegistered(
             asset_id=asset_id,
             name=name,
-            level="Device",
+            tier="Device",
             parent_id=None,
             occurred_at=_NOW,
             commissioned_by=ActorId(uuid4()),

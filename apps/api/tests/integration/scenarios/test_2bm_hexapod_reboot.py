@@ -150,11 +150,8 @@ _NOW = datetime(2026, 5, 17, 14, 30, 0, tzinfo=UTC)
 _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000360bb")
 
-# Facility hierarchy mnemonic hex tags: e=enterprise, 5=site, 7=area (sector), a=unit.
-# Scenario tag: 360.
-_ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000360e01")
+# Facility hierarchy mnemonic hex tags: a=unit. Scenario tag: 360.
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000360501")
-_SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000360701")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000360a01")
 
 # Families (2: motion controller + hexapod)
@@ -214,9 +211,6 @@ def _id_queue() -> list[UUID]:
     e = uuid4
     return [
         *facility_id_prefix(
-            argonne_id=_ARGONNE_ENTERPRISE_ID,
-            aps_site_id=_APS_SITE_ID,
-            sector_id=_SECTOR_2_AREA_ID,
             unit_id=_2BM_UNIT_ID,
             devices=_DEVICES,
         ),
@@ -351,9 +345,6 @@ async def test_hexapod_reboot_plays_out_end_to_end(
         deps,
         profile_store=make_pg_profile_store(db_pool),
         correlation_id=_CORRELATION_ID,
-        argonne_id=_ARGONNE_ENTERPRISE_ID,
-        aps_site_id=_APS_SITE_ID,
-        sector_id=_SECTOR_2_AREA_ID,
         unit_id=_2BM_UNIT_ID,
         devices=_DEVICES,
         unit_name="2-BM",
@@ -631,8 +622,6 @@ async def test_hexapod_reboot_plays_out_end_to_end(
     # ----- Assert: facility hierarchy + controller + Hexapod landed -----
 
     for asset_id in (
-        _ARGONNE_ENTERPRISE_ID,
-        _APS_SITE_ID,
         _2BM_UNIT_ID,
         _ASSET_AEROTECH_HEXAPOD_DRIVE_ID,
         _ASSET_HEXAPOD_ID,

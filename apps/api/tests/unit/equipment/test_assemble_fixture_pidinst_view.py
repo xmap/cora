@@ -124,7 +124,7 @@ async def _seed_asset(
     registered = AssetRegistered(
         asset_id=asset_id,
         name=name,
-        level="Device",
+        tier="Device",
         parent_id=uuid4(),
         occurred_at=when,
         model_id=model_id,

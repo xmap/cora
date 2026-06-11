@@ -23,7 +23,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.assembly import SlotCardinality, SlotName, TemplateSlot
-from cora.equipment.aggregates.asset import AssetLevel
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.aggregates.fixture import SlotAssetBinding
 from cora.equipment.aggregates.mount import MountHasFixtureBoundAssetError
 from cora.equipment.features import (
@@ -90,7 +90,7 @@ async def _seed_active_asset_in_mount(
 
     deps = build_postgres_deps(pool, now=_NOW, ids=[asset_id, uuid4()])
     await register_asset.bind(deps)(
-        RegisterAsset(name=f"specimen-{slot_code}", level=AssetLevel.DEVICE, parent_id=uuid4()),
+        RegisterAsset(name=f"specimen-{slot_code}", tier=AssetTier.DEVICE, parent_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
