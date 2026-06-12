@@ -121,8 +121,14 @@ openapi-snapshot:
 # (Access BC deciders + evolver only). [tool.mutmut] in apps/api/pyproject.toml
 # carries the test-selection + runner config. Audit-only — not per-PR.
 # Expect ~5-15 min for the first run on Linux; resumable across invocations
-# (state lives in apps/api/mutants/, gitignored). Override the wildcard via
-# `MUTMUT_SCOPE=cora.recipe.* make mutmut-audit` to audit a different BC.
+# (state lives in apps/api/mutants/, gitignored). Override the source scope
+# via `MUTMUT_SCOPE=cora.recipe.* make mutmut-audit`. NOTE: MUTMUT_SCOPE only
+# changes which code is mutated; the pytest test selection is pinned to
+# tests/unit/access in [tool.mutmut] (mutmut 3.5 has no CLI override for it).
+# To audit a DIFFERENT BC end-to-end you must also point that test selection
+# at tests/unit/<bc>. The nightly per-BC rotation workflow
+# (.github/workflows/mutmut.yml) does both automatically on a Linux runner;
+# that is the supported multi-BC path.
 #
 # macOS caveat (observed 2026-05-20): mutmut's per-mutant subprocess wrapper
 # reports every result as `segfault` on darwin even when the same mutant

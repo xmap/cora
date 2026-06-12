@@ -1,10 +1,17 @@
-name: Mutation audit (Access BC, nightly)
+name: Mutation audit (per-BC rotation, nightly)
 
-# Audit-cadence mutation testing on the Access BC's pure-logic surface
-# (deciders + evolver). NOT per-PR — mutation testing is fundamentally
-# asynchronous: per-mutant pytest spawn × scoped suite = minutes, and the
-# product is a survivor LIST you triage offline, not a green/red gate on
-# the PR pipeline.
+# Audit-cadence mutation testing on each BC's pure-logic surface (deciders
+# + evolvers). NOT per-PR — mutation testing is fundamentally asynchronous:
+# per-mutant pytest spawn × scoped suite = minutes, and the product is a
+# survivor LIST you triage offline, not a green/red gate on the PR pipeline.
+#
+# Rotation (per [[project_testing_expansion_research]] Iter M: "nightly
+# per-BC rotation, 1-2 BCs/night so each gets a weekly full audit"): the
+# `select` job picks 2 BCs per night from the day-of-year, cycling through
+# the PBT-covered roster so each BC is audited roughly weekly. This keeps
+# the nightly load and the survivor-triage backlog digestible, versus a
+# full 11-way matrix every night. The trigger to scale to per-BC rotation
+# (>=5 BCs PBT-covered) fired; there are 11 today.
 #
 # Runs on Linux (ubuntu-latest). The local `make mutmut-audit` target works
 # on macOS too but mutmut 3.5's per-mutant subprocess wrapper reports every
@@ -13,7 +20,7 @@ name: Mutation audit (Access BC, nightly)
 #
 # When this finds something useful (a survivor that should be killed),
 # triage flow:
-#   1. Download the `mutmut-audit-<N>` artifact from the run.
+#   1. Download the `mutmut-audit-<bc>-<N>` artifact from the run.
 #   2. Read survivors.txt; pick a mutant id.
 #   3. Locally: `cd apps/api && uv run mutmut show <mutant_id>` to see the diff.
 #   4. Either strengthen the test (preferred) or mark equivalent via
@@ -27,22 +34,73 @@ on:
     # better with an off-minute time).
     - cron: "23 3 * * *"
   workflow_dispatch:
-    # Manual trigger from the Actions UI. Useful after merging changes
-    # to deciders / evolvers to refresh the survivor list without
-    # waiting for the next nightly window.
+    # Manual trigger from the Actions UI. Useful after merging changes to a
+    # BC's deciders / evolvers to refresh its survivor list without waiting
+    # for that BC's next rotation slot.
+    inputs:
+      bc:
+        description: "Single BC to audit (blank = tonight's rotation of 2)"
+        required: false
+        default: ""
 
-# Only one audit at a time. If the next nightly fires while the prior run
-# is still going (unlikely; would mean a >24h audit), let the running
+# Only one audit run at a time. If the next nightly fires while the prior
+# run is still going (unlikely; would mean a >24h audit), let the running
 # one finish — cancelling a partial audit wastes the work already done.
+# Matrix jobs WITHIN a run still parallelise (the 2 rotated BCs run side by
+# side); this group only serialises across runs.
 concurrency:
   group: mutmut-audit
   cancel-in-progress: false
 
 jobs:
-  audit:
-    name: mutmut audit (Access BC)
+  select:
+    name: select BCs for tonight
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    outputs:
+      bcs: ${{ steps.pick.outputs.bcs }}
+    steps:
+      - name: Pick rotation slice
+        id: pick
+        env:
+          # Empty on schedule; set only on a manual workflow_dispatch.
+          INPUT_BC: ${{ inputs.bc }}
+        run: |
+          set -euo pipefail
+          # PBT-covered BC roster (each has tests/unit/<bc> property-based
+          # coverage + a decider/evolver pure-logic surface). Adding a BC
+          # to the rotation is a deliberate edit here.
+          BCS=(access agent calibration data enclosure equipment federation operation recipe safety trust)
+          N=${#BCS[@]}
+
+          if [ -n "${INPUT_BC}" ]; then
+            picked="${INPUT_BC}"
+          else
+            # Day-of-year (1..366), base-10 to avoid octal parsing of 008/009.
+            doy=$((10#$(date -u +%j)))
+            # 2-wide window stepping by 2 each night; wraps mod N so the
+            # whole roster cycles in ~6 nights (each BC ~weekly).
+            start=$(( ((doy - 1) * 2) % N ))
+            picked="${BCS[$start]} ${BCS[$(((start + 1) % N))]}"
+          fi
+
+          arr=""
+          for x in ${picked}; do arr="${arr}\"${x}\","; done
+          echo "bcs=[${arr%,}]" >> "$GITHUB_OUTPUT"
+          echo "Tonight's rotation: ${picked}"
+
+  audit:
+    name: mutmut audit (${{ matrix.bc }})
+    needs: select
+    runs-on: ubuntu-latest
+    # 90 min: most BCs finish in 5-15 min, but large pure-logic surfaces
+    # (equipment ~58 decider/evolver modules) run longer. continue-on-error
+    # on the audit step + always-run summary mean a timeout still uploads
+    # partial results rather than failing silently.
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        bc: ${{ fromJSON(needs.select.outputs.bcs) }}
 
     steps:
       - uses: actions/checkout@v6
@@ -57,9 +115,40 @@ jobs:
         working-directory: apps/api
         run: uv sync --locked --all-extras
 
+      - name: Resolve mutation scope + test selection for this BC
+        working-directory: apps/api
+        env:
+          BC: ${{ matrix.bc }}
+        run: |
+          set -euo pipefail
+          # Pure-logic surface = every decider.py + evolver.py under the BC,
+          # as dotted module wildcards (the CLI escape hatch [tool.mutmut]
+          # documents; `only_mutate` does not actually scope in mutmut 3.5).
+          scope=$(find "src/cora/${BC}" \( -name decider.py -o -name evolver.py \) \
+            | sed 's#^src/##; s#\.py$#.*#; s#/#.#g' \
+            | sort | tr '\n' ' ')
+          if [ -z "${scope// /}" ]; then
+            echo "No decider/evolver modules found under src/cora/${BC}" >&2
+            exit 1
+          fi
+          echo "MUTMUT_SCOPE=${scope}" >> "$GITHUB_ENV"
+          echo "Scope: ${scope}"
+
+          # Point mutmut's pytest test selection at THIS BC's unit tests.
+          # mutmut 3.5 has no CLI override for test selection (only
+          # --max-children); it reads pyproject [tool.mutmut]. The default
+          # there is tests/unit/access; rewrite it for the rotated BC. The
+          # runner checkout is ephemeral, so editing pyproject here is safe.
+          sed -i "s#\"tests/unit/access\"#\"tests/unit/${BC}\"#" pyproject.toml
+          grep -q "\"tests/unit/${BC}\"" pyproject.toml || {
+            echo "Failed to rewrite test selection to tests/unit/${BC}" >&2
+            exit 1
+          }
+
       - name: Run mutmut audit
         # `make mutmut-audit` seeds mutants/README.md (hatchling
-        # package-metadata requirement) and invokes the scoped run.
+        # package-metadata requirement) and invokes the scoped run, reading
+        # MUTMUT_SCOPE from the env exported above.
         # `continue-on-error: true` because surviving mutants are
         # informational, not a failure condition — see the
         # testing-techniques research-memo's explicit-skip list:
@@ -80,6 +169,8 @@ jobs:
         # / segfault / total) to JSON. Parse that for the summary.
         if: always()
         working-directory: apps/api
+        env:
+          BC: ${{ matrix.bc }}
         run: |
           set +e
           uv run mutmut export-cicd-stats > export-output.txt 2>&1 || true
@@ -88,7 +179,7 @@ jobs:
 
           stats_file=mutants/mutmut-cicd-stats.json
           if [ ! -f "$stats_file" ]; then
-            echo "## Mutation audit summary" >> "$GITHUB_STEP_SUMMARY"
+            echo "## Mutation audit summary (${BC})" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "⚠ stats file missing — mutmut export failed. See \`export-output.txt\` in the artifact." >> "$GITHUB_STEP_SUMMARY"
             exit 0
@@ -110,9 +201,9 @@ jobs:
           fi
 
           {
-            echo "## Mutation audit summary"
+            echo "## Mutation audit summary (${BC})"
             echo ""
-            echo "Scope: \`Access BC deciders + Actor evolver\`"
+            echo "Scope: \`${BC} BC deciders + evolvers\`"
             echo ""
             echo "| Outcome | Count |"
             echo "|---|---|"
@@ -132,7 +223,7 @@ jobs:
               head -10 survivors.txt
               echo '```'
               echo ""
-              echo "Full list in the \`mutmut-audit-${{ github.run_number }}\` artifact. Triage via \`mutmut show <id>\` locally; annotate equivalents with \`# pragma: no mutate\`."
+              echo "Full list in the \`mutmut-audit-${BC}-${{ github.run_number }}\` artifact. Triage via \`mutmut show <id>\` locally; annotate equivalents with \`# pragma: no mutate\`."
             else
               echo "No surviving mutants. ✓"
             fi
@@ -142,7 +233,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: mutmut-audit-${{ github.run_number }}
+          name: mutmut-audit-${{ matrix.bc }}-${{ github.run_number }}
           path: |
             apps/api/mutants/mutmut-cicd-stats.json
             apps/api/mutants/mutmut-stats.json
