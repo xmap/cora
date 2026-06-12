@@ -92,6 +92,22 @@ class PostgresAssetLookup:
             return None
         return _row_to_result(row)
 
+    async def ancestors_of(self, asset_ids: frozenset[UUID]) -> frozenset[AssetLookupResult]:
+        """Inclusive `parent_id` ancestor closure (recursive-CTE walk).
+
+        Placeholder pending the recursive-CTE implementation, which
+        carries a dedicated gate review (first `WITH RECURSIVE` in the
+        codebase + the cross-BC-SQL convention lock). The port method
+        and the in-memory adapter ship first so the Protocol is
+        satisfiable; no caller invokes `ancestors_of` until the gate
+        wiring lands, so this raises rather than returning a wrong
+        partial closure.
+        """
+        raise NotImplementedError(
+            "PostgresAssetLookup.ancestors_of recursive-CTE walk is not yet wired; "
+            "it lands with its gate review."
+        )
+
 
 def _row_to_result(row: Any) -> AssetLookupResult:
     return AssetLookupResult(
