@@ -315,9 +315,9 @@ The eight aggregates emit forty-eight distinct event types, grouped by aggregate
 | `AssetPortAdded` | `asset_id`, `port_name`, `direction`, `signal_type`, `occurred_at` | `add_asset_port` succeeds |
 | `AssetPortRemoved` | `asset_id`, `port_name`, `occurred_at` | `remove_asset_port` succeeds |
 | `AssetSettingsUpdated` | `asset_id`, `settings`, `occurred_at` | `update_asset_settings` succeeds; payload carries the post-merge settings dict |
-| `AssetDegraded` | `asset_id`, `occurred_at` | `degrade_asset` succeeds |
-| `AssetFaulted` | `asset_id`, `occurred_at` | `fault_asset` succeeds |
-| `AssetRestored` | `asset_id`, `occurred_at` | `restore_asset` succeeds |
+| `AssetDegraded` | `asset_id`, `reason`, `occurred_at` | `degrade_asset` succeeds; `reason` is operator free text (for example "hot pixel detected") |
+| `AssetFaulted` | `asset_id`, `reason`, `occurred_at` | `fault_asset` succeeds |
+| `AssetRestored` | `asset_id`, `reason`, `occurred_at` | `restore_asset` succeeds |
 | `AssetOwnerAdded` | `asset_id`, `owner` (full AssetOwner VO), `occurred_at` | `add_asset_owner` succeeds |
 | `AssetOwnerRemoved` | `asset_id`, `owner_name`, `occurred_at` | `remove_asset_owner` succeeds |
 | `AssetAlternateIdentifierAdded` | `asset_id`, `alternate_identifier` (full VO), `occurred_at` | `add_asset_alternate_identifier` succeeds |

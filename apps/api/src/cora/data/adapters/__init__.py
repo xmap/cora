@@ -1,6 +1,6 @@
 """Data BC adapters: concrete implementations of Data ports.
 
-`RoCrate12Adapter`: implements `EditionSerializerPort` for
+`RoCrate12Adapter`: implements `EditionSerializer` for
 `EditionKind.ROCRATE` producing JSON-LD per the RO-Crate 1.2 +
 Workflow Run Crate profiles.
 
@@ -8,7 +8,7 @@ Workflow Run Crate profiles.
 `DistributionLookup` adapters reading `proj_data_distribution_summary`
 or an in-process dict for the canonical Distribution row per Dataset.
 
-`HttpRangeChecksumAdapter`: implements `ChecksumVerifierPort` over
+`HttpRangeChecksumAdapter`: implements `ChecksumVerifier` over
 HTTP / HTTPS via range-read in 1 MiB chunks.
 
 Test-only stub adapters live alongside the production adapters for

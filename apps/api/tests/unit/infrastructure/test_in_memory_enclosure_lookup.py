@@ -3,7 +3,7 @@
 Mirrors the production `PostgresEnclosureLookup` contract under
 the in-memory adapter:
   - `register()` installs an enclosure summary keyed by id.
-  - `lookup()` returns the seeded `EnclosureReference`.
+  - `lookup()` returns the seeded `EnclosureLookupResult`.
   - `lookup()` returns `None` for an unknown id.
   - `find_for_assets()` returns every reference whose
     `containing_asset_id` matches one of the requested asset_ids,
@@ -27,7 +27,7 @@ from cora.infrastructure.adapters.in_memory_enclosure_lookup import (
 )
 from cora.infrastructure.ports import (
     EnclosureLookup,
-    EnclosureReference,
+    EnclosureLookupResult,
 )
 
 
@@ -101,7 +101,7 @@ async def test_ctor_seed_mapping_populates_records() -> None:
     eid_a, eid_b = uuid4(), uuid4()
     aid_a, aid_b = uuid4(), uuid4()
     seed = {
-        eid_a: EnclosureReference(
+        eid_a: EnclosureLookupResult(
             enclosure_id=eid_a,
             name="A",
             containing_asset_id=aid_a,
@@ -111,7 +111,7 @@ async def test_ctor_seed_mapping_populates_records() -> None:
             source_kind=None,
             source_id=None,
         ),
-        eid_b: EnclosureReference(
+        eid_b: EnclosureLookupResult(
             enclosure_id=eid_b,
             name="B",
             containing_asset_id=aid_b,

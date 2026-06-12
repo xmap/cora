@@ -39,7 +39,7 @@ from uuid import UUID
 
 import asyncpg
 
-from cora.infrastructure.ports.clearance_lookup import ClearanceReference
+from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
 
 _FIND_REFERENCING_RUN_SQL = """
 SELECT clearance_id, status, template_id, template_code, facility_code
@@ -63,7 +63,7 @@ class PostgresClearanceLookup:
         run_id: UUID,
         subject_id: UUID | None,
         asset_ids: frozenset[UUID],
-    ) -> list[ClearanceReference]:
+    ) -> list[ClearanceLookupResult]:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 _FIND_REFERENCING_RUN_SQL,
@@ -76,8 +76,8 @@ class PostgresClearanceLookup:
         return [_row_to_reference(row) for row in rows]
 
 
-def _row_to_reference(row: Any) -> ClearanceReference:
-    return ClearanceReference(
+def _row_to_reference(row: Any) -> ClearanceLookupResult:
+    return ClearanceLookupResult(
         clearance_id=row["clearance_id"],
         status=str(row["status"]),
         template_id=row["template_id"],

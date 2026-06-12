@@ -1,7 +1,7 @@
 """Pre-Conductor PseudoAxis step expansion.
 
 Wires the PseudoAxis runtime evaluator into the path between recipe
-expansion (`RecipeExpansionPort.expand`) and the Conductor
+expansion (`RecipeExpander.expand`) and the Conductor
 (`Conductor.conduct`). A `SetpointStep` whose `address` is of the form
 `"pseudoaxis://<asset_id>/<port>"` is REWRITTEN into N sequential
 constituent `SetpointStep`s targeting the constituent Assets, each

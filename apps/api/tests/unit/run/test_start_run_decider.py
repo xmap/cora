@@ -28,8 +28,8 @@ from cora.equipment.aggregates.asset import (
     AssetTier,
     PortDirection,
 )
-from cora.infrastructure.ports.caution_lookup import CautionReference
-from cora.infrastructure.ports.clearance_lookup import ClearanceReference
+from cora.infrastructure.ports.caution_lookup import CautionLookupResult
+from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
 from cora.recipe.aggregates.plan import (
     Plan,
     PlanName,
@@ -60,7 +60,7 @@ from cora.subject.aggregates.subject import Subject, SubjectName, SubjectStatus
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)
 
 
-def _active_clearance_stub() -> tuple[ClearanceReference, ...]:
+def _active_clearance_stub() -> tuple[ClearanceLookupResult, ...]:
     """One-element tuple with a synthetic Active clearance.
 
     Default for decider tests that don't exercise the 11a-c-3
@@ -70,7 +70,7 @@ def _active_clearance_stub() -> tuple[ClearanceReference, ...]:
     or non-Active statuses to exercise the new error paths.
     """
     return (
-        ClearanceReference(
+        ClearanceLookupResult(
             clearance_id=UUID(int=0),
             status="Active",
             template_id=UUID(int=1),
@@ -1092,9 +1092,9 @@ def _caution_ref(
     target_kind: str = "Asset",
     text_excerpt: str = "hexapod stalls below 0.5 mm/s",
     workaround_excerpt: str = "run at 0.6 mm/s",
-) -> CautionReference:
-    """One CautionReference covering the snapshot-path inputs."""
-    return CautionReference(
+) -> CautionLookupResult:
+    """One CautionLookupResult covering the snapshot-path inputs."""
+    return CautionLookupResult(
         caution_id=uuid4(),
         target_kind=target_kind,
         target_id=uuid4(),
@@ -1138,7 +1138,7 @@ def test_decide_embeds_empty_acknowledged_cautions_when_context_has_none() -> No
 
 @pytest.mark.unit
 def test_decide_embeds_snapshot_in_run_started_payload() -> None:
-    """Each CautionReference in context.active_cautions becomes a
+    """Each CautionLookupResult in context.active_cautions becomes a
     CautionAcknowledgement on the RunStarted event with every column
     preserved (caution_id, target_kind, target_id, category, severity,
     text_excerpt, workaround_excerpt)."""

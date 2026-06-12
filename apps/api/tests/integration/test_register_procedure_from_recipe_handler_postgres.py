@@ -26,8 +26,8 @@ import pytest
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.operation._projections import register_operation_projections
-from cora.operation.adapters.in_memory_recipe_expansion_port import (
-    InMemoryRecipeExpansionPort,
+from cora.operation.adapters.in_memory_recipe_expander import (
+    InMemoryRecipeExpander,
 )
 from cora.operation.features import register_procedure_from_recipe
 from cora.operation.features.register_procedure_from_recipe import (
@@ -91,7 +91,7 @@ async def test_register_procedure_from_recipe_persists_two_event_genesis_block(
     # would pass either way).
     bindings = {"beta": 2.0, "alpha": 1.0}
     returned_id = await register_procedure_from_recipe.bind(
-        deps, expansion_port=InMemoryRecipeExpansionPort()
+        deps, expansion_port=InMemoryRecipeExpander()
     )(
         RegisterProcedureFromRecipe(
             name="P",

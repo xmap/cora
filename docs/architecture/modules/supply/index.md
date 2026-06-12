@@ -1,6 +1,4 @@
-# Supply module
-
-<span class="md-maturity md-maturity--stable" title="Aggregate, five-state health FSM + Decommissioned lifecycle terminal, seven events, ten slices (one in-process-only), projection all locked.">stable</span>
+# Supply module <span class="md-maturity md-maturity--stable" title="Aggregate, five-state health FSM + Decommissioned lifecycle terminal, seven events, ten slices (one in-process-only), projection all locked.">stable</span>
 
 ## Purpose & Scope
 

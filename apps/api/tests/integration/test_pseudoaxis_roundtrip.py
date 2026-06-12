@@ -44,8 +44,8 @@ from cora.equipment.features.update_asset_partition_rule import (
 )
 from cora.infrastructure.kernel import Kernel
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
-from cora.operation.adapters.in_memory_recipe_expansion_port import (
-    InMemoryRecipeExpansionPort,
+from cora.operation.adapters.in_memory_recipe_expander import (
+    InMemoryRecipeExpander,
 )
 from cora.operation.aggregates.procedure import InMemoryActivityStore
 from cora.operation.conductor import Conductor, InMemoryActionRegistry, SetpointStep
@@ -139,7 +139,7 @@ def _build_conduct_handler(
     constituent_map: Mapping[UUID, tuple[UUID, ...]],
 ) -> conduct_procedure.Handler:
     """Compose conduct_procedure with the same wiring as `wire_operation`
-    plus a populated `InMemoryRecipeExpansionPort` so the PseudoAxis
+    plus a populated `InMemoryRecipeExpander` so the PseudoAxis
     address resolves against the supplied constituent map."""
     append_step = append_activities.bind(deps, step_store=InMemoryActivityStore())
     start_handler = start_procedure.bind(deps)
@@ -159,7 +159,7 @@ def _build_conduct_handler(
     def resolver(asset_id: UUID) -> tuple[UUID, ...]:
         return constituent_map[asset_id]
 
-    expansion_port = InMemoryRecipeExpansionPort(constituent_resolver=resolver)
+    expansion_port = InMemoryRecipeExpander(constituent_resolver=resolver)
     return conduct_procedure.bind(deps, conductor=conductor, expansion_port=expansion_port)
 
 

@@ -28,8 +28,8 @@ from cora.infrastructure.ports.asset_lookup import (
     AncestorWalkDepthExceededError,
     AssetLookupResult,
 )
-from cora.infrastructure.ports.clearance_lookup import ClearanceReference
-from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
+from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
+from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 from cora.run.aggregates.run import RunRequiresActiveClearanceError
 from cora.run.features import start_run
 from cora.run.features.start_run import StartRun
@@ -75,11 +75,11 @@ class _RecordingEnclosureLookup:
     def __init__(self) -> None:
         self.captured: frozenset[UUID] | None = None
 
-    async def lookup(self, enclosure_id: UUID) -> EnclosureReference | None:
+    async def lookup(self, enclosure_id: UUID) -> EnclosureLookupResult | None:
         del enclosure_id
         return None
 
-    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureReference]:
+    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         self.captured = asset_ids
         return []
 
@@ -205,7 +205,7 @@ class _RecordingClearanceLookup:
         run_id: UUID,
         subject_id: UUID | None,
         asset_ids: frozenset[UUID],
-    ) -> list[ClearanceReference]:
+    ) -> list[ClearanceLookupResult]:
         del run_id, subject_id
         self.captured = asset_ids
         return []

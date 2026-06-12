@@ -1,4 +1,4 @@
-# Operation module <span class="md-maturity md-maturity--stable" title="Aggregate, FSM, six events, ten slices, projection, and per-step entry table all locked.">stable</span>
+# Operation module <span class="md-maturity md-maturity--stable" title="Aggregate, FSM, seven events, ten slices, projection, and per-step entry table all locked.">stable</span>
 
 ## Purpose & Scope
 
@@ -81,6 +81,7 @@ stateDiagram-v2
 | `ProcedureCompleted` | `procedure_id, occurred_at` | `complete_procedure` accepted (Running → Completed). |
 | `ProcedureAborted` | `procedure_id, reason, occurred_at` | `abort_procedure` accepted (Running → Aborted). |
 | `ProcedureTruncated` | `procedure_id, reason, interrupted_at?, occurred_at` | `truncate_procedure` accepted (Running → Truncated). |
+| `RecipeExpansionRecorded` | `procedure_id, recipe_id, recipe_version?, capability_id, capability_version?, bindings, expansion_port_version, steps_hash, bindings_hash, step_count, occurred_at` | `register_procedure_from_recipe` accepted; written alongside `ProcedureRegistered` to record the Recipe-to-steps expansion provenance. No-op fold on Procedure state. |
 
 Per-step records (one row per setpoint, action, or check) write directly to the `entries_operation_procedure_activities` table via the ActivityStore port, NOT as events on the Procedure stream. No `ProcedureStepsLogbookClosed` event is emitted; the FSM terminal IS the close signal.
 

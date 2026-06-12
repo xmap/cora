@@ -53,7 +53,7 @@ from uuid import UUID
 
 import asyncpg
 
-from cora.infrastructure.ports.caution_lookup import CautionReference, MinSeverity
+from cora.infrastructure.ports.caution_lookup import CautionLookupResult, MinSeverity
 
 _FIND_ACTIVE_FOR_RUN_SQL = """
 SELECT caution_id,
@@ -103,7 +103,7 @@ class PostgresCautionLookup:
         asset_ids: frozenset[UUID],
         procedure_ids: frozenset[UUID],
         min_severity: MinSeverity = "Caution",
-    ) -> list[CautionReference]:
+    ) -> list[CautionLookupResult]:
         # Resolve the severity threshold to an ordinal Python-side so
         # the SQL stays a single SELECT with a CASE-on-severity in the
         # WHERE clause. Direct indexing fails loud on an unknown value;
@@ -122,8 +122,8 @@ class PostgresCautionLookup:
         return [_row_to_reference(row) for row in rows]
 
 
-def _row_to_reference(row: Any) -> CautionReference:
-    return CautionReference(
+def _row_to_reference(row: Any) -> CautionLookupResult:
+    return CautionLookupResult(
         caution_id=row["caution_id"],
         target_kind=str(row["target_kind"]),
         target_id=row["target_id"],

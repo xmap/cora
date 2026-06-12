@@ -28,8 +28,8 @@ from cora.equipment.aggregates.asset import (
     AssetName,
     AssetTier,
 )
-from cora.infrastructure.ports.clearance_lookup import ClearanceReference
-from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
+from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
+from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
     RunEnclosureCoverageMismatchError,
@@ -47,8 +47,8 @@ def _enclosure_ref(
     permit_status: str = "Permitted",
     lifecycle: str = "Active",
     containing_asset_id: UUID | None = None,
-) -> EnclosureReference:
-    return EnclosureReference(
+) -> EnclosureLookupResult:
+    return EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="<test enclosure>",
         containing_asset_id=containing_asset_id if containing_asset_id is not None else uuid4(),
@@ -60,8 +60,8 @@ def _enclosure_ref(
     )
 
 
-def _active_clearance() -> ClearanceReference:
-    return ClearanceReference(
+def _active_clearance() -> ClearanceLookupResult:
+    return ClearanceLookupResult(
         clearance_id=uuid4(),
         status="Active",
         template_id=uuid4(),
@@ -71,7 +71,7 @@ def _active_clearance() -> ClearanceReference:
 
 
 def _context(
-    referencing_enclosures: tuple[EnclosureReference, ...],
+    referencing_enclosures: tuple[EnclosureLookupResult, ...],
 ) -> tuple[RunStartContext, frozenset[UUID]]:
     """Build a RunStartContext that would pass every check EXCEPT the
     Enclosure gate. Returns the context + the needed_family_ids the

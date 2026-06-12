@@ -55,7 +55,7 @@ gate check is `lifecycle == "Active" AND permit_status ==
 
 ## No BC imports in the port
 
-Every field on `EnclosureReference` is typed as a bare `str` or
+Every field on `EnclosureLookupResult` is typed as a bare `str` or
 bare `UUID` (not the Enclosure BC's `EnclosureId` /
 `EnclosurePermitStatus` / `EnclosureLifecycle` types) so this
 port stays inside `cora.infrastructure.ports`'s `depends_on = []`
@@ -71,7 +71,7 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
-class EnclosureReference:
+class EnclosureLookupResult:
     """Summary row from `proj_enclosure_summary` for cross-BC checks.
 
     Carries the minimal columns consumer deciders need to partition
@@ -108,7 +108,7 @@ class EnclosureReference:
 class EnclosureLookup(Protocol):
     """Cross-BC port: query Enclosure's projection by id or by asset binding."""
 
-    async def lookup(self, enclosure_id: UUID) -> EnclosureReference | None:
+    async def lookup(self, enclosure_id: UUID) -> EnclosureLookupResult | None:
         """Return the projection row for `enclosure_id`, or None if not found.
 
         Returning None signals "no Enclosure with that id is visible
@@ -125,7 +125,7 @@ class EnclosureLookup(Protocol):
         """
         ...
 
-    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureReference]:
+    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         """Return every Active enclosure whose `containing_asset_id` is in `asset_ids`.
 
         Used by consumer deciders that hold a set of Asset ids (a Run's
@@ -156,7 +156,7 @@ class AlwaysPermittedEnclosureLookup:
     name describes the always-pass posture rather than echoing the
     `Permitted` status string.
 
-    `lookup` returns a synthetic `EnclosureReference` with
+    `lookup` returns a synthetic `EnclosureLookupResult` with
     `permit_status="Permitted"` and `lifecycle="Active"` for any
     UUID so consumer deciders running against a kernel without the
     Enclosure BC wired see the same permitted-by-default behavior
@@ -173,8 +173,8 @@ class AlwaysPermittedEnclosureLookup:
     `enclosure_lookup_factory` to replace this stub.
     """
 
-    async def lookup(self, enclosure_id: UUID) -> EnclosureReference | None:
-        return EnclosureReference(
+    async def lookup(self, enclosure_id: UUID) -> EnclosureLookupResult | None:
+        return EnclosureLookupResult(
             enclosure_id=enclosure_id,
             name="",
             containing_asset_id=enclosure_id,
@@ -185,12 +185,12 @@ class AlwaysPermittedEnclosureLookup:
             source_id=None,
         )
 
-    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureReference]:
+    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         return []
 
 
 __all__ = [
     "AlwaysPermittedEnclosureLookup",
     "EnclosureLookup",
-    "EnclosureReference",
+    "EnclosureLookupResult",
 ]

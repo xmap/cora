@@ -32,7 +32,7 @@ short-circuits to `[]` without touching the pool.
 ## Enum coercion
 
 `permit_status` and `lifecycle` are stored as `TEXT` columns and are
-typed as `str` on the port's `EnclosureReference` (to keep
+typed as `str` on the port's `EnclosureLookupResult` (to keep
 `cora.infrastructure.ports.enclosure_lookup` import-free of
 Enclosure BC types). The adapter still constructs
 `EnclosurePermitStatus(row["permit_status"])` and
@@ -62,7 +62,7 @@ from cora.enclosure.aggregates.enclosure.state import (
     EnclosureLifecycle,
     EnclosurePermitStatus,
 )
-from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
+from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 
 _LOOKUP_SQL = """
 SELECT enclosure_id, name, containing_asset_id, permit_status, lifecycle,
@@ -87,14 +87,14 @@ class PostgresEnclosureLookup:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
 
-    async def lookup(self, enclosure_id: UUID) -> EnclosureReference | None:
+    async def lookup(self, enclosure_id: UUID) -> EnclosureLookupResult | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(_LOOKUP_SQL, enclosure_id)
         if row is None:
             return None
         return _row_to_reference(row)
 
-    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureReference]:
+    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         if not asset_ids:
             return []
         async with self._pool.acquire() as conn:
@@ -108,8 +108,8 @@ def _format_observed_at(raw: Any) -> str | None:
     return raw.isoformat()
 
 
-def _row_to_reference(row: Any) -> EnclosureReference:
-    return EnclosureReference(
+def _row_to_reference(row: Any) -> EnclosureLookupResult:
+    return EnclosureLookupResult(
         enclosure_id=row["enclosure_id"],
         name=str(row["name"]),
         containing_asset_id=row["containing_asset_id"],

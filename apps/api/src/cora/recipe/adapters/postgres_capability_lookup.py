@@ -33,7 +33,7 @@ from typing import Any
 
 import asyncpg
 
-from cora.infrastructure.ports.capability_lookup import CapabilityReference
+from cora.infrastructure.ports.capability_lookup import CapabilityLookupResult
 
 _FIND_APPLICABLE_BY_AFFORDANCES_SQL = """
 SELECT capability_id, code, name, status
@@ -53,7 +53,7 @@ class PostgresCapabilityLookup:
     async def find_applicable_by_affordances(
         self,
         affordances: frozenset[str],
-    ) -> list[CapabilityReference]:
+    ) -> list[CapabilityLookupResult]:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 _FIND_APPLICABLE_BY_AFFORDANCES_SQL,
@@ -62,8 +62,8 @@ class PostgresCapabilityLookup:
         return [_row_to_reference(row) for row in rows]
 
 
-def _row_to_reference(row: Any) -> CapabilityReference:
-    return CapabilityReference(
+def _row_to_reference(row: Any) -> CapabilityLookupResult:
+    return CapabilityLookupResult(
         capability_id=row["capability_id"],
         code=str(row["code"]),
         name=str(row["name"]),

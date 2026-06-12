@@ -61,7 +61,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureBoundCapabilityDeprecatedError,
     ProcedureNotFoundError,
     ProcedureStepsForbiddenForRecipeDrivenError,
-    RecipeExpansionPortVersionMismatchError,
+    RecipeExpanderVersionMismatchError,
     RecipeExpansionRecordNotFoundError,
     load_procedure_with_events,
 )
@@ -71,7 +71,7 @@ from cora.operation.features.conduct_procedure.command import (
     ConductProcedure,
     ConductProcedureResult,
 )
-from cora.operation.ports.recipe_expansion_port import RecipeExpansionPort
+from cora.operation.ports.recipe_expander import RecipeExpander
 from cora.recipe.aggregates.capability import CapabilityStatus, load_capability
 from cora.recipe.aggregates.recipe import load_recipe_at_version
 
@@ -98,7 +98,7 @@ def bind(
     deps: Kernel,
     *,
     conductor: Conductor,
-    expansion_port: RecipeExpansionPort,
+    expansion_port: RecipeExpander,
 ) -> Handler:
     """Build a conduct_procedure handler closed over deps + Conductor + port.
 
@@ -212,13 +212,13 @@ async def _re_expand_steps(
     caller_steps: Sequence[Step],
     stored_events: list[StoredEvent],
     event_store: EventStore,
-    expansion_port: RecipeExpansionPort,
+    expansion_port: RecipeExpander,
 ) -> tuple[Step, ...]:
     """Run the recipe-replay gate per [[project-run-procedure-replay-design]].
 
     Six steps: reject non-empty caller steps -> find_recipe_expansion_record
     (raise RecipeExpansionRecordNotFoundError on None) -> pins_from_payload
-    -> port-version strict-equals (raise RecipeExpansionPortVersionMismatchError
+    -> port-version strict-equals (raise RecipeExpanderVersionMismatchError
     on drift) -> load_recipe_at_version (raise RecipeExpansionRecordNotFoundError
     when None on a recipe-driven Procedure; RecipeVersionNotFoundError
     propagates from helper) -> load_capability + reject Deprecated
@@ -236,7 +236,7 @@ async def _re_expand_steps(
     pins = pins_from_payload(procedure_id, record.payload)
 
     if pins.expansion_port_version != expansion_port.version:
-        raise RecipeExpansionPortVersionMismatchError(
+        raise RecipeExpanderVersionMismatchError(
             procedure_id,
             pins.expansion_port_version,
             expansion_port.version,

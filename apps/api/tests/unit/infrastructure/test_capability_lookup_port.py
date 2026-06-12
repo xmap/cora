@@ -1,6 +1,6 @@
 """Unit tests for the `CapabilityLookup` port value types.
 
-Pins the `CapabilityReference` dataclass contract that Equipment's
+Pins the `CapabilityLookupResult` dataclass contract that Equipment's
 `get_asset_integration_view` handler relies on, plus the
 `AlwaysEmptyCapabilityLookup` test-default returning `[]`.
 """
@@ -13,14 +13,14 @@ import pytest
 from cora.infrastructure.ports import (
     AlwaysEmptyCapabilityLookup,
     CapabilityLookup,
-    CapabilityReference,
+    CapabilityLookupResult,
 )
 
 
 @pytest.mark.unit
 def test_capability_reference_carries_all_four_fields() -> None:
     cid = uuid4()
-    ref = CapabilityReference(
+    ref = CapabilityLookupResult(
         capability_id=cid,
         code="cora.capability.tomo",
         name="TomoScan",
@@ -34,7 +34,7 @@ def test_capability_reference_carries_all_four_fields() -> None:
 
 @pytest.mark.unit
 def test_capability_reference_is_frozen() -> None:
-    ref = CapabilityReference(
+    ref = CapabilityLookupResult(
         capability_id=uuid4(),
         code="cora.capability.tomo",
         name="TomoScan",
@@ -47,8 +47,8 @@ def test_capability_reference_is_frozen() -> None:
 @pytest.mark.unit
 def test_capability_reference_supports_value_equality() -> None:
     cid = uuid4()
-    a = CapabilityReference(capability_id=cid, code="x", name="X", status="Defined")
-    b = CapabilityReference(capability_id=cid, code="x", name="X", status="Defined")
+    a = CapabilityLookupResult(capability_id=cid, code="x", name="X", status="Defined")
+    b = CapabilityLookupResult(capability_id=cid, code="x", name="X", status="Defined")
     assert a == b
 
 

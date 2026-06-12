@@ -14,7 +14,7 @@ dependencies = [
     "pydantic-settings>=2.14.1,<3",
     "mcp>=1.27.2,<2",
     "uvicorn[standard]>=0.49.0",
-    "structlog>=25.0.0",
+    "structlog>=26.1.0",
     "uuid-utils>=0.16.0",
     "prometheus-client>=0.21.0,<1",
     "prometheus-fastapi-instrumentator>=7.0.0,<8",
@@ -35,7 +35,7 @@ dependencies = [
     # subscribers + tests use the port + `FakeLLM`. Pin <1 to flag a future
     # major SDK shift in CI
     # before it lands silently.
-    "anthropic>=0.105.2,<1",
+    "anthropic>=0.109.1,<1",
     # cryptography: explicit top-level floor pin. Previously pulled
     # transitively at 48.x via pyjwt[crypto]. Pinned explicitly to
     # >=46,<47 ahead of the federation wire-tier adapters (python-cwt
@@ -45,7 +45,7 @@ dependencies = [
     # retains the cp313 manylinux + macosx_arm64 wheels and stable
     # RS256 / ES256 / Ed25519 paths that pyjwt and the existing
     # `cora.infrastructure.signing` Ed25519 verify codepath exercise.
-    "cryptography>=46,<47",
+    "cryptography>=48.0.1,<49",
     # PyJWT (Phase C Iter A): the one library dependency for the edge-auth
     # JWT path, used by `JwtTokenVerifier` for `Authorization: Bearer <JWT>`
     # signature verification + JWKS rotation. `[crypto]` extra pulls in
@@ -79,9 +79,9 @@ dev = [
     "pytest>=9.0.3,<10",
     "pytest-asyncio>=1.4.0,<2",
     "pytest-cov>=7.1.0,<8",
-    "coverage[toml]>=7.14.0,<8",
+    "coverage[toml]>=7.14.1,<8",
     "diff-cover>=10.3.0,<11",
-    "ruff>=0.15.16,<0.16",
+    "ruff>=0.15.17,<0.16",
     "pyright>=1.1.410,<2",
     "httpx>=0.28.0",
     "asgi-lifespan>=2.1.0,<3",
@@ -163,7 +163,7 @@ dev = [
     # fixes; pinned >=3.5 to dodge earlier async-fixture rough edges.
     # Configuration in `[tool.mutmut]` below scopes mutation to pure
     # decider/evolver modules only.
-    "mutmut>=3.5,<4",
+    "mutmut>=3.6.0,<4",
 ]
 
 [build-system]

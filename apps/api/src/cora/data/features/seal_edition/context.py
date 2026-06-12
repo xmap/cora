@@ -10,7 +10,7 @@
     (the decider checks for the dataset_id set complement to surface
     the `EditionDatasetDistributionNotFoundError`)
   - `FacilityLookup.lookup_by_code` for the publisher binding
-  - `EditionSerializerPort.serialize(..., external_pid=None)` for the
+  - `EditionSerializer.serialize(..., external_pid=None)` for the
     pre-DOI `content_hash`
 
 The handler captures `now` + `sealing_year` + `effective_publisher_code`

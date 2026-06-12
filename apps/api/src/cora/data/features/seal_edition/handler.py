@@ -11,7 +11,7 @@ Update-style handler. Pre-load order per design memo L15:
   7. Validate publisher_facility_code (FacilityLookup -> 404 if missing)
   8. Resolve effective license + publication_year (override -> state ->
      sealing-clock year)
-  9. Call EditionSerializerPort.serialize -> 502 if it raises
+  9. Call EditionSerializer.serialize -> 502 if it raises
   10. Run pure decider with all captured fields in context
   11. Append EditionSealed event
 """
@@ -63,7 +63,7 @@ from cora.shared.identity import ActorId
 if TYPE_CHECKING:
     from cora.data.aggregates.edition import EditionKind
     from cora.data.ports.distribution_lookup import DistributionLookup
-    from cora.data.ports.edition_serializer import EditionSerializerPort
+    from cora.data.ports.edition_serializer import EditionSerializer
 
 _STREAM_TYPE = "Edition"
 _COMMAND_NAME = "SealEdition"
@@ -114,7 +114,7 @@ def bind(deps: Kernel) -> Handler:
         deps.data.distribution_lookup,  # type: ignore[attr-defined]
     )
     per_kind_serializers = cast(
-        "dict[EditionKind, EditionSerializerPort]",
+        "dict[EditionKind, EditionSerializer]",
         deps.data.edition_serializers,  # type: ignore[attr-defined]
     )
 

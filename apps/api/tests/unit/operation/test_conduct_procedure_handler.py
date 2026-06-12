@@ -27,8 +27,8 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import Allow, Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.operation.adapters.in_memory_recipe_expansion_port import (
-    InMemoryRecipeExpansionPort,
+from cora.operation.adapters.in_memory_recipe_expander import (
+    InMemoryRecipeExpander,
 )
 from cora.operation.aggregates.procedure import (
     ProcedureRegistered,
@@ -185,7 +185,7 @@ async def test_conduct_procedure_handler_dispatches_to_conductor_with_envelope()
     handler = bind(
         _deps(_FakeAuthz(), store),  # type: ignore[arg-type]
         conductor=conductor,  # type: ignore[arg-type]
-        expansion_port=InMemoryRecipeExpansionPort(),
+        expansion_port=InMemoryRecipeExpander(),
     )
     steps: tuple[Step, ...] = (
         SetpointStep(address="2bma:rot:val", value=45.0),
@@ -231,7 +231,7 @@ async def test_conduct_procedure_handler_propagates_failure_from_conductor() -> 
     handler = bind(
         _deps(_FakeAuthz(), store),  # type: ignore[arg-type]
         conductor=conductor,  # type: ignore[arg-type]
-        expansion_port=InMemoryRecipeExpansionPort(),
+        expansion_port=InMemoryRecipeExpander(),
     )
     result = await handler(
         ConductProcedure(procedure_id=procedure_id, steps=()),
@@ -248,7 +248,7 @@ async def test_conduct_procedure_handler_raises_unauthorized_when_authz_denies()
     handler = bind(
         _deps(_FakeAuthz(deny_reason="no permission")),  # type: ignore[arg-type]
         conductor=conductor,  # type: ignore[arg-type]
-        expansion_port=InMemoryRecipeExpansionPort(),
+        expansion_port=InMemoryRecipeExpander(),
     )
     with pytest.raises(UnauthorizedError, match="no permission"):
         await handler(
@@ -464,7 +464,7 @@ from cora.operation.aggregates.procedure import (  # noqa: E402
     ProcedureBoundCapabilityDeprecatedError,
     ProcedureNotFoundError,
     ProcedureStepsForbiddenForRecipeDrivenError,
-    RecipeExpansionPortVersionMismatchError,
+    RecipeExpanderVersionMismatchError,
     RecipeExpansionRecorded,
     RecipeExpansionRecordNotFoundError,
     RecipeExpansionReplayMismatchError,
@@ -663,12 +663,12 @@ def _bind_handler(
     store: InMemoryEventStore,
     conductor: "_FakeConductor",
     *,
-    expansion_port: InMemoryRecipeExpansionPort | None = None,
+    expansion_port: InMemoryRecipeExpander | None = None,
 ) -> Any:
     return bind(
         _deps(_FakeAuthz(), store),  # type: ignore[arg-type]
         conductor=conductor,  # type: ignore[arg-type]
-        expansion_port=expansion_port or InMemoryRecipeExpansionPort(),
+        expansion_port=expansion_port or InMemoryRecipeExpander(),
     )
 
 
@@ -746,7 +746,7 @@ async def test_recipe_driven_handler_with_missing_expansion_record_raises_not_fo
 
 @pytest.mark.unit
 async def test_recipe_driven_handler_with_port_version_mismatch_raises_port_error() -> None:
-    """Dataclass `version` field supports `InMemoryRecipeExpansionPort(version='v3')`
+    """Dataclass `version` field supports `InMemoryRecipeExpander(version='v3')`
     so we can stage a drifted port against a `v2-pseudoaxis-aware`-pinned event
     without inventing a second adapter."""
     procedure_id = uuid4()
@@ -755,10 +755,8 @@ async def test_recipe_driven_handler_with_port_version_mismatch_raises_port_erro
     # Pinned at the current default version; the port below reports v3.
     await _seed_recipe_driven_procedure(store, procedure_id, recipe_id)
     conductor = _FakeConductor(result=ConductorResult(procedure_id=procedure_id, completed_count=0))
-    handler = _bind_handler(
-        store, conductor, expansion_port=InMemoryRecipeExpansionPort(version="v3")
-    )
-    with pytest.raises(RecipeExpansionPortVersionMismatchError) as exc:
+    handler = _bind_handler(store, conductor, expansion_port=InMemoryRecipeExpander(version="v3"))
+    with pytest.raises(RecipeExpanderVersionMismatchError) as exc:
         await handler(
             ConductProcedure(procedure_id=procedure_id, steps=()),
             principal_id=uuid4(),

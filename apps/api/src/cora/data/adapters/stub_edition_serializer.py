@@ -1,4 +1,4 @@
-"""In-process `EditionSerializerPort` stubs for tests.
+"""In-process `EditionSerializer` stubs for tests.
 
 Three flavors:
 
@@ -27,7 +27,7 @@ from cora.data.aggregates.edition.state import (
 )
 from cora.data.ports.edition_serializer import (
     DatasetRef,
-    EditionSerializerPort,
+    EditionSerializer,
     SerializedEdition,
 )
 from cora.shared.facility_code import FacilityCode
@@ -117,8 +117,8 @@ class PerKindEditionSerializer:
     handler-level) when a kind is not registered.
     """
 
-    def __init__(self, per_kind: Mapping[EditionKind, EditionSerializerPort]) -> None:
-        self._per_kind: dict[EditionKind, EditionSerializerPort] = dict(per_kind)
+    def __init__(self, per_kind: Mapping[EditionKind, EditionSerializer]) -> None:
+        self._per_kind: dict[EditionKind, EditionSerializer] = dict(per_kind)
 
     async def serialize(
         self,

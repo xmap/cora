@@ -48,7 +48,7 @@ router = APIRouter(tags=["data"])
         },
         status.HTTP_502_BAD_GATEWAY: {
             "model": ErrorResponse,
-            "description": ("DoiMinter.mint or EditionSerializerPort.serialize failed."),
+            "description": ("DoiMinter.mint or EditionSerializer.serialize failed."),
         },
     },
     summary="Publish a Sealed Edition",

@@ -1,4 +1,4 @@
-"""Default `RecipeExpansionPort` adapter: pure delegation to `expand`.
+"""Default `RecipeExpander` adapter: pure delegation to `expand`.
 
 Wraps the module-level `cora.operation._recipe_expansion.expand` function
 in a Protocol-conforming object and pins a stable `version` string. The
@@ -44,8 +44,8 @@ _DEFAULT_VERSION = "v2-pseudoaxis-aware"
 
 
 @dataclass(frozen=True)
-class InMemoryRecipeExpansionPort:
-    """Pure-function `RecipeExpansionPort` backed by the default `expand`.
+class InMemoryRecipeExpander:
+    """Pure-function `RecipeExpander` backed by the default `expand`.
 
     `version` defaults to `"v2-pseudoaxis-aware"` and is rarely
     overridden in production; tests pass a different version when they
@@ -97,4 +97,4 @@ class InMemoryRecipeExpansionPort:
         )
 
 
-__all__ = ["InMemoryRecipeExpansionPort"]
+__all__ = ["InMemoryRecipeExpander"]

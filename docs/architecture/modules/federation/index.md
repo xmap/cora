@@ -12,7 +12,7 @@ Out of scope
 
 - **Raw secret material.** The aggregate carries only opaque pointers (`secret_ref`, `public_material_ref`); the bytes live behind the `SecretStore` port and never enter the event log, projections, or logs. Resolving a ref to bytes is the adapter's job at use time, not the aggregate's.
 - **The cryptographic act of signing.** The `Signer` port produces signatures over canonicalized payloads outside the decider. The Seal aggregate records that a pointer was signed and at which sequence number, not the signature operation itself.
-- **Peer-facility id minting.** `Permit.peer_facility_id` is an opaque string supplied by the operator; CORA does not mint peer ids and does not check that a peer-side directory entry exists at write time.
+- **Peer-facility code minting.** `Permit.peer_facility_code` is an operator-supplied `FacilityCode`; CORA does not mint peer codes and does not check that a peer-side directory entry exists at write time.
 - **Transparency-log emission.** `ReceiptKind` (`scitt`, `rekor_sct`, `ts_authority`) is recorded on inbound terms as the receipt scheme the inbound side demands; the actual SCITT or Rekor adapter that produces the receipt is out of scope for the aggregate.
 - **Cross-facility registry replication.** The Seal records and signs the head pointer; the gossip or pull protocol by which peer facilities discover and fetch a new head lives in the transport adapter, not on the aggregate.
 - **Permit terms updates.** Today every Permit lifecycle slice only moves the FSM; the terms tagged union is fixed at `define_permit` time. A `revise_permit_terms` slice is deferred until a real revision case shows up.
@@ -24,9 +24,11 @@ Out of scope
 | Name | Identity | State summary | FSM |
 |---|---|---|---|
 | `Facility` | `id: FacilityId` (UUID; derived from `code` via UUID5) + `code: FacilityCode` (cross-deployment slug) | `id`, `code`, `display_name`, `kind: Site \| Area`, `parent_id?`, `trust_anchor_credential_ids: frozenset[CredentialId]`, `status`, `persistent_id?`, `alternate_identifiers`, `registered_at`, `registered_by`, `decommissioned_at?`, `decommissioned_by?` | yes (2-state) |
-| `Permit` | `id: UUID` | `id`, `peer_facility_id: str`, `direction`, `allowed_credential_ids: frozenset[UUID]`, `allowed_payload_types`, `allowed_artifact_kinds`, `abi_tier_floor`, `expires_at`, `defined_by_actor_id`, `status`, `terms: OutboundTerms \| InboundTerms` | yes (4-state) |
-| `Credential` | `id: UUID` (unique triple `(facility_id, audience, purpose)`) | `id`, `facility_id`, `audience`, `purpose`, `secret_ref`, `public_material_ref?`, `expires_at?`, `registered_by_actor_id`, `rotation_pending_secret_ref?`, `rotation_pending_public_material_ref?`, `status` | yes (3-state + rotation overlay) |
-| `Seal` | `facility_id: str` (singleton per facility) | `facility_id`, `online_credential_id`, `offline_credential_id`, `current_head_hash?`, `current_sequence_number`, `initialized_by_actor_id`, `status` | yes (mini-FSM, `Live <-> Republishing`) |
+| `Permit` | `id: UUID` | `id`, `peer_facility_code: FacilityCode`, `direction`, `allowed_credential_ids: frozenset[UUID]`, `allowed_payload_types`, `allowed_artifact_kinds`, `abi_tier_floor`, `expires_at`, `defined_by_actor_id`, `status`, `terms: OutboundTerms \| InboundTerms` | yes (4-state) |
+| `Credential` | `id: UUID` (unique triple `(facility_code, audience, purpose)`) | `id`, `facility_code: FacilityCode`, `audience`, `purpose`, `secret_ref`, `public_material_ref?`, `expires_at?`, `registered_by_actor_id`, `rotation_pending_secret_ref?`, `rotation_pending_public_material_ref?`, `status` | yes (3-state + rotation overlay) |
+| `Seal` | `facility_code: FacilityCode` (singleton per facility) | `facility_code`, `online_credential_id`, `offline_credential_id`, `current_head_hash?`, `current_sequence_number`, `initialized_by_actor_id`, `status` | yes (mini-FSM, `Live <-> Republishing`) |
+
+The `Permit`, `Credential`, and `Seal` aggregate states carry the facility reference as a typed `FacilityCode` (`peer_facility_code` / `facility_code`), and the REST and MCP wire bodies use the same `facility_code` / `peer_facility_code` keys. The on-disk event-payload JSON keys and the projection columns keep the bare-string names `facility_id` / `peer_facility_id` (the cryptographic-chain immutability convention: renaming a persisted payload key would break the signed seal chain), and `seal_stream_id(facility_code)` threads the bare slug through the stream-id boundary. So the event tables and projection DDL below intentionally read `facility_id` while the aggregate state and wire read `facility_code`.
 
 A `Facility` is one peer-facility record, with two-tier identity per the locked design: `id: FacilityId` is the opaque UUID PK for spine references within this deployment, derived deterministically from `code` via `uuid5`; `code: FacilityCode` is the cross-deployment convergent slug (lowercase ASCII alphanumeric plus dash, 1-32 chars). Cross-BC and cross-deployment references to a facility MUST use `code`, not `id`; the `test_cross_bc_refs_facility_code_not_id.py` architecture fitness pins the rule. The aggregate is additive in this slice (no Asset / Supply / Federation binding yet; those land in slices 6-9 of the structural-scope masquerade resolution per [project_facility_aggregate_design](../../../../memory/project_facility_aggregate_design.md)).
 
@@ -36,15 +38,15 @@ The self-Facility row (the deployment's own facility identity in the cross-deplo
 
 **Operator bootstrap sequence for sealing.** The self-Facility seed ships with an empty `trust_anchor_credential_ids` set. Before `initialize_seal` can succeed, an operator runs three steps in order. (1) Register the two seal credentials via `register_credential` (one `SealOnlineSigning`, one `SealOfflineRoot`). (2) Anchor each credential id via `add_facility_trust_anchor_credential(self_facility_id, credential_id)`. (3) Call `initialize_seal` with the same two credential ids; the decider's structural cross-tenant defense checks set-membership against the anchored set. `rotate_seal_online_key` requires the new online credential to be anchored beforehand via the same `add_facility_trust_anchor_credential` slice; an operator typically anchors the replacement credential, rotates, then removes the retired credential via `remove_facility_trust_anchor_credential`.
 
-`Seal.facility_id` is a string (not a UUID) because the per-facility singleton is keyed on a human-readable facility identifier. The handler mints the event-store stream UUID deterministically via UUID5 over the federation namespace and the `facility_id` string, so the stream is addressable from the same string the operator types.
+`Seal.facility_code` is a typed `FacilityCode` (not a UUID) because the per-facility singleton is keyed on the cross-deployment convergent slug. The handler mints the event-store stream UUID deterministically via `seal_stream_id(facility_code)` (UUID5 over the federation namespace and the bare slug string), so the stream is addressable from the same code the operator types, and the on-disk payload + projection keep the bare-string `facility_id` key.
 
-`Credential` keys an identity triple `(facility_id, audience, purpose)` enforced as a UNIQUE constraint on `proj_federation_credential_summary`. The aggregate id is the internal opaque handle; the identity triple is what operators query by.
+`Credential` keys an identity triple `(facility_code, audience, purpose)` at the aggregate and wire layers; the UNIQUE constraint that enforces it on `proj_federation_credential_summary` is on the bare-string `facility_id` column. The aggregate id is the internal opaque handle; the identity triple is what operators query by.
 
 ## Value Objects
 
 | Name | Shape | Where used |
 |---|---|---|
-| `FacilityCode` | trimmed `value: str` matching `^[a-z0-9-]{1,32}$` | `Facility.code`; future `Seal.facility_id` / `Permit.peer_facility_id` typing once the aggregate-state rename slice lands |
+| `FacilityCode` | trimmed `value: str` matching `^[a-z0-9-]{1,32}$` | `Facility.code`, `Permit.peer_facility_code`, `Credential.facility_code`, `Seal.facility_code` (aggregate state + REST/MCP wire); event-payload and projection columns keep the bare-string `facility_id` / `peer_facility_id` keys per the immutability convention |
 | `FacilityName` | trimmed `value: str`, 1-200 chars | `Facility.display_name` |
 | `FacilityKind` | closed StrEnum: `Site` \| `Area` | `Facility.kind` (Institution + Sector deferred per the design memo) |
 | `FacilityStatus` | closed StrEnum: `Active` \| `Decommissioned` | `Facility.status` |
@@ -153,7 +155,7 @@ stateDiagram-v2
 : `allowed_credential_ids`, `allowed_payload_types`, and `allowed_artifact_kinds` are each non-empty (rejected as `InvalidPermitScopeError`; there is no wildcard fallback). `expires_at` lies in the future. `direction == Outbound iff isinstance(terms, OutboundTerms)`. Outbound terms whose `(read_scope, onward_action_scope)` pair collapses the matrix (for example exporting off-platform with metadata-only read) are rejected as `PermitScopeCollapseError`. Every member of `accepted_canonicalization_versions` on inbound terms is a recognized scheme (today only `cora/v1`).
 
 `register_credential`
-: `secret_ref`, `facility_id`, and `audience` are non-empty after trimming. The identity triple `(facility_id, audience, purpose)` is not already taken (a partial UNIQUE on the projection enforces this at the storage layer; the genesis collision raises `CredentialAlreadyExistsError`).
+: `secret_ref`, `facility_code`, and `audience` are non-empty after trimming. The identity triple `(facility_code, audience, purpose)` is not already taken (a partial UNIQUE on the projection's bare-string `facility_id` column enforces this at the storage layer; the genesis collision raises `CredentialAlreadyExistsError`).
 
 `start_credential_rotation`
 : `pending_secret_ref` is non-empty. The credential is `Active` and not past `expires_at`.
@@ -217,15 +219,15 @@ Twenty-five slices ship: nineteen lifecycle slices (four on Facility, five each 
 | `AbortCredentialRotation` | MODIFIED | `POST /federation/credentials/{credential_id}/rotation/abort` | `abort_credential_rotation` | none |
 | `RevokeCredential` | MODIFIED | `POST /federation/credentials/{credential_id}/revoke` | `revoke_credential` | none |
 | `InitializeSeal` | NEW | `POST /federation/seals` | `initialize_seal` | required |
-| `SignSealPointer` | MODIFIED | `POST /federation/seals/{facility_id}/pointer/sign` | `sign_seal_pointer` | none |
-| `RotateSealOnlineKey` | MODIFIED | `POST /federation/seals/{facility_id}/online-key/rotate` | `rotate_seal_online_key` | none |
-| `StartSealRepublishing` | MODIFIED | `POST /federation/seals/{facility_id}/republishing/start` | `start_seal_republishing` | none |
-| `CompleteSealRepublishing` | MODIFIED | `POST /federation/seals/{facility_id}/republishing/complete` | `complete_seal_republishing` | none |
+| `SignSealPointer` | MODIFIED | `POST /federation/seals/{facility_code}/pointer/sign` | `sign_seal_pointer` | none |
+| `RotateSealOnlineKey` | MODIFIED | `POST /federation/seals/{facility_code}/online-key/rotate` | `rotate_seal_online_key` | none |
+| `StartSealRepublishing` | MODIFIED | `POST /federation/seals/{facility_code}/republishing/start` | `start_seal_republishing` | none |
+| `CompleteSealRepublishing` | MODIFIED | `POST /federation/seals/{facility_code}/republishing/complete` | `complete_seal_republishing` | none |
 | `GetPermit` | QUERY | `GET /federation/permits/{permit_id}` | `get_permit` | none |
 | `ListPermits` | QUERY | `GET /federation/permits` | `list_permits` | none |
 | `GetCredential` | QUERY | `GET /federation/credentials/{credential_id}` | `get_credential` | none |
 | `ListCredentials` | QUERY | `GET /federation/credentials` | `list_credentials` | none |
-| `GetSeal` | QUERY | `GET /federation/seals/{facility_id}` | `get_seal` | none |
+| `GetSeal` | QUERY | `GET /federation/seals/{facility_code}` | `get_seal` | none |
 | `ListSeals` | QUERY | `GET /federation/seals` | `list_seals` | none |
 
 Three slices write more than one stream in a single Postgres transaction: `initialize_seal` and `rotate_seal_online_key` each append a `DecisionRegistered` audit on the Decision BC alongside the Seal-stream event, and `revoke_credential` audits the revocation in the same shape. Both use `EventStore.append_streams` rather than `append`; the BC-local `_actor_update_handler` factory does not cover multi-stream writes, and those three slices stay longhand by design.
@@ -416,7 +418,7 @@ The four examples below cover the canonical Federation flow: register two Creden
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "facility_id": "aps-2bm",
+      "facility_code": "aps-2bm",
       "audience": "federation-peers",
       "purpose": "SealOnlineSigning",
       "secret_ref": "vault://kv/federation/aps-2bm/seal-online#v1",
@@ -425,7 +427,7 @@ The four examples below cover the canonical Federation flow: register two Creden
     }
     ```
 
-    Returns `201 Created` with `credential_id`. The `secret_ref` is an opaque handle; the bytes live behind the `SecretStore` adapter and never enter the event log or projection. The identity triple `(facility_id, audience, purpose)` is unique; a second call with the same triple returns `409 Conflict` (`CredentialAlreadyExistsError`).
+    Returns `201 Created` with `credential_id`. The `secret_ref` is an opaque handle; the bytes live behind the `SecretStore` adapter and never enter the event log or projection. The identity triple `(facility_code, audience, purpose)` is unique; a second call with the same triple returns `409 Conflict` (`CredentialAlreadyExistsError`).
 
 === "MCP"
 
@@ -433,7 +435,7 @@ The four examples below cover the canonical Federation flow: register two Creden
     mcp.call_tool(
         "register_credential",
         {
-            "facility_id": "aps-2bm",
+            "facility_code": "aps-2bm",
             "audience": "federation-peers",
             "purpose": "SealOnlineSigning",
             "secret_ref": "vault://kv/federation/aps-2bm/seal-online#v1",
@@ -454,13 +456,13 @@ The four examples below cover the canonical Federation flow: register two Creden
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "facility_id": "aps-2bm",
+      "facility_code": "aps-2bm",
       "online_credential_id": "<online-credential-id>",
       "offline_credential_id": "<offline-credential-id>"
     }
     ```
 
-    Returns `201 Created` with the Seal envelope. The handler resolves both Credential ids through the `CredentialLookup` port to enforce purpose binding (`SealOnlineSigning` vs `SealOfflineRoot`), status-Active, and `facility_id` agreement before commit. The two ids must differ (`SealKeyCollisionError`); collision into the same Credential collapses the cold-root attestation guarantee. The Seal stream UUID is derived deterministically from `facility_id` via UUID5, so the per-facility singleton is addressable from the string alone. The Seal-stream write and a `DecisionRegistered` audit on the Decision BC land atomically in one `append_streams` transaction.
+    Returns `201 Created` with the Seal envelope. The handler resolves both Credential ids through the `CredentialLookup` port to enforce purpose binding (`SealOnlineSigning` vs `SealOfflineRoot`), status-Active, and `facility_code` agreement before commit. The two ids must differ (`SealKeyCollisionError`); collision into the same Credential collapses the cold-root attestation guarantee. The Seal stream UUID is derived deterministically from `facility_code` via UUID5, so the per-facility singleton is addressable from the slug alone. The Seal-stream write and a `DecisionRegistered` audit on the Decision BC land atomically in one `append_streams` transaction.
 
 === "MCP"
 
@@ -468,7 +470,7 @@ The four examples below cover the canonical Federation flow: register two Creden
     mcp.call_tool(
         "initialize_seal",
         {
-            "facility_id": "aps-2bm",
+            "facility_code": "aps-2bm",
             "online_credential_id": "<online-credential-id>",
             "offline_credential_id": "<offline-credential-id>",
         },
@@ -500,7 +502,7 @@ The four examples below cover the canonical Federation flow: register two Creden
     mcp.call_tool(
         "sign_seal_pointer",
         {
-            "facility_id": "aps-2bm",
+            "facility_code": "aps-2bm",
             "new_head_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
             "new_sequence_number": 1,
             "signed_at": "2026-06-01T14:30:00Z",
@@ -519,7 +521,7 @@ The four examples below cover the canonical Federation flow: register two Creden
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "peer_facility_id": "max-iv",
+      "peer_facility_code": "max-iv",
       "direction": "Outbound",
       "allowed_credential_ids": ["<signing-credential-id>"],
       "allowed_payload_types": ["application/cora-manifest+json"],
@@ -545,7 +547,7 @@ The four examples below cover the canonical Federation flow: register two Creden
     mcp.call_tool(
         "define_permit",
         {
-            "peer_facility_id": "max-iv",
+            "peer_facility_code": "max-iv",
             "direction": "Outbound",
             "allowed_credential_ids": ["<signing-credential-id>"],
             "allowed_payload_types": ["application/cora-manifest+json"],

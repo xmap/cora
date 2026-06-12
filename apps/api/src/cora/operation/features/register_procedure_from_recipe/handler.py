@@ -19,7 +19,7 @@ The handler then invokes the decider with both `recipe` and
 binding-value shape validation, overflow + determinism gates, and
 emits `[ProcedureRegistered, RecipeExpansionRecorded]`.
 
-Receives a `RecipeExpansionPort` from `bind()`'s captured deps so the
+Receives a `RecipeExpander` from `bind()`'s captured deps so the
 decider can run the cap + determinism gates without re-importing
 infrastructure inside the pure layer.
 """
@@ -42,7 +42,7 @@ from cora.operation.features.register_procedure_from_recipe.command import (
     RegisterProcedureFromRecipe,
 )
 from cora.operation.features.register_procedure_from_recipe.decider import decide
-from cora.operation.ports.recipe_expansion_port import RecipeExpansionPort
+from cora.operation.ports.recipe_expander import RecipeExpander
 from cora.recipe.aggregates.capability import (
     CapabilityNotFoundError,
     load_capability,
@@ -88,7 +88,7 @@ class IdempotentHandler(Protocol):
     ) -> UUID: ...
 
 
-def bind(deps: Kernel, *, expansion_port: RecipeExpansionPort) -> Handler:
+def bind(deps: Kernel, *, expansion_port: RecipeExpander) -> Handler:
     """Build a register_procedure_from_recipe handler closed over deps + port."""
 
     async def handler(

@@ -1,6 +1,6 @@
 """Data BC ports: cross-aggregate / cross-port surfaces consumed by Data slices.
 
-`EditionSerializerPort` is the per-kind serializer surface invoked by
+`EditionSerializer` is the per-kind serializer surface invoked by
 `seal_edition` + `publish_edition` to render an Edition as a citation
 artifact (RO-Crate JSON-LD, DataCite XML, Croissant JSON, etc.).
 
@@ -9,7 +9,7 @@ given Dataset; consumed at `seal_edition` time to build the
 serializer's `DatasetRef` boundary.
 
 Per-BC port modules live here when the port is consumed only by Data
-BC code paths (today also: ``ChecksumVerifierPort``). Cross-BC ports
+BC code paths (today also: ``ChecksumVerifier``). Cross-BC ports
 (used by multiple BCs) live at ``cora.infrastructure.ports`` per
 [[project_data_distribution_design]] L13 + W13.
 """
@@ -19,7 +19,7 @@ from cora.data.ports.checksum_verifier import (
     AlwaysMismatchingChecksumVerifier,
     AlwaysUnreachableChecksumVerifier,
     ChecksumVerificationResult,
-    ChecksumVerifierPort,
+    ChecksumVerifier,
     ChecksumVerifierUnsupportedSchemeError,
     ConfiguredChecksumVerifier,
     Match,
@@ -32,7 +32,7 @@ from cora.data.ports.distribution_lookup import (
 )
 from cora.data.ports.edition_serializer import (
     DatasetRef,
-    EditionSerializerPort,
+    EditionSerializer,
     SerializedEdition,
 )
 
@@ -42,12 +42,12 @@ __all__ = [
     "AlwaysUnreachableChecksumVerifier",
     "CanonicalDistributionLookupResult",
     "ChecksumVerificationResult",
-    "ChecksumVerifierPort",
+    "ChecksumVerifier",
     "ChecksumVerifierUnsupportedSchemeError",
     "ConfiguredChecksumVerifier",
     "DatasetRef",
     "DistributionLookup",
-    "EditionSerializerPort",
+    "EditionSerializer",
     "Match",
     "Mismatch",
     "SerializedEdition",

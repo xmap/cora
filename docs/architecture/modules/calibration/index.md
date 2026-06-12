@@ -1,4 +1,4 @@
-# Calibration module <span class="md-maturity md-maturity--stable" title="Four slices shipped with two events, polymorphic source union, and Run / Dataset anchoring in place">stable</span>
+# Calibration module <span class="md-maturity md-maturity--stable" title="Five slices shipped with three events, polymorphic source union, and Run / Dataset anchoring in place">stable</span>
 
 ## Purpose & Scope
 
@@ -60,6 +60,7 @@ N/A. The Calibration aggregate has no load-bearing lifecycle FSM. Revisions accu
 |---|---|---|
 | `CalibrationDefined` | `calibration_id`, `target_id`, `quantity`, `operating_point`, `description?`, `defined_by_actor_id`, `occurred_at` | `define_calibration` succeeds (genesis; no revisions yet) |
 | `CalibrationRevisionAppended` | `revision_id`, `calibration_id`, `value`, `status`, `source_procedure_id?`, `source_dataset_id?`, `source_actor_id?`, `established_at`, `established_by_actor_id`, `decided_by_decision_id?`, `supersedes_revision_id?`, `occurred_at` | `append_calibration_revision` succeeds |
+| `CalibrationRevisionPublished` | `calibration_id`, `revision_id`, `outbound_permit_id`, `signature_envelope_kind`, `signing_version`, `signature_bytes_hex`, `signature_kid`, `receipt_id`, `published_at`, `published_by`, `publication_status`, `occurred_at` | `publish_revision` succeeds; atomically appends a matching `PublicationReceiptRecorded` on the outbound Permit stream. No-op fold on Calibration state today (the publication block on `CalibrationRevision` is deferred). |
 
 `CalibrationRevisionAppended` serialises the polymorphic source as three nullable `source_*_id` fields with exactly one non-null per the exclusive-arc pattern. The wire shape on REST and MCP keeps the nested `{kind, <id>}` envelope for readability; the event payload and projection columns use exclusive-arc to keep storage shape and constraint enforcement direct.
 
@@ -69,6 +70,7 @@ N/A. The Calibration aggregate has no load-bearing lifecycle FSM. Revisions accu
 |---|---|---|---|---|
 | `DefineCalibration` | NEW | `POST /calibrations` | `define_calibration` | required |
 | `AppendCalibrationRevision` | MODIFIED | `POST /calibrations/{calibration_id}/revisions` | `append_calibration_revision` | required |
+| `PublishRevision` | MODIFIED | `POST /calibrations/{calibration_id}/revisions/{revision_id}/publish` | `publish_revision` | required |
 | `GetCalibration` | QUERY | `GET /calibrations/{calibration_id}` | `get_calibration` | none |
 | `ListCalibrations` | QUERY | `GET /calibrations` | `list_calibrations` | none |
 
@@ -79,6 +81,9 @@ N/A. The Calibration aggregate has no load-bearing lifecycle FSM. Revisions accu
 
 `AppendCalibrationRevision`
 : `CalibrationNotFound`, `InvalidCalibrationValue`, `InvalidCalibrationSource`, `SupersedesRevisionNotFound` (the `supersedes_revision_id` does not match any revision on this calibration), `Unauthorized`, `ConcurrencyError`
+
+`PublishRevision`
+: `CalibrationNotFound`, `CalibrationRevisionNotFound`, `CalibrationCannotPublishRevision` (the revision has no `content_hash`), `OutboundPermitNotActive` (no outbound Permit, or the Permit is not `Active`), `Unauthorized`. Returns `201 Created` with `{receipt_id}`; idempotency-wrapped so a retried key returns the cached receipt rather than re-publishing.
 
 `GetCalibration`
 : `CalibrationNotFound`

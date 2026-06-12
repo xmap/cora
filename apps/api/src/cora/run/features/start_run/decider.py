@@ -377,7 +377,7 @@ def decide(
     # consumption event, never per-operator on the Caution
     # aggregate). NON-BLOCKING (anti-pattern #5): no precondition
     # check is added here; the decider only converts each
-    # CautionReference from the context into a CautionAcknowledgement
+    # CautionLookupResult from the context into a CautionAcknowledgement
     # VO and embeds the tuple verbatim.
     acknowledged_cautions = tuple(
         CautionAcknowledgement(

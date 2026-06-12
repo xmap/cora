@@ -68,7 +68,7 @@ from cora.operation.conductor import Step
 from cora.operation.features.register_procedure_from_recipe.command import (
     RegisterProcedureFromRecipe,
 )
-from cora.operation.ports.recipe_expansion_port import RecipeExpansionPort
+from cora.operation.ports.recipe_expander import RecipeExpander
 from cora.recipe.aggregates.capability import Capability, ExecutorShape
 from cora.recipe.aggregates.recipe import Recipe
 from cora.shared.bounded_text import validate_bounded_text
@@ -96,7 +96,7 @@ def decide(
     *,
     recipe: Recipe,
     capability: Capability,
-    expansion_port: RecipeExpansionPort,
+    expansion_port: RecipeExpander,
     now: datetime,
     new_id: UUID,
 ) -> list[ProcedureEvent]:

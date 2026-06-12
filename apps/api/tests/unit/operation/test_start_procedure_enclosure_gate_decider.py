@@ -23,7 +23,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
+from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureEnclosureCoverageMismatchError,
@@ -41,8 +41,8 @@ def _enclosure_ref(
     *,
     permit_status: str = "Permitted",
     lifecycle: str = "Active",
-) -> EnclosureReference:
-    return EnclosureReference(
+) -> EnclosureLookupResult:
+    return EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="<test enclosure>",
         containing_asset_id=uuid4(),
@@ -65,7 +65,7 @@ def _procedure(procedure_id: UUID | None = None) -> Procedure:
 
 
 def _context(
-    referencing_enclosures: tuple[EnclosureReference, ...],
+    referencing_enclosures: tuple[EnclosureLookupResult, ...],
 ) -> ProcedureStartContext:
     return ProcedureStartContext(
         assets={},

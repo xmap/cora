@@ -97,7 +97,7 @@ router = APIRouter(tags=["data"])
         },
         status.HTTP_502_BAD_GATEWAY: {
             "model": ErrorResponse,
-            "description": "EditionSerializerPort failed.",
+            "description": "EditionSerializer failed.",
         },
     },
     summary="Seal a Registered Edition",

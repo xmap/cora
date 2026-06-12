@@ -32,7 +32,7 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports.supply_lookup import (
     SingleSupplyLookup,
-    SupplyReference,
+    SupplyLookupResult,
     UnknownSupplyLookup,
 )
 from cora.shared.identity import ActorId
@@ -70,8 +70,8 @@ def _storage_supply_ref(
     supply_id: UUID = _SUPPLY_ID,
     kind: str = "Storage",
     status: str = "Available",
-) -> SupplyReference:
-    return SupplyReference(
+) -> SupplyLookupResult:
+    return SupplyLookupResult(
         supply_id=supply_id,
         kind=kind,
         name="primary-storage",

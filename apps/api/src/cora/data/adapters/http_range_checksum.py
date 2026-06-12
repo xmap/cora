@@ -1,4 +1,4 @@
-"""HTTP / HTTPS adapter implementing ``ChecksumVerifierPort``.
+"""HTTP / HTTPS adapter implementing ``ChecksumVerifier``.
 
 Walks the bytes at the Distribution URI by issuing a HEAD then a
 sequence of ``Range`` GETs (1 MiB chunks) feeding sha256. Honors a
@@ -50,7 +50,7 @@ _DEFAULT_MAX_WALK_SECONDS = 60.0
 
 
 class HttpRangeChecksumAdapter:
-    """``ChecksumVerifierPort`` over HTTP / HTTPS via range-read sha256."""
+    """``ChecksumVerifier`` over HTTP / HTTPS via range-read sha256."""
 
     def __init__(
         self,

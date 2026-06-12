@@ -46,8 +46,8 @@ from typing import cast
 from uuid import UUID
 
 from cora.equipment.aggregates.asset import Asset
-from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
-from cora.infrastructure.ports.supply_lookup import SupplyReference
+from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 
 
 @dataclass(frozen=True)
@@ -66,10 +66,10 @@ class ProcedureStartContext:
     """
 
     assets: dict[UUID, Asset]
-    needed_supplies_satisfaction: Mapping[str, tuple[SupplyReference, ...]] = field(
-        default_factory=lambda: cast("Mapping[str, tuple[SupplyReference, ...]]", {})
+    needed_supplies_satisfaction: Mapping[str, tuple[SupplyLookupResult, ...]] = field(
+        default_factory=lambda: cast("Mapping[str, tuple[SupplyLookupResult, ...]]", {})
     )
-    referencing_enclosures: tuple[EnclosureReference, ...] = ()
+    referencing_enclosures: tuple[EnclosureLookupResult, ...] = ()
     """Every Active Enclosure whose `containing_asset_id` traces to any
     of the Procedure's `target_asset_ids`. Loaded by the handler via
     `deps.enclosure_lookup.find_for_assets(asset_ids=target_asset_ids)`.

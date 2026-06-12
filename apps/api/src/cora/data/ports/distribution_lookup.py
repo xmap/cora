@@ -2,7 +2,7 @@
 
 Used by `seal_edition` to resolve the authoritative `DistributionUri`
 / `DatasetChecksum` / `byte_size` / `DatasetEncoding` for each member
-Dataset before invoking the `EditionSerializerPort`.
+Dataset before invoking the `EditionSerializer`.
 
 ## Canonical pick policy
 
@@ -42,7 +42,7 @@ from cora.data.aggregates.distribution.state import (
 class CanonicalDistributionLookupResult:
     """Result row from `DistributionLookup.lookup_canonical_by_dataset`.
 
-    Carries only the fields the `EditionSerializerPort` boundary needs.
+    Carries only the fields the `EditionSerializer` boundary needs.
     """
 
     distribution_id: UUID

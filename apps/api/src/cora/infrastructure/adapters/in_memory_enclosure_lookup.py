@@ -20,7 +20,7 @@ from collections.abc import Mapping
 from threading import Lock
 from uuid import UUID
 
-from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
+from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 
 
 class InMemoryEnclosureLookup:
@@ -28,9 +28,9 @@ class InMemoryEnclosureLookup:
 
     def __init__(
         self,
-        seed: Mapping[UUID, EnclosureReference] | None = None,
+        seed: Mapping[UUID, EnclosureLookupResult] | None = None,
     ) -> None:
-        self._records: dict[UUID, EnclosureReference] = dict(seed) if seed is not None else {}
+        self._records: dict[UUID, EnclosureLookupResult] = dict(seed) if seed is not None else {}
         self._lock = Lock()
 
     def register(
@@ -54,7 +54,7 @@ class InMemoryEnclosureLookup:
         when the scenario under test cares about provenance.
         """
         with self._lock:
-            self._records[enclosure_id] = EnclosureReference(
+            self._records[enclosure_id] = EnclosureLookupResult(
                 enclosure_id=enclosure_id,
                 name=name,
                 containing_asset_id=containing_asset_id,
@@ -65,11 +65,11 @@ class InMemoryEnclosureLookup:
                 source_id=source_id,
             )
 
-    async def lookup(self, enclosure_id: UUID) -> EnclosureReference | None:
+    async def lookup(self, enclosure_id: UUID) -> EnclosureLookupResult | None:
         with self._lock:
             return self._records.get(enclosure_id)
 
-    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureReference]:
+    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         if not asset_ids:
             return []
         with self._lock:
