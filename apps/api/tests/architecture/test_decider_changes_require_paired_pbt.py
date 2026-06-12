@@ -138,22 +138,6 @@ GRANDFATHERED_DECIDERS_WITHOUT_PBT: frozenset[str] = frozenset(
         "cora.supply.features.observe_supply_status.decider",
         "cora.supply.features.register_supply.decider",
         "cora.supply.features.restore_supply.decider",
-        "cora.trust.features.abort_visit.decider",
-        "cora.trust.features.arrive_visit.decider",
-        "cora.trust.features.cancel_visit.decider",
-        "cora.trust.features.check_in_visit.decider",
-        "cora.trust.features.check_out_visit.decider",
-        "cora.trust.features.complete_visit.decider",
-        "cora.trust.features.define_conduit.decider",
-        "cora.trust.features.define_policy.decider",
-        "cora.trust.features.define_surface.decider",
-        "cora.trust.features.hold_visit.decider",
-        "cora.trust.features.register_visit.decider",
-        "cora.trust.features.release_control_of_surface.decider",
-        "cora.trust.features.resume_visit.decider",
-        "cora.trust.features.start_visit.decider",
-        "cora.trust.features.take_control_of_surface.decider",
-        "cora.trust.features.void_visit.decider",
     }
 )
 
