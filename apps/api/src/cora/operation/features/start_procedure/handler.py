@@ -160,6 +160,31 @@ def bind(deps: Kernel) -> Handler:
         scoped_asset_ids: frozenset[UUID] = state.target_asset_ids | frozenset(
             asset.controller_id for asset in assets.values() if asset.controller_id is not None
         )
+
+        # cross-BC ancestor-chain widening (chain-walk Slice 6, mirrors
+        # start_run Slice 5): widen the scope up the Asset parent_id
+        # chain so an Enclosure bound to an ANCESTOR of a target Asset
+        # gates this Procedure. Without this, the enclosure pre-flight
+        # gate's L-pre-1 "derive scope from the Asset chain" is
+        # decorative on the Procedure path: an Enclosure bound to the
+        # beamline Unit never matches a Procedure targeting only a Device
+        # under it. The walk returns the inclusive closure; Decommissioned
+        # ancestors are dropped from the widening (a retired intermediate
+        # must not pull its stale Permitted Enclosure into scope, while a
+        # live grandparent above it stays). The walk reads only
+        # Equipment's Asset projection, terminates at the facility-rooted
+        # root (never the Federation Facility axis), and raises
+        # AncestorWalkDepthExceededError on a parent_id cycle / over-deep
+        # chain rather than under-scoping the gate; that error is left
+        # intentionally unmapped (a 500: data corruption, not client-
+        # fixable). The Procedure path widens only the Enclosure gate (it
+        # has no clearance / caution lookups); start_run additionally
+        # feeds the same widened scope to those two.
+        ancestor_rows = await deps.asset_lookup.ancestors_of(scoped_asset_ids)
+        scoped_asset_ids = scoped_asset_ids | frozenset(
+            row.id for row in ancestor_rows if row.lifecycle != "Decommissioned"
+        )
+
         referencing_enclosures = tuple(
             await deps.enclosure_lookup.find_for_assets(asset_ids=scoped_asset_ids)
         )
