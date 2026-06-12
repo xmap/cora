@@ -61,6 +61,7 @@ def _load(name: str) -> ModuleType:
 
 
 sd = _load("site_descriptor")
+sp = _load("site_pages")
 
 
 def test_site_loads_and_validates() -> None:
@@ -146,6 +147,38 @@ def test_site_guards_reject_bad_data(tmp_path: Path) -> None:
     )
     with pytest.raises(sd.SiteError):
         sd.load(duplicate_practice)
+
+
+def test_renders_all_site_pages() -> None:
+    site = sd.load(_SITE)
+    pages = sp.render_all(site, catalog_methods=frozenset({"tomography", "dark_baseline"}))
+    assert set(pages) == {
+        "deployments/aps/index.md",
+        "deployments/aps/practices.md",
+        "deployments/aps/actors.md",
+        "deployments/aps/agents.md",
+    }
+    for src_uri, markdown in pages.items():
+        assert markdown.startswith("# "), f"{src_uri} missing H1"
+        assert chr(0x2014) not in markdown, f"{src_uri} has an em dash"
+    # the gap-fix: CautionDrafter is now surfaced alongside RunDebriefer
+    assert "CautionDrafter" in pages["deployments/aps/agents.md"]
+    assert "claude-sonnet-4-6" in pages["deployments/aps/agents.md"]
+    assert "`human`" in pages["deployments/aps/actors.md"]
+    # a catalog-known method links; the facility page links up to Argonne
+    assert "[`tomography`](../../catalog/methods.md)" in pages["deployments/aps/practices.md"]
+    assert "../argonne/index.md" in pages["deployments/aps/index.md"]
+
+
+def test_practice_method_links_only_known() -> None:
+    site = sd.load(_SITE)
+    pages = sp.render_all(site, catalog_methods=frozenset({"tomography"}))
+    practices = pages["deployments/aps/practices.md"]
+    # known catalog method renders as a link
+    assert "[`tomography`](../../catalog/methods.md)" in practices
+    # a method not in the catalog renders unlinked (bare code span)
+    assert "`hexapod_reboot`" in practices
+    assert "[`hexapod_reboot`]" not in practices
 
 
 def test_malformed_site_raises(tmp_path: Path) -> None:
