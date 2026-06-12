@@ -31,6 +31,7 @@ pytestmark = pytest.mark.unit
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 _DESCRIPTOR = _REPO_ROOT / "deployments" / "2-bm" / "beamline.yaml"
+_CATALOG = _REPO_ROOT / "catalog" / "catalog.yaml"
 
 
 def _load(name: str) -> ModuleType:
@@ -45,6 +46,18 @@ def _load(name: str) -> ModuleType:
 
 bd = _load("beamline_descriptor")
 bp = _load("beamline_pages")
+cd = _load("catalog_descriptor")
+
+
+def _render_with_catalog() -> str:
+    descriptor = bd.load(_DESCRIPTOR)
+    catalog = cd.load(_CATALOG)
+    pages = bp.render_all(
+        descriptor,
+        catalog_families=frozenset(f.name for f in catalog.families),
+        catalog_models=frozenset(m.name for m in catalog.models),
+    )
+    return pages["deployments/2-bm/beamline.md"]
 
 
 def _humanize(name: str) -> str:
@@ -71,9 +84,7 @@ def test_descriptor_loads_and_validates() -> None:
 
 def test_renders_one_h2_per_group_and_no_em_dash() -> None:
     descriptor = bd.load(_DESCRIPTOR)
-    pages = bp.render_all(descriptor)
-    assert set(pages) == {"deployments/2-bm/beamline.md"}
-    markdown = pages["deployments/2-bm/beamline.md"]
+    markdown = _render_with_catalog()
 
     assert markdown.startswith("# 2-BM beam path")
     for name, _group in descriptor.groups:
@@ -85,11 +96,14 @@ def test_renders_one_h2_per_group_and_no_em_dash() -> None:
     assert "`new`" in markdown
     # the P6-50 nested constituents render as their own sub-table
     assert "**P6-50_safety_stack constituents**" in markdown
-    # devices link up to the Catalog, and drawings + calibrations render
-    assert "../../catalog/families.md" in markdown
-    assert "../../catalog/models.md" in markdown
+    # a family present in the Catalog links up; a pending one renders plain (no fake link)
+    assert "[`RotaryStage`](../../catalog/families.md)" in markdown
+    assert "`Mask`" in markdown
+    assert "[`Mask`](../../catalog/families.md)" not in markdown
+    # drawings + calibrations (with status) + the confirm note all render
     assert "drawing: EDMS" in markdown
-    assert "calibration: magnification" in markdown
+    assert "calibration: magnification = 9.83 (Provisional" in markdown
+    assert "confirm: count and thickness" in markdown
     # repo style: no em dashes in generated prose
     assert "—" not in markdown
 

@@ -249,7 +249,7 @@ detector:
       new: true
     - name: MCTOptics_lens_turret
       family: RotaryStage         # confirm: RotaryStage vs LinearStage (translating slide)
-      model: nanotec_st4118
+      model: optique_peter_lens_turret_motor
       pv: "2bmb:m1"
       range: 0..360 deg
       confirm: true
@@ -324,7 +324,7 @@ detector:
           status: Provisional
     - name: Oryx_5MP_camera
       family: Camera
-      model: flir_oryx_5mp
+      model: flir_oryx_orx_10g_51s5m_c
       pv: "2bmSP1:"
       sensor: 2448 x 2048 pixel
       pixel_size: 3.45 um

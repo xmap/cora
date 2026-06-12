@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 # Mirrors of code-defined closed sets. Guarded by enum-equality tests against
 # the cora enums; never edit these by hand without the test catching drift.
@@ -65,7 +65,9 @@ AFFORDANCES: frozenset[str] = frozenset(
 EXECUTOR_SHAPES: frozenset[str] = frozenset({"Method", "Procedure"})
 MANUFACTURER_ID_TYPES: frozenset[str] = frozenset({"ROR", "GRID", "ISNI"})
 
-_MODEL_CONFIG = ConfigDict(extra="allow", protected_namespaces=())
+# Catalog models are closed-shape; forbid unknown keys so a mistyped field name
+# (descripton, needed_familes) fails the build instead of silently rendering empty.
+_MODEL_CONFIG = ConfigDict(extra="forbid", protected_namespaces=())
 
 
 class CatalogError(ValueError):
@@ -116,7 +118,8 @@ class Capability(BaseModel):
     name: str
     description: str | None = None
     required_affordances: list[str] = []
-    executor_shapes: list[str] = []
+    # Required non-empty: the closed-core contract (and define_capability) demand it.
+    executor_shapes: list[str] = Field(min_length=1)
     parameters_schema: dict[str, Any] | None = None
 
     @field_validator("required_affordances")
@@ -213,7 +216,7 @@ def load(path: str | Path) -> Catalog:
         raise CatalogError(f"{path}: top level must be a mapping")
 
     try:
-        return Catalog(
+        catalog = Catalog(
             roles=[Role.model_validate(r) for r in raw.get("roles", [])],
             families=[Family.model_validate(f) for f in raw.get("families", [])],
             capabilities=[Capability.model_validate(c) for c in raw.get("capabilities", [])],
@@ -223,3 +226,26 @@ def load(path: str | Path) -> Catalog:
         )
     except ValidationError as exc:
         raise CatalogError(f"{path}: catalog failed validation:\n{exc}") from exc
+
+    _check_references(path, catalog)
+    return catalog
+
+
+def _check_references(path: Path, catalog: Catalog) -> None:
+    """Within-catalog referential integrity: a typo in a method's capability or
+    needed_families, or a model's declared_families, fails the build instead of
+    rendering a dead in-page link or silently dropping a binding."""
+    family_names = {f.name for f in catalog.families}
+    capability_codes = {c.code for c in catalog.capabilities}
+    for m in catalog.methods:
+        if m.capability is not None and m.capability not in capability_codes:
+            raise CatalogError(
+                f"{path}: method '{m.name}' references unknown capability '{m.capability}'"
+            )
+        unknown = sorted(set(m.needed_families) - family_names)
+        if unknown:
+            raise CatalogError(f"{path}: method '{m.name}' needs unknown families {unknown}")
+    for model in catalog.models:
+        unknown = sorted(set(model.declared_families) - family_names)
+        if unknown:
+            raise CatalogError(f"{path}: model '{model.name}' declares unknown families {unknown}")

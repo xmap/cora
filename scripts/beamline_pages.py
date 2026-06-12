@@ -23,6 +23,11 @@ DESCRIPTOR_BLOB_URL = "https://github.com/xmap/cora/blob/main/deployments/2-bm/b
 _CATALOG_FAMILIES = "../../catalog/families.md"
 _CATALOG_MODELS = "../../catalog/models.md"
 
+# Populated per render from the catalog so a family/model only becomes a link
+# when it actually exists in the Catalog; pending/local ones render as plain text.
+_KNOWN_FAMILIES: frozenset[str] = frozenset()
+_KNOWN_MODELS: frozenset[str] = frozenset()
+
 # Structural device fields rendered in dedicated columns or handled explicitly,
 # so they are not repeated as open key-specs.
 _STRUCTURAL = frozenset(
@@ -45,12 +50,25 @@ _STRUCTURAL = frozenset(
 )
 
 
-def render_all(descriptor: BeamlineDescriptor) -> dict[str, str]:
+def render_all(
+    descriptor: BeamlineDescriptor,
+    *,
+    catalog_families: frozenset[str] = frozenset(),
+    catalog_models: frozenset[str] = frozenset(),
+) -> dict[str, str]:
+    global _KNOWN_FAMILIES, _KNOWN_MODELS
+    _KNOWN_FAMILIES = catalog_families
+    _KNOWN_MODELS = catalog_models
     return {PAGE_SRC_URI: _render_page(descriptor)}
 
 
 def _esc(text: str) -> str:
     return text.replace("|", r"\|")
+
+
+def _catalog_link(name: str, known: frozenset[str], page: str) -> str:
+    """Link to a Catalog page only when the name exists there; else plain code."""
+    return f"[`{name}`]({page})" if name in known else f"`{name}`"
 
 
 def _humanize(key: str) -> str:
@@ -66,7 +84,7 @@ def _admonition(text: str, *, kind: str = "note", title: str | None = None) -> s
 def _table(headers: list[str], rows: list[list[str]]) -> str:
     head = "| " + " | ".join(headers) + " |"
     sep = "| " + " | ".join("---" for _ in headers) + " |"
-    body = ["| " + " | ".join(cell or "" for cell in row) + " |" for row in rows]
+    body = ["| " + " | ".join(_esc(cell) if cell else "" for cell in row) + " |" for row in rows]
     return "\n".join([head, sep, *body])
 
 
@@ -90,7 +108,7 @@ def _specs_cell(device: Device) -> str:
     if device.passive:
         parts.append("passive")
     if device.model:
-        parts.append(f"model [`{device.model}`]({_CATALOG_MODELS})")
+        parts.append(f"model {_catalog_link(device.model, _KNOWN_MODELS, _CATALOG_MODELS)}")
     if device.controller:
         parts.append(f"via `{device.controller}`")
     for key, value in (device.model_extra or {}).items():
@@ -107,10 +125,18 @@ def _specs_cell(device: Device) -> str:
         rev = f" rev {device.drawing.revision}" if device.drawing.revision else ""
         parts.append(f"drawing: {device.drawing.system} {device.drawing.number}{rev}")
     for cal in device.calibrations:
-        parts.append(f"calibration: {cal.quantity} = {cal.value}")
+        meta: list[str] = []
+        if cal.status:
+            meta.append(str(cal.status))
+        if cal.operating_point:
+            meta.append(", ".join(f"{k}={v}" for k, v in cal.operating_point.items()))
+        suffix = f" ({'; '.join(meta)})" if meta else ""
+        parts.append(f"calibration: {cal.quantity} = {cal.value}{suffix}")
+    if isinstance(device.confirm, str) and device.confirm:
+        parts.append(f"confirm: {device.confirm}")
     if device.note:
         parts.append(device.note)
-    return "<br>".join(_esc(part) for part in parts)
+    return "<br>".join(parts)
 
 
 def _status_cell(device: Device) -> str:
@@ -126,7 +152,7 @@ def _device_rows(devices: list[Device]) -> list[list[str]]:
     return [
         [
             f"`{d.name}`",
-            f"[`{d.family}`]({_CATALOG_FAMILIES})" if d.family else "",
+            _catalog_link(d.family, _KNOWN_FAMILIES, _CATALOG_FAMILIES) if d.family else "",
             _pv_cell(d.pv),
             _specs_cell(d),
             "yes" if d.replaceable else "",
@@ -237,6 +263,7 @@ def _render_page(descriptor: BeamlineDescriptor) -> str:
         )
     )
 
+    extra = beamline.model_extra or {}
     facts: list[list[str]] = []
     for label, value in (
         ("Facility", beamline.facility),
@@ -246,9 +273,15 @@ def _render_page(descriptor: BeamlineDescriptor) -> str:
         ("Source", beamline.source),
     ):
         if value:
-            facts.append([label, str(value)])
+            cell = str(value)
+            if label == "Source" and extra.get("source_confirm"):
+                cell += f" (confirm: {extra['source_confirm']})"
+            facts.append([label, cell])
     if beamline.z_span_mm and len(beamline.z_span_mm) == 2:
-        facts.append(["Z span", f"{beamline.z_span_mm[0]} to {beamline.z_span_mm[1]} mm"])
+        zcell = f"{beamline.z_span_mm[0]} to {beamline.z_span_mm[1]} mm"
+        if extra.get("z_span_confirm"):
+            zcell += " (confirm)"
+        facts.append(["Z span", zcell])
     if facts:
         blocks.append(_table(["Property", "Value"], facts))
 

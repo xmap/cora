@@ -157,9 +157,19 @@ def on_files(files: Any, *, config: Any) -> Any:
     import catalog_pages
     from mkdocs.structure.files import File
 
+    catalog = catalog_descriptor.load(CATALOG_PATH)
+    catalog_families = frozenset(f.name for f in catalog.families)
+    catalog_models = frozenset(m.name for m in catalog.models)
+
     generated: dict[str, str] = {}
-    generated.update(beamline_pages.render_all(beamline_descriptor.load(DESCRIPTOR_PATH)))
-    generated.update(catalog_pages.render_all(catalog_descriptor.load(CATALOG_PATH)))
+    generated.update(
+        beamline_pages.render_all(
+            beamline_descriptor.load(DESCRIPTOR_PATH),
+            catalog_families=catalog_families,
+            catalog_models=catalog_models,
+        )
+    )
+    generated.update(catalog_pages.render_all(catalog))
     for src_uri, content in generated.items():
         files.append(File.generated(config, src_uri, content=content))
     return files

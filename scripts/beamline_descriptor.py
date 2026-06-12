@@ -130,6 +130,13 @@ class Beamline(BaseModel):
     source: str | None = None
     z_span_mm: list[int] | None = None
 
+    @field_validator("z_span_mm")
+    @classmethod
+    def _two_endpoints(cls, value: list[int] | None) -> list[int] | None:
+        if value is not None and len(value) != 2:
+            raise ValueError("z_span_mm must be exactly [start, end]")
+        return value
+
 
 class Controls(BaseModel):
     """Cross-cutting drive electronics and trigger hardware."""

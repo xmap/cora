@@ -27,7 +27,7 @@ def _esc(text: str) -> str:
 def _table(headers: list[str], rows: list[list[str]]) -> str:
     head = "| " + " | ".join(headers) + " |"
     sep = "| " + " | ".join("---" for _ in headers) + " |"
-    body = ["| " + " | ".join(cell or "" for cell in row) + " |" for row in rows]
+    body = ["| " + " | ".join(_esc(cell) if cell else "" for cell in row) + " |" for row in rows]
     return "\n".join([head, sep, *body])
 
 
@@ -54,7 +54,7 @@ def _capabilities(catalog: Catalog) -> str:
             f"`{c.code}`",
             c.name,
             _codes(sorted(binds.get(c.code, []))),
-            _esc(c.description or ""),
+            c.description or "",
         ]
         for c in catalog.capabilities
     ]
@@ -75,7 +75,7 @@ def _methods(catalog: Catalog) -> str:
             f"`{m.name}`",
             f"[`{m.capability}`](capabilities.md)" if m.capability else "",
             _codes(m.needed_families),
-            _esc(m.purpose or ""),
+            m.purpose or "",
         ]
         for m in catalog.methods
     ]
@@ -100,7 +100,7 @@ def _families(catalog: Catalog) -> str:
         [
             f"`{f.name}`",
             _codes(sorted(used_by.get(f.name, []))),
-            _esc(f.note or ""),
+            f.note or "",
         ]
         for f in catalog.families
     ]
@@ -122,7 +122,7 @@ def _roles(catalog: Catalog) -> str:
             f"`{r.name}`",
             _codes(r.required_affordances),
             _codes(r.optional_affordances),
-            _esc(r.docstring),
+            r.docstring,
         ]
         for r in catalog.roles
     ]

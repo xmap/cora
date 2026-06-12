@@ -59,9 +59,11 @@ def test_catalog_loads_and_validates() -> None:
     cat = cd.load(_CATALOG)
     assert len(cat.roles) == 4
     assert {r.name for r in cat.roles} == {"Imager", "Positioner", "Controller", "Detector"}
+    # lower bounds, not exact: additive catalog edits should not break this test
+    # (only roles == 4 is exact, because it is drift-guarded against SEED_ROLES).
     assert len(cat.families) >= 10
-    assert len(cat.capabilities) == 5
-    assert len(cat.methods) == 15
+    assert len(cat.capabilities) >= 5
+    assert len(cat.methods) >= 15
     assert len(cat.models) >= 12
     # every method references a capability that exists in the catalog
     codes = {c.code for c in cat.capabilities}
@@ -113,6 +115,37 @@ def test_renders_all_catalog_pages() -> None:
     assert "depth-of-focus" in pages["catalog/methods.md"]
     assert "`Imageable`" in pages["catalog/roles.md"]
     assert "Aerotech" in pages["catalog/models.md"]
+
+
+def test_catalog_guards_reject_bad_data(tmp_path: Path) -> None:
+    # a method referencing an undefined capability fails the build
+    unknown_cap = tmp_path / "unknown_cap.yaml"
+    unknown_cap.write_text(
+        "capabilities:\n  - {code: cora.capability.x, name: X, executor_shapes: [Method]}\n"
+        "methods:\n  - {name: m, capability: cora.capability.missing}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(unknown_cap)
+
+    # an empty executor_shapes violates the required-non-empty contract
+    empty_shapes = tmp_path / "empty_shapes.yaml"
+    empty_shapes.write_text(
+        "capabilities:\n  - {code: cora.capability.x, name: X, executor_shapes: []}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(empty_shapes)
+
+    # a typo'd field name is rejected (extra=forbid), not silently swallowed
+    typo = tmp_path / "typo.yaml"
+    typo.write_text(
+        "capabilities:\n  - "
+        "{code: cora.capability.x, name: X, executor_shapes: [Method], descripton: oops}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(typo)
 
 
 def test_malformed_catalog_raises(tmp_path: Path) -> None:
