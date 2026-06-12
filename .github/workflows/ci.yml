@@ -13,13 +13,16 @@ concurrency:
 # The suite is split across parallel jobs so PR wall-clock is the slowest
 # shard, not the sum of all tiers. Every test still runs exactly once, with
 # coverage; the `coverage` job fans the per-shard data back in and applies
-# the same diff-cover gate as a single run would. Tests are split into two
-# lanes by whether they need Postgres, and EACH lane is sharded across a
-# matrix of runners: the no-DB tiers (unit/architecture/contract, ~97% of
-# cases, in-memory via APP_ENV=test, no container) and the Postgres-bound
-# tiers (integration/e2e, each shard on its own runner with its own
-# containers, sidestepping the single-box oversubscription that made -n8
-# slower than -n4 locally).
+# the same diff-cover gate as a single run would. Tests are split into three
+# lanes by per-test COST, and EACH lane is sharded across a matrix:
+#   - fast: unit + architecture (in-memory, microsecond AST/fitness checks)
+#   - contract: contract (in-memory but builds a FastAPI app per test, the
+#     no-DB long pole; sharded widest)
+#   - db: integration + e2e (each shard its own Postgres container,
+#     sidestepping the single-box oversubscription that made -n8 < -n4)
+# Splitting by cost lets count-based sharding balance each lane without a
+# committed .test_durations file; mixing fast and slow tests and count-
+# splitting does not (it piles every slow contract test into one shard).
 jobs:
   lint:
     name: Lint, typecheck, arch
@@ -46,30 +49,71 @@ jobs:
         run: uv run tach check
 
       - name: Guard - every test tier is mapped to a CI lane
-        # The lanes below enumerate tier directories explicitly (test-noio:
-        # unit/architecture/contract; test-db: integration/e2e). A new top-
-        # level tier dir, or a root-level test_*.py, that no lane runs would
-        # silently never execute in CI (pytest is happy running a subset).
-        # Fail loudly so the lane lists stay exhaustive over tests/.
+        # The lanes below enumerate tier directories explicitly (test-fast:
+        # unit/architecture; test-contract: contract; test-db:
+        # integration/e2e). A new top-level tier dir, or a root-level
+        # test_*.py, that no lane runs would silently never execute in CI
+        # (pytest is happy running a subset). Fail loudly so the lane lists
+        # stay exhaustive over tests/.
         run: |
           allowed=$(printf '%s\n' unit architecture contract integration e2e fixtures __pycache__ | sort -u)
           actual=$(find tests -mindepth 1 -maxdepth 1 -type d | sed 's#.*/##' | sort -u)
           unmapped=$(comm -13 <(echo "$allowed") <(echo "$actual") || true)
           stray=$(find tests -maxdepth 1 -name 'test_*.py')
           if [ -n "$unmapped" ] || [ -n "$stray" ]; then
-            echo "::error::Test location(s) not mapped to a CI lane -> dirs:[$unmapped] files:[$stray]. Add them to test-noio/test-db in this workflow (or to the allowlist if intentionally not run)." >&2
+            echo "::error::Test location(s) not mapped to a CI lane -> dirs:[$unmapped] files:[$stray]. Add them to a lane (test-fast/test-contract/test-db) in this workflow (or to the allowlist if intentionally not run)." >&2
             exit 1
           fi
           echo "OK: all of tests/ is mapped to a CI lane."
 
-  test-noio:
-    name: Tests (no-DB shard ${{ matrix.group }})
+  # The no-DB tiers are split into two lanes by per-test COST, not lumped
+  # together: unit + architecture are uniformly cheap (microsecond AST /
+  # fitness checks, ~97% of cases but a small slice of wall-clock), while
+  # contract tests each build a FastAPI app (~seconds each, the real long
+  # pole). Sharding each cost-homogeneous lane by count balances cleanly
+  # with no `.test_durations` file; mixing them and count-splitting does
+  # NOT (it piles every slow contract test into one shard).
+  test-fast:
+    name: Tests (fast shard ${{ matrix.group }})
     runs-on: ubuntu-latest
     strategy:
-      # The no-DB tiers hold ~97% of test CASES, so sharding them across
-      # runners is the primary wall-clock lever: unsharded this lane was the
-      # ~46-minute long pole. fail-fast: false so every shard's coverage
-      # data reaches the fan-in even if one shard fails.
+      fail-fast: false
+      matrix:
+        group: [1, 2]
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - name: Test (unit + architecture, in-memory, sharded)
+        # In-memory adapters via APP_ENV=test (tests/conftest.py); no
+        # container. Coverage stays ON (the diff-cover gate needs it);
+        # `--cov-report=` defers reporting to the `coverage` job;
+        # `--cov-fail-under=0` defers the 80% floor to the combined data.
+        # Path-based selection (not `-m`): some helper/__init__ files carry
+        # no marker.
+        run: uv run pytest tests/unit tests/architecture --splits ${{ strategy.job-total }} --group ${{ matrix.group }} -n 4 --dist=worksteal --cov --cov-report= --cov-fail-under=0
+
+      - name: Stage coverage data for fan-in
+        run: mv .coverage .coverage.fast.${{ matrix.group }}
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: covdata-fast-${{ matrix.group }}
+          path: apps/api/.coverage.fast.${{ matrix.group }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  test-contract:
+    name: Tests (contract shard ${{ matrix.group }})
+    runs-on: ubuntu-latest
+    strategy:
       fail-fast: false
       matrix:
         group: [1, 2, 3, 4, 5, 6]
@@ -82,35 +126,20 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - name: Test (unit + architecture + contract, in-memory, sharded)
-        # These tiers build their FastAPI app with in-memory adapters via
-        # APP_ENV=test (set in tests/conftest.py) and pull no Postgres
-        # fixture, so these shards start no container. pytest-split
-        # partitions them into N groups (N = strategy.job-total = matrix
-        # size). Coverage stays ON: the diff-cover gate downstream needs
-        # coverage of every line these tests exercise (dropping it would
-        # force a redundant second run). `--cov-report=` writes no report
-        # here; the single combined report is built in the `coverage` job.
-        # Path-based selection (not `-m`) is the robust selector: some
-        # helper/__init__ files carry no marker. `--cov-fail-under=0`
-        # disables the pyproject fail_under=80 check per-shard (a shard
-        # covers only part of the tree); the 80% floor is enforced on the
-        # combined data in the `coverage` job. Without a committed
-        # `.test_durations`, pytest-split balances by count, so balance is
-        # approximate; `make store-durations` tightens it (a follow-up).
-        run: uv run pytest tests/unit tests/architecture tests/contract --splits ${{ strategy.job-total }} --group ${{ matrix.group }} -n 4 --dist=worksteal --cov --cov-report= --cov-fail-under=0
+      - name: Test (contract, in-memory, sharded)
+        # Contract tests build an app per test, so this is the no-DB long
+        # pole; shard it widest. Same in-memory / coverage / fail-under
+        # treatment as the fast lane.
+        run: uv run pytest tests/contract --splits ${{ strategy.job-total }} --group ${{ matrix.group }} -n 4 --dist=worksteal --cov --cov-report= --cov-fail-under=0
 
       - name: Stage coverage data for fan-in
-        # pytest-cov combined the per-xdist-worker files into a single
-        # `.coverage`; rename it to a unique, combinable name. The leading
-        # dot is required: `coverage combine` only picks up `.coverage.*`.
-        run: mv .coverage .coverage.noio.${{ matrix.group }}
+        run: mv .coverage .coverage.contract.${{ matrix.group }}
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v7
         with:
-          name: covdata-noio-${{ matrix.group }}
-          path: apps/api/.coverage.noio.${{ matrix.group }}
+          name: covdata-contract-${{ matrix.group }}
+          path: apps/api/.coverage.contract.${{ matrix.group }}
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
@@ -176,7 +205,7 @@ jobs:
     # test jobs succeeded. A cancelled or failed shard (likely under
     # cancel-in-progress) leaves this job skipped, so it never reports a
     # passing coverage check on a partial run. Do NOT add `if: always()`.
-    needs: [test-noio, test-db]
+    needs: [test-fast, test-contract, test-db]
     # py-cov-action needs `contents: write` to push the coverage badge to
     # the dedicated `python-coverage-comment-action-data` branch and
     # `pull-requests: write` to post the PR coverage comment.
@@ -203,20 +232,21 @@ jobs:
           merge-multiple: true
 
       - name: Combine coverage (fail loudly if a lane is missing)
-        # Require the one no-DB lane plus at least one DB shard. `needs`
-        # (all test jobs succeeded) and each lane's `if-no-files-found:
-        # error` upload already guarantee every shard's data is present, so
-        # this is a non-coupled tripwire: it does not hardcode the shard
-        # count, which lives only in `matrix.group`. A missing lane would
-        # silently under-report coverage and let diff-cover pass on lines a
-        # deselected lane covered. `find` is robust to artifact nesting.
+        # Require at least one shard file from each of the three lanes.
+        # `needs` (all test jobs succeeded) and each lane's `if-no-files-
+        # found: error` upload already guarantee every shard's data is
+        # present, so this is a non-coupled tripwire: it does not hardcode
+        # the shard count, which lives only in each `matrix.group`. A missing
+        # lane would silently under-report coverage and let diff-cover pass
+        # on lines a deselected lane covered. `find` is robust to nesting.
         run: |
-          noio=$(find _covdata -name '.coverage.noio.*' -type f | wc -l | tr -d ' ')
+          fast=$(find _covdata -name '.coverage.fast.*' -type f | wc -l | tr -d ' ')
+          contract=$(find _covdata -name '.coverage.contract.*' -type f | wc -l | tr -d ' ')
           db=$(find _covdata -name '.coverage.db.*' -type f | wc -l | tr -d ' ')
-          echo "Coverage data files: noio-shards=$noio db-shards=$db"
+          echo "Coverage data files: fast=$fast contract=$contract db=$db"
           find _covdata -name '.coverage.*' -type f
-          if [ "$noio" -lt 1 ] || [ "$db" -lt 1 ]; then
-            echo "::error::Expected >=1 no-DB-shard file and >=1 DB-shard file; found noio=$noio db=$db. Aborting to avoid under-reporting coverage." >&2
+          if [ "$fast" -lt 1 ] || [ "$contract" -lt 1 ] || [ "$db" -lt 1 ]; then
+            echo "::error::Expected >=1 shard file from each lane (fast/contract/db); found fast=$fast contract=$contract db=$db. Aborting to avoid under-reporting coverage." >&2
             exit 1
           fi
           find _covdata -name '.coverage.*' -type f -exec mv {} . \;
