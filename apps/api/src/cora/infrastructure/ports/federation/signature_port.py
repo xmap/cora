@@ -27,7 +27,7 @@ crypto recipes live inside `cora/federation/adapters/<family>_signature_port.py`
 
 from typing import Protocol, runtime_checkable
 
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 from cora.infrastructure.ports.federation.value_types import (
     FederationTrustContext,
     PublishedArtifact,

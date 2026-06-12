@@ -23,7 +23,7 @@ not this in-memory test fixture.
 
 import contextlib
 
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 from cora.infrastructure.ports.federation import (
     DsseStaticJwksEnvelope,
     FederationTrustContext,

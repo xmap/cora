@@ -44,7 +44,7 @@ from cora.infrastructure.ports.byte_signer import (
     SigningKeyNotFoundError,
     SigningTrustContext,
 )
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 
 _ADAPTER_VERSION = "cora/v1"
 

@@ -2,7 +2,7 @@
 
 Cross-BC iter-b federation handler. Loads the Calibration aggregate
 + the matching outbound Permit via PermitLookup, canonicalizes the
-artifact via the deployment-default CanonicalizationPort, signs via
+artifact via the deployment-default Canonicalizer, signs via
 SignaturePort, publishes via PublishPort, and atomically appends the
 event pair onto both streams via `EventStore.append_streams`.
 

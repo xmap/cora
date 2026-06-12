@@ -1,6 +1,6 @@
 """ByteSigner port: substrate-neutral signature production over canonical bytes.
 
-`ByteSigner` is the sibling to `CanonicalizationPort`. The two are
+`ByteSigner` is the sibling to `Canonicalizer`. The two are
 paired by `adapter_version` (a v1 ByteSigner signs over v1
 canonicalized bytes); cross-version pairing is rejected at the
 port boundary via `CanonicalizationVersionMismatchError`.
@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal, Protocol, runtime_checkable
 
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 
 KeyHandle = Any
 """Opaque adapter-specific key reference.

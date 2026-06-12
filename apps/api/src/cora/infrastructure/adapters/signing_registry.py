@@ -23,7 +23,7 @@ canonicalization side does.
 import contextlib
 
 from cora.infrastructure.ports.byte_signer import ByteSigner
-from cora.infrastructure.ports.canonicalization import (
+from cora.infrastructure.ports.canonicalizer import (
     UnsupportedCanonicalizationVersionError,
 )
 

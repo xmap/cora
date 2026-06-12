@@ -10,7 +10,7 @@ from cora.infrastructure.adapters.default_signing_adapter import (
 )
 from cora.infrastructure.adapters.signing_registry import SigningRegistry
 from cora.infrastructure.ports.byte_signer import ByteSigner
-from cora.infrastructure.ports.canonicalization import (
+from cora.infrastructure.ports.canonicalizer import (
     UnsupportedCanonicalizationVersionError,
 )
 

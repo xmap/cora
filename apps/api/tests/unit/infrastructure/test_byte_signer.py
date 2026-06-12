@@ -15,7 +15,7 @@ from cora.infrastructure.ports.byte_signer import (
     UnsupportedSigningAlgorithmError,
     algorithms_intersection,
 )
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 
 
 class _FakeSigningAdapter:

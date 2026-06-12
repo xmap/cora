@@ -38,7 +38,7 @@ from datetime import datetime
 from cora.infrastructure.adapters.canonicalization_registry import (
     CanonicalizationRegistry,
 )
-from cora.infrastructure.ports.canonicalization import (
+from cora.infrastructure.ports.canonicalizer import (
     UnsupportedCanonicalizationVersionError,
 )
 from cora.infrastructure.ports.federation.signature_port import SignaturePort

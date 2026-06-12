@@ -19,9 +19,9 @@ callers per the ControlPort `Reading.quality_detail` precedent.
 
 from datetime import datetime
 
-from cora.infrastructure.ports.canonicalization import (
+from cora.infrastructure.ports.canonicalizer import (
     CanonicalizationFailedError,
-    CanonicalizationPort,
+    Canonicalizer,
 )
 from cora.infrastructure.ports.federation.value_types import (
     DcoEntry,
@@ -65,7 +65,7 @@ def check_payload_type_trusted(
 
 
 def check_content_hash(
-    artifact: PublishedArtifact, canonicalization_adapter: CanonicalizationPort
+    artifact: PublishedArtifact, canonicalization_adapter: Canonicalizer
 ) -> StageResult:
     """Recompute the content hash via the matching canonicalization adapter.
 

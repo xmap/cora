@@ -7,7 +7,7 @@ PullPort, and SignaturePort against minimal duck-typed conformers.
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 from cora.infrastructure.ports.federation import (
     ArtifactReference,
     DsseStaticJwksEnvelope,
