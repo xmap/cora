@@ -40,7 +40,6 @@ _EM_DASH = "\u2014"
 
 EMDASH_ALLOWLIST: frozenset[str] = frozenset(
     {
-        "src/cora/__init__.py",
         "src/cora/access/aggregates/actor/events.py",
         "src/cora/access/aggregates/actor/evolver.py",
         "src/cora/access/features/__init__.py",

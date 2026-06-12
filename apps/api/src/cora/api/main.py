@@ -623,7 +623,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     fastapi_app = FastAPI(
         title="CORA",
         version=__version__,
-        description="Research facility operations platform",
+        description="Research facility system of record",
         lifespan=lifespan,
     )
     fastapi_app.add_middleware(

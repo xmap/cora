@@ -1,7 +1,7 @@
 [project]
 name = "cora"
 version = "0.1.0"
-description = "Continuously Overpromised, Rarely Automated — research facility operations platform"
+description = "Continuously Overpromised, Rarely Automated: research facility system of record"
 readme = "README.md"
 requires-python = ">=3.13"
 authors = [{ name = "Doga Gursoy" }]
