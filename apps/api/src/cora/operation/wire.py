@@ -58,8 +58,8 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
 from cora.operation.acquisitions import collect, continuous, discrete
 from cora.operation.adapters.control_port_config import build_control_port
-from cora.operation.adapters.in_memory_recipe_expansion_port import (
-    InMemoryRecipeExpansionPort,
+from cora.operation.adapters.in_memory_recipe_expander import (
+    InMemoryRecipeExpander,
 )
 from cora.operation.aggregates.procedure import (
     ActivityStore,
@@ -146,7 +146,7 @@ def wire_operation(deps: Kernel) -> OperationHandlers:
     # then any `pseudoaxis://` SetpointStep at conduct time is rejected
     # with `PartitionRuleNotFoundError` (HTTP 409) so the routing-
     # layer status mapping surfaces the deferral cleanly.
-    recipe_expansion_port = InMemoryRecipeExpansionPort()
+    recipe_expander = InMemoryRecipeExpander()
     start_handler = with_tracing(
         start_procedure.bind(deps),
         command_name="StartProcedure",
@@ -198,7 +198,7 @@ def wire_operation(deps: Kernel) -> OperationHandlers:
         ),
         register_procedure_from_recipe=with_tracing(
             with_idempotency(
-                register_procedure_from_recipe.bind(deps, expansion_port=recipe_expansion_port),
+                register_procedure_from_recipe.bind(deps, expansion_port=recipe_expander),
                 deps.idempotency_store,
                 command_name="RegisterProcedureFromRecipe",
                 serialize_result=str,
@@ -230,7 +230,7 @@ def wire_operation(deps: Kernel) -> OperationHandlers:
             kind="query",
         ),
         conduct_procedure=with_tracing(
-            conduct_procedure.bind(deps, conductor=conductor, expansion_port=recipe_expansion_port),
+            conduct_procedure.bind(deps, conductor=conductor, expansion_port=recipe_expander),
             command_name="ConductProcedure",
             bc=_BC,
         ),

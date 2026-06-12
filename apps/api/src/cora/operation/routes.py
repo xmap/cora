@@ -58,9 +58,9 @@ from cora.operation.aggregates.procedure import (
     ProcedureStepsLogbookClosedError,
     ProcedureSupplyCoverageMismatchError,
     RecipeBindingsStaleAgainstCurrentCapabilityError,
+    RecipeExpanderVersionMismatchError,
     RecipeExpansionDeterminismError,
     RecipeExpansionOverflowError,
-    RecipeExpansionPortVersionMismatchError,
     RecipeExpansionRecordNotFoundError,
     RecipeExpansionReplayMismatchError,
 )
@@ -302,7 +302,7 @@ def register_operation_routes(app: FastAPI) -> None:
     # will fail the same way. Replay-time bugs land here too per
     # [[project-run-procedure-replay-design]] Rejections (alphabetical):
     #   - RecipeExpansionDeterminismError (at-write determinism bug).
-    #   - RecipeExpansionPortVersionMismatchError (pinned port v differs
+    #   - RecipeExpanderVersionMismatchError (pinned port v differs
     #     from currently-wired; placeholder until a v2 expansion port
     #     lands with its routing layer).
     #   - RecipeExpansionRecordNotFoundError (data corruption guard:
@@ -311,7 +311,7 @@ def register_operation_routes(app: FastAPI) -> None:
     #   - RecipeExpansionReplayMismatchError (replay-time hash drift).
     for internal_cls in (
         RecipeExpansionDeterminismError,
-        RecipeExpansionPortVersionMismatchError,
+        RecipeExpanderVersionMismatchError,
         RecipeExpansionRecordNotFoundError,
         RecipeExpansionReplayMismatchError,
         # PseudoAxis pre-Conductor expansion ([[project-pseudoaxis-design]]
