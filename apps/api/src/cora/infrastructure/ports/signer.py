@@ -2,11 +2,12 @@
 
 `Signer` is the hexagonal port for signing event payloads. Implementations
 plug in at the handler tier post-decider / pre-INSERT per
-[[project_signed_events_design]]. Today: zero adapters ship in production
-code (verification path uses the same canonicalization helper from
+[[project_signed_events_design]]. Today: the in-memory Ed25519 adapter
+`InMemorySigner` ships (wired by default for dev and tests); the
+verification path uses the same canonicalization helper from
 [[project_content_addressed_identity_design]] and a directly-resolved
-public key). The port exists so the choice of signing backend stays
-swappable: a future iteration adds one of these adapters without
+public key. The port exists so the choice of signing backend stays
+swappable: a production iteration swaps in one of these backends without
 touching the handlers that call `Signer.sign`:
 
   - Sigstore keyless OIDC (Fulcio short-lived cert bound to a workload
