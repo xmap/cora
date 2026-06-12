@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_bd2d50bd5f5bc3b9_clock_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-12 07:06 +0000
+            created at 2026-06-12 11:04 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -147,7 +147,7 @@
     <p class="pln"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="str">    Carries the minimal columns cross-aggregate consumers need to</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t"><span class="str">    validate parent-chain invariants before commit. Loaded by the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="str">    handler via `ClearanceTemplateLookup.lookup_by_id` and handed to</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="str">    handler via `ClearanceTemplateLookup.lookup` and handed to</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t"><span class="str">    the decider in the slice's context object (mirrors</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t"><span class="str">    `AssetLookupResult` shape).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -180,7 +180,7 @@
     <p class="run"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="key">class</span> <span class="nam">ClearanceTemplateLookup</span><span class="op">(</span><span class="nam">Protocol</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">    <span class="str">"""Cross-aggregate port: query Safety's ClearanceTemplate projection by id."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="key">async</span> <span class="key">def</span> <span class="nam">lookup_by_id</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">template_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">)</span> <span class="op">-></span> <span class="nam">ClearanceTemplateLookupResult</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="key">async</span> <span class="key">def</span> <span class="nam">lookup</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">template_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">)</span> <span class="op">-></span> <span class="nam">ClearanceTemplateLookupResult</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">        <span class="str">"""Return the projection row for `template_id`, or None if not found.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t"><span class="str">        Returning None signals "no ClearanceTemplate with that id is</span>&nbsp;</span><span class="r"></span></p>
@@ -209,7 +209,7 @@
             <a class="nav" href="z_bd2d50bd5f5bc3b9_clock_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-12 07:06 +0000
+            created at 2026-06-12 11:04 +0000
         </p>
     </div>
 </footer>
