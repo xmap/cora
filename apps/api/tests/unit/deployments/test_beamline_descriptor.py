@@ -104,8 +104,8 @@ def test_renders_one_h2_per_group_and_no_em_dash() -> None:
     assert "drawing: EDMS" in markdown
     assert "calibration: magnification = 9.83 (Provisional" in markdown
     assert "confirm: count and thickness" in markdown
-    # repo style: no em dashes in generated prose
-    assert "—" not in markdown
+    # repo style: no em dashes in generated prose (chr() keeps the literal out of source)
+    assert chr(0x2014) not in markdown
 
 
 def test_markers_promoted_from_comments_to_fields() -> None:

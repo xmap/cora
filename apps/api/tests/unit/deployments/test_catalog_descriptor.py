@@ -109,7 +109,7 @@ def test_renders_all_catalog_pages() -> None:
     }
     for src_uri, markdown in pages.items():
         assert markdown.startswith("# "), f"{src_uri} missing H1"
-        assert "—" not in markdown, f"{src_uri} has an em dash"
+        assert chr(0x2014) not in markdown, f"{src_uri} has an em dash"
     # spot-check derived + per-item content actually rendered
     assert "`tomography`" in pages["catalog/capabilities.md"]
     assert "depth-of-focus" in pages["catalog/methods.md"]
