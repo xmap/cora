@@ -42,6 +42,8 @@ def _load(name: str) -> ModuleType:
 
 
 ai = _load("architecture_introspect")
+ap = _load("architecture_pages")
+_MODEL = ai.introspect(_CORA)
 
 
 def _filesystem_aggregates() -> set[tuple[str, str]]:
@@ -115,3 +117,54 @@ def test_in_process_stub_slice_has_no_surface() -> None:
     observe = {s.dir_name: s for s in model.bc("supply").slices}["observe_supply_status"]
     assert observe.in_process
     assert observe.rest_path is None and observe.mcp_tool is None
+
+
+def test_bc_table_renders_full_membership() -> None:
+    table = ap.render_bc_table(_MODEL, {})
+    assert "`enclosure`" in table  # the omitted 17th BC
+    assert "`role`" in table  # the omitted equipment aggregate
+    assert table.count("Active") == 17
+    assert table.count("Planned") == 2
+    assert "`strategy`" in table and "`budget`" in table
+    assert chr(0x2014) not in table
+
+
+def test_bc_table_track_map_covers_every_bc() -> None:
+    # The editorial Track map must place every introspected BC, else a new BC is
+    # silently dropped from the table. render_bc_table also raises on a gap.
+    placed = {bc for _, bc in ap._BC_ROWS} | {bc for _, bc, _ in ap._PLANNED_ROWS}
+    assert {bc.name for bc in _MODEL.bcs} - placed == set()
+
+
+def test_count_renderer() -> None:
+    assert ap.render_count(_MODEL, {"kind": "bc", "spell": "true", "cap": "true"}) == "Seventeen"
+    assert ap.render_count(_MODEL, {"kind": "aggregate", "spell": "true"}) == "forty"
+    assert ap.render_count(_MODEL, {"kind": "bc"}) == "17"
+    assert ap.render_count(_MODEL, {"kind": "event", "bc": "decision"}) == "4"
+    assert ap.render_count(_MODEL, {"kind": "slice", "bc": "equipment"}) == "60"
+
+
+def test_bc_aggregates_renderer() -> None:
+    aggs = ap.render_bc_aggregates(_MODEL, {"bc": "equipment"})
+    assert "`role`" in aggs and "`asset`" in aggs
+
+
+def test_expand_markers_idempotent() -> None:
+    md = "lead <!-- arch:count kind=bc spell=true cap=true -->X<!-- /arch:count --> tail"
+    out = ap.expand_markers(md, model=_MODEL, src_uri="architecture/model.md")
+    assert "Seventeen" in out
+    assert out.startswith("lead <!-- arch:count") and out.endswith("/arch:count --> tail")
+    # re-expanding a generated page is stable
+    assert ap.expand_markers(out, model=_MODEL, src_uri="architecture/model.md") == out
+
+
+def test_expand_markers_rejects_bad_markers() -> None:
+    cases = [
+        "<!-- arch:bogus -->x<!-- /arch:bogus -->",  # unknown kind
+        "<!-- arch:count -->x<!-- /arch:count -->",  # missing required kind arg
+        "<!-- arch:count kind=bc nope=1 -->x<!-- /arch:count -->",  # unknown arg
+        "<!-- arch:bc-table -->x",  # unpaired (no close)
+    ]
+    for md in cases:
+        with pytest.raises(ap.ArchMarkerError):
+            ap.expand_markers(md, model=_MODEL, src_uri="architecture/x.md")

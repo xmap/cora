@@ -21,6 +21,11 @@ A) **Link rewriting** (`on_page_markdown`). Rewrites markdown links
    Links containing /.claude/ (private auto-memory) are stripped to plain
    text.
 
+   It also expands `arch:*` markers on architecture/ pages: their bodies
+   (the BC table, aggregate lists, counts, slice tables, FSM states) are
+   rendered from the live cora code model (scripts/architecture_*), so the
+   factual tables cannot drift. A malformed marker aborts the build.
+
 B) **Generated pages** (`on_files`). Renders virtual pages from the
    descriptors: the beamline layout page from deployments/<id>/beamline.yaml
    (scripts/beamline_*), the Catalog inventory pages from catalog/catalog.yaml
@@ -44,8 +49,23 @@ STAGED_CONTRIBUTING_SRC_URI = "reference/contributing.md"
 DESCRIPTOR_PATH = REPO_ROOT / "deployments" / "2-bm" / "beamline.yaml"
 CATALOG_PATH = REPO_ROOT / "catalog" / "catalog.yaml"
 SITE_PATH = REPO_ROOT / "deployments" / "aps" / "site.yaml"
+CORA_SRC = REPO_ROOT / "apps" / "api" / "src" / "cora"
 
 LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+
+# Cached architecture model: introspecting the cora source is the same for every
+# architecture/ page, so build it once per process.
+_ARCH_MODEL: object | None = None
+
+
+def _arch_model() -> object:
+    global _ARCH_MODEL
+    if _ARCH_MODEL is None:
+        import architecture_introspect
+
+        _ARCH_MODEL = architecture_introspect.introspect(CORA_SRC)
+    return _ARCH_MODEL
+
 
 # Ensure sibling scripts (beamline_descriptor, beamline_pages) are importable
 # when mkdocs runs this hook with the repo root not on sys.path.
@@ -139,7 +159,14 @@ def on_page_markdown(
     config: Any,
     files: Any,
 ) -> str:
-    return _rewrite_in_page(page.file.src_uri, markdown)
+    src_uri = page.file.src_uri
+    # Architecture pages carry arch:* markers whose bodies are rendered from the
+    # live code model (expand before link-rewrite so generated links resolve too).
+    if src_uri.startswith("architecture/") and "<!-- arch:" in markdown:
+        import architecture_pages
+
+        markdown = architecture_pages.expand_markers(markdown, model=_arch_model(), src_uri=src_uri)
+    return _rewrite_in_page(src_uri, markdown)
 
 
 def on_files(files: Any, *, config: Any) -> Any:
