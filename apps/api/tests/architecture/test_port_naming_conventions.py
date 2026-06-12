@@ -38,17 +38,6 @@ A `<X>Lookup` port returns a denormalized read-side row. That DTO is named
 identical concept; `Reference` is reserved for genuine reference value
 objects, which live in `value_types.py` (excluded here) or carry a domain
 name. A port file declaring a `*Reference` class is the rejected shape.
-
-## Deferred: the signing/canonicalization cluster
-
-`SigningPort` (`signing.py`) and `CanonicalizationPort`
-(`canonicalization.py`) still carry the suffix AND mismatch their files.
-Their rename rides with the signing-stack dedup (the audit's
-MERGED-SIGNING-STACK finding: `Signer` vs `SigningPort` is an open
-which-survives decision, and the canonicalization rename touches the same
-crypto cluster). They sit in `_DEFERRED_SIGNING_CLUSTER` so this test
-stays green without prejudging that decision; remove them from the set
-when the dedup lands and the renames happen.
 """
 
 import ast
@@ -67,10 +56,6 @@ _PORT_SUFFIX_ALLOWLIST: dict[str, str] = {
     "PublishPort": "federation publish seam; 'Publish' is a bare verb, no graceful agent noun",
     "PullPort": "federation pull seam; 'Pull' is a bare verb, no graceful agent noun",
 }
-
-# Suffix-carrying ports whose rename is deferred to the signing-stack dedup
-# (audit MERGED-SIGNING-STACK). Exempt from BOTH rules until that lands.
-_DEFERRED_SIGNING_CLUSTER: frozenset[str] = frozenset({"SigningPort", "CanonicalizationPort"})
 
 # Files under a ports/ tree that do not define a port Protocol.
 _NON_PORT_FILES: frozenset[str] = frozenset({"__init__.py", "errors.py", "value_types.py"})
@@ -128,8 +113,9 @@ def test_port_class_drops_redundant_port_suffix(path: Path) -> None:
     protocols = _protocol_classes(ast.parse(path.read_text()))
     if not protocols:
         pytest.skip(f"{_qualified(path)} declares no port Protocol")
-    allowed = _PORT_SUFFIX_ALLOWLIST.keys() | _DEFERRED_SIGNING_CLUSTER
-    offenders = sorted(p for p in protocols if p.endswith("Port") and p not in allowed)
+    offenders = sorted(
+        p for p in protocols if p.endswith("Port") and p not in _PORT_SUFFIX_ALLOWLIST
+    )
     assert not offenders, (
         f"{_qualified(path)} declares port Protocol(s) with a redundant `Port` suffix:\n  "
         + "\n  ".join(offenders)
@@ -148,8 +134,6 @@ def test_port_filename_matches_class(path: Path) -> None:
     protocols = _protocol_classes(ast.parse(path.read_text()))
     if not protocols:
         pytest.skip(f"{_qualified(path)} declares no port Protocol")
-    if any(p in _DEFERRED_SIGNING_CLUSTER for p in protocols):
-        pytest.skip(f"{_qualified(path)} rename deferred to the signing-stack dedup")
     stem = path.stem
     snake_names = {_camel_to_snake(p) for p in protocols}
     assert stem in snake_names, (
@@ -157,7 +141,7 @@ def test_port_filename_matches_class(path: Path) -> None:
         f"Protocol it defines ({sorted(protocols)}).\n\n"
         "Rename the file to snake_case(<PortClass>).py so an import-path reader can predict "
         "the class from the path. A domain-named module whose stem omits a suffix the class "
-        "keeps (signing.py for SigningPort) is the rejected shape."
+        "keeps is the rejected shape."
     )
 
 

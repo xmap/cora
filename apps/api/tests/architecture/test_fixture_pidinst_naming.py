@@ -2,10 +2,10 @@
 
 Per Section 15.4 + Section 20 R3 of project_fixture_pidinst_design:
 
-  - `FixturePidinstView` lives in `cora.equipment._pidinst_types`
+  - `FixturePidinstView` lives in `cora.equipment._pidinst._types`
     alongside `AssetPidinstView` per Lock 1; the Fixture-tier view
     must not drift into a sibling slice module.
-  - `to_fixture_pidinst_record` lives in `cora.equipment._pidinst_serializer`
+  - `to_fixture_pidinst_record` lives in `cora.equipment._pidinst._serializer`
     alongside `to_pidinst_record`; the sibling serializer must share
     the same BC-root module so the kernel reuse stays one import away.
   - Four concrete `FixturePidinstSerializationError` subclasses
@@ -26,8 +26,7 @@ import ast
 
 import pytest
 
-from cora.equipment._pidinst_serializer import to_fixture_pidinst_record
-from cora.equipment._pidinst_types import FixturePidinstView
+from cora.equipment._pidinst import FixturePidinstView, to_fixture_pidinst_record
 from cora.equipment.errors import (
     FixtureLandingPageMissingError,
     FixtureManufacturerStateNotAvailableError,
@@ -93,16 +92,16 @@ def _registered_exception_classes(tree: ast.Module) -> set[str]:
 
 
 def test_fixture_pidinst_view_lives_in_pidinst_types_module() -> None:
-    assert FixturePidinstView.__module__ == "cora.equipment._pidinst_types", (
-        "FixturePidinstView must live in cora.equipment._pidinst_types "
+    assert FixturePidinstView.__module__ == "cora.equipment._pidinst._types", (
+        "FixturePidinstView must live in cora.equipment._pidinst._types "
         "alongside AssetPidinstView per Section 9.1 Lock 1. Found in: "
         f"{FixturePidinstView.__module__!r}"
     )
 
 
 def test_to_fixture_pidinst_record_lives_in_designated_serializer_file() -> None:
-    assert to_fixture_pidinst_record.__module__ == "cora.equipment._pidinst_serializer", (
-        "to_fixture_pidinst_record must live in cora.equipment._pidinst_serializer "
+    assert to_fixture_pidinst_record.__module__ == "cora.equipment._pidinst._serializer", (
+        "to_fixture_pidinst_record must live in cora.equipment._pidinst._serializer "
         "alongside to_pidinst_record per Section 10.1 Lock 1. Found in: "
         f"{to_fixture_pidinst_record.__module__!r}"
     )

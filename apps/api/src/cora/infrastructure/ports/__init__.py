@@ -50,7 +50,6 @@ from cora.infrastructure.ports.enclosure_lookup import (
     EnclosureLookup,
     EnclosureLookupResult,
 )
-from cora.infrastructure.ports.event_publisher import EventPublisher
 from cora.infrastructure.ports.event_store import (
     ConcurrencyError,
     EventStore,
@@ -168,7 +167,6 @@ __all__ = [
     "Deny",
     "EnclosureLookup",
     "EnclosureLookupResult",
-    "EventPublisher",
     "EventStore",
     "FacilityLookup",
     "FacilityLookupResult",

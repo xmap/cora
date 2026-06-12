@@ -27,7 +27,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.equipment._pidinst_serializer import to_fixture_pidinst_record
+from cora.equipment._pidinst import to_fixture_pidinst_record
 from cora.equipment.aggregates.assembly import SlotCardinality, SlotName, TemplateSlot
 from cora.equipment.aggregates.asset import (
     AssetOwner,

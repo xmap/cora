@@ -37,10 +37,6 @@ from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
-# ----------------------------------------------------------------------
-# Discriminated result type
-# ----------------------------------------------------------------------
-
 
 @dataclass(frozen=True)
 class Match:
@@ -78,13 +74,7 @@ class Unreachable:
     error_detail: str
 
 
-#: Discriminated union returned by ``ChecksumVerifier.verify``.
 ChecksumVerificationResult = Match | Mismatch | Unreachable
-
-
-# ----------------------------------------------------------------------
-# Port Protocol
-# ----------------------------------------------------------------------
 
 
 class ChecksumVerifier(Protocol):
@@ -131,11 +121,6 @@ class ChecksumVerifierUnsupportedSchemeError(Exception):
     def __init__(self, scheme: str) -> None:
         super().__init__(f"No ChecksumVerifier adapter registered for URI scheme {scheme!r}")
         self.scheme = scheme
-
-
-# ----------------------------------------------------------------------
-# Test stubs
-# ----------------------------------------------------------------------
 
 
 class AlwaysMatchingChecksumVerifier:

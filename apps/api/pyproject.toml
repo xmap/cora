@@ -1,7 +1,7 @@
 [project]
 name = "cora"
 version = "0.1.0"
-description = "Continuously Overpromised, Rarely Automated — research facility operations platform"
+description = "Continuously Overpromised, Rarely Automated: research facility system of record"
 readme = "README.md"
 requires-python = ">=3.13"
 authors = [{ name = "Doga Gursoy" }]
@@ -95,6 +95,16 @@ dev = [
     # container per worker (via session-scoped fixture, see tests/conftest)
     # sidesteps testcontainers-python#567 contention.
     "pytest-xdist>=3.8.0,<4",
+    # pytest-split: partitions the collected suite into N disjoint groups
+    # (`--splits N --group K`) so CI can run one group per matrix runner.
+    # This is cross-MACHINE parallelism, complementary to xdist's within-
+    # machine `-n` workers: CI shards the Postgres-bound integration+e2e
+    # tiers across separate runners (each with its own containers) rather
+    # than oversubscribing one box, which local benchmarking showed was
+    # slower (-n8 < -n4, the suite is I/O-bound on per-worker Postgres).
+    # With no `.test_durations` file it splits by test count (a warning is
+    # printed); a stored-durations file balances by time but is optional.
+    "pytest-split>=0.11.0,<1",
     # pytest-httpserver (Phase C Iter A): spins up an in-process Werkzeug
     # HTTP server per-test; used to serve fake JWKS endpoints + IdP
     # introspection endpoints in `tests/unit/test_jwt_verifier.py` and
@@ -164,6 +174,12 @@ dev = [
     # Configuration in `[tool.mutmut]` below scopes mutation to pure
     # decider/evolver modules only.
     "mutmut>=3.6.0,<4",
+    # PyYAML: parses the beamline descriptor (deployments/<id>/beamline.yaml).
+    # Used by scripts/beamline_descriptor.py, which the docs build imports and
+    # the deployment round-trip test dynamic-imports. types-PyYAML supplies the
+    # type stubs pyright wants for `import yaml`.
+    "pyyaml>=6,<7",
+    "types-PyYAML>=6,<7",
 ]
 
 [build-system]

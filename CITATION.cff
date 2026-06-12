@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "CORA: a unified operations platform for large-scale research facilities"
+title: "CORA: the system of record for the experiment at large-scale research facilities"
 message: "If you use CORA in your research, please cite it using these metadata."
 type: software
 authors:
@@ -13,7 +13,7 @@ license: Apache-2.0
 version: 0.1.0
 date-released: "2026-05-12"
 keywords:
-  - operations-platform
+  - system-of-record
   - research-facility
   - event-sourcing
   - domain-driven-design
@@ -23,10 +23,10 @@ keywords:
   - isa-95
   - isa-88
 abstract: >-
-  CORA is a unified operations platform for large-scale research facilities,
+  CORA is the system of record for the experiment at large-scale research facilities,
   built around event-sourced bounded contexts, a recipe ladder
   (Method / Practice / Plan / Run) for facility-neutral procedures, and
   equivalent REST and agent-protocol (MCP) API surfaces backed by a single
-  handler per command. Pilot deployment targets APS beamline 35-BM at Argonne
+  handler per command. Pilot deployment targets APS beamline 2-BM at Argonne
   National Laboratory; the architecture is designed to generalise across
   photon sources, neutron sources, free-electron lasers, and HPC centres.

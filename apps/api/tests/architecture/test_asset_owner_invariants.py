@@ -30,7 +30,7 @@ _EQUIPMENT_DIR = _REPO_ROOT / "apps" / "api" / "src" / "cora" / "equipment"
 
 _STATE_PATH = _EQUIPMENT_DIR / "aggregates" / "asset" / "state.py"
 _REMOVE_DECIDER_PATH = _EQUIPMENT_DIR / "features" / "remove_asset_owner" / "decider.py"
-_SERIALIZER_PATH = _EQUIPMENT_DIR / "_pidinst_serializer.py"
+_SERIALIZER_PATH = _EQUIPMENT_DIR / "_pidinst" / "_serializer.py"
 
 
 @pytest.mark.architecture
@@ -111,7 +111,7 @@ _ROLE_TAXONOMY_ALLOW_PATHS: frozenset[str] = frozenset(
         # event-payload state, not docstrings). Allow-listed for the
         # documentary reference; remove this entry when slice 6 lands
         # and replace the docstring mention with a code-side import.
-        "apps/api/src/cora/equipment/_pidinst_types.py",
+        "apps/api/src/cora/equipment/_pidinst/_types.py",
     }
 )
 

@@ -34,11 +34,11 @@ asks the registry, which routes by either:
 
 ## Why a port, not a function
 
-Two adapters is rule-of-two for a port today; rule-of-three would
-trigger one. We're at two because:
-  1. Test suites need a `TestTokenVerifier` for unit isolation
-     (raises programmable outcomes without an IdP round-trip).
-  2. Globus + non-Globus IdPs are operationally distinct paths.
+Two production adapters today; rule-of-three would trigger an
+extraction. We're at two because Globus + non-Globus IdPs are
+operationally distinct paths. Unit tests use a local fake implementing
+`verify` (see tests/unit/auth/test_bearer_auth_middleware.py), so the
+port stays testable without an IdP round-trip.
 The Protocol shape lets the kernel hold a `TokenVerifier` field
 without leaking which adapter implementation; same architectural
 move as `Authorize` (AllowAllAuthorize for tests / TrustAuthorize
@@ -184,7 +184,7 @@ class TokenVerifier(Protocol):
     """Verify an `Authorization: Bearer <token>` value against a configured IdP.
 
     Implementations: `JwtTokenVerifier` (PyJWT + PyJWKClient), `IntrospectionTokenVerifier`
-    (httpx + LRU cache), `TestTokenVerifier` (programmable, test-only).
+    (httpx + LRU cache); unit tests use a local fake implementing `verify`.
 
     Per Decision 4 of the design lock: `expected_audience` is the
     resolved Surface UUID from `get_surface_id` / `get_mcp_surface_id`.

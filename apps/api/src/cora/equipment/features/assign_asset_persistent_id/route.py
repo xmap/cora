@@ -17,7 +17,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
 
-from cora.equipment._asset_persistent_identifier_body import (
+from cora.equipment._bodies import (
     AssignAssetPersistentIdRequest,
     AssignAssetPersistentIdResponse,
 )

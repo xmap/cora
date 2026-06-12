@@ -1,8 +1,8 @@
 """Architecture fitness for the kernel-tier PIDINST serializer modules.
 
 L22 / L28 of `project_pidinst_serializer_design`. The PIDINST
-serializer at `cora.equipment._pidinst_serializer` and its sibling
-type module `cora.equipment._pidinst_types` are pure-function CORA
+serializer at `cora.equipment._pidinst._serializer` and its sibling
+type module `cora.equipment._pidinst._types` are pure-function CORA
 infrastructure: they must never accumulate I/O, async surface,
 cross-BC imports, mutable dataclass state, or `Any`-typed escape
 hatches. This file is the test that prevents slice 6 (DataCite mint
@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from cora.equipment._pidinst_types import (
+from cora.equipment._pidinst import (
     PidinstAlternateIdentifier,
     PidinstRecord,
     SchemaVersion,
@@ -67,8 +67,8 @@ _FORBIDDEN_IO_TOP_LEVEL_IMPORTS: frozenset[str] = frozenset(
 def _pidinst_module_paths() -> list[Path]:
     tracked = tracked_python_files()
     targets = {
-        CORA_ROOT / "equipment" / "_pidinst_serializer.py",
-        CORA_ROOT / "equipment" / "_pidinst_types.py",
+        CORA_ROOT / "equipment" / "_pidinst" / "_serializer.py",
+        CORA_ROOT / "equipment" / "_pidinst" / "_types.py",
     }
     return sorted(p for p in tracked if p in targets)
 
@@ -146,7 +146,7 @@ def test_pidinst_record_has_no_any_or_dict_str_any_annotations() -> None:
     return types) for `Any` and `dict[str, Any]`. Either shape is a
     typing escape hatch; the intermediate is typed end to end.
     """
-    types_path = CORA_ROOT / "equipment" / "_pidinst_types.py"
+    types_path = CORA_ROOT / "equipment" / "_pidinst" / "_types.py"
     tree = ast.parse(types_path.read_text())
     violations: list[str] = []
 
@@ -215,7 +215,7 @@ def test_pidinst_alternate_identifier_reuses_asset_alternate_identifier_kind() -
     )
 
     # Belt-and-braces: assert the types module imports the existing enum.
-    types_path = CORA_ROOT / "equipment" / "_pidinst_types.py"
+    types_path = CORA_ROOT / "equipment" / "_pidinst" / "_types.py"
     source = types_path.read_text()
     assert "from cora.equipment.aggregates.asset import" in source
     assert "AlternateIdentifierKind" in source

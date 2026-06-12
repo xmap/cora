@@ -36,11 +36,11 @@ Per Section 11 of project_fixture_pidinst_design:
 import asyncio
 from uuid import UUID
 
-from cora.equipment._pidinst_types import (
+from cora.equipment._pidinst import (
     FixtureComponentRef,
     FixturePidinstView,
 )
-from cora.equipment._pidinst_types import (
+from cora.equipment._pidinst import (
     Manufacturer as PidinstManufacturer,
 )
 from cora.equipment.aggregates.asset import AssetOwner, load_asset

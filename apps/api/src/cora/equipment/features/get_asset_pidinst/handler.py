@@ -29,8 +29,7 @@ from settings at bind time; per-request callers do not pass these in.
 from typing import Protocol
 from uuid import UUID
 
-from cora.equipment._pidinst_serializer import to_pidinst_record
-from cora.equipment._pidinst_types import PidinstRecord
+from cora.equipment._pidinst import PidinstRecord, to_pidinst_record
 from cora.equipment.errors import PidinstRecordInvariantError, UnauthorizedError
 from cora.equipment.features.get_asset_pidinst._view_assembler import assemble_pidinst_view
 from cora.equipment.features.get_asset_pidinst.query import GetAssetPidinst

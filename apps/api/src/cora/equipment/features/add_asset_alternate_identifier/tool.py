@@ -7,7 +7,7 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
 
-from cora.equipment._alternate_identifier_body import AlternateIdentifierBody
+from cora.equipment._bodies import AlternateIdentifierBody
 from cora.equipment.features.add_asset_alternate_identifier.command import (
     AddAssetAlternateIdentifier,
 )

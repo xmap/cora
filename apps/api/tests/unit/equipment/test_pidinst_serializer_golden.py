@@ -23,8 +23,7 @@ from pathlib import Path
 
 import pytest
 
-from cora.equipment._pidinst_serializer import to_pidinst_record
-from cora.equipment._pidinst_types import AssetPidinstView
+from cora.equipment._pidinst import AssetPidinstView, to_pidinst_record
 from cora.shared.content_hash import canonical_body_bytes
 from tests.unit.equipment._helpers import (
     build_minimal_view,

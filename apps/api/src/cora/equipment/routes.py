@@ -226,6 +226,7 @@ from cora.equipment.features import (
     list_assets,
     list_families,
     list_fixtures,
+    mint_missing_asset_persistent_ids,
     register_asset,
     register_fixture,
     register_frame,
@@ -447,6 +448,7 @@ def register_equipment_routes(app: FastAPI) -> None:
     app.include_router(add_asset_owner.router)
     app.include_router(remove_asset_owner.router)
     app.include_router(assign_asset_persistent_id.router)
+    app.include_router(mint_missing_asset_persistent_ids.router)
     app.include_router(get_asset.router)
     app.include_router(get_asset_integration_view.router)
     app.include_router(get_asset_pidinst.router)

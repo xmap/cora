@@ -3,7 +3,7 @@
 from cora.infrastructure.adapters.default_canonicalization_adapter import (
     DefaultCanonicalizationAdapter,
 )
-from cora.infrastructure.ports.canonicalization import (
+from cora.infrastructure.ports.canonicalizer import (
     CanonicalizationFailedError,
     CanonicalizedBytes,
 )

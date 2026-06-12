@@ -15,13 +15,13 @@ from cora.infrastructure.adapters.default_signing_adapter import (
     DefaultSigningAdapter,
     JwksKid,
 )
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
-from cora.infrastructure.ports.signing import (
+from cora.infrastructure.ports.byte_signer import (
     CanonicalizationVersionMismatchError,
     Signature,
     SigningKeyNotFoundError,
     SigningTrustContext,
 )
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 
 
 def _fixed_clock() -> datetime:

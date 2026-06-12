@@ -4,9 +4,9 @@ template: home.html
 
 # CORA
 
-Autonomous facilities make thousands of decisions a day. Some by humans, some by agents, most reasoned from prior runs. Without a place that records what was intended, what was decided, and what happened, the science cannot be trusted, reproduced, or handed off.
+Why did this run use that center of rotation, who or what approved it, under which recipe, and can you replay it six months from now? Today that answer is smeared across HDF5 process groups, PV snapshots, the e-logbook, and someone's memory, while TomoScan, TomoPy, EPICS, and Globus each do their part and remember none of it.
 
-CORA is that place. It owns no servo loop, runs no reconstruction, and stores no dataset bytes. It records the work, end to end, in one append-only event log that survives every change of staff, vendor, and tool below it.
+CORA is where that answer lives. It owns no servo loop, runs no reconstruction, and stores no dataset bytes. It records the work, end to end, in one append-only event log that survives every change of staff, vendor, and tool below it.
 
 ## What CORA records
 
@@ -43,6 +43,22 @@ How CORA earns the claim
 - **Everything is replayable.** Any decision, human or agent, reconstructable from a Postgres event log alone.
 
 </div>
+
+## Where CORA sits
+
+<div class="cora-aside" markdown>
+
+The spine, the edge, and the floor
+{: .cora-kicker }
+
+- **The spine, always CORA.** The event log, decisions, the recipe ladder, trust, and audit. Decision-grade latency; it never sits inside a deterministic real-time loop.
+- **The execution edge, optional.** Driving operations step by step, and in time the scan loop, over a substrate-neutral ControlPort and Conductor with EPICS adapters. A facility may adopt it or keep its own execution and scan tools. At 2-BM, driving the scan loop this way is exploratory.
+- **The floor, never CORA.** Servo control, position-synchronised output, FPGA trigger fan-out, sub-millisecond timing. These stay in the IOCs and motion controllers, wherever the line above is drawn.
+
+</div>
+
+Only the spine and the floor are fixed. How far the edge reaches between them is the facility's choice.
+[Read the full model](architecture/standards.md#the-recording-spine-and-the-optional-execution-edge).
 
 ## What CORA governs
 

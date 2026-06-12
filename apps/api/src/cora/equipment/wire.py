@@ -72,6 +72,7 @@ from cora.equipment.features import (
     list_assets,
     list_families,
     list_fixtures,
+    mint_missing_asset_persistent_ids,
     register_asset,
     register_fixture,
     register_frame,
@@ -99,6 +100,7 @@ from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
+from cora.shared.identifier import PersistentIdentifier, PersistentIdentifierScheme
 from cora.shared.ports.doi_minter import DoiMinter
 
 _BC = "equipment"
@@ -168,6 +170,7 @@ class EquipmentHandlers:
     add_asset_owner: add_asset_owner.Handler
     remove_asset_owner: remove_asset_owner.Handler
     assign_asset_persistent_id: assign_asset_persistent_id.Handler
+    mint_missing_asset_persistent_ids: mint_missing_asset_persistent_ids.Handler
     get_asset: get_asset.Handler
     get_asset_integration_view: get_asset_integration_view.Handler
     get_asset_pidinst: get_asset_pidinst.Handler
@@ -235,6 +238,31 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
     else:
         doi_minter = StubDoiMinter()
     object.__setattr__(deps, "equipment", SimpleNamespace(doi_minter=doi_minter))
+
+    # Bridge the bulk-mint orchestrator to the single-asset mint slice here, in
+    # the composition root, so the orchestrator slice imports no sibling slice
+    # (slice independence). The adapter satisfies the `MintOne` protocol.
+    _assign_asset_persistent_id = assign_asset_persistent_id.bind(deps)
+
+    async def _mint_one_asset_persistent_id(
+        asset_id: UUID,
+        *,
+        scheme: PersistentIdentifierScheme,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None,
+        surface_id: UUID,
+    ) -> PersistentIdentifier:
+        return await _assign_asset_persistent_id(
+            assign_asset_persistent_id.AssignAssetPersistentId(
+                asset_id=asset_id, scheme=scheme, suffix=None
+            ),
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            surface_id=surface_id,
+        )
+
     return EquipmentHandlers(
         # Family aggregate
         define_family=with_tracing(
@@ -444,8 +472,13 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
             bc=_BC,
         ),
         assign_asset_persistent_id=with_tracing(
-            assign_asset_persistent_id.bind(deps),
+            _assign_asset_persistent_id,
             command_name="AssignAssetPersistentId",
+            bc=_BC,
+        ),
+        mint_missing_asset_persistent_ids=with_tracing(
+            mint_missing_asset_persistent_ids.bind(deps, mint_one=_mint_one_asset_persistent_id),
+            command_name="MintMissingAssetPersistentIds",
             bc=_BC,
         ),
         get_asset=with_tracing(

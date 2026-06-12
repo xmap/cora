@@ -119,7 +119,6 @@ class HashConflict:
     """Hash of the command body just submitted."""
 
 
-# Discriminated union returned by claim()
 type ClaimOutcome = Claimed | CachedSuccess | CachedError | LockedRecent | HashConflict
 
 

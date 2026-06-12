@@ -10,6 +10,12 @@ on:
       - ".github/workflows/docs.yml"
       - "scripts/stage_docs.py"
       - "scripts/mkdocs_hooks.py"
+      - "scripts/beamline_descriptor.py"
+      - "scripts/beamline_pages.py"
+      - "scripts/catalog_descriptor.py"
+      - "scripts/catalog_pages.py"
+      - "deployments/**"
+      - "catalog/**"
       - "talks/**"
   workflow_dispatch:
 
@@ -36,8 +42,8 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install MkDocs Material
-        run: pip install --quiet "mkdocs-material==9.5.49"
+      - name: Install MkDocs Material and descriptor deps
+        run: pip install --quiet "mkdocs-material==9.5.49" "pyyaml>=6,<7" "pydantic>=2.13.4,<3"
 
       - name: Stage README and CONTRIBUTING into docs/
         run: python scripts/stage_docs.py

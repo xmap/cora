@@ -1,6 +1,6 @@
 """Canonicalization port: substrate-neutral content-hash production.
 
-`CanonicalizationPort` lifts the shipped v1 recipe (stdlib json sort-keys
+`Canonicalizer` lifts the shipped v1 recipe (stdlib json sort-keys
 + DSSE PAE + SHA-256) into a swappable port surface. The v1 adapter
 delegates byte-for-byte to `cora.shared.content_hash` helpers;
 future adapters at versions like `"cora/v2-cose"` can ride alongside
@@ -39,11 +39,11 @@ class CanonicalizedBytes:
 
 
 @runtime_checkable
-class CanonicalizationPort(Protocol):
+class Canonicalizer(Protocol):
     """Produce wire-canonical bytes and round-trip-verify content hashes.
 
-    Sibling to SigningPort. The two are paired by `adapter_version`
-    (a v1 SigningPort signs over v1 canonicalized bytes); cross-version
+    Sibling to ByteSigner. The two are paired by `adapter_version`
+    (a v1 ByteSigner signs over v1 canonicalized bytes); cross-version
     pairing is rejected at the signing-port boundary via
     `CanonicalizationVersionMismatchError`.
     """
@@ -124,8 +124,8 @@ class UnsupportedCanonicalizationVersionError(Exception):
 
 __all__ = [
     "CanonicalizationFailedError",
-    "CanonicalizationPort",
     "CanonicalizedBytes",
+    "Canonicalizer",
     "ContentHashMismatchError",
     "UnsupportedCanonicalizationVersionError",
 ]

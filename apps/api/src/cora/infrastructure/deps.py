@@ -51,6 +51,7 @@ if TYPE_CHECKING:
         PublishPort,
         SignaturePort,
     )
+    from cora.infrastructure.ports.signer import Signer
 
 from cora.infrastructure.adapters.canonicalization_registry import (
     CanonicalizationRegistry,
@@ -170,6 +171,7 @@ def make_postgres_kernel(
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
     token_verifier: TokenVerifier | None = None,
+    signer: "Signer | None" = None,
     publish_port: "PublishPort | None" = None,
     signature_port: "SignaturePort | None" = None,
     permit_lookup: "PermitLookup | None" = None,
@@ -317,6 +319,7 @@ def make_postgres_kernel(
         signing_registry=SigningRegistry(),
         publish_port=publish_port,
         signature_port=signature_port,
+        signer=signer,
         permit_lookup=permit_lookup,
         pool=pool,
         llm=llm,
@@ -349,6 +352,7 @@ def make_inmemory_kernel(
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
     token_verifier: TokenVerifier | None = None,
+    signer: "Signer | None" = None,
     publish_port: "PublishPort | None" = None,
     signature_port: "SignaturePort | None" = None,
     permit_lookup: "PermitLookup | None" = None,
@@ -482,6 +486,7 @@ def make_inmemory_kernel(
         signing_registry=SigningRegistry(),
         publish_port=publish_port,
         signature_port=signature_port,
+        signer=signer,
         permit_lookup=permit_lookup,
         # pool is intentionally typed `object | None` on this factory's
         # signature (per the docstring: idempotency-pruner tests pass a
@@ -772,6 +777,7 @@ async def build_kernel(
     enclosure_lookup_factory: EnclosureLookupFactory | None = None,
     publish_port_factory: "Callable[[], PublishPort] | None" = None,
     signature_port_factory: "Callable[[], SignaturePort] | None" = None,
+    signer_factory: "Callable[[], Signer] | None" = None,
     permit_lookup_factory: "Callable[[], PermitLookup] | None" = None,
     llm_factory: LLMFactory | None = None,
     settings: Settings | None = None,
@@ -830,6 +836,7 @@ async def build_kernel(
             token_verifier=token_verifier,
             publish_port=publish_port_factory() if publish_port_factory is not None else None,
             signature_port=signature_port_factory() if signature_port_factory is not None else None,
+            signer=signer_factory() if signer_factory is not None else None,
             permit_lookup=permit_lookup_factory() if permit_lookup_factory is not None else None,
         )
         return kernel, _noop_teardown
@@ -927,6 +934,7 @@ async def build_kernel(
         token_verifier=token_verifier,
         publish_port=publish_port_factory() if publish_port_factory is not None else None,
         signature_port=signature_port_factory() if signature_port_factory is not None else None,
+        signer=signer_factory() if signer_factory is not None else None,
         permit_lookup=permit_lookup_factory() if permit_lookup_factory is not None else None,
     )
     return kernel, _compose_teardowns([_maybe_llm_teardown(llm), _make_pool_teardown(pool)])

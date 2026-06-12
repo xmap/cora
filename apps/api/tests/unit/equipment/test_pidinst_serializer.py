@@ -11,18 +11,16 @@ from uuid import UUID
 
 import pytest
 
-from cora.equipment._pidinst_serializer import (
+from cora.equipment._pidinst import (
     AssetNameMissingError,
+    AssetPidinstView,
+    DateType,
     LandingPageMissingError,
     ManufacturerStateNotAvailableError,
     OwnerStateNotAvailableError,
-    to_pidinst_record,
-)
-from cora.equipment._pidinst_types import (
-    AssetPidinstView,
-    DateType,
     PidinstIdentifierType,
     SchemaVersion,
+    to_pidinst_record,
 )
 from cora.equipment.aggregates.asset import (
     AssetLifecycle,

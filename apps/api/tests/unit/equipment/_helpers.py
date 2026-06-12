@@ -18,7 +18,7 @@ copy-pasting view construction into the test file.
 from datetime import UTC, datetime
 from uuid import UUID
 
-from cora.equipment._pidinst_types import (
+from cora.equipment._pidinst import (
     AssetPidinstView,
     ModelPidinstView,
     Owner,

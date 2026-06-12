@@ -1,4 +1,4 @@
-"""Per-version dispatch for CanonicalizationPort adapters.
+"""Per-version dispatch for Canonicalizer adapters.
 
 `CanonicalizationRegistry` is the deployment-wide dispatch table:
 every adapter registered under its `adapter_version` string is the
@@ -22,14 +22,14 @@ construction and exposed read-only.
 
 import contextlib
 
-from cora.infrastructure.ports.canonicalization import (
-    CanonicalizationPort,
+from cora.infrastructure.ports.canonicalizer import (
+    Canonicalizer,
     UnsupportedCanonicalizationVersionError,
 )
 
 
 class CanonicalizationRegistry:
-    """Per-version dispatch for CanonicalizationPort adapters.
+    """Per-version dispatch for Canonicalizer adapters.
 
     Construct, register one or more adapters by `adapter_version`
     string, optionally set the deployment-wide default version,
@@ -40,11 +40,11 @@ class CanonicalizationRegistry:
     """
 
     def __init__(self) -> None:
-        self._routes: list[tuple[str, CanonicalizationPort]] = []
+        self._routes: list[tuple[str, Canonicalizer]] = []
         self._default: str | None = None
         self._closed = False
 
-    def register(self, version: str, adapter: CanonicalizationPort) -> None:
+    def register(self, version: str, adapter: Canonicalizer) -> None:
         """Register `adapter` under `version`. Duplicate version raises ValueError."""
         for existing_version, _ in self._routes:
             if existing_version == version:
@@ -63,7 +63,7 @@ class CanonicalizationRegistry:
             )
         self._default = version
 
-    def resolve(self, version: str) -> CanonicalizationPort:
+    def resolve(self, version: str) -> Canonicalizer:
         """Return the adapter registered under `version`. Exact match only."""
         for registered_version, adapter in self._routes:
             if registered_version == version:

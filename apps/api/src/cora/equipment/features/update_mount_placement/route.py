@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, Field
 
-from cora.equipment._placement_body import PlacementBody
+from cora.equipment._bodies import PlacementBody
 from cora.equipment.features.update_mount_placement.command import UpdateMountPlacement
 from cora.equipment.features.update_mount_placement.handler import Handler
 from cora.infrastructure.routing import (

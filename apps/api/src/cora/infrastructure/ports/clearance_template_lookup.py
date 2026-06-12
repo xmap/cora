@@ -63,7 +63,7 @@ class ClearanceTemplateLookupResult:
 
     Carries the minimal columns cross-aggregate consumers need to
     validate parent-chain invariants before commit. Loaded by the
-    handler via `ClearanceTemplateLookup.lookup_by_id` and handed to
+    handler via `ClearanceTemplateLookup.lookup` and handed to
     the decider in the slice's context object (mirrors
     `AssetLookupResult` shape).
 
@@ -96,7 +96,7 @@ class ClearanceTemplateLookupResult:
 class ClearanceTemplateLookup(Protocol):
     """Cross-aggregate port: query Safety's ClearanceTemplate projection by id."""
 
-    async def lookup_by_id(self, template_id: UUID) -> ClearanceTemplateLookupResult | None:
+    async def lookup(self, template_id: UUID) -> ClearanceTemplateLookupResult | None:
         """Return the projection row for `template_id`, or None if not found.
 
         Returning None signals "no ClearanceTemplate with that id is

@@ -23,8 +23,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
 
-from cora.equipment._pidinst_response import PidinstRecordResponse, record_to_response
-from cora.equipment._pidinst_serializer import to_fixture_pidinst_record
+from cora.equipment._pidinst import (
+    PidinstRecordResponse,
+    record_to_response,
+    to_fixture_pidinst_record,
+)
 from cora.equipment.aggregates.fixture import FixtureNotFoundError
 from cora.equipment.features.get_fixture_pidinst.handler import Handler
 from cora.infrastructure.routing import (

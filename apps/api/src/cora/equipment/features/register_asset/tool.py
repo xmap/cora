@@ -14,9 +14,7 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.equipment._alternate_identifier_body import AlternateIdentifierBody
-from cora.equipment._asset_owner_body import AssetOwnerBody
-from cora.equipment._drawing_body import DrawingBody
+from cora.equipment._bodies import AlternateIdentifierBody, AssetOwnerBody, DrawingBody
 from cora.equipment.aggregates.asset import ASSET_NAME_MAX_LENGTH, AssetTier
 from cora.equipment.features.register_asset.command import RegisterAsset
 from cora.equipment.features.register_asset.handler import IdempotentHandler

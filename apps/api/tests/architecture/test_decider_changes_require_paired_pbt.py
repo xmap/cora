@@ -54,18 +54,7 @@ _UNIT_ROOT = _TESTS_ROOT / "unit"
 # without a sibling `tests/unit/<bc>/test_<slice>_decider_properties.py`
 # file. This list is APPEND-ONLY-SHRINKING: entries leave when a paired
 # PBT lands; new deciders must NOT be added here.
-GRANDFATHERED_DECIDERS_WITHOUT_PBT: frozenset[str] = frozenset(
-    {
-        "cora.supply.features.degrade_supply.decider",
-        "cora.supply.features.deregister_supply.decider",
-        "cora.supply.features.mark_supply_available.decider",
-        "cora.supply.features.mark_supply_recovering.decider",
-        "cora.supply.features.mark_supply_unavailable.decider",
-        "cora.supply.features.observe_supply_status.decider",
-        "cora.supply.features.register_supply.decider",
-        "cora.supply.features.restore_supply.decider",
-    }
-)
+GRANDFATHERED_DECIDERS_WITHOUT_PBT: frozenset[str] = frozenset()
 
 
 def _decider_files() -> list[Path]:

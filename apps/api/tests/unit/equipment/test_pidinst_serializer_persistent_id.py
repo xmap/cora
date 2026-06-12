@@ -12,8 +12,7 @@ from dataclasses import replace
 
 import pytest
 
-from cora.equipment._pidinst_serializer import to_pidinst_record
-from cora.equipment._pidinst_types import PidinstIdentifierType
+from cora.equipment._pidinst import PidinstIdentifierType, to_pidinst_record
 from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,

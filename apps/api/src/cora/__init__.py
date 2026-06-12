@@ -1,4 +1,4 @@
-"""CORA — research facility operations platform."""
+"""CORA: research facility system of record."""
 
 from importlib.metadata import PackageNotFoundError, version
 

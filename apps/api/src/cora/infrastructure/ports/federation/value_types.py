@@ -346,7 +346,7 @@ class Unverifiable:
 VerificationOutcome = Verified | Rejected | Unverifiable
 """Discriminated union over verifier outcome. Callers branch via
 `isinstance`. The three arms map exactly to the SignatureVerification
-verdict triple on the kernel-tier SigningPort:
+verdict triple on the kernel-tier ByteSigner:
 Verified ≅ Valid, Rejected ≅ Invalid, Unverifiable ≅ Unverifiable."""
 
 

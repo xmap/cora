@@ -277,7 +277,7 @@ async def test_handler_raises_cannot_version_when_template_still_draft() -> None
 async def test_handler_raises_not_found_when_parent_lookup_misses() -> None:
     store = InMemoryEventStore()
     await _seed_active_template(store)
-    # Empty lookup: no parent registered, lookup_by_id returns None.
+    # Empty lookup: no parent registered, lookup returns None.
     empty_lookup = InMemoryClearanceTemplateLookup()
     deps = _build_deps(event_store=store, clearance_template_lookup=empty_lookup)
 
@@ -343,7 +343,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
 
 @pytest.mark.unit
 async def test_handler_does_not_lookup_or_append_when_denied() -> None:
-    """A class that records every lookup_by_id call so the test can
+    """A class that records every lookup call so the test can
     assert that the deny path short-circuits BEFORE the cross-aggregate
     parent resolution runs."""
 
@@ -351,7 +351,7 @@ async def test_handler_does_not_lookup_or_append_when_denied() -> None:
         def __init__(self) -> None:
             self.calls: list[UUID] = []
 
-        async def lookup_by_id(self, template_id: UUID) -> None:
+        async def lookup(self, template_id: UUID) -> None:
             self.calls.append(template_id)
             return None
 

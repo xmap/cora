@@ -70,10 +70,21 @@ The slice-contract fitness function ([apps/api/tests/architecture/test_slice_con
 ### BC-root extras
 
 - `_projections.py`: composition-root entry point that registers the BC's projections with the projection registry. Mechanical and present in every BC that has a `projections/` directory.
-- `_<aggregate>_update_handler.py`: factory that hoists shared update-handler scaffolding when n>=3 update slices on the same aggregate share the pattern (per `project_update_handler_pattern.md`). Today: 15 files across 11 BCs: `agent`, `equipment/_asset_update_handler.py`, `campaign`, `federation`, `safety/_clearance_update_handler.py`, `recipe/{_method,_plan,_practice}_update_handler.py`, `operation/_procedure_update_handler.py`, `run`, `subject`, `supply`, `trust`.
+- `_<aggregate>_update_handler.py`: factory that hoists shared update-handler scaffolding when n>=3 update slices on the same aggregate share the pattern (per `project_update_handler_pattern.md`). Today: 16 files across 11 BCs hosting 19 aggregate factories: `agent`, `campaign`, `equipment/{_asset,_frame,_mount}`, `operation/_procedure`, `recipe/{_method,_plan,_practice}`, `run`, `safety/{_clearance,_clearance_template}`, `subject`, `supply`, `trust`, plus `federation/_actor_update_handler.py`, which co-locates four factories (Actor / Permit / Credential / Seal) in one file (the lone exception to the one-file-per-aggregate norm).
 - `_subscribers.py`: wires the BC's domain-event subscribers into the projection registry's subscriber bus. Today: `agent/_subscribers.py` (RunDebriefer + CautionDrafter) and `federation/_subscribers.py`. The pattern generalises to any BC that reacts to events from another BC.
 - `_<aggregate>_dtos.py`: BC-local DTO module re-exported from `routes.py` and `tools.py`, kept out of the slice folder when several read/write slices share the same projected shape. Today: `calibration/_calibration_dtos.py`, `caution/_caution_dtos.py`, `safety/_clearance_dtos.py`, `federation/_federation_dtos.py`.
 - `authorize_factory.py` (trust BC only): exports `build_authorize`, injected into the kernel by the composition root in `cora/api/main.py`. No other BC imports it.
+
+### Private subpackages (BC-root reshape at scale)
+
+Private `_*.py` modules stay flat at the BC root by default; the naming prefix (`_<aggregate>_<role>.py`) does the grouping. When a BC root crosses ~10 private modules and a cohesive cluster has emerged, carve that cluster into a private subpackage (`_<name>/` with a re-exporting `__init__.py`) so the root stays navigable (per `project_bc_root_layout.md`).
+
+`equipment` is the first BC to cross the threshold (16 private modules) and the worked example:
+
+- `equipment/_pidinst/` (`_types.py`, `_serializer.py`, `_response.py`): the PIDINST v1.0 subsystem (intermediate type tree, pure serializer, response DTOs).
+- `equipment/_bodies/` (the `_*_body.py` wire DTOs): Pydantic request/response mirrors of value objects. Several are shared across aggregates (`Drawing`, `Placement`), so they cannot live in any one slice (slice independence forbids cross-slice imports); the shared home is the package.
+
+Both re-export their public surface, so consumers import from the package (`from cora.equipment._pidinst import PidinstRecord`), not the submodules. The canonical shared-pattern files (`_bootstrap.py`, `_projections.py`, `_<aggregate>_update_handler.py`) stay flat for cross-BC consistency. Grouping the DTOs by aggregate was rejected: the shared VOs have no single aggregate owner, so per-aggregate files would force false ownership.
 
 **Capability-dependent handlers.** When a slice depends on an external capability that may be unwired in some deployments (today: `regenerate_run_debrief` needs `kernel.llm`, which is `None` when `ANTHROPIC_API_KEY` isn't configured), the handler bundle types the field as `Handler | None`. The route guards on `None` and raises `HTTPException(503)` inline; this is the only documented exception to the "command-slice routes don't wrap handler calls" rule. Pinned by `test_route_no_inline_http_exception.py`'s `GRANDFATHERED_COMMAND_ROUTES` allowlist.
 
@@ -113,11 +124,15 @@ The `__init__.py` is the BC's curated public surface; importing through it lets 
 A port is a `typing.Protocol` seam the domain depends on and an adapter implements.
 
 - **Port class**: name it for its ROLE with a descriptive role noun (`EventStore`, `TokenVerifier`, `AssetLookup`, `IdGenerator`, `DoiMinter`, `EditionSerializer`, `RecipeExpander`). The role noun already signals the seam, so the generic `Port` suffix is redundant and is forbidden EXCEPT as an allowlisted carve-out, used only where stripping it leaves a bare verb, an abstract non-agent noun, or a value-object collision. Today's carve-outs: `ControlPort`, `SignaturePort` (would collide with the `Signature` value object), `PublishPort`, `PullPort`.
-- **Port filename**: `snake_case(<PortClass>).py`, so the import path predicts the class (`event_store.py` -> `EventStore`, `signature_port.py` -> `SignaturePort`). A domain-named module whose stem omits a suffix the class keeps (`signing.py` for `SigningPort`) is the rejected shape.
+- **Port filename**: `snake_case(<PortClass>).py`, so the import path predicts the class (`event_store.py` -> `EventStore`, `signature_port.py` -> `SignaturePort`). A domain-named module whose stem omits a suffix the class keeps is the rejected shape.
 - **Lookup-result DTO**: a `<X>Lookup` port returns a denormalized read-side row named `<X>LookupResult` (`AssetLookupResult`, `SupplyLookupResult`), never `<X>Reference`. The `Reference` suffix is reserved for genuine reference value objects (kept in `value_types.py` or under a domain name).
 - **Location tier**: cross-BC ports at `cora/infrastructure/ports/`; BC-owned ports at `cora/<bc>/ports/` until a rule-of-three (3+ distinct BC consumers) promotes them; shared-kernel ports (adapter-free, 3+ consumers) at `cora/shared/ports/`.
 - **Adapter class**: `<Tech><Role>` with no `Adapter` suffix (`PostgresEventStore`, `AnthropicLLM`, `InMemoryRecipeExpander`); the adapter prepends a tech token to the bare port role. File is `snake_case(<Tech><Role>).py`. BC-owned adapters live at `<bc>/adapters/`, cross-BC adapters at `infrastructure/adapters/`.
-- Enforced by [test_port_naming_conventions.py](../../apps/api/tests/architecture/test_port_naming_conventions.py). The `Signer` / `SigningPort` / `CanonicalizationPort` crypto cluster is a documented deferred exception: those renames ride with the signing-stack consolidation.
+- **Import scope**: infra and shared ports import only stdlib, `typing`, and `cora.shared.*`. A BC-owned port may also import its OWN BC's aggregate value types (for example `EnclosureObserver` imports `EnclosurePermitStatus`), never another BC's internals.
+- **Family subpackage**: a port family promotes to a subpackage with its own `errors.py` / `value_types.py` only when it carries a large shared catalog (federation: 4 ports + a 12-member error family + a value-type catalog). Below that bar, co-locate errors and value types in the port module (the `llm.py` / `control_port.py` shape).
+- **`runtime_checkable`**: decorate a port iff an `isinstance` / `issubclass` check targets it (somewhere in src or tests); the decorator exists only to enable those checks. Enforced.
+- **Injection**: a port reaches handlers by one of three paths -- a `Kernel` field (cross-BC primitives), `wire_<bc>(deps)` (BC-local ports built on `deps.pool` or route config), or the `published_artifact` orchestrator (the crypto / federation pipeline). A port absent from `Kernel` is not necessarily orphaned.
+- Enforced by [test_port_naming_conventions.py](../../apps/api/tests/architecture/test_port_naming_conventions.py) (names) and [test_port_structure.py](../../apps/api/tests/architecture/test_port_structure.py) (frozen DTOs + `runtime_checkable` usage).
 
 ## Bootstrap
 

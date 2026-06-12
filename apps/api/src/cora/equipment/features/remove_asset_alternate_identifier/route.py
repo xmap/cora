@@ -14,7 +14,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.equipment._alternate_identifier_body import AlternateIdentifierBody
+from cora.equipment._bodies import AlternateIdentifierBody
 from cora.equipment.features.remove_asset_alternate_identifier.command import (
     RemoveAssetAlternateIdentifier,
 )

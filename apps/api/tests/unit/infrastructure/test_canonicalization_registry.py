@@ -8,9 +8,9 @@ from cora.infrastructure.adapters.canonicalization_registry import (
 from cora.infrastructure.adapters.default_canonicalization_adapter import (
     DefaultCanonicalizationAdapter,
 )
-from cora.infrastructure.ports.canonicalization import (
-    CanonicalizationPort,
+from cora.infrastructure.ports.canonicalizer import (
     CanonicalizedBytes,
+    Canonicalizer,
     UnsupportedCanonicalizationVersionError,
 )
 
@@ -36,7 +36,7 @@ def test_canonicalization_registry_register_and_resolve_returns_adapter() -> Non
     registry.register("cora/v1", adapter)
     resolved = registry.resolve("cora/v1")
     assert resolved is adapter
-    assert isinstance(resolved, CanonicalizationPort)
+    assert isinstance(resolved, Canonicalizer)
 
 
 def test_canonicalization_registry_resolve_unregistered_raises_with_known_set() -> None:

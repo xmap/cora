@@ -6,7 +6,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/)
 
-An agent-native operations platform for large-scale research facilities. Pilot: APS beamline 2-BM, a micro-CT instrument at Argonne National Laboratory; rollout to APS's other imaging beamlines (7-BM, 32-ID), then cross-facility validation at MAX IV in Sweden. Long-horizon goal: facility-neutral across photon sources, neutron sources, free-electron lasers, and HPC centres.
+CORA is the system of record for the experiment: the one place that holds why each run did what it did, who or what approved it, under which recipe, and how to replay it later. It owns no servo loop, runs no reconstruction, and stores no dataset bytes; it records what your existing tools decide and, where a facility wants it, governs the choices between them. Pilot: APS beamline 2-BM, a micro-CT instrument at Argonne National Laboratory; rollout to APS's other imaging beamlines (7-BM, 32-ID), then cross-facility validation at MAX IV in Sweden. Long-horizon goal: facility-neutral across photon sources, neutron sources, free-electron lasers, and HPC centres.
 
 The name is also the diagnosis: **Continuously Overpromised, Rarely Automated**. Most facility software lives forever as a slide-deck capability. CORA is the version that ships.
 
@@ -134,6 +134,8 @@ cora/
 ## Architecture (high level)
 
 Functional DDD with bounded contexts. Hexagonal (Functional Core / Imperative Shell). Event-sourced backend on a relational store. Two equivalent API surfaces (REST and MCP) backed by the same handler. Agents are principals, not features: same identity, authz, and audit as humans. The recipe ladder (Method, Practice, Plan, Run) is the facility-neutrality mechanism.
+
+CORA spans three tiers. The spine is always CORA: the event log, decisions, the recipe ladder, trust, and audit, running at decision-grade latency and never inside a deterministic real-time loop. The execution edge is optional: a substrate-neutral ControlPort and Conductor (EPICS adapters shipped) a facility may adopt to drive operations, or skip in favour of its own tools. The floor is never CORA: servo control, position-synchronised output, and FPGA triggering stay in the IOCs and motion controllers. Only the spine and the floor are fixed; how far the edge reaches between them is the facility's choice. See [the recording spine and the optional execution edge](docs/architecture/standards.md#the-recording-spine-and-the-optional-execution-edge).
 
 Modelling lenses, borrowed for shared vocabulary with the field rather than wire conformance: ISA-95 (asset hierarchy), ISA-88 (episodic procedures), ISA-106 (continuous operations), ISA-99 / IEC 62443 (trust topology), ISO/IEC 42001 + NIST AI RMF (AI governance), W3C PROV-O (provenance at API boundaries).
 

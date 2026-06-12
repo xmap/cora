@@ -21,7 +21,7 @@ decider, no event emission, no clock injection, no UUID generator.
 from typing import Protocol
 from uuid import UUID
 
-from cora.equipment._pidinst_types import FixturePidinstView
+from cora.equipment._pidinst import FixturePidinstView
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.get_fixture_pidinst._view_assembler import (
     assemble_fixture_pidinst_view,

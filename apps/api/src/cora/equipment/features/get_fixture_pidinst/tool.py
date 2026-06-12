@@ -17,7 +17,7 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.equipment._pidinst_serializer import to_fixture_pidinst_record
+from cora.equipment._pidinst import to_fixture_pidinst_record
 from cora.equipment.aggregates.fixture import FixtureNotFoundError
 from cora.equipment.features.get_fixture_pidinst.handler import Handler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id

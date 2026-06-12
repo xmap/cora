@@ -13,7 +13,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.equipment._asset_owner_body import AssetOwnerBody
+from cora.equipment._bodies import AssetOwnerBody
 from cora.equipment.features.add_asset_owner.command import AddAssetOwner
 from cora.equipment.features.add_asset_owner.handler import Handler
 from cora.infrastructure.routing import (

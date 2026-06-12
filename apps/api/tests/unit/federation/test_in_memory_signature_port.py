@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 
 from cora.federation.adapters.in_memory_signature_port import InMemorySignaturePort
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 from cora.infrastructure.ports.federation import (
     DsseStaticJwksEnvelope,
     FederationTrustContext,

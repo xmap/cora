@@ -67,6 +67,9 @@ from cora.equipment.features.install_asset import tool as install_asset_tool
 from cora.equipment.features.list_assets import tool as list_assets_tool
 from cora.equipment.features.list_families import tool as list_families_tool
 from cora.equipment.features.list_fixtures import tool as list_fixtures_tool
+from cora.equipment.features.mint_missing_asset_persistent_ids import (
+    tool as mint_missing_asset_persistent_ids_tool,
+)
 from cora.equipment.features.register_asset import tool as register_asset_tool
 from cora.equipment.features.register_fixture import tool as register_fixture_tool
 from cora.equipment.features.register_frame import tool as register_frame_tool
@@ -255,6 +258,10 @@ def register_equipment_tools(
     assign_asset_persistent_id_tool.register(
         mcp,
         get_handler=lambda: get_handlers().assign_asset_persistent_id,
+    )
+    mint_missing_asset_persistent_ids_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().mint_missing_asset_persistent_ids,
     )
     get_asset_tool.register(
         mcp,
