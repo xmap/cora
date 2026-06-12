@@ -23,8 +23,9 @@ A) **Link rewriting** (`on_page_markdown`). Rewrites markdown links
 
 B) **Generated pages** (`on_files`). Renders virtual pages from the
    descriptors: the beamline beam-path page from deployments/<id>/beamline.yaml
-   (scripts/beamline_*), and the Catalog inventory pages from catalog/catalog.yaml
-   (scripts/catalog_*). A missing or invalid descriptor raises and fails the
+   (scripts/beamline_*), the Catalog inventory pages from catalog/catalog.yaml
+   (scripts/catalog_*), and the APS site pages from deployments/aps/site.yaml
+   (scripts/site_*). A missing or invalid descriptor raises and fails the
    build (mkdocs build --strict).
 """
 
@@ -42,6 +43,7 @@ DOCS_DIR = REPO_ROOT / "docs"
 STAGED_CONTRIBUTING_SRC_URI = "reference/contributing.md"
 DESCRIPTOR_PATH = REPO_ROOT / "deployments" / "2-bm" / "beamline.yaml"
 CATALOG_PATH = REPO_ROOT / "catalog" / "catalog.yaml"
+SITE_PATH = REPO_ROOT / "deployments" / "aps" / "site.yaml"
 
 LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
@@ -143,8 +145,9 @@ def on_page_markdown(
 def on_files(files: Any, *, config: Any) -> Any:
     """Inject the generated pages as virtual files.
 
-    Renders the beamline beam-path page and the Catalog inventory pages from
-    their descriptors. A missing or invalid descriptor raises and fails the build.
+    Renders the beamline beam-path page, the Catalog inventory pages, and the
+    APS site pages from their descriptors. A missing or invalid descriptor
+    raises and fails the build.
     """
     # Defensive: re-assert the sys.path entry inside the function. The
     # module-scope insert can be lost depending on how mkdocs loads hooks.
@@ -155,11 +158,14 @@ def on_files(files: Any, *, config: Any) -> Any:
     import beamline_pages
     import catalog_descriptor
     import catalog_pages
+    import site_descriptor
+    import site_pages
     from mkdocs.structure.files import File
 
     catalog = catalog_descriptor.load(CATALOG_PATH)
     catalog_families = frozenset(f.name for f in catalog.families)
     catalog_models = frozenset(m.name for m in catalog.models)
+    catalog_methods = frozenset(m.name for m in catalog.methods)
 
     generated: dict[str, str] = {}
     generated.update(
@@ -170,6 +176,12 @@ def on_files(files: Any, *, config: Any) -> Any:
         )
     )
     generated.update(catalog_pages.render_all(catalog))
+    generated.update(
+        site_pages.render_all(
+            site_descriptor.load(SITE_PATH),
+            catalog_methods=catalog_methods,
+        )
+    )
     for src_uri, content in generated.items():
         files.append(File.generated(config, src_uri, content=content))
     return files

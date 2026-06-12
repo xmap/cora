@@ -14,6 +14,8 @@ on:
       - "scripts/beamline_pages.py"
       - "scripts/catalog_descriptor.py"
       - "scripts/catalog_pages.py"
+      - "scripts/site_descriptor.py"
+      - "scripts/site_pages.py"
       - "deployments/**"
       - "catalog/**"
       - "talks/**"
