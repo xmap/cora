@@ -44,7 +44,7 @@ capture the version so re-expansion at replay time can detect drift.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -55,7 +55,6 @@ if TYPE_CHECKING:
     from cora.recipe.aggregates.recipe import RecipeStep
 
 
-@runtime_checkable
 class RecipeExpander(Protocol):
     """Pure expansion of a Recipe's step tuple to a Conductor `Step` tuple.
 
