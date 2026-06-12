@@ -1,17 +1,18 @@
-"""Render the site descriptor into the APS site pages.
+"""Render the site descriptor into ONE reader-first APS page.
 
-`render_all(site, catalog_methods=...)` returns a {src_uri: markdown} dict with
-one generated page per site surface: the Facility landing (index.md), Practices,
-Actors, and Agents. Each page is the clean fact table plus per-item one-liners
-from the descriptor.
+`render_all(site, catalog_methods=...)` returns a {src_uri: markdown} dict with a
+single page, deployments/aps/index.md: a walk through what the facility gives an
+experiment, organized by the reader's journey (techniques -> resources -> safety
+envelope -> who acts), not one page per bounded context. Tables appear inside
+reader-shaped sections with framing prose, mirroring the beam-path page's
+per-subsystem device tables.
 
-A Practice method renders as a link to the generated Catalog Methods page only
-when the method is present in the catalog (threaded in as `catalog_methods`);
-methods still pending in the catalog render unlinked, exactly as the prior
-hand-authored page did.
+A Practice method links to the generated Catalog Methods page only when the
+catalog defines it (threaded in as `catalog_methods`); methods still pending in
+the catalog render unlinked.
 
-The mkdocs on_files hook in scripts/mkdocs_hooks.py injects these as virtual
-files at build time; nothing is written to disk.
+The mkdocs on_files hook in scripts/mkdocs_hooks.py injects this as a virtual
+file at build time; nothing is written to disk.
 """
 
 from __future__ import annotations
@@ -45,111 +46,129 @@ def _banner() -> str:
     )
 
 
-def _facility(site: Site) -> str:
+def _planned(labels: list[str]) -> list[str]:
+    if not labels:
+        return []
+    return ["*Planned: " + ", ".join(labels) + ".*"]
+
+
+def _facility(site: Site) -> list[str]:
     f = site.facility
-    rows = [
-        ["Facility code", f"`{f.code}`"],
-        ["Kind", f"`{f.kind}`"],
-    ]
+    rows = [["Facility code", f"`{f.code}`"], ["Kind", f"`{f.kind}`"]]
     if f.institution:
         rows.append(["Institution", f"[{f.institution}](../argonne/index.md)"])
     if f.sectors:
-        rows.append(["Sectors under this Site", ", ".join(f"`{s}`" for s in f.sectors)])
+        rows.append(["Sectors", ", ".join(f"`{s}`" for s in f.sectors)])
     if f.beamlines:
-        links = ", ".join(f"[{b}](../2-bm/index.md)" for b in f.beamlines)
-        rows.append(["Beamlines under this Site", links])
-    inventories = "\n".join(
-        f"- [{label}]({target})"
-        for label, target in (
-            ("Assets", "assets.md"),
-            ("Actors", "actors.md"),
-            ("Agents", "agents.md"),
-            ("Practices", "practices.md"),
-            ("Clearances", "clearances.md"),
-            ("Supplies", "supplies.md"),
-            ("Cautions", "cautions.md"),
-        )
-    )
-    return "\n\n".join(
-        [
-            "# APS",
-            "Site-level inventories for APS: the Facility, the Practices registered here, the "
-            "facility principals, and the facility-wide Clearances, Supplies, and Cautions.",
-            _banner(),
-            _table(["Property", "Value"], rows),
-            "## Inventories",
-            inventories,
-        ]
-    )
+        rows.append(["Beamlines", ", ".join(f"[{b}](../2-bm/index.md)" for b in f.beamlines)])
+    return [
+        "APS is the synchrotron facility these deployment pages describe. This page walks what the "
+        "facility gives an experiment: the techniques adapted here, the resources a run draws on, "
+        "the safety envelope it clears, and the people and agents who act in it. The beamlines "
+        "that host the actual measurements hang one level down.",
+        _banner(),
+        _table(["Property", "Value"], rows),
+    ]
 
 
-def _practices(site: Site, catalog_methods: frozenset[str]) -> str:
+def _techniques(site: Site, catalog_methods: frozenset[str]) -> list[str]:
     def _method(name: str) -> str:
         return f"[`{name}`]({METHODS_PAGE})" if name in catalog_methods else f"`{name}`"
 
     active = [[f"`{p.name}`", _method(p.method)] for p in site.practices if not p.pending]
-    pending = [
-        [p.name, _method(p.method) + (f" ({p.note})" if p.note else "")]
-        for p in site.practices
-        if p.pending
-    ]
-    sections = [
-        "# Practices",
-        f"A Practice is ISA-88's Site Recipe, the facility-adapted form of a "
-        f"[Method]({MODEL_PAGE}). Each Practice registered at APS binds one catalog Method.",
-        _banner(),
+    pending = [p.name for p in site.practices if p.pending]
+    blocks = [
+        "## The techniques adapted here",
+        f"A Practice is APS's facility-tuned form of a cross-facility [Method]({MODEL_PAGE}): the "
+        "ISA-88 Site Recipe layer. The Method names a technique abstractly in the Catalog; the "
+        "Practice is how 2-BM runs it here. Each row links up to the Method it adapts.",
         _table(["Practice", "Method"], active),
     ]
-    if pending:
-        sections += ["## Pending", _table(["Practice", "Method"], pending)]
-    return "\n\n".join(sections)
+    blocks += _planned(pending)
+    return blocks
 
 
-def _actors(site: Site) -> str:
-    active = [[a.name, f"`{a.kind}`"] for a in site.actors if not a.pending]
-    pending = [
-        [a.name + (f" ({a.note})" if a.note else ""), f"`{a.kind}`"]
-        for a in site.actors
-        if a.pending
+def _resources(site: Site) -> list[str]:
+    active = [[f"`{s.name}`", f"`{s.kind}`"] for s in site.supplies if not s.pending]
+    pending = [s.name for s in site.supplies if s.pending]
+    blocks = [
+        "## The resources you draw on",
+        "Supplies are the continuously-available facility resources a run needs present before it "
+        "can start: beam, cooling, vacuum. The facility tracks their availability; a run's "
+        "required supplies are checked at the pre-flight gate.",
+        _table(["Supply", "Kind"], active),
     ]
-    sections = [
-        "# Actors",
-        "Access BC Actors that are conceptually facility-wide at APS: User Office accounts "
-        "(proposal PIs), safety-process reviewers, the canonical APS Operator identity, and each "
-        "AI Agent's co-registered Actor row. Beamline-bound staff (the 2-BM operator pool) live "
-        f"with their beamline. Actor display names live in `actor_profile`, not in event-sourced "
-        f"Actor state. See [Model]({MODEL_PAGE}) for the aggregate shape.",
-        _banner(),
-        _table(["Actor", "Kind"], active),
+    blocks += _planned(pending)
+    return blocks
+
+
+def _safety(site: Site) -> list[str]:
+    active = [
+        [f"`{c.name}`", f"`{c.kind}`", c.binding or ""] for c in site.clearances if not c.pending
     ]
-    if pending:
-        sections += ["## Pending", _table(["Actor", "Kind"], pending)]
-    return "\n\n".join(sections)
+    pending = [c.name for c in site.clearances if c.pending]
+    blocks = [
+        "## The safety envelope",
+        "Before an experiment runs, it clears the facility's safety forms (Clearances), and "
+        "operators carry forward hazards and quirks as Cautions. Both gate or advise the work "
+        "without being part of the measurement itself.",
+        _table(["Clearance", "Kind", "Binds"], active),
+    ]
+    blocks += _planned(pending)
+    active_cautions = [c for c in site.cautions if not c.pending]
+    if active_cautions:
+        lines = []
+        for c in active_cautions:
+            tag = f"**{c.severity}**" if c.severity else "**Caution**"
+            lines.append(f"- {tag} ({c.target}): {c.text}")
+        blocks.append("**Active cautions**\n" + "\n".join(lines))
+    pending_cautions = [c.text for c in site.cautions if c.pending]
+    blocks += _planned(pending_cautions)
+    return blocks
 
 
-def _agents(site: Site) -> str:
-    rows = [
-        [f"`{a.name}`", f"`{a.kind}`", f"`{a.version}`", f"`{a.model_provider} / {a.model_name}`"]
+def _principals(site: Site) -> list[str]:
+    actor_active = [[a.name, f"`{a.kind}`"] for a in site.actors if not a.pending]
+    actor_pending = [a.name for a in site.actors if a.pending]
+    agent_rows = [
+        [f"`{a.name}`", f"`{a.version}`", f"`{a.model_provider} / {a.model_name}`"]
         for a in site.agents
         if not a.pending
     ]
-    return "\n\n".join(
-        [
-            "# Agents",
-            "Agent BC Agents seeded at this deployment. Each Agent's id is shared with an "
-            "Access BC Actor (`kind=agent`) via a cross-BC atomic write (`ActorRegistered` + "
-            "`AgentDefined` in one transaction). "
-            f"See [Model]({MODEL_PAGE}) for the aggregate shape.",
-            _banner(),
-            _table(["Agent", "Kind", "Version", "Model"], rows),
-        ]
-    )
+    blocks = [
+        "## Who acts here",
+        "Every action CORA records is attributed to a principal. At APS those are the people "
+        "registered facility-wide (the operator on shift, safety reviewers, proposal PIs) and the "
+        "autonomous agents. Human display names live in `actor_profile` (the editable, forgettable "
+        "layer), not in the event-sourced Actor record, which carries only id and kind.",
+        _table(["Person or service", "Kind"], actor_active),
+    ]
+    blocks += _planned(actor_pending)
+    blocks += [
+        "Agents are advisory LLM principals. Each one's id is shared with an Access Actor "
+        "(`kind=agent`) through a single cross-BC atomic write, so an agent's writes attribute the "
+        "same way a person's do. They observe and advise; they never gate Run state.",
+        _table(["Agent", "Version", "Model"], agent_rows),
+    ]
+    return blocks
+
+
+def _modeled() -> list[str]:
+    return [
+        "## How APS is modeled",
+        "APS itself is not an Asset: it is a Federation `Facility` with `FacilityKind = Site`. The "
+        "beamlines it hosts are the root Assets, each bound to the Site by `facility_code`; their "
+        f"sub-systems nest below by `parent_id`. See [Assets](assets.md) for that binding and "
+        f"[the CORA model]({MODEL_PAGE}) for the aggregate shapes.",
+    ]
 
 
 def render_all(site: Site, *, catalog_methods: frozenset[str] = frozenset()) -> dict[str, str]:
-    return {
-        "deployments/aps/index.md": _facility(site) + "\n",
-        "deployments/aps/practices.md": _practices(site, catalog_methods) + "\n",
-        "deployments/aps/actors.md": _actors(site) + "\n",
-        "deployments/aps/agents.md": _agents(site) + "\n",
-    }
+    blocks = ["# APS"]
+    blocks += _facility(site)
+    blocks += _techniques(site, catalog_methods)
+    blocks += _resources(site)
+    blocks += _safety(site)
+    blocks += _principals(site)
+    blocks += _modeled()
+    return {"deployments/aps/index.md": "\n\n".join(blocks) + "\n"}

@@ -75,3 +75,24 @@ actors:
 agents:
   - {name: RunDebriefer, kind: RunDebriefer, version: 1.0.0, model_provider: anthropic, model_name: claude-haiku-4-5}
   - {name: CautionDrafter, kind: CautionDrafter, version: 1.0.0, model_provider: anthropic, model_name: claude-sonnet-4-6}
+
+# Supply BC: facility-wide continuously-available resources whose availability the facility tracks.
+supplies:
+  - {name: APS liquid helium, kind: LiquidHelium}
+  - {name: Storage-ring beam current, kind: PhotonBeam, pending: true}
+  - {name: Liquid nitrogen, kind: LiquidNitrogen, pending: true}
+  - {name: Gas mixtures, kind: ProcessGas, pending: true, note: sample environments}
+
+# Safety BC: facility-issued Clearances. Each carries a facility safety-form kind and binds to one
+# or more aggregates or external references.
+clearances:
+  - {name: Facility umbrella, kind: ESAF, binding: APS Site Asset}
+  - {name: Per-experiment ESAFs, kind: ESAF, pending: true, note: per-proposal Subject + Run}
+  - {name: Synchrotron access, kind: SAF, pending: true}
+  - {name: Door interlocks, kind: DOOR, pending: true}
+
+# Caution BC: operator tribal knowledge carried on a facility-level target.
+cautions:
+  - {target: APS Site Asset, category: OperationalWindow, severity: Notice, text: "Top-up injections cause brief beam-flux transients (~0.5s) every few minutes"}
+  - {target: APS Site Asset, text: "Storage-ring scheduled downtimes", pending: true}
+  - {target: Shared optics, text: "Calibration drift on shared optics", pending: true}

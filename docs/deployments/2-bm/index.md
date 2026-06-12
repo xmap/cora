@@ -27,7 +27,7 @@ Setup before a scan.
 - [Procedures](procedures.md): alignment, calibration, and recovery routines (Operation BC).
 - [Supplies](supplies.md): the resources a run needs available (beam, cooling, vacuum).
 - [Enclosures](enclosures.md): the hutch permit that gates runs and procedures, covering every device through the pre-flight chain walk (Enclosure BC).
-- Clearances: the safety forms that must be Active to start, issued at the [APS Site](../aps/clearances.md).
+- Clearances: the safety forms that must be Active to start, issued at the [APS Site](../aps/index.md#the-safety-envelope).
 
 ## Running a measurement
 
@@ -36,7 +36,7 @@ The act of measuring.
 - [Subjects](subjects.md): the samples mounted and measured.
 - [Runs](runs.md): execution instances and their state.
 - [Campaigns](campaigns.md): series that group many runs.
-- The recipe a run executes is a [Method](../../catalog/methods.md) (cross-facility) bound through an APS [Practice](../aps/practices.md).
+- The recipe a run executes is a [Method](../../catalog/methods.md) (cross-facility) bound through an APS [Practice](../aps/index.md#the-techniques-adapted-here).
 
 ## Results
 
@@ -51,4 +51,4 @@ Who and what governs.
 - [Decisions](decisions.md): the accountability ledger (overrides, steering).
 - [Policies](policies.md): the authorization rules in effect at the beamline.
 - [Cautions](cautions.md): operator advisories and tribal knowledge.
-- People and autonomous agents are facility principals at the [APS Site](../aps/actors.md) ([Agents](../aps/agents.md)); on the beamline they surface only through the actions they take above.
+- People and autonomous agents are facility principals at the [APS Site](../aps/index.md#who-acts-here); on the beamline they surface only through the actions they take above.

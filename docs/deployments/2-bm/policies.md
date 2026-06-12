@@ -25,7 +25,7 @@ A Policy is an authorization rule attached to a Conduit, governing who may issue
 | Policy | Permitted principals | Permitted commands |
 | --- | --- | --- |
 | `2-BM Operations Policy` | `2-BM Operator 1..3` (see [Actors](actors.md)) | Operator-driven commands (Equipment, Recipe, Operation, Run, Subject, Dataset, Caution, Clearance, Supply, Campaign) |
-| `2-BM Agent Policy` | `Run Debrief` (see [APS Actors](../aps/actors.md), [APS Agents](../aps/agents.md)) | Decision family: `RegisterDecision`, `RateDecision`, `AppendInferences` |
+| `2-BM Agent Policy` | `Run Debrief` (see [APS principals](../aps/index.md#who-acts-here)) | Decision family: `RegisterDecision`, `RateDecision`, `AppendInferences` |
 
 ## Pending
 

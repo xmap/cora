@@ -104,6 +104,36 @@ class Agent(BaseModel):
     note: str | None = None
 
 
+class Supply(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    name: str
+    kind: str
+    pending: bool = False
+    note: str | None = None
+
+
+class Clearance(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    name: str
+    kind: str
+    binding: str | None = None
+    pending: bool = False
+    note: str | None = None
+
+
+class Caution(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    target: str
+    text: str
+    category: str | None = None
+    severity: str | None = None
+    pending: bool = False
+    note: str | None = None
+
+
 @dataclass(frozen=True)
 class Site:
     """A validated site: one facility's site-level surface, in file order."""
@@ -112,6 +142,9 @@ class Site:
     practices: list[Practice]
     actors: list[Actor]
     agents: list[Agent]
+    supplies: list[Supply]
+    clearances: list[Clearance]
+    cautions: list[Caution]
 
 
 def load(path: str | Path) -> Site:
@@ -143,6 +176,9 @@ def load(path: str | Path) -> Site:
             practices=[Practice.model_validate(p) for p in raw.get("practices", [])],
             actors=[Actor.model_validate(a) for a in raw.get("actors", [])],
             agents=[Agent.model_validate(a) for a in raw.get("agents", [])],
+            supplies=[Supply.model_validate(s) for s in raw.get("supplies", [])],
+            clearances=[Clearance.model_validate(c) for c in raw.get("clearances", [])],
+            cautions=[Caution.model_validate(c) for c in raw.get("cautions", [])],
         )
     except ValidationError as exc:
         raise SiteError(f"{path}: site failed validation:\n{exc}") from exc
@@ -159,6 +195,9 @@ def _check_references(path: Path, site: Site) -> None:
         ("practice", [p.name for p in site.practices]),
         ("actor", [a.name for a in site.actors]),
         ("agent", [a.name for a in site.agents]),
+        ("supply", [s.name for s in site.supplies]),
+        ("clearance", [c.name for c in site.clearances]),
+        ("caution", [c.text for c in site.cautions]),
     ):
         seen: set[str] = set()
         for name in names:

@@ -73,6 +73,9 @@ def test_site_loads_and_validates() -> None:
     assert len(site.practices) >= 17
     assert len(site.actors) >= 9
     assert len(site.agents) == 2
+    assert len(site.supplies) >= 1
+    assert len(site.clearances) >= 1
+    assert len(site.cautions) >= 1
 
 
 def test_facility_kind_mirror_matches_code() -> None:
@@ -149,36 +152,44 @@ def test_site_guards_reject_bad_data(tmp_path: Path) -> None:
         sd.load(duplicate_practice)
 
 
-def test_renders_all_site_pages() -> None:
+def test_renders_single_site_narrative() -> None:
     site = sd.load(_SITE)
     pages = sp.render_all(site, catalog_methods=frozenset({"tomography", "dark_baseline"}))
-    assert set(pages) == {
-        "deployments/aps/index.md",
-        "deployments/aps/practices.md",
-        "deployments/aps/actors.md",
-        "deployments/aps/agents.md",
-    }
-    for src_uri, markdown in pages.items():
-        assert markdown.startswith("# "), f"{src_uri} missing H1"
-        assert chr(0x2014) not in markdown, f"{src_uri} has an em dash"
-    # the gap-fix: CautionDrafter is now surfaced alongside RunDebriefer
-    assert "CautionDrafter" in pages["deployments/aps/agents.md"]
-    assert "claude-sonnet-4-6" in pages["deployments/aps/agents.md"]
-    assert "`human`" in pages["deployments/aps/actors.md"]
-    # a catalog-known method links; the facility page links up to Argonne
-    assert "[`tomography`](../../catalog/methods.md)" in pages["deployments/aps/practices.md"]
-    assert "../argonne/index.md" in pages["deployments/aps/index.md"]
+    # one reader-first narrative, NOT one page per bounded context
+    assert set(pages) == {"deployments/aps/index.md"}
+    page = pages["deployments/aps/index.md"]
+    assert page.startswith("# APS")
+    assert chr(0x2014) not in page
+    # organized by the reader's journey, not by aggregate
+    for heading in (
+        "## The techniques adapted here",
+        "## The resources you draw on",
+        "## The safety envelope",
+        "## Who acts here",
+    ):
+        assert heading in page, f"missing section {heading}"
+    # both agents surfaced with their models (the gap-fix)
+    assert "CautionDrafter" in page and "claude-sonnet-4-6" in page
+    assert "RunDebriefer" in page and "claude-haiku-4-5" in page
+    # content woven in from every folded list
+    assert "[`tomography`](../../catalog/methods.md)" in page  # practice -> catalog method
+    assert "`human`" in page  # principals
+    assert "LiquidHelium" in page  # supplies
+    assert "ESAF" in page  # clearances
+    assert "beam-flux transients" in page  # cautions
+    assert "../argonne/index.md" in page  # facility -> institution
 
 
 def test_practice_method_links_only_known() -> None:
     site = sd.load(_SITE)
-    pages = sp.render_all(site, catalog_methods=frozenset({"tomography"}))
-    practices = pages["deployments/aps/practices.md"]
+    page = sp.render_all(site, catalog_methods=frozenset({"tomography"}))[
+        "deployments/aps/index.md"
+    ]
     # known catalog method renders as a link
-    assert "[`tomography`](../../catalog/methods.md)" in practices
+    assert "[`tomography`](../../catalog/methods.md)" in page
     # a method not in the catalog renders unlinked (bare code span)
-    assert "`hexapod_reboot`" in practices
-    assert "[`hexapod_reboot`]" not in practices
+    assert "`hexapod_reboot`" in page
+    assert "[`hexapod_reboot`]" not in page
 
 
 def test_malformed_site_raises(tmp_path: Path) -> None:

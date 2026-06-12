@@ -2,7 +2,7 @@
 
 *Access BC Actors that are conceptually beamline-scoped at 2-BM.*
 
-The operator pool on shift. Facility-process principals (proposal PIs, ESRB, the BS acting in review-chain capacity) live at [APS](../aps/actors.md). See [Model](../../architecture/model.md) for the aggregate shape.
+The operator pool on shift. Facility-process principals (proposal PIs, ESRB, the BS acting in review-chain capacity) live at [APS](../aps/index.md#who-acts-here). See [Model](../../architecture/model.md) for the aggregate shape.
 
 | Actor | Kind |
 | --- | --- |
