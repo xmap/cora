@@ -1337,7 +1337,7 @@
 | src/cora/operation/adapters/epics\_ca\_control\_port.py                                  |       83 |        3 |       22 |        3 |     94.3% |253, 290, 384 |
 | src/cora/operation/adapters/epics\_pva\_control\_port.py                                 |      132 |       19 |       50 |       10 |     80.8% |189, 204, 208-\>213, 211-212, 216, 221-228, 232, 236, 284-285, 401, 403, 422-\>exit |
 | src/cora/operation/adapters/in\_memory\_control\_port.py                                 |       59 |        2 |       12 |        2 |     94.4% |  163, 234 |
-| src/cora/operation/adapters/in\_memory\_recipe\_expansion\_port.py                       |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/adapters/in\_memory\_recipe\_expander.py                              |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/\_\_init\_\_.py                                            |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/procedure/\_\_init\_\_.py                                  |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/procedure/entries.py                                       |       27 |        0 |        4 |        0 |    100.0% |           |
@@ -1407,7 +1407,7 @@
 | src/cora/operation/features/truncate\_procedure/tool.py                                  |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/\_\_init\_\_.py                                                 |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/control\_port.py                                                |       44 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/ports/recipe\_expansion\_port.py                                      |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/ports/recipe\_expander.py                                             |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/projections/\_\_init\_\_.py                                           |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/projections/procedure.py                                              |       42 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/operation/routes.py                                                             |       56 |        6 |       12 |        0 |     91.2% |132-133, 190-191, 207-208 |

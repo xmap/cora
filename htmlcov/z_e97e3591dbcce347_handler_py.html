@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_e97e3591dbcce347_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-12 05:08 +0000
+            created at 2026-06-12 07:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -145,7 +145,7 @@
     <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="nam">ProcedureBoundCapabilityDeprecatedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">    <span class="nam">ProcedureNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="nam">ProcedureStepsForbiddenForRecipeDrivenError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="nam">RecipeExpansionPortVersionMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="nam">RecipeExpanderVersionMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="nam">RecipeExpansionRecordNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">    <span class="nam">load_procedure_with_events</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -155,7 +155,7 @@
     <p class="run run2"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="nam">ConductProcedure</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">    <span class="nam">ConductProcedureResult</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">ports</span><span class="op">.</span><span class="nam">recipe_expansion_port</span> <span class="key">import</span> <span class="nam">RecipeExpansionPort</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">ports</span><span class="op">.</span><span class="nam">recipe_expander</span> <span class="key">import</span> <span class="nam">RecipeExpander</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">recipe</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">capability</span> <span class="key">import</span> <span class="nam">CapabilityStatus</span><span class="op">,</span> <span class="nam">load_capability</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">recipe</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">recipe</span> <span class="key">import</span> <span class="nam">load_recipe_at_version</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -182,7 +182,7 @@
     <p class="run run2"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">    <span class="nam">deps</span><span class="op">:</span> <span class="nam">Kernel</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="op">*</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">    <span class="nam">conductor</span><span class="op">:</span> <span class="nam">Conductor</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">    <span class="nam">expansion_port</span><span class="op">:</span> <span class="nam">RecipeExpansionPort</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">    <span class="nam">expansion_port</span><span class="op">:</span> <span class="nam">RecipeExpander</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t"><span class="op">)</span> <span class="op">-></span> <span class="nam">Handler</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">    <span class="str">"""Build a conduct_procedure handler closed over deps + Conductor + port.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -296,13 +296,13 @@
     <p class="exc show_exc"><span class="n"><a id="t212" href="#t212">212</a></span><span class="t">    <span class="nam">caller_steps</span><span class="op">:</span> <span class="nam">Sequence</span><span class="op">[</span><span class="nam">Step</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t">    <span class="nam">stored_events</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">StoredEvent</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">    <span class="nam">event_store</span><span class="op">:</span> <span class="nam">EventStore</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">    <span class="nam">expansion_port</span><span class="op">:</span> <span class="nam">RecipeExpansionPort</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">    <span class="nam">expansion_port</span><span class="op">:</span> <span class="nam">RecipeExpander</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t"><span class="op">)</span> <span class="op">-></span> <span class="nam">tuple</span><span class="op">[</span><span class="nam">Step</span><span class="op">,</span> <span class="op">...</span><span class="op">]</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">    <span class="str">"""Run the recipe-replay gate per [[project-run-procedure-replay-design]].</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t218" href="#t218">218</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t"><span class="str">    Six steps: reject non-empty caller steps -> find_recipe_expansion_record</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t220" href="#t220">220</a></span><span class="t"><span class="str">    (raise RecipeExpansionRecordNotFoundError on None) -> pins_from_payload</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t"><span class="str">    -> port-version strict-equals (raise RecipeExpansionPortVersionMismatchError</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t"><span class="str">    -> port-version strict-equals (raise RecipeExpanderVersionMismatchError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t"><span class="str">    on drift) -> load_recipe_at_version (raise RecipeExpansionRecordNotFoundError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t"><span class="str">    when None on a recipe-driven Procedure; RecipeVersionNotFoundError</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t224" href="#t224">224</a></span><span class="t"><span class="str">    propagates from helper) -> load_capability + reject Deprecated</span>&nbsp;</span><span class="r"></span></p>
@@ -320,7 +320,7 @@
     <p class="exc show_exc"><span class="n"><a id="t236" href="#t236">236</a></span><span class="t">    <span class="nam">pins</span> <span class="op">=</span> <span class="nam">pins_from_payload</span><span class="op">(</span><span class="nam">procedure_id</span><span class="op">,</span> <span class="nam">record</span><span class="op">.</span><span class="nam">payload</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t238" href="#t238">238</a></span><span class="t">    <span class="key">if</span> <span class="nam">pins</span><span class="op">.</span><span class="nam">expansion_port_version</span> <span class="op">!=</span> <span class="nam">expansion_port</span><span class="op">.</span><span class="nam">version</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">        <span class="key">raise</span> <span class="nam">RecipeExpansionPortVersionMismatchError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">        <span class="key">raise</span> <span class="nam">RecipeExpanderVersionMismatchError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t240" href="#t240">240</a></span><span class="t">            <span class="nam">procedure_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t241" href="#t241">241</a></span><span class="t">            <span class="nam">pins</span><span class="op">.</span><span class="nam">expansion_port_version</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t242" href="#t242">242</a></span><span class="t">            <span class="nam">expansion_port</span><span class="op">.</span><span class="nam">version</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -357,7 +357,7 @@
             <a class="nav" href="z_e97e3591dbcce347_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-12 05:08 +0000
+            created at 2026-06-12 07:06 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1164eecb97aa37cc_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-12 05:08 +0000
+            created at 2026-06-12 07:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -142,9 +142,9 @@
     <p class="run run2"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">    <span class="nam">ProcedureStepsLogbookClosedError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">    <span class="nam">ProcedureSupplyCoverageMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">    <span class="nam">RecipeBindingsStaleAgainstCurrentCapabilityError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="nam">RecipeExpansionDeterminismError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">    <span class="nam">RecipeExpansionOverflowError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="nam">RecipeExpansionPortVersionMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="nam">RecipeExpanderVersionMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">    <span class="nam">RecipeExpansionDeterminismError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="nam">RecipeExpansionOverflowError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="nam">RecipeExpansionRecordNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="nam">RecipeExpansionReplayMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -386,7 +386,7 @@
     <p class="pln"><span class="n"><a id="t302" href="#t302">302</a></span><span class="t">    <span class="com"># will fail the same way. Replay-time bugs land here too per</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t303" href="#t303">303</a></span><span class="t">    <span class="com"># [[project-run-procedure-replay-design]] Rejections (alphabetical):</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t304" href="#t304">304</a></span><span class="t">    <span class="com">#   - RecipeExpansionDeterminismError (at-write determinism bug).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t305" href="#t305">305</a></span><span class="t">    <span class="com">#   - RecipeExpansionPortVersionMismatchError (pinned port v differs</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t305" href="#t305">305</a></span><span class="t">    <span class="com">#   - RecipeExpanderVersionMismatchError (pinned port v differs</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t">    <span class="com">#     from currently-wired; placeholder until a v2 expansion port</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t">    <span class="com">#     lands with its routing layer).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t">    <span class="com">#   - RecipeExpansionRecordNotFoundError (data corruption guard:</span>&nbsp;</span><span class="r"></span></p>
@@ -395,7 +395,7 @@
     <p class="pln"><span class="n"><a id="t311" href="#t311">311</a></span><span class="t">    <span class="com">#   - RecipeExpansionReplayMismatchError (replay-time hash drift).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t">    <span class="key">for</span> <span class="nam">internal_cls</span> <span class="key">in</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t">        <span class="nam">RecipeExpansionDeterminismError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t">        <span class="nam">RecipeExpansionPortVersionMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t">        <span class="nam">RecipeExpanderVersionMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t315" href="#t315">315</a></span><span class="t">        <span class="nam">RecipeExpansionRecordNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t316" href="#t316">316</a></span><span class="t">        <span class="nam">RecipeExpansionReplayMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t317" href="#t317">317</a></span><span class="t">        <span class="com"># PseudoAxis pre-Conductor expansion ([[project-pseudoaxis-design]]</span>&nbsp;</span><span class="r"></span></p>
@@ -432,7 +432,7 @@
             <a class="nav" href="z_1164eecb97aa37cc_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-12 05:08 +0000
+            created at 2026-06-12 07:06 +0000
         </p>
     </div>
 </footer>
