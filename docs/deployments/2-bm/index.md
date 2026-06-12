@@ -1,8 +1,6 @@
 # 2-BM
 
-*Operational bending-magnet micro-CT at APS.*
-
-CORA's pilot deployment. The scenario corpus that grounds the domain model runs against real 2-BM operations.
+*Operational bending-magnet micro-CT at APS. This page walks the beamline and how a measurement gets done on it.*
 
 | Property | Value |
 | --- | --- |
@@ -12,27 +10,45 @@ CORA's pilot deployment. The scenario corpus that grounds the domain model runs 
 | Institution | [Argonne](../argonne/index.md) (context; not modeled as an Asset or Facility) |
 | Drawing | `(ICMS, A342-RT1000, 02)` (APS beamline layout drawing, Rev 02, May 2026) |
 
-Single-valued per the [Drawing VO](../../architecture/modules/equipment/index.md); the legacy Beam Component Reference Table `APS_1404611` is the natural carrier for upstream-optics Mounts and defers until those Assets register. See per-Asset drawings on [Assets](assets.md#engineering-drawings) and Assembly / Mount drawings on [MCTOptics](equipment/mctoptics.md#engineering-drawings).
+The measurement lifecycle below is the reading order: the beamline itself, then getting it ready, running a measurement, the results, and the envelope that governs it. The physical layer is generated from the descriptor; the operational stages are hand-authored today and become CORA-projection-generated in a later phase.
 
-## Inventories
+## The beamline
 
-- [Beam path](beamline.md) (the equipment walk source to detector, generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor)
-- [Assets](assets.md) (flat inventory of all 2-BM sub-Assets: Components and Devices nested via `parent_id`)
-- [Calibrations](calibrations.md)
-- [Actors](actors.md)
-- [Procedures](procedures.md)
-- [Subjects](subjects.md)
-- [Runs](runs.md)
-- [Campaigns](campaigns.md)
-- [Datasets](datasets.md)
-- [Decisions](decisions.md)
-- [Cautions](cautions.md)
-- [Enclosures](enclosures.md)
-- [Supplies](supplies.md)
-- [Policies](policies.md)
+What 2-BM physically is, walked source to detector.
 
-## Equipment deployments
+- [Beam path](beamline.md): the equipment walk, every device with its calibration and condition, generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
+- [Assets](assets.md): the CORA Asset model view (flat tree by `parent_id`, Family affordances, vendor Models, settings schemas, drawings).
+- [MCTOptics](equipment/mctoptics.md): the Optique Peter detector as an Assembly + Fixture.
 
-- [MCTOptics](equipment/mctoptics.md) (Optique Peter detector: Assembly + Fixture + 7 bound Assets + PseudoAxis lens selector)
+## Getting ready
 
-Methods are cross-facility vocabulary in the [Catalog](../../catalog/methods.md); the Practices 2-BM consumes are APS Site Recipes in [APS](../aps/practices.md).
+Setup before a scan.
+
+- [Procedures](procedures.md): alignment, calibration, and recovery routines (Operation BC).
+- [Supplies](supplies.md): the resources a run needs available (beam, cooling, vacuum).
+- [Enclosures](enclosures.md): the hutch permit that gates runs and procedures, covering every device through the pre-flight chain walk (Enclosure BC).
+- Clearances: the safety forms that must be Active to start, issued at the [APS Site](../aps/clearances.md).
+
+## Running a measurement
+
+The act of measuring.
+
+- [Subjects](subjects.md): the samples mounted and measured.
+- [Runs](runs.md): execution instances and their state.
+- [Campaigns](campaigns.md): series that group many runs.
+- The recipe a run executes is a [Method](../../catalog/methods.md) (cross-facility) bound through an APS [Practice](../aps/practices.md).
+
+## Results
+
+What came out and whether it is trustworthy.
+
+- [Datasets](datasets.md): the data products, with lineage back to the run, subject, and equipment.
+
+## Operating envelope
+
+Who and what governs.
+
+- [Decisions](decisions.md): the accountability ledger (overrides, steering).
+- [Policies](policies.md): the authorization rules in effect at the beamline.
+- [Cautions](cautions.md): operator advisories and tribal knowledge.
+- People and autonomous agents are facility principals at the [APS Site](../aps/actors.md) ([Agents](../aps/agents.md)); on the beamline they surface only through the actions they take above.

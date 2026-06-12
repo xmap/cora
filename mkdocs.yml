@@ -100,20 +100,24 @@ nav:
       - Cautions: deployments/aps/cautions.md
     - 2-BM:
       - deployments/2-bm/index.md
-      - Beam path: deployments/2-bm/beamline.md
-      - Assets: deployments/2-bm/assets.md
-      - Calibrations: deployments/2-bm/calibrations.md
-      - Actors: deployments/2-bm/actors.md
-      - Procedures: deployments/2-bm/procedures.md
-      - Subjects: deployments/2-bm/subjects.md
-      - Runs: deployments/2-bm/runs.md
-      - Campaigns: deployments/2-bm/campaigns.md
-      - Cautions: deployments/2-bm/cautions.md
-      - Enclosures: deployments/2-bm/enclosures.md
-      - Supplies: deployments/2-bm/supplies.md
-      - Datasets: deployments/2-bm/datasets.md
-      - Decisions: deployments/2-bm/decisions.md
-      - Policies: deployments/2-bm/policies.md
+      - The beamline:
+        - Beam path: deployments/2-bm/beamline.md
+        - Assets: deployments/2-bm/assets.md
+      - Getting ready:
+        - Procedures: deployments/2-bm/procedures.md
+        - Supplies: deployments/2-bm/supplies.md
+        - Enclosures: deployments/2-bm/enclosures.md
+      - Running a measurement:
+        - Subjects: deployments/2-bm/subjects.md
+        - Runs: deployments/2-bm/runs.md
+        - Campaigns: deployments/2-bm/campaigns.md
+      - Results:
+        - Datasets: deployments/2-bm/datasets.md
+      - Operating envelope:
+        - Decisions: deployments/2-bm/decisions.md
+        - Policies: deployments/2-bm/policies.md
+        - Cautions: deployments/2-bm/cautions.md
+        - Actors: deployments/2-bm/actors.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
