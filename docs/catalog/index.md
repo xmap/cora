@@ -2,6 +2,10 @@
 
 *Cross-facility vocabulary: the kinds shared across APS, MAX IV, and any future site CORA serves. This page explains how the catalog works; the inventories themselves are generated from the [`catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) descriptor.*
 
+## How the vocabulary composes
+
+The kinds below are not five separate lists; they are one chain, sliced per kind for lookup. A measurement technique enters CORA as a [Method](methods.md). A Method declares the device [Families](families.md) it needs and the [Capability](capabilities.md) contract it realizes. A Family advertises which functional [Roles](roles.md) it can satisfy (`presents_as`), and a Role in turn requires a closed set of [Affordances](../reference/affordances.md), the primitive verbs a device supports. When a beamline is built, an Asset binds a vendor [Model](models.md) to record the specific hardware that fills a Family. So the chain reads: a Method needs Families, Families present Roles, Roles require Affordances, and Models are the concrete hardware that satisfy Families. The per-kind pages below are that one chain, each viewed from one link.
+
 ## Inventories
 
 - [Capabilities](capabilities.md): Recipe BC operations-layer templates (`cora.capability.*`), the namespace for what an operation provides. Each Method binds one Capability.
