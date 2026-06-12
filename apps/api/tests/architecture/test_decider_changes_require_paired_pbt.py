@@ -56,23 +56,6 @@ _UNIT_ROOT = _TESTS_ROOT / "unit"
 # PBT lands; new deciders must NOT be added here.
 GRANDFATHERED_DECIDERS_WITHOUT_PBT: frozenset[str] = frozenset(
     {
-        "cora.recipe.features.add_plan_wire.decider",
-        "cora.recipe.features.define_method.decider",
-        "cora.recipe.features.define_plan.decider",
-        "cora.recipe.features.define_practice.decider",
-        "cora.recipe.features.deprecate_capability.decider",
-        "cora.recipe.features.deprecate_method.decider",
-        "cora.recipe.features.deprecate_plan.decider",
-        "cora.recipe.features.deprecate_practice.decider",
-        "cora.recipe.features.deprecate_recipe.decider",
-        "cora.recipe.features.remove_plan_wire.decider",
-        "cora.recipe.features.update_method_parameters_schema.decider",
-        "cora.recipe.features.update_plan_default_parameters.decider",
-        "cora.recipe.features.version_capability.decider",
-        "cora.recipe.features.version_method.decider",
-        "cora.recipe.features.version_plan.decider",
-        "cora.recipe.features.version_practice.decider",
-        "cora.recipe.features.version_recipe.decider",
         "cora.supply.features.degrade_supply.decider",
         "cora.supply.features.deregister_supply.decider",
         "cora.supply.features.mark_supply_available.decider",
