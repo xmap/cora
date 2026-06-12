@@ -27,6 +27,6 @@ abstract: >-
   built around event-sourced bounded contexts, a recipe ladder
   (Method / Practice / Plan / Run) for facility-neutral procedures, and
   equivalent REST and agent-protocol (MCP) API surfaces backed by a single
-  handler per command. Pilot deployment targets APS beamline 35-BM at Argonne
+  handler per command. Pilot deployment targets APS beamline 2-BM at Argonne
   National Laboratory; the architecture is designed to generalise across
   photon sources, neutron sources, free-electron lasers, and HPC centres.
