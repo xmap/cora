@@ -22,7 +22,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.equipment._pidinst_types import PidinstRecord
+from cora.equipment._pidinst import PidinstRecord
 from cora.equipment.aggregates.asset import AssetNotFoundError
 from cora.equipment.aggregates.asset.events import (
     AssetRegistered,

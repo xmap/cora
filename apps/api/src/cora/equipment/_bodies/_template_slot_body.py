@@ -23,13 +23,14 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from cora.equipment._placement_body import PlacementBody
 from cora.equipment.aggregates.assembly.state import (
     SLOT_NAME_MAX_LENGTH,
     SlotCardinality,
     SlotName,
     TemplateSlot,
 )
+
+from ._placement_body import PlacementBody
 
 
 class TemplateSlotBody(BaseModel):

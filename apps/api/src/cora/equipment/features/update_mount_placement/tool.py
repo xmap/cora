@@ -7,7 +7,7 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
 
-from cora.equipment._placement_body import PlacementBody
+from cora.equipment._bodies import PlacementBody
 from cora.equipment.features.update_mount_placement.command import UpdateMountPlacement
 from cora.equipment.features.update_mount_placement.handler import Handler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id

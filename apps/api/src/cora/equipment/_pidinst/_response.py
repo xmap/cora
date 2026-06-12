@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from cora.equipment._pidinst_types import PidinstRecord
+    from ._types import PidinstRecord
 
 
 class PidinstIdentifierDTO(BaseModel):

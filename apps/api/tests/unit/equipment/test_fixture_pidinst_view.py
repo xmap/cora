@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.equipment._pidinst_types import (
+from cora.equipment._pidinst import (
     FixtureComponentRef,
     FixturePidinstView,
     Manufacturer,

@@ -12,7 +12,7 @@ from dataclasses import replace
 
 import pytest
 
-from cora.equipment._pidinst_types import (
+from cora.equipment._pidinst import (
     Manufacturer,
     Owner,
     PidinstAlternateIdentifier,

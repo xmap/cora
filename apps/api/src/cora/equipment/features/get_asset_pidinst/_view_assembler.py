@@ -26,7 +26,7 @@ Per L6 + L22 + sections 6.2-6.3 of project_asset_persistent_id_design:
 import asyncio
 from uuid import UUID
 
-from cora.equipment._pidinst_types import AssetPidinstView, ModelPidinstView, Owner
+from cora.equipment._pidinst import AssetPidinstView, ModelPidinstView, Owner
 from cora.equipment.aggregates.asset import AssetNotFoundError, load_asset
 from cora.equipment.aggregates.family import load_family
 from cora.equipment.aggregates.model import Model, load_model

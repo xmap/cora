@@ -13,9 +13,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Request, status
 from pydantic import BaseModel, Field
 
-from cora.equipment._drawing_body import DrawingBody
-from cora.equipment._template_slot_body import TemplateSlotBody
-from cora.equipment._template_wire_body import TemplateWireBody
+from cora.equipment._bodies import DrawingBody, TemplateSlotBody, TemplateWireBody
 from cora.equipment.aggregates.assembly import ASSEMBLY_NAME_MAX_LENGTH
 from cora.equipment.features.define_assembly.command import DefineAssembly
 from cora.equipment.features.define_assembly.handler import IdempotentHandler

@@ -31,7 +31,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
 
-from cora.equipment._pidinst_response import PidinstRecordResponse, record_to_response
+from cora.equipment._pidinst import PidinstRecordResponse, record_to_response
 from cora.equipment.features.get_asset_pidinst.handler import Handler
 from cora.equipment.features.get_asset_pidinst.query import GetAssetPidinst
 from cora.infrastructure.routing import (

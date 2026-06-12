@@ -7,9 +7,7 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.equipment._drawing_body import DrawingBody
-from cora.equipment._template_slot_body import TemplateSlotBody
-from cora.equipment._template_wire_body import TemplateWireBody
+from cora.equipment._bodies import DrawingBody, TemplateSlotBody, TemplateWireBody
 from cora.equipment.aggregates.assembly import ASSEMBLY_NAME_MAX_LENGTH
 from cora.equipment.features.version_assembly.command import VersionAssembly
 from cora.equipment.features.version_assembly.handler import Handler

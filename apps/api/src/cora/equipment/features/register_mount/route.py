@@ -13,8 +13,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Request, status
 from pydantic import BaseModel, Field
 
-from cora.equipment._drawing_body import DrawingBody
-from cora.equipment._placement_body import PlacementBody
+from cora.equipment._bodies import DrawingBody, PlacementBody
 from cora.equipment.aggregates.mount import SLOT_CODE_MAX_LENGTH
 from cora.equipment.features.register_mount.command import RegisterMount
 from cora.equipment.features.register_mount.handler import IdempotentHandler

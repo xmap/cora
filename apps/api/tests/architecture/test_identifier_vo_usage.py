@@ -201,7 +201,7 @@ def _resolve_allowlist_classes() -> dict[str, tuple[Path, ast.ClassDef]]:
 
     Several allowlisted names recur across the codebase (Manufacturer
     exists both as an aggregate VO in `equipment/aggregates/model/state.py`
-    and as a wire-DTO in `equipment/_pidinst_types.py`; ModelRef exists
+    and as a wire-DTO in `equipment/_pidinst/_types.py`; ModelRef exists
     both as an Agent aggregate VO and as an LLM port DTO). The aggregate-
     tier definition is the canonical one for this fitness check: that
     is the class whose shape composes (or deviates from) the Identifier

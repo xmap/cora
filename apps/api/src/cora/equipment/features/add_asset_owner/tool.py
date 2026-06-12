@@ -7,7 +7,7 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
 
-from cora.equipment._asset_owner_body import AssetOwnerBody
+from cora.equipment._bodies import AssetOwnerBody
 from cora.equipment.features.add_asset_owner.command import AddAssetOwner
 from cora.equipment.features.add_asset_owner.handler import Handler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id

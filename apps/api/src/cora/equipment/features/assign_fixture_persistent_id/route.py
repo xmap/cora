@@ -18,7 +18,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
 
-from cora.equipment._fixture_persistent_identifier_body import (
+from cora.equipment._bodies import (
     AssignFixturePersistentIdRequest,
     AssignFixturePersistentIdResponse,
 )

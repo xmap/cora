@@ -13,14 +13,14 @@ from uuid import UUID
 
 import pytest
 
-from cora.equipment._pidinst_serializer import to_fixture_pidinst_record
-from cora.equipment._pidinst_types import (
+from cora.equipment._pidinst import (
     FixtureComponentRef,
     FixturePidinstView,
     Manufacturer,
     PidinstIdentifierType,
     PidinstRelationType,
     SchemaVersion,
+    to_fixture_pidinst_record,
 )
 from cora.equipment.aggregates.asset import (
     AssetOwner,

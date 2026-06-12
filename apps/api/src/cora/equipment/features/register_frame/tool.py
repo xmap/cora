@@ -12,7 +12,7 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.equipment._placement_body import PlacementBody
+from cora.equipment._bodies import PlacementBody
 from cora.equipment.aggregates.frame import FRAME_NAME_MAX_LENGTH
 from cora.equipment.features.register_frame.command import RegisterFrame
 from cora.equipment.features.register_frame.handler import IdempotentHandler

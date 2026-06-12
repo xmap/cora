@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.equipment._pidinst_types import AssetPidinstView, ModelPidinstView
+from cora.equipment._pidinst import AssetPidinstView, ModelPidinstView
 from cora.equipment.aggregates._partition_rule import Affine
 from cora.equipment.aggregates.asset import AssetNotFoundError
 from cora.equipment.aggregates.asset.events import (

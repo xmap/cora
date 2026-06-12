@@ -4,7 +4,7 @@ Pydantic request/response schemas + APIRouter for `POST /frames`.
 
 The Placement value object is a dataclass at the domain layer
 (`cora.equipment.aggregates._placement`); the shared
-`PlacementBody` Pydantic mirror (`cora.equipment._placement_body`)
+`PlacementBody` Pydantic mirror (`cora.equipment._bodies._placement_body`)
 is the wire format. The route converts to the domain VO inside the
 handler. The conversion is trivial (field-for-field) and raises
 `InvalidPlacementError` on domain-rule violations (negative
@@ -17,7 +17,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Request, status
 from pydantic import BaseModel, Field
 
-from cora.equipment._placement_body import PlacementBody
+from cora.equipment._bodies import PlacementBody
 from cora.equipment.aggregates.frame import FRAME_NAME_MAX_LENGTH
 from cora.equipment.features.register_frame.command import RegisterFrame
 from cora.equipment.features.register_frame.handler import IdempotentHandler

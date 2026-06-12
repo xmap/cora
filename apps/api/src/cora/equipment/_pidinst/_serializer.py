@@ -57,7 +57,19 @@ run in property order so the first to raise wins.
 
 from datetime import datetime
 
-from cora.equipment._pidinst_types import (
+from cora.equipment.errors import (
+    AssetNameMissingError,
+    FixtureLandingPageMissingError,
+    FixtureManufacturerStateNotAvailableError,
+    FixtureNameMissingError,
+    FixtureOwnerStateNotAvailableError,
+    LandingPageMissingError,
+    ManufacturerStateNotAvailableError,
+    OwnerStateNotAvailableError,
+)
+from cora.shared.identifier import PersistentIdentifierScheme
+
+from ._types import (
     AssetPidinstView,
     DateType,
     FixturePidinstView,
@@ -76,17 +88,6 @@ from cora.equipment._pidinst_types import (
     RelatedIdentifier,
     SchemaVersion,
 )
-from cora.equipment.errors import (
-    AssetNameMissingError,
-    FixtureLandingPageMissingError,
-    FixtureManufacturerStateNotAvailableError,
-    FixtureNameMissingError,
-    FixtureOwnerStateNotAvailableError,
-    LandingPageMissingError,
-    ManufacturerStateNotAvailableError,
-    OwnerStateNotAvailableError,
-)
-from cora.shared.identifier import PersistentIdentifierScheme
 
 _URN_UUID_PREFIX = "urn:uuid:"
 _FAMILY_URN_PREFIX = "urn:cora:family:"
