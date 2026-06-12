@@ -42,7 +42,7 @@ Michael Polanyi's observation that "we know more than we can tell" is the operat
 
 CORA is two regions with one fixed identity and one movable line.
 
-- **The spine (always CORA).** The event log, decisions, the recipe ladder, trust, and audit. This is what CORA is, in every deployment. It runs at decision-grade latency and never sits inside a deterministic real-time loop.
+- **The spine (always CORA).** The event log, decisions, the recipe ladder, trust, and audit. This is what CORA is, in every deployment. It runs at decision-grade latency and never sits inside a deterministic real-time loop, the split-second control where a late answer is a wrong answer.
 - **The execution edge (optional, the facility's choice).** Driving operations step by step, and in time the experiment scan loop, plus the agent loops that steer them. CORA offers a substrate-neutral `ControlPort` and a `Conductor` here: today it drives operational procedures (setpoint, action, check) over shipped EPICS Channel Access and PVA adapters. A facility may adopt this edge, or keep its own execution and scan tools and port into CORA only what it chooses. Driving the experiment scan loop directly over EPICS is exploratory work in the 2-BM pilot.
 - **The floor (never CORA).** The deterministic real-time loop, servo control, position-synchronised output and FPGA trigger fan-out, sub-millisecond timing, runs in EPICS IOCs, FPGAs, and motion controllers regardless of where a facility draws the spine/edge line.
 
