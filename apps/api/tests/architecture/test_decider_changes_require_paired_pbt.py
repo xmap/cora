@@ -66,8 +66,6 @@ GRANDFATHERED_DECIDERS_WITHOUT_PBT: frozenset[str] = frozenset(
         "cora.agent.features.revoke_tool_from_agent.decider",
         "cora.agent.features.suspend_agent.decider",
         "cora.agent.features.version_agent.decider",
-        "cora.calibration.features.append_calibration_revision.decider",
-        "cora.calibration.features.define_calibration.decider",
         "cora.data.features.demote_dataset.decider",
         "cora.data.features.discard_dataset.decider",
         "cora.data.features.promote_dataset.decider",
