@@ -16,9 +16,14 @@ on:
       - "scripts/catalog_pages.py"
       - "scripts/site_descriptor.py"
       - "scripts/site_pages.py"
+      - "scripts/architecture_introspect.py"
+      - "scripts/architecture_pages.py"
       - "deployments/**"
       - "catalog/**"
       - "talks/**"
+      # The Architecture pages render their factual tables from the code via AST
+      # introspection, so a BC / aggregate / event / slice change must redeploy docs.
+      - "apps/api/src/cora/**"
   workflow_dispatch:
 
 # Allow only one concurrent deployment, no cancel-in-progress so a
