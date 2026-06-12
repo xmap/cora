@@ -86,7 +86,7 @@ def test_renders_one_h2_per_group_and_no_em_dash() -> None:
     descriptor = bd.load(_DESCRIPTOR)
     markdown = _render_with_catalog()
 
-    assert markdown.startswith("# 2-BM beam path")
+    assert markdown.startswith("# 2-BM layout")
     for name, _group in descriptor.groups:
         assert f"## {_humanize(name)}" in markdown
     assert "## Controls" in markdown

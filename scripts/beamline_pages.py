@@ -2,8 +2,8 @@
 
 `render_all(descriptor)` returns a {src_uri: markdown} dict (mirroring the
 contract scripts/scenarios_pages.render_all used) with a single generated page,
-deployments/2-bm/beamline.md: the beam-path walk, one section per subsystem,
-a device table per group, then the cross-cutting controls and resources.
+deployments/2-bm/beamline.md: the layout walk source to detector, one section
+per subsystem, a device table per group, then the cross-cutting controls and resources.
 
 The mkdocs on_files hook in scripts/mkdocs_hooks.py injects these as virtual
 files at build time; nothing is written to disk.
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 PAGE_SRC_URI = "deployments/2-bm/beamline.md"
 DESCRIPTOR_BLOB_URL = "https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml"
 
-# Links up to the cross-facility Catalog (relative to the beam-path page).
+# Links up to the cross-facility Catalog (relative to the layout page).
 _CATALOG_FAMILIES = "../../catalog/families.md"
 _CATALOG_MODELS = "../../catalog/models.md"
 
@@ -244,7 +244,7 @@ def _render_resources(resources: Any) -> str:
 
 def _render_page(descriptor: BeamlineDescriptor) -> str:
     beamline = descriptor.beamline
-    blocks: list[str] = [f"# {beamline.name} beam path"]
+    blocks: list[str] = [f"# {beamline.name} layout"]
 
     blocks.append(
         "A walk along the beam, source to detector. Each device pairs its human "

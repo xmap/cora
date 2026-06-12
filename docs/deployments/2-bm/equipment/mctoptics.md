@@ -105,7 +105,7 @@ This replaces the older convention of carrying `lens_select` as a Method paramet
 
 ## Calibrations
 
-Four Calibrations downstream of this deployment, shown against their device on the [Beam path](../beamline.md):
+Four Calibrations downstream of this deployment, shown against their device on the [Layout](../beamline.md):
 
 - Three `magnification` revisions, one per objective (9.83x / 4.93x / 1.10x effective, derived from measured pixel size divided by sensor pitch)
 - One `effective_thickness` revision on the LuAG scintillator (100 micrometers)
@@ -165,7 +165,7 @@ A few model questions this deployment surfaces but does not pin down:
 ## See also
 
 - [2-BM Assets](../assets.md) for the flat inventory listing the underlying Asset rows
-- [2-BM Beam path](../beamline.md) for the four downstream Calibration revisions, shown on their device
+- [2-BM Layout](../beamline.md) for the four downstream Calibration revisions, shown on their device
 - [2-BM Enclosures](../enclosures.md) for the hutch permit that gates Runs and Procedures binding these Assets: an Enclosure on the `2-BM` Unit covers every Device here through the pre-flight chain walk
 - [Equipment module](../../../architecture/modules/equipment/index.md) for the aggregate shapes (Family, Model, Asset, Mount, Frame, Assembly, Fixture)
 

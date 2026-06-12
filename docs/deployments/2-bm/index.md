@@ -16,7 +16,7 @@ The measurement lifecycle below is the reading order: the beamline itself, then 
 
 What 2-BM physically is, walked source to detector.
 
-- [Beam path](beamline.md): the equipment walk, every device with its calibration and condition, generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
+- [Layout](beamline.md): the equipment walk source to detector, every device with its calibration and condition, generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
 - [Assets](assets.md): the CORA Asset model view (flat tree by `parent_id`, Family affordances, vendor Models, settings schemas, drawings).
 - [MCTOptics](equipment/mctoptics.md): the Optique Peter detector as an Assembly + Fixture.
 

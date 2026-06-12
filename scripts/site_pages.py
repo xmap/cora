@@ -4,7 +4,7 @@
 single page, deployments/aps/index.md: a walk through what the facility gives an
 experiment, organized by the reader's journey (techniques -> resources -> safety
 envelope -> who acts), not one page per bounded context. Tables appear inside
-reader-shaped sections with framing prose, mirroring the beam-path page's
+reader-shaped sections with framing prose, mirroring the beamline layout page's
 per-subsystem device tables.
 
 A Practice method links to the generated Catalog Methods page only when the

@@ -95,7 +95,7 @@ nav:
     - 2-BM:
       - deployments/2-bm/index.md
       - The beamline:
-        - Beam path: deployments/2-bm/beamline.md
+        - Layout: deployments/2-bm/beamline.md
         - Assets: deployments/2-bm/assets.md
       - Getting ready:
         - Procedures: deployments/2-bm/procedures.md

@@ -22,7 +22,7 @@ A) **Link rewriting** (`on_page_markdown`). Rewrites markdown links
    text.
 
 B) **Generated pages** (`on_files`). Renders virtual pages from the
-   descriptors: the beamline beam-path page from deployments/<id>/beamline.yaml
+   descriptors: the beamline layout page from deployments/<id>/beamline.yaml
    (scripts/beamline_*), the Catalog inventory pages from catalog/catalog.yaml
    (scripts/catalog_*), and the APS site pages from deployments/aps/site.yaml
    (scripts/site_*). A missing or invalid descriptor raises and fails the
@@ -145,7 +145,7 @@ def on_page_markdown(
 def on_files(files: Any, *, config: Any) -> Any:
     """Inject the generated pages as virtual files.
 
-    Renders the beamline beam-path page, the Catalog inventory pages, and the
+    Renders the beamline layout page, the Catalog inventory pages, and the
     APS site pages from their descriptors. A missing or invalid descriptor
     raises and fails the build.
     """
