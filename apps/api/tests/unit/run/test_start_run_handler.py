@@ -289,7 +289,7 @@ async def _seed_subject_mounted(
     )
 
 
-async def _seed_full_chain(
+async def seed_full_chain(
     store: InMemoryEventStore,
     *,
     plan_deprecated: bool = False,
@@ -333,7 +333,7 @@ async def _seed_full_chain(
 @pytest.mark.unit
 async def test_handler_returns_generated_run_id_for_sample_run() -> None:
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, subject_id = await _seed_full_chain(store)
+    _, _, _, _, plan_id, subject_id = await seed_full_chain(store)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
     handler = start_run.bind(deps)
 
@@ -349,7 +349,7 @@ async def test_handler_returns_generated_run_id_for_sample_run() -> None:
 async def test_handler_returns_generated_run_id_for_dark_field_run() -> None:
     """Run without Subject (calibration / dark-field)."""
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, _ = await _seed_full_chain(store)
+    _, _, _, _, plan_id, _ = await seed_full_chain(store)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
     handler = start_run.bind(deps)
 
@@ -364,7 +364,7 @@ async def test_handler_returns_generated_run_id_for_dark_field_run() -> None:
 @pytest.mark.unit
 async def test_handler_appends_run_started_event_to_store() -> None:
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, subject_id = await _seed_full_chain(store)
+    _, _, _, _, plan_id, subject_id = await seed_full_chain(store)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
     handler = start_run.bind(deps)
 
@@ -390,7 +390,7 @@ async def test_handler_appends_run_started_event_to_store() -> None:
 @pytest.mark.unit
 async def test_handler_appends_run_started_with_null_subject_for_dark_field() -> None:
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, _ = await _seed_full_chain(store)
+    _, _, _, _, plan_id, _ = await seed_full_chain(store)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
     handler = start_run.bind(deps)
 
@@ -544,7 +544,7 @@ async def test_handler_raises_asset_not_found_when_bound_asset_missing() -> None
 @pytest.mark.unit
 async def test_handler_raises_subject_not_found_when_subject_id_missing() -> None:
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, _ = await _seed_full_chain(store)
+    _, _, _, _, plan_id, _ = await seed_full_chain(store)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
     handler = start_run.bind(deps)
 
@@ -563,7 +563,7 @@ async def test_handler_raises_subject_not_found_when_subject_id_missing() -> Non
 @pytest.mark.unit
 async def test_handler_propagates_plan_deprecated_error() -> None:
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, _ = await _seed_full_chain(store, plan_deprecated=True)
+    _, _, _, _, plan_id, _ = await seed_full_chain(store, plan_deprecated=True)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
     handler = start_run.bind(deps)
 
@@ -578,8 +578,8 @@ async def test_handler_propagates_plan_deprecated_error() -> None:
 @pytest.mark.unit
 async def test_handler_propagates_subject_not_mountable_error() -> None:
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, subject_id = await _seed_full_chain(store)
-    # Mounted Subject from _seed_full_chain — let's flip it to Removed.
+    _, _, _, _, plan_id, subject_id = await seed_full_chain(store)
+    # Mounted Subject from seed_full_chain — let's flip it to Removed.
     from cora.subject.aggregates.subject.events import (
         SubjectMeasured,
         SubjectRemoved,
@@ -621,7 +621,7 @@ async def test_handler_propagates_subject_not_mountable_error() -> None:
 @pytest.mark.unit
 async def test_handler_propagates_run_asset_decommissioned_error() -> None:
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, _ = await _seed_full_chain(store, asset_decommissioned=True)
+    _, _, _, _, plan_id, _ = await seed_full_chain(store, asset_decommissioned=True)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
     handler = start_run.bind(deps)
 
@@ -637,7 +637,7 @@ async def test_handler_propagates_run_asset_decommissioned_error() -> None:
 async def test_handler_propagates_capabilities_not_satisfied_at_run_start() -> None:
     """Re-validation: Asset capabilities drifted off after Plan-bind."""
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, _ = await _seed_full_chain(store, drift_capability_off_asset=True)
+    _, _, _, _, plan_id, _ = await seed_full_chain(store, drift_capability_off_asset=True)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
     handler = start_run.bind(deps)
 
@@ -656,7 +656,7 @@ async def test_handler_propagates_capabilities_not_satisfied_at_run_start() -> N
 async def test_handler_propagates_causation_id_to_appended_event() -> None:
     causation = UUID("01900000-0000-7000-8000-0000000000bb")
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, _ = await _seed_full_chain(store)
+    _, _, _, _, plan_id, _ = await seed_full_chain(store)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
     handler = start_run.bind(deps)
 
@@ -765,7 +765,7 @@ async def test_handler_with_campaign_writes_both_streams_atomically() -> None:
     from cora.campaign.aggregates.campaign import from_stored as campaign_from_stored
 
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, subject_id = await _seed_full_chain(store)
+    _, _, _, _, plan_id, subject_id = await seed_full_chain(store)
     campaign_id = uuid4()
     lead = uuid4()
     await _seed_campaign_active(store, campaign_id, lead)
@@ -810,7 +810,7 @@ async def test_handler_raises_campaign_not_found_when_campaign_missing() -> None
     from cora.campaign.aggregates.campaign import CampaignNotFoundError
 
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, subject_id = await _seed_full_chain(store)
+    _, _, _, _, plan_id, subject_id = await seed_full_chain(store)
     bogus_campaign_id = uuid4()
 
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
@@ -836,7 +836,7 @@ async def test_handler_raises_cannot_join_for_terminal_campaign() -> None:
     from cora.run.aggregates.run import RunCannotJoinCampaignError
 
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, subject_id = await _seed_full_chain(store)
+    _, _, _, _, plan_id, subject_id = await seed_full_chain(store)
     campaign_id = uuid4()
     await _seed_campaign_closed(store, campaign_id, uuid4())
 
@@ -866,7 +866,7 @@ async def test_handler_without_campaign_id_uses_single_stream_append() -> None:
     """Backward-compat path. No campaign_id means the handler writes
     only the Run stream (single-stream append)."""
     store = InMemoryEventStore()
-    _, _, _, _, plan_id, subject_id = await _seed_full_chain(store)
+    _, _, _, _, plan_id, subject_id = await seed_full_chain(store)
 
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
     handler = start_run.bind(deps)

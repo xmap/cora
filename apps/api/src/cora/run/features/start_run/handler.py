@@ -220,8 +220,9 @@ def bind(deps: Kernel) -> Handler:
         # Plans that target only the stage. Expand once here so both
         # downstream lookups see the same Run scope. Already-loaded
         # Assets are in `assets`; observation `controller_id` is free.
-        # Only `controller_id` is expanded today; `parent_id` and
-        # `fixture_id` traversals are left as separate design calls.
+        # `controller_id` (one-hop) is expanded here; the `parent_id`
+        # ancestor chain is expanded just below via the chain walk;
+        # `fixture_id` traversal is left as a separate design call.
         #
         # Snapshot-vs-gate asymmetry: the controller Asset itself is
         # NOT loaded into `assets` (only Plan-bound stage Assets are),
@@ -234,6 +235,37 @@ def bind(deps: Kernel) -> Handler:
         # lifecycle the right gate for stage-targeting Plans.
         scoped_asset_ids = plan.asset_ids | {
             asset.controller_id for asset in assets.values() if asset.controller_id is not None
+        }
+
+        # cross-BC ancestor-chain widening (chain-walk Slice 5): widen
+        # the scope up the Asset `parent_id` chain so an Enclosure,
+        # Clearance, or Caution bound to an ANCESTOR of a Plan-bound
+        # Asset gates / warns this Run. Without this, the enclosure
+        # pre-flight gate's L-pre-1 "derive scope from the Asset chain"
+        # is decorative: an Enclosure bound to the 2-BM beamline Unit
+        # never matches a Plan that binds only a Device under it. The
+        # walk returns the inclusive ancestor closure (the inputs plus
+        # every ancestor). Decommissioned ancestors are dropped from the
+        # widening: a retired intermediate must not pull its stale
+        # Permitted Enclosure into scope, while a live grandparent above
+        # a Decommissioned intermediate stays in scope (the walk already
+        # collected the whole closure; only the Decommissioned nodes are
+        # filtered out of the union). Plan-bound Assets keep their own
+        # `RunPlanAssetDecommissionedError` lifecycle gate above; this
+        # filter governs only the ancestor widening. The walk reads only
+        # Equipment's Asset projection and terminates at the facility-
+        # rooted root, never the Federation Facility axis; a `parent_id`
+        # cycle or an over-deep chain raises
+        # `AncestorWalkDepthExceededError` rather than under-scoping the
+        # gate (failing loud beats admitting a Run an unreached
+        # ancestor's Enclosure should refuse). That error is left
+        # intentionally unmapped at the route layer: a parent_id cycle
+        # is server-side data corruption, not a client-fixable request,
+        # so a 500 (with the stack trace in the server log) is the right
+        # operator signal, not a 4xx the caller could retry.
+        ancestor_rows = await deps.asset_lookup.ancestors_of(scoped_asset_ids)
+        scoped_asset_ids = scoped_asset_ids | {
+            row.id for row in ancestor_rows if row.lifecycle != "Decommissioned"
         }
 
         # cross-BC clearance gate: query Safety's

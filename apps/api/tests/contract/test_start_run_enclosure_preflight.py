@@ -26,6 +26,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.infrastructure.adapters.in_memory_asset_lookup import (
+    InMemoryAssetLookup,
+)
 from cora.infrastructure.adapters.in_memory_enclosure_lookup import (
     InMemoryEnclosureLookup,
 )
@@ -84,6 +87,25 @@ def _install_enclosure_lookup(app: FastAPI, lookup) -> None:  # type: ignore[no-
     from cora.run import wire_run
 
     new_deps = dataclasses.replace(app.state.deps, enclosure_lookup=lookup)
+    app.state.deps = new_deps
+    app.state.run = wire_run(new_deps)
+
+
+def _install_lookups(app: FastAPI, *, asset_lookup=None, enclosure_lookup=None) -> None:  # type: ignore[no-untyped-def]
+    """Swap asset_lookup and/or enclosure_lookup in one replace + rewire.
+
+    Used by the chain-walk tests, which seed an InMemoryAssetLookup with a
+    child -> parent edge so the ancestor walk has something to climb (the
+    test app's default asset_lookup is an empty InMemoryAssetLookup).
+    """
+    from cora.run import wire_run
+
+    changes: dict[str, object] = {}
+    if asset_lookup is not None:
+        changes["asset_lookup"] = asset_lookup
+    if enclosure_lookup is not None:
+        changes["enclosure_lookup"] = enclosure_lookup
+    new_deps = dataclasses.replace(app.state.deps, **changes)
     app.state.deps = new_deps
     app.state.run = wire_run(new_deps)
 
@@ -185,6 +207,104 @@ def test_post_runs_returns_409_coverage_mismatch_for_mixed_permitted_and_not_per
     detail = response.json()["detail"]
     assert "Enclosure" in detail
     assert "failed the Permitted-and-Active gate" in detail
+
+
+def _seed_child_parent_asset_lookup(asset_id: str) -> tuple[InMemoryAssetLookup, UUID]:
+    """Seed an InMemoryAssetLookup with `asset_id` as a Device under a Unit parent.
+
+    Returns the lookup + the parent id (the Enclosure's containing_asset_id
+    in the chain-walk tests). The test app's asset_lookup is empty by
+    default, so the walk needs this seed to have a chain to climb -- in
+    production the same edge lives in proj_equipment_asset_summary.
+    """
+    parent_id = uuid4()
+    lookup = InMemoryAssetLookup()
+    lookup.register(UUID(asset_id), name="child-device", tier="Device", parent_id=parent_id)
+    lookup.register(parent_id, name="beamline-unit", tier="Unit", parent_id=None)
+    return lookup, parent_id
+
+
+@pytest.mark.contract
+def test_post_runs_returns_409_when_ancestor_enclosure_is_not_permitted() -> None:
+    """Chain walk: an Enclosure bound to the Plan-bound Asset's PARENT (not
+    the Asset itself) blocks the Run. This is the load-bearing case L-pre-1
+    exists for: the Plan binds only the child Device, the NotPermitted
+    Enclosure sits on the beamline Unit above it, and the ancestor walk is
+    what brings the Unit into scope so the gate sees the Enclosure."""
+    app = create_app()
+    with TestClient(app) as client:
+        plan_id, subject_id, asset_id = _setup_chain(client)
+        asset_lookup, parent_id = _seed_child_parent_asset_lookup(asset_id)
+        enclosure_lookup = InMemoryEnclosureLookup()
+        enclosure_lookup.register(
+            enclosure_id=uuid4(),
+            name="Beamline-Hutch",
+            containing_asset_id=parent_id,
+            permit_status="NotPermitted",
+            lifecycle="Active",
+        )
+        _install_lookups(app, asset_lookup=asset_lookup, enclosure_lookup=enclosure_lookup)
+        response = client.post(
+            "/runs",
+            json={"name": "ancestor-blocked", "plan_id": plan_id, "subject_id": subject_id},
+        )
+    assert response.status_code == 409, response.text
+    detail = response.json()["detail"]
+    assert "Enclosure" in detail
+    assert "one or more referencing Enclosures" in detail
+
+
+@pytest.mark.contract
+def test_post_runs_returns_201_when_ancestor_enclosure_is_permitted() -> None:
+    """Chain walk, paired happy path: the same ancestor Enclosure, now
+    Permitted + Active, admits the Run."""
+    app = create_app()
+    with TestClient(app) as client:
+        plan_id, subject_id, asset_id = _setup_chain(client)
+        asset_lookup, parent_id = _seed_child_parent_asset_lookup(asset_id)
+        enclosure_lookup = InMemoryEnclosureLookup()
+        enclosure_lookup.register(
+            enclosure_id=uuid4(),
+            name="Beamline-Hutch",
+            containing_asset_id=parent_id,
+            permit_status="Permitted",
+            lifecycle="Active",
+        )
+        _install_lookups(app, asset_lookup=asset_lookup, enclosure_lookup=enclosure_lookup)
+        response = client.post(
+            "/runs",
+            json={"name": "ancestor-permitted", "plan_id": plan_id, "subject_id": subject_id},
+        )
+    assert response.status_code == 201, response.text
+
+
+@pytest.mark.contract
+def test_post_runs_ancestor_enclosure_silently_passes_without_the_walk() -> None:
+    """Load-bearing proof: with the asset_lookup left EMPTY (no chain to
+    climb), the very same parent-bound NotPermitted Enclosure does NOT gate
+    the Run -- it silently passes (201). This is exactly the gap the chain
+    walk closes; the contrast with the 409 test above is the proof that the
+    walk, not the direct match, is what makes L-pre-1 load-bearing."""
+    app = create_app()
+    with TestClient(app) as client:
+        plan_id, subject_id, asset_id = _setup_chain(client)
+        _, parent_id = _seed_child_parent_asset_lookup(asset_id)
+        enclosure_lookup = InMemoryEnclosureLookup()
+        enclosure_lookup.register(
+            enclosure_id=uuid4(),
+            name="Beamline-Hutch",
+            containing_asset_id=parent_id,
+            permit_status="NotPermitted",
+            lifecycle="Active",
+        )
+        # NOTE: asset_lookup is NOT installed -> it stays the empty default,
+        # so ancestors_of returns nothing and the scope is never widened.
+        _install_lookups(app, enclosure_lookup=enclosure_lookup)
+        response = client.post(
+            "/runs",
+            json={"name": "ancestor-silent-pass", "plan_id": plan_id, "subject_id": subject_id},
+        )
+    assert response.status_code == 201, response.text
 
 
 @pytest.mark.contract
