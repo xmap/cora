@@ -1,5 +1,5 @@
 .PHONY: install dev db-up db-down db-reset lint typecheck test test-unit test-int test-contract \
-        test-coverage diff-coverage fmt clean help \
+        test-noio test-db test-coverage store-durations diff-coverage fmt clean help \
         migrate-status migrate-apply migrate-new migrate-hash precommit precommit-run \
         arch-check arch-show docs-stage docs-build docs-serve openapi-snapshot \
         mutmut-audit mutmut-browse
@@ -27,7 +27,10 @@ help:
 	@echo "  test-unit       Run only unit tests"
 	@echo "  test-int        Run only integration tests"
 	@echo "  test-contract   Run only contract tests"
+	@echo "  test-noio       Run the no-DB CI lane (unit + architecture + contract, in-memory)"
+	@echo "  test-db         Run the DB CI lane (integration + e2e; needs db-up)"
 	@echo "  test-coverage   Run all tests with coverage report (term + html + xml)"
+	@echo "  store-durations Record per-test timings into .test_durations to balance CI shards"
 	@echo "  diff-coverage   Run diff-cover against origin/main (fails if patch <90%)"
 	@echo "  arch-check      Tach dependency contract + architecture fitness-function tests"
 	@echo "  arch-show       Open the dependency graph (tach show)"
@@ -97,8 +100,25 @@ test-int:
 test-contract:
 	cd $(API_DIR) && uv run pytest $(PYTEST_PARALLEL) -m contract
 
+# Local mirrors of the two CI test lanes (see .github/workflows/ci.yml).
+# Path-based selection matches CI: it is the robust selector since some
+# helper/__init__ files carry no marker. test-noio starts no Postgres
+# container (APP_ENV=test gives in-memory adapters); test-db needs `db-up`.
+test-noio:
+	cd $(API_DIR) && uv run pytest $(PYTEST_PARALLEL) tests/unit tests/architecture tests/contract
+
+test-db:
+	cd $(API_DIR) && uv run pytest $(PYTEST_PARALLEL) tests/integration tests/e2e
+
 test-coverage:
 	cd $(API_DIR) && uv run pytest $(PYTEST_PARALLEL) --cov --cov-report=term-missing --cov-report=html --cov-report=xml
+
+# Record per-test execution times so pytest-split balances CI shards by
+# time instead of by count. Runs the FULL suite (needs db-up) and writes
+# apps/api/.test_durations; commit the result. Re-run after large test
+# additions; staleness costs shard balance, never correctness.
+store-durations:
+	cd $(API_DIR) && uv run pytest $(PYTEST_PARALLEL) --store-durations
 
 diff-coverage:
 	cd $(API_DIR) && uv run diff-cover coverage.xml --compare-branch=origin/main --fail-under=90
