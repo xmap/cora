@@ -1,0 +1,77 @@
+# CORA Site descriptor: the APS site-level surface
+#
+# The single human-readable source for one facility's site-level instances:
+# the Facility, the Practices registered there, and the facility principals
+# (Actors and Agents). The docs build renders the APS site pages from this file.
+#
+# Source-of-truth boundary (see the docs-rewrite plan):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py (enum-equality
+#     tested), never re-authored here.
+#   - agents MIRROR the code seeds (cora/agent/seed.py + seed_caution_drafter.py);
+#     a drift-guard test asserts equality, so this list cannot silently fall out
+#     of step with what the deployment actually seeds.
+#   - the facility records the bootstrap invariants (kind=Site, display_name
+#     equals code); a test pins those.
+#   - practices and actors have no global code seed (they live only in
+#     integration-test scenarios); this file is their consolidated source,
+#     guarded by the round-trip test.
+
+facility:
+  code: aps
+  display_name: aps
+  kind: Site
+  institution: Argonne
+  sectors: [Sector 2]
+  beamlines: [2-BM]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. A method
+# that exists in the Catalog renders as a link; a method still pending in the
+# Catalog renders unlinked.
+practices:
+  - {name: APS_standard_dark_baseline_practice, method: dark_baseline}
+  - {name: APS_motor_homing_practice, method: motor_homing}
+  - {name: 2BM_resolution_practice, method: resolution_alignment}
+  - {name: 2BM_focus_practice, method: focus_alignment}
+  - {name: 2BM_alignment_practice, method: center_alignment}
+  - {name: 2BM_roll_practice, method: roll_alignment}
+  - {name: 2BM_pitch_practice, method: pitch_alignment}
+  - {name: 2BM_first_light_practice, method: first_light}
+  - {name: 2BM_dark_baseline_practice, method: dark_baseline}
+  - {name: 2BM_flat_baseline_practice, method: flat_baseline}
+  - {name: 2BM_alignment_calibration_practice, method: alignment_calibration}
+  - {name: 2BM_hexapod_reboot_practice, method: hexapod_reboot}
+  - {name: 2BM_tomography_practice, method: tomography}
+  - {name: 2BM_streaming_tomography_practice, method: streaming_tomography}
+  - {name: 2BM_mosaic_practice, method: mosaic_tomography}
+  - {name: 2BM_continuous_rotation_practice, method: continuous_rotation_tomography}
+  - {name: 2BM_multi_energy_practice, method: tomography}
+  - {name: Per-objective focus variant, method: focus_alignment, pending: true, note: "Mitutoyo 1.1x / 5x / 10x objectives"}
+  - {name: Per-objective resolution variant, method: resolution_alignment, pending: true, note: "Mitutoyo 1.1x / 5x / 10x objectives"}
+  - {name: 2BM_energy_calibration_practice, method: energy_calibration, pending: true}
+  - {name: 2BM_ioc_restart_practice, method: ioc_restart, pending: true}
+  - {name: 2BM_vibration_baseline_practice, method: vibration_baseline, pending: true}
+  - {name: 2BM_mirror_recoat_practice, method: mirror_recoat_return, pending: true}
+
+# Access BC Actors that are conceptually facility-wide at APS. Actor display
+# names live in actor_profile (the PII vault), not in event-sourced Actor state.
+# Beamline-bound staff (the 2-BM operator pool) live with their beamline.
+actors:
+  - {name: APS Operator, kind: human}
+  - {name: Run Debrief, kind: agent}
+  - {name: APS Experiment Safety Review Board, kind: human}
+  - {name: 2-BM Beamline Scientist, kind: human}
+  - {name: Proposal 2026-1234 PI, kind: human}
+  - {name: Proposal 2026-1235 PI, kind: human}
+  - {name: Proposal 2026-1236 PI, kind: human}
+  - {name: Proposal 2026-1237 PI, kind: human}
+  - {name: Sample-of-opportunity PI, kind: human}
+  - {name: Named APS scientific staff, kind: human, pending: true, note: "cross-beamline duties"}
+  - {name: Real ESRB membership, kind: human, pending: true, note: "vs committee-as-actor"}
+
+# Agent BC Agents seeded at this deployment. Each Agent's id is shared with an
+# Access BC Actor (kind=agent) via a cross-BC atomic write. This list mirrors
+# the code seeds and is drift-guarded against them.
+agents:
+  - {name: RunDebriefer, kind: RunDebriefer, version: 1.0.0, model_provider: anthropic, model_name: claude-haiku-4-5}
+  - {name: CautionDrafter, kind: CautionDrafter, version: 1.0.0, model_provider: anthropic, model_name: claude-sonnet-4-6}
