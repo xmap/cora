@@ -7423,6 +7423,76 @@
         "title": "MethodSummaryDTO",
         "type": "object"
       },
+      "MintMissingAssetPersistentIdsRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /assets/mint-missing-persistent-ids`.",
+        "properties": {
+          "facility_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Scope the sweep to one facility code; omit to sweep all facilities.",
+            "title": "Facility Code"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Max Assets to mint this call (1-1000). Bounds external mint calls; re-run to continue (the sweep is re-run-safe).",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "scheme": {
+            "$ref": "#/components/schemas/PersistentIdentifierScheme",
+            "default": "DOI"
+          }
+        },
+        "title": "MintMissingAssetPersistentIdsRequest",
+        "type": "object"
+      },
+      "MintMissingAssetPersistentIdsResponse": {
+        "description": "Summary of one bulk-mint sweep. `scanned` is the number of Assets\nenumerated as missing an id; each lands in exactly one of the lists.",
+        "properties": {
+          "failed": {
+            "items": {
+              "$ref": "#/components/schemas/_FailedAssetResponse"
+            },
+            "title": "Failed",
+            "type": "array"
+          },
+          "minted": {
+            "items": {
+              "$ref": "#/components/schemas/_MintedAssetResponse"
+            },
+            "title": "Minted",
+            "type": "array"
+          },
+          "scanned": {
+            "title": "Scanned",
+            "type": "integer"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/_SkippedAssetResponse"
+            },
+            "title": "Skipped",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scanned",
+          "minted",
+          "skipped",
+          "failed"
+        ],
+        "title": "MintMissingAssetPersistentIdsResponse",
+        "type": "object"
+      },
       "MissingAffordanceCandidatesItem": {
         "description": "Per-missing-affordance group on the wire.\n\n`affordance` is one of the entries in `missing_affordances`.\n`candidates` is sorted by asset_id string form (mirrors the\nwired_assets ordering convention). Empty list means the\nfacility has no Asset that could cover this requirement.",
         "properties": {
@@ -14616,6 +14686,30 @@
         "title": "_EqualsCriterion",
         "type": "object"
       },
+      "_FailedAssetResponse": {
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "error_class": {
+            "title": "Error Class",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "error_class",
+          "message"
+        ],
+        "title": "_FailedAssetResponse",
+        "type": "object"
+      },
       "_IdentifierBody": {
         "description": "One Identifier carried on the request body.",
         "properties": {
@@ -14744,6 +14838,30 @@
           "required_receipt_kinds"
         ],
         "title": "_InboundTermsResponse",
+        "type": "object"
+      },
+      "_MintedAssetResponse": {
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "scheme",
+          "value"
+        ],
+        "title": "_MintedAssetResponse",
         "type": "object"
       },
       "_OutboundTermsRequest": {
@@ -14922,6 +15040,25 @@
           "value"
         ],
         "title": "_SetpointStepRequest",
+        "type": "object"
+      },
+      "_SkippedAssetResponse": {
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "reason"
+        ],
+        "title": "_SkippedAssetResponse",
         "type": "object"
       },
       "_WithinToleranceCriterion": {
@@ -17592,6 +17729,72 @@
           }
         },
         "summary": "Register a new physical equipment asset",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/assets/mint-missing-persistent-ids": {
+      "post": {
+        "description": "Sweep + mint. Per-asset outcomes land in the response body.",
+        "operationId": "post_assets_mint_missing_persistent_ids_assets_mint_missing_persistent_ids_post",
+        "parameters": [
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MintMissingAssetPersistentIdsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MintMissingAssetPersistentIdsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize policy denied the command."
+          },
+          "422": {
+            "description": "Request body failed schema validation: scheme outside the closed enum, limit out of bounds, unknown field."
+          }
+        },
+        "summary": "Bulk-mint persistent identifiers for every Asset that lacks one",
         "tags": [
           "equipment"
         ]

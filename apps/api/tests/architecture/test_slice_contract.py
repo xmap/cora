@@ -56,6 +56,10 @@ _ORCHESTRATION_SLICES: frozenset[str] = frozenset(
         # complete_procedure / abort_procedure handlers; no direct event
         # emission. See [[project_edge_runtime_design]].
         "cora.operation.features.conduct_procedure",
+        # Bulk-mint sweep: enumerates Assets missing a persistent id and
+        # delegates each to the assign_asset_persistent_id handler; no direct
+        # event emission. See [[project_asset_persistent_id_design]].
+        "cora.equipment.features.mint_missing_asset_persistent_ids",
     }
 )
 _NO_DECIDER_SLICES: frozenset[str] = _ENTRY_APPEND_SLICES | _ORCHESTRATION_SLICES
