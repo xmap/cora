@@ -2,7 +2,7 @@
 
 The signed-event row carries three coupled fields: `signature` (raw
 bytes), `signature_kid` (key id), and `signature_version` (signing-
-recipe identifier, dispatched to the matching SigningPort adapter
+recipe identifier, dispatched to the matching ByteSigner adapter
 via the SigningRegistry per project_canonicalization_port_design.md).
 
 The matched-pair invariant: all three are NULL together (unsigned

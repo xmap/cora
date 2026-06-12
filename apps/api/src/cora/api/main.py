@@ -133,6 +133,7 @@ from cora.federation.adapters import PostgresCredentialLookup, PostgresFacilityL
 from cora.federation.adapters.in_memory_permit_lookup import InMemoryPermitLookup
 from cora.federation.adapters.in_memory_publish_port import InMemoryPublishPort
 from cora.federation.adapters.in_memory_signature_port import InMemorySignaturePort
+from cora.infrastructure.adapters.in_memory_signer import InMemorySigner
 from cora.infrastructure.auth.bearer_auth_middleware import BearerAuthMiddleware
 from cora.infrastructure.auth.exception_handlers import register_auth_exception_handlers
 from cora.infrastructure.config import Settings
@@ -442,6 +443,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 # when the wire-tier work lands.
                 publish_port_factory=InMemoryPublishPort,
                 signature_port_factory=InMemorySignaturePort,
+                # In-memory Ed25519 event signer wired by default so Agent
+                # subscribers actually sign their DecisionRegistered rows;
+                # production overrides with a KMS / Sigstore-keyless adapter.
+                signer_factory=InMemorySigner,
                 permit_lookup_factory=InMemoryPermitLookup,
                 llm_factory=build_llm,
                 # Pass the create_app-time Settings through so tests

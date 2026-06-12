@@ -8,8 +8,8 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.operation._recipe_expansion import expand
-from cora.operation.adapters.in_memory_recipe_expansion_port import (
-    InMemoryRecipeExpansionPort,
+from cora.operation.adapters.in_memory_recipe_expander import (
+    InMemoryRecipeExpander,
 )
 from cora.operation.aggregates.procedure import (
     InvalidRecipeBindingsError,
@@ -93,7 +93,7 @@ def test_decide_emits_registered_plus_recipe_expansion_recorded() -> None:
         command=_cmd(recipe.id),
         recipe=recipe,
         capability=cap,
-        expansion_port=InMemoryRecipeExpansionPort(),
+        expansion_port=InMemoryRecipeExpander(),
         now=_NOW,
         new_id=new_id,
     )
@@ -129,7 +129,7 @@ def test_decide_raises_already_exists_when_state_present() -> None:
             command=_cmd(recipe.id),
             recipe=recipe,
             capability=cap,
-            expansion_port=InMemoryRecipeExpansionPort(),
+            expansion_port=InMemoryRecipeExpander(),
             now=_NOW,
             new_id=uuid4(),
         )
@@ -145,7 +145,7 @@ def test_decide_raises_executor_mismatch_when_capability_excludes_procedure() ->
             command=_cmd(recipe.id),
             recipe=recipe,
             capability=cap,
-            expansion_port=InMemoryRecipeExpansionPort(),
+            expansion_port=InMemoryRecipeExpander(),
             now=_NOW,
             new_id=uuid4(),
         )
@@ -175,7 +175,7 @@ def test_decide_raises_invalid_bindings_when_values_fail_schema() -> None:
             command=cmd,
             recipe=recipe,
             capability=cap,
-            expansion_port=InMemoryRecipeExpansionPort(),
+            expansion_port=InMemoryRecipeExpander(),
             now=_NOW,
             new_id=uuid4(),
         )
@@ -265,7 +265,7 @@ def test_decide_with_real_expand_function_preserves_step_count() -> None:
         command=_cmd(recipe.id),
         recipe=recipe,
         capability=cap,
-        expansion_port=InMemoryRecipeExpansionPort(),
+        expansion_port=InMemoryRecipeExpander(),
         now=_NOW,
         new_id=uuid4(),
     )

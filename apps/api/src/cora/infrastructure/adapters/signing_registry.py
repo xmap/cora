@@ -1,4 +1,4 @@
-"""Per-version dispatch for SigningPort adapters.
+"""Per-version dispatch for ByteSigner adapters.
 
 `SigningRegistry` is the sibling to `CanonicalizationRegistry` for
 the signing side. Same shape: register by `adapter_version`, resolve
@@ -22,20 +22,20 @@ canonicalization side does.
 
 import contextlib
 
-from cora.infrastructure.ports.canonicalization import (
+from cora.infrastructure.ports.byte_signer import ByteSigner
+from cora.infrastructure.ports.canonicalizer import (
     UnsupportedCanonicalizationVersionError,
 )
-from cora.infrastructure.ports.signing import SigningPort
 
 
 class SigningRegistry:
-    """Per-version dispatch for SigningPort adapters."""
+    """Per-version dispatch for ByteSigner adapters."""
 
     def __init__(self) -> None:
-        self._routes: list[tuple[str, SigningPort]] = []
+        self._routes: list[tuple[str, ByteSigner]] = []
         self._closed = False
 
-    def register(self, version: str, adapter: SigningPort) -> None:
+    def register(self, version: str, adapter: ByteSigner) -> None:
         """Register `adapter` under `version`. Duplicate version raises ValueError."""
         for existing_version, _ in self._routes:
             if existing_version == version:
@@ -45,7 +45,7 @@ class SigningRegistry:
                 )
         self._routes.append((version, adapter))
 
-    def resolve(self, version: str) -> SigningPort:
+    def resolve(self, version: str) -> ByteSigner:
         """Return the adapter registered under `version`. Exact match only."""
         for registered_version, adapter in self._routes:
             if registered_version == version:

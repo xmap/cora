@@ -1,4 +1,4 @@
-"""`RoCrate12Adapter`: first `EditionSerializerPort` implementation.
+"""`RoCrate12Adapter`: first `EditionSerializer` implementation.
 
 Produces JSON-LD per the RO-Crate 1.2 + Workflow Run Crate profiles
 (per the Edition design memo L10). The serializer is deterministic:
@@ -105,7 +105,7 @@ def _publisher_entity(publisher_facility_code: FacilityCode) -> dict[str, object
 
 
 class RoCrate12Adapter:
-    """`EditionSerializerPort` implementation for `EditionKind.ROCRATE`.
+    """`EditionSerializer` implementation for `EditionKind.ROCRATE`.
 
     Pure in-process serializer; no IO. `serialize` returns a
     `SerializedEdition` carrying the sha256 hash + an inline

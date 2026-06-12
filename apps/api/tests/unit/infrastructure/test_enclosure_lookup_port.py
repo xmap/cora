@@ -1,13 +1,13 @@
 """Unit tests for the `EnclosureLookup` port value types.
 
-Pins the `EnclosureReference` dataclass contract that cross-BC
+Pins the `EnclosureLookupResult` dataclass contract that cross-BC
 consumers rely on plus the `AlwaysPermittedEnclosureLookup` test-
 default returning a synthetic Active+Permitted row from `lookup(...)`
 and `[]` from `find_for_assets(...)`. The stub exists so tests not
 exercising the Enclosure surface do not need to seed projection
 rows; the inline-stub shape mirrors `AlwaysEmptyCapabilityLookup` /
 `AlwaysQuietCautionLookup` / `AllSatisfiedSupplyLookup`. All
-`EnclosureReference` fields stay as bare `str` / bare `UUID` so
+`EnclosureLookupResult` fields stay as bare `str` / bare `UUID` so
 `cora.infrastructure.ports` stays free of Enclosure BC enum imports
 per the kernel-tier dependency discipline.
 """
@@ -20,7 +20,7 @@ import pytest
 from cora.infrastructure.ports import (
     AlwaysPermittedEnclosureLookup,
     EnclosureLookup,
-    EnclosureReference,
+    EnclosureLookupResult,
 )
 from cora.infrastructure.ports.enclosure_lookup import (
     AlwaysPermittedEnclosureLookup as AlwaysPermittedEnclosureLookupFromModule,
@@ -29,7 +29,7 @@ from cora.infrastructure.ports.enclosure_lookup import (
     EnclosureLookup as EnclosureLookupFromModule,
 )
 from cora.infrastructure.ports.enclosure_lookup import (
-    EnclosureReference as EnclosureReferenceFromModule,
+    EnclosureLookupResult as EnclosureReferenceFromModule,
 )
 
 
@@ -37,7 +37,7 @@ from cora.infrastructure.ports.enclosure_lookup import (
 def test_enclosure_reference_carries_all_eight_fields() -> None:
     eid = uuid4()
     aid = uuid4()
-    ref = EnclosureReference(
+    ref = EnclosureLookupResult(
         enclosure_id=eid,
         name="Station A Hutch",
         containing_asset_id=aid,
@@ -59,7 +59,7 @@ def test_enclosure_reference_carries_all_eight_fields() -> None:
 
 @pytest.mark.unit
 def test_enclosure_reference_allows_optional_observation_fields_to_be_none() -> None:
-    ref = EnclosureReference(
+    ref = EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="Station A Hutch",
         containing_asset_id=uuid4(),
@@ -76,7 +76,7 @@ def test_enclosure_reference_allows_optional_observation_fields_to_be_none() -> 
 
 @pytest.mark.unit
 def test_enclosure_reference_is_frozen() -> None:
-    ref = EnclosureReference(
+    ref = EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="Station A Hutch",
         containing_asset_id=uuid4(),
@@ -95,7 +95,7 @@ def test_enclosure_reference_status_and_lifecycle_are_str() -> None:
     """Port keeps `permit_status` and `lifecycle` as plain `str` so
     callers compare via literals (`== "Permitted"`, `== "Active"`)
     and the port stays free of Enclosure BC enum imports."""
-    ref = EnclosureReference(
+    ref = EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="Station A Hutch",
         containing_asset_id=uuid4(),
@@ -150,5 +150,5 @@ def test_always_permitted_enclosure_lookup_satisfies_enclosure_lookup_protocol()
 @pytest.mark.unit
 def test_enclosure_lookup_names_re_exported_from_ports_package() -> None:
     assert EnclosureLookup is EnclosureLookupFromModule
-    assert EnclosureReference is EnclosureReferenceFromModule
+    assert EnclosureLookupResult is EnclosureReferenceFromModule
     assert AlwaysPermittedEnclosureLookup is AlwaysPermittedEnclosureLookupFromModule

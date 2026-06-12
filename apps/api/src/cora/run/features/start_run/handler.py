@@ -61,7 +61,7 @@ from cora.equipment.aggregates.asset import Asset, AssetNotFoundError, load_asse
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import Deny, SupplyReference
+from cora.infrastructure.ports import Deny, SupplyLookupResult
 from cora.infrastructure.ports.event_store import StreamAppend
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.recipe.aggregates.method import MethodNotFoundError, load_method
@@ -220,8 +220,9 @@ def bind(deps: Kernel) -> Handler:
         # Plans that target only the stage. Expand once here so both
         # downstream lookups see the same Run scope. Already-loaded
         # Assets are in `assets`; observation `controller_id` is free.
-        # Only `controller_id` is expanded today; `parent_id` and
-        # `fixture_id` traversals are left as separate design calls.
+        # `controller_id` (one-hop) is expanded here; the `parent_id`
+        # ancestor chain is expanded just below via the chain walk;
+        # `fixture_id` traversal is left as a separate design call.
         #
         # Snapshot-vs-gate asymmetry: the controller Asset itself is
         # NOT loaded into `assets` (only Plan-bound stage Assets are),
@@ -235,6 +236,44 @@ def bind(deps: Kernel) -> Handler:
         scoped_asset_ids = plan.asset_ids | {
             asset.controller_id for asset in assets.values() if asset.controller_id is not None
         }
+
+        # cross-BC ancestor-chain widening (chain-walk Slice 5): widen
+        # the scope up the Asset `parent_id` chain so an Enclosure,
+        # Clearance, or Caution bound to an ANCESTOR of a Plan-bound
+        # Asset gates / warns this Run. Without this, the enclosure
+        # pre-flight gate's L-pre-1 "derive scope from the Asset chain"
+        # is decorative: an Enclosure bound to the 2-BM beamline Unit
+        # never matches a Plan that binds only a Device under it. The
+        # walk returns the inclusive ancestor closure (the inputs plus
+        # every ancestor), and EVERY ancestor enters the scope regardless
+        # of its own lifecycle. We deliberately do NOT filter ancestors
+        # on `lifecycle`: the containing Asset's lifecycle is the wrong
+        # source of truth for whether a physical interlock is live. Each
+        # downstream gate owns its own lifecycle semantics on the widened
+        # scope. For the safety-critical Enclosure gate that source of
+        # truth is the ENCLOSURE's own lifecycle: `find_for_assets`
+        # returns only Active Enclosures and the decider fails any
+        # non-(Permitted-and-Active) row, so a retired Enclosure is
+        # dropped at the right layer while an Active+NotPermitted
+        # Enclosure on a Decommissioned ancestor Asset still correctly
+        # REFUSES the Run (a Decommissioned containing Asset does not
+        # retire its interlock; decommission_asset has no Enclosure
+        # cascade). Filtering Decommissioned ancestors here instead would
+        # silently suppress that Enclosure and admit the Run into an
+        # un-permitted hutch. Plan-bound Assets keep their own
+        # `RunPlanAssetDecommissionedError` gate above. The walk reads
+        # only Equipment's Asset projection and terminates at the
+        # facility-rooted root, never the Federation Facility axis; a
+        # `parent_id` cycle or an over-deep chain raises
+        # `AncestorWalkDepthExceededError` rather than under-scoping the
+        # gate (failing loud beats admitting a Run an unreached ancestor's
+        # Enclosure should refuse). That error is left intentionally
+        # unmapped at the route layer: a parent_id cycle is server-side
+        # data corruption, not a client-fixable request, so a 500 (with
+        # the stack trace in the server log) is the right operator signal,
+        # not a 4xx the caller could retry.
+        ancestor_rows = await deps.asset_lookup.ancestors_of(scoped_asset_ids)
+        scoped_asset_ids = scoped_asset_ids | {row.id for row in ancestor_rows}
 
         # cross-BC clearance gate: query Safety's
         # clearance projection for every clearance whose bindings
@@ -282,7 +321,7 @@ def bind(deps: Kernel) -> Handler:
         # Method.needed_supplies, load every non-Decommissioned Supply
         # so the decider can gate on at-least-one-AVAILABLE per kind.
         # Empty needed_supplies short-circuits the port call.
-        needed_supplies_satisfaction: dict[str, tuple[SupplyReference, ...]] = {}
+        needed_supplies_satisfaction: dict[str, tuple[SupplyLookupResult, ...]] = {}
         if method.needed_supplies:
             satisfaction = await deps.supply_lookup.find_supplies_by_kind(
                 kinds=method.needed_supplies,

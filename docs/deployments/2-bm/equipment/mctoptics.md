@@ -166,6 +166,7 @@ A few model questions this deployment surfaces but does not pin down:
 
 - [2-BM Assets](../assets.md) for the flat inventory listing the underlying Asset rows
 - [2-BM Calibrations](../calibrations.md) for the four downstream Calibration revisions
+- [2-BM Enclosures](../enclosures.md) for the hutch permit that gates Runs and Procedures binding these Assets: an Enclosure on the `2-BM` Unit covers every Device here through the pre-flight chain walk
 - [Equipment module](../../../architecture/modules/equipment/index.md) for the aggregate shapes (Family, Model, Asset, Mount, Frame, Assembly, Fixture)
 
 The deployment scenario test at `apps/api/tests/integration/scenarios/test_2bm_mctoptics_setup.py` currently exercises an earlier shape of this deployment (flat parent-child composition); it will be rewritten to match the Assembly + Fixture model described here.

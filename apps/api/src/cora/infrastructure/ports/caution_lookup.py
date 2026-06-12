@@ -70,7 +70,7 @@ type MinSeverity = Literal["Notice", "Caution", "Warning"]
 
 
 @dataclass(frozen=True)
-class CautionReference:
+class CautionLookupResult:
     """Summary row from `proj_caution_summary` for the Run.start non-blocking banner.
 
     Carries the minimal columns the start_run handler embeds in the
@@ -106,7 +106,7 @@ class CautionLookup(Protocol):
         asset_ids: frozenset[UUID],
         procedure_ids: frozenset[UUID],
         min_severity: MinSeverity = "Caution",
-    ) -> list[CautionReference]:
+    ) -> list[CautionLookupResult]:
         """Return every Active caution whose target references the Run's scope.
 
         "References" means:
@@ -154,7 +154,7 @@ class AlwaysQuietCautionLookup:
         asset_ids: frozenset[UUID],
         procedure_ids: frozenset[UUID],
         min_severity: MinSeverity = "Caution",
-    ) -> list[CautionReference]:
+    ) -> list[CautionLookupResult]:
         _ = asset_ids  # unused (stub never surfaces any cautions)
         _ = procedure_ids  # unused
         _ = min_severity  # unused

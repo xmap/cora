@@ -20,7 +20,7 @@ config.
 
 from typing import Any
 
-from cora.infrastructure.ports.canonicalization import (
+from cora.infrastructure.ports.canonicalizer import (
     CanonicalizationFailedError,
     CanonicalizedBytes,
 )

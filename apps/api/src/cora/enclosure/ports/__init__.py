@@ -9,10 +9,10 @@ between substrate observability and the CORA-owned permit FSM.
 
 BC-tier port location per [[project_adapter_naming_design]]: stays
 here until rule-of-three promotes to `cora.infrastructure.ports`.
-Cross-BC `EnclosureLookup` (read-side, consumed by other BCs) is
-deferred to a later sub-slice and will land at
-`cora.infrastructure.ports.enclosure_lookup` per the cross-BC lookup
-home convention.
+Cross-BC `EnclosureLookup` (read-side, consumed by other BCs) has
+landed at `cora.infrastructure.ports.enclosure_lookup` per the cross-BC
+lookup home convention; consumers today are `run/start_run` and
+`operation/start_procedure`.
 """
 
 from cora.enclosure.ports.enclosure_observer import (

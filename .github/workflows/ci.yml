@@ -10,40 +10,31 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# The suite is split across parallel jobs so PR wall-clock is the slowest
+# shard, not the sum of all tiers. Every test still runs exactly once, with
+# coverage; the `coverage` job fans the per-shard data back in and applies
+# the same diff-cover gate as a single run would. Tests are split into three
+# lanes by per-test COST, and EACH lane is sharded across a matrix:
+#   - fast: unit + architecture (in-memory, microsecond AST/fitness checks)
+#   - contract: contract (in-memory but builds a FastAPI app per test, the
+#     no-DB long pole; sharded widest)
+#   - db: integration + e2e (each shard its own Postgres container,
+#     sidestepping the single-box oversubscription that made -n8 < -n4)
+# Splitting by cost lets count-based sharding balance each lane without a
+# committed .test_durations file; mixing fast and slow tests and count-
+# splitting does not (it piles every slow contract test into one shard).
 jobs:
-  api:
-    name: API (lint + typecheck + test)
+  lint:
+    name: Lint, typecheck, arch
     runs-on: ubuntu-latest
-    # py-cov-action needs `contents: write` to push the coverage badge
-    # to the dedicated `python-coverage-comment-action-data` branch and
-    # `pull-requests: write` to post the PR coverage comment.
-    permissions:
-      contents: write
-      pull-requests: write
     defaults:
       run:
         working-directory: apps/api
-    env:
-      # GitHub Actions cleans up containers when the job ends, so the
-      # testcontainers Ryuk reaper sidecar adds startup overhead and
-      # occasional flakes for no benefit. Disabled per upstream guidance
-      # for ephemeral CI environments.
-      TESTCONTAINERS_RYUK_DISABLED: "true"
 
     steps:
       - uses: actions/checkout@v6
-        with:
-          # diff-cover needs both branches to compute patch coverage on PRs.
-          fetch-depth: 0
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-          cache-dependency-glob: apps/api/uv.lock
-
-      - name: Sync dependencies (locked)
-        run: uv sync --locked --all-extras
+      - uses: ./.github/actions/setup
 
       - name: Lint (ruff check)
         run: uv run ruff check src tests
@@ -57,27 +48,217 @@ jobs:
       - name: Architecture (tach dependency contract)
         run: uv run tach check
 
-      - name: Test (pytest with coverage)
-        # `--cov` reads `[tool.coverage.run] source` from pyproject.toml.
-        # XML report feeds diff-cover; term-missing surfaces uncovered
-        # lines in the CI log. Total fail_under=80 (in pyproject) is the
-        # soft floor; diff-cover (next step) is the hard gate on PRs.
-        #
-        # `-n 4 --dist=worksteal`: parallel via pytest-xdist. ubuntu-
-        # latest exposes 4 logical CPUs, so `-n 4` spawns one worker
-        # per core, each with its own Postgres container (per-worker
-        # session-scoped fixture in tests/conftest.py). Pinned to 4
-        # (rather than `auto`) so a future larger-class runner doesn't
-        # oversubscribe Docker — local benchmarking on the 8-core dev
-        # Mac showed `-n 8` was *slower* than `-n 4` (the suite is
-        # I/O-bound on per-worker Postgres) and surfaced a flaky
-        # asyncio concurrency test.
-        #
-        # `coverage.run.parallel = true` (in pyproject) makes each
-        # worker write a suffixed `.coverage.<host>.<pid>.<rand>` file
-        # and pytest-cov combines them at session end into the single
-        # coverage.xml that diff-cover reads downstream.
-        run: uv run pytest -n 4 --dist=worksteal --cov --cov-report=xml --cov-report=term-missing
+      - name: Guard - every test tier is mapped to a CI lane
+        # The lanes below enumerate tier directories explicitly (test-fast:
+        # unit/architecture; test-contract: contract; test-db:
+        # integration/e2e). A new top-level tier dir, or a root-level
+        # test_*.py, that no lane runs would silently never execute in CI
+        # (pytest is happy running a subset). Fail loudly so the lane lists
+        # stay exhaustive over tests/.
+        run: |
+          allowed=$(printf '%s\n' unit architecture contract integration e2e fixtures __pycache__ | sort -u)
+          actual=$(find tests -mindepth 1 -maxdepth 1 -type d | sed 's#.*/##' | sort -u)
+          unmapped=$(comm -13 <(echo "$allowed") <(echo "$actual") || true)
+          stray=$(find tests -maxdepth 1 -name 'test_*.py')
+          if [ -n "$unmapped" ] || [ -n "$stray" ]; then
+            echo "::error::Test location(s) not mapped to a CI lane -> dirs:[$unmapped] files:[$stray]. Add them to a lane (test-fast/test-contract/test-db) in this workflow (or to the allowlist if intentionally not run)." >&2
+            exit 1
+          fi
+          echo "OK: all of tests/ is mapped to a CI lane."
+
+  # The no-DB tiers are split into two lanes by per-test COST, not lumped
+  # together: unit + architecture are uniformly cheap (microsecond AST /
+  # fitness checks, ~97% of cases but a small slice of wall-clock), while
+  # contract tests each build a FastAPI app (~seconds each, the real long
+  # pole). Sharding each cost-homogeneous lane by count balances cleanly
+  # with no `.test_durations` file; mixing them and count-splitting does
+  # NOT (it piles every slow contract test into one shard).
+  test-fast:
+    name: Tests (fast shard ${{ matrix.group }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2]
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - name: Test (unit + architecture, in-memory, sharded)
+        # In-memory adapters via APP_ENV=test (tests/conftest.py); no
+        # container. Coverage stays ON (the diff-cover gate needs it);
+        # `--cov-report=` defers reporting to the `coverage` job;
+        # `--cov-fail-under=0` defers the 80% floor to the combined data.
+        # Path-based selection (not `-m`): some helper/__init__ files carry
+        # no marker.
+        run: uv run pytest tests/unit tests/architecture --splits ${{ strategy.job-total }} --group ${{ matrix.group }} -n 4 --dist=worksteal --cov --cov-report= --cov-fail-under=0
+
+      - name: Stage coverage data for fan-in
+        run: mv .coverage .coverage.fast.${{ matrix.group }}
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: covdata-fast-${{ matrix.group }}
+          path: apps/api/.coverage.fast.${{ matrix.group }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  test-contract:
+    name: Tests (contract shard ${{ matrix.group }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3, 4, 5, 6]
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - name: Test (contract, in-memory, sharded)
+        # Contract tests build an app per test, so this is the no-DB long
+        # pole; shard it widest. Same in-memory / coverage / fail-under
+        # treatment as the fast lane.
+        run: uv run pytest tests/contract --splits ${{ strategy.job-total }} --group ${{ matrix.group }} -n 4 --dist=worksteal --cov --cov-report= --cov-fail-under=0
+
+      - name: Stage coverage data for fan-in
+        run: mv .coverage .coverage.contract.${{ matrix.group }}
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: covdata-contract-${{ matrix.group }}
+          path: apps/api/.coverage.contract.${{ matrix.group }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  test-db:
+    name: Tests (DB shard ${{ matrix.group }})
+    runs-on: ubuntu-latest
+    strategy:
+      # One shard failing must not cancel its siblings: we need every
+      # shard's result (and its coverage data) for the fan-in.
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3]
+    defaults:
+      run:
+        working-directory: apps/api
+    env:
+      # GitHub Actions cleans up containers when the job ends, so the
+      # testcontainers Ryuk reaper sidecar adds startup overhead and
+      # occasional flakes for no benefit. Disabled per upstream guidance
+      # for ephemeral CI environments.
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - name: Test (integration + e2e, sharded)
+        # The Postgres-bound tiers are the wall-clock long pole (per-worker
+        # container start + per-test template-DB clone). pytest-split
+        # partitions them into N disjoint groups, one per matrix runner;
+        # N is `strategy.job-total` (the matrix size) so re-sharding is a
+        # one-line edit to `matrix.group` with no second constant to sync.
+        # Each runner is its own 4-vCPU machine with its own containers, so
+        # this is true hardware parallelism rather than oversubscribing one
+        # box (local benchmarking showed -n 8 was slower than -n 4 because
+        # the suite is I/O-bound on per-worker Postgres). `-n 4` keeps one
+        # container per core within each runner. With no `.test_durations`
+        # file pytest-split balances by test count (a warning is printed),
+        # which is even here because every DB test pays a uniform clone.
+        # `--cov-fail-under=0`: the 80% total floor is meaningless on a
+        # single shard and is enforced on the combined data in the
+        # `coverage` job instead.
+        run: uv run pytest tests/integration tests/e2e --splits ${{ strategy.job-total }} --group ${{ matrix.group }} -n 4 --dist=worksteal --cov --cov-report= --cov-fail-under=0
+
+      - name: Stage coverage data for fan-in
+        run: mv .coverage .coverage.db.${{ matrix.group }}
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: covdata-db-${{ matrix.group }}
+          path: apps/api/.coverage.db.${{ matrix.group }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  coverage:
+    name: Coverage + diff gate
+    runs-on: ubuntu-latest
+    # Default `needs` semantics are load-bearing: this job runs ONLY if all
+    # test jobs succeeded. A cancelled or failed shard (likely under
+    # cancel-in-progress) leaves this job skipped, so it never reports a
+    # passing coverage check on a partial run. Do NOT add `if: always()`.
+    needs: [test-fast, test-contract, test-db]
+    # py-cov-action needs `contents: write` to push the coverage badge to
+    # the dedicated `python-coverage-comment-action-data` branch and
+    # `pull-requests: write` to post the PR coverage comment.
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # diff-cover needs history to compute patch coverage on PRs.
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+
+      - name: Download all coverage data
+        uses: actions/download-artifact@v7
+        with:
+          path: apps/api/_covdata
+          pattern: covdata-*
+          merge-multiple: true
+
+      - name: Combine coverage (fail loudly if a lane is missing)
+        # Require at least one shard file from each of the three lanes.
+        # `needs` (all test jobs succeeded) and each lane's `if-no-files-
+        # found: error` upload already guarantee every shard's data is
+        # present, so this is a non-coupled tripwire: it does not hardcode
+        # the shard count, which lives only in each `matrix.group`. A missing
+        # lane would silently under-report coverage and let diff-cover pass
+        # on lines a deselected lane covered. `find` is robust to nesting.
+        run: |
+          fast=$(find _covdata -name '.coverage.fast.*' -type f | wc -l | tr -d ' ')
+          contract=$(find _covdata -name '.coverage.contract.*' -type f | wc -l | tr -d ' ')
+          db=$(find _covdata -name '.coverage.db.*' -type f | wc -l | tr -d ' ')
+          echo "Coverage data files: fast=$fast contract=$contract db=$db"
+          find _covdata -name '.coverage.*' -type f
+          if [ "$fast" -lt 1 ] || [ "$contract" -lt 1 ] || [ "$db" -lt 1 ]; then
+            echo "::error::Expected >=1 shard file from each lane (fast/contract/db); found fast=$fast contract=$contract db=$db. Aborting to avoid under-reporting coverage." >&2
+            exit 1
+          fi
+          find _covdata -name '.coverage.*' -type f -exec mv {} . \;
+          uv run coverage combine
+          # XML first, so the diff-cover gate input and the uploaded
+          # coverage.xml artifact exist even if the total floor below trips.
+          uv run coverage xml
+          # `coverage report` prints the term-missing table and enforces the
+          # pyproject fail_under=80 on the COMBINED total (the same floor the
+          # old single-job run applied via pytest-cov); it exits non-zero
+          # below 80, failing this job before the patch gate, same as today.
+          uv run coverage report
 
       - name: Diff coverage (PRs only, hard gate at 90% on changed lines)
         # Modern best practice: diff coverage hard, total coverage soft.
@@ -103,10 +284,10 @@ jobs:
       # PR coverage comment on PRs. README references the badge SVG via
       # the raw GitHub URL on that data branch.
       - name: Publish coverage badge + PR comment
-        # `if: always()` so the badge updates even when an unrelated
-        # earlier step fails, preventing badge staleness during incident
-        # cleanup. The action itself short-circuits cleanly if no
-        # coverage XML exists.
+        # `if: always()` so the badge updates even when an unrelated earlier
+        # step fails, preventing badge staleness during incident cleanup.
+        # The action short-circuits cleanly if no coverage XML exists. This
+        # is reporting only; the hard gate is the diff-cover step above.
         if: always()
         uses: py-cov-action/python-coverage-comment-action@v3
         with:

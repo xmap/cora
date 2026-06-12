@@ -12,8 +12,8 @@ import pytest
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
-from cora.operation.adapters.in_memory_recipe_expansion_port import (
-    InMemoryRecipeExpansionPort,
+from cora.operation.adapters.in_memory_recipe_expander import (
+    InMemoryRecipeExpander,
 )
 from cora.operation.aggregates.procedure import (
     RecipeBindingsStaleAgainstCurrentCapabilityError,
@@ -143,9 +143,7 @@ async def _build_seeded_deps(*, deny: bool = False) -> tuple[InMemoryEventStore,
 @pytest.mark.unit
 async def test_handler_returns_generated_procedure_id() -> None:
     store, deps = await _build_seeded_deps()
-    handler = register_procedure_from_recipe.bind(
-        deps, expansion_port=InMemoryRecipeExpansionPort()
-    )
+    handler = register_procedure_from_recipe.bind(deps, expansion_port=InMemoryRecipeExpander())
 
     result = await handler(
         RegisterProcedureFromRecipe(
@@ -172,9 +170,7 @@ async def test_handler_returns_generated_procedure_id() -> None:
 @pytest.mark.unit
 async def test_handler_raises_unauthorized_on_deny() -> None:
     _, deps = await _build_seeded_deps(deny=True)
-    handler = register_procedure_from_recipe.bind(
-        deps, expansion_port=InMemoryRecipeExpansionPort()
-    )
+    handler = register_procedure_from_recipe.bind(deps, expansion_port=InMemoryRecipeExpander())
     with pytest.raises(UnauthorizedError):
         await handler(
             RegisterProcedureFromRecipe(
@@ -195,9 +191,7 @@ async def test_handler_raises_recipe_not_found_when_stream_missing() -> None:
     store = InMemoryEventStore()
     await seed_capability(store, _CAPABILITY_ID)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID_A], now=_NOW, event_store=store)
-    handler = register_procedure_from_recipe.bind(
-        deps, expansion_port=InMemoryRecipeExpansionPort()
-    )
+    handler = register_procedure_from_recipe.bind(deps, expansion_port=InMemoryRecipeExpander())
     with pytest.raises(RecipeNotFoundError):
         await handler(
             RegisterProcedureFromRecipe(
@@ -220,9 +214,7 @@ async def test_handler_raises_capability_not_found_when_recipe_points_at_missing
     await _seed_recipe(store, _RECIPE_ID, _CAPABILITY_ID)
     # Note: NO seed_capability call.
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID_A], now=_NOW, event_store=store)
-    handler = register_procedure_from_recipe.bind(
-        deps, expansion_port=InMemoryRecipeExpansionPort()
-    )
+    handler = register_procedure_from_recipe.bind(deps, expansion_port=InMemoryRecipeExpander())
     with pytest.raises(CapabilityNotFoundError):
         await handler(
             RegisterProcedureFromRecipe(
@@ -257,9 +249,7 @@ async def test_handler_rejects_when_capability_schema_drifted_since_recipe_write
     # Recipe binds an `angle` BindingRef that no longer resolves.
     await _seed_recipe(store, _RECIPE_ID, _CAPABILITY_ID, with_binding=True)
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID_A], now=_NOW, event_store=store)
-    handler = register_procedure_from_recipe.bind(
-        deps, expansion_port=InMemoryRecipeExpansionPort()
-    )
+    handler = register_procedure_from_recipe.bind(deps, expansion_port=InMemoryRecipeExpander())
     with pytest.raises(RecipeBindingsStaleAgainstCurrentCapabilityError) as exc:
         await handler(
             RegisterProcedureFromRecipe(

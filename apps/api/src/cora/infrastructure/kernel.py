@@ -17,7 +17,11 @@ authorize factory. That lazy import was tagged `deprecated = true`
 in tach.toml because tach couldn't tell that the import was
 control-flow-guarded. Splitting the data class out of the
 construction module breaks the cycle at the namespace level:
-`cora.infrastructure.kernel` only knows about ports, not adapters.
+`cora.infrastructure.kernel` knows about ports, not adapters, with two
+deliberate carve-outs: the `canonicalization_registry` and
+`signing_registry` fields are concrete version-dispatch containers
+(`CanonicalizationRegistry` / `SigningRegistry`) because version
+selection needs the registry container, not a single port instance.
 
 ## BC-specific stores stay BC-internal
 

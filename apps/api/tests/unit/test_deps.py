@@ -189,6 +189,45 @@ async def test_make_inmemory_kernel_accepts_fake_llm_override(
 
 
 @pytest.mark.unit
+def test_make_inmemory_kernel_threads_signer_override() -> None:
+    """`signer` is threaded onto the kernel so the Agent subscribers'
+    signing path is live. Regression here would silently revert
+    kernel.signer to None and dead-no-op every signed event."""
+    from cora.infrastructure.adapters.in_memory_signer import InMemorySigner
+    from cora.infrastructure.deps import make_inmemory_kernel
+    from cora.infrastructure.ports import SystemClock, UUIDv7Generator
+
+    signer = InMemorySigner()
+    settings = Settings()  # type: ignore[call-arg]
+    kernel = make_inmemory_kernel(
+        settings=settings,
+        clock=SystemClock(),
+        id_generator=UUIDv7Generator(),
+        authz=AllowAllAuthorize(),
+        signer=signer,
+    )
+    assert kernel.signer is signer
+
+
+@pytest.mark.unit
+def test_make_inmemory_kernel_defaults_signer_to_none() -> None:
+    """Without an override the kernel has no signer; unsigned rows are the
+    legitimate default until an adapter is wired (parity with production
+    main.py wiring InMemorySigner explicitly)."""
+    from cora.infrastructure.deps import make_inmemory_kernel
+    from cora.infrastructure.ports import SystemClock, UUIDv7Generator
+
+    settings = Settings()  # type: ignore[call-arg]
+    kernel = make_inmemory_kernel(
+        settings=settings,
+        clock=SystemClock(),
+        id_generator=UUIDv7Generator(),
+        authz=AllowAllAuthorize(),
+    )
+    assert kernel.signer is None
+
+
+@pytest.mark.unit
 def test_make_inmemory_kernel_defaults_enclosure_lookup_to_always_permitted_stub() -> None:
     """`enclosure_lookup` defaults to `AlwaysPermittedEnclosureLookup` so
     existing Run / Procedure tests don't have to seed enclosures.

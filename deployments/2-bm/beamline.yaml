@@ -1,0 +1,409 @@
+# 2-BM beamline descriptor
+#
+# The single human-readable source describing the 2-BM beamline. The docs site
+# renders a page from this file; later the integration tests load it, and later
+# still a CORA seeder onboards the real beamline from it. This file is the
+# definition; docs/deployments/2-bm/ explains it.
+#
+# How to read it: a walk along the beam, source to detector. Each entry pairs the
+# human name with the EPICS handle a scientist already knows, plus its key specs.
+#
+# Two rules the shape encodes:
+#   - Location is not identity. Where a device sits on this walk is separate from
+#     which CORA Asset it is. Swap a camera or recoat a mirror and its place here
+#     is unchanged.
+#   - Grouping is presentation. The subsystem headings are not CORA objects; we
+#     promote a heading to a real CORA group (a Component Asset or an Enclosure)
+#     only when a feature needs to act on the whole group.
+#
+# Fields:
+#   family    the CORA Family (device class)
+#   pv        the EPICS handle (a string, or a map of named axes)
+#   controller back-reference to the drive box in `controls` that moves this device
+#   new       true when the device is not modeled in CORA yet
+#   confirm   true or a note when a value here is from the docs / inferred, not
+#             yet checked with 2-BM staff
+
+beamline:
+  name: "2-BM"
+  facility: aps                 # APS, a Site-level Facility (facility_code: aps)
+  sector: "Sector 2"            # organizational label, not a registered asset today
+  tier: Unit
+  parent: null
+  drawing: "(ICMS, A342-RT1000, 02)"
+  source: bending-magnet
+  source_confirm: "post-APS-U multi-dipole fan, ~5.4 mrad"
+  z_span_mm: [24020, 56764]     # front-end exit mask to photon stop
+  z_span_confirm: true
+
+enclosures:
+  # Today the hutches exist only as a Frame (2BM_hutch_frame). Registering them as
+  # Enclosures is a future "build a box" step, not done yet.
+  - name: 2-BM-A
+    role: optics-hutch
+  - name: 2-BM-B
+    role: experiment-hutch
+
+# ===========================================================================
+# The beam path: source -> detector
+# ===========================================================================
+
+front-end:
+  enclosure: 2-BM-A
+  intro: Where the beam enters and first gets gated.
+  devices:
+    - name: source
+      family: Beam              # Supply(kind=beam); accelerator-side, provenance only
+      new: true
+      note: bending magnet, recorded as a Supply, not an Asset
+    - name: FE_exit_mask
+      family: Mask
+      passive: true
+      water_cooled: true
+      z_mm: 24020
+      new: true
+      confirm: true
+    - name: Be_windows
+      family: Window
+      passive: true
+      replaceable: true
+      new: true
+      confirm: "count and thickness"
+    - name: A_shutter
+      family: Shutter
+      pv: "S02BM-PSS:FES"
+      new: true
+      confirm: true
+      note: front-end safety shutter, gated by the personnel safety system
+    - name: vacuum_isolation
+      family: Vacuum             # Supply(kind=vacuum) observation, not a separate asset
+      pv: { BIV: "2bm:BIV", gate_valves: [GV1, GV2, GV3] }
+      new: true
+      confirm: true
+      note: valve open or closed state read as Supply status
+
+conditioning-optics:
+  enclosure: 2-BM-A
+  intro: Shape the beam and pick its energy.
+  devices:
+    - name: L3_slits
+      family: Slit
+      pv: { x_in: "2bma:m14", x_out: "2bma:m13", y_top: "2bma:m15", y_bot: "2bma:m16" }
+      white_beam: true
+      water_cooled: true
+      new: true
+      confirm: true
+    - name: L3_filter_changer
+      family: Filter
+      pv: { upstream_paddle: "2bma:m17", downstream_paddle: "2bma:m18" }
+      foils: ["1 mm C", "150 um Al", "600 um Al", "1 mm Al"]
+      new: true
+      confirm: true
+      note: only the downstream paddle is currently operational
+    - name: Y3-30_mirror
+      family: Mirror
+      pv: { downstream_y: "2bma:m2", upstream_y: "2bma:m5", stripe_select: "2bma:m3" }
+      controller: OMS_VME58_2bma_drive
+      material: Si
+      length: 0.993 m
+      water_cooled: true
+      replaceable: true          # APS-U spare exists
+      stripes: ["5 nm Pt", "W/Si x50 (b)", "W/Si x50 (c)", "W/Si x50 (d)"]  # recoatable
+      new: true
+      confirm: true
+    - name: DMM_monochromator
+      family: Monochromator
+      pv: { crystal2_z: "2bma:m8" }   # plus m25-m32 for alignment
+      material: Si multilayer
+      crystal_z_mm: [29335, 29934]
+      new: true
+      confirm: true
+      note: insertable, pink-beam operation bypasses it
+
+beam-defining-and-safety:
+  enclosure: 2-BM-A / 2-BM-B boundary
+  intro: Admit the beam to the experiment hutch and reshape it.
+  note: >
+    The P6-50 stack sits physically AFTER the optics above (z 33343), but it is
+    grouped here by function (safety), not by strict z-order. That exception is
+    deliberate and called out rather than silently reordered.
+  devices:
+    - name: P6-50_safety_stack
+      family: SafetyStack
+      z_mm: 33343
+      new: true
+      confirm: true
+      constituents:
+        - name: Shutter_2BM        # the B-station safety shutter (SBS); CORA-modeled
+          family: Shutter
+          pv: "S02BM-PSS:SBS"
+          material: "W 21 mm"
+          aperture_mm: [60.0, 44.5]
+          replaceable: true
+          confirm: true
+        - name: white_beam_stop
+          family: BeamStop
+          passive: true
+          water_cooled: true
+          new: true
+        - name: W_collimator
+          family: Collimator
+          passive: true
+          new: true
+        - name: SS_baffle
+          family: Baffle
+          passive: true
+          new: true
+    - name: B_station_slits
+      family: Slit
+      enclosure: 2-BM-B
+      pv: { y_top: "2bma:m9", y_bot: "2bma:m10", x: ["2bma:m11", "2bma:m12"] }
+      z_mm: 50500
+      new: true
+      confirm: true
+      note: vertical pair tracks the per-energy beam position, reuses the A-side class
+    - name: beam_position_flag
+      family: Diagnostic
+      enclosure: 2-BM-B
+      new: true
+      confirm: true
+      note: mono-mode only, held out of beam in pink mode
+
+sample-environment:
+  enclosure: 2-BM-B
+  intro: Hold and rotate the sample. Listed bottom to top (the kinematic stack).
+  devices:
+    - name: sample_optical_table
+      family: OpticalTable
+      pv: { y: "2bmb:m24", z: "2bmb:m20", upstream_x: "2bmb:m21", downstream_x: "2bmb:m22" }
+      new: true
+      confirm: true
+    - name: Hexapod_2BM
+      family: Hexapod
+      model: aerotech_hexgen_hex300_230hl   # Aerotech HEX300-230HL
+      pv: "2bmHXP:"
+      controller: Aerotech_Hexapod_drive
+      replaceable: true
+      travel: "x 55 mm, y 60 mm, z 25 mm, a 15 deg, b 15 deg, c 30 deg"
+      confirm: true
+      drawing: { system: EDMS, number: Hex300-Data-Sheet, revision: D20250203 }
+    - name: Sample_pitch_lam
+      family: LinearStage         # Kohzu SA16A goniometer, laminography pitch
+      model: kohzu_sa16a
+      pv: "2bmb:m49"
+      range: 0..20 deg
+      new: true
+      confirm: true
+    - name: fixed_wedge_-10deg
+      family: Wedge
+      passive: true
+      replaceable: true
+      new: true
+    - name: Aerotech_ABRS_rotary
+      family: RotaryStage         # the rotation axis (theta)
+      model: aerotech_abs250mp_m_as   # Aerotech ABS250MP-M-AS, air-bearing
+      pv: "2bmb:m102"
+      controller: Aerotech_Ensemble_drive
+      trigger_source: PSO         # position-synchronized output drives the camera
+      replaceable: true
+      range: -360..360 deg
+      max_speed: 720 deg/s
+      encoder_resolution: 0.0001 deg
+      interchangeable_with: ["ABRS-150MP (fast tomo)", "ABS2000 (spindle)"]
+      confirm: true
+    - name: Sample_top_X
+      family: LinearStage
+      model: kohzu_cyat_070
+      pv: "2bmb:m18"
+      controller: OMS_VME58_2bmb_drive
+      range: -10..10 mm
+      max_speed: 1 mm/s
+      encoder_resolution: 0.0005 mm
+    - name: Sample_top_Z
+      family: LinearStage
+      model: kohzu_cyat_070
+      pv: "2bmb:m17"
+      controller: OMS_VME58_2bmb_drive
+      range: -10..10 mm
+      max_speed: 1 mm/s
+      encoder_resolution: 0.0005 mm
+    - name: Sample_top_Roll
+      family: PseudoAxis          # virtual DoF over the hexapod kinematics
+    - name: Sample_top_Pitch
+      family: PseudoAxis
+
+detector:
+  enclosure: 2-BM-B
+  intro: Convert the transmitted beam to light and record it (the MCTOptics microscope).
+  cora: Assembly(MCTOptics) + Fixture(mctoptics_at_2bm), presents as an Imager
+  placement: Mount + Frame (2BM_hutch_frame)
+  note: >
+    A second camera (FLIR Oryx 31 MP, pv 2bmSP2:) appears in the docs, but the CORA
+    model is single-camera at 2-BM (camera_select fixed at 0). Add it only if 2-BM
+    staff confirm a live second bay.
+  devices:
+    - name: MCTOptics_body
+      family: Microscope          # the microscope housing
+      model: optique_peter_micrx080
+      pv: "2bm:MCTOptics:"
+      new: true
+    - name: MCTOptics_lens_turret
+      family: RotaryStage         # confirm: RotaryStage vs LinearStage (translating slide)
+      model: optique_peter_lens_turret_motor
+      pv: "2bmb:m1"
+      range: 0..360 deg
+      confirm: true
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
+    - name: MCTOptics_objective_0
+      family: Objective
+      magnification: 10.0
+      numerical_aperture: 0.28
+      working_distance: 33.5 mm
+      replaceable: true
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
+      calibrations:
+        - name: cal_objective_0_mag
+          quantity: magnification
+          operating_point: { objective_designation: "10x_Mitutoyo", energy: 25 }
+          value: 9.83
+          source: AssertedSource
+          status: Provisional
+    - name: MCTOptics_objective_1
+      family: Objective
+      magnification: 5.0
+      numerical_aperture: 0.14
+      working_distance: 34 mm
+      replaceable: true
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
+      calibrations:
+        - name: cal_objective_1_mag
+          quantity: magnification
+          operating_point: { objective_designation: "5x_Mitutoyo", energy: 25 }
+          value: 4.93
+          source: AssertedSource
+          status: Provisional
+    - name: MCTOptics_objective_2
+      family: Objective
+      magnification: 1.1
+      numerical_aperture: 0.03
+      working_distance: 50 mm
+      replaceable: true
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
+      calibrations:
+        - name: cal_objective_2_mag
+          quantity: magnification
+          operating_point: { objective_designation: "1.1x_Mitutoyo", energy: 25 }
+          value: 1.10
+          source: AssertedSource
+          status: Provisional
+    - name: lens_select
+      family: PseudoAxis          # virtual, decomposes a lens index to turret rotation
+      pv: "2bm:MCTOptics:LensSelect"
+    - name: Optique_Peter_focus_Z
+      family: LinearStage         # the single shared focus stage; per-lens offsets in software
+      model: aerotech_pro225sl_1000
+      pv: "2bmbAERO:m1"
+      controller: Aerotech_2bmbAERO_drive
+      travel: 1000 mm
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
+    - name: Scintillator_LuAG
+      family: Scintillator
+      material: LuAG
+      thickness: 100 um
+      decay_time: 0.07 us
+      replaceable: true           # Consumable, swapped between sizes
+      pv: "2bm:MCTOptics:ScintillatorType"
+      confirm: true
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
+      calibrations:
+        - name: cal_scintillator_eff_thickness
+          quantity: effective_thickness
+          operating_point: { scintillator_material: "LuAG", energy: 25 }
+          value: "100 um"
+          source: AssertedSource
+          status: Provisional
+    - name: Oryx_5MP_camera
+      family: Camera
+      model: flir_oryx_orx_10g_51s5m_c
+      pv: "2bmSP1:"
+      sensor: 2448 x 2048 pixel
+      pixel_size: 3.45 um
+      bit_depth: 12 bit
+      replaceable: true
+      confirm: true
+    - name: vitreous_carbon_window
+      family: Window
+      passive: true
+      replaceable: true
+      new: true
+  decommissioned:                 # provenance only, not active assets
+    - PCO Dimax HS
+    - Adimec Quartz Q-12A180
+
+# ===========================================================================
+# Cross-cutting: serves many groups at once, so it sits outside the beam walk
+# ===========================================================================
+
+controls:
+  intro: >
+    The drive-electronics boxes and trigger hardware. Driven stages above point
+    back here via their controller field.
+  motion_controllers:
+    - name: Aerotech_Ensemble_drive
+      family: MotionController
+      model: aerotech_ensemble_hle10_40_a_mxh
+      protocol: Aerotech_Native
+      axis_count: 1
+    - name: Aerotech_Hexapod_drive
+      family: MotionController
+      protocol: Aerotech_Native
+      axis_count: 6
+    - name: Aerotech_2bmbAERO_drive
+      family: MotionController
+      protocol: Aerotech_Native
+      axis_count: 1
+    - name: OMS_VME58_2bmb_drive
+      family: MotionController
+      model: oms_vme58
+      protocol: OMS_VME
+      axis_count: 91
+      note: b-station crate (ioc2bmb), drives 2bmb:m1-m91 including the sample stages
+    - name: OMS_VME58_2bma_drive
+      family: MotionController
+      model: oms_vme58
+      protocol: OMS_VME
+      axis_count: 91
+      note: a-station crate (ioc2bma), drives the front-end and optics band
+  triggering:
+    - name: softGlueZynq_FPGA
+      family: TriggerFPGA
+      pv: "2bmbMZ1:SG:"
+      path: "PSO -> MUX2-1 -> GateDly1 -> camera Line2"
+      replaceable: true
+      new: true
+      confirm: true
+  software_iocs_not_modeled:
+    # Software processes, not hardware. They belong to the Plan/Method wiring layer
+    # and are referenced only by PV prefix, never registered as Assets.
+    [ioc2bma, ioc2bmb, energy, MCTOptics, table_full, 2filter]
+
+resources:
+  intro: >
+    Continuously-available resources (the Supply BC) and the field-swappable parts
+    inventory. Both described once here and referenced from the walk above.
+  supplies:
+    # confirm: canonical kind strings. supplies.md today uses cryogen / gas /
+    # pneumatic; reconcile before this hard-codes a vocabulary.
+    - kind: beam
+    - kind: cooling_water         # observed via Flow1-Flow8 BLEPS channels
+    - kind: vacuum                # observed via IP1-7, IG1-8, VS1-7, GV1-3
+    - kind: power
+    - kind: compute
+  replaceable_parts:
+    # One selector, since CORA has no single asset-revision concept:
+    #   recoatable surface  -> Consumable affordance, no separate asset
+    #   swappable w/ identity -> Exchange (reversible) or Retire (terminal) via Fixture
+    #   passive shim/window  -> Fixture-attached part or Consumable; shelf spare = asset, no fixture
+    recoatable: ["mirror coating stripes", "DMM multilayers"]
+    swappable_with_identity: ["objectives", "camera", "scintillator", "rotary stage"]
+    passive: ["fixed -10deg wedge", "filter foils", "Be windows", "vitreous-carbon window"]

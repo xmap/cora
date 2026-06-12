@@ -51,7 +51,7 @@ from cora.infrastructure.routing import NIL_SENTINEL_ID
 
 
 @dataclass(frozen=True)
-class ClearanceReference:
+class ClearanceLookupResult:
     """Summary row from `proj_safety_clearance_summary` for the Run-start gate.
 
     Carries the minimal columns the start_run decider needs to
@@ -80,7 +80,7 @@ class ClearanceLookup(Protocol):
         run_id: UUID,
         subject_id: UUID | None,
         asset_ids: frozenset[UUID],
-    ) -> list[ClearanceReference]:
+    ) -> list[ClearanceLookupResult]:
         """Return every clearance whose bindings reference the Run's scope.
 
         "References" means:
@@ -131,7 +131,7 @@ class AlwaysCoveredClearanceLookup:
         run_id: UUID,
         subject_id: UUID | None,
         asset_ids: frozenset[UUID],
-    ) -> list[ClearanceReference]:
+    ) -> list[ClearanceLookupResult]:
         _ = subject_id  # unused (synthetic clearance "covers" everything)
         _ = asset_ids  # unused
         _ = run_id  # unused (synthetic clearance binds opaquely)
@@ -139,7 +139,7 @@ class AlwaysCoveredClearanceLookup:
         # in any decider path (the stub exists for tests that don't
         # exercise the clearance-gate logic).
         return [
-            ClearanceReference(
+            ClearanceLookupResult(
                 clearance_id=NIL_SENTINEL_ID,  # sentinel "test stub" id
                 status="Active",
                 template_id=NIL_SENTINEL_ID,

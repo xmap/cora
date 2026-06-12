@@ -45,7 +45,7 @@ from cora.equipment.features.get_asset_integration_view import (
     GetAssetIntegrationView,
 )
 from cora.equipment.features.register_asset import RegisterAsset
-from cora.infrastructure.ports import CapabilityReference
+from cora.infrastructure.ports import CapabilityLookupResult
 from tests.unit._helpers import build_deps as _build_deps
 
 _NOW = datetime(2026, 5, 20, 12, 0, 0, tzinfo=UTC)
@@ -253,14 +253,14 @@ class _FakeCapabilityLookup:
     frozenset and gets back a fixed list; the test asserts the mapping
     onto CapabilityView preserves all four fields plus order."""
 
-    def __init__(self, refs: list[CapabilityReference]) -> None:
+    def __init__(self, refs: list[CapabilityLookupResult]) -> None:
         self.refs = refs
         self.calls: list[frozenset[str]] = []
 
     async def find_applicable_by_affordances(
         self,
         affordances: frozenset[str],
-    ) -> list[CapabilityReference]:
+    ) -> list[CapabilityLookupResult]:
         self.calls.append(affordances)
         return list(self.refs)
 
@@ -268,17 +268,17 @@ class _FakeCapabilityLookup:
 @pytest.mark.unit
 async def test_handler_maps_capability_lookup_refs_into_view() -> None:
     """The handler calls capability_lookup with the combined Family
-    affordances and maps each returned CapabilityReference onto a
+    affordances and maps each returned CapabilityLookupResult onto a
     public CapabilityView (capability_id, code, name, status)."""
     import dataclasses
 
     cap_a = UUID("01900000-0000-7000-8000-00000000ca01")
     cap_b = UUID("01900000-0000-7000-8000-00000000ca02")
     seeded = [
-        CapabilityReference(
+        CapabilityLookupResult(
             capability_id=cap_a, code="cora.capability.alpha", name="Alpha", status="Defined"
         ),
-        CapabilityReference(
+        CapabilityLookupResult(
             capability_id=cap_b, code="cora.capability.bravo", name="Bravo", status="Versioned"
         ),
     ]

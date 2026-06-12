@@ -59,7 +59,7 @@ from uuid import UUID
 
 import asyncpg
 
-from cora.infrastructure.ports.supply_lookup import SupplyReference
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 
 _FIND_SUPPLIES_BY_KIND_SQL = """
 SELECT supply_id, kind, name, status, facility_code
@@ -86,7 +86,7 @@ class PostgresSupplyLookup:
         self,
         *,
         kinds: frozenset[str],
-    ) -> Mapping[str, list[SupplyReference]]:
+    ) -> Mapping[str, list[SupplyLookupResult]]:
         if not kinds:
             return {}
         async with self._pool.acquire() as conn:
@@ -94,13 +94,13 @@ class PostgresSupplyLookup:
                 _FIND_SUPPLIES_BY_KIND_SQL,
                 sorted(kinds),
             )
-        grouped: dict[str, list[SupplyReference]] = {}
+        grouped: dict[str, list[SupplyLookupResult]] = {}
         for row in rows:
             ref = _row_to_reference(row)
             grouped.setdefault(ref.kind, []).append(ref)
         return grouped
 
-    async def lookup(self, supply_id: UUID) -> SupplyReference | None:
+    async def lookup(self, supply_id: UUID) -> SupplyLookupResult | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(_LOOKUP_BY_ID_SQL, supply_id)
         if row is None:
@@ -108,8 +108,8 @@ class PostgresSupplyLookup:
         return _row_to_reference(row)
 
 
-def _row_to_reference(row: Any) -> SupplyReference:
-    return SupplyReference(
+def _row_to_reference(row: Any) -> SupplyLookupResult:
+    return SupplyLookupResult(
         supply_id=row["supply_id"],
         kind=str(row["kind"]),
         name=str(row["name"]),

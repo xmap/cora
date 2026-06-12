@@ -30,7 +30,7 @@ today. Mirrors the `DatasetRegistrationContext` precedent.
 from dataclasses import dataclass
 
 from cora.data.aggregates.dataset import Dataset
-from cora.infrastructure.ports.supply_lookup import SupplyReference
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 
 
 @dataclass(frozen=True)
@@ -44,4 +44,4 @@ class DistributionRegistrationContext:
     """
 
     dataset: Dataset
-    supply: SupplyReference
+    supply: SupplyLookupResult

@@ -13,7 +13,7 @@ Carries the caller's intent at seal-time:
     Edition has no license at register-time)
 
 Per design memo L33: `content_hash` is NEVER operator-supplied; it
-comes from the `EditionSerializerPort` only.
+comes from the `EditionSerializer` only.
 """
 
 from dataclasses import dataclass

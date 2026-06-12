@@ -123,7 +123,7 @@ def bind(deps: Kernel) -> Handler:
         stored, version = await deps.event_store.load(_STREAM_TYPE, command.template_id)
         state = fold([from_stored(s) for s in stored])
 
-        parent_lookup_result = await deps.clearance_template_lookup.lookup_by_id(
+        parent_lookup_result = await deps.clearance_template_lookup.lookup(
             command.supersedes_template_id
         )
 

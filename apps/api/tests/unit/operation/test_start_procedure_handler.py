@@ -6,6 +6,7 @@ reaching the decider. Tests seed events directly into the in-memory
 store via helpers, mirroring `test_start_run_handler.py`.
 """
 
+import dataclasses
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -22,6 +23,12 @@ from cora.equipment.aggregates.asset.events import (
 from cora.equipment.aggregates.asset.events import to_payload as asset_to_payload
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
+from cora.infrastructure.ports.asset_lookup import (
+    ANCESTOR_WALK_DEPTH_CAP,
+    AncestorWalkDepthExceededError,
+    AssetLookupResult,
+)
+from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 from cora.operation.aggregates.procedure import (
     ProcedureCannotStartError,
     ProcedureNotFoundError,
@@ -293,3 +300,149 @@ async def test_handler_propagates_causation_id() -> None:
     )
     events, _ = await store.load("Procedure", _PROCEDURE_ID)
     assert events[1].causation_id == causation
+
+
+# ---------- Chain-walk ancestor widening (Slice 6, Anti-hook 4b) ----------
+
+_TARGET_ASSET_ID = UUID("01900000-0000-7000-8000-0000000c0b11")
+_LIVE_ANCESTOR_ID = UUID("01900000-0000-7000-8000-0000000c0c01")
+_DEAD_ANCESTOR_ID = UUID("01900000-0000-7000-8000-0000000c0c02")
+
+
+def _result(asset_id: UUID, lifecycle: str, tier: str = "Unit") -> AssetLookupResult:
+    return AssetLookupResult(
+        id=asset_id,
+        name=f"asset-{asset_id}",
+        tier=tier,
+        lifecycle=lifecycle,
+        family_affordances=frozenset(),
+    )
+
+
+class _StubAssetLookup:
+    """Returns a fixed ancestor closure regardless of input (test double)."""
+
+    def __init__(self, rows: frozenset[AssetLookupResult]) -> None:
+        self._rows = rows
+
+    async def lookup(self, asset_id: UUID) -> AssetLookupResult | None:
+        return next((r for r in self._rows if r.id == asset_id), None)
+
+    async def ancestors_of(self, asset_ids: frozenset[UUID]) -> frozenset[AssetLookupResult]:
+        del asset_ids
+        return self._rows
+
+
+class _RaisingAssetLookup:
+    """ancestors_of raises (simulates a parent_id cycle / over-deep chain)."""
+
+    async def lookup(self, asset_id: UUID) -> AssetLookupResult | None:
+        del asset_id
+        return None
+
+    async def ancestors_of(self, asset_ids: frozenset[UUID]) -> frozenset[AssetLookupResult]:
+        del asset_ids
+        raise AncestorWalkDepthExceededError(
+            observed_depth=ANCESTOR_WALK_DEPTH_CAP + 1, cap=ANCESTOR_WALK_DEPTH_CAP
+        )
+
+
+class _RecordingEnclosureLookup:
+    """Captures the asset_ids find_for_assets is called with."""
+
+    def __init__(self) -> None:
+        self.captured: frozenset[UUID] | None = None
+
+    async def lookup(self, enclosure_id: UUID) -> EnclosureLookupResult | None:
+        del enclosure_id
+        return None
+
+    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
+        self.captured = asset_ids
+        return []
+
+
+@pytest.mark.unit
+async def test_procedure_widened_scope_includes_every_ancestor_regardless_of_lifecycle() -> None:
+    """start_procedure mirrors start_run: the ancestor closure widens the
+    Enclosure scope, including a Decommissioned ancestor. The Enclosure's
+    own lifecycle (applied downstream) decides whether it blocks; filtering
+    Decommissioned ancestors here would suppress an Active+NotPermitted
+    Enclosure on a retired ancestor and admit into an un-permitted hutch."""
+    store = InMemoryEventStore()
+    await _seed_asset(store, _TARGET_ASSET_ID)
+    await _seed_procedure(store, target_asset_ids=(_TARGET_ASSET_ID,))
+
+    asset_lookup = _StubAssetLookup(
+        frozenset(
+            {
+                _result(_TARGET_ASSET_ID, lifecycle="Active", tier="Device"),
+                _result(_LIVE_ANCESTOR_ID, lifecycle="Active"),
+                _result(_DEAD_ANCESTOR_ID, lifecycle="Decommissioned"),
+            }
+        )
+    )
+    recorder = _RecordingEnclosureLookup()
+    deps = _build_deps_shared(
+        ids=[_TRANSITION_EVENT_ID], now=_NOW, event_store=store, asset_lookup=asset_lookup
+    )
+    deps = dataclasses.replace(deps, enclosure_lookup=recorder)
+    handler = start_procedure.bind(deps)
+
+    await handler(
+        StartProcedure(procedure_id=_PROCEDURE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert recorder.captured is not None
+    assert _LIVE_ANCESTOR_ID in recorder.captured
+    assert _TARGET_ASSET_ID in recorder.captured
+    assert _DEAD_ANCESTOR_ID in recorder.captured
+
+
+@pytest.mark.unit
+async def test_procedure_empty_ancestor_walk_leaves_scope_unwidened() -> None:
+    store = InMemoryEventStore()
+    await _seed_asset(store, _TARGET_ASSET_ID)
+    await _seed_procedure(store, target_asset_ids=(_TARGET_ASSET_ID,))
+
+    asset_lookup = _StubAssetLookup(frozenset())
+    recorder = _RecordingEnclosureLookup()
+    deps = _build_deps_shared(
+        ids=[_TRANSITION_EVENT_ID], now=_NOW, event_store=store, asset_lookup=asset_lookup
+    )
+    deps = dataclasses.replace(deps, enclosure_lookup=recorder)
+    handler = start_procedure.bind(deps)
+
+    await handler(
+        StartProcedure(procedure_id=_PROCEDURE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert recorder.captured == frozenset({_TARGET_ASSET_ID})
+
+
+@pytest.mark.unit
+async def test_procedure_ancestor_walk_failure_propagates_and_refuses() -> None:
+    """Fail-loud: a parent_id cycle / over-deep chain propagates and refuses
+    the Procedure rather than starting with a partial, under-scoped gate."""
+    store = InMemoryEventStore()
+    await _seed_asset(store, _TARGET_ASSET_ID)
+    await _seed_procedure(store, target_asset_ids=(_TARGET_ASSET_ID,))
+
+    deps = _build_deps_shared(
+        ids=[_TRANSITION_EVENT_ID],
+        now=_NOW,
+        event_store=store,
+        asset_lookup=_RaisingAssetLookup(),
+    )
+    handler = start_procedure.bind(deps)
+
+    with pytest.raises(AncestorWalkDepthExceededError):
+        await handler(
+            StartProcedure(procedure_id=_PROCEDURE_ID),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )

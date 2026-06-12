@@ -1,7 +1,7 @@
-"""Signing port: substrate-neutral signature production over canonical bytes.
+"""ByteSigner port: substrate-neutral signature production over canonical bytes.
 
-`SigningPort` is the sibling to `CanonicalizationPort`. The two are
-paired by `adapter_version` (a v1 SigningPort signs over v1
+`ByteSigner` is the sibling to `Canonicalizer`. The two are
+paired by `adapter_version` (a v1 ByteSigner signs over v1
 canonicalized bytes); cross-version pairing is rejected at the
 port boundary via `CanonicalizationVersionMismatchError`.
 
@@ -18,11 +18,12 @@ window, expected payload type). It is sibling to Memo 1's
 (`allowed_credentials`, `abi_tier_floor`, `required_receipt_kinds`);
 the two are at different tiers and have distinct shapes.
 
-Note on naming: this `SigningPort` is the NEW shape from the
-canonicalization-port re-cut. The older `Signer` Protocol at
-`cora.infrastructure.ports.signer` ships zero adapters today and
-will be widened or retired in a later step per the lock memo's
-iter-b step 5; the two coexist during the transition.
+Level note: `ByteSigner` is the low-level primitive that signs raw
+canonical bytes under a key handle. The sibling `Signer` port at
+`cora.infrastructure.ports.signer` is the higher-level
+event-provenance signer (it canonicalizes an event payload via the
+content-hash pipeline and returns the signature triple the event row
+persists). They are distinct levels, not duplicates.
 """
 
 from collections.abc import Iterable
@@ -30,7 +31,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal, Protocol, runtime_checkable
 
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 
 KeyHandle = Any
 """Opaque adapter-specific key reference.
@@ -95,7 +96,7 @@ class SignatureVerification:
 
 
 @runtime_checkable
-class SigningPort(Protocol):
+class ByteSigner(Protocol):
     """Sign canonicalized bytes under a key handle; verify signatures.
 
     Both methods are async because production adapters are network-
@@ -157,7 +158,7 @@ class UnsupportedSigningAlgorithmError(Exception):
     """The `KeyHandle` references an algorithm the adapter does not implement.
 
     Raised before any crypto runs. Used by the algorithm-allowlist
-    gate inside `SigningPort.verify` so legacy algorithms cannot
+    gate inside `ByteSigner.verify` so legacy algorithms cannot
     downgrade a verification.
     """
 
@@ -173,7 +174,7 @@ class UnsupportedSigningAlgorithmError(Exception):
 class CanonicalizationVersionMismatchError(Exception):
     """Cross-version signing rejected at the port boundary.
 
-    A v1 SigningPort refuses to sign over v2 CanonicalizedBytes and
+    A v1 ByteSigner refuses to sign over v2 CanonicalizedBytes and
     vice versa: pairing is mandatory per the
     `signing_version == canonicalization_version` invariant. The
     architecture-fitness suite asserts this row-by-row on every
@@ -202,13 +203,13 @@ def algorithms_intersection(requested: Iterable[str], allowlist: frozenset[str])
 
 
 __all__ = [
+    "ByteSigner",
     "CanonicalizationVersionMismatchError",
     "KeyHandle",
     "Signature",
     "SignatureInvalidError",
     "SignatureVerification",
     "SigningKeyNotFoundError",
-    "SigningPort",
     "SigningTrustContext",
     "UnsupportedSigningAlgorithmError",
     "algorithms_intersection",

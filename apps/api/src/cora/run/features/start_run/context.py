@@ -56,10 +56,10 @@ from uuid import UUID
 
 from cora.campaign.aggregates.campaign import Campaign
 from cora.equipment.aggregates.asset import Asset
-from cora.infrastructure.ports.caution_lookup import CautionReference
-from cora.infrastructure.ports.clearance_lookup import ClearanceReference
-from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
-from cora.infrastructure.ports.supply_lookup import SupplyReference
+from cora.infrastructure.ports.caution_lookup import CautionLookupResult
+from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
+from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 from cora.recipe.aggregates.plan import Plan
 from cora.subject.aggregates.subject import Subject
 
@@ -100,12 +100,12 @@ class RunStartContext:
     plan: Plan
     subject: Subject | None
     assets: dict[UUID, Asset]
-    referencing_clearances: tuple[ClearanceReference, ...]
-    active_cautions: tuple[CautionReference, ...] = ()
-    needed_supplies_satisfaction: Mapping[str, tuple[SupplyReference, ...]] = field(
-        default_factory=lambda: cast("Mapping[str, tuple[SupplyReference, ...]]", {})
+    referencing_clearances: tuple[ClearanceLookupResult, ...]
+    active_cautions: tuple[CautionLookupResult, ...] = ()
+    needed_supplies_satisfaction: Mapping[str, tuple[SupplyLookupResult, ...]] = field(
+        default_factory=lambda: cast("Mapping[str, tuple[SupplyLookupResult, ...]]", {})
     )
-    referencing_enclosures: tuple[EnclosureReference, ...] = ()
+    referencing_enclosures: tuple[EnclosureLookupResult, ...] = ()
     """Every Active Enclosure whose `containing_asset_id` traces to any
     of the Run's scoped Asset ids. Loaded by the handler via
     `deps.enclosure_lookup.find_for_assets(asset_ids=scoped_asset_ids)`.

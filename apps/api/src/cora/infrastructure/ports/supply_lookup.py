@@ -35,7 +35,7 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
-class SupplyReference:
+class SupplyLookupResult:
     """Summary row from `proj_supply_summary` for cross-BC consumers.
 
     Carries the minimal columns the cross-BC consumers (Run / Operation
@@ -61,7 +61,7 @@ class SupplyReference:
     [[project-facility-aggregate-design]] convention.
 
     `supply_id` is typed `UUID` for cross-port symmetry with
-    `ClearanceReference.clearance_id` and `CautionReference.caution_id`.
+    `ClearanceLookupResult.clearance_id` and `CautionLookupResult.caution_id`.
     """
 
     supply_id: UUID
@@ -78,7 +78,7 @@ class SupplyLookup(Protocol):
         self,
         *,
         kinds: frozenset[str],
-    ) -> Mapping[str, list[SupplyReference]]:
+    ) -> Mapping[str, list[SupplyLookupResult]]:
         """Return Supplies grouped by kind for every requested kind.
 
         The returned mapping is keyed by kind string and contains
@@ -99,7 +99,7 @@ class SupplyLookup(Protocol):
         """
         ...
 
-    async def lookup(self, supply_id: UUID) -> SupplyReference | None:
+    async def lookup(self, supply_id: UUID) -> SupplyLookupResult | None:
         """Return the projection row for `supply_id`, or `None` if not found.
 
         Consumers needing to validate a specific supply (the Data BC
@@ -148,12 +148,12 @@ class AllSatisfiedSupplyLookup:
         self,
         *,
         kinds: frozenset[str],
-    ) -> Mapping[str, list[SupplyReference]]:
+    ) -> Mapping[str, list[SupplyLookupResult]]:
         from cora.infrastructure.routing import NIL_SENTINEL_ID
 
         return {
             kind: [
-                SupplyReference(
+                SupplyLookupResult(
                     supply_id=NIL_SENTINEL_ID,
                     kind=kind,
                     name=f"<test stub: {kind}>",
@@ -164,7 +164,7 @@ class AllSatisfiedSupplyLookup:
             for kind in kinds
         }
 
-    async def lookup(self, supply_id: UUID) -> SupplyReference | None:
+    async def lookup(self, supply_id: UUID) -> SupplyLookupResult | None:
         _ = supply_id
         return None
 
@@ -186,11 +186,11 @@ class NoSuppliesRegisteredLookup:
         self,
         *,
         kinds: frozenset[str],
-    ) -> Mapping[str, list[SupplyReference]]:
+    ) -> Mapping[str, list[SupplyLookupResult]]:
         _ = kinds
         return {}
 
-    async def lookup(self, supply_id: UUID) -> SupplyReference | None:
+    async def lookup(self, supply_id: UUID) -> SupplyLookupResult | None:
         _ = supply_id
         return None
 
@@ -210,11 +210,11 @@ class UnknownSupplyLookup:
         self,
         *,
         kinds: frozenset[str],
-    ) -> Mapping[str, list[SupplyReference]]:
+    ) -> Mapping[str, list[SupplyLookupResult]]:
         _ = kinds
         return {}
 
-    async def lookup(self, supply_id: UUID) -> SupplyReference | None:
+    async def lookup(self, supply_id: UUID) -> SupplyLookupResult | None:
         _ = supply_id
         return None
 
@@ -225,22 +225,22 @@ class SingleSupplyLookup:
     Use when a Distribution-register test needs to exercise the
     happy path (or specific kind/status branches) without spinning
     up the real `PostgresSupplyLookup` adapter. Construct with a
-    fixed `SupplyReference`; every `lookup` call returns the same
+    fixed `SupplyLookupResult`; every `lookup` call returns the same
     reference. `find_supplies_by_kind` returns empty (out of scope).
     """
 
-    def __init__(self, reference: SupplyReference) -> None:
+    def __init__(self, reference: SupplyLookupResult) -> None:
         self._reference = reference
 
     async def find_supplies_by_kind(
         self,
         *,
         kinds: frozenset[str],
-    ) -> Mapping[str, list[SupplyReference]]:
+    ) -> Mapping[str, list[SupplyLookupResult]]:
         _ = kinds
         return {}
 
-    async def lookup(self, supply_id: UUID) -> SupplyReference | None:
+    async def lookup(self, supply_id: UUID) -> SupplyLookupResult | None:
         if supply_id == self._reference.supply_id:
             return self._reference
         return None

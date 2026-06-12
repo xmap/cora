@@ -13,7 +13,7 @@ Dict-backed, no crypto. Test entry verbs:
     `canonicalized.adapter_version` matches.
 
 Note on the arch-2 delegation invariant: the IN-MEMORY adapter
-does NOT need a SigningPort instance because it does no crypto;
+does NOT need a ByteSigner instance because it does no crypto;
 it returns canned outcomes for testing. The architecture-fitness
 test `test_signature_port_delegates_to_signing_port.py` (lands at
 the same time as the first wire-tier adapter) walks PRODUCTION
@@ -23,7 +23,7 @@ not this in-memory test fixture.
 
 import contextlib
 
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 from cora.infrastructure.ports.federation import (
     DsseStaticJwksEnvelope,
     FederationTrustContext,

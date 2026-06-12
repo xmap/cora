@@ -6,7 +6,7 @@ Pins the two error paths:
   - kind exists in satisfaction but every entry has status != "Available"
     -> `RunSupplyCoverageMismatchError`
 
-Plus the happy path: at least one AVAILABLE SupplyReference satisfies
+Plus the happy path: at least one AVAILABLE SupplyLookupResult satisfies
 the kind (Degraded and other non-AVAILABLE entries don't count per the
 shared AVAILABLE-only lock from project_supply_preflight_gate_design).
 
@@ -25,8 +25,8 @@ from cora.equipment.aggregates.asset import (
     AssetName,
     AssetTier,
 )
-from cora.infrastructure.ports.clearance_lookup import ClearanceReference
-from cora.infrastructure.ports.supply_lookup import SupplyReference
+from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
     RunRequiresAvailableSupplyError,
@@ -39,8 +39,8 @@ from cora.subject.aggregates.subject import Subject, SubjectName, SubjectStatus
 _NOW = datetime(2026, 5, 28, 12, 0, 0, tzinfo=UTC)
 
 
-def _ref(kind: str, status: str) -> SupplyReference:
-    return SupplyReference(
+def _ref(kind: str, status: str) -> SupplyLookupResult:
+    return SupplyLookupResult(
         supply_id=uuid4(),
         kind=kind,
         name=f"<test {kind}>",
@@ -49,8 +49,8 @@ def _ref(kind: str, status: str) -> SupplyReference:
     )
 
 
-def _active_clearance() -> ClearanceReference:
-    return ClearanceReference(
+def _active_clearance() -> ClearanceLookupResult:
+    return ClearanceLookupResult(
         clearance_id=uuid4(),
         status="Active",
         template_id=uuid4(),
@@ -60,7 +60,7 @@ def _active_clearance() -> ClearanceReference:
 
 
 def _context(
-    needed_supplies_satisfaction: dict[str, tuple[SupplyReference, ...]],
+    needed_supplies_satisfaction: dict[str, tuple[SupplyLookupResult, ...]],
 ) -> tuple[RunStartContext, frozenset[UUID]]:
     """Build a RunStartContext that passes every check EXCEPT the
     Supply gate. Returns the context + the needed_family_ids the handler

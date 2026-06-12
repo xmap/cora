@@ -108,6 +108,21 @@ The `__init__.py` is the BC's curated public surface; importing through it lets 
 - **BC-application errors**: PascalCase + `Error` suffix in `cora/<bc>/errors.py` (for example `UnauthorizedError`). Each BC registers its own handler; same-named errors across BCs are distinct classes.
 - **Domain events**: PascalCase past-tense in the aggregate's `events.py` (for example `ActorRegistered`). Same file holds the `<Aggregate>Event` discriminated union.
 
+### Ports and adapters
+
+A port is a `typing.Protocol` seam the domain depends on and an adapter implements.
+
+- **Port class**: name it for its ROLE with a descriptive role noun (`EventStore`, `TokenVerifier`, `AssetLookup`, `IdGenerator`, `DoiMinter`, `EditionSerializer`, `RecipeExpander`). The role noun already signals the seam, so the generic `Port` suffix is redundant and is forbidden EXCEPT as an allowlisted carve-out, used only where stripping it leaves a bare verb, an abstract non-agent noun, or a value-object collision. Today's carve-outs: `ControlPort`, `SignaturePort` (would collide with the `Signature` value object), `PublishPort`, `PullPort`.
+- **Port filename**: `snake_case(<PortClass>).py`, so the import path predicts the class (`event_store.py` -> `EventStore`, `signature_port.py` -> `SignaturePort`). A domain-named module whose stem omits a suffix the class keeps is the rejected shape.
+- **Lookup-result DTO**: a `<X>Lookup` port returns a denormalized read-side row named `<X>LookupResult` (`AssetLookupResult`, `SupplyLookupResult`), never `<X>Reference`. The `Reference` suffix is reserved for genuine reference value objects (kept in `value_types.py` or under a domain name).
+- **Location tier**: cross-BC ports at `cora/infrastructure/ports/`; BC-owned ports at `cora/<bc>/ports/` until a rule-of-three (3+ distinct BC consumers) promotes them; shared-kernel ports (adapter-free, 3+ consumers) at `cora/shared/ports/`.
+- **Adapter class**: `<Tech><Role>` with no `Adapter` suffix (`PostgresEventStore`, `AnthropicLLM`, `InMemoryRecipeExpander`); the adapter prepends a tech token to the bare port role. File is `snake_case(<Tech><Role>).py`. BC-owned adapters live at `<bc>/adapters/`, cross-BC adapters at `infrastructure/adapters/`.
+- **Import scope**: infra and shared ports import only stdlib, `typing`, and `cora.shared.*`. A BC-owned port may also import its OWN BC's aggregate value types (for example `EnclosureObserver` imports `EnclosurePermitStatus`), never another BC's internals.
+- **Family subpackage**: a port family promotes to a subpackage with its own `errors.py` / `value_types.py` only when it carries a large shared catalog (federation: 4 ports + a 12-member error family + a value-type catalog). Below that bar, co-locate errors and value types in the port module (the `llm.py` / `control_port.py` shape).
+- **`runtime_checkable`**: decorate a port iff an `isinstance` / `issubclass` check targets it (somewhere in src or tests); the decorator exists only to enable those checks. Enforced.
+- **Injection**: a port reaches handlers by one of three paths -- a `Kernel` field (cross-BC primitives), `wire_<bc>(deps)` (BC-local ports built on `deps.pool` or route config), or the `published_artifact` orchestrator (the crypto / federation pipeline). A port absent from `Kernel` is not necessarily orphaned.
+- Enforced by [test_port_naming_conventions.py](../../apps/api/tests/architecture/test_port_naming_conventions.py) (names) and [test_port_structure.py](../../apps/api/tests/architecture/test_port_structure.py) (frozen DTOs + `runtime_checkable` usage).
+
 ## Bootstrap
 
 Constants every slice surface needs but that aren't slice-specific live in `cora/<bc>/_bootstrap.py`. Today: `SYSTEM_PRINCIPAL_ID`, canonically in `cora/infrastructure/routing.py`:

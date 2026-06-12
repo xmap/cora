@@ -388,8 +388,8 @@ class ProcedureStepsForbiddenForRecipeDrivenError(Exception):
         self.procedure_id = procedure_id
 
 
-class RecipeExpansionPortVersionMismatchError(Exception):
-    """The currently-wired `RecipeExpansionPort.version` differs from the pin.
+class RecipeExpanderVersionMismatchError(Exception):
+    """The currently-wired `RecipeExpander.version` differs from the pin.
 
     The `RecipeExpansionRecorded` event pins `expansion_port_version`;
     the replay path runs a strict-equals guard against the live port's

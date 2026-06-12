@@ -39,7 +39,7 @@ from cora.equipment.aggregates.asset import Asset, AssetNotFoundError, load_asse
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import Deny, SupplyReference
+from cora.infrastructure.ports import Deny, SupplyLookupResult
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.aggregates.procedure import (
     ProcedureNotFoundError,
@@ -160,6 +160,37 @@ def bind(deps: Kernel) -> Handler:
         scoped_asset_ids: frozenset[UUID] = state.target_asset_ids | frozenset(
             asset.controller_id for asset in assets.values() if asset.controller_id is not None
         )
+
+        # cross-BC ancestor-chain widening (chain-walk Slice 6, mirrors
+        # start_run Slice 5): widen the scope up the Asset parent_id
+        # chain so an Enclosure bound to an ANCESTOR of a target Asset
+        # gates this Procedure. Without this, the enclosure pre-flight
+        # gate's L-pre-1 "derive scope from the Asset chain" is
+        # decorative on the Procedure path: an Enclosure bound to the
+        # beamline Unit never matches a Procedure targeting only a Device
+        # under it. The walk returns the inclusive closure and EVERY
+        # ancestor enters the scope regardless of its own lifecycle: the
+        # containing Asset's lifecycle is the wrong source of truth for
+        # whether a physical interlock is live. The Enclosure gate's
+        # source of truth is the ENCLOSURE's own lifecycle
+        # (`find_for_assets` returns only Active Enclosures; the decider
+        # fails any non-(Permitted-and-Active) row), so a retired
+        # Enclosure is dropped at the right layer while an
+        # Active+NotPermitted Enclosure on a Decommissioned ancestor Asset
+        # still correctly REFUSES the Procedure (decommission_asset has no
+        # Enclosure cascade; filtering Decommissioned ancestors here would
+        # silently suppress that interlock). The walk reads only
+        # Equipment's Asset projection, terminates at the facility-rooted
+        # root (never the Federation Facility axis), and raises
+        # AncestorWalkDepthExceededError on a parent_id cycle / over-deep
+        # chain rather than under-scoping the gate; that error is left
+        # intentionally unmapped (a 500: data corruption, not client-
+        # fixable). The Procedure path widens only the Enclosure gate (it
+        # has no clearance / caution lookups); start_run additionally
+        # feeds the same widened scope to those two.
+        ancestor_rows = await deps.asset_lookup.ancestors_of(scoped_asset_ids)
+        scoped_asset_ids = scoped_asset_ids | frozenset(row.id for row in ancestor_rows)
+
         referencing_enclosures = tuple(
             await deps.enclosure_lookup.find_for_assets(asset_ids=scoped_asset_ids)
         )
@@ -173,7 +204,7 @@ def bind(deps: Kernel) -> Handler:
         # snapshot. Capability-level needed_supplies for standalone
         # Procedures is a Watch item.
         needed_supplies_snapshot: frozenset[str] = frozenset()
-        needed_supplies_satisfaction: dict[str, tuple[SupplyReference, ...]] = {}
+        needed_supplies_satisfaction: dict[str, tuple[SupplyLookupResult, ...]] = {}
         if state.parent_run_id is not None:
             # Strict load chain (mirrors start_run.handler): a missing
             # aggregate anywhere in parent_run -> plan -> practice ->

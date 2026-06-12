@@ -8,7 +8,7 @@ Update-style handler. Pre-load order per design memo L16:
   4. (Decider) content_hash invariant
   5. DoiMinter.mint(scheme=DOI, suffix=<edition_id>) -> 502 if raises
   6. Re-load member Datasets + canonical Distributions for re-serialize
-  7. EditionSerializerPort.serialize(..., external_pid=minted_pid) ->
+  7. EditionSerializer.serialize(..., external_pid=minted_pid) ->
      post-mint sha256 = published_content_hash
   8. Decider emits EditionPublished
 """
@@ -53,7 +53,7 @@ from cora.shared.ports.doi_minter import PersistentIdentifierMintError
 if TYPE_CHECKING:
     from cora.data.aggregates.edition import EditionKind
     from cora.data.ports.distribution_lookup import DistributionLookup
-    from cora.data.ports.edition_serializer import EditionSerializerPort
+    from cora.data.ports.edition_serializer import EditionSerializer
     from cora.shared.ports.doi_minter import DoiMinter
 
 _STREAM_TYPE = "Edition"
@@ -83,7 +83,7 @@ def bind(deps: Kernel) -> Handler:
         deps.data.distribution_lookup,  # type: ignore[attr-defined]
     )
     per_kind_serializers = cast(
-        "dict[EditionKind, EditionSerializerPort]",
+        "dict[EditionKind, EditionSerializer]",
         deps.data.edition_serializers,  # type: ignore[attr-defined]
     )
     minter = cast("DoiMinter", deps.data.doi_minter)  # type: ignore[attr-defined]

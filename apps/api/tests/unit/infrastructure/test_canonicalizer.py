@@ -1,13 +1,13 @@
-"""Unit tests for the CanonicalizationPort Protocol surface and value types."""
+"""Unit tests for the Canonicalizer Protocol surface and value types."""
 
 from typing import Any
 
 import pytest
 
-from cora.infrastructure.ports.canonicalization import (
+from cora.infrastructure.ports.canonicalizer import (
     CanonicalizationFailedError,
-    CanonicalizationPort,
     CanonicalizedBytes,
+    Canonicalizer,
     ContentHashMismatchError,
     UnsupportedCanonicalizationVersionError,
 )
@@ -30,7 +30,7 @@ class _FakeCanonicalizationAdapter:
 
 
 def test_canonicalization_port_is_runtime_checkable_against_duck_typed_adapter() -> None:
-    assert isinstance(_FakeCanonicalizationAdapter(), CanonicalizationPort)
+    assert isinstance(_FakeCanonicalizationAdapter(), Canonicalizer)
 
 
 def test_canonicalized_bytes_is_frozen_dataclass_with_mandatory_adapter_version() -> None:

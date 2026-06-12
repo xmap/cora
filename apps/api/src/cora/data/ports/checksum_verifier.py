@@ -1,4 +1,4 @@
-"""ChecksumVerifierPort: Data BC's per-distribution byte-integrity port.
+"""ChecksumVerifier: Data BC's per-distribution byte-integrity port.
 
 Used by the ``record_attestation`` handler to compute a checksum over
 a Distribution's bytes at its declared URI, returning a discriminated
@@ -37,10 +37,6 @@ from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
-# ----------------------------------------------------------------------
-# Discriminated result type
-# ----------------------------------------------------------------------
-
 
 @dataclass(frozen=True)
 class Match:
@@ -78,16 +74,10 @@ class Unreachable:
     error_detail: str
 
 
-#: Discriminated union returned by ``ChecksumVerifierPort.verify``.
 ChecksumVerificationResult = Match | Mismatch | Unreachable
 
 
-# ----------------------------------------------------------------------
-# Port Protocol
-# ----------------------------------------------------------------------
-
-
-class ChecksumVerifierPort(Protocol):
+class ChecksumVerifier(Protocol):
     """Data BC port: compute a checksum over a Distribution's bytes."""
 
     async def verify(
@@ -131,11 +121,6 @@ class ChecksumVerifierUnsupportedSchemeError(Exception):
     def __init__(self, scheme: str) -> None:
         super().__init__(f"No ChecksumVerifier adapter registered for URI scheme {scheme!r}")
         self.scheme = scheme
-
-
-# ----------------------------------------------------------------------
-# Test stubs
-# ----------------------------------------------------------------------
 
 
 class AlwaysMatchingChecksumVerifier:
@@ -214,7 +199,7 @@ __all__ = [
     "AlwaysMismatchingChecksumVerifier",
     "AlwaysUnreachableChecksumVerifier",
     "ChecksumVerificationResult",
-    "ChecksumVerifierPort",
+    "ChecksumVerifier",
     "ChecksumVerifierUnsupportedSchemeError",
     "ConfiguredChecksumVerifier",
     "Match",

@@ -173,7 +173,7 @@ class PublicationReceiptRecorded:
     per cross-BC append-streams discipline.
 
     `content_hash` is the artifact's port-tier content hash
-    (recomputed via the matching CanonicalizationPort adapter on
+    (recomputed via the matching Canonicalizer adapter on
     the verify side); `home_stream_type` + `home_stream_id` +
     `home_artifact_id` denorm the cross-stream join so audit
     queries do not require a separate index lookup. `receipt_id`

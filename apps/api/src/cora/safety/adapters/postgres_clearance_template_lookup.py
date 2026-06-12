@@ -63,7 +63,7 @@ class PostgresClearanceTemplateLookup:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
 
-    async def lookup_by_id(self, template_id: UUID) -> ClearanceTemplateLookupResult | None:
+    async def lookup(self, template_id: UUID) -> ClearanceTemplateLookupResult | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(_LOOKUP_SQL, template_id)
         if row is None:

@@ -13,7 +13,7 @@
   9. EditionDatasetDistributionNotFoundError (missing canonical Distr)
   10. EditionLicenseRequiredForKindError (pure decider-on-state check)
   11. Handler FacilityLookup.lookup_by_code -> EditionPublisherNotFoundError
-  12. Handler EditionSerializerPort.serialize -> EditionSerializerError
+  12. Handler EditionSerializer.serialize -> EditionSerializerError
   13. Handler computes sha256 + publication_year + effective_license
   14. Decider emits EditionSealed
 """

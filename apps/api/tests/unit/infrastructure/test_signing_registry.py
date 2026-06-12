@@ -9,10 +9,10 @@ from cora.infrastructure.adapters.default_signing_adapter import (
     JwksKid,
 )
 from cora.infrastructure.adapters.signing_registry import SigningRegistry
-from cora.infrastructure.ports.canonicalization import (
+from cora.infrastructure.ports.byte_signer import ByteSigner
+from cora.infrastructure.ports.canonicalizer import (
     UnsupportedCanonicalizationVersionError,
 )
-from cora.infrastructure.ports.signing import SigningPort
 
 
 def _build_default_signing_adapter() -> DefaultSigningAdapter:
@@ -35,7 +35,7 @@ def test_signing_registry_register_and_resolve_returns_adapter() -> None:
     registry.register("cora/v1", adapter)
     resolved = registry.resolve("cora/v1")
     assert resolved is adapter
-    assert isinstance(resolved, SigningPort)
+    assert isinstance(resolved, ByteSigner)
 
 
 def test_signing_registry_resolve_unregistered_raises_with_known_set() -> None:

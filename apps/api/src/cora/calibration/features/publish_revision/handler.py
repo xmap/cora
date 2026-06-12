@@ -2,7 +2,7 @@
 
 Cross-BC iter-b federation handler. Loads the Calibration aggregate
 + the matching outbound Permit via PermitLookup, canonicalizes the
-artifact via the deployment-default CanonicalizationPort, signs via
+artifact via the deployment-default Canonicalizer, signs via
 SignaturePort, publishes via PublishPort, and atomically appends the
 event pair onto both streams via `EventStore.append_streams`.
 
@@ -12,7 +12,7 @@ decider domain error before any port IO; the SignaturePort.sign and
 PublishPort.publish calls happen ONLY after the pre-flight pure
 decider has validated the publish is authorized + deterministic.
 
-Per AH#17 + arch-2: SignaturePort.sign delegates to SigningPort for
+Per AH#17 + arch-2: SignaturePort.sign delegates to ByteSigner for
 raw crypto; the handler does not invoke a crypto library directly.
 The artifact's `content_hash` is reused verbatim from the revision
 state per the content-addressed-identity rollout (no port-side

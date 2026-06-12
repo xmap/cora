@@ -226,7 +226,7 @@ No emoji anywhere in source — comments, docstrings, log strings, error message
 
 Every public module, class, function, and method gets a docstring. Style is prose, not Sphinx.
 
-- **One imperative summary line.** Single-line docstrings stay on one line: `"""Load and fold a Caution's event stream into current state."""`. End with a period.
+- **One imperative summary line.** Single-line docstrings stay on one line: `"""Load and fold a Caution's event stream into current state."""`. End with a period. Carve-out: a port `Protocol` class describes a seam, not an action, so its summary may lead with a role noun-phrase (`"""Cross-BC port: query the Caution roster for a Run."""`, `"""ByteSigner port: substrate-neutral signature production over canonical bytes."""`); this noun-phrase lead is the dominant and accepted port-docstring style.
 - **Prose body when more is needed.** Blank line after the summary, then narrative paragraphs. Use Markdown subheaders (`## Section`) for distinct concerns.
 - **Domain vocabulary matches the [glossary](glossary.md).** A slice handler is a handler, not an endpoint. An aggregate is an aggregate, not a model. An evolver is an evolver, not a reducer.
 - **Cross-references**:

@@ -1,4 +1,4 @@
-"""Unit tests for `cora.infrastructure.signing` + `ports.signing`.
+"""Unit tests for `cora.infrastructure.signing` + `ports.byte_signer`.
 
 Coverage:
   - `event_type_to_payload_type` CamelCase to kebab-case mapping

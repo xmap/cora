@@ -1,21 +1,21 @@
-"""Unit tests for the SigningPort Protocol surface and value types."""
+"""Unit tests for the ByteSigner Protocol surface and value types."""
 
 from datetime import UTC, datetime
 
 import pytest
 
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
-from cora.infrastructure.ports.signing import (
+from cora.infrastructure.ports.byte_signer import (
+    ByteSigner,
     CanonicalizationVersionMismatchError,
     Signature,
     SignatureInvalidError,
     SignatureVerification,
     SigningKeyNotFoundError,
-    SigningPort,
     SigningTrustContext,
     UnsupportedSigningAlgorithmError,
     algorithms_intersection,
 )
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 
 
 class _FakeSigningAdapter:
@@ -41,7 +41,7 @@ class _FakeSigningAdapter:
 
 
 def test_signing_port_is_runtime_checkable_against_duck_typed_adapter() -> None:
-    assert isinstance(_FakeSigningAdapter(), SigningPort)
+    assert isinstance(_FakeSigningAdapter(), ByteSigner)
 
 
 def test_signature_is_frozen_dataclass_with_locked_fields() -> None:

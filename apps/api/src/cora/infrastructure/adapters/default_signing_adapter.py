@@ -37,14 +37,14 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
 )
 
-from cora.infrastructure.ports.canonicalization import CanonicalizedBytes
-from cora.infrastructure.ports.signing import (
+from cora.infrastructure.ports.byte_signer import (
     CanonicalizationVersionMismatchError,
     Signature,
     SignatureVerification,
     SigningKeyNotFoundError,
     SigningTrustContext,
 )
+from cora.infrastructure.ports.canonicalizer import CanonicalizedBytes
 
 _ADAPTER_VERSION = "cora/v1"
 

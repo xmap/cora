@@ -2,11 +2,12 @@
 
 `Signer` is the hexagonal port for signing event payloads. Implementations
 plug in at the handler tier post-decider / pre-INSERT per
-[[project_signed_events_design]]. Today: zero adapters ship in production
-code (verification path uses the same canonicalization helper from
+[[project_signed_events_design]]. Today: the in-memory Ed25519 adapter
+`InMemorySigner` ships (wired by default for dev and tests); the
+verification path uses the same canonicalization helper from
 [[project_content_addressed_identity_design]] and a directly-resolved
-public key). The port exists so the choice of signing backend stays
-swappable: a future iteration adds one of these adapters without
+public key. The port exists so the choice of signing backend stays
+swappable: a production iteration swaps in one of these backends without
 touching the handlers that call `Signer.sign`:
 
   - Sigstore keyless OIDC (Fulcio short-lived cert bound to a workload
@@ -29,7 +30,7 @@ the key identifier that lets the verifier resolve the matching public
 key; `signing_version` is the signing-recipe identifier per
 [[project_canonicalization_port_design]] (the v1 default is
 `"cora/v1"`), recorded so the verifier can dispatch to the matching
-SigningPort adapter via the SigningRegistry. The semantics of `kid`
+ByteSigner adapter via the SigningRegistry. The semantics of `kid`
 vary by adapter:
 
   - Sigstore Fulcio: cert serial of the short-lived OIDC-bound cert
@@ -167,7 +168,7 @@ class Signer(Protocol):
         identifier the verifier passes to its public-key resolver.
         `signing_version` is the signing-recipe identifier
         (`"cora/v1"` for the shipped Ed25519-over-DSSE-PAE recipe);
-        the verifier dispatches to the matching SigningPort adapter
+        the verifier dispatches to the matching ByteSigner adapter
         via the SigningRegistry. Adapters MUST return the version
         string that names their signing recipe; the matched-pair
         invariant is enforced row-by-row by an architecture-fitness

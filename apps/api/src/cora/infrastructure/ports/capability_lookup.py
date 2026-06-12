@@ -14,7 +14,7 @@ one consumer today (Equipment), shape determined by the consumer's
 need. Lives in `cora.infrastructure.ports` per the existing pattern.
 
 The port shape is `find_applicable_by_affordances(affordances) ->
-list[CapabilityReference]`. Filter is affordance-set containment
+list[CapabilityLookupResult]`. Filter is affordance-set containment
 (`required_affordances <@ affordances`) plus status in
 `{Defined, Versioned}` (Deprecated capabilities are excluded). This
 mirrors the read predicate Equipment used to inline as raw SQL
@@ -26,7 +26,7 @@ Family's docstring at `cora.equipment.aggregates.family.state`
 reserves the word "Capability" for Recipe BC. The port lets Equipment
 ask Recipe a question through a Protocol whose name uses Recipe's
 vocabulary, without Equipment's domain code learning the word. The
-handler maps `CapabilityReference` to Equipment's local
+handler maps `CapabilityLookupResult` to Equipment's local
 `CapabilityView` response type.
 """
 
@@ -36,7 +36,7 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
-class CapabilityReference:
+class CapabilityLookupResult:
     """Summary row from `proj_recipe_capability_summary` returned to consumers.
 
     Carries the minimal columns the integration-view handler needs to
@@ -57,7 +57,7 @@ class CapabilityLookup(Protocol):
     async def find_applicable_by_affordances(
         self,
         affordances: frozenset[str],
-    ) -> list[CapabilityReference]:
+    ) -> list[CapabilityLookupResult]:
         """Return every non-Deprecated Capability whose required_affordances are covered.
 
         "Covered" means `required_affordances <@ affordances` (every
@@ -86,6 +86,6 @@ class AlwaysEmptyCapabilityLookup:
     async def find_applicable_by_affordances(
         self,
         affordances: frozenset[str],
-    ) -> list[CapabilityReference]:
+    ) -> list[CapabilityLookupResult]:
         _ = affordances
         return []

@@ -1,4 +1,4 @@
-"""RecipeExpansionPort: pure function from Recipe step tuple + bindings to Step tuple.
+"""RecipeExpander: pure function from Recipe step tuple + bindings to Step tuple.
 
 Per [[project-recipe-aggregate-design]] the expansion is a PURE function:
 no clock, no port I/O, no randomness, no module-global state. The port
@@ -7,7 +7,7 @@ events capture which expander emitted a given expansion, enabling
 replay even if a deployment later swaps the default for a custom
 expander.
 
-The default adapter (`InMemoryRecipeExpansionPort`) delegates to the
+The default adapter (`InMemoryRecipeExpander`) delegates to the
 pure `expand` function in `cora.operation._recipe_expansion`. Future
 custom expanders (a deployment-specific DSL or a memoizing cache)
 implement the same Protocol and ship their own `version` string.
@@ -44,7 +44,7 @@ capture the version so re-expansion at replay time can detect drift.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -55,8 +55,7 @@ if TYPE_CHECKING:
     from cora.recipe.aggregates.recipe import RecipeStep
 
 
-@runtime_checkable
-class RecipeExpansionPort(Protocol):
+class RecipeExpander(Protocol):
     """Pure expansion of a Recipe's step tuple to a Conductor `Step` tuple.
 
     `version` is a stable string identifying the expander (default impl
@@ -97,4 +96,4 @@ class RecipeExpansionPort(Protocol):
         ...
 
 
-__all__ = ["RecipeExpansionPort"]
+__all__ = ["RecipeExpander"]

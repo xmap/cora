@@ -25,12 +25,12 @@ artifact reaches the orchestrator. The orchestrator's
 `content_hash` stage is the defense-in-depth recompute when the
 pull adapter did not.
 
-Per arch-2 (SignaturePort delegates to SigningPort): this
+Per arch-2 (SignaturePort delegates to ByteSigner): this
 orchestrator delegates the arm-specific stages to
 `SignaturePort.verify`. It NEVER invokes a crypto library
 directly; the matching adapter under
 `cora/federation/adapters/<family>_signature_port.py` calls
-SigningPort.sign/verify.
+ByteSigner.sign/verify.
 """
 
 from datetime import datetime
@@ -38,7 +38,7 @@ from datetime import datetime
 from cora.infrastructure.adapters.canonicalization_registry import (
     CanonicalizationRegistry,
 )
-from cora.infrastructure.ports.canonicalization import (
+from cora.infrastructure.ports.canonicalizer import (
     UnsupportedCanonicalizationVersionError,
 )
 from cora.infrastructure.ports.federation.signature_port import SignaturePort
