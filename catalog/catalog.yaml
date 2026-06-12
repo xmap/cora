@@ -1,0 +1,181 @@
+# CORA Catalog descriptor: the cross-facility vocabulary
+#
+# The single human-readable source for the kinds shared across every CORA
+# deployment. The docs build renders the Catalog pages from this file.
+#
+# Source-of-truth boundary (see the docs-rewrite plan):
+#   - roles MIRROR the code's SEED_ROLES; a drift-guard test asserts equality,
+#     so this list cannot silently fall out of step with the code.
+#   - the closed affordance / executor-shape vocabularies are validated against
+#     code-mirrored frozensets in scripts/catalog_descriptor.py (enum-equality
+#     tested), never re-authored here.
+#   - families, capabilities, methods, models have no global code seed; this
+#     file is their consolidated source, guarded by the round-trip test.
+#
+# Families ship with no affordances on purpose: an affordance is a Role concern
+# (required_affordances live on the roles below), and a Family declares which
+# Roles it presents_as. Per-device settings and vendor bindings live on the
+# beamline page, not here.
+
+roles:
+  - name: Imager
+    docstring: "Acquires 2D image frames on exposure or trigger. Satisfying Assets or composed Assemblies emit Image / Frame signals. Direct-detection Cameras and composed scintillator-relay Assemblies both satisfy this Role; the multi-Family disjunction (Lock 17) accepts either path."
+    required_affordances: [Imageable]
+    optional_affordances: [Binnable, Coolable, Triggerable, Streamable]
+    produces: [Image, Frame]
+    consumes: [TriggerIn]
+  - name: Positioner
+    docstring: "Drives at least one degree of freedom to operator-commanded positions. Satisfying Families include LinearStage, RotaryStage, Hexapod, and indexable mechanisms. Single-axis and multi-axis Assets both satisfy; the contract is positioning capability, not axis count."
+    required_affordances: [Homeable, Limitable]
+    optional_affordances: [Rotatable, Translatable, Posable, Indexable, Capturable, Leading, Following]
+    produces: [EncoderPosition]
+    consumes: [PositionCommand]
+  - name: Controller
+    docstring: "Generates or routes signals (motion, timing) that govern subordinate Assets. Satisfying Families are the empty-Affordances <Domain>Controller leaves (MotionController, TimingController). The Controller does NOT itself perform motion / imaging; subordinate Assets do, under its supervision."
+    required_affordances: [Identifiable]
+    optional_affordances: [Reportable, Pulsing]
+    produces: [ControlOut]
+    consumes: [ControlIn]
+  - name: Detector
+    docstring: "Reports a continuous or discrete measurement on query or trigger. Satisfying Families include ion chambers, photodiodes, thermocouples, and other point-sensor anatomies. Distinct from Imager: a Detector produces a scalar or short-vector Reading, not a 2D frame."
+    required_affordances: [Reportable]
+    optional_affordances: [Triggerable, Streamable]
+    produces: [Reading]
+    consumes: [TriggerIn]
+
+families:
+  # Defined families today. Affordances intentionally empty (a Role concern).
+  - name: RotaryStage
+  - name: LinearStage
+  - name: Camera
+  - name: Scintillator
+  - name: Shutter
+  - name: Hexapod
+  - name: Objective
+  - name: PseudoAxis
+  - name: MotionController
+  - name: Imager            # presenter Family for detector Assemblies
+  - name: ProbeGeneric      # APS-scope abstract detector probe-chain
+  # Pending in code (documented, not yet defined): Goniometer, Monochromator,
+  # Slit, Mirror, TimingController; future: OpticalRelay.
+
+capabilities:
+  - code: cora.capability.tomography
+    name: Tomography
+    executor_shapes: [Method]
+  - code: cora.capability.acquisition
+    name: Acquisition
+    executor_shapes: [Method]
+  - code: cora.capability.alignment
+    name: Alignment
+    executor_shapes: [Method]
+  - code: cora.capability.calibration
+    name: Calibration
+    executor_shapes: [Method]
+  - code: cora.capability.maintenance
+    name: Maintenance
+    executor_shapes: [Method, Procedure]
+  # Pending in code: cora.capability.energy_scan, cora.capability.steering.
+
+methods:
+  - name: motor_homing
+    capability: cora.capability.maintenance
+    needed_families: [RotaryStage, LinearStage]
+  - name: resolution_alignment
+    capability: cora.capability.alignment
+    needed_families: [LinearStage, Camera, Scintillator]
+  - name: focus_alignment
+    capability: cora.capability.alignment
+    needed_families: [LinearStage, Camera, Scintillator]
+  - name: center_alignment
+    capability: cora.capability.alignment
+    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+  - name: roll_alignment
+    capability: cora.capability.alignment
+    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+  - name: pitch_alignment
+    capability: cora.capability.alignment
+    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+  - name: first_light
+    capability: cora.capability.acquisition
+    needed_families: [Shutter, Camera, Scintillator]
+  - name: dark_baseline
+    capability: cora.capability.acquisition
+    needed_families: [Shutter, Camera, Scintillator]
+  - name: flat_baseline
+    capability: cora.capability.acquisition
+    needed_families: [Shutter, Camera, Scintillator]
+  - name: hexapod_reboot
+    capability: cora.capability.maintenance
+    needed_families: [Hexapod]
+  - name: tomography
+    capability: cora.capability.tomography
+    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+  - name: alignment_calibration
+    capability: cora.capability.calibration
+    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+  - name: streaming_tomography
+    capability: cora.capability.tomography
+    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+  - name: continuous_rotation_tomography
+    capability: cora.capability.tomography
+    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+  - name: mosaic_tomography
+    capability: cora.capability.tomography
+    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+
+models:
+  # Vendor product definitions (reusable across facilities). The per-deployment
+  # binding ("which 2-BM asset uses this") lives on the beamline page.
+  - name: aerotech_hexgen_hex300_230hl
+    manufacturer: { name: Aerotech }
+    part_number: "HEX300-230HL-E1-PL4-TAS"
+    declared_families: [Hexapod]
+  - name: aerotech_abs250mp_m_as
+    manufacturer: { name: Aerotech }
+    part_number: "ABS250MP-M-AS"
+    declared_families: [RotaryStage]
+  - name: aerotech_ensemble_hle10_40_a_mxh
+    manufacturer: { name: Aerotech }
+    part_number: "HLE10-40-A-MXH"
+    declared_families: [MotionController]
+  - name: aerotech_hexapod_drive_unknown_pn
+    manufacturer: { name: Aerotech }
+    part_number: "unknown-pending-confirmation"
+    declared_families: [MotionController]
+  - name: aerotech_2bmbaero_drive_unknown_pn
+    manufacturer: { name: Aerotech }
+    part_number: "unknown-pending-confirmation"
+    declared_families: [MotionController]
+  - name: aerotech_pro225sl_1000
+    manufacturer: { name: Aerotech }
+    part_number: "PRO225SL-1000"
+    declared_families: [LinearStage]
+  - name: oms_vme58
+    manufacturer: { name: "Oregon Micro Systems" }
+    part_number: "VME58"
+    declared_families: [MotionController]
+  - name: kohzu_cyat_070
+    manufacturer: { name: Kohzu }
+    part_number: "CYAT-070"
+    declared_families: [LinearStage]
+  - name: optique_peter_lens_turret_motor
+    manufacturer: { name: "Optique Peter" }
+    part_number: "TripleObj-MCT-turret"
+    declared_families: [RotaryStage]
+  - name: mitutoyo_plan_apo_nir
+    manufacturer: { name: Mitutoyo }
+    part_number: "Plan-Apo-NIR"
+    declared_families: [Objective]
+  - name: flir_oryx_orx_10g_51s5m_c
+    manufacturer: { name: FLIR }
+    part_number: "ORX-10G-51S5M-C"
+    declared_families: [Camera]
+  - name: crytur_luag_ce_100um
+    manufacturer: { name: Crytur }
+    part_number: "LuAG:Ce-100um"
+    declared_families: [Scintillator]
+
+# recipes: none defined for 2-BM today (recipe ladders are exercised per
+# scenario, not registered as a persistent catalog).
+recipes: []
