@@ -13,7 +13,7 @@ Cross-aggregate consumer ergonomics live in their own slice tests
 `register_clearance` / `amend_clearance` template bindings). The
 purpose of THIS module is the adapter -> projection contract: every
 FSM status the projection materializes round-trips through
-`lookup_by_id`, and the missing-template case returns `None`.
+`lookup`, and the missing-template case returns `None`.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -119,7 +119,7 @@ async def test_lookup_by_id_returns_none_when_template_not_found(
     for missing rows, it returns None so consumers can translate to
     their own domain error at the boundary."""
     lookup = PostgresClearanceTemplateLookup(db_pool)
-    result = await lookup.lookup_by_id(uuid4())
+    result = await lookup.lookup(uuid4())
     assert result is None
 
 
@@ -138,7 +138,7 @@ async def test_lookup_by_id_returns_result_when_template_defined(
     await _drain_safety(db_pool)
 
     lookup = PostgresClearanceTemplateLookup(db_pool)
-    result = await lookup.lookup_by_id(expected_id)
+    result = await lookup.lookup(expected_id)
     assert result is not None
     assert result.id == expected_id
     assert result.facility_code == _FACILITY_CODE
@@ -163,7 +163,7 @@ async def test_lookup_by_id_returns_active_after_activate_event_drains(
     await _drain_safety(db_pool)
 
     lookup = PostgresClearanceTemplateLookup(db_pool)
-    result = await lookup.lookup_by_id(template_id)
+    result = await lookup.lookup(template_id)
     assert result is not None
     assert result.id == template_id
     assert result.status == "Active"
@@ -183,7 +183,7 @@ async def test_lookup_by_id_returns_deprecated_after_deprecate_event_drains(
     await _drain_safety(db_pool)
 
     lookup = PostgresClearanceTemplateLookup(db_pool)
-    result = await lookup.lookup_by_id(template_id)
+    result = await lookup.lookup(template_id)
     assert result is not None
     assert result.id == template_id
     assert result.status == "Deprecated"
@@ -201,7 +201,7 @@ async def test_lookup_by_id_returns_withdrawn_after_withdraw_event_drains(
     await _drain_safety(db_pool)
 
     lookup = PostgresClearanceTemplateLookup(db_pool)
-    result = await lookup.lookup_by_id(template_id)
+    result = await lookup.lookup(template_id)
     assert result is not None
     assert result.id == template_id
     assert result.status == "Withdrawn"
@@ -256,7 +256,7 @@ async def test_lookup_by_id_returns_bumped_version_after_versioned_event_drains(
     await _drain_safety(db_pool)
 
     lookup = PostgresClearanceTemplateLookup(db_pool)
-    result = await lookup.lookup_by_id(child_id)
+    result = await lookup.lookup(child_id)
     assert result is not None
     assert result.id == child_id
     assert result.facility_code == _FACILITY_CODE

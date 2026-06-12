@@ -1,6 +1,6 @@
 """In-memory `ClearanceTemplateLookup` adapter for unit tests and the `test` app environment.
 
-Mirrors the production adapter contract: same `lookup_by_id` operation,
+Mirrors the production adapter contract: same `lookup` operation,
 same None-on-missing semantics. A `threading.Lock` guards the dict
 so concurrent tasks see consistent state.
 
@@ -53,7 +53,7 @@ class InMemoryClearanceTemplateLookup:
                 version=version,
             )
 
-    async def lookup_by_id(self, template_id: UUID) -> ClearanceTemplateLookupResult | None:
+    async def lookup(self, template_id: UUID) -> ClearanceTemplateLookupResult | None:
         with self._lock:
             return self._records.get(template_id)
 

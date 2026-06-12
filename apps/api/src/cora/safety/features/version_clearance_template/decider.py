@@ -7,7 +7,7 @@ parent belongs to the same facility as the child (L5), and that
 
 `now` and `versioned_by` are injected by the application handler from
 the Clock and Actor identity sources. `parent_lookup_result` is injected
-by the handler after calling `ClearanceTemplateLookup.lookup_by_id`;
+by the handler after calling `ClearanceTemplateLookup.lookup`;
 None signals the parent template id does not resolve to a projection
 row.
 """

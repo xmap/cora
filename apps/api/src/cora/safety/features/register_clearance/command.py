@@ -44,7 +44,7 @@ class RegisterClearance:
 
     `template_id` is the foreign key to the `ClearanceTemplate` this
     clearance instantiates. The handler resolves it via
-    `ClearanceTemplateLookup.lookup_by_id` and the decider rejects
+    `ClearanceTemplateLookup.lookup` and the decider rejects
     unknown ids with `ClearanceTemplateNotFoundError` (HTTP 404) and
     non-Active templates with `ClearanceTemplateNotBindableError`
     (HTTP 409). The auto-seed lifespan hook ships ten Active templates

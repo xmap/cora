@@ -2,7 +2,7 @@
 
 Mirrors the production `PostgresClearanceTemplateLookup` contract under
 the in-memory adapter:
-  - `lookup_by_id()` returns `None` for an unknown id (None-on-missing
+  - `lookup()` returns `None` for an unknown id (None-on-missing
     semantics; deciders translate to domain errors).
   - `register()` installs a clearance-template summary keyed by id.
   - `register()` defaults to facility `aps`, status `Active`, version 1
@@ -27,7 +27,7 @@ from cora.infrastructure.ports.clearance_template_lookup import (
 @pytest.mark.unit
 async def test_lookup_by_id_returns_none_when_unseeded() -> None:
     lookup = InMemoryClearanceTemplateLookup()
-    assert await lookup.lookup_by_id(uuid4()) is None
+    assert await lookup.lookup(uuid4()) is None
 
 
 @pytest.mark.unit
@@ -42,7 +42,7 @@ async def test_register_then_lookup_by_id_returns_seeded_result() -> None:
         version=3,
     )
 
-    result = await lookup.lookup_by_id(tid)
+    result = await lookup.lookup(tid)
     assert result is not None
     assert result.id == tid
     assert result.facility_code == "aps-2bm"
@@ -57,7 +57,7 @@ async def test_register_defaults_facility_code_to_aps_and_status_to_active() -> 
     tid = uuid4()
     lookup.register(template_id=tid)
 
-    result = await lookup.lookup_by_id(tid)
+    result = await lookup.lookup(tid)
     assert result is not None
     assert result.facility_code == "aps"
     assert result.status == "Active"
@@ -79,7 +79,7 @@ async def test_seed_constructor_pre_populates_dict_and_lookup_returns_seeded_res
     }
     lookup = InMemoryClearanceTemplateLookup(seed=seed)
 
-    result = await lookup.lookup_by_id(tid)
+    result = await lookup.lookup(tid)
     assert result is not None
     assert result.id == tid
     assert result.code == "laser-safety"
@@ -94,8 +94,8 @@ async def test_lookup_by_id_distinguishes_two_seeded_ids() -> None:
     lookup.register(template_id=tid_a, code="radiation-safety", version=1)
     lookup.register(template_id=tid_b, code="laser-safety", version=4)
 
-    result_a = await lookup.lookup_by_id(tid_a)
-    result_b = await lookup.lookup_by_id(tid_b)
+    result_a = await lookup.lookup(tid_a)
+    result_b = await lookup.lookup(tid_b)
     assert result_a is not None
     assert result_a.id == tid_a
     assert result_a.code == "radiation-safety"

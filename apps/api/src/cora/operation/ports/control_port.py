@@ -1,4 +1,4 @@
-"""ControlPort port: domain-shaped value-IO for the Operation BC executor.
+"""ControlPort: domain-shaped value-IO for the Operation BC executor.
 
 `ControlPort` is the async Protocol that Operation BC slice handlers
 (and the future Procedure executor) use to read, write, and subscribe

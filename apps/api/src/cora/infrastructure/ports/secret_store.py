@@ -61,9 +61,11 @@ from typing import Protocol
 class SecretNotFoundError(Exception):
     """The `ref` does not resolve to any stored secret.
 
-    Surfaces as HTTP 404 at the route layer because the caller asked
-    for material that the vault has no record of. May indicate a typo,
-    a revoked secret, or a rotation step that never landed.
+    Intended to surface as HTTP 404 at the route layer once a consumer
+    wires this port (no handler is registered today; the SecretStore
+    seam is reserved, not yet consumed). The caller asked for material
+    that the vault has no record of: a typo, a revoked secret, or a
+    rotation step that never landed.
     """
 
     def __init__(self, ref: str) -> None:
@@ -74,7 +76,8 @@ class SecretNotFoundError(Exception):
 class SecretStoreError(Exception):
     """The secret store backend is unreachable or misbehaving.
 
-    Surfaces as HTTP 500 because the failure is opaque to the caller
+    Intended to surface as HTTP 500 once a consumer wires this port (no
+    handler is registered today). The failure is opaque to the caller
     and not addressable by a routine retry. Adapters with a configured
     fallback MAY catch this internally before it reaches the caller.
     """
