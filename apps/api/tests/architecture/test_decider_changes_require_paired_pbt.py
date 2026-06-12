@@ -56,7 +56,6 @@ _UNIT_ROOT = _TESTS_ROOT / "unit"
 # PBT lands; new deciders must NOT be added here.
 GRANDFATHERED_DECIDERS_WITHOUT_PBT: frozenset[str] = frozenset(
     {
-        "cora.access.features.forget_actor.decider",
         "cora.agent.features.define_agent.decider",
         "cora.agent.features.deprecate_agent.decider",
         "cora.agent.features.grant_tool_to_agent.decider",
