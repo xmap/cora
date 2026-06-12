@@ -73,8 +73,6 @@ GRANDFATHERED_DECIDERS_WITHOUT_PBT: frozenset[str] = frozenset(
         "cora.data.features.discard_dataset.decider",
         "cora.data.features.promote_dataset.decider",
         "cora.data.features.register_dataset.decider",
-        "cora.decision.features.rate_decision.decider",
-        "cora.decision.features.register_decision.decider",
         "cora.equipment.features.activate_asset.decider",
         "cora.equipment.features.add_asset_family.decider",
         "cora.equipment.features.add_asset_port.decider",
