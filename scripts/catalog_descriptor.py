@@ -95,6 +95,7 @@ class Family(BaseModel):
     model_config = _MODEL_CONFIG
 
     name: str
+    note: str | None = None
     affordances: list[str] = []
     presents_as: list[str] = []
     settings_schema: dict[str, Any] | None = None
@@ -140,6 +141,7 @@ class Method(BaseModel):
 
     name: str
     capability: str | None = None
+    purpose: str | None = None
     needed_families: list[str] = []
     needed_supplies: list[str] = []
     required_roles: list[str] = []

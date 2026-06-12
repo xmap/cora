@@ -21,11 +21,11 @@ A) **Link rewriting** (`on_page_markdown`). Rewrites markdown links
    Links containing /.claude/ (private auto-memory) are stripped to plain
    text.
 
-B) **Deployment page generation** (`on_files`). Reads the beamline
-   descriptor (deployments/<id>/beamline.yaml) via scripts/beamline_descriptor
-   and renders a virtual deployments/<id>/beamline.md page via
-   scripts/beamline_pages. A missing or invalid descriptor raises and fails
-   the build (mkdocs build --strict).
+B) **Generated pages** (`on_files`). Renders virtual pages from the
+   descriptors: the beamline beam-path page from deployments/<id>/beamline.yaml
+   (scripts/beamline_*), and the Catalog inventory pages from catalog/catalog.yaml
+   (scripts/catalog_*). A missing or invalid descriptor raises and fails the
+   build (mkdocs build --strict).
 """
 
 from __future__ import annotations
@@ -41,6 +41,7 @@ REPO_ROOT = HOOK_DIR.parent
 DOCS_DIR = REPO_ROOT / "docs"
 STAGED_CONTRIBUTING_SRC_URI = "reference/contributing.md"
 DESCRIPTOR_PATH = REPO_ROOT / "deployments" / "2-bm" / "beamline.yaml"
+CATALOG_PATH = REPO_ROOT / "catalog" / "catalog.yaml"
 
 LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
@@ -55,9 +56,7 @@ def _rewrite_in_page(page_src_uri: str, markdown: str) -> str:
     page_path_in_docs = Path(page_src_uri)
     page_dir_in_docs = page_path_in_docs.parent
     # Number of "../" steps to climb from the page back to docs/ root.
-    depth_to_docs_root = (
-        0 if str(page_dir_in_docs) == "." else len(page_dir_in_docs.parts)
-    )
+    depth_to_docs_root = 0 if str(page_dir_in_docs) == "." else len(page_dir_in_docs.parts)
     up_to_docs_root = "../" * depth_to_docs_root
 
     def _rewrite(match: re.Match[str]) -> str:
@@ -135,30 +134,32 @@ def on_page_markdown(
     markdown: str,
     *,
     page: Any,
-    config: Any,  # noqa: ARG001
-    files: Any,  # noqa: ARG001
+    config: Any,
+    files: Any,
 ) -> str:
     return _rewrite_in_page(page.file.src_uri, markdown)
 
 
 def on_files(files: Any, *, config: Any) -> Any:
-    """Inject the generated deployment page(s) as virtual files.
+    """Inject the generated pages as virtual files.
 
-    Loads the beamline descriptor and renders pages via scripts/beamline_pages.
-    A missing or invalid descriptor raises and fails the build.
+    Renders the beamline beam-path page and the Catalog inventory pages from
+    their descriptors. A missing or invalid descriptor raises and fails the build.
     """
     # Defensive: re-assert the sys.path entry inside the function. The
     # module-scope insert can be lost depending on how mkdocs loads hooks.
     if str(HOOK_DIR) not in sys.path:
         sys.path.insert(0, str(HOOK_DIR))
 
-    from mkdocs.structure.files import File  # noqa: PLC0415
+    import beamline_descriptor
+    import beamline_pages
+    import catalog_descriptor
+    import catalog_pages
+    from mkdocs.structure.files import File
 
-    from beamline_descriptor import load  # noqa: PLC0415
-    from beamline_pages import render_all  # noqa: PLC0415
-
-    descriptor = load(DESCRIPTOR_PATH)
-    pages = render_all(descriptor)
-    for src_uri, content in pages.items():
+    generated: dict[str, str] = {}
+    generated.update(beamline_pages.render_all(beamline_descriptor.load(DESCRIPTOR_PATH)))
+    generated.update(catalog_pages.render_all(catalog_descriptor.load(CATALOG_PATH)))
+    for src_uri, content in generated.items():
         files.append(File.generated(config, src_uri, content=content))
     return files

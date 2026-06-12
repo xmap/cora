@@ -118,6 +118,8 @@ nav:
     - Capabilities: catalog/capabilities.md
     - Methods: catalog/methods.md
     - Families: catalog/families.md
+    - Roles: catalog/roles.md
+    - Models: catalog/models.md
   - Talks: talks.md
   - Reference:
     - reference/index.md

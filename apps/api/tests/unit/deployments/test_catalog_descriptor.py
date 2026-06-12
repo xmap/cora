@@ -47,6 +47,7 @@ def _load(name: str) -> ModuleType:
 
 
 cd = _load("catalog_descriptor")
+cp = _load("catalog_pages")
 
 
 def _vals(items: Any) -> set[str]:
@@ -92,6 +93,26 @@ def test_roles_match_seed_roles() -> None:
         assert set(role.optional_affordances) == _vals(seed.optional_affordances)
         assert set(role.produces) == _vals(seed.produces)
         assert set(role.consumes) == _vals(seed.consumes)
+
+
+def test_renders_all_catalog_pages() -> None:
+    cat = cd.load(_CATALOG)
+    pages = cp.render_all(cat)
+    assert set(pages) == {
+        "catalog/capabilities.md",
+        "catalog/methods.md",
+        "catalog/families.md",
+        "catalog/roles.md",
+        "catalog/models.md",
+    }
+    for src_uri, markdown in pages.items():
+        assert markdown.startswith("# "), f"{src_uri} missing H1"
+        assert "—" not in markdown, f"{src_uri} has an em dash"
+    # spot-check derived + per-item content actually rendered
+    assert "`tomography`" in pages["catalog/capabilities.md"]
+    assert "depth-of-focus" in pages["catalog/methods.md"]
+    assert "`Imageable`" in pages["catalog/roles.md"]
+    assert "Aerotech" in pages["catalog/models.md"]
 
 
 def test_malformed_catalog_raises(tmp_path: Path) -> None:
