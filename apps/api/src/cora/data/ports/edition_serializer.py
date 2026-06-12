@@ -1,4 +1,4 @@
-"""EditionSerializerPort: per-kind serializer for citable Edition records.
+"""EditionSerializer: per-kind serializer for citable Edition records.
 
 Invoked twice across the Edition lifecycle:
 
@@ -73,7 +73,7 @@ class DatasetRef:
 
 @dataclass(frozen=True)
 class SerializedEdition:
-    """Result of `EditionSerializerPort.serialize`.
+    """Result of `EditionSerializer.serialize`.
 
     `content_hash` is the sha256 of the canonical serialized bytes;
     `bytes_uri` points at where those bytes live (in-memory data URL
@@ -86,7 +86,7 @@ class SerializedEdition:
     content_type: str
 
 
-class EditionSerializerPort(Protocol):
+class EditionSerializer(Protocol):
     """Per-kind serializer for citation-grade Edition artifacts."""
 
     async def serialize(
@@ -113,6 +113,6 @@ class EditionSerializerPort(Protocol):
 
 __all__ = [
     "DatasetRef",
-    "EditionSerializerPort",
+    "EditionSerializer",
     "SerializedEdition",
 ]

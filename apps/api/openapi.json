@@ -26585,7 +26585,7 @@
                 }
               }
             },
-            "description": "DoiMinter.mint or EditionSerializerPort.serialize failed."
+            "description": "DoiMinter.mint or EditionSerializer.serialize failed."
           }
         },
         "summary": "Publish a Sealed Edition",
@@ -26698,7 +26698,7 @@
                 }
               }
             },
-            "description": "EditionSerializerPort failed."
+            "description": "EditionSerializer failed."
           }
         },
         "summary": "Seal a Registered Edition",

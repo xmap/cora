@@ -12,7 +12,7 @@ sits one tier below).
     + a publisher Facility + a license + a citation year
   - Carries its own identity (`id`) distinct from member Datasets
   - Has a sealing `content_hash` set at the Sealed transition (sha256
-    of the canonical serialized form via `EditionSerializerPort`)
+    of the canonical serialized form via `EditionSerializer`)
   - Optionally carries an `external_pid` (DOI minted via DoiMinter)
     after the Published transition
   - Can be tombstoned (Withdrawn) without deleting the DOI
@@ -446,7 +446,7 @@ class EditionDatasetDistributionNotFoundError(Exception):
 
 
 class EditionSerializerError(Exception):
-    """The EditionSerializerPort adapter raised at seal or publish time.
+    """The EditionSerializer adapter raised at seal or publish time.
 
     Wraps any underlying adapter failure (RoCrate12Adapter, future
     DataCite / Croissant / OAIS / NeXus adapters). Lifts to 502 (port

@@ -1,4 +1,4 @@
-"""ChecksumVerifierPort: Data BC's per-distribution byte-integrity port.
+"""ChecksumVerifier: Data BC's per-distribution byte-integrity port.
 
 Used by the ``record_attestation`` handler to compute a checksum over
 a Distribution's bytes at its declared URI, returning a discriminated
@@ -78,7 +78,7 @@ class Unreachable:
     error_detail: str
 
 
-#: Discriminated union returned by ``ChecksumVerifierPort.verify``.
+#: Discriminated union returned by ``ChecksumVerifier.verify``.
 ChecksumVerificationResult = Match | Mismatch | Unreachable
 
 
@@ -87,7 +87,7 @@ ChecksumVerificationResult = Match | Mismatch | Unreachable
 # ----------------------------------------------------------------------
 
 
-class ChecksumVerifierPort(Protocol):
+class ChecksumVerifier(Protocol):
     """Data BC port: compute a checksum over a Distribution's bytes."""
 
     async def verify(
@@ -214,7 +214,7 @@ __all__ = [
     "AlwaysMismatchingChecksumVerifier",
     "AlwaysUnreachableChecksumVerifier",
     "ChecksumVerificationResult",
-    "ChecksumVerifierPort",
+    "ChecksumVerifier",
     "ChecksumVerifierUnsupportedSchemeError",
     "ConfiguredChecksumVerifier",
     "Match",

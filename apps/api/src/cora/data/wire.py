@@ -54,7 +54,7 @@ from cora.data.features import (
     withdraw_edition,
 )
 from cora.data.ports.distribution_lookup import DistributionLookup
-from cora.data.ports.edition_serializer import EditionSerializerPort
+from cora.data.ports.edition_serializer import EditionSerializer
 from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
@@ -92,7 +92,7 @@ def _build_distribution_lookup(deps: Kernel) -> DistributionLookup:
     return InMemoryDistributionLookup()
 
 
-def _build_edition_serializers() -> dict[EditionKind, EditionSerializerPort]:
+def _build_edition_serializers() -> dict[EditionKind, EditionSerializer]:
     """Per-kind serializer adapter map. Only `ROCRATE` is wired today."""
     return {EditionKind.ROCRATE: RoCrate12Adapter()}
 

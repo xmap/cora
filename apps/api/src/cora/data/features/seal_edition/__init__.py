@@ -3,7 +3,7 @@
 Pre-loads each member Dataset for the Production-intent guard and the
 canonical Distribution per Dataset for the serializer's `DatasetRef`
 boundary. Resolves the publisher Facility via `FacilityLookup`,
-invokes the per-kind `EditionSerializerPort` (today: only
+invokes the per-kind `EditionSerializer` (today: only
 `RoCrate12Adapter`), captures the sha256 `content_hash`, and emits
 `EditionSealed`. Strict-not-idempotent on re-seal.
 """
