@@ -26,12 +26,12 @@ project_docs_surfacing_design.md). The short version of the strip rules:
          a reader needs to integrate with the module.
 -->
 
-# <Module name> module
-
-<span class="md-maturity md-maturity--stable" title="<One-line caption: what the badge implies for this module>"><alpha | beta | stable | deprecated></span>
+# <Module name> module <span class="md-maturity md-maturity--stable" title="<One-line caption: what the badge implies for this module>"><alpha | beta | stable | deprecated></span>
 
 <!--
-  The maturity span renders as a colored pill chip just below the title.
+  The maturity span must stay on the same line as the H1 so it renders as a
+  colored pill chip inline with the title (the .md-typeset h1 > .md-maturity
+  CSS rule aligns it there). On its own line it drops to a new paragraph.
   Match the class suffix to the label inside the span:
     md-maturity--alpha       <span class="md-maturity md-maturity--alpha">alpha</span>
     md-maturity--beta        <span class="md-maturity md-maturity--beta">beta</span>

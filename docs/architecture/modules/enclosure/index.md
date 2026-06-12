@@ -1,6 +1,4 @@
-# Enclosure module
-
-<span class="md-maturity md-maturity--alpha" title="Single founding aggregate, two orthogonal enums, three events, three slices, two ports (one cross-BC, one BC-local), stub adapters only; production observer adapter deferred to first pilot integration.">alpha</span>
+# Enclosure module <span class="md-maturity md-maturity--alpha" title="Single founding aggregate, two orthogonal enums, three events, three slices, two ports (one cross-BC, one BC-local), stub adapters only; production observer adapter deferred to first pilot integration.">alpha</span>
 
 ## Purpose & Scope
 
