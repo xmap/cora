@@ -2142,7 +2142,7 @@
 | src/cora/trust/features/define\_policy/tool.py                                           |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_surface/\_\_init\_\_.py                                  |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_surface/command.py                                       |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/define\_surface/decider.py                                       |        9 |        1 |        2 |        1 |     81.8% |        31 |
+| src/cora/trust/features/define\_surface/decider.py                                       |        9 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_surface/handler.py                                       |       31 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_surface/route.py                                         |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_surface/tool.py                                          |       18 |        0 |        0 |        0 |    100.0% |           |
@@ -2237,7 +2237,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   147-148 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **44168** |  **989** | **6018** |  **248** | **97.2%** |           |
+| **TOTAL**                                                                                | **44168** |  **988** | **6018** |  **247** | **97.2%** |           |
 
 
 ## Setup coverage badge
