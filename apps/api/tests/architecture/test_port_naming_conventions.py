@@ -70,7 +70,7 @@ _PORT_SUFFIX_ALLOWLIST: dict[str, str] = {
 
 # Suffix-carrying ports whose rename is deferred to the signing-stack dedup
 # (audit MERGED-SIGNING-STACK). Exempt from BOTH rules until that lands.
-_DEFERRED_SIGNING_CLUSTER: frozenset[str] = frozenset({"SigningPort", "CanonicalizationPort"})
+_DEFERRED_SIGNING_CLUSTER: frozenset[str] = frozenset({"CanonicalizationPort"})
 
 # Files under a ports/ tree that do not define a port Protocol.
 _NON_PORT_FILES: frozenset[str] = frozenset({"__init__.py", "errors.py", "value_types.py"})

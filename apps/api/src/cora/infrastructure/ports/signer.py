@@ -29,7 +29,7 @@ the key identifier that lets the verifier resolve the matching public
 key; `signing_version` is the signing-recipe identifier per
 [[project_canonicalization_port_design]] (the v1 default is
 `"cora/v1"`), recorded so the verifier can dispatch to the matching
-SigningPort adapter via the SigningRegistry. The semantics of `kid`
+ByteSigner adapter via the SigningRegistry. The semantics of `kid`
 vary by adapter:
 
   - Sigstore Fulcio: cert serial of the short-lived OIDC-bound cert
@@ -167,7 +167,7 @@ class Signer(Protocol):
         identifier the verifier passes to its public-key resolver.
         `signing_version` is the signing-recipe identifier
         (`"cora/v1"` for the shipped Ed25519-over-DSSE-PAE recipe);
-        the verifier dispatches to the matching SigningPort adapter
+        the verifier dispatches to the matching ByteSigner adapter
         via the SigningRegistry. Adapters MUST return the version
         string that names their signing recipe; the matched-pair
         invariant is enforced row-by-row by an architecture-fitness

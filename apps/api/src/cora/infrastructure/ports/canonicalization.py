@@ -42,8 +42,8 @@ class CanonicalizedBytes:
 class CanonicalizationPort(Protocol):
     """Produce wire-canonical bytes and round-trip-verify content hashes.
 
-    Sibling to SigningPort. The two are paired by `adapter_version`
-    (a v1 SigningPort signs over v1 canonicalized bytes); cross-version
+    Sibling to ByteSigner. The two are paired by `adapter_version`
+    (a v1 ByteSigner signs over v1 canonicalized bytes); cross-version
     pairing is rejected at the signing-port boundary via
     `CanonicalizationVersionMismatchError`.
     """

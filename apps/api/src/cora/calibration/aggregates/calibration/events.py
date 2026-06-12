@@ -250,7 +250,7 @@ class CalibrationRevisionPublished:
       - `signing_version` is the signing-recipe identifier per
         [[project_canonicalization_port_design]] (the v1 default
         is "cora/v1"); the verifier dispatches to the matching
-        SigningPort adapter via the SigningRegistry.
+        ByteSigner adapter via the SigningRegistry.
       - `signature_bytes_hex` is the raw signature bytes encoded as
         hex string for jsonb storage; the verifier decodes with
         `bytes.fromhex(...)`.
