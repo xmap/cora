@@ -38,4 +38,12 @@ For architects reading or evaluating CORA's design. Roles defined by what they d
 
     [Read →](standards.md)
 
+-   :material-view-grid-outline:{ .lg .middle } __Modules__
+
+    ---
+
+    Per bounded context: events, slices, aggregates, FSM. Reference detail you reach for by name, not the way in.
+
+    [Read →](modules/index.md)
+
 </div>
