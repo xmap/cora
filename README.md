@@ -135,6 +135,8 @@ cora/
 
 Functional DDD with bounded contexts. Hexagonal (Functional Core / Imperative Shell). Event-sourced backend on a relational store. Two equivalent API surfaces (REST and MCP) backed by the same handler. Agents are principals, not features: same identity, authz, and audit as humans. The recipe ladder (Method, Practice, Plan, Run) is the facility-neutrality mechanism.
 
+CORA spans three tiers. The spine is always CORA: the event log, decisions, the recipe ladder, trust, and audit, running at decision-grade latency and never inside a deterministic real-time loop. The execution edge is optional: a substrate-neutral ControlPort and Conductor (EPICS adapters shipped) a facility may adopt to drive operations, or skip in favour of its own tools. The floor is never CORA: servo control, position-synchronised output, and FPGA triggering stay in the IOCs and motion controllers. Only the spine and the floor are fixed; how far the edge reaches between them is the facility's choice. See [the recording spine and the optional execution edge](docs/architecture/standards.md#the-recording-spine-and-the-optional-execution-edge).
+
 Modelling lenses, borrowed for shared vocabulary with the field rather than wire conformance: ISA-95 (asset hierarchy), ISA-88 (episodic procedures), ISA-106 (continuous operations), ISA-99 / IEC 62443 (trust topology), ISO/IEC 42001 + NIST AI RMF (AI governance), W3C PROV-O (provenance at API boundaries).
 
 For the full design discussion see [docs/architecture/](docs/architecture/index.md); concrete picks (FastAPI, Postgres, Atlas, MCP SDK, etc.) live in [docs/stack/](docs/stack/index.md).

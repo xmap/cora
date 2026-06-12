@@ -44,6 +44,22 @@ How CORA earns the claim
 
 </div>
 
+## Where CORA sits
+
+<div class="cora-aside" markdown>
+
+The spine, the edge, and the floor
+{: .cora-kicker }
+
+- **The spine, always CORA.** The event log, decisions, the recipe ladder, trust, and audit. Decision-grade latency; it never sits inside a deterministic real-time loop.
+- **The execution edge, optional.** Driving operations step by step, and in time the scan loop, over a substrate-neutral ControlPort and Conductor with EPICS adapters. A facility may adopt it or keep its own execution and scan tools. At 2-BM, driving the scan loop this way is exploratory.
+- **The floor, never CORA.** Servo control, position-synchronised output, FPGA trigger fan-out, sub-millisecond timing. These stay in the IOCs and motion controllers, wherever the line above is drawn.
+
+</div>
+
+Only the spine and the floor are fixed. How far the edge reaches between them is the facility's choice.
+[Read the full model](architecture/standards.md#the-recording-spine-and-the-optional-execution-edge).
+
 ## What CORA governs
 
 The recipe chain is the spine. Around it, CORA models the rest of what a single facility decision actually depends on: the instruments, the resources they draw on, the people and agents who act, the rules that gate them, and what gets produced. Seventeen bounded contexts, one event log.
