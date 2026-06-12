@@ -1,6 +1,4 @@
-# Access module
-
-<span class="md-maturity md-maturity--stable" title="Foundation BC: one aggregate, two events, two-state lifecycle, shared identity with Agent">stable</span>
+# Access module <span class="md-maturity md-maturity--stable" title="Foundation BC: one aggregate, three events, two-state lifecycle, shared identity with Agent">stable</span>
 
 ## Purpose & Scope
 
@@ -57,6 +55,7 @@ The state is carried by the `active` boolean on the aggregate; `Active` and `Dea
 |---|---|---|
 | `ActorRegistered` | `actor_id`, `kind`, `occurred_at` | `register_actor` succeeds (genesis); also emitted atomically by Agent module's `define_agent` with `kind="agent"`. Display name lives in the `actor_profile` table per the PII vault pattern; legacy V1 writes carried `name` in the payload and are dropped on replay. |
 | `ActorDeactivated` | `actor_id`, `occurred_at` | `deactivate_actor` succeeds on an Actor that was active |
+| `ActorProfileForgotten` | `actor_id`, `occurred_at` | `forget_actor` succeeds; PII-erasure audit marker carrying no personal data. Aggregate state is unchanged; the projection swaps the cached display name for a tombstone literal, and the `actor_profile` row is scrubbed and deleted in the same transaction |
 
 ## Slices
 

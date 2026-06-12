@@ -1,8 +1,8 @@
-# Trust module <span class="md-maturity md-maturity--stable" title="ISA-99/IEC-62443 topology: Zone, Conduit, Surface, Policy. Pure Policy Decision Point + first concrete entries-table observation logbook.">stable</span>
+# Trust module <span class="md-maturity md-maturity--stable" title="ISA-99/IEC-62443 topology: Zone, Conduit, Surface, Policy, plus session-scoped Visit presence. Pure Policy Decision Point + first concrete entries-table observation logbook.">stable</span>
 
 ## Purpose & Scope
 
-The Trust module owns CORA's authorization topology. Every command that crosses the system is evaluated against this topology before it reaches a decider, and the evaluator that performs that check is a pure function on Policy state. Five aggregates carry the responsibility: `Zone` groups principals and assets that share a trust posture, `Conduit` is a governed communications path between two Zones, `Surface` is the process-level arrival point through which a request entered CORA, `Policy` is an authorization rule attached to a specific Conduit and Surface, and `Visit` tracks a principal's session-scoped presence on a Surface (rewrite was needed; minimal patch applied — review desired).
+The Trust module owns CORA's authorization topology. Every command that crosses the system is evaluated against this topology before it reaches a decider, and the evaluator that performs that check is a pure function on Policy state. Five aggregates carry the responsibility: `Zone` groups principals and assets that share a trust posture, `Conduit` is a governed communications path between two Zones, `Surface` is the process-level arrival point through which a request entered CORA, `Policy` is an authorization rule attached to a specific Conduit and Surface, and `Visit` tracks a principal's session-scoped presence on a Surface: the beamtime session with its planned period, arrival, presence check-in and check-out, and surface-control handover.
 
 Trust is the **what you may do** layer. Identity (who you are) lives in [Access](../access/index.md); agent-specific configuration (tool allowlists, budgets, suspended state) lives in [Agent](../agent/index.md). The cross-module Authorize port carries an Actor id resolved by Access, a Conduit id resolved by the entry adapter, and a Surface id resolved by the transport adapter, and answers Allow or Deny by consulting Policy state.
 
@@ -27,12 +27,15 @@ Out of scope
 | `Conduit` | `id: UUID` | `id`, `name: ConduitName`, `source_zone_id`, `target_zone_id`, `logbooks: dict[str, UUID]` | additive, no transitions today |
 | `Surface` | `id: UUID` | `id`, `name: SurfaceName`, `kind: SurfaceKind`, `status: SurfaceStatus` | additive, only `Defined` emitted today |
 | `Policy` | `id: UUID` | `id`, `name: PolicyName`, `conduit_id`, `permitted_principal_ids: frozenset[UUID]`, `permitted_commands: frozenset[str]`, `surface_id` | additive, no transitions today |
+| `Visit` | `id: UUID` | `id`, `policy_id`, `surface_id`, `type: VisitType`, `planned_start_at`, `planned_end_at`, `parent_id?`, `external_refs: frozenset[Identifier]`, `presence_entries: frozenset[PresenceEntry]`, `status: VisitStatus`, `last_status_reason?` | yes (8-state session lifecycle) |
 
 A `Zone` is a trust-requirement-homogeneous grouping of principals and assets, defined by trust posture rather than physical location. A `Conduit` is the governed comms path between two Zones; the source-target naming is for clarity at the API layer, since the conduit itself is undirected per the topology standard. A `Surface` is the process-level arrival socket the request crossed: the protocol-bound endpoint, not the inter-zone path. A `Policy` is the explicit allow-list that gates a `(principal, command)` pair on a specific Conduit and Surface.
 
-`Conduit.logbooks` maps logbook kind to the currently-open logbook id. Today the only logbook kind is `traversals`, opened automatically at conduit-creation, and the state encodes the at-most-one-open-per-kind invariant directly: opening a second logbook of the same kind raises rather than orphaning the first. Logbook entries themselves live in a separate typed table and do not fold into Conduit state.
+`Conduit.logbooks` maps logbook kind to the currently-open logbook id. Today the only logbook kind is `verdict`, opened automatically at conduit-creation, and the state encodes the at-most-one-open-per-kind invariant directly: opening a second logbook of the same kind raises rather than orphaning the first. Logbook entries themselves live in a separate typed table (`entries_conduit_verdicts`) and do not fold into Conduit state.
 
 `Policy.surface_id` defaults to a nil sentinel UUID. The sentinel is reserved exclusively for one legacy compatibility fold: pre-Surface PolicyDefined events on disk lack the surface_id field and fold to nil, and the evaluator treats nil-surface policies as matching any caller's surface_id. Once those legacy streams are drained the wildcard branch and the sentinel default will be removed in the same change.
+
+A `Visit` is one principal's session-scoped presence bound to exactly one `Surface` under one `Policy`: the beamtime session that authorization runs inside. It carries a planned period (`planned_start_at`, `planned_end_at`), a set of `external_refs` that anchor it to upstream beamtime-scheduling concepts (proposal, BTR, cycle), and a `presence_entries` set recording who physically or remotely checked in and out. A child Visit nests under a parent on the same Surface via `parent_id` (a commissioning Visit during a user Visit). Surface-control handover (which Visit currently drives a Surface) is tracked in a projection, not on Surface state, so the Surface aggregate stays infrastructure-stable. The actual session period (`arrived_at`, `started_at`, `completed_at`) lives on the projection alongside the planned period.
 
 ## Value Objects
 
@@ -44,8 +47,13 @@ A `Zone` is a trust-requirement-homogeneous grouping of principals and assets, d
 | `SurfaceKind` | closed StrEnum: `http` \| `mcp_stdio` \| `mcp_streamable_http` | `Surface.kind` |
 | `SurfaceStatus` | closed StrEnum: `Defined` \| `Versioned` \| `Deprecated` | `Surface.status` |
 | `PolicyName` | trimmed string, 1-200 chars | `Policy.name` |
-| `LogbookKind` | snake_case string discriminator; today only `"verdicts"` | keys of `Conduit.logbooks` |
+| `LogbookKind` | snake_case string discriminator; today only `"verdict"` | keys of `Conduit.logbooks` |
 | `AuthzResult` | tagged union `Allow()` \| `Deny(reason: str)` | return shape of `evaluate(policy, ...)` |
+| `VisitStatus` | closed StrEnum: `Planned` \| `Arrived` \| `InProgress` \| `OnHold` \| `Completed` \| `Cancelled` \| `Aborted` \| `Voided` | `Visit.status` |
+| `VisitType` | closed StrEnum: `user` \| `commissioning` \| `maintenance` \| `calibration` \| `staff` | `Visit.type` |
+| `PresenceMode` | closed StrEnum: `physical` \| `remote` | `PresenceEntry.mode` |
+| `PresenceEntry` | `(actor_id, mode, check_in_at, check_out_at?)`; an open entry has a null `check_out_at` | members of `Visit.presence_entries` |
+| `Identifier` | `(scheme, value)` open-scheme anti-corruption ref from `cora.shared.identifier` | members of `Visit.external_refs` |
 
 `SurfaceKind` is a closed enum on purpose: adding a new arrival kind (gRPC, websocket, agent-to-agent, batch) requires a code release. The kept-narrow operational vocabulary is the same discipline applied to executor shapes in Recipe and affordances in Equipment.
 
@@ -53,7 +61,7 @@ A `Zone` is a trust-requirement-homogeneous grouping of principals and assets, d
 
 ## FSM
 
-Three of the four aggregates run no FSM today. `Zone`, `Conduit`, and `Policy` are immutable-once-defined: the genesis event is the only event, and the additive-state pattern keeps the door open for the lifecycle transitions captured in the out-of-scope aside. `Surface` ships a status enum but only the genesis transition into `Defined` is exposed. None of the four aggregates ships a `version_*` or `deprecate_*` slice today.
+Of the four topology aggregates, `Zone`, `Conduit`, and `Policy` are immutable-once-defined: the genesis event is the only event, and the additive-state pattern keeps the door open for the lifecycle transitions captured in the out-of-scope aside. `Surface` ships a status enum but only the genesis transition into `Defined` is exposed. None of the four topology aggregates ships a `version_*` or `deprecate_*` slice today. `Visit`, the fifth aggregate, runs a full eight-state session lifecycle; see its subsection below.
 
 ```mermaid
 stateDiagram-v2
@@ -64,15 +72,58 @@ stateDiagram-v2
 | From | To | Command | Event |
 |---|---|---|---|
 | `[*]` | `Defined` | `define_zone` | `ZoneDefined` |
-| `[*]` | `Defined` | `define_conduit` | `ConduitDefined` (auto-opens the `traversals` logbook via `ConduitLogbookOpened` in the same transaction) |
+| `[*]` | `Defined` | `define_conduit` | `ConduitDefined` (auto-opens the `verdict` logbook via `ConduitLogbookOpened` in the same transaction) |
 | `[*]` | `Defined` | `define_surface` | `SurfaceDefined` |
 | `[*]` | `Defined` | `define_policy` | `PolicyDefined` |
 
 The logbook sub-lifecycle on `Conduit` is captured in the events table below; today the open transition fires at conduit-creation and the close transition has no command path (it lands additively when conduit-archive ships).
 
+### Visit
+
+`Visit` runs the one real lifecycle in the module: an eight-state session FSM.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Planned: register_visit
+    Planned --> Arrived: arrive_visit
+    Arrived --> InProgress: start_visit
+    InProgress --> OnHold: hold_visit
+    OnHold --> InProgress: resume_visit
+    InProgress --> Completed: complete_visit
+    OnHold --> Completed: complete_visit
+    Planned --> Cancelled: cancel_visit
+    Arrived --> Cancelled: cancel_visit
+    InProgress --> Aborted: abort_visit
+    OnHold --> Aborted: abort_visit
+    Planned --> Voided: void_visit
+    Arrived --> Voided: void_visit
+    InProgress --> Voided: void_visit
+    OnHold --> Voided: void_visit
+    Completed --> [*]
+    Cancelled --> [*]
+    Aborted --> [*]
+    Voided --> [*]
+```
+
+| From | To | Command | Event |
+|---|---|---|---|
+| `[*]` | `Planned` | `register_visit` | `VisitRegistered` |
+| `Planned` | `Arrived` | `arrive_visit` | `VisitArrived` |
+| `Arrived` | `InProgress` | `start_visit` | `VisitStarted` |
+| `InProgress` | `OnHold` | `hold_visit` | `VisitHeld` |
+| `OnHold` | `InProgress` | `resume_visit` | `VisitResumed` |
+| `InProgress` \| `OnHold` | `Completed` | `complete_visit` | `VisitCompleted` |
+| `Planned` \| `Arrived` | `Cancelled` | `cancel_visit` | `VisitCancelled` |
+| `InProgress` \| `OnHold` | `Aborted` | `abort_visit` | `VisitAborted` |
+| `Planned` \| `Arrived` \| `InProgress` \| `OnHold` | `Voided` | `void_visit` | `VisitVoided` |
+
+`Completed`, `Cancelled`, `Aborted`, and `Voided` are terminal. Every lifecycle transition is strict-not-idempotent (re-issuing from the wrong state raises a `VisitCannot<Verb>Error`); `register_visit` is the only idempotent slice. `hold`, `cancel`, `abort`, and `void` carry a reason that lands on `last_status_reason`.
+
+Two pairs of commands are orthogonal to the lifecycle (they do not change `status`): `check_in_visit` / `check_out_visit` open and close a `PresenceEntry` for an actor (allowed while `Arrived`, `InProgress`, or `OnHold`), and `take_control_of_surface` / `release_control_of_surface` move surface-control between Visits on the same Surface (tracked in the `proj_trust_surface_active_visit` projection, not on aggregate state).
+
 ## Events
 
-`Zone` emits one event type. `Conduit` emits three. `Surface` emits one. `Policy` emits one.
+`Zone` emits one event type. `Conduit` emits three. `Surface` emits one. `Policy` emits one. `Visit` emits thirteen.
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
@@ -86,6 +137,24 @@ The logbook sub-lifecycle on `Conduit` is captured in the events table below; to
 `ConduitLogbookOpened.schema` declares the per-row column shape of the entries that will land in the typed entries table for this logbook kind. Carrying the schema on the open event means the Conduit lifecycle audit captures the schema as of the moment the logbook was opened, which supports per-logbook schema evolution by opening a new logbook with an updated schema.
 
 `PolicyDefined` payloads carry the permission lists sorted by string form. Same logical permission set, same payload bytes, same idempotency hash.
+
+The thirteen `Visit` events (lifecycle plus the two orthogonal command pairs):
+
+| Event | Payload sketch | When emitted |
+|---|---|---|
+| `VisitRegistered` | `visit_id`, `policy_id`, `surface_id`, `type`, `planned_start_at`, `planned_end_at`, `parent_id?`, `external_refs`, `occurred_at` | `register_visit` succeeds (genesis) |
+| `VisitArrived` | `visit_id`, `occurred_at` | `arrive_visit` succeeds |
+| `VisitStarted` | `visit_id`, `occurred_at` | `start_visit` succeeds |
+| `VisitHeld` | `visit_id`, `reason`, `occurred_at` | `hold_visit` succeeds |
+| `VisitResumed` | `visit_id`, `occurred_at` | `resume_visit` succeeds |
+| `VisitCompleted` | `visit_id`, `occurred_at` | `complete_visit` succeeds |
+| `VisitCancelled` | `visit_id`, `reason`, `occurred_at` | `cancel_visit` succeeds |
+| `VisitAborted` | `visit_id`, `reason`, `occurred_at` | `abort_visit` succeeds |
+| `VisitVoided` | `visit_id`, `reason`, `occurred_at` | `void_visit` succeeds |
+| `VisitCheckedIn` | `visit_id`, `actor_id`, `mode`, `occurred_at` | `check_in_visit` opens a `PresenceEntry` |
+| `VisitCheckedOut` | `visit_id`, `actor_id`, `occurred_at` | `check_out_visit` closes the actor's open entry |
+| `VisitSurfaceControlTaken` | `visit_id`, `surface_id`, `occurred_at` | `take_control_of_surface` succeeds (projection-only) |
+| `VisitSurfaceControlReleased` | `visit_id`, `surface_id`, `occurred_at` | `release_control_of_surface` succeeds (projection-only) |
 
 ## Slices
 
@@ -101,6 +170,19 @@ The logbook sub-lifecycle on `Conduit` is captured in the events table below; to
 | `ListPolicies` | QUERY | `GET /policies` | `list_policies` | none |
 | `EvaluatePolicy` | QUERY | `GET /policies/{policy_id}/evaluate` | `evaluate_policy` | none |
 | `ListPermissions` | QUERY | `GET /policies/{policy_id}/permissions` | `list_permissions` | none |
+| `RegisterVisit` | NEW | `POST /visits` | `register_visit` | required |
+| `ArriveVisit` | MODIFIED | `POST /visits/{visit_id}/arrive` | `arrive_visit` | none |
+| `StartVisit` | MODIFIED | `POST /visits/{visit_id}/start` | `start_visit` | none |
+| `HoldVisit` | MODIFIED | `POST /visits/{visit_id}/hold` | `hold_visit` | none |
+| `ResumeVisit` | MODIFIED | `POST /visits/{visit_id}/resume` | `resume_visit` | none |
+| `CompleteVisit` | MODIFIED | `POST /visits/{visit_id}/complete` | `complete_visit` | none |
+| `CancelVisit` | MODIFIED | `POST /visits/{visit_id}/cancel` | `cancel_visit` | none |
+| `AbortVisit` | MODIFIED | `POST /visits/{visit_id}/abort` | `abort_visit` | none |
+| `VoidVisit` | MODIFIED | `POST /visits/{visit_id}/void` | `void_visit` | none |
+| `CheckInVisit` | MODIFIED | `POST /visits/{visit_id}/check-in` | `check_in_visit` | none |
+| `CheckOutVisit` | MODIFIED | `POST /visits/{visit_id}/check-out` | `check_out_visit` | none |
+| `TakeControlOfSurface` | MODIFIED | `POST /visits/{visit_id}/surface-control/take` | `take_control_of_surface` | none |
+| `ReleaseControlOfSurface` | MODIFIED | `POST /visits/{visit_id}/surface-control/release` | `release_control_of_surface` | none |
 
 `define_surface` is reachable today only for the bootstrap path that seeds the three system Surfaces. The route exists for operational symmetry and is exercised by the bootstrap routine; there is no operator-facing path for minting a fourth Surface.
 
@@ -138,9 +220,21 @@ The logbook sub-lifecycle on `Conduit` is captured in the events table below; to
 `ListPermissions`
 : `PolicyNotFound`, `Unauthorized` (on-behalf queries where `evaluated_principal_id` differs from the caller require a separate permission and are denied by default)
 
+`RegisterVisit`
+: `InvalidVisitPlannedPeriod`, `InvalidVisitReason`, `VisitAlreadyExists`, `VisitParentNotFound`, `VisitParentMismatchedSurface`, `Unauthorized`
+
+`ArriveVisit` / `StartVisit` / `HoldVisit` / `ResumeVisit` / `CompleteVisit` / `CancelVisit` / `AbortVisit` / `VoidVisit`
+: `VisitNotFound`, `VisitCannot<Arrive|Start|Hold|Resume|Complete|Cancel|Abort|Void>`, `InvalidVisitReason` (the reason-bearing transitions: hold, cancel, abort, void), `Unauthorized`
+
+`CheckInVisit` / `CheckOutVisit`
+: `VisitNotFound`, `VisitCannotCheckIn` / `VisitAlreadyCheckedIn` (check-in), `VisitActorNotCheckedIn` (check-out), `Unauthorized`
+
+`TakeControlOfSurface` / `ReleaseControlOfSurface`
+: `VisitNotFound`, `VisitCannotTakeControl` (surface mismatch, status not eligible, or not a descendant) / `VisitCannotReleaseControl` (surface mismatch or not the current holder), `Unauthorized`
+
 ## Storage & Projections
 
-Four read-side artefacts back the Trust module: three summary projections (one per identity-bearing aggregate that supports list queries) and one typed entries table for the per-decision authorization audit log.
+Seven read-side artefacts back the Trust module: three topology summary projections (one per identity-bearing topology aggregate that supports list queries), one typed entries table for the per-decision authorization audit log, and three Visit tables (summary, presence, and surface-control).
 
 ```sql title="proj_trust_zone_summary"
 CREATE TABLE proj_trust_zone_summary (
@@ -221,11 +315,80 @@ CREATE INDEX entries_conduit_verdicts_recorded_at_brin_idx
 
 `Policy.permitted_principal_ids` and `Policy.permitted_commands` are intentionally not projected as filter columns on `proj_trust_policy_summary`: they are list-shaped, and a future join projection covers "all policies allowing principal X" if that read pattern crystallizes.
 
+```sql title="proj_trust_visit_summary"
+CREATE TABLE proj_trust_visit_summary (
+    visit_id           UUID        PRIMARY KEY,
+    policy_id          UUID        NOT NULL,
+    surface_id         UUID        NOT NULL,
+    type               TEXT        NOT NULL CHECK (
+        type IN ('user', 'commissioning', 'maintenance', 'calibration', 'staff')
+    ),
+    status             TEXT        NOT NULL CHECK (
+        status IN ('Planned', 'Arrived', 'InProgress', 'OnHold',
+                   'Completed', 'Cancelled', 'Aborted', 'Voided')
+    ),
+    planned_start_at   TIMESTAMPTZ NOT NULL,
+    planned_end_at     TIMESTAMPTZ NOT NULL,
+    parent_id          UUID,
+    external_refs      JSONB       NOT NULL DEFAULT '[]',
+    created_at         TIMESTAMPTZ NOT NULL,
+    arrived_at         TIMESTAMPTZ,
+    started_at         TIMESTAMPTZ,
+    completed_at       TIMESTAMPTZ,
+    last_status_reason TEXT,
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX proj_trust_visit_summary_surface_status_idx
+    ON proj_trust_visit_summary (surface_id, status);
+CREATE INDEX proj_trust_visit_summary_status_planned_idx
+    ON proj_trust_visit_summary (status, planned_start_at);
+CREATE INDEX proj_trust_visit_summary_keyset_idx
+    ON proj_trust_visit_summary (created_at, visit_id);
+```
+
+```sql title="proj_trust_visit_presence"
+CREATE TABLE proj_trust_visit_presence (
+    visit_id      UUID        NOT NULL REFERENCES proj_trust_visit_summary (visit_id) ON DELETE CASCADE,
+    actor_id      UUID        NOT NULL,
+    mode          TEXT        NOT NULL CHECK (mode IN ('physical', 'remote')),
+    check_in_at   TIMESTAMPTZ NOT NULL,
+    check_out_at  TIMESTAMPTZ,
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (visit_id, actor_id, check_in_at)
+);
+
+CREATE INDEX proj_trust_visit_presence_open_idx
+    ON proj_trust_visit_presence (visit_id)
+    WHERE check_out_at IS NULL;
+CREATE INDEX proj_trust_visit_presence_actor_idx
+    ON proj_trust_visit_presence (actor_id, check_in_at);
+```
+
+```sql title="proj_trust_surface_active_visit"
+CREATE TABLE proj_trust_surface_active_visit (
+    surface_id   UUID        NOT NULL,
+    visit_id     UUID        NOT NULL REFERENCES proj_trust_visit_summary (visit_id) ON DELETE CASCADE,
+    since_at     TIMESTAMPTZ NOT NULL,
+    released_at  TIMESTAMPTZ,
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (surface_id, visit_id, since_at)
+);
+
+CREATE UNIQUE INDEX proj_trust_surface_active_visit_open_uq
+    ON proj_trust_surface_active_visit (surface_id)
+    WHERE released_at IS NULL;
+CREATE INDEX proj_trust_surface_active_visit_visit_idx
+    ON proj_trust_surface_active_visit (visit_id, since_at);
+```
+
+The Visit summary carries both the planned period (from genesis) and the actual period (`arrived_at`, `started_at`, `completed_at`, mirrored from the lifecycle events) so a reader sees plan-versus-actual without folding the stream. The presence table is one row per `(visit_id, actor_id, check_in_at)`; the partial index on open entries (null `check_out_at`) backs the "who is in the hutch right now" read. The surface-control table enforces at-most-one-open-row-per-surface through the partial UNIQUE index on `(surface_id) WHERE released_at IS NULL`, which is how the current controller of a Surface is resolved.
+
 ## Cross-Module boundaries
 
 | Module | Relationship | What's exchanged |
 |---|---|---|
-| Access | reads-from | `Policy.permitted_principal_ids` contains `Actor.id` values; the Authorize port carries `actor_id` resolved by the Access layer |
+| Access | reads-from | `Policy.permitted_principal_ids` contains `Actor.id` values; the Authorize port carries `actor_id` resolved by the Access layer; `Visit` records presence against `Actor.id` via `check_in_visit` / `check_out_visit` |
 | All BCs | provides-port | every write-side decider behind the kernel's PEP is gated by the Authorize port, which resolves a `Policy` and calls the pure `evaluate(policy, ...)` |
 | Conduit / Surface ids on inbound calls | reads-from | the HTTP and MCP entry adapters set `conduit_id` from the entry topology and `surface_id` from the transport, then pass both on the Authorize call |
 | Equipment | aligns-with | every `Asset` is conventionally a member of exactly one Trust Zone for security policy; the link is read-time, not stored on either aggregate |
@@ -282,7 +445,7 @@ The five examples below cover the canonical Trust authoring and evaluation flow:
     }
     ```
 
-    Returns `201 Created` with `conduit_id`. The `traversals` logbook opens automatically in the same transaction, so the very first authorization decision routed through this Conduit lands a row in `entries_conduit_verdicts` without a separate setup step.
+    Returns `201 Created` with `conduit_id`. The `verdict` logbook opens automatically in the same transaction, so the very first authorization decision routed through this Conduit lands a row in `entries_conduit_verdicts` without a separate setup step.
 
 === "MCP"
 

@@ -1,8 +1,10 @@
-# Recipe module <span class="md-maturity md-maturity--stable" title="Track A core: four aggregates form the abstract→bound recipe ladder">stable</span>
+# Recipe module <span class="md-maturity md-maturity--stable" title="Track A core: five aggregates (Capability, Method, Practice, Plan, Recipe) span the abstract-to-bound recipe ladder plus the executable step sequence">stable</span>
 
 ## Purpose & Scope
 
-The Recipe module owns the abstract description of how to run an experiment, from the universal operations template down to the asset-bound plan that a Run will execute. Four aggregates form a ladder: `Capability` is the universal declarative template that says what a class of operation does; `Method` is the science-community technique class; `Practice` is the facility's curated adaptation; and `Plan` binds a Practice to specific Asset instances and wires their ports together. The ladder follows the ISA-88 General → Site → Master/Control Recipe progression, with Capability sitting above the ladder as the executor-agnostic template that both Method-shaped science recipes and Procedure-shaped operational ceremonies (in the [Operation module](../operation/index.md)) realize.
+The Recipe module owns the abstract description of how to run an experiment, from the universal operations template down to the asset-bound plan that a Run will execute. Five aggregates carry the responsibility. Four form the abstract-to-bound ladder: `Capability` is the universal declarative template that says what a class of operation does; `Method` is the science-community technique class; `Practice` is the facility's curated adaptation; and `Plan` binds a Practice to specific Asset instances and wires their ports together. The ladder follows the ISA-88 General → Site → Master/Control Recipe progression, with Capability sitting above the ladder as the executor-agnostic template that both Method-shaped science recipes and Procedure-shaped operational ceremonies (in the [Operation module](../operation/index.md)) realize.
+
+The fifth aggregate, `Recipe`, is the executable body: a deployment-bound, ordered tuple of templated steps that references one `Capability` by `capability_id` and, once an operator supplies parameter bindings, expands into the flat step list the Operation Conductor walks. Recipe sits beside Capability (which declares the contract) rather than inside the bind ladder; it iterates faster than Capability and carries the body, while Method stays the technique-class contract and Plan stays the Asset-bound binding.
 
 Recipe is the "what we plan to do" layer. The "what actually happened" layer lives in the [Run module](../run/index.md), which takes a `Plan` and runs it. Recipe knows nothing about scheduling, execution, or runtime parameter capture; it knows about declaration, versioning, deprecation, and the cross-aggregate validation that catches mismatches at bind time.
 
@@ -27,6 +29,7 @@ Out of scope
 | `Method` | `id: UUID` | `id`, `name`, `capability_id`, `needed_family_ids`, `needed_assembly_ids`, `needed_supplies`, `required_roles`, `parameters_schema`, `status`, `version`, `content_hash` | yes (3-state) |
 | `Practice` | `id: UUID` | `id`, `name`, `method_id`, `site_id`, `status`, `version` | yes (3-state) |
 | `Plan` | `id: UUID` | `id`, `name`, `practice_id`, `method_id`, `asset_ids`, `default_parameters`, `wires`, `role_bindings`, `status`, `version` | yes (3-state) |
+| `Recipe` | `id: UUID` | `id`, `name`, `capability_id`, `steps: tuple[RecipeStep]`, `status`, `version`, `replaced_by_recipe_id?` | yes (3-state) |
 
 ## Value Objects
 
@@ -42,6 +45,9 @@ Out of scope
 | `PracticeStatus` | closed StrEnum: `Defined` \| `Versioned` \| `Deprecated` | `Practice.status` |
 | `PlanName` | trimmed string, 1-200 chars | `Plan.name` |
 | `PlanStatus` | closed StrEnum: `Defined` \| `Versioned` \| `Deprecated` | `Plan.status` |
+| `RecipeName` | trimmed string, 1-200 chars | `Recipe.name` |
+| `RecipeStatus` | closed StrEnum: `Defined` \| `Versioned` \| `Deprecated` | `Recipe.status` |
+| `RecipeStep` | closed union: `RecipeSetpointStep` \| `RecipeActionStep` \| `RecipeCheckStep`; each carries templated fields with `BindingRef` sentinels resolved at expansion | members of `Recipe.steps` (non-empty) |
 | `Wire` | 4-tuple `(source_asset_id, source_port_name, target_asset_id, target_port_name)`; port names 1-100 chars after trim | `Plan.wires` |
 | `RoleName` | trimmed string, 1-50 chars; Method-local positional role label | `RoleRequirement.role_name`, `RoleBinding.role_name` |
 | `PortRequirement` | 3-tuple `(port_name, direction, signal_type)`; `direction` is the Equipment `PortDirection` enum; port name + signal type bounds mirror Asset.ports | `RoleRequirement.required_ports` |
@@ -56,7 +62,7 @@ The `Affordance` enum used in `Capability.required_affordances` is owned by the 
 
 ## FSM
 
-All four aggregates share the same three-state lifecycle. The genesis command differs; the version and deprecate transitions are identical.
+All five aggregates share the same three-state lifecycle. The genesis command differs; the version and deprecate transitions are identical.
 
 ```mermaid
 stateDiagram-v2
@@ -97,6 +103,8 @@ Schema and wiring updates (`update_method_parameters_schema`, `update_plan_defau
 | `MethodVersioned` | `method_id`, `version_tag`, `occurred_at` | `version_method` succeeds |
 | `MethodDeprecated` | `method_id`, `occurred_at` | `deprecate_method` succeeds |
 | `MethodParametersSchemaUpdated` | `method_id`, `parameters_schema?`, `occurred_at` | `update_method_parameters_schema` succeeds; the schema replaces wholesale (None clears) |
+| `MethodRequiredRoleAdded` | `method_id`, `role_name`, `family_id?`, `role_kind?`, `required_ports`, `optional`, `occurred_at` | `add_method_required_role` succeeds; `family_id` XOR `role_kind` per the `RoleRequirement` invariant |
+| `MethodRequiredRoleRemoved` | `method_id`, `role_name`, `occurred_at` | `remove_method_required_role` succeeds |
 
 ### Practice
 
@@ -116,8 +124,20 @@ Schema and wiring updates (`update_method_parameters_schema`, `update_plan_defau
 | `PlanDefaultParametersUpdated` | `plan_id`, `default_parameters`, `occurred_at` | `update_plan_default_parameters` succeeds; the resolved post-merge dict is captured |
 | `PlanWireAdded` | `plan_id`, `source_asset_id`, `source_port_name`, `target_asset_id`, `target_port_name`, `occurred_at` | `add_plan_wire` succeeds |
 | `PlanWireRemoved` | `plan_id`, `source_asset_id`, `source_port_name`, `target_asset_id`, `target_port_name`, `occurred_at` | `remove_plan_wire` succeeds |
+| `PlanRoleBound` | `plan_id`, `role_name`, `asset_id`, `occurred_at` | `bind_plan_role` succeeds; pins which Asset fills a declared role slot |
+| `PlanRoleUnbound` | `plan_id`, `role_name`, `occurred_at` | `unbind_plan_role` succeeds; the bound `asset_id` is reconstructable at fold |
 
 The `PlanDefined` audit snapshots pin what was checked at bind time (`method_needed_family_ids_snapshot`, `asset_families_snapshot`) so the audit trail reproduces the validation even if Method or Asset state evolves later. The snapshots are payload-only; the evolver does not fold them into state.
+
+### Recipe
+
+| Event | Payload sketch | When emitted |
+|---|---|---|
+| `RecipeDefined` | `recipe_id`, `name`, `capability_id`, `steps`, `occurred_at` | `define_recipe` succeeds (genesis) |
+| `RecipeVersioned` | `recipe_id`, `version_tag`, `steps`, `occurred_at` | `version_recipe` succeeds; `name` and `capability_id` are preserved (not in payload), steps replace wholesale |
+| `RecipeDeprecated` | `recipe_id`, `replaced_by_recipe_id?`, `occurred_at` | `deprecate_recipe` succeeds; the optional pointer marks a successor |
+
+`Recipe.capability_id` is required and immutable across versions; a Recipe is identified by `capability_id + name`.
 
 ## Slices
 
@@ -132,6 +152,8 @@ The `PlanDefined` audit snapshots pin what was checked at bind time (`method_nee
 | `VersionMethod` | MODIFIED | `POST /methods/{method_id}/version` | `version_method` | none |
 | `DeprecateMethod` | MODIFIED | `POST /methods/{method_id}/deprecate` | `deprecate_method` | none |
 | `UpdateMethodParametersSchema` | MODIFIED | `PUT /methods/{method_id}/parameters-schema` | `update_method_parameters_schema` | none |
+| `AddMethodRequiredRole` | MODIFIED | `POST /methods/{method_id}/add-required-role` | `add_method_required_role` | none |
+| `RemoveMethodRequiredRole` | MODIFIED | `POST /methods/{method_id}/remove-required-role` | `remove_method_required_role` | none |
 | `GetMethod` | QUERY | `GET /methods/{method_id}` | `get_method` | none |
 | `ListMethods` | QUERY | `GET /methods` | `list_methods` | none |
 | `DefinePractice` | NEW | `POST /practices` | `define_practice` | required |
@@ -146,9 +168,14 @@ The `PlanDefined` audit snapshots pin what was checked at bind time (`method_nee
 | `AddPlanWire` | MODIFIED | `POST /plans/{plan_id}/wires` | `add_plan_wire` | none |
 | `RemovePlanWire` | MODIFIED | `DELETE /plans/{plan_id}/wires` | `remove_plan_wire` | none |
 | `BindPlanRole` | MODIFIED | `POST /plans/{plan_id}/bind-role` | `bind_plan_role` | none |
+| `UnbindPlanRole` | MODIFIED | `POST /plans/{plan_id}/unbind-role` | `unbind_plan_role` | none |
 | `GetPlan` | QUERY | `GET /plans/{plan_id}` | `get_plan` | none |
 | `ListPlans` | QUERY | `GET /plans` | `list_plans` | none |
 | `InspectPlanBinding` | QUERY | `POST /plans/inspect-binding` | `inspect_plan_binding` | none |
+| `DefineRecipe` | NEW | `POST /recipes` | `define_recipe` | required |
+| `VersionRecipe` | MODIFIED | `POST /recipes/{recipe_id}/version` | `version_recipe` | none |
+| `DeprecateRecipe` | MODIFIED | `POST /recipes/{recipe_id}/deprecate` | `deprecate_recipe` | none |
+| `GetRecipe` | QUERY | `GET /recipes/{recipe_id}` | `get_recipe` | none |
 
 `define_plan` is the only slice with cross-aggregate state validation in the decider. The handler pre-loads the Practice, the Method (via `practice.method_id`), and every bound Asset, then hands them to the pure decider as a `PlanBindingContext`. The decider rejects bindings against deprecated upstream entries, against decommissioned Assets, against family sets that do not cover the Method's needs, and against affordance sets that do not cover the bound Capability's contract.
 
@@ -191,6 +218,9 @@ The `PlanDefined` audit snapshots pin what was checked at bind time (`method_nee
 `UpdateMethodParametersSchema`
 : `MethodNotFoundError`, `InvalidMethodParametersSchemaError`, `MethodParametersNotSubsetError`, `Unauthorized`
 
+`AddMethodRequiredRole` / `RemoveMethodRequiredRole`
+: `MethodNotFoundError`, `MethodCannotMutateRequiredRolesError` (Method not `Defined`), `MethodRoleNameAlreadyDeclaredError` (add) / `MethodRoleNameNotFoundError` (remove), `RoleRequirementBindingDuplicateError` / `InvalidRoleRequirementTargetError` (the `family_id` XOR `role_kind` invariant), `Unauthorized`
+
 `GetMethod`, `ListMethods`
 : `MethodNotFoundError` (Get only); boundary 422 only otherwise
 
@@ -227,15 +257,30 @@ The `PlanDefined` audit snapshots pin what was checked at bind time (`method_nee
 `BindPlanRole`
 : `PlanNotFoundError`, `PlanCannotMutateRoleBindingsError` (Plan not `Defined`), `PlanRoleAssetNotBoundError`, `PlanRoleAlreadyBoundError`, `MethodNotFoundError`, `PlanRoleNameNotDeclaredError`, `AssetNotFoundError`, `RoleNotFoundError` (`role_kind` path edge-load), `PlanRoleFamilyMismatchError` (`family_id` path), `PlanRoleFamilyNotResolvableError` (`role_kind` path; an Asset Family does not resolve via `FamilyLookup`), `PlanRoleAssetCannotPresentError` (`role_kind` path; no Family or composed Assembly presents the Role with covering affordances), `PlanRolePortCoverageNotSatisfiedError`, `PlanWireRoleEndpointMismatchError`, `Unauthorized`
 
+`UnbindPlanRole`
+: `PlanNotFoundError`, `PlanCannotMutateRoleBindingsError` (Plan not `Defined`), `PlanRoleNotBoundError` (strict-not-idempotent), `Unauthorized`
+
 `GetPlan`, `ListPlans`
 : `PlanNotFoundError` (Get only); boundary 422 only otherwise
 
 `InspectPlanBinding`
 : `PracticeNotFoundError`, `MethodNotFoundError`, `AssetNotFoundError`, `CapabilityNotFoundError`, `FamilyNotFoundError`, `Unauthorized` (same NotFound set as `DefinePlan` since both share the load fan-out)
 
+`DefineRecipe`
+: `RecipeAlreadyExistsError`, `InvalidRecipeNameError`, `EmptyRecipeStepsError`, `CapabilityNotFoundError` (handler-load), `RecipeRequiresCapabilityParametersSchemaError`, `RecipeBindingReferencesUnknownParameterError` (a step `BindingRef` names a parameter the Capability schema does not declare), `Unauthorized`
+
+`VersionRecipe`
+: `RecipeNotFoundError`, `InvalidRecipeVersionTagError`, `EmptyRecipeStepsError`, `RecipeCannotVersionError` (Deprecated), the same binding-validation errors as `DefineRecipe`, `Unauthorized`
+
+`DeprecateRecipe`
+: `RecipeNotFoundError`, `RecipeCannotDeprecateError`, `Unauthorized`
+
+`GetRecipe`
+: `RecipeNotFoundError`
+
 ## Storage & Projections
 
-Four read-side tables back the Recipe module, one per aggregate. All four follow the same lifecycle-summary shape: a single row per aggregate, mutated by `ON CONFLICT` upserts as the lifecycle events arrive.
+Five read-side tables back the Recipe module, one per aggregate. All five follow the same lifecycle-summary shape: a single row per aggregate, mutated by `ON CONFLICT` upserts as the lifecycle events arrive.
 
 ```sql title="proj_recipe_capability_summary"
 CREATE TABLE proj_recipe_capability_summary (
@@ -324,18 +369,40 @@ CREATE INDEX proj_recipe_plan_summary_practice_idx
     ON proj_recipe_plan_summary (practice_id);
 ```
 
+```sql title="proj_recipe_recipe_summary"
+CREATE TABLE proj_recipe_recipe_summary (
+    recipe_id              UUID        PRIMARY KEY,
+    name                   TEXT        NOT NULL,
+    capability_id          UUID        NOT NULL,
+    status                 TEXT        NOT NULL
+        CHECK (status IN ('Defined', 'Versioned', 'Deprecated')),
+    version_tag            TEXT,
+    steps_count            INTEGER     NOT NULL DEFAULT 0,
+    replaced_by_recipe_id  UUID,
+    versioned_at           TIMESTAMPTZ,
+    deprecated_at          TIMESTAMPTZ,
+    created_at             TIMESTAMPTZ NOT NULL,
+    updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX proj_recipe_recipe_summary_keyset_idx
+    ON proj_recipe_recipe_summary (created_at, recipe_id);
+CREATE INDEX proj_recipe_recipe_summary_capability_idx
+    ON proj_recipe_recipe_summary (capability_id);
+```
+
 `GET /{aggregate}/{id}` for Method, Practice, and Plan folds the event stream so the response reflects the latest committed write without projection lag. `GET /capabilities/{id}` does the same. The four `list_*` slices (and `get_capability`'s list variants when they land) read from the projections with keyset pagination over `(created_at, {aggregate}_id)`.
 
 The Capability summary carries `required_affordances` and `executor_shapes` as `TEXT[]` so a future filter on "list capabilities affording X" is an index add, not a column add. `parameters_schema_present` is a boolean; the schema content itself stays in the event stream to keep the summary row small. `suggested_role_ids` is a `UUID[]` maintained by `CapabilitySuggestedRolesUpdated` wholesale-replace; it is documentation-only (no fitness check binds Methods to it) and defaults to the empty array for every pre-existing row. The Plan summary intentionally omits `asset_ids` (a multi-valued binding); a future `proj_recipe_plan_assets` join table will surface "all plans using Asset X" when use cases demand it. `Plan.default_parameters` and `Plan.wires` also stay out of the summary; both fold from the event stream on single-Plan reads.
 
-All four summaries carry `versioned_at` + `deprecated_at` lifecycle timestamps (Path C: state stays minimal, projection holds the timeline). Method and Plan also carry `content_hash` for content-addressed identity lookup. The Capability summary previously had a UNIQUE index on `code` for write-time collision detection; that constraint was dropped (the decider already enforces code uniqueness against the aggregate stream, and the index added migration friction for re-versioning workflows) and the constraint is reachable via a future projection-level check if pilot demand surfaces.
+All five summaries carry `versioned_at` + `deprecated_at` lifecycle timestamps (Path C: state stays minimal, projection holds the timeline). Method and Plan also carry `content_hash` for content-addressed identity lookup. The Capability summary previously had a UNIQUE index on `code` for write-time collision detection; that constraint was dropped (the decider already enforces code uniqueness against the aggregate stream, and the index added migration friction for re-versioning workflows) and the constraint is reachable via a future projection-level check if pilot demand surfaces.
 
 ## Cross-Module boundaries
 
 | Module | Relationship | What's exchanged |
 |---|---|---|
 | Equipment | depends-on | `Method.needed_family_ids` references `Family.id` values; `Plan.asset_ids` references `Asset.id` values; `Plan.wires` reference `Asset.ports` declared on bound Assets; `Capability.required_affordances` uses the `Affordance` enum owned by Equipment; `RoleRequirement.role_kind` and `Capability.suggested_role_ids` reference global `Role` contract ids resolved at the handler edge via `RoleLookup`; the `bind_plan_role` `role_kind` path reads `Family.presents_as` + `Family.affordances` (via `FamilyLookup`) and a composed `Assembly.presents_as` (via `AssemblyLookup`) |
-| Operation | shared-enum-with | `Capability.executor_shapes` lists `Procedure` as a valid implementer; `Procedure.capability_id` (Operation BC) points back at a Capability declared here |
+| Operation | shared-enum-with, expands | `Capability.executor_shapes` lists `Procedure` as a valid implementer; `Procedure.capability_id` (Operation BC) points back at a Capability declared here; Operation's `register_procedure_from_recipe` reads a `Recipe` and expands its templated steps into the Procedure's flat step list (recorded as `RecipeExpansionRecorded`) |
 | Supply | depends-on-kind | `Method.needed_supplies` references `Supply.kind` strings (instance-aggregate vs type-aggregate asymmetry, since kinds are facility-portable and instance UUIDs are not) |
 | Run | upstream-of | `Run.plan_id` references a Plan; the Method's `parameters_schema` is the validation contract for Run parameter overrides |
 | Calibration | upstream-of | `Run.pinned_calibration_ids` (resolved at Run start) is keyed by Asset and Capability/quantity tuples that originate in the Recipe ladder |
