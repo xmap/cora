@@ -164,6 +164,12 @@ dev = [
     # Configuration in `[tool.mutmut]` below scopes mutation to pure
     # decider/evolver modules only.
     "mutmut>=3.6.0,<4",
+    # PyYAML: parses the beamline descriptor (deployments/<id>/beamline.yaml).
+    # Used by scripts/beamline_descriptor.py, which the docs build imports and
+    # the deployment round-trip test dynamic-imports. types-PyYAML supplies the
+    # type stubs pyright wants for `import yaml`.
+    "pyyaml>=6,<7",
+    "types-PyYAML>=6,<7",
 ]
 
 [build-system]

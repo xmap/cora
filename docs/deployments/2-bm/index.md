@@ -16,6 +16,7 @@ Single-valued per the [Drawing VO](../../architecture/modules/equipment/index.md
 
 ## Inventories
 
+- [Beam path](beamline.md) (the equipment walk source to detector, generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor)
 - [Assets](assets.md) (flat inventory of all 2-BM sub-Assets: Components and Devices nested via `parent_id`)
 - [Calibrations](calibrations.md)
 - [Actors](actors.md)

@@ -176,17 +176,26 @@ migrate-hash:
 # `lint` would flag (data loss, locking-prone DDL).
 
 # Docs site (mkdocs-material) — published to xmap.github.io/cora/ via
-# .github/workflows/docs.yml on every push to main. Locally, install
-# mkdocs-material once with: pip install --user mkdocs-material==9.5.49
+# .github/workflows/docs.yml on every push to main. mkdocs runs through an
+# ephemeral `uv run` env so the build deps are always present and pinned to
+# match CI: mkdocs-material plus pyyaml + pydantic, which back
+# scripts/beamline_descriptor.py (the on_files hook in scripts/mkdocs_hooks.py
+# imports it to render the deployment beam-path page). No global install needed;
+# uv caches the env after the first run.
+MKDOCS = uv run --no-project \
+	--with "mkdocs-material==9.5.49" \
+	--with "pyyaml>=6,<7" \
+	--with "pydantic>=2.13.4,<3" \
+	mkdocs
 
 docs-stage:
 	python3 scripts/stage_docs.py
 
 docs-build: docs-stage
-	mkdocs build --strict
+	$(MKDOCS) build --strict
 
 docs-serve: docs-stage
-	mkdocs serve -a localhost:8001
+	$(MKDOCS) serve -a localhost:8001
 
 clean:
 	cd $(API_DIR) && rm -rf .pytest_cache .ruff_cache .pyright_cache build dist *.egg-info
