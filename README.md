@@ -6,7 +6,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/)
 
-An agent-native operations platform for large-scale research facilities. Pilot: APS beamline 2-BM, a micro-CT instrument at Argonne National Laboratory; rollout to APS's other imaging beamlines (7-BM, 32-ID), then cross-facility validation at MAX IV in Sweden. Long-horizon goal: facility-neutral across photon sources, neutron sources, free-electron lasers, and HPC centres.
+CORA is the system of record for the experiment: the one place that holds why each run did what it did, who or what approved it, under which recipe, and how to replay it later. It owns no servo loop, runs no reconstruction, and stores no dataset bytes; it records what your existing tools decide and, where a facility wants it, governs the choices between them. Pilot: APS beamline 2-BM, a micro-CT instrument at Argonne National Laboratory; rollout to APS's other imaging beamlines (7-BM, 32-ID), then cross-facility validation at MAX IV in Sweden. Long-horizon goal: facility-neutral across photon sources, neutron sources, free-electron lasers, and HPC centres.
 
 The name is also the diagnosis: **Continuously Overpromised, Rarely Automated**. Most facility software lives forever as a slide-deck capability. CORA is the version that ships.
 
