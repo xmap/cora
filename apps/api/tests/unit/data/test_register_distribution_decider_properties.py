@@ -56,7 +56,7 @@ from cora.data.features.register_distribution import (
     DistributionRegistrationContext,
     RegisterDistribution,
 )
-from cora.infrastructure.ports.supply_lookup import SupplyReference
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes
 
@@ -96,8 +96,8 @@ def _dataset(
     )
 
 
-def _supply(supply_id: UUID, *, kind: str = "Storage") -> SupplyReference:
-    return SupplyReference(
+def _supply(supply_id: UUID, *, kind: str = "Storage") -> SupplyLookupResult:
+    return SupplyLookupResult(
         supply_id=supply_id,
         kind=kind,
         name="store",

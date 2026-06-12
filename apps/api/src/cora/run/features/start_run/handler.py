@@ -61,7 +61,7 @@ from cora.equipment.aggregates.asset import Asset, AssetNotFoundError, load_asse
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import Deny, SupplyReference
+from cora.infrastructure.ports import Deny, SupplyLookupResult
 from cora.infrastructure.ports.event_store import StreamAppend
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.recipe.aggregates.method import MethodNotFoundError, load_method
@@ -282,7 +282,7 @@ def bind(deps: Kernel) -> Handler:
         # Method.needed_supplies, load every non-Decommissioned Supply
         # so the decider can gate on at-least-one-AVAILABLE per kind.
         # Empty needed_supplies short-circuits the port call.
-        needed_supplies_satisfaction: dict[str, tuple[SupplyReference, ...]] = {}
+        needed_supplies_satisfaction: dict[str, tuple[SupplyLookupResult, ...]] = {}
         if method.needed_supplies:
             satisfaction = await deps.supply_lookup.find_supplies_by_kind(
                 kinds=method.needed_supplies,

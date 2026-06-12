@@ -23,18 +23,18 @@ from cora.infrastructure.ports.authorize import (
 from cora.infrastructure.ports.capability_lookup import (
     AlwaysEmptyCapabilityLookup,
     CapabilityLookup,
-    CapabilityReference,
+    CapabilityLookupResult,
 )
 from cora.infrastructure.ports.caution_lookup import (
     AlwaysQuietCautionLookup,
     CautionLookup,
-    CautionReference,
+    CautionLookupResult,
     MinSeverity,
 )
 from cora.infrastructure.ports.clearance_lookup import (
     AlwaysCoveredClearanceLookup,
     ClearanceLookup,
-    ClearanceReference,
+    ClearanceLookupResult,
 )
 from cora.infrastructure.ports.clearance_template_lookup import (
     ClearanceTemplateLookup,
@@ -48,7 +48,7 @@ from cora.infrastructure.ports.credential_lookup import (
 from cora.infrastructure.ports.enclosure_lookup import (
     AlwaysPermittedEnclosureLookup,
     EnclosureLookup,
-    EnclosureReference,
+    EnclosureLookupResult,
 )
 from cora.infrastructure.ports.event_publisher import EventPublisher
 from cora.infrastructure.ports.event_store import (
@@ -121,7 +121,7 @@ from cora.infrastructure.ports.supply_lookup import (
     AllSatisfiedSupplyLookup,
     NoSuppliesRegisteredLookup,
     SupplyLookup,
-    SupplyReference,
+    SupplyLookupResult,
 )
 from cora.infrastructure.ports.token_verifier import (
     IntrospectionUnavailableError,
@@ -152,13 +152,13 @@ __all__ = [
     "CachedHandlerError",
     "CachedSuccess",
     "CapabilityLookup",
-    "CapabilityReference",
+    "CapabilityLookupResult",
     "CautionLookup",
-    "CautionReference",
+    "CautionLookupResult",
     "ClaimOutcome",
     "Claimed",
     "ClearanceLookup",
-    "ClearanceReference",
+    "ClearanceLookupResult",
     "ClearanceTemplateLookup",
     "ClearanceTemplateLookupResult",
     "Clock",
@@ -167,7 +167,7 @@ __all__ = [
     "CredentialLookupResult",
     "Deny",
     "EnclosureLookup",
-    "EnclosureReference",
+    "EnclosureLookupResult",
     "EventPublisher",
     "EventStore",
     "FacilityLookup",
@@ -217,7 +217,7 @@ __all__ = [
     "StoredEvent",
     "StreamAppend",
     "SupplyLookup",
-    "SupplyReference",
+    "SupplyLookupResult",
     "SystemClock",
     "TokenVerifier",
     "UUIDv7Generator",

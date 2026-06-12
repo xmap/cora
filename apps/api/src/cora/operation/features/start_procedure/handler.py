@@ -39,7 +39,7 @@ from cora.equipment.aggregates.asset import Asset, AssetNotFoundError, load_asse
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import Deny, SupplyReference
+from cora.infrastructure.ports import Deny, SupplyLookupResult
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.aggregates.procedure import (
     ProcedureNotFoundError,
@@ -173,7 +173,7 @@ def bind(deps: Kernel) -> Handler:
         # snapshot. Capability-level needed_supplies for standalone
         # Procedures is a Watch item.
         needed_supplies_snapshot: frozenset[str] = frozenset()
-        needed_supplies_satisfaction: dict[str, tuple[SupplyReference, ...]] = {}
+        needed_supplies_satisfaction: dict[str, tuple[SupplyLookupResult, ...]] = {}
         if state.parent_run_id is not None:
             # Strict load chain (mirrors start_run.handler): a missing
             # aggregate anywhere in parent_run -> plan -> practice ->

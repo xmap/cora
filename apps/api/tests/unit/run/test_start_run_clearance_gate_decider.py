@@ -23,7 +23,7 @@ from cora.equipment.aggregates.asset import (
     AssetName,
     AssetTier,
 )
-from cora.infrastructure.ports.clearance_lookup import ClearanceReference
+from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
     RunClearanceCoverageMismatchError,
@@ -37,7 +37,7 @@ _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
 
 
 def _context(
-    referencing_clearances: tuple[ClearanceReference, ...],
+    referencing_clearances: tuple[ClearanceLookupResult, ...],
 ) -> tuple[RunStartContext, frozenset[UUID]]:
     """Build a RunStartContext that would pass every check EXCEPT the
     clearance gate. Returns the context + the needed_family_ids the
@@ -74,8 +74,8 @@ def _context(
     return context, frozenset({cap})
 
 
-def _ref(status: str) -> ClearanceReference:
-    return ClearanceReference(
+def _ref(status: str) -> ClearanceLookupResult:
+    return ClearanceLookupResult(
         clearance_id=uuid4(),
         status=status,
         template_id=uuid4(),

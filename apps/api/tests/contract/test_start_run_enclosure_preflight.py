@@ -29,7 +29,7 @@ from cora.api.main import create_app
 from cora.infrastructure.adapters.in_memory_enclosure_lookup import (
     InMemoryEnclosureLookup,
 )
-from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
+from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 from tests.contract._helpers import create_capability_via_api
 from tests.contract._subject_helpers import register_active_asset
 
@@ -38,7 +38,7 @@ def _setup_chain(client: TestClient) -> tuple[str, str, str]:
     """Build the Family + Asset + Method + Practice + Plan + Subject chain.
 
     Returns (plan_id, subject_id, asset_id). The asset_id is returned
-    so the test can seed an EnclosureReference whose
+    so the test can seed an EnclosureLookupResult whose
     `containing_asset_id` matches.
     """
     _cap_id = create_capability_via_api(client)
@@ -215,7 +215,7 @@ def test_post_runs_returns_409_when_binding_enclosure_is_decommissioned() -> Non
 
             async def find_for_assets(
                 self, *, asset_ids: frozenset[UUID]
-            ) -> list[EnclosureReference]:
+            ) -> list[EnclosureLookupResult]:
                 del asset_ids
                 return list(lookup._records.values())  # type: ignore[reportPrivateUsage]
 

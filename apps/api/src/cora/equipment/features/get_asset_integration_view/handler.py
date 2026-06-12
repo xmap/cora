@@ -12,10 +12,10 @@ Read-time composition handler. Assembles the integration-view bundle by:
         [[project-dataset-lineage-design]])
     4. caution_lookup.find_active_for_run(
            asset_ids={asset_id}, procedure_ids=frozenset(),
-           min_severity="Notice")           -> list[CautionReference]
+           min_severity="Notice")           -> list[CautionLookupResult]
        (port; returns [] in test mode via AlwaysQuietCautionLookup)
     5. capability_lookup.find_applicable_by_affordances(
-           <combined Family affordances>)   -> list[CapabilityReference]
+           <combined Family affordances>)   -> list[CapabilityLookupResult]
        (port; returns [] in test mode via AlwaysEmptyCapabilityLookup)
     6. assemble AssetIntegrationView and return
 
@@ -183,7 +183,7 @@ def bind(deps: Kernel) -> Handler:
         # Step 5: applicable Capabilities via the cross-BC port. In-
         # memory test mode: AlwaysEmptyCapabilityLookup returns [].
         # The port keeps the word "Capability" out of Equipment's
-        # domain code: the handler maps the port's CapabilityReference
+        # domain code: the handler maps the port's CapabilityLookupResult
         # onto the local CapabilityView response shape, and Family's
         # docstring discipline (Capability is a Recipe word) holds.
         capability_refs = await deps.capability_lookup.find_applicable_by_affordances(

@@ -6,7 +6,7 @@ Pins the two error paths:
   - kind exists in satisfaction but every entry has status != "Available"
     -> `ProcedureSupplyCoverageMismatchError`
 
-Plus the happy path: at least one AVAILABLE SupplyReference satisfies
+Plus the happy path: at least one AVAILABLE SupplyLookupResult satisfies
 the kind. Standalone Procedures (no parent_run_id) pass trivially
 because the handler passes an empty `needed_supplies_snapshot`.
 Phase-of-Run Procedures inherit their parent Run's
@@ -19,7 +19,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.ports.supply_lookup import SupplyReference
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureName,
@@ -33,8 +33,8 @@ from cora.operation.features.start_procedure import ProcedureStartContext, Start
 _NOW = datetime(2026, 5, 28, 12, 0, 0, tzinfo=UTC)
 
 
-def _ref(kind: str, status: str) -> SupplyReference:
-    return SupplyReference(
+def _ref(kind: str, status: str) -> SupplyLookupResult:
+    return SupplyLookupResult(
         supply_id=uuid4(),
         kind=kind,
         name=f"<test {kind}>",
@@ -54,7 +54,7 @@ def _procedure(procedure_id: UUID | None = None) -> Procedure:
 
 
 def _context(
-    needed_supplies_satisfaction: dict[str, tuple[SupplyReference, ...]],
+    needed_supplies_satisfaction: dict[str, tuple[SupplyLookupResult, ...]],
 ) -> ProcedureStartContext:
     return ProcedureStartContext(
         assets={},

@@ -2,7 +2,7 @@
 
 Genesis-style decider: state must be None (otherwise
 DistributionAlreadyExistsError); reason VOs validate input; context
-carries the parent Dataset + cross-BC SupplyReference, both required
+carries the parent Dataset + cross-BC SupplyLookupResult, both required
 by the handler before the decider runs (per L17).
 """
 
@@ -40,7 +40,7 @@ from cora.data.features.register_distribution import (
     DistributionRegistrationContext,
     RegisterDistribution,
 )
-from cora.infrastructure.ports.supply_lookup import SupplyReference
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 from cora.shared.identity import ActorId
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
@@ -88,8 +88,8 @@ def _supply(
     *,
     kind: str = "Storage",
     status: str = "Available",
-) -> SupplyReference:
-    return SupplyReference(
+) -> SupplyLookupResult:
+    return SupplyLookupResult(
         supply_id=supply_id,
         kind=kind,
         name="primary-storage",

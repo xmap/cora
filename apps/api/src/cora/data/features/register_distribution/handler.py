@@ -25,7 +25,7 @@ later if profiling demands.
 ## Cross-BC port
 
 `deps.supply_lookup.lookup(supply_id)` returns a
-`SupplyReference | None` (per L14 + L28). The lookup returns rows
+`SupplyLookupResult | None` (per L14 + L28). The lookup returns rows
 in EVERY status (Available, Degraded, Unavailable, Recovering,
 Decommissioned); the decider's only Supply-side gate is `kind ==
 "Storage"`, so a Distribution can legitimately be registered

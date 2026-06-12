@@ -126,9 +126,9 @@ def test_post_start_procedure_returns_409_when_binding_enclosure_is_decommission
         # Decommissioned at the read layer, so we hand-roll an adapter
         # that returns the row anyway to exercise the decider's
         # defensive lifecycle guard.
-        from cora.infrastructure.ports.enclosure_lookup import EnclosureReference
+        from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 
-        tombstoned = EnclosureReference(
+        tombstoned = EnclosureLookupResult(
             enclosure_id=uuid4(),
             name="A-Hutch",
             containing_asset_id=asset_id,
@@ -145,7 +145,7 @@ def test_post_start_procedure_returns_409_when_binding_enclosure_is_decommission
 
             async def find_for_assets(
                 self, *, asset_ids: frozenset[UUID]
-            ) -> list[EnclosureReference]:
+            ) -> list[EnclosureLookupResult]:
                 del asset_ids
                 return [tombstoned]
 

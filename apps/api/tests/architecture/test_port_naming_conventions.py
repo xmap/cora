@@ -3,8 +3,8 @@
 A port is a `typing.Protocol` seam the domain depends on and adapters
 implement. They live under `cora/**/ports/` (cross-BC ports at
 `infrastructure/ports/`, BC-owned ports at `<bc>/ports/`, shared-kernel
-ports at `shared/ports/`). Two rules hold across the corpus, and until
-this test landed neither was enforced, so four files had drifted.
+ports at `shared/ports/`). Three rules hold across the corpus, and until
+this test landed none was enforced, so several files had drifted.
 
 ## Rule 1: bare role noun, `Port` suffix only as an allowlisted carve-out
 
@@ -29,6 +29,15 @@ When the class legitimately carries the `Port` suffix the file carries it
 too (`control_port.py` -> `ControlPort`), so the snake_case identity still
 holds. The rejected shape is a domain-named module whose stem omits a
 suffix the class keeps.
+
+## Rule 3: lookup-result DTOs use the `LookupResult` suffix
+
+A `<X>Lookup` port returns a denormalized read-side row. That DTO is named
+`<X>LookupResult` (`AssetLookupResult`, `SupplyLookupResult`), never
+`<X>Reference`. The two suffixes once split the corpus 9-to-5 for the
+identical concept; `Reference` is reserved for genuine reference value
+objects, which live in `value_types.py` (excluded here) or carry a domain
+name. A port file declaring a `*Reference` class is the rejected shape.
 
 ## Deferred: the signing/canonicalization cluster
 
@@ -66,6 +75,12 @@ _DEFERRED_SIGNING_CLUSTER: frozenset[str] = frozenset({"SigningPort", "Canonical
 # Files under a ports/ tree that do not define a port Protocol.
 _NON_PORT_FILES: frozenset[str] = frozenset({"__init__.py", "errors.py", "value_types.py"})
 
+# Genuine reference value objects allowed to keep the `Reference` suffix inside a
+# scanned port file. Empty today: lookup-result DTOs are `<X>LookupResult`, and
+# real reference VOs live in value_types.py (excluded above). Add a class here
+# only with a reason if a non-lookup reference legitimately belongs in a port file.
+_REFERENCE_SUFFIX_ALLOWLIST: frozenset[str] = frozenset()
+
 
 def _camel_to_snake(name: str) -> str:
     """`EventStore` -> `event_store`, `LLM` -> `llm`, `IdGenerator` -> `id_generator`."""
@@ -86,6 +101,11 @@ def _protocol_classes(tree: ast.AST) -> list[str]:
         for node in ast.iter_child_nodes(tree)
         if isinstance(node, ast.ClassDef) and any(_is_protocol_base(b) for b in node.bases)
     ]
+
+
+def _class_names(tree: ast.AST) -> list[str]:
+    """Names of all top-level classes in a module."""
+    return [node.name for node in ast.iter_child_nodes(tree) if isinstance(node, ast.ClassDef)]
 
 
 def _port_files() -> list[Path]:
@@ -138,4 +158,23 @@ def test_port_filename_matches_class(path: Path) -> None:
         "Rename the file to snake_case(<PortClass>).py so an import-path reader can predict "
         "the class from the path. A domain-named module whose stem omits a suffix the class "
         "keeps (signing.py for SigningPort) is the rejected shape."
+    )
+
+
+@pytest.mark.architecture
+@pytest.mark.parametrize("path", _port_files(), ids=_qualified)
+def test_port_lookup_result_uses_lookupresult_suffix(path: Path) -> None:
+    """A lookup-result DTO in a port file is `<X>LookupResult`, never `<X>Reference`."""
+    offenders = sorted(
+        name
+        for name in _class_names(ast.parse(path.read_text()))
+        if name.endswith("Reference") and name not in _REFERENCE_SUFFIX_ALLOWLIST
+    )
+    assert not offenders, (
+        f"{_qualified(path)} declares a `Reference`-suffixed class in a port file:\n  "
+        + "\n  ".join(offenders)
+        + "\n\nA row returned by a `<X>Lookup` port is a lookup result; name it "
+        "`<X>LookupResult` to match the canonical suffix. The `Reference` suffix is reserved "
+        "for genuine reference value objects, which belong in value_types.py or carry a domain "
+        "name. If this really is such a VO, add it to `_REFERENCE_SUFFIX_ALLOWLIST` with a reason."
     )
