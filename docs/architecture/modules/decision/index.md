@@ -78,7 +78,7 @@ Two sub-lifecycles accrue alongside without changing decision facts.
 | not-open | open | (no direct slice today; opened by the agent subscriber that records the trace) | `DecisionLogbookOpened` |
 | open | not-open | (no direct slice today; closes on terminal trace handoff) | `DecisionLogbookClosed` |
 
-The `append_reasoning_entry` slice does not open or close a logbook; it appends one entry row to `entries_decision_inferences` for a logbook that is already open on the Decision.
+The `append_inferences` slice does not open or close a logbook; it appends one entry row to `entries_decision_inferences` for a logbook that is already open on the Decision.
 
 **Rating sub-lifecycle.** `Decision.ratings` is a per-actor dict folded latest-per-actor-wins. Multiple `DecisionRated` events per `(decision, actor)` pair are allowed; the evolver keeps only the latest entry per actor in aggregate state. The audit trail (every rating ever submitted) lives in the event log.
 
@@ -107,19 +107,15 @@ The `append_reasoning_entry` slice does not open or close a logbook; it appends 
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterDecision` | NEW | `POST /decisions` | `register_decision` | required |
-| `GetDecision` | QUERY | `GET /decisions/{decision_id}` | `get_decision` | none |
-| `ListDecisions` | QUERY | `GET /decisions` | `list_decisions` | none |
-| `AppendReasoningEntry` | APPEND | `POST /decisions/{decision_id}/reasoning_entries` | `append_reasoning_entry` | required |
-| `RateDecision` | APPEND | `POST /decisions/{decision_id}/ratings` | `rate_decision` | required |
+<!-- arch:slices-table bc=decision -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 `register_decision` performs two cross-aggregate pre-loads in the handler before appending. The Actor referenced by `actor_id` must exist; no status check is run (a Decision can be made by an Actor in any lifecycle state, including Deactivated, because the historical fact still holds). The decider then refuses any Actor whose `kind` is `agent`: agent-emitted Decisions are written by the subscriber path (RunDebriefer, CautionDrafter) so the Signer port can wrap each row at the boundary; this slice stays human and service-account only. When `parent_id` is set, the parent Decision must exist. For operator-triggered re-invocations of an agent run-debrief, the handler additionally checks that the parent Decision carries the same `run_id` and the same RunDebrief context.
 
 `list_decisions` is a keyset-paginated read against `proj_decision_summary`. The handler accepts an optional `confidence_band` filter and an optional `actor_id` filter, and uses the same no-smart-logic-in-SQL discipline as every other list slice in CORA. The `confidence_band` filter resolves against the denormalized column, so a low-cardinality categorical predicate stays an indexed lookup.
 
-`append_reasoning_entry` writes one row into `entries_decision_inferences`. The handler validates that a logbook of the requested kind is currently open on the Decision; mismatches raise `DecisionLogbookNotOpen`. The slice does not open a logbook itself: opening is done by the agent subscriber that captures the trace.
+`append_inferences` writes one row into `entries_decision_inferences`. The handler validates that a logbook of the requested kind is currently open on the Decision; mismatches raise `DecisionLogbookNotOpen`. The slice does not open a logbook itself: opening is done by the agent subscriber that captures the trace.
 
 `rate_decision` reads the rated Decision's current `confidence` value and writes it onto the `DecisionRated` payload as `confidence_at_rating`, then appends the event. Latest-per-actor wins in the projection; every event still lands in the audit log.
 
@@ -134,7 +130,7 @@ The `append_reasoning_entry` slice does not open or close a logbook; it appends 
 `ListDecisions`
 : (boundary 422 only)
 
-`AppendReasoningEntry`
+`AppendInferences`
 : `DecisionNotFound`, `DecisionLogbookNotOpen`, boundary 422 for the per-row payload shape, `Unauthorized`
 
 `RateDecision`
@@ -401,7 +397,7 @@ The five examples below cover the canonical Decision authoring and read flow: re
 === "REST"
 
     ```http
-    POST /decisions/9c2a8e4f-3b5d-6c7e-8f9a-0b1c2d3e4f5a/reasoning_entries
+    POST /decisions/9c2a8e4f-3b5d-6c7e-8f9a-0b1c2d3e4f5a/inferences
     Content-Type: application/json
     Idempotency-Key: 7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d
     X-Principal-Id: 33333333-4444-5555-6666-777777777777
@@ -430,7 +426,7 @@ The five examples below cover the canonical Decision authoring and read flow: re
 
     ```python
     mcp.call_tool(
-        "append_reasoning_entry",
+        "append_inferences",
         {
             "decision_id": "9c2a8e4f-3b5d-6c7e-8f9a-0b1c2d3e4f5a",
             "logbook_id": "5a6b7c8d-9e0f-1a2b-3c4d-5e6f7a8b9c0d",

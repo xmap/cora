@@ -145,6 +145,17 @@ def test_count_renderer() -> None:
     assert ap.render_count(_MODEL, {"kind": "slice", "bc": "equipment"}) == "60"
 
 
+def test_decision_slices_table_uses_real_surface() -> None:
+    # The audit's high finding: the decision page documented a nonexistent
+    # append_reasoning_entry tool/REST. The generated table uses the real surface.
+    table = ap.render_slices_table(_MODEL, {"bc": "decision"})
+    assert "`AppendInferences`" in table
+    assert "/decisions/{decision_id}/inferences" in table
+    assert "`append_inferences`" in table
+    assert "append_reasoning_entry" not in table
+    assert "AppendReasoningEntry" not in table
+
+
 def test_bc_aggregates_renderer() -> None:
     aggs = ap.render_bc_aggregates(_MODEL, {"bc": "equipment"})
     assert "`role`" in aggs and "`asset`" in aggs
