@@ -186,6 +186,7 @@ sample-environment:
       replaceable: true
       travel: "x 55 mm, y 60 mm, z 25 mm, a 15 deg, b 15 deg, c 30 deg"
       confirm: true
+      drawing: { system: EDMS, number: Hex300-Data-Sheet, revision: D20250203 }
     - name: Sample_pitch_lam
       family: LinearStage         # Kohzu SA16A goniometer, laminography pitch
       model: kohzu_sa16a
@@ -252,24 +253,49 @@ detector:
       pv: "2bmb:m1"
       range: 0..360 deg
       confirm: true
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
     - name: MCTOptics_objective_0
       family: Objective
       magnification: 10.0
       numerical_aperture: 0.28
       working_distance: 33.5 mm
       replaceable: true
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
+      calibrations:
+        - name: cal_objective_0_mag
+          quantity: magnification
+          operating_point: { objective_designation: "10x_Mitutoyo", energy: 25 }
+          value: 9.83
+          source: AssertedSource
+          status: Provisional
     - name: MCTOptics_objective_1
       family: Objective
       magnification: 5.0
       numerical_aperture: 0.14
       working_distance: 34 mm
       replaceable: true
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
+      calibrations:
+        - name: cal_objective_1_mag
+          quantity: magnification
+          operating_point: { objective_designation: "5x_Mitutoyo", energy: 25 }
+          value: 4.93
+          source: AssertedSource
+          status: Provisional
     - name: MCTOptics_objective_2
       family: Objective
       magnification: 1.1
       numerical_aperture: 0.03
       working_distance: 50 mm
       replaceable: true
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
+      calibrations:
+        - name: cal_objective_2_mag
+          quantity: magnification
+          operating_point: { objective_designation: "1.1x_Mitutoyo", energy: 25 }
+          value: 1.10
+          source: AssertedSource
+          status: Provisional
     - name: lens_select
       family: PseudoAxis          # virtual, decomposes a lens index to turret rotation
       pv: "2bm:MCTOptics:LensSelect"
@@ -279,6 +305,7 @@ detector:
       pv: "2bmbAERO:m1"
       controller: Aerotech_2bmbAERO_drive
       travel: 1000 mm
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
     - name: Scintillator_LuAG
       family: Scintillator
       material: LuAG
@@ -287,6 +314,14 @@ detector:
       replaceable: true           # Consumable, swapped between sizes
       pv: "2bm:MCTOptics:ScintillatorType"
       confirm: true
+      drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
+      calibrations:
+        - name: cal_scintillator_eff_thickness
+          quantity: effective_thickness
+          operating_point: { scintillator_material: "LuAG", energy: 25 }
+          value: "100 um"
+          source: AssertedSource
+          status: Provisional
     - name: Oryx_5MP_camera
       family: Camera
       model: flir_oryx_5mp

@@ -19,6 +19,10 @@ if TYPE_CHECKING:
 PAGE_SRC_URI = "deployments/2-bm/beamline.md"
 DESCRIPTOR_BLOB_URL = "https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml"
 
+# Links up to the cross-facility Catalog (relative to the beam-path page).
+_CATALOG_FAMILIES = "../../catalog/families.md"
+_CATALOG_MODELS = "../../catalog/models.md"
+
 # Structural device fields rendered in dedicated columns or handled explicitly,
 # so they are not repeated as open key-specs.
 _STRUCTURAL = frozenset(
@@ -33,6 +37,8 @@ _STRUCTURAL = frozenset(
         "new",
         "confirm",
         "note",
+        "drawing",
+        "calibrations",
         "constituents",
         "enclosure",
     }
@@ -84,7 +90,7 @@ def _specs_cell(device: Device) -> str:
     if device.passive:
         parts.append("passive")
     if device.model:
-        parts.append(f"model `{device.model}`")
+        parts.append(f"model [`{device.model}`]({_CATALOG_MODELS})")
     if device.controller:
         parts.append(f"via `{device.controller}`")
     for key, value in (device.model_extra or {}).items():
@@ -97,6 +103,11 @@ def _specs_cell(device: Device) -> str:
             parts.append(f"{label}: " + ", ".join(str(item) for item in value))
         else:
             parts.append(f"{label}: {value}")
+    if device.drawing is not None:
+        rev = f" rev {device.drawing.revision}" if device.drawing.revision else ""
+        parts.append(f"drawing: {device.drawing.system} {device.drawing.number}{rev}")
+    for cal in device.calibrations:
+        parts.append(f"calibration: {cal.quantity} = {cal.value}")
     if device.note:
         parts.append(device.note)
     return "<br>".join(_esc(part) for part in parts)
@@ -115,7 +126,7 @@ def _device_rows(devices: list[Device]) -> list[list[str]]:
     return [
         [
             f"`{d.name}`",
-            d.family or "",
+            f"[`{d.family}`]({_CATALOG_FAMILIES})" if d.family else "",
             _pv_cell(d.pv),
             _specs_cell(d),
             "yes" if d.replaceable else "",

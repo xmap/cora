@@ -24,11 +24,14 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 # Top-level keys that are not beam-path groups. Everything else at the top
 # level is a subsystem group, kept in file order (the authored beam-path order).
 KNOWN_TOP_KEYS: frozenset[str] = frozenset({"beamline", "enclosures", "controls", "resources"})
+
+# Mirror of the code's DrawingSystem enum; guarded by an enum-equality test.
+DRAWING_SYSTEMS: frozenset[str] = frozenset({"ICMS", "EDMS", "DOI"})
 
 _MODEL_CONFIG = ConfigDict(extra="allow", protected_namespaces=())
 
@@ -39,6 +42,36 @@ class DescriptorError(ValueError):
     Carries the descriptor path so the docs build (mkdocs --strict) and the
     tests both fail with a message that names the file and the offending field.
     """
+
+
+class Drawing(BaseModel):
+    """An engineering-document reference (ISO 7200 system / number / revision)."""
+
+    model_config = _MODEL_CONFIG
+
+    system: str
+    number: str
+    revision: str | None = None
+
+    @field_validator("system")
+    @classmethod
+    def _known_system(cls, value: str) -> str:
+        if value not in DRAWING_SYSTEMS:
+            raise ValueError(f"unknown drawing system: {value}")
+        return value
+
+
+class Calibration(BaseModel):
+    """An empirical calibration record attached to a device."""
+
+    model_config = _MODEL_CONFIG
+
+    name: str | None = None
+    quantity: str
+    operating_point: dict[str, Any] | None = None
+    value: Any = None
+    source: str | None = None
+    status: str | None = None
 
 
 class Device(BaseModel):
@@ -62,6 +95,8 @@ class Device(BaseModel):
     new: bool = False
     confirm: bool | str = False
     note: str | None = None
+    drawing: Drawing | None = None
+    calibrations: list[Calibration] = []
     constituents: list[Device] | None = None
 
 

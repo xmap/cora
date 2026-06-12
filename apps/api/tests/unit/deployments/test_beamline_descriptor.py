@@ -21,6 +21,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from cora.equipment.aggregates._drawing import DrawingSystem
+
 if TYPE_CHECKING:
     from types import ModuleType
 
@@ -83,6 +85,11 @@ def test_renders_one_h2_per_group_and_no_em_dash() -> None:
     assert "`new`" in markdown
     # the P6-50 nested constituents render as their own sub-table
     assert "**P6-50_safety_stack constituents**" in markdown
+    # devices link up to the Catalog, and drawings + calibrations render
+    assert "../../catalog/families.md" in markdown
+    assert "../../catalog/models.md" in markdown
+    assert "drawing: EDMS" in markdown
+    assert "calibration: magnification" in markdown
     # repo style: no em dashes in generated prose
     assert "—" not in markdown
 
@@ -95,6 +102,21 @@ def test_markers_promoted_from_comments_to_fields() -> None:
     # a solid CORA-modeled device carries neither marker
     assert devices["Sample_top_X"].new is False
     assert devices["Sample_top_X"].confirm is False
+
+
+def test_drawing_system_mirror_matches_code() -> None:
+    assert {d.value for d in DrawingSystem} == bd.DRAWING_SYSTEMS
+
+
+def test_drawings_and_calibrations_loaded() -> None:
+    descriptor = bd.load(_DESCRIPTOR)
+    devices = {d.name: d for _name, group in descriptor.groups for d in group.devices}
+    obj0 = devices["MCTOptics_objective_0"]
+    assert obj0.drawing is not None
+    assert obj0.drawing.system == "EDMS"
+    assert obj0.calibrations
+    assert obj0.calibrations[0].quantity == "magnification"
+    assert devices["Hexapod_2BM"].drawing is not None
 
 
 def test_malformed_descriptor_raises(tmp_path: Path) -> None:
