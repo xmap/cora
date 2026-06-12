@@ -56,16 +56,16 @@ def _facility(site: Site) -> list[str]:
     f = site.facility
     rows = [["Facility code", f"`{f.code}`"], ["Kind", f"`{f.kind}`"]]
     if f.institution:
-        rows.append(["Institution", f"[{f.institution}](../argonne/index.md)"])
+        rows.append(["Institution", f.institution])
     if f.sectors:
         rows.append(["Sectors", ", ".join(f"`{s}`" for s in f.sectors)])
     if f.beamlines:
         rows.append(["Beamlines", ", ".join(f"[{b}](../2-bm/index.md)" for b in f.beamlines)])
     return [
-        "APS is the synchrotron facility these deployment pages describe. This page walks what the "
-        "facility gives an experiment: the techniques adapted here, the resources a run draws on, "
-        "the safety envelope it clears, and the people and agents who act in it. The beamlines "
-        "that host the actual measurements hang one level down.",
+        "APS is the synchrotron site 2-BM runs at. This page is the home for the facility-level "
+        "facts a 2-BM experiment inherits but does not own: the techniques adapted here, the "
+        "resources a run draws on, the safety envelope it clears, and the people and agents who "
+        "act in it. The beamline links up to these rather than restating them.",
         _banner(),
         _table(["Property", "Value"], rows),
     ]

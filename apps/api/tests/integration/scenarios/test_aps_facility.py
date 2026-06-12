@@ -160,8 +160,8 @@ async def test_facility_install_plays_out_end_to_end(
     db_pool: asyncpg.Pool,
 ) -> None:
     """Register Argonne Enterprise + APS Site + the facility-level BCs
-    that hang at those levels. Each registration grounds one inventory
-    page under `docs/deployments/argonne/` or `docs/deployments/aps/`.
+    that hang at those levels. The facility-level inventory grounds the
+    APS site page under `docs/deployments/aps/`.
     """
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
 

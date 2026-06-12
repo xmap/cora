@@ -7,7 +7,7 @@
 | Asset | `2-BM` (root Asset, `tier = Unit`, `parent_id = None`) |
 | Facility | [APS](../aps/index.md) (bound via `facility_code = "aps"`, `FacilityKind = Site`) |
 | Sector | `Sector 2` (organizational grouping; not a registered Asset) |
-| Institution | [Argonne](../argonne/index.md) (context; not modeled as an Asset or Facility) |
+| Institution | Argonne (context; not modeled as an Asset or Facility) |
 | Drawing | `(ICMS, A342-RT1000, 02)` (APS beamline layout drawing, Rev 02, May 2026) |
 
 The measurement lifecycle below is the reading order: the beamline itself, then getting it ready, running a measurement, the results, and the envelope that governs it. The physical layer is generated from the descriptor; the operational stages are hand-authored today and become CORA-projection-generated in a later phase.
