@@ -108,6 +108,7 @@ nav:
       - Runs: deployments/2-bm/runs.md
       - Campaigns: deployments/2-bm/campaigns.md
       - Cautions: deployments/2-bm/cautions.md
+      - Enclosures: deployments/2-bm/enclosures.md
       - Supplies: deployments/2-bm/supplies.md
       - Datasets: deployments/2-bm/datasets.md
       - Decisions: deployments/2-bm/decisions.md

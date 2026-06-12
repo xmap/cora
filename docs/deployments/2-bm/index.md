@@ -26,6 +26,7 @@ Single-valued per the [Drawing VO](../../architecture/modules/equipment/index.md
 - [Datasets](datasets.md)
 - [Decisions](decisions.md)
 - [Cautions](cautions.md)
+- [Enclosures](enclosures.md)
 - [Supplies](supplies.md)
 - [Policies](policies.md)
 
