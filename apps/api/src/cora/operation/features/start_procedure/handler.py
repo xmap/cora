@@ -168,10 +168,18 @@ def bind(deps: Kernel) -> Handler:
         # gate's L-pre-1 "derive scope from the Asset chain" is
         # decorative on the Procedure path: an Enclosure bound to the
         # beamline Unit never matches a Procedure targeting only a Device
-        # under it. The walk returns the inclusive closure; Decommissioned
-        # ancestors are dropped from the widening (a retired intermediate
-        # must not pull its stale Permitted Enclosure into scope, while a
-        # live grandparent above it stays). The walk reads only
+        # under it. The walk returns the inclusive closure and EVERY
+        # ancestor enters the scope regardless of its own lifecycle: the
+        # containing Asset's lifecycle is the wrong source of truth for
+        # whether a physical interlock is live. The Enclosure gate's
+        # source of truth is the ENCLOSURE's own lifecycle
+        # (`find_for_assets` returns only Active Enclosures; the decider
+        # fails any non-(Permitted-and-Active) row), so a retired
+        # Enclosure is dropped at the right layer while an
+        # Active+NotPermitted Enclosure on a Decommissioned ancestor Asset
+        # still correctly REFUSES the Procedure (decommission_asset has no
+        # Enclosure cascade; filtering Decommissioned ancestors here would
+        # silently suppress that interlock). The walk reads only
         # Equipment's Asset projection, terminates at the facility-rooted
         # root (never the Federation Facility axis), and raises
         # AncestorWalkDepthExceededError on a parent_id cycle / over-deep
@@ -181,9 +189,7 @@ def bind(deps: Kernel) -> Handler:
         # has no clearance / caution lookups); start_run additionally
         # feeds the same widened scope to those two.
         ancestor_rows = await deps.asset_lookup.ancestors_of(scoped_asset_ids)
-        scoped_asset_ids = scoped_asset_ids | frozenset(
-            row.id for row in ancestor_rows if row.lifecycle != "Decommissioned"
-        )
+        scoped_asset_ids = scoped_asset_ids | frozenset(row.id for row in ancestor_rows)
 
         referencing_enclosures = tuple(
             await deps.enclosure_lookup.find_for_assets(asset_ids=scoped_asset_ids)

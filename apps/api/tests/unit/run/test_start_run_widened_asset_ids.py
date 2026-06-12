@@ -85,7 +85,15 @@ class _RecordingEnclosureLookup:
 
 
 @pytest.mark.unit
-async def test_widened_scope_includes_live_ancestor_and_drops_decommissioned() -> None:
+async def test_widened_scope_includes_every_ancestor_regardless_of_lifecycle() -> None:
+    """The widening unions EVERY ancestor into scope, including a
+    Decommissioned one. The containing Asset's lifecycle is NOT the source
+    of truth for whether a physical interlock is live: an Enclosure on a
+    Decommissioned ancestor must still reach the gate (the Enclosure's own
+    lifecycle filter, applied downstream by find_for_assets + the decider,
+    decides whether it blocks). Filtering Decommissioned ancestors here
+    would silently suppress an Active+NotPermitted Enclosure on a retired
+    ancestor and admit the Run into an un-permitted hutch."""
     store = InMemoryEventStore()
     _, asset_id, _, _, plan_id, subject_id = await seed_full_chain(store)
 
@@ -113,12 +121,12 @@ async def test_widened_scope_includes_live_ancestor_and_drops_decommissioned() -
 
     assert result == _NEW_ID
     assert recorder.captured is not None
-    # the live ancestor widened the scope...
+    # every ancestor widened the scope, the plan-bound Asset stays...
     assert _LIVE_ANCESTOR_ID in recorder.captured
-    # ...the plan-bound Asset is still in scope...
     assert asset_id in recorder.captured
-    # ...and the Decommissioned ancestor was dropped from the widening.
-    assert _DEAD_ANCESTOR_ID not in recorder.captured
+    # ...AND the Decommissioned ancestor is included (its Enclosure must
+    # still be able to gate; the Enclosure's own lifecycle decides downstream).
+    assert _DEAD_ANCESTOR_ID in recorder.captured
 
 
 @pytest.mark.unit
@@ -209,8 +217,8 @@ async def test_clearance_lookup_also_receives_the_widened_scope() -> None:
     identical widened scoped_asset_ids reaches clearance_lookup, so an
     ancestor-bound Clearance can cover a child Run. The recorder returns no
     clearances (so the decider raises RunRequiresActiveClearanceError), but
-    the lookup arg was captured first -- proving the widening flows to the
-    Safety gate too, with the Decommissioned ancestor still dropped."""
+    the lookup arg was captured first -- proving the widening (every
+    ancestor, no lifecycle filter) flows to the Safety gate too."""
     store = InMemoryEventStore()
     _, asset_id, _, _, plan_id, subject_id = await seed_full_chain(store)
 
@@ -240,4 +248,4 @@ async def test_clearance_lookup_also_receives_the_widened_scope() -> None:
     assert recorder.captured is not None
     assert _LIVE_ANCESTOR_ID in recorder.captured
     assert asset_id in recorder.captured
-    assert _DEAD_ANCESTOR_ID not in recorder.captured
+    assert _DEAD_ANCESTOR_ID in recorder.captured

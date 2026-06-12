@@ -42,8 +42,14 @@ from cora.enclosure.features.observe_enclosure_status import ObserveEnclosureSta
 from cora.enclosure.features.register_enclosure import RegisterEnclosure
 from cora.equipment.adapters.postgres_asset_lookup import PostgresAssetLookup
 from cora.equipment.aggregates.asset import AssetTier
-from cora.equipment.features import add_asset_family, define_family, register_asset
+from cora.equipment.features import (
+    add_asset_family,
+    decommission_asset,
+    define_family,
+    register_asset,
+)
 from cora.equipment.features.add_asset_family import AddAssetFamily
+from cora.equipment.features.decommission_asset import DecommissionAsset
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.infrastructure.kernel import Kernel
@@ -232,3 +238,44 @@ async def test_without_walk_ancestor_enclosure_silently_passes(db_pool: asyncpg.
         correlation_id=_CORRELATION_ID,
     )
     assert run_id is not None
+
+
+@pytest.mark.integration
+async def test_decommissioned_ancestor_with_active_notpermitted_enclosure_still_refuses(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Safety regression: a Decommissioned ANCESTOR must NOT suppress its own
+    still-Active NotPermitted Enclosure. The Unit is decommissioned but its
+    interlock Enclosure stays Active + NotPermitted (decommission_asset has
+    no Enclosure cascade). The walk must still bring the retired Unit into
+    scope so the gate sees the live NotPermitted Enclosure and REFUSES the
+    Run. Filtering Decommissioned ancestors out of the widening would
+    silently admit the Run into an un-permitted hutch."""
+    deps, plan_id, subject_id, unit_id, _device_id = await _seed_chain(db_pool, walk=True)
+    enclosure_id = await _seed_enclosure(db_pool, containing_asset_id=unit_id)
+    await _observe(
+        db_pool,
+        enclosure_id=enclosure_id,
+        new_status=EnclosurePermitStatus.NOT_PERMITTED,
+        now=_T1,
+    )
+
+    # Retire the containing Unit. Its Enclosure is untouched (Active + NotPermitted).
+    await decommission_asset.bind(deps)(
+        DecommissionAsset(asset_id=unit_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await drain_equipment_projections(db_pool)
+
+    with pytest.raises(RunRequiresPermittedEnclosureError) as exc_info:
+        await start_run.bind(deps)(
+            StartRun(
+                name="Must refuse via decommissioned ancestor",
+                plan_id=plan_id,
+                subject_id=subject_id,
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert any(eid == enclosure_id for eid, _ in exc_info.value.enclosure_status_summary)

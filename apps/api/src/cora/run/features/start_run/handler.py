@@ -245,28 +245,35 @@ def bind(deps: Kernel) -> Handler:
         # is decorative: an Enclosure bound to the 2-BM beamline Unit
         # never matches a Plan that binds only a Device under it. The
         # walk returns the inclusive ancestor closure (the inputs plus
-        # every ancestor). Decommissioned ancestors are dropped from the
-        # widening: a retired intermediate must not pull its stale
-        # Permitted Enclosure into scope, while a live grandparent above
-        # a Decommissioned intermediate stays in scope (the walk already
-        # collected the whole closure; only the Decommissioned nodes are
-        # filtered out of the union). Plan-bound Assets keep their own
-        # `RunPlanAssetDecommissionedError` lifecycle gate above; this
-        # filter governs only the ancestor widening. The walk reads only
-        # Equipment's Asset projection and terminates at the facility-
-        # rooted root, never the Federation Facility axis; a `parent_id`
-        # cycle or an over-deep chain raises
+        # every ancestor), and EVERY ancestor enters the scope regardless
+        # of its own lifecycle. We deliberately do NOT filter ancestors
+        # on `lifecycle`: the containing Asset's lifecycle is the wrong
+        # source of truth for whether a physical interlock is live. Each
+        # downstream gate owns its own lifecycle semantics on the widened
+        # scope. For the safety-critical Enclosure gate that source of
+        # truth is the ENCLOSURE's own lifecycle: `find_for_assets`
+        # returns only Active Enclosures and the decider fails any
+        # non-(Permitted-and-Active) row, so a retired Enclosure is
+        # dropped at the right layer while an Active+NotPermitted
+        # Enclosure on a Decommissioned ancestor Asset still correctly
+        # REFUSES the Run (a Decommissioned containing Asset does not
+        # retire its interlock; decommission_asset has no Enclosure
+        # cascade). Filtering Decommissioned ancestors here instead would
+        # silently suppress that Enclosure and admit the Run into an
+        # un-permitted hutch. Plan-bound Assets keep their own
+        # `RunPlanAssetDecommissionedError` gate above. The walk reads
+        # only Equipment's Asset projection and terminates at the
+        # facility-rooted root, never the Federation Facility axis; a
+        # `parent_id` cycle or an over-deep chain raises
         # `AncestorWalkDepthExceededError` rather than under-scoping the
-        # gate (failing loud beats admitting a Run an unreached
-        # ancestor's Enclosure should refuse). That error is left
-        # intentionally unmapped at the route layer: a parent_id cycle
-        # is server-side data corruption, not a client-fixable request,
-        # so a 500 (with the stack trace in the server log) is the right
-        # operator signal, not a 4xx the caller could retry.
+        # gate (failing loud beats admitting a Run an unreached ancestor's
+        # Enclosure should refuse). That error is left intentionally
+        # unmapped at the route layer: a parent_id cycle is server-side
+        # data corruption, not a client-fixable request, so a 500 (with
+        # the stack trace in the server log) is the right operator signal,
+        # not a 4xx the caller could retry.
         ancestor_rows = await deps.asset_lookup.ancestors_of(scoped_asset_ids)
-        scoped_asset_ids = scoped_asset_ids | {
-            row.id for row in ancestor_rows if row.lifecycle != "Decommissioned"
-        }
+        scoped_asset_ids = scoped_asset_ids | {row.id for row in ancestor_rows}
 
         # cross-BC clearance gate: query Safety's
         # clearance projection for every clearance whose bindings

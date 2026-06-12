@@ -363,9 +363,12 @@ class _RecordingEnclosureLookup:
 
 
 @pytest.mark.unit
-async def test_procedure_widened_scope_includes_live_ancestor_and_drops_decommissioned() -> None:
+async def test_procedure_widened_scope_includes_every_ancestor_regardless_of_lifecycle() -> None:
     """start_procedure mirrors start_run: the ancestor closure widens the
-    Enclosure scope, with the Decommissioned ancestor dropped."""
+    Enclosure scope, including a Decommissioned ancestor. The Enclosure's
+    own lifecycle (applied downstream) decides whether it blocks; filtering
+    Decommissioned ancestors here would suppress an Active+NotPermitted
+    Enclosure on a retired ancestor and admit into an un-permitted hutch."""
     store = InMemoryEventStore()
     await _seed_asset(store, _TARGET_ASSET_ID)
     await _seed_procedure(store, target_asset_ids=(_TARGET_ASSET_ID,))
@@ -395,7 +398,7 @@ async def test_procedure_widened_scope_includes_live_ancestor_and_drops_decommis
     assert recorder.captured is not None
     assert _LIVE_ANCESTOR_ID in recorder.captured
     assert _TARGET_ASSET_ID in recorder.captured
-    assert _DEAD_ANCESTOR_ID not in recorder.captured
+    assert _DEAD_ANCESTOR_ID in recorder.captured
 
 
 @pytest.mark.unit

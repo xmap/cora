@@ -26,7 +26,7 @@ The decider then requires every referencing Enclosure to be `Permitted` and `Act
 - every referencing Enclosure fails the check: refused with `RunRequiresPermittedEnclosureError` / `ProcedureRequiresPermittedEnclosureError` (HTTP 409).
 - some pass and some fail: refused with `RunEnclosureCoverageMismatchError` / `ProcedureEnclosureCoverageMismatchError` (HTTP 409).
 
-A Decommissioned ancestor is dropped from the widening, so a retired intermediate Asset cannot pull a stale permit into scope; a live Asset above it still gates. The walk reads only the Equipment Asset projection and stops at the facility-rooted Unit; it never crosses into the Federation Facility hierarchy.
+Every ancestor enters the widened scope regardless of its own lifecycle. Whether a retired ancestor's interlock still blocks is decided by the Enclosure's own lifecycle, not the containing Asset's: a Decommissioned Enclosure is excluded at the read layer, but an Enclosure that is still Active and NotPermitted on a Decommissioned ancestor Asset correctly REFUSES the Run (decommissioning the containing Asset does not retire its interlock). The walk reads only the Equipment Asset projection and stops at the facility-rooted Unit; it never crosses into the Federation Facility hierarchy.
 
 See [Runs](runs.md) and [Procedures](procedures.md) for what each gated operation binds.
 
