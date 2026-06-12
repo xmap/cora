@@ -29,6 +29,7 @@ pytestmark = pytest.mark.unit
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 _CORA = _REPO_ROOT / "apps" / "api" / "src" / "cora"
+_DOCS_ARCH = _REPO_ROOT / "docs" / "architecture"
 
 
 def _load(name: str) -> ModuleType:
@@ -156,6 +157,29 @@ def test_expand_markers_idempotent() -> None:
     assert out.startswith("lead <!-- arch:count") and out.endswith("/arch:count --> tail")
     # re-expanding a generated page is stable
     assert ap.expand_markers(out, model=_MODEL, src_uri="architecture/model.md") == out
+
+
+def test_every_architecture_marker_expands_cleanly() -> None:
+    # Walk the real docs: every arch:* marker on every architecture/ page must
+    # expand against the live model without raising (no stale bc/agg, no bad arg).
+    md_files = sorted(_DOCS_ARCH.rglob("*.md"))
+    assert md_files, "expected architecture docs pages"
+    seen_marker = False
+    for path in md_files:
+        text = path.read_text(encoding="utf-8")
+        if "<!-- arch:" not in text:
+            continue
+        seen_marker = True
+        src_uri = f"architecture/{path.relative_to(_DOCS_ARCH).as_posix()}"
+        out = ap.expand_markers(text, model=_MODEL, src_uri=src_uri)
+        assert "<!-- arch:" in out  # markers are preserved for the next build
+        assert chr(0x2014) not in out, f"{src_uri} has an em dash"
+    assert seen_marker, "no architecture page carries an arch:* marker"
+
+
+def test_model_md_has_exactly_one_bc_table() -> None:
+    text = (_DOCS_ARCH / "model.md").read_text(encoding="utf-8")
+    assert text.count("<!-- arch:bc-table -->") == 1
 
 
 def test_expand_markers_rejects_bad_markers() -> None:

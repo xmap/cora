@@ -10,28 +10,11 @@ CORA is a set of bounded contexts (BCs) organised into tracks. Each BC owns its 
 
 Status legend: **Active** = aggregate is shipping and listed under [Modules](modules/index.md); **Planned** = scoped, not yet implemented.
 
-| Track | BC | Aggregates | Status |
-| --- | --- | --- | --- |
-| Foundation | `access` | `actor` | Active |
-| Foundation | `equipment` | `family`, `model`, `asset`, `assembly`, `fixture`, `mount`, `frame` | Active |
-| Track A (episodic procedures) | `recipe` | `capability`, `method`, `practice`, `plan`, `recipe` | Active |
-| Track A | `run` | `run` | Active |
-| Track A | `campaign` | `campaign` | Active |
-| Track B (continuous operations) | `supply` | `supply` | Active |
-| Track B | `operation` | `procedure` | Active |
-| Track C (trust topology) | `trust` | `zone`, `conduit`, `surface`, `policy`, `visit` | Active |
-| Governance | `safety` | `clearance` | Active |
-| Governance | `caution` | `caution` | Active |
-| Governance | `calibration` | `calibration` | Active |
-| Decisions and agents | `decision` | `decision` | Active |
-| Decisions and agents | `agent` | `agent` | Active |
-| Independent | `subject` | `subject` | Active |
-| Independent | `data` | `dataset` | Active |
-| Independent | `federation` | `credential`, `permit`, `seal` | Active |
-| Decisions and agents | `strategy` | `strategy` | Planned |
-| Independent | `budget` | `budget` | Planned |
+<!-- arch:bc-table -->
+_Generated from the code at build time._
+<!-- /arch:bc-table -->
 
-Sixteen BCs and 32 aggregates ship today; two more BCs are reserved with single planned aggregates. Tracks group BCs by the lens they take on operations: Foundation owns the shared facts every other track refers to, Track A is the batch-shaped recipe ladder, Track B is the always-on resource and procedure side, Track C is the trust topology that gates the others, Governance owns the formal and informal operator controls, Decisions and agents own the audit and configuration of consequential choices, and Independent covers what doesn't sit on any single track.
+<!-- arch:count kind=bc spell=true cap=true -->Seventeen<!-- /arch:count --> BCs and <!-- arch:count kind=aggregate spell=true -->forty<!-- /arch:count --> aggregates ship today; two more BCs are reserved with single planned aggregates. Tracks group BCs by the lens they take on operations: Foundation owns the shared facts every other track refers to, Track A is the batch-shaped recipe ladder, Track B is the always-on resource and procedure side, Track C is the trust topology that gates the others, Governance owns the formal and informal operator controls, Decisions and agents own the audit and configuration of consequential choices, and Independent covers what doesn't sit on any single track.
 
 ## Aggregates
 
