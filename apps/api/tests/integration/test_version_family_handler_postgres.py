@@ -13,6 +13,7 @@ import pytest
 from cora.equipment.aggregates.family import (
     FamilyName,
     FamilyStatus,
+    family_stream_id,
     load_family,
 )
 from cora.equipment.features import define_family, version_family
@@ -29,14 +30,14 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 async def test_version_family_persists_event_and_round_trips_through_fold(
     db_pool: asyncpg.Pool,
 ) -> None:
-    family_id = UUID("01900000-0000-7000-8000-00000057fa01")
+    family_id = family_stream_id(FamilyName("X-ray Fluorescence Mapping"))
     defined_event_id = UUID("01900000-0000-7000-8000-00000057fa0e")
     versioned_event_id = UUID("01900000-0000-7000-8000-00000057fa0f")
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
-        ids=[family_id, defined_event_id, versioned_event_id],
+        ids=[defined_event_id, versioned_event_id],
     )
 
     await define_family.bind(deps)(

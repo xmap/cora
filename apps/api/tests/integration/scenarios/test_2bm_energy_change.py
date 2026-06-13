@@ -116,6 +116,7 @@ from cora.decision.aggregates.decision import (
 )
 from cora.decision.features.register_decision import RegisterDecision
 from cora.decision.features.register_decision import bind as bind_register_decision
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.recipe.features.define_method import DefineMethod
@@ -172,10 +173,10 @@ _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000423a01")
 # Opaque Practice-site UUID (the practice site, unrelated to Asset tier).
 _PRACTICE_SITE_ID = UUID("01900000-0000-7000-8000-000000423501")
 
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000423c01")
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000423c11")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000423c21")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000423c31")
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 
 _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-000000423a11")
 _ASSET_SAMPLE_TOP_X_ID = UUID("01900000-0000-7000-8000-000000423a21")

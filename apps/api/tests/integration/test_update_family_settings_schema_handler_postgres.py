@@ -19,7 +19,7 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
-from cora.equipment.aggregates.family import load_family
+from cora.equipment.aggregates.family import FamilyName, family_stream_id, load_family
 from cora.equipment.features import define_family, update_family_settings_schema
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.update_family_settings_schema import UpdateFamilySettingsSchema
@@ -66,10 +66,10 @@ async def test_update_family_settings_schema_round_trips_through_event_store_and
 ) -> None:
     """Full end-to-end: define, set schema, fold-on-read returns the
     schema, projection settings_schema_present = TRUE."""
-    family_id = uuid4()
+    family_id = family_stream_id(FamilyName("phase-contrast micro-CT"))
     deps = _build_deps(
         db_pool,
-        [family_id, uuid4(), uuid4()],  # family_id + 2 event_ids
+        [uuid4(), uuid4()],  # define event_id + schema-update event_id
     )
 
     # Define
@@ -110,11 +110,11 @@ async def test_clearing_schema_flips_projection_present_back_to_false(
 ) -> None:
     """Operator removes a previously-declared schema; projection
     flips back to FALSE."""
-    family_id = uuid4()
+    family_id = family_stream_id(FamilyName("phase-contrast micro-CT"))
     deps = _build_deps(
         db_pool,
-        # family_id + 1 define event_id + 2 schema-update event_ids
-        [family_id, uuid4(), uuid4(), uuid4()],
+        # 1 define event_id + 2 schema-update event_ids
+        [uuid4(), uuid4(), uuid4()],
     )
 
     await define_family.bind(deps)(
@@ -156,10 +156,10 @@ async def test_no_op_on_unchanged_schema_does_not_emit_event(
     """Re-submitting the same schema must NOT emit a new event
     (decider returns []). Verify by checking the stream version
     didn't advance."""
-    family_id = uuid4()
+    family_id = family_stream_id(FamilyName("phase-contrast micro-CT"))
     deps = _build_deps(
         db_pool,
-        [family_id, uuid4(), uuid4()],  # family_id + define + first schema-update
+        [uuid4(), uuid4()],  # define event_id + first schema-update event_id
     )
 
     await define_family.bind(deps)(

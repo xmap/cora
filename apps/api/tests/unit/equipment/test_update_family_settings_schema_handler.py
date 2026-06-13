@@ -56,8 +56,11 @@ def _build_deps(
     deny: bool = False,
 ) -> Kernel:
     """Thin wrapper preserving this file's ID list + clock."""
+    # define_family derives its stream id from the name, so the generator
+    # supplies only event ids here (_CAPABILITY_ID stays as the unknown id
+    # for the not-found test).
     return _build_deps_shared(
-        ids=[_CAPABILITY_ID, _DEFINED_EVENT_ID, _SCHEMA_EVENT_ID, _SCHEMA_EVENT_ID_2],
+        ids=[_DEFINED_EVENT_ID, _SCHEMA_EVENT_ID, _SCHEMA_EVENT_ID_2],
         now=_NOW,
         event_store=event_store,
         deny=deny,

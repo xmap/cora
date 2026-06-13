@@ -106,6 +106,7 @@ from cora.access.features.register_actor import RegisterActor
 from cora.access.features.register_actor import bind as bind_register_actor
 from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.add_asset_family import bind as bind_add_family
 from cora.equipment.features.define_family import DefineFamily
@@ -273,14 +274,15 @@ def facility_id_prefix(
       1. register_actor x 3 (operator pool, canonical ids): actor_id, event
       2. register_actor x 2 (BS + ESRB review-chain reviewers): actor_id, event
       3. register_asset Unit (root, facility-anchored): unit_id, event
-      4. define_family x N (in `devices` order): cap_id, event
+      4. define_family x U (unique cap_names): event only (stream id derived)
       5. register_asset + add_asset_family x N: asset_id, register_event, addcap_event
       6. define_zone (2-BM Zone, canonical id): zone_id, event
       7. define_conduit (2-BM Local Conduit, self-loop): conduit_id, event
       8. define_policy x 2 (Operations + Agent, canonical ids): policy_id, event
 
-    Anonymous event ids use `uuid4()`. Total length = 10 + 2 + 5 * N + 10 = 22 + 5 * N.
-    (Trust block = 10: zone[2] + conduit[4 — agg + logbook + 2 events] + 2 policies[2 each].)
+    Family ids are derived from the name (not popped), so define_family
+    consumes one event-id slot per UNIQUE cap_name, not a stream id.
+    Anonymous event ids use `uuid4()`.
     """
     e = uuid4
     ids: list[UUID] = [
@@ -300,8 +302,12 @@ def facility_id_prefix(
         unit_id,
         e(),
     ]
+    seen_family_names: set[str] = set()
     for d in devices:
-        ids.extend([d.cap_id, e()])
+        if d.cap_name in seen_family_names:
+            continue
+        seen_family_names.add(d.cap_name)
+        ids.extend([e()])
     for d in devices:
         ids.extend([d.asset_id, e(), e()])
     # Trust shape (fixture-owned canonical UUIDs).
@@ -398,7 +404,15 @@ async def install_aps_unit(
         principal_id=principal_id,
         correlation_id=correlation_id,
     )
+    # Family ids are derived from the name, so two devices sharing a
+    # Family (e.g. several LinearStages) must define it exactly once;
+    # a second define on the same name would collide on the deterministic
+    # stream. Dedup in first-appearance order.
+    defined_family_names: set[str] = set()
     for d in devices:
+        if d.cap_name in defined_family_names:
+            continue
+        defined_family_names.add(d.cap_name)
         await bind_define_family(deps)(
             DefineFamily(name=d.cap_name, affordances=frozenset()),
             principal_id=principal_id,
@@ -416,7 +430,10 @@ async def install_aps_unit(
             correlation_id=correlation_id,
         )
         await bind_add_family(deps)(
-            AddAssetFamily(asset_id=d.asset_id, family_id=d.cap_id),
+            AddAssetFamily(
+                asset_id=d.asset_id,
+                family_id=family_stream_id(FamilyName(d.cap_name)),
+            ),
             principal_id=principal_id,
             correlation_id=correlation_id,
         )
@@ -463,7 +480,7 @@ async def install_aps_unit(
         esrb_actor_id=ESRB_ACTOR_ID,
         unit_id=unit_id,
         device_ids=tuple(d.asset_id for d in devices),
-        cap_ids=tuple(d.cap_id for d in devices),
+        cap_ids=tuple(family_stream_id(FamilyName(d.cap_name)) for d in devices),
         bm2_zone_id=BM2_ZONE_ID,
         bm2_local_conduit_id=BM2_LOCAL_CONDUIT_ID,
         bm2_operations_policy_id=BM2_OPERATIONS_POLICY_ID,

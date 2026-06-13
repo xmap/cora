@@ -34,6 +34,7 @@ from cora.caution.features import register_caution, retire_caution
 from cora.caution.features.register_caution import RegisterCaution
 from cora.caution.features.retire_caution import RetireCaution
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import add_asset_family, define_family, register_asset
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.define_family import DefineFamily
@@ -92,16 +93,17 @@ async def _seed_upstream_chain(
     plan_id = uuid4()
     subject_id = uuid4()
     asset_id = uuid4()
+    # define_family now derives its stream id from the name and pops
+    # only the event id, so there is no cap_id slot in the queue.
     queue = [
-        uuid4(),  # cap_id
-        uuid4(),  # cap_event_id
-        asset_id,
-        uuid4(),  # asset_register_event_id
-        uuid4(),  # asset_addcap_event_id
-        uuid4(),  # method_id
-        uuid4(),  # method_event_id
-        uuid4(),  # practice_id
-        uuid4(),  # practice_event_id
+        uuid4(),  # cap_event_id           [0]
+        asset_id,  #                        [1]
+        uuid4(),  # asset_register_event_id [2]
+        uuid4(),  # asset_addcap_event_id   [3]
+        uuid4(),  # method_id               [4]
+        uuid4(),  # method_event_id         [5]
+        uuid4(),  # practice_id             [6]
+        uuid4(),  # practice_event_id       [7]
         plan_id,
         uuid4(),  # plan_event_id
         subject_id,
@@ -118,7 +120,7 @@ async def _seed_upstream_chain(
         clearance_lookup=PostgresClearanceLookup(db_pool),
         caution_lookup=PostgresCautionLookup(db_pool),
     )
-    cap_id = queue[0]
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
 
     await define_family.bind(deps)(
         DefineFamily(name="FlyMotion", affordances=frozenset()),
@@ -146,14 +148,14 @@ async def _seed_upstream_chain(
         correlation_id=_CORRELATION_ID,
     )
     await define_practice.bind(deps)(
-        DefinePractice(name="APS XRF", method_id=queue[5], site_id=uuid4()),
+        DefinePractice(name="APS XRF", method_id=queue[4], site_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     await define_plan.bind(deps)(
         DefinePlan(
             name="32-ID FlyScan",
-            practice_id=queue[7],
+            practice_id=queue[6],
             asset_ids=frozenset({asset_id}),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -332,23 +334,23 @@ async def test_run_start_snapshots_controller_caution_via_controller_id_back_ref
     stage_asset_id = uuid4()
     plan_id = uuid4()
     subject_id = uuid4()
-    controller_family_id = uuid4()
-    stage_family_id = uuid4()
+    controller_family_id = family_stream_id(FamilyName("MotionController"))
+    stage_family_id = family_stream_id(FamilyName("StageUnderTest"))
+    # define_family derives its stream id from the name and pops only
+    # the event id, so there is no slot for either family stream id.
     queue = [
-        controller_family_id,
-        uuid4(),  # controller family event
-        controller_asset_id,
-        uuid4(),  # controller register event
-        uuid4(),  # controller addfamily event
-        stage_family_id,
-        uuid4(),  # stage family event
-        stage_asset_id,
-        uuid4(),  # stage register event
-        uuid4(),  # stage addfamily event
-        uuid4(),  # method_id
-        uuid4(),  # method event
-        uuid4(),  # practice_id
-        uuid4(),  # practice event
+        uuid4(),  # controller family event   [0]
+        controller_asset_id,  #                [1]
+        uuid4(),  # controller register event  [2]
+        uuid4(),  # controller addfamily event [3]
+        uuid4(),  # stage family event         [4]
+        stage_asset_id,  #                      [5]
+        uuid4(),  # stage register event        [6]
+        uuid4(),  # stage addfamily event       [7]
+        uuid4(),  # method_id                   [8]
+        uuid4(),  # method event                [9]
+        uuid4(),  # practice_id                 [10]
+        uuid4(),  # practice event              [11]
         plan_id,
         uuid4(),  # plan event
         subject_id,
@@ -428,14 +430,14 @@ async def test_run_start_snapshots_controller_caution_via_controller_id_back_ref
         correlation_id=_CORRELATION_ID,
     )
     await define_practice.bind(deps)(
-        DefinePractice(name="APS StageScan", method_id=queue[10], site_id=uuid4()),
+        DefinePractice(name="APS StageScan", method_id=queue[8], site_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     await define_plan.bind(deps)(
         DefinePlan(
             name="ScanOfStage",
-            practice_id=queue[12],
+            practice_id=queue[10],
             asset_ids=frozenset({stage_asset_id}),
         ),
         principal_id=_PRINCIPAL_ID,

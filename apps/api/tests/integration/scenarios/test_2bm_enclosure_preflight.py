@@ -42,6 +42,7 @@ from cora.enclosure.features import observe_enclosure_status, register_enclosure
 from cora.enclosure.features.observe_enclosure_status import ObserveEnclosureStatus
 from cora.enclosure.features.register_enclosure import RegisterEnclosure
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import add_asset_family, define_family, register_asset
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.define_family import DefineFamily
@@ -90,15 +91,19 @@ async def _seed_upstream_chain(
     asset_id = uuid4()
     plan_id = uuid4()
     subject_id = uuid4()
+    method_id = uuid4()
+    practice_id = uuid4()
+    # Family stream ids are now derived from the name (deterministic uuid5),
+    # so define_family pops only its event id, not a stream id.
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     queue = [
-        uuid4(),  # cap_id
-        uuid4(),  # cap event
+        uuid4(),  # cap event (define_family: stream id derived, not popped)
         asset_id,
         uuid4(),  # asset register event
         uuid4(),  # asset addfamily event
-        uuid4(),  # method_id
+        method_id,
         uuid4(),  # method event
-        uuid4(),  # practice_id
+        practice_id,
         uuid4(),  # practice event
         plan_id,
         uuid4(),  # plan event
@@ -115,7 +120,6 @@ async def _seed_upstream_chain(
     # proj_enclosure_summary projection (cross-BC end-to-end composition).
     deps = dataclasses.replace(deps, enclosure_lookup=PostgresEnclosureLookup(db_pool))
 
-    cap_id = queue[0]
     await define_family.bind(deps)(
         DefineFamily(name="FlyMotion", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
@@ -147,14 +151,14 @@ async def _seed_upstream_chain(
         correlation_id=_CORRELATION_ID,
     )
     await define_practice.bind(deps)(
-        DefinePractice(name="APS XRF", method_id=queue[5], site_id=uuid4()),
+        DefinePractice(name="APS XRF", method_id=method_id, site_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     await define_plan.bind(deps)(
         DefinePlan(
             name="2-BM Pilot Scan",
-            practice_id=queue[7],
+            practice_id=practice_id,
             asset_ids=frozenset({asset_id}),
         ),
         principal_id=_PRINCIPAL_ID,

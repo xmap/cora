@@ -18,7 +18,12 @@ threading the next instance through a per-BC helper.
 from typing import Protocol
 from uuid import UUID
 
-from cora.equipment.aggregates.family import event_type_name, to_payload
+from cora.equipment.aggregates.family import (
+    FamilyName,
+    event_type_name,
+    family_stream_id,
+    to_payload,
+)
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.define_family.command import DefineFamily
 from cora.equipment.features.define_family.decider import decide
@@ -109,7 +114,7 @@ def bind(deps: Kernel) -> Handler:
             )
             raise UnauthorizedError(decision.reason)
 
-        new_id = deps.id_generator.new_id()
+        new_id = family_stream_id(FamilyName(command.name))
         now = deps.clock.now()
 
         domain_events = decide(

@@ -20,6 +20,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -138,7 +139,7 @@ async def _seed_chain_and_start_run(
 async def test_complete_run_persists_and_round_trips_to_completed_state(
     db_pool: asyncpg.Pool,
 ) -> None:
-    cap_id = UUID("01900000-0000-7000-8000-00000064aa01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000064aa02")
     asset_id = UUID("01900000-0000-7000-8000-00000064ab01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000064ab02")
@@ -160,7 +161,6 @@ async def test_complete_run_persists_and_round_trips_to_completed_state(
     deps = _build_deps_with_ids(
         db_pool,
         [
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,
@@ -221,7 +221,7 @@ async def test_complete_run_persists_and_round_trips_to_completed_state(
 async def test_abort_run_persists_with_trimmed_reason_and_round_trips_to_aborted_state(
     db_pool: asyncpg.Pool,
 ) -> None:
-    cap_id = UUID("01900000-0000-7000-8000-00000065aa01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000065aa02")
     asset_id = UUID("01900000-0000-7000-8000-00000065ab01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000065ab02")
@@ -243,7 +243,6 @@ async def test_abort_run_persists_with_trimmed_reason_and_round_trips_to_aborted
     deps = _build_deps_with_ids(
         db_pool,
         [
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,

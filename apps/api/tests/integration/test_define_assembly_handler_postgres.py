@@ -12,13 +12,14 @@ from uuid import UUID
 import asyncpg
 import pytest
 
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import define_assembly, define_family
 from cora.equipment.features.define_assembly import DefineAssembly
 from cora.equipment.features.define_family import DefineFamily
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 2, 12, 0, 0, tzinfo=UTC)
-_FAMILY_ID = UUID("01900000-0000-7000-8000-00000054cb01")
+_FAMILY_ID = family_stream_id(FamilyName("Detector"))
 _FAMILY_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cb0e")
 _ASSEMBLY_ID = UUID("01900000-0000-7000-8000-00000054cb02")
 _ASSEMBLY_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cb1e")
@@ -34,7 +35,6 @@ async def test_define_assembly_persists_event_to_postgres(
         db_pool,
         now=_NOW,
         ids=[
-            _FAMILY_ID,
             _FAMILY_EVENT_ID,
             _ASSEMBLY_ID,
             _ASSEMBLY_EVENT_ID,

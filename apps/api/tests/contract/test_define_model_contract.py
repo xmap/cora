@@ -122,12 +122,32 @@ def test_post_models_unknown_declared_family_returns_404(accept_family: UUID) ->
 
 
 @pytest.mark.contract
-def test_post_models_without_key_creates_distinct_models_on_each_call(
+def test_post_models_without_key_same_vendor_key_returns_409(
     accept_family: UUID,
 ) -> None:
+    """Model ids are derived from the vendor key, so a second define with
+    the same (manufacturer, part_number) collides on the deterministic
+    stream (no Idempotency-Key to short-circuit it) and returns 409."""
     _ = accept_family
     with TestClient(create_app()) as client:
         body = _body()
+        r1 = client.post("/models", json=body)
+        r2 = client.post("/models", json=body)
+
+    assert r1.status_code == 201
+    assert r2.status_code == 409
+
+
+@pytest.mark.contract
+def test_post_models_placeholder_part_number_creates_distinct_models(
+    accept_family: UUID,
+) -> None:
+    """Two Models recorded with the unknown-pending-confirmation
+    placeholder cannot derive a stable id, so each gets a distinct random
+    id rather than colliding."""
+    _ = accept_family
+    with TestClient(create_app()) as client:
+        body = _body(part_number="unknown-pending-confirmation")
         r1 = client.post("/models", json=body)
         r2 = client.post("/models", json=body)
 
@@ -166,7 +186,10 @@ def test_post_models_same_key_different_body_returns_422(accept_family: UUID) ->
 
 
 @pytest.mark.contract
-def test_post_models_different_keys_create_distinct_models(accept_family: UUID) -> None:
+def test_post_models_different_keys_same_vendor_key_returns_409(accept_family: UUID) -> None:
+    """Distinct Idempotency-Keys gate only the response cache, not
+    identity: the same vendor key still derives one stream, so the second
+    call collides and returns 409."""
     _ = accept_family
     with TestClient(create_app()) as client:
         body = _body()
@@ -174,8 +197,7 @@ def test_post_models_different_keys_create_distinct_models(accept_family: UUID) 
         r2 = client.post("/models", json=body, headers={"Idempotency-Key": "mk-B"})
 
     assert r1.status_code == 201
-    assert r2.status_code == 201
-    assert r1.json()["model_id"] != r2.json()["model_id"]
+    assert r2.status_code == 409
 
 
 @pytest.mark.contract

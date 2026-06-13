@@ -25,7 +25,6 @@ from cora.equipment.features.version_assembly import VersionAssembly
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 3, 14, 0, 0, tzinfo=UTC)
-_FAMILY_ID = UUID("01900000-0000-7000-8000-00000054ce01")
 _FAMILY_EVENT_ID = UUID("01900000-0000-7000-8000-00000054ce0e")
 _ASSEMBLY_ID = UUID("01900000-0000-7000-8000-00000054ce02")
 _DEFINED_EVENT_ID = UUID("01900000-0000-7000-8000-00000054ce1e")
@@ -42,7 +41,6 @@ async def test_deprecate_assembly_appends_deprecated_event_to_postgres(
         db_pool,
         now=_NOW,
         ids=[
-            _FAMILY_ID,
             _FAMILY_EVENT_ID,
             _ASSEMBLY_ID,
             _DEFINED_EVENT_ID,
@@ -83,7 +81,6 @@ async def test_deprecate_assembly_appends_deprecated_event_to_postgres(
     assert deprecated.occurred_at == _NOW
 
 
-_FAMILY_ID_V = UUID("01900000-0000-7000-8000-00000054cf01")
 _FAMILY_EVENT_ID_V = UUID("01900000-0000-7000-8000-00000054cf0e")
 _ASSEMBLY_ID_V = UUID("01900000-0000-7000-8000-00000054cf02")
 _DEFINED_EVENT_ID_V = UUID("01900000-0000-7000-8000-00000054cf1e")
@@ -102,7 +99,6 @@ async def test_deprecate_assembly_persists_through_versioned_arm(
         db_pool,
         now=_NOW,
         ids=[
-            _FAMILY_ID_V,
             _FAMILY_EVENT_ID_V,
             _ASSEMBLY_ID_V,
             _DEFINED_EVENT_ID_V,

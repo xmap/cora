@@ -23,6 +23,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -144,7 +145,7 @@ async def test_truncate_run_persists_with_interrupted_at_and_round_trips_to_trun
     """End-to-end: truncate emits RunTruncated; payload preserves
     trimmed reason + interrupted_at; load_run returns the
     Truncated state."""
-    cap_id = UUID("01900000-0000-7000-8000-00000067cc01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000067cc02")
     asset_id = UUID("01900000-0000-7000-8000-00000067cd01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000067cd02")
@@ -166,7 +167,6 @@ async def test_truncate_run_persists_with_interrupted_at_and_round_trips_to_trun
     deps = _build_deps_with_ids(
         db_pool,
         [
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,
@@ -239,7 +239,7 @@ async def test_truncate_run_persists_null_interrupted_at_as_null(
 ) -> None:
     """Operator-unknown interruption time round-trips as null
     through jsonb (not the string \"None\" or missing key)."""
-    cap_id = UUID("01900000-0000-7000-8000-00000068cc01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000068cc02")
     asset_id = UUID("01900000-0000-7000-8000-00000068cd01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000068cd02")
@@ -261,7 +261,6 @@ async def test_truncate_run_persists_null_interrupted_at_as_null(
     deps = _build_deps_with_ids(
         db_pool,
         [
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,

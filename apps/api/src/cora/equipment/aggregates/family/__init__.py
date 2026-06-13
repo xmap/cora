@@ -5,6 +5,7 @@ Vertical slices that operate on this aggregate live under
 state and event types.
 """
 
+from cora.equipment.aggregates.family._family_registry import family_stream_id
 from cora.equipment.aggregates.family.affordance import (
     Affordance,
     InvalidAffordanceError,
@@ -80,6 +81,7 @@ __all__ = [
     "InvalidFamilyVersionTagError",
     "event_type_name",
     "evolve",
+    "family_stream_id",
     "find_missing_families_per_id",
     "fold",
     "from_stored",

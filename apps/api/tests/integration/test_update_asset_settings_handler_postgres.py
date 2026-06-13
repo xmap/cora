@@ -18,6 +18,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import AssetTier, InvalidAssetSettingsError
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -50,11 +51,10 @@ async def test_update_asset_settings_persists_event_with_full_post_merge_dict(
     """Happy path: define Family with schema, register Asset,
     add Family, PATCH settings, assert persisted event payload
     carries the FULL post-merge dict (5g-c lock)."""
-    cap_id = UUID("01900000-0000-7000-8000-0000005c0001")
+    cap_id = family_stream_id(FamilyName("Tomography"))
     asset_id = UUID("01900000-0000-7000-8000-0000005c0002")
     ids = [
-        # define_family: family_id, define_event_id
-        cap_id,
+        # define_family: define_event_id (stream id is derived from name)
         UUID("01900000-0000-7000-8000-0000005c0011"),
         # update_family_settings_schema: schema_event_id
         UUID("01900000-0000-7000-8000-0000005c0012"),
@@ -126,10 +126,9 @@ async def test_update_asset_settings_merges_across_two_patches(
 ) -> None:
     """Two PATCHes accumulate via merge: first sets one key, second
     sets another; final state has both."""
-    cap_id = UUID("01900000-0000-7000-8000-0000005c0021")
+    cap_id = family_stream_id(FamilyName("Tomography"))
     asset_id = UUID("01900000-0000-7000-8000-0000005c0022")
     ids = [
-        cap_id,
         UUID("01900000-0000-7000-8000-0000005c0031"),  # define cap event
         UUID("01900000-0000-7000-8000-0000005c0032"),  # set schema event
         asset_id,
@@ -193,16 +192,14 @@ async def test_update_asset_settings_rejects_true_type_conflict_across_capabilit
 ) -> None:
     """Two Capabilities both declare `temperature` but with
     incompatible types; the validator names both Capabilities."""
-    cap_a_id = UUID("01900000-0000-7000-8000-0000005c0041")
-    cap_b_id = UUID("01900000-0000-7000-8000-0000005c0042")
+    cap_a_id = family_stream_id(FamilyName("A"))
+    cap_b_id = family_stream_id(FamilyName("B"))
     asset_id = UUID("01900000-0000-7000-8000-0000005c0043")
     ids = [
-        cap_a_id,
-        UUID("01900000-0000-7000-8000-0000005c0051"),
-        UUID("01900000-0000-7000-8000-0000005c0052"),
-        cap_b_id,
-        UUID("01900000-0000-7000-8000-0000005c0053"),
-        UUID("01900000-0000-7000-8000-0000005c0054"),
+        UUID("01900000-0000-7000-8000-0000005c0051"),  # define A event
+        UUID("01900000-0000-7000-8000-0000005c0052"),  # schema A event
+        UUID("01900000-0000-7000-8000-0000005c0053"),  # define B event
+        UUID("01900000-0000-7000-8000-0000005c0054"),  # schema B event
         asset_id,
         UUID("01900000-0000-7000-8000-0000005c0055"),
         UUID("01900000-0000-7000-8000-0000005c0056"),

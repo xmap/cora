@@ -129,6 +129,7 @@ from cora.calibration.features.define_calibration import bind as bind_define_cal
 from cora.calibration.quantities import CalibrationQuantity
 from cora.equipment.aggregates._partition_rule import LookupTable, ReadbackAggregatorKind
 from cora.equipment.aggregates.asset import AssetTier, PortDirection
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.equipment.features.add_asset_family import AddAssetFamily
@@ -182,24 +183,26 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000420bb")
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000420501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000420a01")
 
-# Family ids (facility install)
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000420c01")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000420c11")
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000420c21")
+# Family ids are derived from the name (deterministic uuid5), so they
+# converge with what install_aps_unit defines and with the NEW Families
+# this scenario declares.
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
 
 # Family ids (NEW for MCTOptics composition)
-_CAP_IMAGER_ID = UUID("01900000-0000-7000-8000-000000420c31")
-_CAP_OBJECTIVE_ID = UUID("01900000-0000-7000-8000-000000420c41")
+_CAP_IMAGER_ID = family_stream_id(FamilyName("Imager"))
+_CAP_OBJECTIVE_ID = family_stream_id(FamilyName("Objective"))
 # Pending(2-BM operator confirmation): confirm lens turret Family (RotaryStage vs LinearStage).
 # Assumed RotaryStage based on Optique Peter doc motor positions observation
-# as degrees. Reuses _CAP_LINEAR_STAGE_ID slot if turret is linear.
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000420c51")
+# as degrees. Flip to LinearStage if the turret is linear.
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
 # PseudoAxis Family for the lens_select virtual axis. A LookupTable
 # partition rule decomposes the operator-issued lens index (0/1/2)
 # into the corresponding turret-rotation setpoint at runtime; the
 # mctoptics_image_acquisition Method declares this Family in
 # needed_family_ids alongside Imager + Camera.
-_CAP_PSEUDO_AXIS_ID = UUID("01900000-0000-7000-8000-000000420c61")
+_CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 
 # Asset ids (facility-install Devices, sibling under 2-BM)
 _ASSET_ORYX_5MP_ID = UUID("01900000-0000-7000-8000-000000420a11")
@@ -503,14 +506,10 @@ def _id_queue() -> list[UUID]:
         e(),
         e(),
         # define_family x 4 (Imager + Objective + RotaryStage + PseudoAxis):
-        # family_id, event_id
-        _CAP_IMAGER_ID,
+        # event_id only (stream id derived from the name, not popped)
         e(),
-        _CAP_OBJECTIVE_ID,
         e(),
-        _CAP_ROTARY_STAGE_ID,
         e(),
-        _CAP_PSEUDO_AXIS_ID,
         e(),
         # update_family_settings_schema x 4 (NEW Families): event_id
         e(),

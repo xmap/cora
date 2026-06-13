@@ -65,16 +65,20 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
     await drain_projections(db_pool, registry, deadline_seconds=2.0)
 
 
-async def _seed_chain(deps: Kernel) -> tuple[UUID, UUID, UUID]:
+async def _seed_chain(deps: Kernel, family_name: str = "Tomography") -> tuple[UUID, UUID, UUID]:
     """Seed Family + Asset + Method + Practice. Returns
     (practice_id, method_id, asset_id) for the Plan to bind to.
 
     The IDs are consumed from deps.id_generator in this exact order
     (define_family, register_asset, add_asset_family,
     define_method, define_practice). Caller pre-allocates them in
-    the FixedIdGenerator queue."""
+    the FixedIdGenerator queue.
+
+    Family stream ids are deterministic (uuid5 over the name), so a
+    second seed in the same db with the same family_name would 409;
+    callers seeding two chains in one db pass distinct family_name."""
     cap_id = await bind_define_family(deps)(
-        DefineFamily(name="Tomography", affordances=frozenset()),
+        DefineFamily(name=family_name, affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -107,14 +111,14 @@ async def _seed_chain(deps: Kernel) -> tuple[UUID, UUID, UUID]:
 
 
 def _chain_ids() -> list[UUID]:
-    """9 ids consumed by _seed_chain (in order):
-      - define_family: cap_id + event_id  = 2
+    """8 ids consumed by _seed_chain (in order):
+      - define_family: event_id only      = 1 (stream id derived from name)
       - register_asset:    asset_id + event_id = 2
       - add_asset_family: event_id only   = 1 (no new aggregate)
       - define_method:     method_id + event_id = 2
       - define_practice:   practice_id + event_id = 2
-    Total = 9."""
-    return [uuid4() for _ in range(9)]
+    Total = 8."""
+    return [uuid4() for _ in range(8)]
 
 
 @pytest.mark.integration
@@ -165,7 +169,7 @@ async def test_practice_id_filter_narrows_results(db_pool: asyncpg.Pool) -> None
     # Second Plan with a different chain
     plan_b = uuid4()
     deps_b = _build_deps(db_pool, [*_chain_ids(), plan_b, uuid4()])
-    practice_b, _, asset_b = await _seed_chain(deps_b)
+    practice_b, _, asset_b = await _seed_chain(deps_b, family_name="TomographyB")
     await bind_define(deps_b)(
         DefinePlan(name="ForPracticeB", practice_id=practice_b, asset_ids=frozenset({asset_b})),
         principal_id=_PRINCIPAL_ID,
@@ -257,7 +261,7 @@ async def test_combined_status_and_practice_id_filter(db_pool: asyncpg.Pool) -> 
         db_pool,
         [*_chain_ids(), plan_versioned_b, uuid4(), uuid4()],
     )
-    practice_b, _, asset_b = await _seed_chain(deps_b)
+    practice_b, _, asset_b = await _seed_chain(deps_b, family_name="TomographyB")
     await bind_define(deps_b)(
         DefinePlan(name="VerForB", practice_id=practice_b, asset_ids=frozenset({asset_b})),
         principal_id=_PRINCIPAL_ID,

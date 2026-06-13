@@ -105,6 +105,7 @@ from cora.equipment.aggregates._partition_rule import (
     SolverReference,
     SolverTransportKind,
 )
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.equipment.features.update_asset_partition_rule import UpdateAssetPartitionRule
@@ -155,10 +156,10 @@ _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000358a01")
 # Sample_top_Pitch is a PseudoAxis (virtual DoF over an underlying solver),
 # not a LinearStage. See project_pitch_roll_retag memo for the partial-fix
 # rationale; the remaining four hexapod DoFs are deferred until trigger.
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000358c01")
-_CAP_PSEUDO_AXIS_ID = UUID("01900000-0000-7000-8000-000000358c11")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000358c21")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000358c31")
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
+_CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 
 # Devices (rotary + pitch-tilt + image chain)
 _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-000000358a11")

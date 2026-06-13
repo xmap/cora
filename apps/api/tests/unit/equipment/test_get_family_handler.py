@@ -15,6 +15,7 @@ from cora.equipment.aggregates.family import (
     Family,
     FamilyName,
     FamilyStatus,
+    family_stream_id,
 )
 from cora.equipment.features import define_family, get_family
 from cora.equipment.features.define_family import DefineFamily
@@ -26,7 +27,9 @@ from tests.unit._helpers import RecordingAuthorize as _RecordingAuthorize
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
-_NEW_ID = UUID("01900000-0000-7000-8000-000000006ab1")
+# The Family stream id is derived from the name; the generator supplies
+# only the per-event id.
+_DERIVED_ID = family_stream_id(FamilyName("Tomography"))
 _EVENT_ID = UUID("01900000-0000-7000-8000-000000006be1")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
@@ -35,7 +38,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 def _build_deps(event_store: InMemoryEventStore | None = None) -> Kernel:
     """Thin wrapper preserving this file's ID list + clock."""
     return _build_deps_shared(
-        ids=[_NEW_ID, _EVENT_ID],
+        ids=[_EVENT_ID],
         now=_NOW,
         event_store=event_store,
     )
@@ -53,14 +56,14 @@ async def test_handler_returns_capability_for_known_id() -> None:
 
     handler = get_family.bind(deps)
     view = await handler(
-        GetFamily(family_id=_NEW_ID),
+        GetFamily(family_id=_DERIVED_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
 
     assert view is not None
     assert view.family == Family(
-        id=_NEW_ID,
+        id=_DERIVED_ID,
         name=FamilyName("Tomography"),
         status=FamilyStatus.DEFINED,
     )
@@ -87,7 +90,7 @@ async def test_handler_authorizes_with_query_name_and_default_conduit() -> None:
     site has to exist."""
     tracking = _RecordingAuthorize()
     deps = _build_deps_shared(
-        ids=[_NEW_ID, _EVENT_ID],
+        ids=[_EVENT_ID],
         now=_NOW,
         authz=tracking,
     )
@@ -105,7 +108,7 @@ async def test_handler_authorizes_with_query_name_and_default_conduit() -> None:
 @pytest.mark.unit
 async def test_handler_raises_unauthorized_on_deny() -> None:
     deps = _build_deps_shared(
-        ids=[_NEW_ID, _EVENT_ID],
+        ids=[_EVENT_ID],
         now=_NOW,
         authz=_DenyAllAuthorize(),
     )

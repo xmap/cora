@@ -90,6 +90,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.update_asset_settings import (
     UpdateAssetSettings,
 )
@@ -174,10 +175,10 @@ _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000350a01")
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000350501")
 
 # Family ids (4 caps x 2 ids/define = 8)
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000035c01")
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000035c11")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000035c21")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000035c31")
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 
 # Asset ids (4 assets x {2 register + 1 addcap} = 12 ids; we name only the asset ids)
 _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-000000035a01")

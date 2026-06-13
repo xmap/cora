@@ -32,7 +32,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import AssetTier
-from cora.equipment.aggregates.family import Affordance
+from cora.equipment.aggregates.family import Affordance, FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -73,7 +73,7 @@ async def test_capability_bound_full_lane_postgres(db_pool: asyncpg.Pool) -> Non
     succeeds: Family declares ROTATABLE, Capability requires ROTATABLE."""
     cap_id = UUID("01900000-0000-7000-8000-00000071c001")
     cap_event = UUID("01900000-0000-7000-8000-00000071c002")
-    family_id = UUID("01900000-0000-7000-8000-00000071f001")
+    family_id = family_stream_id(FamilyName("RotaryStage"))
     family_event = UUID("01900000-0000-7000-8000-00000071f002")
     asset_id = UUID("01900000-0000-7000-8000-00000071a001")
     asset_register_event = UUID("01900000-0000-7000-8000-00000071a002")
@@ -94,7 +94,6 @@ async def test_capability_bound_full_lane_postgres(db_pool: asyncpg.Pool) -> Non
         ids=[
             cap_id,
             cap_event,
-            family_id,
             family_event,
             asset_id,
             asset_register_event,

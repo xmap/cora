@@ -34,11 +34,14 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerIdentifier,
     ManufacturerIdentifierType,
     ManufacturerName,
+    PartNumber,
+    model_stream_id,
 )
 from cora.equipment.features import (
     add_model_family,
@@ -130,15 +133,20 @@ async def test_model_defined_inserts_summary_row(
     """ModelDefined arm: INSERT row with status=Defined, manufacturer
     flat columns, sorted declared_family_ids JSONB, version_tag from
     payload when present."""
-    family_id = UUID("01900000-0000-7000-8000-0000000ca701")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-0000000ca70e")
-    model_id = UUID("01900000-0000-7000-8000-0000000ca7a1")
+    model_fallback_id = UUID("01900000-0000-7000-8000-0000000ca7a1")
     model_event_id = UUID("01900000-0000-7000-8000-0000000ca7ae")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
-        ids=[family_id, family_event_id, model_id, model_event_id],
+        ids=[family_event_id, model_fallback_id, model_event_id],
     )
     await define_family.bind(deps)(
         DefineFamily(name="ContinuousRotationTomography", affordances=frozenset()),
@@ -184,23 +192,26 @@ async def test_model_versioned_replaces_summary_wholesale(
     """ModelVersioned arm: UPDATE wholesale replaces name, manufacturer
     columns, part_number, declared_family_ids JSONB, version_tag; status
     flips to Versioned."""
-    family_a_id = UUID("01900000-0000-7000-8000-0000000ca801")
+    family_a_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_a_event_id = UUID("01900000-0000-7000-8000-0000000ca80e")
-    family_b_id = UUID("01900000-0000-7000-8000-0000000ca802")
+    family_b_id = family_stream_id(FamilyName("StepScanTomography"))
     family_b_event_id = UUID("01900000-0000-7000-8000-0000000ca80f")
-    model_id = UUID("01900000-0000-7000-8000-0000000ca8a1")
+    model_fallback_id = UUID("01900000-0000-7000-8000-0000000ca8a1")
     define_event_id = UUID("01900000-0000-7000-8000-0000000ca8ae")
     version_event_id = UUID("01900000-0000-7000-8000-0000000ca8af")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_a_id,
             family_a_event_id,
-            family_b_id,
             family_b_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             version_event_id,
         ],
@@ -266,19 +277,23 @@ async def test_model_deprecated_sets_reason_and_preserves_vendor_key(
     vendor-key columns (manufacturer_name, part_number) and
     declared_family_ids preserved so the audit trail of "what was
     deprecated" stays answerable."""
-    family_id = UUID("01900000-0000-7000-8000-0000000ca901")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-0000000ca90e")
-    model_id = UUID("01900000-0000-7000-8000-0000000ca9a1")
+    model_fallback_id = UUID("01900000-0000-7000-8000-0000000ca9a1")
     define_event_id = UUID("01900000-0000-7000-8000-0000000ca9ae")
     deprecate_event_id = UUID("01900000-0000-7000-8000-0000000ca9af")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             deprecate_event_id,
         ],
@@ -323,23 +338,26 @@ async def test_model_family_added_appends_and_resorts(
     """ModelFamilyAdded arm: declared_family_ids gains family_id and is
     re-sorted to match the canonical sorted-string-array shape that
     event payloads carry."""
-    family_a_id = UUID("01900000-0000-7000-8000-0000000caa01")
+    family_a_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_a_event_id = UUID("01900000-0000-7000-8000-0000000caa0e")
-    family_b_id = UUID("01900000-0000-7000-8000-0000000caa02")
+    family_b_id = family_stream_id(FamilyName("StepScanTomography"))
     family_b_event_id = UUID("01900000-0000-7000-8000-0000000caa0f")
-    model_id = UUID("01900000-0000-7000-8000-0000000caaa1")
+    model_fallback_id = UUID("01900000-0000-7000-8000-0000000caaa1")
     define_event_id = UUID("01900000-0000-7000-8000-0000000caaae")
     added_event_id = UUID("01900000-0000-7000-8000-0000000caaaf")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_a_id,
             family_a_event_id,
-            family_b_id,
             family_b_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             added_event_id,
         ],
@@ -385,23 +403,26 @@ async def test_model_family_removed_drops_and_preserves_sort(
 ) -> None:
     """ModelFamilyRemoved arm: declared_family_ids loses family_id while
     the remaining elements keep canonical sort order."""
-    family_a_id = UUID("01900000-0000-7000-8000-0000000cab01")
+    family_a_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_a_event_id = UUID("01900000-0000-7000-8000-0000000cab0e")
-    family_b_id = UUID("01900000-0000-7000-8000-0000000cab02")
+    family_b_id = family_stream_id(FamilyName("StepScanTomography"))
     family_b_event_id = UUID("01900000-0000-7000-8000-0000000cab0f")
-    model_id = UUID("01900000-0000-7000-8000-0000000caba1")
+    model_fallback_id = UUID("01900000-0000-7000-8000-0000000caba1")
     define_event_id = UUID("01900000-0000-7000-8000-0000000cabae")
     removed_event_id = UUID("01900000-0000-7000-8000-0000000cabaf")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_a_id,
             family_a_event_id,
-            family_b_id,
             family_b_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             removed_event_id,
         ],
@@ -441,29 +462,40 @@ async def test_model_family_removed_drops_and_preserves_sort(
 
 
 @pytest.mark.integration
-async def test_two_models_with_same_vendor_key_both_persist_and_advance_bookmark(
+async def test_two_placeholder_part_number_models_both_persist_and_advance_bookmark(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """Post-fix fitness: two distinct Models defined with the same
-    (manufacturer_name, part_number) pair must both land in
-    `proj_equipment_model_summary` and the projection bookmark must
-    advance past both ModelDefined events without UniqueViolation.
+    """Post-fix fitness: two distinct Models defined with the
+    not-yet-confirmed placeholder part number get distinct random
+    stream ids (the deterministic vendor-key derivation falls back to
+    the caller's random id for the placeholder, so two genuinely
+    different unconfirmed units stay distinct). Both must land in
+    `proj_equipment_model_summary` sharing the same
+    (manufacturer_name, part_number) columns, and the projection
+    bookmark must advance past both ModelDefined events without
+    UniqueViolation.
 
     This is the regression class the
     20260602100000_drop_proj_equipment_model_summary_vendor_key_unique
-    migration exists to retire: before the drop, the decider accepted
-    both define_model commands (no vendor-key uniqueness invariant at
-    the aggregate tier), then the second projection apply blew up on
-    the UNIQUE INDEX, poisoning the bookmark and stalling the
-    projection indefinitely.
+    migration exists to retire: with the dropped UNIQUE INDEX, two rows
+    that share the vendor-key columns coexist; if the index were still
+    present the second projection apply would blow up on it, poisoning
+    the bookmark and stalling the projection indefinitely.
 
-    The Capability precedent at
+    With deterministic ids a REAL (non-placeholder) vendor key collides
+    on the event store's `expected_version=0` (409 -> ConcurrencyError)
+    before the projection ever runs, so the placeholder path is the one
+    that still produces two persisted rows sharing the vendor-key
+    columns. The Capability precedent at
     20260518210000_drop_proj_recipe_capability_summary_code_unique
-    motivated this drop; vendor-key uniqueness is now
-    decider-tier operator-curation discipline, not a projection-tier
-    UNIQUE constraint."""
-    family_id = UUID("01900000-0000-7000-8000-0000000cac01")
+    motivated this drop; vendor-key uniqueness is now decider-tier
+    operator-curation discipline, not a projection-tier UNIQUE
+    constraint."""
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-0000000cac0e")
+    # Placeholder part number: model_stream_id falls back to the random
+    # fallback id, so these two fallback ids ARE the two distinct Model
+    # stream ids.
     first_model_id = UUID("01900000-0000-7000-8000-0000000caca1")
     first_event_id = UUID("01900000-0000-7000-8000-0000000cacae")
     second_model_id = UUID("01900000-0000-7000-8000-0000000caca2")
@@ -473,7 +505,6 @@ async def test_two_models_with_same_vendor_key_both_persist_and_advance_bookmark
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
             first_model_id,
             first_event_id,
@@ -489,9 +520,9 @@ async def test_two_models_with_same_vendor_key_both_persist_and_advance_bookmark
     await drain_equipment_projections(db_pool)
 
     shared_command = DefineModel(
-        name="Aerotech ANT130-L",
+        name="Aerotech (pending confirmation)",
         manufacturer=Manufacturer(name=ManufacturerName("Aerotech")),
-        part_number="ANT130-L",
+        part_number="unknown-pending-confirmation",
         declared_family_ids=frozenset({family_id}),
     )
     await define_model.bind(deps)(

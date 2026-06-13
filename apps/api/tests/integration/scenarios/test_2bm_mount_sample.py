@@ -81,6 +81,7 @@ import asyncpg
 import pytest
 
 from cora.campaign.aggregates.campaign import CampaignIntent
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.subject.features.mount_subject import MountSubject
@@ -107,7 +108,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000402bb")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000402a01")
 
 # Aerotech rotary (the mount apparatus): Family + Device
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000402c01")
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
 _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-000000402a11")
 
 # Operations-phase intake aggregates (PI Actor + Subject + Campaign)

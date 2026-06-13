@@ -18,12 +18,14 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     ModelName,
     ModelStatus,
     PartNumber,
+    model_stream_id,
 )
 from cora.equipment.features import (
     add_model_family,
@@ -62,24 +64,27 @@ async def test_get_model_loads_full_history_from_real_postgres(
     Model (wholesale identity replace), then add Family B via the
     targeted-mutation slice. GET returns the post-mutation state: the
     Versioned identity block plus the appended family."""
-    family_a_id = UUID("01900000-0000-7000-8000-00000063d001")
+    family_a_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_a_event_id = UUID("01900000-0000-7000-8000-00000063d00e")
-    family_b_id = UUID("01900000-0000-7000-8000-00000063d002")
+    family_b_id = family_stream_id(FamilyName("StepScanTomography"))
     family_b_event_id = UUID("01900000-0000-7000-8000-00000063d00f")
-    model_id = UUID("01900000-0000-7000-8000-00000063ca01")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000063ca01")
     define_event_id = UUID("01900000-0000-7000-8000-00000063ca0e")
     versioned_event_id = UUID("01900000-0000-7000-8000-00000063ca1a")
     added_event_id = UUID("01900000-0000-7000-8000-00000063ca2b")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_a_id,
             family_a_event_id,
-            family_b_id,
             family_b_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             versioned_event_id,
             added_event_id,

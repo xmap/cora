@@ -25,6 +25,7 @@ from cora.equipment.aggregates.assembly._content_hash import (
     compute_assembly_content_hash,
     compute_assembly_content_hash_from_state,
 )
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 
 
 def _slot(name: str, family_id: UUID) -> TemplateSlot:
@@ -457,6 +458,53 @@ def test_content_hash_ignores_drawing_per_design_lock() -> None:
     assert compute_assembly_content_hash_from_state(
         state_no_drawing
     ) == compute_assembly_content_hash_from_state(state_with_drawing)
+
+
+@pytest.mark.unit
+def test_two_assemblies_same_intent_across_facilities_share_hash() -> None:
+    """The headline cross-facility guarantee: two facilities that author
+    the same Assembly intent from the same Family NAMES converge on one
+    content_hash. This holds only because Family ids are deterministic
+    (uuid5 over the name); with random per-facility Family ids the slot
+    and presenter ids would differ and the hashes would diverge."""
+
+    def _hash_authored_from_names() -> str:
+        return compute_assembly_content_hash(
+            name="MCTOptics",
+            presents_as_family_id=family_stream_id(FamilyName("Imager")),
+            required_slots=frozenset(
+                {
+                    _slot("camera", family_stream_id(FamilyName("Camera"))),
+                    _slot("scintillator", family_stream_id(FamilyName("Scintillator"))),
+                }
+            ),
+            required_wires=frozenset(),
+            parameter_overrides_schema=None,
+        )
+
+    facility_a = _hash_authored_from_names()
+    facility_b = _hash_authored_from_names()
+    assert facility_a == facility_b
+
+
+@pytest.mark.unit
+def test_different_family_names_yield_distinct_hashes() -> None:
+    presenter = family_stream_id(FamilyName("Imager"))
+    h_camera = compute_assembly_content_hash(
+        name="MCTOptics",
+        presents_as_family_id=presenter,
+        required_slots=frozenset({_slot("sensor", family_stream_id(FamilyName("Camera")))}),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+    )
+    h_objective = compute_assembly_content_hash(
+        name="MCTOptics",
+        presents_as_family_id=presenter,
+        required_slots=frozenset({_slot("sensor", family_stream_id(FamilyName("Objective")))}),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+    )
+    assert h_camera != h_objective
 
 
 @pytest.mark.unit

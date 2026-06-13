@@ -86,6 +86,7 @@ from cora.data.features.promote_dataset import PromoteDataset
 from cora.data.features.promote_dataset import bind as bind_promote_dataset
 from cora.data.features.register_dataset import RegisterDataset
 from cora.data.features.register_dataset import bind as bind_register_dataset
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.run.features.complete_run import CompleteRun
 from cora.run.features.complete_run import bind as bind_complete_run
 from cora.run.features.start_run import StartRun
@@ -118,10 +119,10 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000406bb")
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000406501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000406a01")
 
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000406c01")
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000406c11")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000406c21")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000406c31")
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 
 _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-000000406a11")
 _ASSET_SAMPLE_TOP_X_ID = UUID("01900000-0000-7000-8000-000000406a21")

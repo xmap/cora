@@ -29,6 +29,7 @@ from cora.campaign.features import register_campaign, start_campaign
 from cora.campaign.features.register_campaign import RegisterCampaign
 from cora.campaign.features.start_campaign import StartCampaign
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -74,7 +75,7 @@ async def test_start_run_with_campaign_writes_both_streams_atomically(
     # Carefully-allocated id queue (start_run pre-loads, then needs
     # 1 run id + 2 event ids when campaign_id is set: RunStarted
     # event id + CampaignRunAdded event id).
-    cap_id = UUID("01900000-0000-7000-8000-00000071aa01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000071aa02")
     asset_id = UUID("01900000-0000-7000-8000-00000071ab01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000071ab02")
@@ -101,7 +102,6 @@ async def test_start_run_with_campaign_writes_both_streams_atomically(
         db_pool,
         now=_NOW,
         ids=[
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,
