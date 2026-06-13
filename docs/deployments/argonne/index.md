@@ -7,8 +7,17 @@ Argonne National Laboratory is the operating institution. It is not modeled as a
 | Property | Value |
 | --- | --- |
 | Institution | `Argonne` (context, not a registered row) |
-| Sites operated by this institution | [APS](../aps/index.md) |
+| Active site | [APS](../aps/index.md) |
 
-## Inventories
+## Assets and sites
 
-- [Assets](assets.md)
+Argonne holds no Asset rows of its own. Equipment scope (the `Asset` aggregate, with `tier` in `{Unit, Component, Device}`) hangs off a Site through `facility_code` and `parent_id`, never off the institution. See [Model](../../architecture/model.md) for the aggregate shape.
+
+The Sites this institution operates are facility-envelope scope, modeled as `Facility` rows with `FacilityKind = Site`, not as Assets:
+
+| Facility | FacilityKind | Status |
+| --- | --- | --- |
+| `APS` | `Site` | Active |
+| `ATLAS` | `Site` | Pending |
+| `CNM` | `Site` | Pending |
+| `ALCF` | `Site` | Pending |

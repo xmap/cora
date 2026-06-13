@@ -86,12 +86,6 @@ nav:
     - Deferred: stack/deferred.md
   - Deployments:
     - deployments/index.md
-    - Argonne:
-      - deployments/argonne/index.md
-      - Assets: deployments/argonne/assets.md
-    - APS:
-      - deployments/aps/index.md
-      - Assets: deployments/aps/assets.md
     - 2-BM:
       - deployments/2-bm/index.md
       - The beamline:
@@ -112,6 +106,11 @@ nav:
         - Policies: deployments/2-bm/policies.md
         - Cautions: deployments/2-bm/cautions.md
         - Actors: deployments/2-bm/actors.md
+    - Facility envelope:
+      - APS (Site):
+        - deployments/aps/index.md
+        - Assets: deployments/aps/assets.md
+      - Argonne (Institution): deployments/argonne/index.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
