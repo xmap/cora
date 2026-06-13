@@ -6,7 +6,11 @@ from uuid import UUID
 import pytest
 
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
-from cora.equipment.aggregates.family import InvalidFamilyNameError
+from cora.equipment.aggregates.family import (
+    FamilyName,
+    InvalidFamilyNameError,
+    family_stream_id,
+)
 from cora.equipment.features import define_family
 from cora.equipment.features.define_family import DefineFamily
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
@@ -14,7 +18,9 @@ from cora.infrastructure.kernel import Kernel
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
-_NEW_ID = UUID("01900000-0000-7000-8000-000000006ab1")
+# The stream id is now derived from the name, not popped from the id
+# generator; the generator supplies only the per-event id.
+_DERIVED_ID = family_stream_id(FamilyName("Tomography"))
 _EVENT_ID = UUID("01900000-0000-7000-8000-000000006be1")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
@@ -27,7 +33,7 @@ def _build_deps(
 ) -> Kernel:
     """Thin wrapper preserving this file's ID list + clock."""
     return _build_deps_shared(
-        ids=[_NEW_ID, _EVENT_ID],
+        ids=[_EVENT_ID],
         now=_NOW,
         event_store=event_store,
         deny=deny,
@@ -35,7 +41,7 @@ def _build_deps(
 
 
 @pytest.mark.unit
-async def test_handler_returns_generated_family_id() -> None:
+async def test_handler_returns_derived_family_id() -> None:
     deps = _build_deps()
     handler = define_family.bind(deps)
 
@@ -45,7 +51,7 @@ async def test_handler_returns_generated_family_id() -> None:
         correlation_id=_CORRELATION_ID,
     )
 
-    assert result == _NEW_ID
+    assert result == _DERIVED_ID
 
 
 @pytest.mark.unit
@@ -60,14 +66,14 @@ async def test_handler_appends_capability_defined_event_to_store() -> None:
         correlation_id=_CORRELATION_ID,
     )
 
-    events, version = await store.load("Family", _NEW_ID)
+    events, version = await store.load("Family", _DERIVED_ID)
     assert version == 1
     assert len(events) == 1
     stored = events[0]
     assert stored.event_type == "FamilyDefined"
     assert stored.schema_version == 1
     assert stored.payload == {
-        "family_id": str(_NEW_ID),
+        "family_id": str(_DERIVED_ID),
         "name": "Tomography",
         "occurred_at": _NOW.isoformat(),
         "affordances": [],
@@ -91,7 +97,7 @@ async def test_handler_trims_capability_name_via_value_object() -> None:
         correlation_id=_CORRELATION_ID,
     )
 
-    events, _ = await store.load("Family", _NEW_ID)
+    events, _ = await store.load("Family", _DERIVED_ID)
     assert events[0].payload["name"] == "Tomography"
 
 
@@ -122,7 +128,7 @@ async def test_handler_does_not_append_when_denied() -> None:
             correlation_id=_CORRELATION_ID,
         )
 
-    events, version = await store.load("Family", _NEW_ID)
+    events, version = await store.load("Family", _DERIVED_ID)
     assert events == []
     assert version == 0
 
@@ -154,7 +160,7 @@ async def test_handler_propagates_causation_id_to_appended_event() -> None:
         causation_id=causation,
     )
 
-    events, _ = await store.load("Family", _NEW_ID)
+    events, _ = await store.load("Family", _DERIVED_ID)
     assert events[0].causation_id == causation
 
 
@@ -183,5 +189,5 @@ async def test_wired_handler_propagates_causation_id_through_full_composition() 
         causation_id=causation,
     )
 
-    events, _ = await store.load("Family", _NEW_ID)
+    events, _ = await store.load("Family", _DERIVED_ID)
     assert events[0].causation_id == causation

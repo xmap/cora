@@ -44,6 +44,7 @@ import asyncpg
 import pytest
 
 from cora.access.aggregates.actor import ActorKind, load_actor
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.trust.aggregates.conduit import load_conduit
 from cora.trust.aggregates.policy import load_policy
 from cora.trust.aggregates.zone import load_zone
@@ -70,8 +71,8 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000002f00bb")
 # matches the rest of the corpus (a=unit/device, c=capability).
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-0000002f00a1")
 
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-0000002f00c1")
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-0000002f00c2")
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
 _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-0000002f00a2")
 _ASSET_SAMPLE_TOP_X_ID = UUID("01900000-0000-7000-8000-0000002f00a3")
 

@@ -49,6 +49,24 @@ FROM proj_supply_summary
 WHERE supply_id = $1
 LIMIT 1
 ```
+
+### find_supplies_by_name (Data BC default-storage-supply bootstrap)
+
+Single SELECT by `(name, facility_code, kind)` with the same
+`Decommissioned` exclusion as `find_supplies_by_kind`: the Data BC
+lifespan bootstrap resolves its default storage Supply by the
+operator-readable `name` column scoped to the self-facility and to
+`kind = 'Storage'`, and a tombstoned same-name Supply must not
+resolve as the default. Returns every matching live row so the
+caller can distinguish no-match, ambiguous-match, and not-Available.
+
+```sql
+SELECT supply_id, kind, name, status, facility_code
+FROM proj_supply_summary
+WHERE name = $1 AND facility_code = $2 AND kind = $3
+  AND status != 'Decommissioned'
+ORDER BY registered_at, supply_id
+```
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -73,6 +91,14 @@ SELECT supply_id, kind, name, status, facility_code
 FROM proj_supply_summary
 WHERE supply_id = $1
 LIMIT 1
+"""
+
+_FIND_SUPPLIES_BY_NAME_SQL = """
+SELECT supply_id, kind, name, status, facility_code
+FROM proj_supply_summary
+WHERE name = $1 AND facility_code = $2 AND kind = $3
+  AND status != 'Decommissioned'
+ORDER BY registered_at, supply_id
 """
 
 
@@ -106,6 +132,17 @@ class PostgresSupplyLookup:
         if row is None:
             return None
         return _row_to_reference(row)
+
+    async def find_supplies_by_name(
+        self,
+        *,
+        name: str,
+        facility_code: str,
+        kind: str,
+    ) -> list[SupplyLookupResult]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(_FIND_SUPPLIES_BY_NAME_SQL, name, facility_code, kind)
+        return [_row_to_reference(row) for row in rows]
 
 
 def _row_to_reference(row: Any) -> SupplyLookupResult:

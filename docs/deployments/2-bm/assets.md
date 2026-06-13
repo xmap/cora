@@ -39,6 +39,7 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | --- | --- |
 | `Shutter` | `Shutterable` |
 | `MotionController` | (empty at v1; controllers expose configuration + firmware identity through `settings` rather than command-tier affordances) |
+| `TimingController` | `Pulsing` (carried via the `Controller` Role). Unlike `MotionController`, a timing box is itself the actor: the pulse-generation affordance is its own, not a driven device's. softGlueZynq generates configurable trigger pulse trains for downstream timing; per-box identity + firmware/bitstream config live in `settings`. |
 | `RotaryStage` | `Rotatable`, `Homeable`, `Limitable`, `Following`, `Marking` |
 | `LinearStage` | `Translatable`, `Homeable`, `Limitable`, `Following` |
 | `Hexapod` | `Posable`, `Homeable`, `Limitable` |
@@ -75,7 +76,7 @@ The Aerotech Ensemble HLE10-40-A-MXH (companion drive for `aerotech_abs250mp_m_a
 
 ## Family settings schemas
 
-NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, `Camera`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. `Imager` and `PseudoAxis` carry no settings schema (they are presenter / facet Families).
+NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: the 2-BM detector classes (the active FLIR Oryx and the decommissioned PCO Dimax) differ along settings axes (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not Family axes, so the high-framerate variant stays a `Camera` rather than a separate Family. `Imager` and `PseudoAxis` carry no settings schema (they are presenter / facet Families).
 
 ### `Objective`
 
@@ -125,6 +126,34 @@ Identity + configuration + connectivity of a separately-modelled drive-electroni
 | `protocol` | closed enum: `EPICS \| Aerotech_Native \| OMS_VME \| Serial_RS232 \| Serial_RS485 \| Modbus_TCP \| Other` | yes | Communication protocol. Six known plus `Other` escape valve; future additions follow the add-only-enum convention. |
 
 `manufacturer` is NOT on this schema: vendor identity lives on the bound Model row per the Capability-declares-settings-schema pattern (`Aerotech` for `Aerotech_Ensemble_drive` comes from `aerotech_ensemble_hle10_40_a_mxh`).
+
+### `TimingController`
+
+Identity + configuration + connectivity of a separately-modelled timing-signal box, the second `<Domain>Controller` Family after `MotionController`. Same intentional-design posture: every field exists because reproducibility, federation, or operational reasoning needs it. The driven device (the camera) carries the `Triggerable` affordance; the timing box carries `Pulsing` (via the `Controller` Role) because it is the active generator of the trigger pulse train. Draft schema pending 2-BM operator confirmation on the softGlueZynq physical box.
+
+| Setting | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `serial_number` | string, 1-128 chars | yes | Per-unit identity; operator-facing canonical key. Same role as on `MotionController`. |
+| `firmware_version` | string, 1-64 chars | yes | Reproducibility provenance. For an FPGA box this is the gateware / bitstream version: the trigger logic itself can change between Runs, so a Run cannot honestly answer "did the timing change between Run X and Run Y" without it. Free-text in v1. |
+| `ip_address` | string, 7-45 chars | no | Network identity. The softGlueZynq is network-attached and EPICS-fronted; optional because future timing sources may not be. |
+| `output_channel_count` | integer, 1-64 | yes | Number of independent trigger / gate output lines the box drives. Analogue of `MotionController.axis_count`; bounds the eventual "one output line failed" Caution scope. |
+| `protocol` | closed enum: `EPICS \| Aerotech_Native \| OMS_VME \| Serial_RS232 \| Serial_RS485 \| Modbus_TCP \| Other` | yes | Communication protocol, shared closed enum with `MotionController`. softGlueZynq is `EPICS`. |
+
+The detailed trigger routing (the softGlue logic-block wiring, e.g. the `PSO -> MUX2-1 -> GateDly1 -> camera Line2` path on the 2-BM box) is per-Run / per-Method configuration, not Asset settings: it changes with the scan, while the schema above records the durable box identity.
+
+### `Camera`
+
+Intrinsic detector properties, made explicit at 2-BM because a second detector class (the high-framerate PCO Dimax) shares the Family with the FLIR Oryx and differs only along settings axes. The first four fields formalize what the per-Asset Settings already carry; the last three are the high-framerate extension that lets one `Camera` Family span both detectors (the `Mirror`-precedent rule: variant-as-settings, not variant-as-subtype).
+
+| Setting | Type | Unit | Notes |
+| --- | --- | --- | --- |
+| `sensor_width` | integer > 0 | pixel | Active sensor columns. |
+| `sensor_height` | integer > 0 | pixel | Active sensor rows. |
+| `pixel_size` | number > 0 | um | Physical sensor pixel pitch (before optical magnification). |
+| `bit_depth` | integer > 0 | bit | ADC bit depth per pixel. |
+| `max_framerate_hz` | number > 0 | Hz | Full-frame maximum frame rate; the axis that distinguishes a high-speed PCO Dimax from a general-purpose Oryx without a separate Family. |
+| `sensor_kind` | closed enum: `CMOS \| sCMOS \| CCD \| EMCCD` | | Sensor architecture. Four known values; add-only enum. |
+| `readout_mode` | closed enum: `RollingShutter \| GlobalShutter` | | Shutter / readout architecture; governs motion-blur behaviour under triggered fly-scans. |
 
 ## Settings
 
@@ -281,13 +310,13 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `focal_length` | `20 mm` |
 | `working_distance` | `33.5 mm` |
 
-### `MCTOptics_objective_1` (5x)
+### `MCTOptics_objective_1` (2x)
 
 | Setting | Value |
 | --- | --- |
-| `magnification` | `5.0` |
-| `numerical_aperture` | `0.14` |
-| `focal_length` | `40 mm` |
+| `magnification` | `2.0` |
+| `numerical_aperture` | `0.055` |
+| `focal_length` | `100 mm` |
 | `working_distance` | `34 mm` |
 
 ### `MCTOptics_objective_2` (1.1x)
@@ -382,8 +411,18 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 
 | Asset | Family |
 | --- | --- |
-| `Mirror_2BM` | `Mirror` |
-| `softGlueZynq_FPGA` | `TriggerFPGA` |
-| `PCO_Dimax_HS` | `HighSpeedCamera` |
+| `Y3-30_mirror` | `Mirror` |
+| `softGlueZynq_FPGA` | `TimingController` |
 | Broader sample-stage motors | `LinearStage` + tilt motors |
 | IOC-hosted EPICS Devices | |
+
+`TimingController` here is the catalog-aligned Family, replacing the earlier `TriggerFPGA` placeholder. Substrate ("FPGA") is not a Family axis: the softGlueZynq is a `TimingController` whose identity + gateware version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
+
+## Decommissioned (provenance only)
+
+Detectors 2-BM ran in the past. They are neither active Assets nor awaiting registration; [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) records them under `decommissioned` for provenance. When modelled they are `Camera` Assets in a terminal lifecycle state: the `Camera` Family spans them and the active FLIR Oryx, because performance class ("high-speed") is a settings axis, not a separate Family, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
+
+| Asset | Family | Note |
+| --- | --- | --- |
+| `PCO_Dimax_HS` | `Camera` | High-speed CMOS camera; superseded by the FLIR Oryx detector chain. |
+| `Adimec_Quartz_Q-12A180` | `Camera` | Earlier 2-BM CoaXPress camera. |

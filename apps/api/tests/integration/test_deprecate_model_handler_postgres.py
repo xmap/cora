@@ -14,14 +14,17 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     ModelCannotDeprecateError,
     ModelNotFoundError,
     ModelStatus,
+    PartNumber,
     fold,
     from_stored,
+    model_stream_id,
 )
 from cora.equipment.features import define_family, define_model, deprecate_model
 from cora.equipment.features.define_family import DefineFamily
@@ -51,19 +54,23 @@ async def test_deprecate_model_persists_event_with_full_payload(
     """Happy path: seed Family + define Model + deprecate Model. Verify
     ModelDeprecated is persisted with the trimmed reason payload and the
     state folds to Deprecated."""
-    family_id = UUID("01900000-0000-7000-8000-00000061d001")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-00000061d00e")
-    model_id = UUID("01900000-0000-7000-8000-00000061ca01")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000061ca01")
     define_event_id = UUID("01900000-0000-7000-8000-00000061ca0e")
     deprecate_event_id = UUID("01900000-0000-7000-8000-00000061ca1a")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             deprecate_event_id,
         ],
@@ -139,22 +146,26 @@ async def test_deprecate_model_raises_cannot_deprecate_after_first_deprecation(
 ) -> None:
     """Strict-not-idempotent: re-deprecating raises ModelCannotDeprecateError
     and no new event is written."""
-    family_id = UUID("01900000-0000-7000-8000-00000061e001")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-00000061e00e")
-    model_id = UUID("01900000-0000-7000-8000-00000061ca21")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000061ca21")
     define_event_id = UUID("01900000-0000-7000-8000-00000061ca2e")
     deprecate_event_id = UUID("01900000-0000-7000-8000-00000061ca2f")
     # The second deprecate_model call lands on the disallowed source and
     # rejects before consuming any id; queue an extra to be safe.
     unused_event_id = UUID("01900000-0000-7000-8000-00000061ca3a")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             deprecate_event_id,
             unused_event_id,

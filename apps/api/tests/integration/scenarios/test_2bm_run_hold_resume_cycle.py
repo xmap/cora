@@ -116,6 +116,7 @@ from cora.campaign.features.close_campaign import CloseCampaign
 from cora.campaign.features.close_campaign import bind as bind_close_campaign
 from cora.campaign.features.start_campaign import StartCampaign
 from cora.campaign.features.start_campaign import bind as bind_start_campaign
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.run.features.complete_run import CompleteRun
 from cora.run.features.complete_run import bind as bind_complete_run
 from cora.run.features.hold_run import HoldRun
@@ -151,10 +152,10 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000460bb")
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000460501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000460a01")
 
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000460c01")
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000460c11")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000460c21")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000460c31")
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 
 _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-000000460a11")
 _ASSET_SAMPLE_TOP_X_ID = UUID("01900000-0000-7000-8000-000000460a21")

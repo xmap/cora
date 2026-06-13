@@ -11,6 +11,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -42,7 +43,7 @@ _CAPABILITY_ID = UUID("01900000-0000-7000-8000-000000c0d170")
 async def test_version_plan_persists_event_and_round_trips_through_fold(
     db_pool: asyncpg.Pool,
 ) -> None:
-    cap_id = UUID("01900000-0000-7000-8000-00000061aa01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000061aa02")
     asset_id = UUID("01900000-0000-7000-8000-00000061ab01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000061ab02")
@@ -60,7 +61,6 @@ async def test_version_plan_persists_event_and_round_trips_through_fold(
         db_pool,
         now=_NOW,
         ids=[
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,

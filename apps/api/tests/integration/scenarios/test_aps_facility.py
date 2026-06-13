@@ -59,6 +59,7 @@ from cora.caution.aggregates.caution import (
 from cora.caution.features.register_caution import RegisterCaution
 from cora.caution.features.register_caution import bind as bind_register_caution
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_family import bind as bind_define_family
 from cora.equipment.features.register_asset import RegisterAsset
@@ -97,7 +98,7 @@ _ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000a00e01")
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000a00501")
 _SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000a00701")
 _ACTOR_OPERATOR_ID = UUID("01900000-0000-7000-8000-000000a00a01")
-_CAP_PROBE_GENERIC_ID = UUID("01900000-0000-7000-8000-000000a00c01")
+_CAP_PROBE_GENERIC_ID = family_stream_id(FamilyName("ProbeGeneric"))
 _METHOD_DARK_BASELINE_ID = UUID("01900000-0000-7000-8000-000000a00d01")
 _CAPABILITY_ID = UUID("01900000-0000-7000-8000-000000c0ed79")
 _PRACTICE_DARK_BASELINE_APS_ID = UUID("01900000-0000-7000-8000-000000a00d11")
@@ -134,8 +135,8 @@ def _id_queue() -> list[UUID]:
         RUN_DEBRIEF_ACTOR_ID,  # shared agent_id == actor_id
         e(),  # ActorRegistered event id
         e(),  # AgentDefined event id
-        # define_family (generic Probe, for Method to declare): cap_id, event_id
-        _CAP_PROBE_GENERIC_ID,
+        # define_family (generic Probe, for Method to declare): event_id only
+        # (stream id is now derived from the name, not popped)
         e(),
         # define_method (dark_baseline): method_id, event_id
         _METHOD_DARK_BASELINE_ID,

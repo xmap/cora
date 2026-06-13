@@ -98,7 +98,7 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     ---
 
-    Foundation BC for principal identity: one aggregate (`Actor`), two events, two-state lifecycle, shared identity with `Agent`. The "who you are" layer that every other module references when attributing an event.
+    Foundation BC for principal identity: one aggregate (`Actor`), <!-- arch:count kind=event bc=access spell=true -->two<!-- /arch:count --> events, two-state lifecycle, shared identity with `Agent`. The "who you are" layer that every other module references when attributing an event.
 
     [Read →](access/index.md)
 
@@ -106,7 +106,7 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     ---
 
-    Seven aggregates (`Family`, `Model`, `Assembly`, `Fixture`, `Asset`, `Frame`, `Mount`), four-state Asset lifecycle, three-state condition orthogonal to lifecycle, a three-tier intrinsic Asset tree (`Unit`/`Component`/`Device` via `AssetTier`) bound to its owning Facility by `facility_code`, settings-schema validation against the Family-declared Capability, and typed ports for wiring devices into Plans.
+    <!-- arch:count kind=aggregate bc=equipment spell=true cap=true -->Seven<!-- /arch:count --> aggregates (<!-- arch:bc-aggregates bc=equipment case=type -->`Family`, `Model`, `Assembly`, `Fixture`, `Asset`, `Frame`, `Mount`<!-- /arch:bc-aggregates -->), four-state Asset lifecycle, three-state condition orthogonal to lifecycle, a three-tier intrinsic Asset tree (`Unit`/`Component`/`Device` via `AssetTier`) bound to its owning Facility by `facility_code`, settings-schema validation against the Family-declared Capability, and typed ports for wiring devices into Plans.
 
     [Read →](equipment/index.md)
 
@@ -114,7 +114,7 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     ---
 
-    Four aggregates forming the abstract-to-bound ladder: `Capability`, `Method`, `Practice`, `Plan`. ISA-88 General/Site/Master/Control recipe progression; the "what we plan to do" layer above Run.
+    <!-- arch:count kind=aggregate bc=recipe spell=true cap=true -->Four<!-- /arch:count --> aggregates of the abstract-to-bound recipe ladder: <!-- arch:bc-aggregates bc=recipe case=type -->`Capability`, `Method`, `Practice`, `Plan`<!-- /arch:bc-aggregates -->. ISA-88 General/Site/Master/Control recipe progression; the "what we plan to do" layer above Run.
 
     [Read →](recipe/index.md)
 

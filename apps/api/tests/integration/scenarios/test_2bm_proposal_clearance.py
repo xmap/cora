@@ -120,6 +120,7 @@ import asyncpg
 import pytest
 
 from cora.campaign.aggregates.campaign import CampaignIntent
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.safety.aggregates.clearance import (
     ClearanceStatus,
     ExternalRefBinding,
@@ -172,8 +173,8 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000440bb")
 # supersede) take 441..449.
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000440a01")
 
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000440c01")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000440c21")
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
 
 _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-000000440a11")
 _ASSET_ORYX_5MP_ID = UUID("01900000-0000-7000-8000-000000440a31")

@@ -25,3 +25,4 @@ For implementers picking deployment and developer tooling. Each row names a role
 | Pre-commit | pre-commit | Hooks for lint, format, and type-check on commit |
 | Local container runtime | Docker + docker-compose | Postgres + pgvector for local dev |
 | CI | GitHub Actions | Repo on GitHub; standard |
+| Docs site generator | MkDocs Material (`mkdocs-material==9.5.49`) | Renders these docs; pinned and built in `.github/workflows/docs.yml`, published to GitHub Pages | Authoring needs MkDocs cannot meet (versioned docs, heavy JS components) |

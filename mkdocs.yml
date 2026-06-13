@@ -83,6 +83,7 @@ nav:
     - Auth: stack/auth.md
     - Observability: stack/observability.md
     - Operations: stack/operations.md
+    - Deployment: stack/deployment.md
     - Deferred: stack/deferred.md
   - Deployments:
     - deployments/index.md

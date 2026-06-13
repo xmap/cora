@@ -24,10 +24,13 @@ from uuid import UUID
 import asyncpg
 import pytest
 
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
+    PartNumber,
     list_model_ids,
+    model_stream_id,
 )
 from cora.equipment.features import (
     define_family,
@@ -52,27 +55,41 @@ async def test_list_model_ids_excludes_deprecated_models(
     """Seed 3 Models, deprecate 1, drain: `list_model_ids` returns the
     2 non-Deprecated ids in `model_id::text`-sorted ascending order.
     Pins the `WHERE status <> 'Deprecated'` filter."""
-    family_id = UUID("01900000-0000-7000-8000-0000000cd001")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-0000000cd00e")
-    model_a_id = UUID("01900000-0000-7000-8000-0000000cd0a1")
+    model_a_fallback_id = UUID("01900000-0000-7000-8000-0000000cd0a1")
     model_a_event_id = UUID("01900000-0000-7000-8000-0000000cd0ae")
-    model_b_id = UUID("01900000-0000-7000-8000-0000000cd0a2")
+    model_b_fallback_id = UUID("01900000-0000-7000-8000-0000000cd0a2")
     model_b_event_id = UUID("01900000-0000-7000-8000-0000000cd0af")
-    model_c_id = UUID("01900000-0000-7000-8000-0000000cd0a3")
+    model_c_fallback_id = UUID("01900000-0000-7000-8000-0000000cd0a3")
     model_c_event_id = UUID("01900000-0000-7000-8000-0000000cd0b0")
     deprecate_event_id = UUID("01900000-0000-7000-8000-0000000cd0b1")
+    model_a_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
+    model_b_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-LZS"),
+        new_id=UUID(int=0),
+    )
+    model_c_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT95-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
-            model_a_id,
+            model_a_fallback_id,
             model_a_event_id,
-            model_b_id,
+            model_b_fallback_id,
             model_b_event_id,
-            model_c_id,
+            model_c_fallback_id,
             model_c_event_id,
             deprecate_event_id,
         ],
@@ -118,29 +135,43 @@ async def test_list_model_ids_returns_models_in_canonical_sort_order(
     """Seed 3 Models, drain: `list_model_ids` returns ids sorted by
     `model_id::text` ascending regardless of insert order. Pins the
     `ORDER BY model_id::text` clause."""
-    family_id = UUID("01900000-0000-7000-8000-0000000cd101")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-0000000cd10e")
-    # Insert order (c, a, b) differs from text-sort order (a, b, c)
-    # so an accidental "natural insertion order" implementation would
-    # not pass.
-    model_a_id = UUID("01900000-0000-7000-8000-0000000cd1a1")
-    model_a_event_id = UUID("01900000-0000-7000-8000-0000000cd1ae")
-    model_b_id = UUID("01900000-0000-7000-8000-0000000cd1a2")
-    model_b_event_id = UUID("01900000-0000-7000-8000-0000000cd1af")
-    model_c_id = UUID("01900000-0000-7000-8000-0000000cd1a3")
-    model_c_event_id = UUID("01900000-0000-7000-8000-0000000cd1b0")
+    # Insert order (c, a, b) differs from text-sort order so an
+    # accidental "natural insertion order" implementation would not
+    # pass; the derived stream ids do not track insert order.
+    model_c_fallback_id = UUID("01900000-0000-7000-8000-0000000cd1a1")
+    model_c_event_id = UUID("01900000-0000-7000-8000-0000000cd1ae")
+    model_a_fallback_id = UUID("01900000-0000-7000-8000-0000000cd1a2")
+    model_a_event_id = UUID("01900000-0000-7000-8000-0000000cd1af")
+    model_b_fallback_id = UUID("01900000-0000-7000-8000-0000000cd1a3")
+    model_b_event_id = UUID("01900000-0000-7000-8000-0000000cd1b0")
+    model_a_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
+    model_b_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-LZS"),
+        new_id=UUID(int=0),
+    )
+    model_c_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT95-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
-            model_c_id,
+            model_c_fallback_id,
             model_c_event_id,
-            model_a_id,
+            model_a_fallback_id,
             model_a_event_id,
-            model_b_id,
+            model_b_fallback_id,
             model_b_event_id,
         ],
     )

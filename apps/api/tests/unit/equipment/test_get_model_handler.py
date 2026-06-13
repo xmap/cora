@@ -23,6 +23,7 @@ from cora.equipment.aggregates.model import (
     ModelName,
     ModelStatus,
     PartNumber,
+    model_stream_id,
 )
 from cora.equipment.features import add_model_family, define_model, get_model
 from cora.equipment.features.add_model_family import AddModelFamily
@@ -35,7 +36,14 @@ from tests.unit._helpers import RecordingAuthorize as _RecordingAuthorize
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
-_NEW_ID = UUID("01900000-0000-7000-8000-000000007ab1")
+# The seed Model derives its stream id from the vendor key; the random
+# id define_model pops first is unused but still occupies the queue slot.
+_MODEL_FALLBACK_ID = UUID("01900000-0000-7000-8000-000000007ab1")
+_MODEL_ID = model_stream_id(
+    Manufacturer(name=ManufacturerName("Aerotech")),
+    PartNumber("ANT130-L"),
+    new_id=UUID(int=0),
+)
 _EVENT_ID = UUID("01900000-0000-7000-8000-000000007be1")
 _ADD_EVENT_ID = UUID("01900000-0000-7000-8000-000000007be2")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
@@ -47,7 +55,7 @@ _FAMILY_B_ID = UUID("01900000-0000-7000-8000-00000000fa02")
 def _build_deps(event_store: InMemoryEventStore | None = None) -> Kernel:
     """Thin wrapper preserving this file's ID list + clock."""
     return _build_deps_shared(
-        ids=[_NEW_ID, _EVENT_ID, _ADD_EVENT_ID],
+        ids=[_MODEL_FALLBACK_ID, _EVENT_ID, _ADD_EVENT_ID],
         now=_NOW,
         event_store=event_store,
     )
@@ -96,13 +104,13 @@ async def test_handler_returns_model_for_known_id(
 
     handler = get_model.bind(deps)
     model = await handler(
-        GetModel(model_id=_NEW_ID),
+        GetModel(model_id=_MODEL_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
 
     assert model == Model(
-        id=_NEW_ID,
+        id=_MODEL_ID,
         name=ModelName("Aerotech ANT130-L"),
         manufacturer=Manufacturer(name=ManufacturerName("Aerotech")),
         part_number=PartNumber("ANT130-L"),
@@ -131,14 +139,14 @@ async def test_handler_reflects_targeted_mutation_history(
         correlation_id=_CORRELATION_ID,
     )
     await add_model_family.bind(deps)(
-        AddModelFamily(model_id=_NEW_ID, family_id=_FAMILY_B_ID),
+        AddModelFamily(model_id=_MODEL_ID, family_id=_FAMILY_B_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
 
     handler = get_model.bind(deps)
     model = await handler(
-        GetModel(model_id=_NEW_ID),
+        GetModel(model_id=_MODEL_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -170,7 +178,7 @@ async def test_handler_authorizes_with_query_name_and_default_conduit() -> None:
     to exist."""
     tracking = _RecordingAuthorize()
     deps = _build_deps_shared(
-        ids=[_NEW_ID, _EVENT_ID],
+        ids=[_MODEL_FALLBACK_ID, _EVENT_ID],
         now=_NOW,
         authz=tracking,
     )
@@ -188,7 +196,7 @@ async def test_handler_authorizes_with_query_name_and_default_conduit() -> None:
 @pytest.mark.unit
 async def test_handler_raises_unauthorized_on_deny() -> None:
     deps = _build_deps_shared(
-        ids=[_NEW_ID, _EVENT_ID],
+        ids=[_MODEL_FALLBACK_ID, _EVENT_ID],
         now=_NOW,
         authz=_DenyAllAuthorize(),
     )

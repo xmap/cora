@@ -84,6 +84,7 @@ import pytest
 
 from cora.data.features.register_dataset import RegisterDataset
 from cora.data.features.register_dataset import bind as bind_register_dataset
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
@@ -127,9 +128,9 @@ _APS_SITE_ID = UUID("01900000-0000-7000-8000-00000035a501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-00000035aa01")
 
 # Capabilities
-_CAP_SHUTTER_ID = UUID("01900000-0000-7000-8000-00000035ac01")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-00000035ac11")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-00000035ac21")
+_CAP_SHUTTER_ID = family_stream_id(FamilyName("Shutter"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 
 # Devices
 _ASSET_SHUTTER_2BM_ID = UUID("01900000-0000-7000-8000-00000035aa11")

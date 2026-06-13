@@ -40,7 +40,6 @@ from cora.infrastructure.kernel import Kernel
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 5, 14, 12, 0, 0, tzinfo=UTC)
-_FAMILY_ID = UUID("01900000-0000-7000-8000-00000000b501")
 _FAMILY_DEFINED_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b502")
 _ASSET_ID = UUID("01900000-0000-7000-8000-00000000b503")
 _ASSET_REGISTERED_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b504")
@@ -71,7 +70,6 @@ def _build_deps(
     """
     return _build_deps_shared(
         ids=[
-            _FAMILY_ID,
             _FAMILY_DEFINED_EVENT_ID,
             _ASSET_ID,
             _ASSET_REGISTERED_EVENT_ID,

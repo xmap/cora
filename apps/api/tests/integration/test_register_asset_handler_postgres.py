@@ -28,10 +28,13 @@ from cora.equipment.aggregates.asset import (
     AssetTier,
     load_asset,
 )
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     ModelNotFoundError,
+    PartNumber,
+    model_stream_id,
 )
 from cora.equipment.features import define_family, define_model, register_asset
 from cora.equipment.features.define_family import DefineFamily
@@ -138,10 +141,15 @@ async def test_register_asset_persists_model_binding_to_postgres(
     Model via `command.model_id`. The handler's Model existence check
     runs against the real Postgres event store; AssetRegistered payload
     carries `model_id` as a string; folded Asset state round-trips it."""
-    family_id = UUID("01900000-0000-7000-8000-000000054e01")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-000000054e0e")
-    model_id = UUID("01900000-0000-7000-8000-00000054ec01")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000054ec01")
     model_event_id = UUID("01900000-0000-7000-8000-00000054ec0e")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Dectris")),
+        PartNumber("EX9M-001"),
+        new_id=UUID(int=0),
+    )
     asset_id = UUID("01900000-0000-7000-8000-00000054ed01")
     asset_event_id = UUID("01900000-0000-7000-8000-00000054ed0e")
     parent_id = UUID("01900000-0000-7000-8000-00000054ed00")
@@ -150,9 +158,8 @@ async def test_register_asset_persists_model_binding_to_postgres(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
-            model_id,
+            model_fallback_id,
             model_event_id,
             asset_id,
             asset_event_id,
@@ -214,10 +221,15 @@ async def test_register_asset_persists_alternate_identifiers_to_postgres(
     shape); the projection row must materialize the same list into the
     `alternate_identifiers` JSONB column; folded Asset state must round-
     trip the frozenset."""
-    family_id = UUID("01900000-0000-7000-8000-000000054fa1")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-000000054fae")
-    model_id = UUID("01900000-0000-7000-8000-00000054fb01")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000054fb01")
     model_event_id = UUID("01900000-0000-7000-8000-00000054fb0e")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130L-G10"),
+        new_id=UUID(int=0),
+    )
     asset_id = UUID("01900000-0000-7000-8000-00000054fc01")
     asset_event_id = UUID("01900000-0000-7000-8000-00000054fc0e")
     parent_id = UUID("01900000-0000-7000-8000-00000054fc00")
@@ -232,9 +244,8 @@ async def test_register_asset_persists_alternate_identifiers_to_postgres(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
-            model_id,
+            model_fallback_id,
             model_event_id,
             asset_id,
             asset_event_id,

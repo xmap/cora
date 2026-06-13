@@ -30,7 +30,6 @@ from tests.integration._equipment_helpers import seed_installed_asset
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 3, 14, 0, 0, tzinfo=UTC)
-_FAMILY_ID = UUID("01900000-0000-7000-8000-00000054cb01")
 _FAMILY_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cb0e")
 _ADD_FAMILY_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cb10")
 _ASSEMBLY_ID = UUID("01900000-0000-7000-8000-00000054cb03")
@@ -56,7 +55,6 @@ async def test_attach_asset_to_fixture_sets_back_reference_in_postgres(
         db_pool,
         now=_NOW,
         ids=[
-            _FAMILY_ID,
             _FAMILY_EVENT_ID,
             _ADD_FAMILY_EVENT_ID,
             _ASSEMBLY_ID,

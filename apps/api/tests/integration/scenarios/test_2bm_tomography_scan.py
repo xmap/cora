@@ -100,6 +100,7 @@ from cora.campaign.features.start_campaign import StartCampaign
 from cora.campaign.features.start_campaign import bind as bind_start_campaign
 from cora.data.features.register_dataset import RegisterDataset
 from cora.data.features.register_dataset import bind as bind_register_dataset
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.run.features.complete_run import CompleteRun
 from cora.run.features.complete_run import bind as bind_complete_run
 from cora.run.features.start_run import StartRun
@@ -133,10 +134,10 @@ _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000403501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000403a01")
 
 # Capabilities (full imaging chain)
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000403c01")
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000403c11")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000403c21")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000403c31")
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 
 # Devices (full imaging chain)
 _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-000000403a11")

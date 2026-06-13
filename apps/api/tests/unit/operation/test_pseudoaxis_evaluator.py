@@ -50,13 +50,11 @@ from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 5, 14, 12, 0, 0, tzinfo=UTC)
 
-_FAMILY_ID = UUID("01900000-0000-7000-8000-00000000c001")
 _FAMILY_DEFINED_EVENT_ID = UUID("01900000-0000-7000-8000-00000000c002")
 _ASSET_ID = UUID("01900000-0000-7000-8000-00000000c003")
 _ASSET_REGISTERED_EVENT_ID = UUID("01900000-0000-7000-8000-00000000c004")
 _FAMILY_ADDED_EVENT_ID = UUID("01900000-0000-7000-8000-00000000c005")
 _PARTITION_EVENT_ID = UUID("01900000-0000-7000-8000-00000000c006")
-_NON_PA_FAMILY_ID = UUID("01900000-0000-7000-8000-00000000c011")
 _NON_PA_FAMILY_DEFINED_EVENT_ID = UUID("01900000-0000-7000-8000-00000000c012")
 _NON_PA_ASSET_ID = UUID("01900000-0000-7000-8000-00000000c013")
 _NON_PA_ASSET_REGISTERED_EVENT_ID = UUID("01900000-0000-7000-8000-00000000c014")
@@ -78,16 +76,18 @@ def _build_deps(
     event_store: InMemoryEventStore | None = None,
 ) -> Kernel:
     """Build a Kernel with a queued id list large enough for the
-    PseudoAxis + non-PseudoAxis setup paths used across this file."""
+    PseudoAxis + non-PseudoAxis setup paths used across this file.
+
+    Family stream ids are derived from the name (not popped from the
+    generator), so the list carries only event ids plus the Asset
+    stream ids that register_asset still mints from the generator."""
     return _build_deps_shared(
         ids=[
-            _FAMILY_ID,
             _FAMILY_DEFINED_EVENT_ID,
             _ASSET_ID,
             _ASSET_REGISTERED_EVENT_ID,
             _FAMILY_ADDED_EVENT_ID,
             _PARTITION_EVENT_ID,
-            _NON_PA_FAMILY_ID,
             _NON_PA_FAMILY_DEFINED_EVENT_ID,
             _NON_PA_ASSET_ID,
             _NON_PA_ASSET_REGISTERED_EVENT_ID,

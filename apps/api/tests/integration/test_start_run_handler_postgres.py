@@ -19,6 +19,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -54,7 +55,7 @@ _CAPABILITY_ID = UUID("01900000-0000-7000-8000-000000c0dcc3")
 async def test_start_run_persists_event_with_full_upstream_chain_against_postgres(
     db_pool: asyncpg.Pool,
 ) -> None:
-    cap_id = UUID("01900000-0000-7000-8000-00000063aa01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000063aa02")
     asset_id = UUID("01900000-0000-7000-8000-00000063ab01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000063ab02")
@@ -76,7 +77,6 @@ async def test_start_run_persists_event_with_full_upstream_chain_against_postgre
         db_pool,
         now=_NOW,
         ids=[
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,

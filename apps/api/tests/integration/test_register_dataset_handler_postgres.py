@@ -36,6 +36,7 @@ from cora.data.features import discard_dataset, register_dataset
 from cora.data.features.discard_dataset import DiscardDataset
 from cora.data.features.register_dataset import RegisterDataset
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -159,7 +160,7 @@ async def test_register_dataset_against_run_subject_and_lineage_round_trip(
 ) -> None:
     """Full upstream chain → Run → raw Dataset → derived Dataset →
     fold both → discard raw → derived-from-Discarded guard fires."""
-    cap_id = UUID("01900000-0000-7000-8000-000000077a01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-000000077a02")
     asset_id = UUID("01900000-0000-7000-8000-000000077b01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-000000077b02")
@@ -187,7 +188,6 @@ async def test_register_dataset_against_run_subject_and_lineage_round_trip(
     deps = _build_deps_with_ids(
         db_pool,
         [
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,

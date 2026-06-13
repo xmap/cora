@@ -14,13 +14,24 @@ from cora.api.main import create_app
 
 
 @pytest.mark.contract
-def test_post_families_without_key_creates_distinct_capabilities_on_each_call() -> None:
+def test_post_families_same_name_twice_returns_409() -> None:
+    """Family ids are derived from the name, so a second define on the
+    same name collides on the deterministic stream (no Idempotency-Key
+    to short-circuit it) and returns 409."""
     with TestClient(create_app()) as client:
         r1 = client.post("/families", json={"name": "Tomography", "affordances": []})
         r2 = client.post("/families", json={"name": "Tomography", "affordances": []})
     assert r1.status_code == 201
-    assert r2.status_code == 201
-    assert r1.json()["family_id"] != r2.json()["family_id"]
+    assert r2.status_code == 409
+
+
+@pytest.mark.contract
+def test_post_families_same_name_case_insensitive_returns_409() -> None:
+    with TestClient(create_app()) as client:
+        r1 = client.post("/families", json={"name": "Tomography", "affordances": []})
+        r2 = client.post("/families", json={"name": "tomography", "affordances": []})
+    assert r1.status_code == 201
+    assert r2.status_code == 409
 
 
 @pytest.mark.contract
@@ -56,7 +67,10 @@ def test_post_families_same_key_different_body_returns_422() -> None:
 
 
 @pytest.mark.contract
-def test_post_families_different_keys_create_distinct_capabilities() -> None:
+def test_post_families_different_keys_same_name_returns_409() -> None:
+    """Distinct Idempotency-Keys gate only the response cache, not
+    identity: the same name still derives one stream, so the second
+    call collides and returns 409."""
     with TestClient(create_app()) as client:
         r1 = client.post(
             "/families",
@@ -69,8 +83,7 @@ def test_post_families_different_keys_create_distinct_capabilities() -> None:
             headers={"Idempotency-Key": "ck-B"},
         )
     assert r1.status_code == 201
-    assert r2.status_code == 201
-    assert r1.json()["family_id"] != r2.json()["family_id"]
+    assert r2.status_code == 409
 
 
 @pytest.mark.contract

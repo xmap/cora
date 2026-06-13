@@ -5,6 +5,11 @@ Vertical slices that operate on this aggregate live under
 state and event types.
 """
 
+from cora.equipment.aggregates.model._model_registry import (
+    PLACEHOLDER_PART_NUMBER,
+    is_placeholder_part_number,
+    model_stream_id,
+)
 from cora.equipment.aggregates.model.events import (
     ModelDefined,
     ModelDeprecated,
@@ -60,6 +65,7 @@ __all__ = [
     "MODEL_NAME_MAX_LENGTH",
     "MODEL_PART_NUMBER_MAX_LENGTH",
     "MODEL_VERSION_TAG_MAX_LENGTH",
+    "PLACEHOLDER_PART_NUMBER",
     "InvalidDeclaredFamiliesError",
     "InvalidManufacturerIdentifierError",
     "InvalidManufacturerIdentifierPairingError",
@@ -96,7 +102,9 @@ __all__ = [
     "evolve",
     "fold",
     "from_stored",
+    "is_placeholder_part_number",
     "list_model_ids",
     "load_model",
+    "model_stream_id",
     "to_payload",
 ]

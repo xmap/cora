@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Safety module records the formal regulatory clearances that gate work at the facility. Two aggregates carry the responsibility. A `ClearanceTemplate` is the per-facility form definition: the typed catalog entry for one form-type (experiment-safety assessment, radiation-safety review, beamtime-allocation form, and so on), identified by a facility-scoped `code` and curated through its own draft-to-active lifecycle. A `Clearance` is the digital twin of one filled-in safety form: it instantiates a `ClearanceTemplate` by `template_id` and owns the lifecycle that takes a draft submission through the review board to an Active state, plus the read-side queries downstream modules call when they need to know "is there an Active clearance covering this Run / Subject / Asset / Procedure?".
+The Safety module records the formal regulatory clearances that gate work at the facility. <!-- arch:count kind=aggregate bc=safety spell=true cap=true -->Two<!-- /arch:count --> aggregates carry the responsibility. A `ClearanceTemplate` is the per-facility form definition: the typed catalog entry for one form-type (experiment-safety assessment, radiation-safety review, beamtime-allocation form, and so on), identified by a facility-scoped `code` and curated through its own draft-to-active lifecycle. A `Clearance` is the digital twin of one filled-in safety form: it instantiates a `ClearanceTemplate` by `template_id` and owns the lifecycle that takes a draft submission through the review board to an Active state, plus the read-side queries downstream modules call when they need to know "is there an Active clearance covering this Run / Subject / Asset / Procedure?".
 
 Each deployment auto-seeds a fixed set of ten form-type templates per Active Facility at startup (ESAF, SAF, AForm, DUO, ESRA, ERA, PLHD, DOOR, BTR, Form9), so a `Clearance` always binds a real template even before an operator curates a facility-specific one.
 
@@ -155,7 +155,7 @@ stateDiagram-v2
 | `ClearanceExpired` | `clearance_id`, `reason`, `occurred_at` | `expire_clearance` succeeds |
 | `ClearanceSuperseded` | `clearance_id` (parent), `by_clearance_id` (child), `occurred_at` | `amend_clearance` succeeds, written to the parent stream |
 
-The five `ClearanceTemplate` events (each carries a fold-symmetry `<verb>_by` actor):
+The <!-- arch:count kind=event bc=safety agg=clearance_template spell=true -->five<!-- /arch:count --> `ClearanceTemplate` events (each carries a fold-symmetry `<verb>_by` actor):
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
@@ -167,26 +167,9 @@ The five `ClearanceTemplate` events (each carries a fold-symmetry `<verb>_by` ac
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterClearance` | NEW | `POST /clearances` | `register_clearance` | required |
-| `SubmitClearance` | MODIFIED | `POST /clearances/{clearance_id}/submit` | `submit_clearance` | none |
-| `StartClearanceReview` | MODIFIED | `POST /clearances/{clearance_id}/start-review` | `start_clearance_review` | none |
-| `AppendClearanceReviewStep` | MODIFIED | `POST /clearances/{clearance_id}/review-steps` | `append_clearance_review_step` | none |
-| `ApproveClearance` | MODIFIED | `POST /clearances/{clearance_id}/approve` | `approve_clearance` | none |
-| `RejectClearance` | MODIFIED | `POST /clearances/{clearance_id}/reject` | `reject_clearance` | none |
-| `ActivateClearance` | MODIFIED | `POST /clearances/{clearance_id}/activate` | `activate_clearance` | none |
-| `ExpireClearance` | MODIFIED | `POST /clearances/{clearance_id}/expire` | `expire_clearance` | none |
-| `AmendClearance` | NEW | `POST /clearances/{parent_id}/amend` | `amend_clearance` | required |
-| `GetClearance` | QUERY | `GET /clearances/{clearance_id}` | `get_clearance` | none |
-| `ListClearances` | QUERY | `GET /clearances` | `list_clearances` | none |
-| `DefineClearanceTemplate` | NEW | `POST /clearance-templates` | `define_clearance_template` | required |
-| `ActivateClearanceTemplate` | MODIFIED | `POST /clearance-templates/{template_id}/activate` | `activate_clearance_template` | none |
-| `VersionClearanceTemplate` | MODIFIED | `POST /clearance-templates/{template_id}/versions` | `version_clearance_template` | none |
-| `DeprecateClearanceTemplate` | MODIFIED | `POST /clearance-templates/{template_id}/deprecate` | `deprecate_clearance_template` | none |
-| `WithdrawClearanceTemplate` | MODIFIED | `POST /clearance-templates/{template_id}/withdraw` | `withdraw_clearance_template` | none |
-| `GetClearanceTemplate` | QUERY | `GET /clearance-templates/{template_id}` | `get_clearance_template` | none |
-| `ListClearanceTemplates` | QUERY | `GET /clearance-templates` | `list_clearance_templates` | none |
+<!-- arch:slices-table bc=safety -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

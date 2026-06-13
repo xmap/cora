@@ -25,6 +25,8 @@ from cora.equipment.aggregates.model import (
     ManufacturerName,
     ModelCannotDeprecateError,
     ModelNotFoundError,
+    PartNumber,
+    model_stream_id,
 )
 from cora.equipment.features import define_model, deprecate_model
 from cora.equipment.features.define_model import DefineModel
@@ -34,7 +36,14 @@ from cora.infrastructure.kernel import Kernel
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
-_MODEL_ID = UUID("01900000-0000-7000-8000-00000007ad11")
+# The seed Model derives its stream id from the vendor key; the random
+# id define_model pops first is unused but still occupies the queue slot.
+_MODEL_FALLBACK_ID = UUID("01900000-0000-7000-8000-00000007ad11")
+_MODEL_ID = model_stream_id(
+    Manufacturer(name=ManufacturerName("Aerotech")),
+    PartNumber("ANT130-L"),
+    new_id=UUID(int=0),
+)
 _DEFINED_EVENT_ID = UUID("01900000-0000-7000-8000-00000007ad12")
 _DEPRECATED_EVENT_ID = UUID("01900000-0000-7000-8000-00000007ad13")
 _EXTRA_EVENT_ID = UUID("01900000-0000-7000-8000-00000007ad14")
@@ -52,7 +61,12 @@ def _build_deps(
 ) -> Kernel:
     """Thin wrapper preserving this file's ID list + clock."""
     return _build_deps_shared(
-        ids=[_MODEL_ID, _DEFINED_EVENT_ID, _DEPRECATED_EVENT_ID, _EXTRA_EVENT_ID],
+        ids=[
+            _MODEL_FALLBACK_ID,
+            _DEFINED_EVENT_ID,
+            _DEPRECATED_EVENT_ID,
+            _EXTRA_EVENT_ID,
+        ],
         now=_NOW,
         event_store=event_store,
         deny=deny,

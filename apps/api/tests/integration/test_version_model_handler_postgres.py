@@ -15,15 +15,18 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     ModelCannotVersionError,
     ModelDeprecated,
     ModelNotFoundError,
+    PartNumber,
     event_type_name,
     fold,
     from_stored,
+    model_stream_id,
     to_payload,
 )
 from cora.equipment.features import define_family, define_model, version_model
@@ -54,23 +57,26 @@ async def test_version_model_persists_event_with_full_payload(
     """Happy path: seed Family + define Model + version Model. Verify
     ModelVersioned is persisted with the wholesale-replacement payload
     (sorted declared_family_ids, manufacturer sub-dict, version_tag)."""
-    family_id = UUID("01900000-0000-7000-8000-00000060d001")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-00000060d00e")
-    other_family_id = UUID("01900000-0000-7000-8000-00000060d002")
+    other_family_id = family_stream_id(FamilyName("StepScanTomography"))
     other_family_event_id = UUID("01900000-0000-7000-8000-00000060d00f")
-    model_id = UUID("01900000-0000-7000-8000-00000060ca01")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000060ca01")
     define_event_id = UUID("01900000-0000-7000-8000-00000060ca0e")
     version_event_id = UUID("01900000-0000-7000-8000-00000060ca1a")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
-            other_family_id,
             other_family_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             version_event_id,
         ],
@@ -173,22 +179,26 @@ async def test_version_model_raises_cannot_version_after_deprecation(
 ) -> None:
     """After appending a ModelDeprecated event, version_model raises
     ModelCannotVersionError and no new event is written."""
-    family_id = UUID("01900000-0000-7000-8000-00000060e001")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-00000060e00e")
-    model_id = UUID("01900000-0000-7000-8000-00000060ca21")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000060ca21")
     define_event_id = UUID("01900000-0000-7000-8000-00000060ca2e")
     deprecate_event_id = UUID("01900000-0000-7000-8000-00000060ca2f")
     # The version_model call lands on the disallowed source and rejects
     # before consuming any id; queue an extra to be safe.
     unused_version_event_id = UUID("01900000-0000-7000-8000-00000060ca3a")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             unused_version_event_id,
         ],

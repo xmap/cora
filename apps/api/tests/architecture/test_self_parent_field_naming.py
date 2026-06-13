@@ -23,10 +23,11 @@ a Surface, not a Visit) legitimately need the cross-aggregate qualifier
 and are NOT flagged because the qualifier is NOT the aggregate's own
 name.
 
-The 6 self-parent sites that currently follow the convention
+The 7 self-parent sites that currently follow the convention
 (`Asset.parent_id`, `Mount.parent_id`, `Frame.parent_id`,
-`Caution.parent_id`, `Clearance.parent_id`, `Visit.parent_id`; the
-companion `Decision.parent_id` also follows it) all pass; a future
+`Caution.parent_id`, `Clearance.parent_id`, `Visit.parent_id`,
+`Facility.parent_id`; the companion `Decision.parent_id` also follows
+it) all pass; a future
 slice that introduces a `parent_asset_id` style verbose self-reference
 on Asset state fails this test loudly at PR time.
 """
@@ -139,6 +140,6 @@ def test_self_parent_field_named_parent_id(path: Path) -> None:
         "`part_of_<aggregate>_id`. The aggregate's own module namespace already "
         "disambiguates the target type. See "
         "[CONTRIBUTING.md / docs/reference/conventions.md] for the rule and "
-        "the 6+ sites already following it (Asset, Mount, Frame, Caution, "
-        "Clearance, Visit, Decision)."
+        "the sites already following it (Asset, Mount, Frame, Caution, "
+        "Clearance, Visit, Facility, Decision)."
     )

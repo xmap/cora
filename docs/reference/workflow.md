@@ -10,7 +10,7 @@ Stop at any step and you have a working mental model of the layer above.
 
 1. **One vertical slice end-to-end:** [features/register_actor/](https://github.com/xmap/cora/tree/main/apps/api/src/cora/access/features/register_actor). Five files, ~430 lines. `command.py` (input), `decider.py` (pure rule), `handler.py` (shell), `route.py` + `tool.py` (REST + MCP). Every slice follows this shape.
 2. **The aggregate:** [aggregates/actor/](https://github.com/xmap/cora/tree/main/apps/api/src/cora/access/aggregates/actor). State, events, evolver. Pure.
-3. **The ports:** [infrastructure/ports/](https://github.com/xmap/cora/tree/main/apps/api/src/cora/infrastructure/ports). Nineteen `Protocol`s (clock, id_generator, event_store, idempotency_store, authorize, event_publisher, canonicalization, signer, signing, token_verifier, secret_store, profile_store, logbook_mirror, llm, capability_lookup, caution_lookup, clearance_lookup, credential_lookup, supply_lookup).
+3. **The ports:** [infrastructure/ports/](https://github.com/xmap/cora/tree/main/apps/api/src/cora/infrastructure/ports). Thirty `Protocol`s, spanning infrastructure seams (`Clock`, `IdGenerator`, `EventStore`, `IdempotencyStore`, `Authorize`, `EventPublisher`, `Canonicalizer`, `Signer`, `ByteSigner`, `TokenVerifier`, `SecretStore`, `ProfileStore`, `LogbookMirror`, `LLM`) and the cross-BC `*Lookup` family (`AssetLookup`, `CapabilityLookup`, `SupplyLookup`, and the rest).
 4. **One fitness test:** [test_slice_contract.py](https://github.com/xmap/cora/blob/main/apps/api/tests/architecture/test_slice_contract.py). What's enforced mechanically.
 5. **Vocabulary:** [Glossary](glossary.md).
 

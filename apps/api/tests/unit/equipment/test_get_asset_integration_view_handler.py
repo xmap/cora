@@ -31,6 +31,7 @@ import pytest
 
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.aggregates.family.affordance import Affordance
 from cora.equipment.features import (
     add_asset_family,
@@ -50,16 +51,16 @@ from tests.unit._helpers import build_deps as _build_deps
 
 _NOW = datetime(2026, 5, 20, 12, 0, 0, tzinfo=UTC)
 
-# Sentinel UUIDs. The FixedIdGenerator consumes them in order:
+# Sentinel UUIDs. Family stream ids are derived from the name (not
+# popped from the generator), so the FixedIdGenerator consumes only:
 # (1) asset id from register_asset, (2) AssetRegistered event id,
-# (3) family-A id, (4) FamilyDefined event id for A,
-# (5) family-B id, (6) FamilyDefined event id for B,
-# (7,8) two AssetFamilyAdded event ids.
+# (3) FamilyDefined event id for A, (4) FamilyDefined event id for B,
+# (5,6) two AssetFamilyAdded event ids.
 _ASSET_ID = UUID("01900000-0000-7000-8000-00000000b101")
 _ASSET_REGISTERED_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b102")
-_FAMILY_A_ID = UUID("01900000-0000-7000-8000-00000000b201")
+_FAMILY_A_ID = family_stream_id(FamilyName("RotaryStage"))
 _FAMILY_A_DEFINED_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b202")
-_FAMILY_B_ID = UUID("01900000-0000-7000-8000-00000000b301")
+_FAMILY_B_ID = family_stream_id(FamilyName("Camera"))
 _FAMILY_B_DEFINED_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b302")
 _ADD_FAMILY_A_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b401")
 _ADD_FAMILY_B_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b402")
@@ -128,9 +129,7 @@ async def test_handler_returns_family_views_with_combined_affordances() -> None:
         ids=[
             _ASSET_ID,
             _ASSET_REGISTERED_EVENT_ID,
-            _FAMILY_A_ID,
             _FAMILY_A_DEFINED_EVENT_ID,
-            _FAMILY_B_ID,
             _FAMILY_B_DEFINED_EVENT_ID,
             _ADD_FAMILY_A_EVENT_ID,
             _ADD_FAMILY_B_EVENT_ID,
@@ -288,7 +287,6 @@ async def test_handler_maps_capability_lookup_refs_into_view() -> None:
         ids=[
             _ASSET_ID,
             _ASSET_REGISTERED_EVENT_ID,
-            _FAMILY_A_ID,
             _FAMILY_A_DEFINED_EVENT_ID,
             _ADD_FAMILY_A_EVENT_ID,
         ],

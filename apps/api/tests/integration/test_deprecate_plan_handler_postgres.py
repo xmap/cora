@@ -12,6 +12,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -45,7 +46,7 @@ _CAPABILITY_ID = UUID("01900000-0000-7000-8000-000000c0dfba")
 async def test_deprecate_plan_persists_and_preserves_version_through_fold(
     db_pool: asyncpg.Pool,
 ) -> None:
-    cap_id = UUID("01900000-0000-7000-8000-00000062aa01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000062aa02")
     asset_id = UUID("01900000-0000-7000-8000-00000062ab01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000062ab02")
@@ -64,7 +65,6 @@ async def test_deprecate_plan_persists_and_preserves_version_through_fold(
         db_pool,
         now=_NOW,
         ids=[
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,

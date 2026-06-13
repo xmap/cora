@@ -270,16 +270,16 @@ detector:
           status: Provisional
     - name: MCTOptics_objective_1
       family: Objective
-      magnification: 5.0
-      numerical_aperture: 0.14
+      magnification: 2.0
+      numerical_aperture: 0.055
       working_distance: 34 mm
       replaceable: true
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
       calibrations:
         - name: cal_objective_1_mag
           quantity: magnification
-          operating_point: { objective_designation: "5x_Mitutoyo", energy: 25 }
-          value: 4.93
+          operating_point: { objective_designation: "2x_Mitutoyo", energy: 25 }
+          value: 2.0
           source: AssertedSource
           status: Provisional
     - name: MCTOptics_objective_2
@@ -376,7 +376,7 @@ controls:
       note: a-station crate (ioc2bma), drives the front-end and optics band
   triggering:
     - name: softGlueZynq_FPGA
-      family: TriggerFPGA
+      family: TimingController
       pv: "2bmbMZ1:SG:"
       path: "PSO -> MUX2-1 -> GateDly1 -> camera Line2"
       replaceable: true
@@ -392,13 +392,14 @@ resources:
     Continuously-available resources (the Supply BC) and the field-swappable parts
     inventory. Both described once here and referenced from the walk above.
   supplies:
-    # confirm: canonical kind strings. supplies.md today uses cryogen / gas /
-    # pneumatic; reconcile before this hard-codes a vocabulary.
     - kind: beam
     - kind: cooling_water         # observed via Flow1-Flow8 BLEPS channels
     - kind: vacuum                # observed via IP1-7, IG1-8, VS1-7, GV1-3
     - kind: power
     - kind: compute
+    - kind: cryogen               # 2-BM detector LN2 dewar
+    - kind: gas                   # pending: sample-environment gas mix
+    - kind: pneumatic             # pending: compressed air supply
   replaceable_parts:
     # One selector, since CORA has no single asset-revision concept:
     #   recoatable surface  -> Consumable affordance, no separate asset

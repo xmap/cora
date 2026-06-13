@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Trust module owns CORA's authorization topology. Every command that crosses the system is evaluated against this topology before it reaches a decider, and the evaluator that performs that check is a pure function on Policy state. Five aggregates carry the responsibility: `Zone` groups principals and assets that share a trust posture, `Conduit` is a governed communications path between two Zones, `Surface` is the process-level arrival point through which a request entered CORA, `Policy` is an authorization rule attached to a specific Conduit and Surface, and `Visit` tracks a principal's session-scoped presence on a Surface: the beamtime session with its planned period, arrival, presence check-in and check-out, and surface-control handover.
+The Trust module owns CORA's authorization topology. Every command that crosses the system is evaluated against this topology before it reaches a decider, and the evaluator that performs that check is a pure function on Policy state. <!-- arch:count kind=aggregate bc=trust spell=true cap=true -->Five<!-- /arch:count --> aggregates carry the responsibility: `Zone` groups principals and assets that share a trust posture, `Conduit` is a governed communications path between two Zones, `Surface` is the process-level arrival point through which a request entered CORA, `Policy` is an authorization rule attached to a specific Conduit and Surface, and `Visit` tracks a principal's session-scoped presence on a Surface: the beamtime session with its planned period, arrival, presence check-in and check-out, and surface-control handover.
 
 Trust is the **what you may do** layer. Identity (who you are) lives in [Access](../access/index.md); agent-specific configuration (tool allowlists, budgets, suspended state) lives in [Agent](../agent/index.md). The cross-module Authorize port carries an Actor id resolved by Access, a Conduit id resolved by the entry adapter, and a Surface id resolved by the transport adapter, and answers Allow or Deny by consulting Policy state.
 
@@ -123,7 +123,7 @@ Two pairs of commands are orthogonal to the lifecycle (they do not change `statu
 
 ## Events
 
-`Zone` emits one event type. `Conduit` emits three. `Surface` emits one. `Policy` emits one. `Visit` emits thirteen.
+`Zone` emits <!-- arch:count kind=event bc=trust agg=zone spell=true -->one<!-- /arch:count --> event type. `Conduit` emits <!-- arch:count kind=event bc=trust agg=conduit spell=true -->three<!-- /arch:count -->. `Surface` emits <!-- arch:count kind=event bc=trust agg=surface spell=true -->one<!-- /arch:count -->. `Policy` emits <!-- arch:count kind=event bc=trust agg=policy spell=true -->one<!-- /arch:count -->. `Visit` emits <!-- arch:count kind=event bc=trust agg=visit spell=true -->thirteen<!-- /arch:count -->.
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
@@ -138,7 +138,7 @@ Two pairs of commands are orthogonal to the lifecycle (they do not change `statu
 
 `PolicyDefined` payloads carry the permission lists sorted by string form. Same logical permission set, same payload bytes, same idempotency hash.
 
-The thirteen `Visit` events (lifecycle plus the two orthogonal command pairs):
+The <!-- arch:count kind=event bc=trust agg=visit spell=true -->thirteen<!-- /arch:count --> `Visit` events (lifecycle plus the two orthogonal command pairs):
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
@@ -158,31 +158,9 @@ The thirteen `Visit` events (lifecycle plus the two orthogonal command pairs):
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineZone` | NEW | `POST /zones` | `define_zone` | required |
-| `ListZones` | QUERY | `GET /zones` | `list_zones` | none |
-| `DefineConduit` | NEW | `POST /conduits` | `define_conduit` | required |
-| `ListConduits` | QUERY | `GET /conduits` | `list_conduits` | none |
-| `DefineSurface` | NEW | `POST /surfaces` | `define_surface` | required |
-| `GetSurface` | QUERY | `GET /surfaces/{target_surface_id}` | `get_surface` | none |
-| `DefinePolicy` | NEW | `POST /policies` | `define_policy` | required |
-| `ListPolicies` | QUERY | `GET /policies` | `list_policies` | none |
-| `EvaluatePolicy` | QUERY | `GET /policies/{policy_id}/evaluate` | `evaluate_policy` | none |
-| `ListPermissions` | QUERY | `GET /policies/{policy_id}/permissions` | `list_permissions` | none |
-| `RegisterVisit` | NEW | `POST /visits` | `register_visit` | required |
-| `ArriveVisit` | MODIFIED | `POST /visits/{visit_id}/arrive` | `arrive_visit` | none |
-| `StartVisit` | MODIFIED | `POST /visits/{visit_id}/start` | `start_visit` | none |
-| `HoldVisit` | MODIFIED | `POST /visits/{visit_id}/hold` | `hold_visit` | none |
-| `ResumeVisit` | MODIFIED | `POST /visits/{visit_id}/resume` | `resume_visit` | none |
-| `CompleteVisit` | MODIFIED | `POST /visits/{visit_id}/complete` | `complete_visit` | none |
-| `CancelVisit` | MODIFIED | `POST /visits/{visit_id}/cancel` | `cancel_visit` | none |
-| `AbortVisit` | MODIFIED | `POST /visits/{visit_id}/abort` | `abort_visit` | none |
-| `VoidVisit` | MODIFIED | `POST /visits/{visit_id}/void` | `void_visit` | none |
-| `CheckInVisit` | MODIFIED | `POST /visits/{visit_id}/check-in` | `check_in_visit` | none |
-| `CheckOutVisit` | MODIFIED | `POST /visits/{visit_id}/check-out` | `check_out_visit` | none |
-| `TakeControlOfSurface` | MODIFIED | `POST /visits/{visit_id}/surface-control/take` | `take_control_of_surface` | none |
-| `ReleaseControlOfSurface` | MODIFIED | `POST /visits/{visit_id}/surface-control/release` | `release_control_of_surface` | none |
+<!-- arch:slices-table bc=trust -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 `define_surface` is reachable today only for the bootstrap path that seeds the three system Surfaces. The route exists for operational symmetry and is exercised by the bootstrap routine; there is no operator-facing path for minting a fourth Surface.
 

@@ -100,18 +100,9 @@ Every transition event carries `from_status` explicitly (even though the FSM con
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterSupply` | NEW | `POST /supplies` | `register_supply` | required |
-| `MarkSupplyAvailable` | MODIFIED | `POST /supplies/{supply_id}/mark-available` | `mark_supply_available` | none |
-| `DegradeSupply` | MODIFIED | `POST /supplies/{supply_id}/degrade` | `degrade_supply` | none |
-| `MarkSupplyUnavailable` | MODIFIED | `POST /supplies/{supply_id}/mark-unavailable` | `mark_supply_unavailable` | none |
-| `MarkSupplyRecovering` | MODIFIED | `POST /supplies/{supply_id}/mark-recovering` | `mark_supply_recovering` | none |
-| `RestoreSupply` | MODIFIED | `POST /supplies/{supply_id}/restore` | `restore_supply` | none |
-| `DeregisterSupply` | TERMINAL | `POST /supplies/{supply_id}/deregister` | `deregister_supply` | none |
-| `ObserveSupplyStatus` | IN-PROCESS | (none, by design) | (none, by design) | none |
-| `GetSupply` | QUERY | `GET /supplies/{supply_id}` | `get_supply` | none |
-| `ListSupplies` | QUERY | `GET /supplies` | `list_supplies` | none |
+<!-- arch:slices-table bc=supply -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 `ObserveSupplyStatus` ships no REST endpoint or MCP tool by design: operators have buttons, machines have ports. In-process adapters (the future EPICS subscriber per the 2-BM controls work, a TomoScan watchdog, future facility-bridges) call `SupplyHandlers.observe_supply_status(...)` directly. Exposing the slice on the public surface would invite operators issuing Monitor-tagged events from MCP tools while the system attributes them to a sensor.
 

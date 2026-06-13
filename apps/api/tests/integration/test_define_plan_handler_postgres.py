@@ -17,7 +17,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import AssetTier
-from cora.equipment.aggregates.family import Affordance
+from cora.equipment.aggregates.family import Affordance, FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -55,7 +55,7 @@ async def test_define_plan_persists_event_with_audit_snapshots_to_postgres(
     db_pool: asyncpg.Pool,
 ) -> None:
     # Pre-allocate UUIDs in the order handlers will consume them.
-    cap_id = UUID("01900000-0000-7000-8000-00000060aa01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000060aa02")
     asset_id = UUID("01900000-0000-7000-8000-00000060ab01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000060ab02")
@@ -75,7 +75,6 @@ async def test_define_plan_persists_event_with_audit_snapshots_to_postgres(
         db_pool,
         now=_NOW,
         ids=[
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,
@@ -188,7 +187,7 @@ async def test_define_plan_affordance_cover_guard_against_postgres(
     affordance set membership round-trips through jsonb."""
     cap_template_id = UUID("01900000-0000-7000-8000-00000061a001")
     cap_template_event = UUID("01900000-0000-7000-8000-00000061a002")
-    family_id = UUID("01900000-0000-7000-8000-00000061b001")
+    family_id = family_stream_id(FamilyName("RotaryStage"))
     family_event = UUID("01900000-0000-7000-8000-00000061b002")
     asset_id = UUID("01900000-0000-7000-8000-00000061c001")
     asset_register_event = UUID("01900000-0000-7000-8000-00000061c002")
@@ -207,7 +206,6 @@ async def test_define_plan_affordance_cover_guard_against_postgres(
         ids=[
             cap_template_id,
             cap_template_event,
-            family_id,
             family_event,
             asset_id,
             asset_register_event,

@@ -192,10 +192,13 @@ async def _seed_model_with_anchor_family(
 
 
 async def _seed_model(db_pool: asyncpg.Pool, *, declared_family_ids: frozenset[UUID]) -> UUID:
-    model_id = uuid4()
+    # define_model derives the stream id from the vendor key (real part
+    # number), so the handler's return value is the authoritative id; the
+    # first id slot is the unused random fallback, the second the event id.
+    fallback_id = uuid4()
     define_event_id = uuid4()
-    deps = _build_deps(db_pool, ids=[model_id, define_event_id])
-    await define_model.bind(deps)(
+    deps = _build_deps(db_pool, ids=[fallback_id, define_event_id])
+    return await define_model.bind(deps)(
         DefineModel(
             name="ANT130-L",
             manufacturer=_aerotech_manufacturer(),
@@ -205,14 +208,14 @@ async def _seed_model(db_pool: asyncpg.Pool, *, declared_family_ids: frozenset[U
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    return model_id
 
 
 async def _seed_family(db_pool: asyncpg.Pool, *, name: str) -> UUID:
-    family_id = uuid4()
+    # define_family derives the stream id from the name and pops only the
+    # event id; the handler's return value is the deterministic id.
     define_event_id = uuid4()
-    deps = _build_deps(db_pool, ids=[family_id, define_event_id])
-    await define_family.bind(deps)(
+    deps = _build_deps(db_pool, ids=[define_event_id])
+    family_id = await define_family.bind(deps)(
         DefineFamily(name=name, affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

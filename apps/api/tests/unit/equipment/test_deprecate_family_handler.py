@@ -42,8 +42,11 @@ def _build_deps(
     deny: bool = False,
 ) -> Kernel:
     """Thin wrapper preserving this file's ID list + clock."""
+    # define_family derives its stream id from the name, so the generator
+    # supplies only event ids here (_CAPABILITY_ID stays as the unknown id
+    # for the not-found test).
     return _build_deps_shared(
-        ids=[_CAPABILITY_ID, _DEFINED_EVENT_ID, _VERSIONED_EVENT_ID, _DEPRECATED_EVENT_ID],
+        ids=[_DEFINED_EVENT_ID, _VERSIONED_EVENT_ID, _DEPRECATED_EVENT_ID],
         now=_NOW,
         event_store=event_store,
         deny=deny,
@@ -92,9 +95,9 @@ async def test_handler_appends_capability_deprecated_event_from_defined() -> Non
         "FamilyDeprecated",
     ]
     deprecated = events[1]
-    # FixedIdGenerator: defining consumes _CAPABILITY_ID + _DEFINED_EVENT_ID,
-    # then deprecate consumes _VERSIONED_EVENT_ID (intended for versioning,
-    # but skipped here; the next id from the list).
+    # FixedIdGenerator: defining consumes _DEFINED_EVENT_ID (the stream id is
+    # derived from the name), then deprecate consumes _VERSIONED_EVENT_ID
+    # (intended for versioning, but skipped here; the next id from the list).
     assert deprecated.event_id == _VERSIONED_EVENT_ID
     assert deprecated.metadata == {"command": "DeprecateFamily"}
 

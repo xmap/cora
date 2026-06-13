@@ -20,12 +20,15 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     ModelFamilyNotPresentError,
+    PartNumber,
     fold,
     from_stored,
+    model_stream_id,
 )
 from cora.equipment.features import (
     add_model_family,
@@ -63,24 +66,27 @@ async def test_remove_model_family_persists_event_with_payload(
     remove_model_family. Verify ModelFamilyRemoved is persisted with
     the expected payload shape and fold reflects the contracted
     declared_family_ids set."""
-    family_a_id = UUID("01900000-0000-7000-8000-00000062d001")
+    family_a_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_a_event_id = UUID("01900000-0000-7000-8000-00000062d00e")
-    family_b_id = UUID("01900000-0000-7000-8000-00000062d002")
+    family_b_id = family_stream_id(FamilyName("StepScanTomography"))
     family_b_event_id = UUID("01900000-0000-7000-8000-00000062d00f")
-    model_id = UUID("01900000-0000-7000-8000-00000062ca01")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000062ca01")
     define_event_id = UUID("01900000-0000-7000-8000-00000062ca0e")
     added_event_id = UUID("01900000-0000-7000-8000-00000062ca1a")
     removed_event_id = UUID("01900000-0000-7000-8000-00000062ca2a")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_a_id,
             family_a_event_id,
-            family_b_id,
             family_b_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             added_event_id,
             removed_event_id,
@@ -153,17 +159,22 @@ async def test_remove_model_family_rejects_absent_family(
     cross-BC Family lookup is performed by the slice; the absent
     family_id is rejected purely by the decider against the folded
     state."""
-    family_id = UUID("01900000-0000-7000-8000-00000062f001")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-00000062f00e")
-    model_id = UUID("01900000-0000-7000-8000-00000062ca41")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000062ca41")
     define_event_id = UUID("01900000-0000-7000-8000-00000062ca4e")
     unused_remove_event_id = UUID("01900000-0000-7000-8000-00000062ca5a")
     absent_family_id = UUID("01900000-0000-7000-8000-0000000bad42")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
-        ids=[family_id, family_event_id, model_id, define_event_id, unused_remove_event_id],
+        ids=[family_event_id, model_fallback_id, define_event_id, unused_remove_event_id],
     )
     await define_family.bind(deps)(
         DefineFamily(name="ContinuousRotationTomography", affordances=frozenset()),

@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Agent module records the typed configuration for each AI agent that participates in CORA. An Agent is the digital identity card of a kind of automation: "the RunDebriefer agent runs on Claude Sonnet 4.6 pinned to snapshot `20251001`, gets the prompt template at this id, and writes its findings as Decisions on the Run it watched"; "the CautionDrafter agent watches terminal Run events and proposes Cautions for operator review". The aggregate carries everything needed to identify, version, and gate an agent's behaviour for reproducibility; the runtime lives in the subscriber layer that invokes it.
+The Agent module records the typed configuration for each AI agent that participates in CORA. An Agent is the digital identity card of a kind of automation: "the RunDebriefer agent runs on Claude Haiku 4.5, gets the prompt template at this id, and writes its findings as Decisions on the Run it watched"; "the CautionDrafter agent watches terminal Run events and proposes Cautions for operator review". The aggregate carries everything needed to identify, version, and gate an agent's behaviour for reproducibility; the runtime lives in the subscriber layer that invokes it.
 
 Agents share their identity with the Access module's Actors: the same UUID names the agent's record here and the agent's Actor record over there, written atomically at definition. Every Decision an agent writes, and every authorisation check that runs against an agent's action, refers to that single id.
 
@@ -114,19 +114,9 @@ stateDiagram-v2
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineAgent` | NEW | `POST /agents` | `define_agent` | required |
-| `VersionAgent` | MODIFIED | `POST /agents/{agent_id}/version` | `version_agent` | none |
-| `SuspendAgent` | MODIFIED | `POST /agents/{agent_id}/suspend` | `suspend_agent` | none |
-| `ResumeAgent` | MODIFIED | `POST /agents/{agent_id}/resume` | `resume_agent` | none |
-| `DeprecateAgent` | MODIFIED | `POST /agents/{agent_id}/deprecate` | `deprecate_agent` | none |
-| `GrantToolToAgent` | MODIFIED | `POST /agents/{agent_id}/tools/grant` | `grant_tool_to_agent` | none |
-| `RevokeToolFromAgent` | MODIFIED | `POST /agents/{agent_id}/tools/revoke` | `revoke_tool_from_agent` | none |
-| `ReviseAgentBudget` | MODIFIED | `POST /agents/{agent_id}/budget` | `revise_agent_budget` | none |
-| `GetAgent` | QUERY | `GET /agents/{agent_id}` | `get_agent` | none |
-| `RegenerateRunDebrief` | CROSS-BC | `POST /agents/run-debriefer/runs/{run_id}/regenerate-debrief` | `regenerate_run_debrief` | required |
-| `PromoteCautionProposal` | CROSS-BC | `POST /agents/caution-drafter/decisions/{decision_id}/promote` | `promote_caution_proposal` | required |
+<!-- arch:slices-table bc=agent -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 
@@ -209,12 +199,11 @@ The four examples below follow the canonical path for one Agent: define it (atom
 
     {
       "kind": "RunDebriefer",
-      "name": "Run Debrief (Claude Sonnet 4.6)",
+      "name": "Run Debrief (Claude Haiku 4.5)",
       "version": "v1.0.0",
       "model_ref": {
         "provider": "anthropic",
-        "model": "claude-sonnet-4-6",
-        "snapshot_pin": "20251001"
+        "model": "claude-haiku-4-5"
       },
       "description": "Watches terminal Run events and writes an advisory Decision summarising what happened.",
       "canonical_uri": "https://agents.cora.aps.anl.gov/run-debrief/v1",
@@ -231,12 +220,11 @@ The four examples below follow the canonical path for one Agent: define it (atom
         "define_agent",
         {
             "kind": "RunDebriefer",
-            "name": "Run Debrief (Claude Sonnet 4.6)",
+            "name": "Run Debrief (Claude Haiku 4.5)",
             "version": "v1.0.0",
             "model_ref": {
                 "provider": "anthropic",
-                "model": "claude-sonnet-4-6",
-                "snapshot_pin": "20251001",
+                "model": "claude-haiku-4-5",
             },
             "description": "Watches terminal Run events and writes an advisory Decision summarising what happened.",
             "canonical_uri": "https://agents.cora.aps.anl.gov/run-debrief/v1",

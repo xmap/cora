@@ -1,6 +1,6 @@
 # Patterns
 
-*Read side, query slices, projections, idempotency, cross-aggregate validation, rejections.*
+*Read side, query slices, projections, idempotency, cross-aggregate validation, cross-stream uniqueness, rejections.*
 
 The shapes that recur across slices: how reads work, when retries stay safe, where slices need another aggregate, what failure looks like. New slices follow them or have a reason not to.
 
@@ -150,6 +150,26 @@ FCIS canonical: data not in the stream is fetched in the shell and passed to the
 Most command slices have a decider that returns `list[<Event>]` for events on the slice's own aggregate. A small set of cross-BC slices instead validate a loaded aggregate from another BC and dispatch to that BC's own slice without writing an event on any aggregate the consuming BC owns. The current example is `cora.agent.features.promote_caution_proposal`: the slice loads a `Decision`, validates the proposed-Caution payload, and the handler dispatches to `cora.caution.features.{register,supersede}_caution` based on the decision's `choice`. The Agent BC never writes a Caution and never emits an Agent-owned event; the function in `decider.py` returns `ProposedCautionView` (the validated payload + dispatch hint) rather than events.
 
 Treat `decider.py` in such slices as a pure validator-and-extractor: the canonical-args check (`state`, `command`, `*`, keyword-only extras) still applies; the return-type expectation (`list[<Event>]`) does not. The slice's docstring must explain the dispatch shape, and the function's `Invariants:` block enumerates rejections the same way a true decider does. Adopt this shape only when the slice genuinely owns no aggregate writes; when in doubt, emit an event on the source aggregate's stream and dispatch via `EventStore.append_streams`.
+
+## Cross-stream uniqueness
+
+Some aggregates carry a natural key that must be unique across every stream of their kind: a Facility `code`, a Role `name`, a Supply `(facility_code, containing_asset_id, kind, name)`. No single aggregate stream can enforce that on its own; event-sourced aggregates have no consistency boundary spanning siblings. Two patterns close the gap. Pick by whether a duplicate should fail the caller synchronously or be tolerated as a swallowed audit row.
+
+**Variant A: stream-derivation.** The stream id is derived from the natural key, `stream_id = uuid5(<frozen namespace>, <natural key>)`, so a duplicate-key genesis targets the same stream and collides on `append_streams(expected_version=0)`. The handler surfaces that as `<X>AlreadyExistsError` (409) on the request path. A read-side unique index is optional defense-in-depth here, not the guard. Used by Facility, ClearanceTemplate, Role, and Seal (a per-Facility singleton, where the derived stream id is the sole mechanism and there is no read-side index). Derivers live next to the aggregate, e.g. `aggregates/<aggregate>/_stream_id.py`.
+
+**Variant B: projection unique index.** The aggregate gets a fresh `IdGenerator` id, and a partial `UNIQUE INDEX` on the `proj_<bc>_*` table is the only cross-stream guard. A duplicate command still appends an event, to a different stream; the projection writer catches the `UniqueViolation`, logs a WARN, and keeps advancing, so the request path still returns success. Used by Supply, Distribution, Enclosure.
+
+Decision rule, observed across the sites above rather than prescribed:
+
+- **Pick A** when the caller should get a synchronous 409 on a duplicate and the natural key is immutable and stable across deployments. A federation-portable code or name then resolves to the same stream id everywhere.
+- **Pick B** when a duplicate is tolerable as a swallowed audit row and re-registration after a tombstone must stay possible. The uniqueness is conditional: the index carries a partial `WHERE` excluding the terminal state (Supply `status != 'Decommissioned'`, Distribution `status != 'Discarded'`, Enclosure `lifecycle = 'Active'`) so a new row can take the key once the prior one is retired.
+
+Two rules hold wherever the pattern is used:
+
+- **The namespace is frozen (Variant A).** The uuid5 namespace UUID is a permanent constant. Changing it re-keys every stream, breaking idempotent genesis and, for federated aggregates, cross-deployment determinism. Mark it MUST NOT CHANGE at the definition site.
+- **The derivation key must byte-match the read-side expression.** When both layers exist, the value hashed into the stream id must equal the value the index keys on. Role lower-cases the name before `uuid5` and indexes on `LOWER(name)`, so `Operator` and `operator` collide at both the stream and the projection.
+
+This is the deliberate deviation from the default in [conventions.md](conventions.md#identifiers), the IdGenerator UUIDv7 used as the stream id. Reach for it only when a natural key, not a surrogate id, owns identity.
 
 ## Schema validation posture
 
