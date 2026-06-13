@@ -9035,6 +9035,77 @@
         "title": "PresenceMode",
         "type": "string"
       },
+      "ProcedureIterationDTO": {
+        "description": "One convergence-loop iteration of a Procedure.",
+        "properties": {
+          "converged": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Converged"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "iteration_index": {
+            "title": "Iteration Index",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "iteration_index",
+          "started_at"
+        ],
+        "title": "ProcedureIterationDTO",
+        "type": "object"
+      },
+      "ProcedureIterationsResponse": {
+        "description": "All iterations for one Procedure, ordered by index.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProcedureIterationDTO"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ProcedureIterationsResponse",
+        "type": "object"
+      },
       "ProcedureListResponse": {
         "description": "Page of procedures plus opaque next-page cursor.",
         "properties": {
@@ -35943,6 +36014,73 @@
           }
         },
         "summary": "Conduct a Procedure: start -> walk steps via ControlPort + actions + checks -> complete (success) or abort (failure).",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
+    "/procedures/{procedure_id}/iterations": {
+      "get": {
+        "operationId": "list_procedure_iterations_procedures__procedure_id__iterations_get",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcedureIterationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the query."
+          },
+          "422": {
+            "description": "Path parameter failed schema validation."
+          }
+        },
+        "summary": "List the convergence-loop iterations of a Procedure",
         "tags": [
           "operation"
         ]

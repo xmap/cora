@@ -84,6 +84,7 @@ from cora.operation.features import (
     conduct_procedure,
     end_iteration,
     get_procedure,
+    list_procedure_iterations,
     list_procedures,
     register_procedure,
     register_procedure_from_recipe,
@@ -229,6 +230,7 @@ def register_operation_routes(app: FastAPI) -> None:
     app.include_router(append_activities.router)
     app.include_router(get_procedure.router)
     app.include_router(list_procedures.router)
+    app.include_router(list_procedure_iterations.router)
     app.include_router(conduct_procedure.router)
     for validation_cls in (
         InvalidProcedureNameError,

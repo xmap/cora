@@ -74,6 +74,7 @@ from cora.operation.features import (
     conduct_procedure,
     end_iteration,
     get_procedure,
+    list_procedure_iterations,
     list_procedures,
     register_procedure,
     register_procedure_from_recipe,
@@ -107,6 +108,7 @@ class OperationHandlers:
     append_activities: append_activities.Handler
     get_procedure: get_procedure.Handler
     list_procedures: list_procedures.Handler
+    list_procedure_iterations: list_procedure_iterations.Handler
     conduct_procedure: conduct_procedure.Handler
     control_port: ControlPort
     """The ControlPort the Conductor talks to. Surfaced on the bundle
@@ -240,6 +242,12 @@ def wire_operation(deps: Kernel) -> OperationHandlers:
         list_procedures=with_tracing(
             list_procedures.bind(deps),
             command_name="ListProcedures",
+            bc=_BC,
+            kind="query",
+        ),
+        list_procedure_iterations=with_tracing(
+            list_procedure_iterations.bind(deps),
+            command_name="ListProcedureIterations",
             bc=_BC,
             kind="query",
         ),
