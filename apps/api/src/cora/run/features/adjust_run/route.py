@@ -19,9 +19,9 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.run.aggregates.run import RUN_ADJUST_REASON_MAX_LENGTH
 from cora.run.features.adjust_run.command import AdjustRun
 from cora.run.features.adjust_run.handler import IdempotentHandler
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class AdjustRunRequest(BaseModel):
@@ -41,7 +41,7 @@ class AdjustRunRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=RUN_ADJUST_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Free-form justification (1-500 chars after trimming). "
             "Required: steering without recorded intent is the "

@@ -23,8 +23,7 @@ from cora.federation.errors import UnauthorizedError
 from cora.federation.features.abort_credential_rotation.route import (
     _get_handler as _get_abort_handler,  # pyright: ignore[reportPrivateUsage]
 )
-
-_REASON_MAX_LENGTH = 500
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 @pytest.mark.contract
@@ -150,7 +149,7 @@ def test_post_abort_credential_rotation_rejects_overlong_reason_with_422() -> No
     with TestClient(create_app()) as client:
         response = client.post(
             f"/federation/credentials/{uuid4()}/rotation/abort",
-            json={"reason": "x" * (_REASON_MAX_LENGTH + 1)},
+            json={"reason": "x" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 

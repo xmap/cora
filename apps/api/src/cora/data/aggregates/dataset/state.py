@@ -124,6 +124,7 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 DATASET_NAME_MAX_LENGTH = 200
 DATASET_URI_MAX_LENGTH = 2048
@@ -134,9 +135,6 @@ DATASET_DERIVED_FROM_MAX_ENTRIES = 64
 DATASET_USED_CALIBRATIONS_MAX_ENTRIES = 64
 DATASET_CHECKSUM_ALGORITHM_SHA256 = "sha256"
 DATASET_CHECKSUM_SHA256_HEX_LENGTH = 64
-DATASET_DISCARD_REASON_MAX_LENGTH = 500
-DATASET_PROMOTION_REASON_MAX_LENGTH = 500
-DATASET_DEMOTION_REASON_MAX_LENGTH = 500
 RUN_END_STATE_COMPLETED = "Completed"  # raw string match against Run BC's RunStatus.COMPLETED.value
 
 # URI schemes that are never legitimate Dataset URIs and that pose
@@ -426,7 +424,7 @@ class InvalidDatasetDiscardReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Dataset discard reason must be 1-{DATASET_DISCARD_REASON_MAX_LENGTH} chars after "
+            f"Dataset discard reason must be 1-{REASON_MAX_LENGTH} chars after "
             f"trimming (got: {value!r})"
         )
         self.value = value
@@ -466,7 +464,7 @@ class InvalidPromotionReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Dataset promotion reason must be 1-{DATASET_PROMOTION_REASON_MAX_LENGTH} chars "
+            f"Dataset promotion reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -534,7 +532,7 @@ class PromotionReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=DATASET_PROMOTION_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidPromotionReasonError,
         )
         object.__setattr__(self, "value", trimmed)
@@ -554,7 +552,7 @@ class InvalidDemotionReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Dataset demotion reason must be 1-{DATASET_DEMOTION_REASON_MAX_LENGTH} chars "
+            f"Dataset demotion reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -631,7 +629,7 @@ class DemotionReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=DATASET_DEMOTION_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidDemotionReasonError,
         )
         object.__setattr__(self, "value", trimmed)
@@ -651,7 +649,7 @@ class DatasetDiscardReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=DATASET_DISCARD_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidDatasetDiscardReasonError,
         )
         object.__setattr__(self, "value", trimmed)

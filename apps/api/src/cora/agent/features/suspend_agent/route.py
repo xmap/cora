@@ -11,7 +11,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.agent.aggregates.agent import AGENT_SUSPENSION_REASON_MAX_LENGTH
 from cora.agent.features.suspend_agent.command import SuspendAgent
 from cora.agent.features.suspend_agent.handler import Handler
 from cora.infrastructure.routing import (
@@ -20,6 +19,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class SuspendAgentRequest(BaseModel):
@@ -27,7 +27,7 @@ class SuspendAgentRequest(BaseModel):
 
     reason: str = Field(
         min_length=1,
-        max_length=AGENT_SUSPENSION_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Operator-supplied suspension reason (1-500 chars after trim). "
             "REQUIRED: operator-pause is a high-information signal that the "

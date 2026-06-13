@@ -13,7 +13,6 @@ from cora.campaign.aggregates.campaign import (
     CAMPAIGN_DESCRIPTION_MAX_LENGTH,
     CAMPAIGN_EXTERNAL_ID_MAX_LENGTH,
     CAMPAIGN_NAME_MAX_LENGTH,
-    CAMPAIGN_REASON_MAX_LENGTH,
     CAMPAIGN_TAG_MAX_LENGTH,
     Campaign,
     CampaignDescription,
@@ -25,6 +24,7 @@ from cora.campaign.aggregates.campaign import (
     InvalidCampaignNameError,
     InvalidCampaignTagError,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _CAMPAIGN_ID = UUID("01900000-0000-7000-8000-00000000c001")
 _LEAD_ACTOR_ID = UUID("01900000-0000-7000-8000-00000000c099")
@@ -39,7 +39,7 @@ def test_length_constants_match_design_memo() -> None:
     assert CAMPAIGN_NAME_MAX_LENGTH == 200
     assert CAMPAIGN_DESCRIPTION_MAX_LENGTH == 2000
     assert CAMPAIGN_TAG_MAX_LENGTH == 50
-    assert CAMPAIGN_REASON_MAX_LENGTH == 500
+    assert REASON_MAX_LENGTH == 500
     assert CAMPAIGN_EXTERNAL_ID_MAX_LENGTH == 100
 
 

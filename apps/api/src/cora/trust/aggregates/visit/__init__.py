@@ -39,7 +39,6 @@ from cora.trust.aggregates.visit.read import (
     load_visit_timestamps,
 )
 from cora.trust.aggregates.visit.state import (
-    VISIT_REASON_MAX_LENGTH,
     InvalidVisitPlannedPeriodError,
     InvalidVisitReasonError,
     PresenceEntry,
@@ -67,7 +66,6 @@ from cora.trust.aggregates.visit.state import (
 )
 
 __all__ = [
-    "VISIT_REASON_MAX_LENGTH",
     "InvalidVisitPlannedPeriodError",
     "InvalidVisitReasonError",
     "PresenceEntry",

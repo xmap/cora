@@ -22,9 +22,8 @@ from cora.federation.aggregates.credential import (
     CredentialStatus,
 )
 from cora.federation.features.abort_credential_rotation.handler import Handler
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from tests.contract._mcp_helpers import open_session, parse_sse_data
-
-_REASON_MAX_LENGTH = 500
 
 
 def _call_tool(
@@ -199,7 +198,7 @@ def test_mcp_abort_credential_rotation_tool_rejects_overlong_reason() -> None:
             name="abort_credential_rotation",
             arguments={
                 "credential_id": str(uuid4()),
-                "reason": "x" * (_REASON_MAX_LENGTH + 1),
+                "reason": "x" * (REASON_MAX_LENGTH + 1),
             },
         )
     assert body["result"]["isError"] is True

@@ -28,11 +28,9 @@ from cora.safety.aggregates.clearance.events import (
 from cora.safety.aggregates.clearance.evolver import evolve, fold
 from cora.safety.aggregates.clearance.read import load_clearance
 from cora.safety.aggregates.clearance.state import (
-    CLEARANCE_EXPIRE_REASON_MAX_LENGTH,
     CLEARANCE_EXTERNAL_ID_MAX_LENGTH,
     CLEARANCE_HAZARD_NOTES_MAX_LENGTH,
     CLEARANCE_MITIGATION_REF_MAX_LENGTH,
-    CLEARANCE_REJECT_REASON_MAX_LENGTH,
     CLEARANCE_REVIEWER_NOTES_MAX_LENGTH,
     CLEARANCE_REVIEWER_ROLE_MAX_LENGTH,
     CLEARANCE_TITLE_MAX_LENGTH,
@@ -74,11 +72,9 @@ from cora.safety.aggregates.clearance.state import (
 )
 
 __all__ = [
-    "CLEARANCE_EXPIRE_REASON_MAX_LENGTH",
     "CLEARANCE_EXTERNAL_ID_MAX_LENGTH",
     "CLEARANCE_HAZARD_NOTES_MAX_LENGTH",
     "CLEARANCE_MITIGATION_REF_MAX_LENGTH",
-    "CLEARANCE_REJECT_REASON_MAX_LENGTH",
     "CLEARANCE_REVIEWER_NOTES_MAX_LENGTH",
     "CLEARANCE_REVIEWER_ROLE_MAX_LENGTH",
     "CLEARANCE_TITLE_MAX_LENGTH",

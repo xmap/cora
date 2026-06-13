@@ -15,9 +15,6 @@ from cora.safety.aggregates.clearance import (
     InvalidClearanceRejectReasonError,
     RunBinding,
 )
-from cora.safety.aggregates.clearance.state import (
-    CLEARANCE_REJECT_REASON_MAX_LENGTH,
-)
 from cora.safety.aggregates.clearance_template import (
     ClearanceTemplateId,
     clearance_template_stream_id,
@@ -25,6 +22,7 @@ from cora.safety.aggregates.clearance_template import (
 from cora.safety.features import reject_clearance
 from cora.safety.features.reject_clearance import RejectClearance
 from cora.shared.facility_code import FacilityCode
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
 
@@ -93,7 +91,7 @@ def test_decide_rejects_too_long_reason() -> None:
             state=state,
             command=RejectClearance(
                 clearance_id=state.id,
-                reason="x" * (CLEARANCE_REJECT_REASON_MAX_LENGTH + 1),
+                reason="x" * (REASON_MAX_LENGTH + 1),
             ),
             now=_NOW,
         )

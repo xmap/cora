@@ -18,10 +18,9 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.subject.features.mount_subject.command import MountSubject
 from cora.subject.features.mount_subject.handler import Handler
-
-_REASON_MAX_LENGTH = 500
 
 
 class MountSubjectRequest(BaseModel):
@@ -34,7 +33,7 @@ class MountSubjectRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Operator-supplied reason for the mount (audit-log "
             "breadcrumb). Examples: 'loaded for run #1234', "

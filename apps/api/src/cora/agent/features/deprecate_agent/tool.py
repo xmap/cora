@@ -7,12 +7,12 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.agent.aggregates.agent import AGENT_DEPRECATION_REASON_MAX_LENGTH
 from cora.agent.features.deprecate_agent.command import DeprecateAgent
 from cora.agent.features.deprecate_agent.handler import Handler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class DeprecateAgentOutput(BaseModel):
@@ -40,7 +40,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             Field(
                 default=None,
                 min_length=1,
-                max_length=AGENT_DEPRECATION_REASON_MAX_LENGTH,
+                max_length=REASON_MAX_LENGTH,
                 description="Optional deprecation reason.",
             ),
         ] = None,

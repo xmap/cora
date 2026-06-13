@@ -21,6 +21,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class DecommissionFrameRequest(BaseModel):
@@ -29,7 +30,7 @@ class DecommissionFrameRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=500,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Operator-supplied free-text reason captured on the "
             "FrameDecommissioned event payload for audit."

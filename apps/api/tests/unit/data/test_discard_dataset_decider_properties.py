@@ -32,7 +32,6 @@ from hypothesis import strategies as st
 
 from cora.data.aggregates.dataset import (
     DATASET_CHECKSUM_SHA256_HEX_LENGTH,
-    DATASET_DISCARD_REASON_MAX_LENGTH,
     Dataset,
     DatasetCannotDiscardError,
     DatasetChecksum,
@@ -46,6 +45,7 @@ from cora.data.aggregates.dataset import (
 from cora.data.features import discard_dataset
 from cora.data.features.discard_dataset import DiscardDataset
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 if TYPE_CHECKING:
@@ -69,7 +69,7 @@ def _dataset(*, dataset_id: UUID, status: DatasetStatus) -> Dataset:
     )
 
 
-_reasons = printable_ascii_text(min_size=1, max_size=DATASET_DISCARD_REASON_MAX_LENGTH)
+_reasons = printable_ascii_text(min_size=1, max_size=REASON_MAX_LENGTH)
 
 
 @pytest.mark.unit

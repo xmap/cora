@@ -6,8 +6,8 @@ abnormal terminator. Strict-not-idempotent.
 
 from datetime import datetime
 
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.trust.aggregates.visit import (
-    VISIT_REASON_MAX_LENGTH,
     InvalidVisitReasonError,
     Visit,
     VisitAborted,
@@ -43,6 +43,6 @@ def decide(
             permitted_sources=_PERMITTED,
         )
     trimmed = command.reason.strip()
-    if not trimmed or len(trimmed) > VISIT_REASON_MAX_LENGTH:
+    if not trimmed or len(trimmed) > REASON_MAX_LENGTH:
         raise InvalidVisitReasonError(command.reason)
     return [VisitAborted(visit_id=state.id, reason=trimmed, occurred_at=now)]

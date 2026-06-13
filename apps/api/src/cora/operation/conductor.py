@@ -99,10 +99,7 @@ from cora.infrastructure.ports.event_store import ConcurrencyError
 from cora.infrastructure.ports.id_generator import IdGenerator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation._control_dispatch_context import with_dispatch_correlation_id
-from cora.operation.aggregates.procedure import (
-    PROCEDURE_ABORT_REASON_MAX_LENGTH,
-    ProcedureNotFoundError,
-)
+from cora.operation.aggregates.procedure import ProcedureNotFoundError
 from cora.operation.errors import CheckFailedError, UnauthorizedError, UnknownActionError
 from cora.operation.features.abort_procedure.command import AbortProcedure
 from cora.operation.features.abort_procedure.handler import Handler as AbortProcedureHandler
@@ -129,6 +126,7 @@ from cora.operation.ports.control_port import (
     NoAdapterForAddressError,
     Reading,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _CONTROL_ERRORS: tuple[type[Exception], ...] = (
     ControlNotConnectedError,
@@ -912,7 +910,7 @@ def _mismatch_reason(criterion: CheckCriterion, value: Any) -> str:
 def _derive_abort_reason(failure: ConductorFailure) -> str:
     """Build a Procedure-aggregate-compliant abort reason from a step failure.
 
-    Truncates to `PROCEDURE_ABORT_REASON_MAX_LENGTH` so the AbortProcedure
+    Truncates to `REASON_MAX_LENGTH` so the AbortProcedure
     handler does not reject the cleanup call. The format leads with
     the step pointer (kind + index + target) so an operator scanning
     the abort reason knows immediately which step in the conducted
@@ -923,7 +921,7 @@ def _derive_abort_reason(failure: ConductorFailure) -> str:
     else:
         prefix = f"{failure.source_kind}[{failure.step_index}] {failure.target}"
     reason = f"{prefix} failed: {failure.error_class}: {failure.message}"
-    return reason[:PROCEDURE_ABORT_REASON_MAX_LENGTH]
+    return reason[:REASON_MAX_LENGTH]
 
 
 def _reading_to_dict(reading: Reading) -> dict[str, Any]:

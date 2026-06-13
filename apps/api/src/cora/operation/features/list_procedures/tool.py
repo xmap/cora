@@ -14,7 +14,6 @@ from cora.infrastructure.routing import get_mcp_surface_id
 from cora.operation.aggregates.procedure import (
     PROCEDURE_KIND_MAX_LENGTH,
     PROCEDURE_NAME_MAX_LENGTH,
-    PROCEDURE_TRUNCATE_REASON_MAX_LENGTH,
     ProcedureStatus,
 )
 from cora.operation.features.list_procedures.handler import Handler
@@ -22,6 +21,7 @@ from cora.operation.features.list_procedures.query import (
     ListProcedures,
     ProcedureStatusFilter,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class _ProcedureSummaryItemDTO(BaseModel):
@@ -36,9 +36,7 @@ class _ProcedureSummaryItemDTO(BaseModel):
     activity_logbook_id: UUID | None = None
     registered_at: datetime
     last_status_changed_at: datetime | None = None
-    last_status_reason: str | None = Field(
-        default=None, max_length=PROCEDURE_TRUNCATE_REASON_MAX_LENGTH
-    )
+    last_status_reason: str | None = Field(default=None, max_length=REASON_MAX_LENGTH)
     interrupted_at: datetime | None = None
 
 

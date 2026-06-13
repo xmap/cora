@@ -18,7 +18,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.subject.aggregates.subject import SUBJECT_DISCARD_REASON_MAX_LENGTH
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.subject.features.discard_subject.command import DiscardSubject
 from cora.subject.features.discard_subject.handler import Handler
 
@@ -29,7 +29,7 @@ class DiscardSubjectRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=SUBJECT_DISCARD_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Free-form reason for the discard (1-500 chars after trimming). "
             "Captured verbatim for GDPR + sample-handling audit. Today the "

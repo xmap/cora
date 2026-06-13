@@ -151,10 +151,10 @@ from uuid import UUID
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
 from cora.shared.facility_code import FacilityCode
 from cora.shared.scope_markers import Annotated, DeferredVocabulary
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 SUPPLY_NAME_MAX_LENGTH = 200
 SUPPLY_KIND_MAX_LENGTH = 50
-SUPPLY_REASON_MAX_LENGTH = 500
 
 
 class SupplyStatus(StrEnum):
@@ -264,7 +264,7 @@ class InvalidSupplyReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Supply transition reason must be 1-{SUPPLY_REASON_MAX_LENGTH} chars "
+            f"Supply transition reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -519,7 +519,7 @@ class SupplyReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=SUPPLY_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidSupplyReasonError,
         )
         object.__setattr__(self, "value", trimmed)

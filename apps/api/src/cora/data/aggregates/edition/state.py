@@ -74,10 +74,10 @@ from uuid import UUID
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identifier import PersistentIdentifier
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 EDITION_TITLE_MAX_LENGTH = 500
 EDITION_LICENSE_MAX_LENGTH = 100
-EDITION_WITHDRAWAL_REASON_MAX_LENGTH = 500
 EDITION_AFFILIATION_MAX_LENGTH = 200
 EDITION_PUBLICATION_YEAR_MIN = 1900
 EDITION_PUBLICATION_YEAR_FUTURE_BUDGET = 5
@@ -211,7 +211,7 @@ class InvalidEditionWithdrawalReasonError(ValueError):
     def __init__(self, value: str) -> None:
         super().__init__(
             f"Edition withdrawal reason must be "
-            f"1-{EDITION_WITHDRAWAL_REASON_MAX_LENGTH} chars after trimming "
+            f"1-{REASON_MAX_LENGTH} chars after trimming "
             f"(got: {value!r})"
         )
         self.value = value
@@ -606,7 +606,7 @@ class WithdrawalReason:
         trimmed = self.value.strip()
         if not trimmed:
             raise InvalidEditionWithdrawalReasonError(self.value)
-        if len(trimmed) > EDITION_WITHDRAWAL_REASON_MAX_LENGTH:
+        if len(trimmed) > REASON_MAX_LENGTH:
             raise InvalidEditionWithdrawalReasonError(self.value)
         object.__setattr__(self, "value", trimmed)
 
@@ -725,7 +725,6 @@ __all__ = [
     "EDITION_PUBLICATION_YEAR_FUTURE_BUDGET",
     "EDITION_PUBLICATION_YEAR_MIN",
     "EDITION_TITLE_MAX_LENGTH",
-    "EDITION_WITHDRAWAL_REASON_MAX_LENGTH",
     "LICENSE_REQUIRED_KINDS",
     "Creator",
     "DoiMinterTombstoneError",

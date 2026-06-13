@@ -99,14 +99,13 @@ from uuid import UUID
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.shared.scope_markers import Annotated, SubsumedBy
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 if TYPE_CHECKING:
     from datetime import datetime
 
 PROCEDURE_NAME_MAX_LENGTH = 200
 PROCEDURE_KIND_MAX_LENGTH = 50
-PROCEDURE_ABORT_REASON_MAX_LENGTH = 500
-PROCEDURE_TRUNCATE_REASON_MAX_LENGTH = 500
 
 # per-Procedure step logbook constants.
 LOGBOOK_KIND_ACTIVITY: Final = "activity"
@@ -733,7 +732,7 @@ class InvalidProcedureTruncateReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Procedure truncate reason must be 1-{PROCEDURE_TRUNCATE_REASON_MAX_LENGTH} chars "
+            f"Procedure truncate reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -816,7 +815,7 @@ class InvalidProcedureAbortReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Procedure abort reason must be 1-{PROCEDURE_ABORT_REASON_MAX_LENGTH} chars "
+            f"Procedure abort reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -849,7 +848,7 @@ class ProcedureTruncateReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=PROCEDURE_TRUNCATE_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidProcedureTruncateReasonError,
         )
         object.__setattr__(self, "value", trimmed)
@@ -872,7 +871,7 @@ class ProcedureAbortReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=PROCEDURE_ABORT_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidProcedureAbortReasonError,
         )
         object.__setattr__(self, "value", trimmed)

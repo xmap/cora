@@ -28,7 +28,6 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from cora.campaign.aggregates.campaign import (
-    CAMPAIGN_REASON_MAX_LENGTH,
     Campaign,
     CampaignCannotRemoveRunError,
     CampaignRunNotMemberError,
@@ -39,6 +38,7 @@ from cora.campaign.aggregates.campaign import (
 from cora.campaign.features.remove_run_from_campaign.command import RemoveRunFromCampaign
 from cora.campaign.features.remove_run_from_campaign.context import CampaignMembershipContext
 from cora.run.aggregates.run import RunRemovedFromCampaign
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _MEMBERSHIP_ELIGIBLE_STATUSES: tuple[CampaignStatus, ...] = (
     CampaignStatus.PLANNED,
@@ -76,7 +76,7 @@ def decide(
         -> CampaignCannotRemoveRunError
       - Run must be a member of this Campaign
         -> CampaignRunNotMemberError
-      - Reason must be 1-CAMPAIGN_REASON_MAX_LENGTH chars after trim
+      - Reason must be 1-REASON_MAX_LENGTH chars after trim
         -> InvalidCampaignRunRemoveReasonError
     """
     _ = state  # context.campaign carries the same Campaign; signature parity.
@@ -95,7 +95,7 @@ def decide(
         raise CampaignRunNotMemberError(campaign.id, command.run_id)
 
     trimmed = command.reason.strip()
-    if not trimmed or len(trimmed) > CAMPAIGN_REASON_MAX_LENGTH:
+    if not trimmed or len(trimmed) > REASON_MAX_LENGTH:
         raise InvalidCampaignRunRemoveReasonError(command.reason)
 
     return MembershipEvents(

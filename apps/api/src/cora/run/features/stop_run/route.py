@@ -16,9 +16,9 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.run.aggregates.run import RUN_STOP_REASON_MAX_LENGTH
 from cora.run.features.stop_run.command import StopRun
 from cora.run.features.stop_run.handler import Handler
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class StopRunRequest(BaseModel):
@@ -27,7 +27,7 @@ class StopRunRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=RUN_STOP_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Free-form reason for the stop (1-500 chars after trimming). "
             "Today the field is unstructured; structured taxonomy is "

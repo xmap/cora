@@ -85,8 +85,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from cora.shared.identifier import Identifier
-
-VISIT_REASON_MAX_LENGTH = 500
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class VisitStatus(StrEnum):
@@ -163,8 +162,7 @@ class InvalidVisitReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Visit reason must be 1-{VISIT_REASON_MAX_LENGTH} chars after trimming "
-            f"(got: {value!r})"
+            f"Visit reason must be 1-{REASON_MAX_LENGTH} chars after trimming (got: {value!r})"
         )
         self.value = value
 

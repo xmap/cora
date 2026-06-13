@@ -12,6 +12,7 @@ from cora.equipment.features.deprecate_assembly.handler import Handler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
@@ -38,7 +39,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             str,
             Field(
                 min_length=1,
-                max_length=500,
+                max_length=REASON_MAX_LENGTH,
                 description="Operator-supplied audit-log breadcrumb.",
             ),
         ],

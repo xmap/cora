@@ -12,7 +12,6 @@ import pytest
 
 from cora.data.aggregates.dataset import (
     DATASET_CHECKSUM_SHA256_HEX_LENGTH,
-    DATASET_DISCARD_REASON_MAX_LENGTH,
     Dataset,
     DatasetCannotDiscardError,
     DatasetChecksum,
@@ -27,6 +26,7 @@ from cora.data.aggregates.dataset import (
 from cora.data.features import discard_dataset
 from cora.data.features.discard_dataset import DiscardDataset
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)
@@ -100,7 +100,7 @@ def test_decide_raises_invalid_reason_for_too_long() -> None:
             state=state,
             command=DiscardDataset(
                 dataset_id=state.id,
-                reason="a" * (DATASET_DISCARD_REASON_MAX_LENGTH + 1),
+                reason="a" * (REASON_MAX_LENGTH + 1),
             ),
             now=_NOW,
             discarded_by=_DISCARDED_BY,

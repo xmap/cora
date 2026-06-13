@@ -112,16 +112,9 @@ from cora.shared.identifier import (
 )
 from cora.shared.identity import ActorId
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 RUN_NAME_MAX_LENGTH = 200
-RUN_ABORT_REASON_MAX_LENGTH = 500
-RUN_STOP_REASON_MAX_LENGTH = 500
-RUN_TRUNCATE_REASON_MAX_LENGTH = 500
-# mid-flight steering reason bound. Mirrors the abort /
-# stop / truncate / clearance-reject reason convention (1-500 chars
-# after trim). Future-additive structured taxonomy parked behind the
-# same triggers as RunAbortReason.
-RUN_ADJUST_REASON_MAX_LENGTH = 500
 # cardinality cap on the AsShot pin set
 # (Run.pinned_calibration_ids). Mirrors Data BC's
 # DATASET_USED_CALIBRATIONS_MAX_ENTRIES exactly (same default + same
@@ -783,8 +776,7 @@ class InvalidRunAbortReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Run abort reason must be 1-{RUN_ABORT_REASON_MAX_LENGTH} chars after "
-            f"trimming (got: {value!r})"
+            f"Run abort reason must be 1-{REASON_MAX_LENGTH} chars after trimming (got: {value!r})"
         )
         self.value = value
 
@@ -805,7 +797,7 @@ class RunAbortReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=RUN_ABORT_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidRunAbortReasonError,
         )
         object.__setattr__(self, "value", trimmed)
@@ -833,8 +825,7 @@ class InvalidRunStopReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Run stop reason must be 1-{RUN_STOP_REASON_MAX_LENGTH} chars after "
-            f"trimming (got: {value!r})"
+            f"Run stop reason must be 1-{REASON_MAX_LENGTH} chars after trimming (got: {value!r})"
         )
         self.value = value
 
@@ -855,7 +846,7 @@ class RunStopReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=RUN_STOP_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidRunStopReasonError,
         )
         object.__setattr__(self, "value", trimmed)
@@ -884,7 +875,7 @@ class InvalidRunTruncateReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Run truncate reason must be 1-{RUN_TRUNCATE_REASON_MAX_LENGTH} chars after "
+            f"Run truncate reason must be 1-{REASON_MAX_LENGTH} chars after "
             f"trimming (got: {value!r})"
         )
         self.value = value
@@ -934,7 +925,7 @@ class RunTruncateReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=RUN_TRUNCATE_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidRunTruncateReasonError,
         )
         object.__setattr__(self, "value", trimmed)
@@ -1248,8 +1239,7 @@ class InvalidRunAdjustReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Run adjust reason must be 1-{RUN_ADJUST_REASON_MAX_LENGTH} chars after "
-            f"trimming (got: {value!r})"
+            f"Run adjust reason must be 1-{REASON_MAX_LENGTH} chars after trimming (got: {value!r})"
         )
         self.value = value
 

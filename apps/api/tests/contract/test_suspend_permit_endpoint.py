@@ -15,8 +15,7 @@ from cora.federation.errors import UnauthorizedError
 from cora.federation.features.suspend_permit.route import (
     _get_handler as _get_suspend_permit_handler,  # pyright: ignore[reportPrivateUsage]
 )
-
-_REASON_MAX_LENGTH = 500
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 def _register_body(**overrides: object) -> dict[str, Any]:
@@ -119,7 +118,7 @@ def test_post_suspend_permit_rejects_overlong_reason_with_422() -> None:
         permit_id = _register_and_activate(client)
         response = client.post(
             f"/federation/permits/{permit_id}/suspend",
-            json={"reason": "x" * (_REASON_MAX_LENGTH + 1)},
+            json={"reason": "x" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 

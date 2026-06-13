@@ -7,9 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from tests.contract._mcp_helpers import open_session, parse_sse_data
-
-_REASON_MAX_LENGTH = 500
 
 
 def _register_args(**overrides: object) -> dict[str, Any]:
@@ -216,7 +215,7 @@ def test_mcp_suspend_permit_tool_rejects_overlong_reason() -> None:
             name="suspend_permit",
             arguments={
                 "permit_id": str(uuid4()),
-                "reason": "x" * (_REASON_MAX_LENGTH + 1),
+                "reason": "x" * (REASON_MAX_LENGTH + 1),
             },
         )
     assert body["result"]["isError"] is True

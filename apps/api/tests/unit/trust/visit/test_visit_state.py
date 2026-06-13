@@ -6,8 +6,8 @@ from uuid import uuid4
 import pytest
 
 from cora.shared.identifier import Identifier
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.trust.aggregates.visit import (
-    VISIT_REASON_MAX_LENGTH,
     InvalidVisitPlannedPeriodError,
     InvalidVisitReasonError,
     Visit,
@@ -94,7 +94,7 @@ def test_invalid_planned_period_error_carries_both_timestamps() -> None:
 def test_invalid_reason_error_carries_value() -> None:
     err = InvalidVisitReasonError("   ")
     assert err.value == "   "
-    assert str(VISIT_REASON_MAX_LENGTH) in str(err)
+    assert str(REASON_MAX_LENGTH) in str(err)
 
 
 @pytest.mark.unit

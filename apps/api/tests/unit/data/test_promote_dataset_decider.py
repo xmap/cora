@@ -21,7 +21,6 @@ import pytest
 
 from cora.data.aggregates.dataset import (
     DATASET_CHECKSUM_SHA256_HEX_LENGTH,
-    DATASET_PROMOTION_REASON_MAX_LENGTH,
     Dataset,
     DatasetAlreadyPromotedError,
     DatasetCannotPromoteError,
@@ -38,6 +37,7 @@ from cora.data.aggregates.dataset import (
 from cora.data.features import promote_dataset
 from cora.data.features.promote_dataset import DatasetPromotionContext, PromoteDataset
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
@@ -254,7 +254,7 @@ def test_decide_raises_invalid_reason_for_too_long() -> None:
         producing_run_id=uuid4(),
         producing_run_end_state="Completed",
     )
-    overlong = "x" * (DATASET_PROMOTION_REASON_MAX_LENGTH + 1)
+    overlong = "x" * (REASON_MAX_LENGTH + 1)
     with pytest.raises(InvalidPromotionReasonError):
         promote_dataset.decide(
             state=state,

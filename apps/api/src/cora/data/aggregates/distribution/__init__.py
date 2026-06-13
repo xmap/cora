@@ -31,7 +31,6 @@ from cora.data.aggregates.distribution.events import (
 from cora.data.aggregates.distribution.evolver import evolve, fold
 from cora.data.aggregates.distribution.read import load_distribution
 from cora.data.aggregates.distribution.state import (
-    DISTRIBUTION_DISCARD_REASON_MAX_LENGTH,
     DISTRIBUTION_URI_MAX_LENGTH,
     STORAGE_SUPPLY_KIND,
     URI_SCHEME_TO_ACCESS_PROTOCOL,
@@ -55,7 +54,6 @@ from cora.data.aggregates.distribution.state import (
 )
 
 __all__ = [
-    "DISTRIBUTION_DISCARD_REASON_MAX_LENGTH",
     "DISTRIBUTION_URI_MAX_LENGTH",
     "STORAGE_SUPPLY_KIND",
     "URI_SCHEME_TO_ACCESS_PROTOCOL",

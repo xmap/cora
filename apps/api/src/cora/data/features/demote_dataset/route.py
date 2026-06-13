@@ -11,7 +11,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.data.aggregates.dataset import DATASET_DEMOTION_REASON_MAX_LENGTH
 from cora.data.features.demote_dataset.command import DemoteDataset
 from cora.data.features.demote_dataset.handler import Handler
 from cora.infrastructure.routing import (
@@ -20,6 +19,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class DemoteDatasetRequest(BaseModel):
@@ -28,7 +28,7 @@ class DemoteDatasetRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=DATASET_DEMOTION_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Free-form reason for the demotion (1-500 chars after trimming). "
             "Captured verbatim in the audit log immutably. Operationally: "

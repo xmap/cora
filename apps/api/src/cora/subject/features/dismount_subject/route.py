@@ -20,10 +20,9 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.subject.features.dismount_subject.command import DismountSubject
 from cora.subject.features.dismount_subject.handler import Handler
-
-_REASON_MAX_LENGTH = 500
 
 
 class DismountSubjectRequest(BaseModel):
@@ -32,7 +31,7 @@ class DismountSubjectRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Operator-supplied reason for the dismount (audit-log "
             "breadcrumb). Examples: 'run complete', 'transport "

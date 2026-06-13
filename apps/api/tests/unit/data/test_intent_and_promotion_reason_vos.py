@@ -11,14 +11,13 @@ Pin:
 import pytest
 
 from cora.data.aggregates.dataset import (
-    DATASET_DEMOTION_REASON_MAX_LENGTH,
-    DATASET_PROMOTION_REASON_MAX_LENGTH,
     DemotionReason,
     Intent,
     InvalidDemotionReasonError,
     InvalidPromotionReasonError,
     PromotionReason,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 # ---------- Intent ----------
 
@@ -61,7 +60,7 @@ def test_promotion_reason_trims_whitespace() -> None:
 
 @pytest.mark.unit
 def test_promotion_reason_accepts_max_length() -> None:
-    at_max = "x" * DATASET_PROMOTION_REASON_MAX_LENGTH
+    at_max = "x" * REASON_MAX_LENGTH
     reason = PromotionReason(at_max)
     assert reason.value == at_max
 
@@ -80,7 +79,7 @@ def test_promotion_reason_rejects_whitespace_only() -> None:
 
 @pytest.mark.unit
 def test_promotion_reason_rejects_overlong() -> None:
-    overlong = "x" * (DATASET_PROMOTION_REASON_MAX_LENGTH + 1)
+    overlong = "x" * (REASON_MAX_LENGTH + 1)
     with pytest.raises(InvalidPromotionReasonError):
         PromotionReason(overlong)
 
@@ -105,7 +104,7 @@ def test_demotion_reason_trims_whitespace() -> None:
 
 @pytest.mark.unit
 def test_demotion_reason_accepts_max_length() -> None:
-    at_max = "x" * DATASET_DEMOTION_REASON_MAX_LENGTH
+    at_max = "x" * REASON_MAX_LENGTH
     reason = DemotionReason(at_max)
     assert reason.value == at_max
 
@@ -124,7 +123,7 @@ def test_demotion_reason_rejects_whitespace_only() -> None:
 
 @pytest.mark.unit
 def test_demotion_reason_rejects_overlong() -> None:
-    overlong = "x" * (DATASET_DEMOTION_REASON_MAX_LENGTH + 1)
+    overlong = "x" * (REASON_MAX_LENGTH + 1)
     with pytest.raises(InvalidDemotionReasonError):
         DemotionReason(overlong)
 

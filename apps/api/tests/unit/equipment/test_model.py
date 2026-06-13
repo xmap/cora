@@ -7,7 +7,6 @@ import pytest
 from cora.equipment.aggregates.model import (
     MANUFACTURER_IDENTIFIER_MAX_LENGTH,
     MANUFACTURER_NAME_MAX_LENGTH,
-    MODEL_DEPRECATION_REASON_MAX_LENGTH,
     MODEL_NAME_MAX_LENGTH,
     MODEL_PART_NUMBER_MAX_LENGTH,
     MODEL_VERSION_TAG_MAX_LENGTH,
@@ -29,6 +28,7 @@ from cora.equipment.aggregates.model import (
     ModelVersionTag,
     PartNumber,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 @pytest.mark.unit
@@ -170,7 +170,7 @@ def test_model_deprecation_reason_rejects_empty_and_too_long() -> None:
     with pytest.raises(InvalidModelDeprecationReasonError):
         ModelDeprecationReason("")
     with pytest.raises(InvalidModelDeprecationReasonError):
-        ModelDeprecationReason("X" * (MODEL_DEPRECATION_REASON_MAX_LENGTH + 1))
+        ModelDeprecationReason("X" * (REASON_MAX_LENGTH + 1))
 
 
 @pytest.mark.unit

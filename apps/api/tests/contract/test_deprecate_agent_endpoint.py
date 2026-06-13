@@ -5,8 +5,8 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from cora.agent.aggregates.agent import AGENT_DEPRECATION_REASON_MAX_LENGTH
 from cora.api.main import create_app
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 def _define_body(**overrides: object) -> dict[str, object]:
@@ -81,6 +81,6 @@ def test_post_deprecate_422_on_over_cap_reason() -> None:
         agent_id = define.json()["agent_id"]
         response = client.post(
             f"/agents/{agent_id}/deprecate",
-            json={"reason": "x" * (AGENT_DEPRECATION_REASON_MAX_LENGTH + 1)},
+            json={"reason": "x" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422

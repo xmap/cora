@@ -24,8 +24,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-
-_REASON_MAX_LENGTH = 500
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class RevokePermitRequest(BaseModel):
@@ -39,7 +38,7 @@ class RevokePermitRequest(BaseModel):
 
     reason: str | None = Field(
         default=None,
-        max_length=_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Optional operator-supplied reason for revoking the permit (audit-log breadcrumb)."
         ),

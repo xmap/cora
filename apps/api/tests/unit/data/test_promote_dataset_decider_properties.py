@@ -35,7 +35,6 @@ from hypothesis import strategies as st
 
 from cora.data.aggregates.dataset import (
     DATASET_CHECKSUM_SHA256_HEX_LENGTH,
-    DATASET_PROMOTION_REASON_MAX_LENGTH,
     Dataset,
     DatasetAlreadyPromotedError,
     DatasetCannotPromoteError,
@@ -51,6 +50,7 @@ from cora.data.aggregates.dataset import (
 from cora.data.features import promote_dataset
 from cora.data.features.promote_dataset import DatasetPromotionContext, PromoteDataset
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ _ANY_INTENT = (Intent.TRIAL, Intent.PRODUCTION, Intent.RETRACTED)
 
 
 def _reasons() -> st.SearchStrategy[str]:
-    return printable_ascii_text(min_size=1, max_size=DATASET_PROMOTION_REASON_MAX_LENGTH)
+    return printable_ascii_text(min_size=1, max_size=REASON_MAX_LENGTH)
 
 
 def _dataset(

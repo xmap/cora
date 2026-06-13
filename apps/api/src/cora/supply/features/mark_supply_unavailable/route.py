@@ -12,7 +12,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.supply.aggregates.supply import SUPPLY_REASON_MAX_LENGTH
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.supply.features.mark_supply_unavailable.command import MarkSupplyUnavailable
 from cora.supply.features.mark_supply_unavailable.handler import Handler
 
@@ -29,7 +29,7 @@ class MarkSupplyUnavailableRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=SUPPLY_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Operator-supplied reason for the mark-unavailable transition (audit-log breadcrumb)."
         ),

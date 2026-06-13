@@ -13,10 +13,10 @@ from uuid import uuid4
 import pytest
 
 from cora.shared.facility_code import FacilityCode
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.supply.aggregates.supply import (
     SUPPLY_KIND_MAX_LENGTH,
     SUPPLY_NAME_MAX_LENGTH,
-    SUPPLY_REASON_MAX_LENGTH,
     InvalidSupplyNameError,
     InvalidSupplyReasonError,
     Supply,
@@ -152,7 +152,7 @@ def test_max_length_constants_are_pinned() -> None:
     """Public exports; silent shrinkage would be invisible to consumers."""
     assert SUPPLY_KIND_MAX_LENGTH == 50
     assert SUPPLY_NAME_MAX_LENGTH == 200
-    assert SUPPLY_REASON_MAX_LENGTH == 500
+    assert REASON_MAX_LENGTH == 500
 
 
 # ---------- SupplyStatus enum (5 health states + Decommissioned terminal) ----------

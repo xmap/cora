@@ -22,11 +22,9 @@ from cora.safety.aggregates.clearance import (
     ClearanceStatus,
     InvalidClearanceExpireReasonError,
 )
-from cora.safety.aggregates.clearance.state import (
-    CLEARANCE_EXPIRE_REASON_MAX_LENGTH,
-)
 from cora.safety.features.expire_clearance.command import ExpireClearance
 from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _EXPIRABLE_STATUSES: tuple[ClearanceStatus, ...] = (ClearanceStatus.ACTIVE,)
 
@@ -51,7 +49,7 @@ def decide(
 
     reason = validate_bounded_text(
         command.reason,
-        max_length=CLEARANCE_EXPIRE_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         error_class=InvalidClearanceExpireReasonError,
     )
 

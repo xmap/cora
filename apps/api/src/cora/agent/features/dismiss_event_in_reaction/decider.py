@@ -36,9 +36,9 @@ from cora.decision.aggregates.decision.state import (
     DECISION_CONTEXT_REACTION_DISMISSAL,
 )
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _REASON_MIN_LENGTH = 1
-_REASON_MAX_LENGTH = 500
 _DISMISSAL_CHOICE = "EventDismissed"
 
 
@@ -88,9 +88,9 @@ def decide(
         raise InvalidDismissalReasonError(
             f"reason must be non-empty after strip; got {command.reason!r}"
         )
-    if len(trimmed_reason) > _REASON_MAX_LENGTH:
+    if len(trimmed_reason) > REASON_MAX_LENGTH:
         raise InvalidDismissalReasonError(
-            f"reason must be at most {_REASON_MAX_LENGTH} chars after strip; "
+            f"reason must be at most {REASON_MAX_LENGTH} chars after strip; "
             f"got {len(trimmed_reason)}"
         )
 
