@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Equipment module owns CORA's record of what physical devices the facility runs, how they are catalogued and composed, where they are mounted, and what operational state each one is in. Eight aggregates carry the responsibility. `Family` is the device-class abstraction (what kind of thing a rotary stage, camera, or scintillator is). `Asset` is one physical instance the facility commissions, maintains, moves, and eventually decommissions. `Model` is the vendor catalog entry that pins a manufacturer plus part number to a set of declared Families. `Mount` is a named installation slot the facility provisions in advance; an Asset is later installed into that slot. `Frame` is a coordinate frame in the placement hierarchy that Mounts use to anchor their position. `Assembly` is a reusable composition blueprint that declares a slot map and wiring for a cluster of Assets, and presents the cluster as a single Family. `Fixture` is the materialization of an Assembly into concrete Asset instances on a particular Trust Surface. `Role` is the global functional binding contract (Imager, Positioner, Controller, Detector) that names WHAT operational shape a Method needs without pinning the anatomical Family that provides it; Families and Assemblies advertise which Roles they satisfy through a `presents_as` set.
+The Equipment module owns CORA's record of what physical devices the facility runs, how they are catalogued and composed, where they are mounted, and what operational state each one is in. <!-- arch:count kind=aggregate bc=equipment spell=true cap=true -->Eight<!-- /arch:count --> aggregates carry the responsibility. `Family` is the device-class abstraction (what kind of thing a rotary stage, camera, or scintillator is). `Asset` is one physical instance the facility commissions, maintains, moves, and eventually decommissions. `Model` is the vendor catalog entry that pins a manufacturer plus part number to a set of declared Families. `Mount` is a named installation slot the facility provisions in advance; an Asset is later installed into that slot. `Frame` is a coordinate frame in the placement hierarchy that Mounts use to anchor their position. `Assembly` is a reusable composition blueprint that declares a slot map and wiring for a cluster of Assets, and presents the cluster as a single Family. `Fixture` is the materialization of an Assembly into concrete Asset instances on a particular Trust Surface. `Role` is the global functional binding contract (Imager, Positioner, Controller, Detector) that names WHAT operational shape a Method needs without pinning the anatomical Family that provides it; Families and Assemblies advertise which Roles they satisfy through a `presents_as` set.
 
 Equipment is Foundation: every other module that needs to point at a specific piece of hardware references an `Asset.id`. The recipe ladder binds Methods to Assets through Plans, and a Method may now require not only Families but specific Assembly blueprints. Procedures target Assets. Calibrations key off an `Asset.id` plus a quantity. Supplies advertise resources whose physical delivery infrastructure lives as Assets. Trust groups Assets into Zones for security policy.
 
@@ -277,7 +277,7 @@ stateDiagram-v2
 
 ## Events
 
-The eight aggregates emit forty-eight distinct event types, grouped by aggregate.
+The <!-- arch:count kind=aggregate bc=equipment spell=true -->eight<!-- /arch:count --> aggregates emit <!-- arch:count kind=event bc=equipment spell=true -->forty-eight<!-- /arch:count --> distinct event types, grouped by aggregate.
 
 ### Family events
 
@@ -371,103 +371,11 @@ The eight aggregates emit forty-eight distinct event types, grouped by aggregate
 
 ## Slices
 
-The eight aggregates expose fifty-six slices end to end.
+The <!-- arch:count kind=aggregate bc=equipment spell=true -->eight<!-- /arch:count --> aggregates expose <!-- arch:count kind=slice bc=equipment spell=true -->fifty-six<!-- /arch:count --> slices end to end.
 
-### Family slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineFamily` | NEW | `POST /families` | `define_family` | required |
-| `VersionFamily` | MODIFIED | `POST /families/{family_id}/version` | `version_family` | none |
-| `DeprecateFamily` | MODIFIED | `POST /families/{family_id}/deprecate` | `deprecate_family` | none |
-| `UpdateFamilySettingsSchema` | MODIFIED | `POST /families/{family_id}/settings-schema` | `update_family_settings_schema` | none |
-| `AddFamilyPresentsAs` | MODIFIED | `POST /families/{family_id}/add-presents-as` | `add_family_presents_as` | none |
-| `RemoveFamilyPresentsAs` | MODIFIED | `POST /families/{family_id}/remove-presents-as` | `remove_family_presents_as` | none |
-| `GetFamily` | QUERY | `GET /families/{family_id}` | `get_family` | none |
-| `ListFamilies` | QUERY | `GET /families` | `list_families` | none |
-
-### Model slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineModel` | NEW | `POST /models` | `define_model` | required |
-| `VersionModel` | MODIFIED | `POST /models/{model_id}/version` | `version_model` | none |
-| `DeprecateModel` | MODIFIED | `POST /models/{model_id}/deprecation` | `deprecate_model` | none |
-| `AddModelFamily` | MODIFIED | `POST /models/{model_id}/families` | `add_model_family` | none |
-| `RemoveModelFamily` | MODIFIED | `DELETE /models/{model_id}/families/{family_id}` | `remove_model_family` | none |
-| `GetModel` | QUERY | `GET /models/{model_id}` | `get_model` | none |
-
-### Asset slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterAsset` | NEW | `POST /assets` | `register_asset` | required |
-| `ActivateAsset` | MODIFIED | `POST /assets/{asset_id}/activate` | `activate_asset` | none |
-| `EnterAssetMaintenance` | MODIFIED | `POST /assets/{asset_id}/enter-maintenance` | `enter_asset_maintenance` | none |
-| `ExitAssetMaintenance` | MODIFIED | `POST /assets/{asset_id}/exit-maintenance` | `exit_asset_maintenance` | none |
-| `DecommissionAsset` | MODIFIED | `POST /assets/{asset_id}/decommission` | `decommission_asset` | none |
-| `RelocateAsset` | MODIFIED | `POST /assets/{asset_id}/relocate` | `relocate_asset` | none |
-| `AddAssetFamily` | MODIFIED | `POST /assets/{asset_id}/add-family` | `add_asset_family` | none |
-| `RemoveAssetFamily` | MODIFIED | `POST /assets/{asset_id}/remove-family` | `remove_asset_family` | none |
-| `AddAssetPort` | MODIFIED | `POST /assets/{asset_id}/add-port` | `add_asset_port` | none |
-| `RemoveAssetPort` | MODIFIED | `POST /assets/{asset_id}/remove-port` | `remove_asset_port` | none |
-| `UpdateAssetSettings` | MODIFIED | `PATCH /assets/{asset_id}/settings` | `update_asset_settings` | none |
-| `DegradeAsset` | MODIFIED | `POST /assets/{asset_id}/degrade` | `degrade_asset` | none |
-| `FaultAsset` | MODIFIED | `POST /assets/{asset_id}/fault` | `fault_asset` | none |
-| `RestoreAsset` | MODIFIED | `POST /assets/{asset_id}/restore` | `restore_asset` | none |
-| `AddAssetOwner` | MODIFIED | `POST /assets/{asset_id}/add-owner` | `add_asset_owner` | none |
-| `RemoveAssetOwner` | MODIFIED | `POST /assets/{asset_id}/remove-owner` | `remove_asset_owner` | none |
-| `AddAssetAlternateIdentifier` | MODIFIED | `POST /assets/{asset_id}/add-alternate-identifier` | `add_asset_alternate_identifier` | none |
-| `RemoveAssetAlternateIdentifier` | MODIFIED | `POST /assets/{asset_id}/remove-alternate-identifier` | `remove_asset_alternate_identifier` | none |
-| `AttachAssetToFixture` | MODIFIED | `POST /assets/{asset_id}/attach-to-fixture` | `attach_asset_to_fixture` | none |
-| `BindAssetToFacility` | MODIFIED | `POST /assets/{asset_id}/bind-to-facility` | `bind_asset_to_facility` | none |
-| `DetachAssetFromFixture` | MODIFIED | `POST /assets/{asset_id}/detach-from-fixture` | `detach_asset_from_fixture` | none |
-| `GetAsset` | QUERY | `GET /assets/{asset_id}` | `get_asset` | none |
-| `GetAssetIntegrationView` | QUERY | `GET /assets/{asset_id}/integration-view` | `get_asset_integration_view` | none |
-| `GetAssetPidinst` | QUERY | `GET /assets/{asset_id}/pidinst` | `get_asset_pidinst` | none |
-| `ListAssets` | QUERY | `GET /assets` | `list_assets` | none |
-
-### Frame slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterFrame` | NEW | `POST /frames` | `register_frame` | required |
-| `UpdateFramePlacement` | MODIFIED | `PATCH /frames/{frame_id}/placement` | `update_frame_placement` | none |
-| `DecommissionFrame` | MODIFIED | `DELETE /frames/{frame_id}` | `decommission_frame` | none |
-
-### Mount slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterMount` | NEW | `POST /mounts` | `register_mount` | required |
-| `UpdateMountPlacement` | MODIFIED | `PATCH /mounts/{mount_id}/placement` | `update_mount_placement` | none |
-| `InstallAsset` | MODIFIED | `PUT /mounts/{mount_id}/installed-asset` | `install_asset` | none |
-| `UninstallAsset` | MODIFIED | `DELETE /mounts/{mount_id}/installed-asset` | `uninstall_asset` | none |
-| `DecommissionMount` | MODIFIED | `DELETE /mounts/{mount_id}` | `decommission_mount` | none |
-
-### Assembly slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineAssembly` | NEW | `POST /assemblies` | `define_assembly` | required |
-| `VersionAssembly` | MODIFIED | `POST /assemblies/{assembly_id}/versions` | `version_assembly` | none |
-| `DeprecateAssembly` | MODIFIED | `POST /assemblies/{assembly_id}/deprecate` | `deprecate_assembly` | none |
-| `AddAssemblyPresentsAs` | MODIFIED | `POST /assemblies/{assembly_id}/add-presents-as` | `add_assembly_presents_as` | none |
-| `RemoveAssemblyPresentsAs` | MODIFIED | `POST /assemblies/{assembly_id}/remove-presents-as` | `remove_assembly_presents_as` | none |
-
-### Fixture slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterFixture` | NEW | `POST /assemblies/{assembly_id}/fixtures` | `register_fixture` | required |
-| `GetFixture` | QUERY | `GET /fixtures/{fixture_id}` | `get_fixture` | none |
-| `ListFixtures` | QUERY | `GET /fixtures` | `list_fixtures` | none |
-
-### Role slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineRole` | NEW | `POST /roles` | `define_role` | required |
+<!-- arch:slices-table bc=equipment -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

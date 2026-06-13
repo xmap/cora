@@ -66,13 +66,9 @@ N/A. The Calibration aggregate has no load-bearing lifecycle FSM. Revisions accu
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineCalibration` | NEW | `POST /calibrations` | `define_calibration` | required |
-| `AppendCalibrationRevision` | MODIFIED | `POST /calibrations/{calibration_id}/revisions` | `append_calibration_revision` | required |
-| `PublishRevision` | MODIFIED | `POST /calibrations/{calibration_id}/revisions/{revision_id}/publish` | `publish_revision` | required |
-| `GetCalibration` | QUERY | `GET /calibrations/{calibration_id}` | `get_calibration` | none |
-| `ListCalibrations` | QUERY | `GET /calibrations` | `list_calibrations` | none |
+<!-- arch:slices-table bc=calibration -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

@@ -114,19 +114,9 @@ stateDiagram-v2
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineAgent` | NEW | `POST /agents` | `define_agent` | required |
-| `VersionAgent` | MODIFIED | `POST /agents/{agent_id}/version` | `version_agent` | none |
-| `SuspendAgent` | MODIFIED | `POST /agents/{agent_id}/suspend` | `suspend_agent` | none |
-| `ResumeAgent` | MODIFIED | `POST /agents/{agent_id}/resume` | `resume_agent` | none |
-| `DeprecateAgent` | MODIFIED | `POST /agents/{agent_id}/deprecate` | `deprecate_agent` | none |
-| `GrantToolToAgent` | MODIFIED | `POST /agents/{agent_id}/tools/grant` | `grant_tool_to_agent` | none |
-| `RevokeToolFromAgent` | MODIFIED | `POST /agents/{agent_id}/tools/revoke` | `revoke_tool_from_agent` | none |
-| `ReviseAgentBudget` | MODIFIED | `POST /agents/{agent_id}/budget` | `revise_agent_budget` | none |
-| `GetAgent` | QUERY | `GET /agents/{agent_id}` | `get_agent` | none |
-| `RegenerateRunDebrief` | CROSS-BC | `POST /agents/run-debriefer/runs/{run_id}/regenerate-debrief` | `regenerate_run_debrief` | required |
-| `PromoteCautionProposal` | CROSS-BC | `POST /agents/caution-drafter/decisions/{decision_id}/promote` | `promote_caution_proposal` | required |
+<!-- arch:slices-table bc=agent -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

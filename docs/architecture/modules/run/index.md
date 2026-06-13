@@ -115,19 +115,9 @@ Individual reading rows do not emit per-row events on the Run stream; they are w
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `StartRun` | NEW | `POST /runs` | `start_run` | required |
-| `HoldRun` | MODIFIED | `POST /runs/{run_id}/hold` | `hold_run` | none |
-| `ResumeRun` | MODIFIED | `POST /runs/{run_id}/resume` | `resume_run` | none |
-| `CompleteRun` | MODIFIED | `POST /runs/{run_id}/complete` | `complete_run` | none |
-| `AbortRun` | MODIFIED | `POST /runs/{run_id}/abort` | `abort_run` | none |
-| `StopRun` | MODIFIED | `POST /runs/{run_id}/stop` | `stop_run` | none |
-| `TruncateRun` | MODIFIED | `POST /runs/{run_id}/truncate` | `truncate_run` | none |
-| `AdjustRun` | MODIFIED | `POST /runs/{run_id}/adjust` | `adjust_run` | required |
-| `AppendObservations` | MODIFIED | `POST /runs/{run_id}/readings` | `append_observations` | none |
-| `GetRun` | QUERY | `GET /runs/{run_id}` | `get_run` | none |
-| `ListRuns` | QUERY | `GET /runs` | `list_runs` | none |
+<!-- arch:slices-table bc=run -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

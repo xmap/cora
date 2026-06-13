@@ -2,9 +2,9 @@
 
 ## Purpose & Scope
 
-The Federation module owns CORA's outgoing and incoming cross-facility data flows. Four aggregates carry the responsibility: `Facility` is the peer-facility identity record with two-tier identity (opaque UUID PK plus cross-deployment convergent code), `Permit` authorizes one federation flow between this facility and a named peer, `Credential` is a per-facility binding to an opaque secret-material handle for a single purpose, and `Seal` is the per-facility singleton that signs the head pointer over this facility's published registry tree.
+The Federation module owns CORA's outgoing and incoming cross-facility data flows. <!-- arch:count kind=aggregate bc=federation spell=true cap=true -->Four<!-- /arch:count --> aggregates carry the responsibility: `Facility` is the peer-facility identity record with two-tier identity (opaque UUID PK plus cross-deployment convergent code), `Permit` authorizes one federation flow between this facility and a named peer, `Credential` is a per-facility binding to an opaque secret-material handle for a single purpose, and `Seal` is the per-facility singleton that signs the head pointer over this facility's published registry tree.
 
-Federation is the cross-facility seam. Trust governs who may do what inside this facility; Federation governs what crosses the boundary, in which direction, signed by which key, against which peer's accepted canonicalization. The four aggregates compose: a `Facility` carries the cross-deployment convergent slug for one peer (or for the self-deployment), a `Permit` names the `Credential` ids that may carry traffic under its terms, and the per-facility `Seal` pairs an online-signing `Credential` with an offline-root `Credential` to sign the head pointer that consumers of a federated registry follow.
+Federation is the cross-facility seam. Trust governs who may do what inside this facility; Federation governs what crosses the boundary, in which direction, signed by which key, against which peer's accepted canonicalization. The <!-- arch:count kind=aggregate bc=federation spell=true -->four<!-- /arch:count --> aggregates compose: a `Facility` carries the cross-deployment convergent slug for one peer (or for the self-deployment), a `Permit` names the `Credential` ids that may carry traffic under its terms, and the per-facility `Seal` pairs an online-signing `Credential` with an offline-root `Credential` to sign the head pointer that consumers of a federated registry follow.
 
 <div class="cora-aside cora-aside--deferred" markdown>
 
@@ -174,7 +174,7 @@ stateDiagram-v2
 
 ## Events
 
-`Permit` emits five event types. `Credential` emits five. `Seal` emits five. Every event carries `occurred_at` and a `<verb>_by_actor_id` denorm of the envelope `principal_id` so projection consumers do not need to join the envelope table for the most common per-event queries. Status is not carried in event payloads; the event type IS the state-change indicator.
+`Permit` emits <!-- arch:count kind=event bc=federation agg=permit spell=true -->five<!-- /arch:count --> event types. `Credential` emits <!-- arch:count kind=event bc=federation agg=credential spell=true -->five<!-- /arch:count -->. `Seal` emits <!-- arch:count kind=event bc=federation agg=seal spell=true -->five<!-- /arch:count -->. Every event carries `occurred_at` and a `<verb>_by_actor_id` denorm of the envelope `principal_id` so projection consumers do not need to join the envelope table for the most common per-event queries. Status is not carried in event payloads; the event type IS the state-change indicator.
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
@@ -200,35 +200,11 @@ stateDiagram-v2
 
 ## Slices
 
-Twenty-five slices ship: nineteen lifecycle slices (four on Facility, five each on Permit / Credential / Seal) and six query slices. Every transition slice carries the actor stamping pattern: the handler factory closes over the aggregate's codec quartet and injects the envelope's `principal_id` into the decider under the per-event `<verb>_by_actor_id` parameter name.
+<!-- arch:count kind=slice bc=federation spell=true cap=true -->Twenty-five<!-- /arch:count --> slices ship: nineteen lifecycle slices (four on Facility, five each on Permit / Credential / Seal) and six query slices. Every transition slice carries the actor stamping pattern: the handler factory closes over the aggregate's codec quartet and injects the envelope's `principal_id` into the decider under the per-event `<verb>_by_actor_id` parameter name.
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterFacility` | NEW | `POST /federation/facilities` | `register_facility` | required |
-| `DecommissionFacility` | MODIFIED | `POST /federation/facilities/{facility_id}/decommission` | `decommission_facility` | none |
-| `AddFacilityTrustAnchorCredential` | MODIFIED | `POST /federation/facilities/{facility_id}/add-trust-anchor-credential` | `add_facility_trust_anchor_credential` | none |
-| `RemoveFacilityTrustAnchorCredential` | MODIFIED | `POST /federation/facilities/{facility_id}/remove-trust-anchor-credential` | `remove_facility_trust_anchor_credential` | none |
-| `DefinePermit` | NEW | `POST /federation/permits` | `define_permit` | required |
-| `ActivatePermit` | MODIFIED | `POST /federation/permits/{permit_id}/activate` | `activate_permit` | none |
-| `SuspendPermit` | MODIFIED | `POST /federation/permits/{permit_id}/suspend` | `suspend_permit` | none |
-| `ResumePermit` | MODIFIED | `POST /federation/permits/{permit_id}/resume` | `resume_permit` | none |
-| `RevokePermit` | MODIFIED | `POST /federation/permits/{permit_id}/revoke` | `revoke_permit` | none |
-| `RegisterCredential` | NEW | `POST /federation/credentials` | `register_credential` | required |
-| `StartCredentialRotation` | MODIFIED | `POST /federation/credentials/{credential_id}/rotation/start` | `start_credential_rotation` | none |
-| `CompleteCredentialRotation` | MODIFIED | `POST /federation/credentials/{credential_id}/rotation/complete` | `complete_credential_rotation` | none |
-| `AbortCredentialRotation` | MODIFIED | `POST /federation/credentials/{credential_id}/rotation/abort` | `abort_credential_rotation` | none |
-| `RevokeCredential` | MODIFIED | `POST /federation/credentials/{credential_id}/revoke` | `revoke_credential` | none |
-| `InitializeSeal` | NEW | `POST /federation/seals` | `initialize_seal` | required |
-| `SignSealPointer` | MODIFIED | `POST /federation/seals/{facility_code}/pointer/sign` | `sign_seal_pointer` | none |
-| `RotateSealOnlineKey` | MODIFIED | `POST /federation/seals/{facility_code}/online-key/rotate` | `rotate_seal_online_key` | none |
-| `StartSealRepublishing` | MODIFIED | `POST /federation/seals/{facility_code}/republishing/start` | `start_seal_republishing` | none |
-| `CompleteSealRepublishing` | MODIFIED | `POST /federation/seals/{facility_code}/republishing/complete` | `complete_seal_republishing` | none |
-| `GetPermit` | QUERY | `GET /federation/permits/{permit_id}` | `get_permit` | none |
-| `ListPermits` | QUERY | `GET /federation/permits` | `list_permits` | none |
-| `GetCredential` | QUERY | `GET /federation/credentials/{credential_id}` | `get_credential` | none |
-| `ListCredentials` | QUERY | `GET /federation/credentials` | `list_credentials` | none |
-| `GetSeal` | QUERY | `GET /federation/seals/{facility_code}` | `get_seal` | none |
-| `ListSeals` | QUERY | `GET /federation/seals` | `list_seals` | none |
+<!-- arch:slices-table bc=federation -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 Three slices write more than one stream in a single Postgres transaction: `initialize_seal` and `rotate_seal_online_key` each append a `DecisionRegistered` audit on the Decision BC alongside the Seal-stream event, and `revoke_credential` audits the revocation in the same shape. Both use `EventStore.append_streams` rather than `append`; the BC-local `_actor_update_handler` factory does not cover multi-stream writes, and those three slices stay longhand by design.
 

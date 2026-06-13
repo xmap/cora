@@ -91,18 +91,9 @@ Transitioning-actor identity lives only on `StoredEvent.principal_id`; the genes
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterCampaign` | NEW | `POST /campaigns` | `register_campaign` | optional |
-| `StartCampaign` | MODIFIED | `POST /campaigns/{campaign_id}/start` | `start_campaign` | none |
-| `HoldCampaign` | MODIFIED | `POST /campaigns/{campaign_id}/hold` | `hold_campaign` | none |
-| `ResumeCampaign` | MODIFIED | `POST /campaigns/{campaign_id}/resume` | `resume_campaign` | none |
-| `CloseCampaign` | MODIFIED | `POST /campaigns/{campaign_id}/close` | `close_campaign` | none |
-| `AbandonCampaign` | MODIFIED | `POST /campaigns/{campaign_id}/abandon` | `abandon_campaign` | none |
-| `AddRunToCampaign` | MODIFIED | `POST /campaigns/{campaign_id}/runs/{run_id}/add` | `add_run_to_campaign` | none |
-| `RemoveRunFromCampaign` | MODIFIED | `POST /campaigns/{campaign_id}/runs/{run_id}/remove` | `remove_run_from_campaign` | none |
-| `GetCampaign` | QUERY | `GET /campaigns/{campaign_id}` | `get_campaign` | none |
-| `ListCampaigns` | QUERY | `GET /campaigns` | `list_campaigns` | none |
+<!-- arch:slices-table bc=campaign -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

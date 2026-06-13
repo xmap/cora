@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Recipe module owns the abstract description of how to run an experiment, from the universal operations template down to the asset-bound plan that a Run will execute. Five aggregates carry the responsibility. Four form the abstract-to-bound ladder: `Capability` is the universal declarative template that says what a class of operation does; `Method` is the science-community technique class; `Practice` is the facility's curated adaptation; and `Plan` binds a Practice to specific Asset instances and wires their ports together. The ladder follows the ISA-88 General → Site → Master/Control Recipe progression, with Capability sitting above the ladder as the executor-agnostic template that both Method-shaped science recipes and Procedure-shaped operational ceremonies (in the [Operation module](../operation/index.md)) realize.
+The Recipe module owns the abstract description of how to run an experiment, from the universal operations template down to the asset-bound plan that a Run will execute. <!-- arch:count kind=aggregate bc=recipe spell=true cap=true -->Five<!-- /arch:count --> aggregates carry the responsibility. Four form the abstract-to-bound ladder: `Capability` is the universal declarative template that says what a class of operation does; `Method` is the science-community technique class; `Practice` is the facility's curated adaptation; and `Plan` binds a Practice to specific Asset instances and wires their ports together. The ladder follows the ISA-88 General → Site → Master/Control Recipe progression, with Capability sitting above the ladder as the executor-agnostic template that both Method-shaped science recipes and Procedure-shaped operational ceremonies (in the [Operation module](../operation/index.md)) realize.
 
 The fifth aggregate, `Recipe`, is the executable body: a deployment-bound, ordered tuple of templated steps that references one `Capability` by `capability_id` and, once an operator supplies parameter bindings, expands into the flat step list the Operation Conductor walks. Recipe sits beside Capability (which declares the contract) rather than inside the bind ladder; it iterates faster than Capability and carries the body, while Method stays the technique-class contract and Plan stays the Asset-bound binding.
 
@@ -62,7 +62,7 @@ The `Affordance` enum used in `Capability.required_affordances` is owned by the 
 
 ## FSM
 
-All five aggregates share the same three-state lifecycle. The genesis command differs; the version and deprecate transitions are identical.
+All <!-- arch:count kind=aggregate bc=recipe spell=true -->five<!-- /arch:count --> aggregates share the same three-state lifecycle. The genesis command differs; the version and deprecate transitions are identical.
 
 ```mermaid
 stateDiagram-v2
@@ -141,41 +141,9 @@ The `PlanDefined` audit snapshots pin what was checked at bind time (`method_nee
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineCapability` | NEW | `POST /capabilities` | `define_capability` | required |
-| `VersionCapability` | MODIFIED | `POST /capabilities/{capability_id}/version` | `version_capability` | none |
-| `DeprecateCapability` | MODIFIED | `POST /capabilities/{capability_id}/deprecate` | `deprecate_capability` | none |
-| `UpdateCapabilitySuggestedRoles` | NEW | `POST /capabilities/{capability_id}/suggested-roles` | `update_capability_suggested_roles` | none |
-| `GetCapability` | QUERY | `GET /capabilities/{capability_id}` | `get_capability` | none |
-| `DefineMethod` | NEW | `POST /methods` | `define_method` | required |
-| `VersionMethod` | MODIFIED | `POST /methods/{method_id}/version` | `version_method` | none |
-| `DeprecateMethod` | MODIFIED | `POST /methods/{method_id}/deprecate` | `deprecate_method` | none |
-| `UpdateMethodParametersSchema` | MODIFIED | `PUT /methods/{method_id}/parameters-schema` | `update_method_parameters_schema` | none |
-| `AddMethodRequiredRole` | MODIFIED | `POST /methods/{method_id}/add-required-role` | `add_method_required_role` | none |
-| `RemoveMethodRequiredRole` | MODIFIED | `POST /methods/{method_id}/remove-required-role` | `remove_method_required_role` | none |
-| `GetMethod` | QUERY | `GET /methods/{method_id}` | `get_method` | none |
-| `ListMethods` | QUERY | `GET /methods` | `list_methods` | none |
-| `DefinePractice` | NEW | `POST /practices` | `define_practice` | required |
-| `VersionPractice` | MODIFIED | `POST /practices/{practice_id}/version` | `version_practice` | none |
-| `DeprecatePractice` | MODIFIED | `POST /practices/{practice_id}/deprecate` | `deprecate_practice` | none |
-| `GetPractice` | QUERY | `GET /practices/{practice_id}` | `get_practice` | none |
-| `ListPractices` | QUERY | `GET /practices` | `list_practices` | none |
-| `DefinePlan` | NEW | `POST /plans` | `define_plan` | required |
-| `VersionPlan` | MODIFIED | `POST /plans/{plan_id}/version` | `version_plan` | none |
-| `DeprecatePlan` | MODIFIED | `POST /plans/{plan_id}/deprecate` | `deprecate_plan` | none |
-| `UpdatePlanDefaultParameters` | MODIFIED | `PATCH /plans/{plan_id}/default-parameters` | `update_plan_default_parameters` | none |
-| `AddPlanWire` | MODIFIED | `POST /plans/{plan_id}/wires` | `add_plan_wire` | none |
-| `RemovePlanWire` | MODIFIED | `DELETE /plans/{plan_id}/wires` | `remove_plan_wire` | none |
-| `BindPlanRole` | MODIFIED | `POST /plans/{plan_id}/bind-role` | `bind_plan_role` | none |
-| `UnbindPlanRole` | MODIFIED | `POST /plans/{plan_id}/unbind-role` | `unbind_plan_role` | none |
-| `GetPlan` | QUERY | `GET /plans/{plan_id}` | `get_plan` | none |
-| `ListPlans` | QUERY | `GET /plans` | `list_plans` | none |
-| `InspectPlanBinding` | QUERY | `POST /plans/inspect-binding` | `inspect_plan_binding` | none |
-| `DefineRecipe` | NEW | `POST /recipes` | `define_recipe` | required |
-| `VersionRecipe` | MODIFIED | `POST /recipes/{recipe_id}/version` | `version_recipe` | none |
-| `DeprecateRecipe` | MODIFIED | `POST /recipes/{recipe_id}/deprecate` | `deprecate_recipe` | none |
-| `GetRecipe` | QUERY | `GET /recipes/{recipe_id}` | `get_recipe` | none |
+<!-- arch:slices-table bc=recipe -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 `define_plan` is the only slice with cross-aggregate state validation in the decider. The handler pre-loads the Practice, the Method (via `practice.method_id`), and every bound Asset, then hands them to the pure decider as a `PlanBindingContext`. The decider rejects bindings against deprecated upstream entries, against decommissioned Assets, against family sets that do not cover the Method's needs, and against affordance sets that do not cover the bound Capability's contract.
 

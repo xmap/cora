@@ -87,11 +87,9 @@ Every observation event carries both `from_status` and `to_status` explicitly so
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterEnclosure` | NEW | `POST /enclosures` | `register_enclosure` | required |
-| `ObserveEnclosureStatus` | IN-PROCESS | (none, by design) | (none, by design) | none |
-| `DecommissionEnclosure` | TERMINAL | `POST /enclosures/{enclosure_id}/decommission` | `decommission_enclosure` | none |
+<!-- arch:slices-table bc=enclosure -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 `ObserveEnclosureStatus` ships no REST endpoint or MCP tool by design: operators have buttons, machines have ports. The substrate adapter (today the in-memory stub, tomorrow an EPICS / P4P / Tango observer) calls `EnclosureHandlers.observe_enclosure_status(...)` directly. Exposing the slice on the public surface would invite operators issuing Monitor-tagged events from MCP tools while the system attributes them to a sensor.
 
