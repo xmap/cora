@@ -26,8 +26,9 @@ already sorted in `to_payload` for persistence determinism.
 
 **Critical invariant**: every transition arm MUST carry `id`, `name`,
 `kind`, `target_asset_ids`, `parent_run_id`, `activity_logbook_id`,
-`capability_id`, `recipe_id`, `current_iteration_index`, AND
-`iteration_count` through from prior state.
+`capability_id`, `recipe_id`, `current_iteration_index`,
+`iteration_count`, `consecutive_unconverged_iterations`, AND
+`max_consecutive_unconverged_iterations` through from prior state.
 Constructing `Procedure(id=..., name=..., status=...)` without
 explicitly passing the additive fields would silently WIPE them to
 defaults (empty frozenset / None / 0). Pinned by the per-transition
@@ -85,6 +86,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
             parent_run_id=parent_run_id,
             capability_id=capability_id,
             recipe_id=recipe_id,
+            max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
         ):
             _ = state  # ProcedureRegistered is the genesis event; prior state ignored
             return Procedure(
@@ -99,6 +101,8 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 recipe_id=recipe_id,
                 current_iteration_index=None,
                 iteration_count=0,
+                consecutive_unconverged_iterations=0,
+                max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
             )
         case ProcedureStarted():
             prior = require_state(state, "ProcedureStarted")
@@ -114,6 +118,10 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 recipe_id=prior.recipe_id,
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
+                consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
+                max_consecutive_unconverged_iterations=(
+                    prior.max_consecutive_unconverged_iterations
+                ),
             )
         case ProcedureCompleted():
             prior = require_state(state, "ProcedureCompleted")
@@ -129,6 +137,10 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 recipe_id=prior.recipe_id,
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
+                consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
+                max_consecutive_unconverged_iterations=(
+                    prior.max_consecutive_unconverged_iterations
+                ),
             )
         case ProcedureAborted():
             prior = require_state(state, "ProcedureAborted")
@@ -144,6 +156,10 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 recipe_id=prior.recipe_id,
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
+                consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
+                max_consecutive_unconverged_iterations=(
+                    prior.max_consecutive_unconverged_iterations
+                ),
             )
         case ProcedureTruncated():
             prior = require_state(state, "ProcedureTruncated")
@@ -159,6 +175,10 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 recipe_id=prior.recipe_id,
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
+                consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
+                max_consecutive_unconverged_iterations=(
+                    prior.max_consecutive_unconverged_iterations
+                ),
             )
         case ProcedureActivitiesLogbookOpened(logbook_id=logbook_id):
             # Lazy open-on-first-write: preserve all
@@ -178,6 +198,10 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 recipe_id=prior.recipe_id,
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
+                consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
+                max_consecutive_unconverged_iterations=(
+                    prior.max_consecutive_unconverged_iterations
+                ),
             )
         case RecipeExpansionRecorded():
             # Provenance-only event: leaves Procedure state unchanged.
@@ -206,12 +230,20 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 recipe_id=prior.recipe_id,
                 current_iteration_index=iteration_index,
                 iteration_count=prior.iteration_count + 1,
+                consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
+                max_consecutive_unconverged_iterations=(
+                    prior.max_consecutive_unconverged_iterations
+                ),
             )
-        case ProcedureIterationEnded():
-            # The open iteration closed: clear the open-index marker. The
-            # count is unchanged (it tracks iterations begun); the
-            # convergence verdict lives on the event payload, not state.
+        case ProcedureIterationEnded(converged=converged):
+            # The open iteration closed: clear the open-index marker and
+            # fold the consecutive-unconverged "patience" streak -- reset to
+            # 0 on a converged=True win, otherwise (False OR None) +1. The
+            # iteration_count is unchanged (it tracks iterations begun).
             prior = require_state(state, "ProcedureIterationEnded")
+            consecutive_unconverged = (
+                0 if converged is True else prior.consecutive_unconverged_iterations + 1
+            )
             return Procedure(
                 id=prior.id,
                 name=prior.name,
@@ -224,6 +256,10 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 recipe_id=prior.recipe_id,
                 current_iteration_index=None,
                 iteration_count=prior.iteration_count,
+                consecutive_unconverged_iterations=consecutive_unconverged,
+                max_consecutive_unconverged_iterations=(
+                    prior.max_consecutive_unconverged_iterations
+                ),
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

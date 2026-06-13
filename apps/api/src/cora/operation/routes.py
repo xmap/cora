@@ -37,6 +37,7 @@ from fastapi.responses import JSONResponse
 from cora.operation.aggregates.procedure import (
     InvalidProcedureAbortReasonError,
     InvalidProcedureInterruptedAtError,
+    InvalidProcedureIterationCapError,
     InvalidProcedureIterationEndReasonError,
     InvalidProcedureKindError,
     InvalidProcedureNameError,
@@ -53,6 +54,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureCannotTruncateError,
     ProcedureCapabilityExecutorMismatchError,
     ProcedureEnclosureCoverageMismatchError,
+    ProcedureIterationLimitReachedError,
     ProcedureNotFoundError,
     ProcedurePlanAssetDecommissionedError,
     ProcedureRequiresAvailableSupplyError,
@@ -238,6 +240,7 @@ def register_operation_routes(app: FastAPI) -> None:
         InvalidProcedureAbortReasonError,
         InvalidProcedureTruncateReasonError,
         InvalidProcedureIterationEndReasonError,
+        InvalidProcedureIterationCapError,
         InvalidProcedureInterruptedAtError,
         InvalidStepKindError,
         # Recipe-driven conduct_procedure path: caller-supplied steps with
@@ -265,6 +268,10 @@ def register_operation_routes(app: FastAPI) -> None:
         # iteration, and non-sequential / mismatched operator-supplied index.
         ProcedureCannotStartIterationError,
         ProcedureCannotEndIterationError,
+        # patience cap exhausted: the convergence loop gave up after N
+        # consecutive unconverged iterations (operator-actionable: abort
+        # or complete the Procedure).
+        ProcedureIterationLimitReachedError,
         ProcedurePlanAssetDecommissionedError,
         ProcedureStepsLogbookClosedError,
         # cross-BC guard: Procedure binds to a Capability whose

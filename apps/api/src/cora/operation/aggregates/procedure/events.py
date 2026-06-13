@@ -113,6 +113,11 @@ class ProcedureRegistered:
     occurred_at: datetime
     capability_id: UUID | None = None
     recipe_id: UUID | None = None
+    max_consecutive_unconverged_iterations: int | None = None
+    """Optional operator-supplied 'patience' cap (>= 1, None = no cap):
+    max consecutive unconverged iterations before start_iteration refuses
+    the next one. Additive payload field; legacy streams fold via
+    `payload.get("max_consecutive_unconverged_iterations")` -> None."""
 
 
 @dataclass(frozen=True)
@@ -393,6 +398,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             occurred_at=occurred_at,
             capability_id=capability_id,
             recipe_id=recipe_id,
+            max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -410,6 +416,9 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 # Recipe's capability_id. Pre-rewrite streams fold via
                 # `.get("recipe_id")` in from_stored.
                 "recipe_id": str(recipe_id) if recipe_id is not None else None,
+                # Optional patience cap (None = no cap). Legacy streams fold
+                # via `.get("max_consecutive_unconverged_iterations")` -> None.
+                "max_consecutive_unconverged_iterations": max_consecutive_unconverged_iterations,
                 "occurred_at": occurred_at.isoformat(),
             }
         case ProcedureStarted(procedure_id=procedure_id, occurred_at=occurred_at):
@@ -553,6 +562,10 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     parent_run_id=UUID(raw_parent) if raw_parent is not None else None,
                     capability_id=UUID(raw_capability) if raw_capability is not None else None,
                     recipe_id=UUID(raw_recipe) if raw_recipe is not None else None,
+                    # Optional patience cap; legacy streams omit the key.
+                    max_consecutive_unconverged_iterations=payload.get(
+                        "max_consecutive_unconverged_iterations"
+                    ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
 

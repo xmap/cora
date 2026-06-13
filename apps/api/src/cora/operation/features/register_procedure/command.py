@@ -56,3 +56,9 @@ class RegisterProcedure:
     target_asset_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
     parent_run_id: UUID | None = None
     capability_id: UUID | None = None
+    max_consecutive_unconverged_iterations: int | None = None
+    """Optional "patience" cap (>= 1 when set; None = no cap): max
+    consecutive unconverged iterations before `start_iteration` refuses
+    the next one. Folds onto Procedure state at register time and is read
+    by the start_iteration decider; never auto-aborts (mirrors
+    Agent.budget). Capability-default inheritance is a deferred follow-up."""

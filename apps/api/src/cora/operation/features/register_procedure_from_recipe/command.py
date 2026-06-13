@@ -32,3 +32,7 @@ class RegisterProcedureFromRecipe:
     parent_run_id: UUID | None
     recipe_id: UUID
     bindings: Mapping[str, Any]
+    max_consecutive_unconverged_iterations: int | None = None
+    """Optional "patience" cap (>= 1 when set; None = no cap), mirroring
+    RegisterProcedure. Folds onto Procedure state at register time;
+    Capability-default inheritance is a deferred follow-up."""

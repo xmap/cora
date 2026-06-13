@@ -9137,6 +9137,11 @@
       "ProcedureResponse": {
         "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. Decouples the wire format\nfrom the domain model so the two can evolve independently.\n`target_asset_ids` is sorted by UUID string form. `status` is the\nStrEnum's string value (Defined / Running / Completed / Aborted /\nTruncated). `parent_run_id` is null for standalone procedures.",
         "properties": {
+          "consecutive_unconverged_iterations": {
+            "default": 0,
+            "title": "Consecutive Unconverged Iterations",
+            "type": "integer"
+          },
           "current_iteration_index": {
             "anyOf": [
               {
@@ -9162,6 +9167,17 @@
             "maxLength": 50,
             "title": "Kind",
             "type": "string"
+          },
+          "max_consecutive_unconverged_iterations": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Consecutive Unconverged Iterations"
           },
           "name": {
             "maxLength": 200,
@@ -11376,6 +11392,19 @@
             "title": "Kind",
             "type": "string"
           },
+          "max_consecutive_unconverged_iterations": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional 'patience' cap: max consecutive unconverged iterations before start_iteration refuses the next one (409). Resets on a converged iteration. None = no cap.",
+            "title": "Max Consecutive Unconverged Iterations"
+          },
           "name": {
             "description": "Operator-readable display name for the procedure. Mirrors register_procedure's name field exactly.",
             "maxLength": 200,
@@ -11457,6 +11486,19 @@
             "minLength": 1,
             "title": "Kind",
             "type": "string"
+          },
+          "max_consecutive_unconverged_iterations": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional 'patience' cap for an iterative Procedure: the max number of consecutive iterations that may end NOT converged before start_iteration refuses the next one (409). The streak resets on a converged iteration. None = no cap. Never auto-aborts; the operator completes or aborts when blocked.",
+            "title": "Max Consecutive Unconverged Iterations"
           },
           "name": {
             "description": "Operator-readable display name for the procedure (for example '2-BM rotation-axis alignment 2026-05-15', 'Vessel-A bakeout').",

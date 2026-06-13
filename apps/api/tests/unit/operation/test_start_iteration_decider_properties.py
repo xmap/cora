@@ -24,6 +24,7 @@ from hypothesis import strategies as st
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureCannotStartIterationError,
+    ProcedureIterationLimitReachedError,
     ProcedureIterationStarted,
     ProcedureName,
     ProcedureNotFoundError,
@@ -53,6 +54,8 @@ def _procedure(
     status: ProcedureStatus = ProcedureStatus.RUNNING,
     iteration_count: int = 0,
     current_iteration_index: int | None = None,
+    consecutive_unconverged_iterations: int = 0,
+    max_consecutive_unconverged_iterations: int | None = None,
 ) -> Procedure:
     return Procedure(
         id=procedure_id,
@@ -63,6 +66,8 @@ def _procedure(
         status=status,
         iteration_count=iteration_count,
         current_iteration_index=current_iteration_index,
+        consecutive_unconverged_iterations=consecutive_unconverged_iterations,
+        max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
     )
 
 
@@ -163,6 +168,35 @@ def test_start_iteration_non_successor_index_always_raises(
         start_iteration.decide(
             state=state,
             command=StartProcedureIteration(procedure_id=procedure_id, iteration_index=index),
+            now=now,
+        )
+
+
+@pytest.mark.unit
+@given(
+    procedure_id=st.uuids(),
+    cap=st.integers(min_value=1, max_value=100),
+    over=st.integers(min_value=0, max_value=50),
+    now=aware_datetimes(),
+)
+def test_start_iteration_at_or_over_patience_cap_always_limits(
+    procedure_id: UUID, cap: int, over: int, now: datetime
+) -> None:
+    # Running, nothing open, valid next index, but the consecutive
+    # unconverged streak has reached (or exceeded) the cap -> the loop
+    # gives up regardless of how far over budget it is.
+    streak = cap + over
+    state = _procedure(
+        procedure_id,
+        iteration_count=streak,
+        current_iteration_index=None,
+        consecutive_unconverged_iterations=streak,
+        max_consecutive_unconverged_iterations=cap,
+    )
+    with pytest.raises(ProcedureIterationLimitReachedError):
+        start_iteration.decide(
+            state=state,
+            command=StartProcedureIteration(procedure_id=procedure_id, iteration_index=streak + 1),
             now=now,
         )
 

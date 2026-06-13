@@ -11,6 +11,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureAborted,
     ProcedureActivitiesLogbookOpened,
     ProcedureCompleted,
+    ProcedureEvent,
     ProcedureIterationEnded,
     ProcedureIterationStarted,
     ProcedureName,
@@ -785,3 +786,178 @@ def test_evolve_iteration_ended_on_empty_state_raises() -> None:
                 occurred_at=_NOW,
             ),
         )
+
+
+# --- patience cap: max_consecutive_unconverged_iterations + streak fold ---
+
+
+def _ie(pid: UUID, index: int, converged: bool | None) -> ProcedureIterationEnded:
+    return ProcedureIterationEnded(
+        procedure_id=pid, iteration_index=index, converged=converged, reason=None, occurred_at=_NOW
+    )
+
+
+@pytest.mark.unit
+def test_genesis_reads_patience_cap_and_zero_streak() -> None:
+    pid = uuid4()
+    state = fold(
+        [
+            ProcedureRegistered(
+                procedure_id=pid,
+                name="center",
+                kind="center_alignment",
+                target_asset_ids=(),
+                parent_run_id=None,
+                occurred_at=_NOW,
+                max_consecutive_unconverged_iterations=3,
+            )
+        ]
+    )
+    assert state is not None
+    assert state.max_consecutive_unconverged_iterations == 3
+    assert state.consecutive_unconverged_iterations == 0
+
+
+@pytest.mark.unit
+def test_genesis_without_cap_defaults_to_none() -> None:
+    assert _defined().max_consecutive_unconverged_iterations is None
+    assert _defined().consecutive_unconverged_iterations == 0
+
+
+@pytest.mark.unit
+def test_iteration_ended_folds_consecutive_unconverged_streak() -> None:
+    pid = uuid4()
+    running = _running(procedure_id=pid)
+
+    def _open_then_end(prev: Procedure, index: int, converged: bool | None) -> Procedure:
+        opened = evolve(
+            prev,
+            ProcedureIterationStarted(procedure_id=pid, iteration_index=index, occurred_at=_NOW),
+        )
+        return evolve(opened, _ie(pid, index, converged))
+
+    s1 = _open_then_end(running, 1, False)
+    assert s1.consecutive_unconverged_iterations == 1
+    s2 = _open_then_end(s1, 2, None)  # None counts as a miss
+    assert s2.consecutive_unconverged_iterations == 2
+    s3 = _open_then_end(s2, 3, True)  # a win resets
+    assert s3.consecutive_unconverged_iterations == 0
+    s4 = _open_then_end(s3, 4, False)
+    assert s4.consecutive_unconverged_iterations == 1
+
+
+@pytest.mark.unit
+def test_transition_arms_preserve_cap_and_streak() -> None:
+    pid = uuid4()
+    state = fold(
+        [
+            ProcedureRegistered(
+                procedure_id=pid,
+                name="center",
+                kind="center_alignment",
+                target_asset_ids=(),
+                parent_run_id=None,
+                occurred_at=_NOW,
+                max_consecutive_unconverged_iterations=2,
+            ),
+            ProcedureStarted(procedure_id=pid, occurred_at=_NOW),
+            ProcedureIterationStarted(procedure_id=pid, iteration_index=1, occurred_at=_NOW),
+            _ie(pid, 1, False),
+        ]
+    )
+    assert state is not None
+    assert state.consecutive_unconverged_iterations == 1
+    aborted = evolve(state, ProcedureAborted(procedure_id=pid, reason="x", occurred_at=_NOW))
+    assert aborted.max_consecutive_unconverged_iterations == 2
+    assert aborted.consecutive_unconverged_iterations == 1
+
+
+# --- carry-forward guard: the evolver's "critical invariant" pinned per arm ---
+
+
+def _rich_running_state(pid: UUID) -> Procedure:
+    """A mid-flight Running Procedure with EVERY additive field non-default:
+    bound Capability + Recipe, an open iteration, a non-zero count, and a
+    non-zero unconverged streak under a cap. Used to prove each
+    carry-forward arm preserves every additive field."""
+    capability_id, recipe_id = uuid4(), uuid4()
+    state = fold(
+        [
+            ProcedureRegistered(
+                procedure_id=pid,
+                name="center",
+                kind="center_alignment",
+                target_asset_ids=(),
+                parent_run_id=None,
+                occurred_at=_NOW,
+                capability_id=capability_id,
+                recipe_id=recipe_id,
+                max_consecutive_unconverged_iterations=3,
+            ),
+            ProcedureStarted(procedure_id=pid, occurred_at=_NOW),
+            ProcedureActivitiesLogbookOpened(
+                procedure_id=pid,
+                logbook_id=uuid4(),
+                kind="steps",
+                schema=STEPS_LOGBOOK_SCHEMA,
+                occurred_at=_NOW,
+            ),
+            ProcedureIterationStarted(procedure_id=pid, iteration_index=1, occurred_at=_NOW),
+            _ie(pid, 1, False),  # streak -> 1
+            ProcedureIterationStarted(procedure_id=pid, iteration_index=2, occurred_at=_NOW),
+        ]
+    )
+    assert state is not None
+    # Precondition: every additive field is non-default before the arm runs.
+    assert state.capability_id is not None
+    assert state.recipe_id is not None
+    assert state.activity_logbook_id is not None
+    assert state.current_iteration_index == 2
+    assert state.iteration_count == 2
+    assert state.consecutive_unconverged_iterations == 1
+    assert state.max_consecutive_unconverged_iterations == 3
+    return state
+
+
+def _carry_forward_event(arm: str, pid: UUID) -> ProcedureEvent:
+    """Build one non-iteration carry-forward event by arm name."""
+    if arm == "started":
+        return ProcedureStarted(procedure_id=pid, occurred_at=_NOW)
+    if arm == "completed":
+        return ProcedureCompleted(procedure_id=pid, occurred_at=_NOW)
+    if arm == "aborted":
+        return ProcedureAborted(procedure_id=pid, reason="x", occurred_at=_NOW)
+    if arm == "truncated":
+        return ProcedureTruncated(
+            procedure_id=pid, reason="x", interrupted_at=None, occurred_at=_NOW
+        )
+    return ProcedureActivitiesLogbookOpened(
+        procedure_id=pid,
+        logbook_id=uuid4(),
+        kind="steps",
+        schema=STEPS_LOGBOOK_SCHEMA,
+        occurred_at=_NOW,
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("arm", ["started", "completed", "aborted", "truncated", "logbook_opened"])
+def test_carry_forward_arms_preserve_every_additive_field(arm: str) -> None:
+    """Each non-iteration arm carries ALL additive fields through unchanged.
+
+    Pins the evolver's "critical invariant" across every arm (not just
+    Aborted), so dropping a field from any arm fails loudly. The iteration
+    arms mutate the iteration fields by design and are covered separately.
+    """
+    pid = uuid4()
+    prior = _rich_running_state(pid)
+    result = evolve(prior, _carry_forward_event(arm, pid))
+    assert result.capability_id == prior.capability_id
+    assert result.recipe_id == prior.recipe_id
+    assert result.current_iteration_index == prior.current_iteration_index
+    assert result.iteration_count == prior.iteration_count
+    assert result.consecutive_unconverged_iterations == prior.consecutive_unconverged_iterations
+    assert (
+        result.max_consecutive_unconverged_iterations
+        == prior.max_consecutive_unconverged_iterations
+    )

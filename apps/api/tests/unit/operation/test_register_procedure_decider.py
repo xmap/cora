@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.operation.aggregates.procedure import (
+    InvalidProcedureIterationCapError,
     InvalidProcedureKindError,
     InvalidProcedureNameError,
     Procedure,
@@ -128,6 +129,44 @@ def test_decide_rejects_existing_state() -> None:
             new_id=uuid4(),
         )
     assert exc_info.value.procedure_id == existing.id
+
+
+@pytest.mark.unit
+def test_decide_records_patience_cap_on_event() -> None:
+    events = register_procedure.decide(
+        state=None,
+        command=RegisterProcedure(
+            name="X", kind="center_alignment", max_consecutive_unconverged_iterations=5
+        ),
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert events[0].max_consecutive_unconverged_iterations == 5
+
+
+@pytest.mark.unit
+def test_decide_defaults_patience_cap_to_none() -> None:
+    events = register_procedure.decide(
+        state=None,
+        command=RegisterProcedure(name="X", kind="bakeout"),
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert events[0].max_consecutive_unconverged_iterations is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("bad_cap", [0, -1, -5])
+def test_decide_rejects_patience_cap_below_one(bad_cap: int) -> None:
+    with pytest.raises(InvalidProcedureIterationCapError):
+        register_procedure.decide(
+            state=None,
+            command=RegisterProcedure(
+                name="X", kind="bakeout", max_consecutive_unconverged_iterations=bad_cap
+            ),
+            now=_NOW,
+            new_id=uuid4(),
+        )
 
 
 @pytest.mark.unit

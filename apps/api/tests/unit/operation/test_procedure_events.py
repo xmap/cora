@@ -86,6 +86,9 @@ def test_to_payload_serializes_procedure_registered_to_primitives() -> None:
         # the denorm `capability_id`; the legacy `register_procedure`
         # slice leaves both None.
         "recipe_id": None,
+        # Patience cap (default None). Legacy streams omit the key and
+        # fold via `.get("max_consecutive_unconverged_iterations")`.
+        "max_consecutive_unconverged_iterations": None,
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -546,6 +549,37 @@ def test_to_payload_bindings_field_is_dict_after_canonical_json_hoist() -> None:
     assert payload["bindings"] == {"alpha": 1.0, "beta": 2.0}
     rebuilt = from_stored(_stored("RecipeExpansionRecorded", payload))
     assert rebuilt.bindings == event.bindings  # type: ignore[union-attr]
+
+
+@pytest.mark.unit
+def test_procedure_registered_round_trips_with_patience_cap() -> None:
+    event = ProcedureRegistered(
+        procedure_id=uuid4(),
+        name="2-BM center alignment",
+        kind="center_alignment",
+        target_asset_ids=(),
+        parent_run_id=None,
+        occurred_at=_NOW,
+        max_consecutive_unconverged_iterations=5,
+    )
+    payload = to_payload(event)
+    assert payload["max_consecutive_unconverged_iterations"] == 5
+    assert from_stored(_stored("ProcedureRegistered", payload)) == event
+
+
+@pytest.mark.unit
+def test_from_stored_folds_legacy_procedure_registered_without_cap_key_to_none() -> None:
+    event = ProcedureRegistered(
+        procedure_id=uuid4(),
+        name="legacy",
+        kind="bakeout",
+        target_asset_ids=(),
+        parent_run_id=None,
+        occurred_at=_NOW,
+    )
+    payload = to_payload(event)
+    del payload["max_consecutive_unconverged_iterations"]  # pre-cap stream
+    assert from_stored(_stored("ProcedureRegistered", payload)) == event
 
 
 @pytest.mark.unit

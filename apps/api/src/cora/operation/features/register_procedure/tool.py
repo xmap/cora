@@ -87,6 +87,17 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 ),
             ),
         ] = None,
+        max_consecutive_unconverged_iterations: Annotated[
+            int | None,
+            Field(
+                ge=1,
+                description=(
+                    "Optional 'patience' cap: max consecutive unconverged "
+                    "iterations before start_iteration refuses the next one "
+                    "(409). Resets on a converged iteration. None = no cap."
+                ),
+            ),
+        ] = None,
     ) -> RegisterProcedureOutput:
         handler = get_handler()
         procedure_id = await handler(
@@ -96,6 +107,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 target_asset_ids=frozenset(target_asset_ids or []),
                 parent_run_id=parent_run_id,
                 capability_id=capability_id,
+                max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

@@ -799,6 +799,61 @@ class ProcedureCannotEndIterationError(Exception):
         self.iteration_index = iteration_index
 
 
+class ProcedureIterationLimitReachedError(Exception):
+    """The convergence loop hit its consecutive-unconverged cap; refuse to start.
+
+    A Procedure may declare `max_consecutive_unconverged_iterations` (the
+    "patience" cap, from ML early-stopping vocabulary): the maximum number
+    of consecutive iterations that may end NOT converged before the loop
+    gives up. `start_iteration` rejects the next iteration once
+    `consecutive_unconverged_iterations >= max_consecutive_unconverged_iterations`.
+    The streak resets to 0 whenever an iteration ends `converged=True`, so
+    a recovering loop keeps going; an iteration ending `converged=False`
+    OR `converged=None` (no verdict) counts toward the cap.
+
+    Distinct from the sequencing guard `ProcedureCannotStartIterationError`:
+    this is an expected, operator-actionable budget outcome (stop and
+    abort / complete the Procedure), not a malformed request. The cap is
+    declaration-only and does NOT auto-abort the Procedure (mirrors
+    `Agent.budget`: a cap is an attribute, not an FSM state). Mapped to
+    HTTP 409.
+    """
+
+    def __init__(
+        self,
+        procedure_id: UUID,
+        *,
+        consecutive_unconverged_iterations: int,
+        max_consecutive_unconverged_iterations: int,
+    ) -> None:
+        super().__init__(
+            f"Procedure {procedure_id} cannot start another iteration: "
+            f"{consecutive_unconverged_iterations} consecutive unconverged "
+            f"iterations reached the cap of {max_consecutive_unconverged_iterations}. "
+            f"Resolve by completing or aborting the Procedure (a converged "
+            f"iteration would reset the streak)."
+        )
+        self.procedure_id = procedure_id
+        self.consecutive_unconverged_iterations = consecutive_unconverged_iterations
+        self.max_consecutive_unconverged_iterations = max_consecutive_unconverged_iterations
+
+
+class InvalidProcedureIterationCapError(ValueError):
+    """The supplied max_consecutive_unconverged_iterations cap is below 1.
+
+    The patience cap is optional (None = no cap); when present it must be
+    >= 1 (a cap of 0 would forbid even the first iteration). Validated at
+    the API boundary via Pydantic `ge=1` AND defensively at the
+    register deciders. Mapped to HTTP 400.
+    """
+
+    def __init__(self, value: int) -> None:
+        super().__init__(
+            f"max_consecutive_unconverged_iterations must be >= 1 when set (got: {value})"
+        )
+        self.value = value
+
+
 class InvalidProcedureTruncateReasonError(ValueError):
     """The supplied truncate reason is empty, whitespace-only, or too long.
 
@@ -1093,3 +1148,20 @@ class Procedure:
     `Run.adjustment_count`. Surfaced as the `iteration_count` projection
     column so "how many iterations did this alignment take" is a plain
     SQL question. Additive-state default 0."""
+    consecutive_unconverged_iterations: int = field(default=0)
+    """How many iterations in a row have ended NOT converged.
+
+    Folded by `ProcedureIterationEnded`: +1 when `converged` is not True
+    (False OR None), reset to 0 when `converged` is True. This is the
+    running "patience" streak the `start_iteration` decider checks against
+    `max_consecutive_unconverged_iterations`. Additive-state default 0."""
+    max_consecutive_unconverged_iterations: int | None = field(default=None)
+    """Optional cap on `consecutive_unconverged_iterations`; None = no cap.
+
+    The "patience" limit (ML early-stopping vocabulary): once the streak
+    reaches this, `start_iteration` refuses the next iteration with
+    `ProcedureIterationLimitReachedError` (the operator then aborts or
+    completes; no auto-abort, mirroring `Agent.budget`). Operator-supplied
+    at register time (>= 1 when set); declaration-only, never an FSM
+    state. Additive-state default None: legacy + uncapped Procedures fold
+    cleanly."""

@@ -75,6 +75,7 @@ async def test_register_procedure_persists_event_to_postgres_with_target_assets(
         "parent_run_id": None,
         "capability_id": None,
         "recipe_id": None,
+        "max_consecutive_unconverged_iterations": None,
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.correlation_id == _CORRELATION_ID

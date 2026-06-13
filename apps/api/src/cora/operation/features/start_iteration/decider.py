@@ -12,6 +12,12 @@ Invariants:
     iterations do not nest), OR iteration_index is not the strict
     successor of iteration_count (operator-supplied index; monotonic,
     no gaps or duplicates) -> ProcedureCannotStartIterationError
+  - the consecutive-unconverged "patience" streak has reached the
+    declared cap (max_consecutive_unconverged_iterations)
+    -> ProcedureIterationLimitReachedError (the loop gives up). Checked
+    AFTER the sequencing guards so a malformed request still gets the
+    sequencing error; a well-formed next-iteration request that exhausts
+    the budget gets the limit error. No auto-abort (mirrors Agent.budget).
 """
 
 from datetime import datetime
@@ -19,6 +25,7 @@ from datetime import datetime
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureCannotStartIterationError,
+    ProcedureIterationLimitReachedError,
     ProcedureIterationStarted,
     ProcedureNotFoundError,
     ProcedureStatus,
@@ -47,6 +54,13 @@ def decide(
             current_iteration_index=state.current_iteration_index,
             expected_iteration_index=expected,
             iteration_index=command.iteration_index,
+        )
+    cap = state.max_consecutive_unconverged_iterations
+    if cap is not None and state.consecutive_unconverged_iterations >= cap:
+        raise ProcedureIterationLimitReachedError(
+            state.id,
+            consecutive_unconverged_iterations=state.consecutive_unconverged_iterations,
+            max_consecutive_unconverged_iterations=cap,
         )
     return [
         ProcedureIterationStarted(

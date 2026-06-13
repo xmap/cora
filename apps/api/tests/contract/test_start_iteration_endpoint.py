@@ -103,3 +103,74 @@ def test_post_start_iteration_returns_422_for_malformed_id() -> None:
             "/procedures/not-a-uuid/iterations/start", json={"iteration_index": 1}
         )
     assert response.status_code == 422
+
+
+def _register_started_with_cap(client: TestClient, cap: int) -> UUID:
+    body: dict[str, Any] = {
+        "name": "2-BM center alignment",
+        "kind": "center_alignment",
+        "max_consecutive_unconverged_iterations": cap,
+    }
+    pid = UUID(client.post("/procedures", json=body).json()["procedure_id"])
+    assert client.post(f"/procedures/{pid}/start").status_code == 204
+    return pid
+
+
+def _run_unconverged_iteration(client: TestClient, pid: UUID, index: int) -> None:
+    started = client.post(f"/procedures/{pid}/iterations/start", json={"iteration_index": index})
+    assert started.status_code == 204
+    ended = client.post(
+        f"/procedures/{pid}/iterations/end",
+        json={"iteration_index": index, "converged": False},
+    )
+    assert ended.status_code == 204
+
+
+@pytest.mark.contract
+def test_register_rejects_zero_patience_cap_with_422() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/procedures",
+            json={
+                "name": "X",
+                "kind": "center_alignment",
+                "max_consecutive_unconverged_iterations": 0,
+            },
+        )
+    assert response.status_code == 422  # Pydantic ge=1
+
+
+@pytest.mark.contract
+def test_start_iteration_returns_409_when_patience_cap_reached() -> None:
+    with TestClient(create_app()) as client:
+        pid = _register_started_with_cap(client, cap=2)
+        _run_unconverged_iteration(client, pid, 1)
+        _run_unconverged_iteration(client, pid, 2)
+        # Streak is now 2 == cap: the next start gives up.
+        blocked = client.post(f"/procedures/{pid}/iterations/start", json={"iteration_index": 3})
+    assert blocked.status_code == 409
+
+
+@pytest.mark.contract
+def test_converged_iteration_resets_patience_streak() -> None:
+    with TestClient(create_app()) as client:
+        pid = _register_started_with_cap(client, cap=1)
+        # A converged iteration does not count toward the cap.
+        client.post(f"/procedures/{pid}/iterations/start", json={"iteration_index": 1})
+        client.post(
+            f"/procedures/{pid}/iterations/end",
+            json={"iteration_index": 1, "converged": True},
+        )
+        # Still within budget after a win: the next iteration starts.
+        ok = client.post(f"/procedures/{pid}/iterations/start", json={"iteration_index": 2})
+        # End it unconverged -> streak 1 == cap -> the following start is blocked.
+        client.post(
+            f"/procedures/{pid}/iterations/end",
+            json={"iteration_index": 2, "converged": False},
+        )
+        blocked = client.post(f"/procedures/{pid}/iterations/start", json={"iteration_index": 3})
+        body = client.get(f"/procedures/{pid}").json()
+    assert ok.status_code == 204
+    assert blocked.status_code == 409
+    assert body["max_consecutive_unconverged_iterations"] == 1
+    assert body["consecutive_unconverged_iterations"] == 1

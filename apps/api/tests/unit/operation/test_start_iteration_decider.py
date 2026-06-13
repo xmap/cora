@@ -14,6 +14,7 @@ import pytest
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureCannotStartIterationError,
+    ProcedureIterationLimitReachedError,
     ProcedureIterationStarted,
     ProcedureName,
     ProcedureNotFoundError,
@@ -31,6 +32,8 @@ def _procedure(
     status: ProcedureStatus = ProcedureStatus.RUNNING,
     iteration_count: int = 0,
     current_iteration_index: int | None = None,
+    consecutive_unconverged_iterations: int = 0,
+    max_consecutive_unconverged_iterations: int | None = None,
 ) -> Procedure:
     return Procedure(
         id=procedure_id or uuid4(),
@@ -41,6 +44,8 @@ def _procedure(
         parent_run_id=None,
         iteration_count=iteration_count,
         current_iteration_index=current_iteration_index,
+        consecutive_unconverged_iterations=consecutive_unconverged_iterations,
+        max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
     )
 
 
@@ -128,6 +133,76 @@ def test_decide_rejects_non_sequential_index(bad_index: int) -> None:
             now=_NOW,
         )
     assert exc.value.expected_iteration_index == 2
+
+
+@pytest.mark.unit
+def test_decide_rejects_when_patience_cap_reached() -> None:
+    # cap=2, streak=2, otherwise-valid next index -> limit reached.
+    proc = _procedure(
+        iteration_count=2,
+        current_iteration_index=None,
+        consecutive_unconverged_iterations=2,
+        max_consecutive_unconverged_iterations=2,
+    )
+    with pytest.raises(ProcedureIterationLimitReachedError) as exc:
+        start_iteration.decide(
+            state=proc,
+            command=StartProcedureIteration(procedure_id=proc.id, iteration_index=3),
+            now=_NOW,
+        )
+    assert exc.value.consecutive_unconverged_iterations == 2
+    assert exc.value.max_consecutive_unconverged_iterations == 2
+
+
+@pytest.mark.unit
+def test_decide_allows_iteration_below_patience_cap() -> None:
+    # cap=3, streak=2 -> still under budget; emits.
+    proc = _procedure(
+        iteration_count=2,
+        current_iteration_index=None,
+        consecutive_unconverged_iterations=2,
+        max_consecutive_unconverged_iterations=3,
+    )
+    events = start_iteration.decide(
+        state=proc,
+        command=StartProcedureIteration(procedure_id=proc.id, iteration_index=3),
+        now=_NOW,
+    )
+    assert events[0].iteration_index == 3
+
+
+@pytest.mark.unit
+def test_decide_no_cap_never_limits() -> None:
+    # No cap (None): a large streak does not block.
+    proc = _procedure(
+        iteration_count=9,
+        current_iteration_index=None,
+        consecutive_unconverged_iterations=9,
+        max_consecutive_unconverged_iterations=None,
+    )
+    events = start_iteration.decide(
+        state=proc,
+        command=StartProcedureIteration(procedure_id=proc.id, iteration_index=10),
+        now=_NOW,
+    )
+    assert events[0].iteration_index == 10
+
+
+@pytest.mark.unit
+def test_decide_sequencing_guard_takes_precedence_over_cap() -> None:
+    # Non-Running with streak at cap: the sequencing guard fires first, not
+    # the limit error (a malformed request is not a budget outcome).
+    proc = _procedure(
+        status=ProcedureStatus.DEFINED,
+        consecutive_unconverged_iterations=2,
+        max_consecutive_unconverged_iterations=2,
+    )
+    with pytest.raises(ProcedureCannotStartIterationError):
+        start_iteration.decide(
+            state=proc,
+            command=StartProcedureIteration(procedure_id=proc.id, iteration_index=1),
+            now=_NOW,
+        )
 
 
 @pytest.mark.unit
