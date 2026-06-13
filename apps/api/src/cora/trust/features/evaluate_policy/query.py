@@ -21,9 +21,10 @@ from uuid import UUID
 
 @dataclass(frozen=True)
 class EvaluatePolicy:
-    """Evaluate a specific Policy against a (principal, command, conduit) tuple."""
+    """Evaluate a Policy against a (principal, command, conduit, surface) tuple."""
 
     policy_id: UUID
     evaluated_principal_id: UUID
     evaluated_command_name: str
     evaluated_conduit_id: UUID
+    evaluated_surface_id: UUID

@@ -30,6 +30,7 @@ from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
 from cora.infrastructure.event_envelope import to_new_event
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.aggregates.policy.events import (
     PolicyDefined,
     event_type_name,
@@ -112,6 +113,9 @@ def _seed_policy_in_store(
         permitted_principal_ids=tuple(permitted_principal_ids),
         permitted_commands=tuple(permitted_commands),
         occurred_at=datetime.now(tz=UTC),
+        # Bind the seeded HTTP Surface so the gated HTTP calls below
+        # (which arrive on SYSTEM_HTTP_SURFACE_ID) strict-match.
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     new_event = to_new_event(
         event_type=event_type_name(event),

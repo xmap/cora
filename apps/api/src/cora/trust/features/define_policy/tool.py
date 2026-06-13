@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
-from cora.infrastructure.routing import NIL_SENTINEL_ID, get_mcp_surface_id
+from cora.infrastructure.routing import get_mcp_surface_id
 from cora.trust.aggregates.policy import POLICY_NAME_MAX_LENGTH
 from cora.trust.features.define_policy.command import DefinePolicy
 from cora.trust.features.define_policy.handler import IdempotentHandler
@@ -67,10 +67,12 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             UUID,
             Field(
                 description=(
-                    "UUID of the Surface this policy governs. Defaults to nil for V1-shape callers."
+                    "UUID of the Surface this policy governs. Required: every policy "
+                    "binds a concrete Surface seeded by the deployment; the nil "
+                    "sentinel is rejected (InvalidPolicySurfaceError)."
                 ),
             ),
-        ] = NIL_SENTINEL_ID,
+        ],
     ) -> DefinePolicyOutput:
         handler = get_handler()
         policy_id = await handler(

@@ -26,6 +26,7 @@ from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
 from cora.infrastructure.event_envelope import to_new_event
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.aggregates.policy.events import (
     PolicyDefined,
     event_type_name,
@@ -42,7 +43,10 @@ def _seed_policy(
     permitted_commands: frozenset[str],
 ) -> None:
     """Seed a single PolicyDefined event into the running app's
-    in-memory store. Same shape as the BOLA contract test's helper."""
+    in-memory store. Same shape as the BOLA contract test's helper.
+
+    Binds the HTTP Surface so REST commands (arriving on
+    SYSTEM_HTTP_SURFACE_ID) strict-match under `evaluate`."""
     event = PolicyDefined(
         policy_id=policy_id,
         name="Plan-wire-authz-test-policy",
@@ -50,6 +54,7 @@ def _seed_policy(
         permitted_principal_ids=(permitted_principal,),
         permitted_commands=tuple(permitted_commands),
         occurred_at=datetime.now(tz=UTC),
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     new_event = to_new_event(
         event_type=event_type_name(event),

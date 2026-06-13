@@ -1,15 +1,17 @@
 """Integration tests for `verify_bootstrap_seed_present`.
 
-Covers the three branches:
-  1. trust_policy_id == V2 → load V2 policy + all 3 Surfaces; assert
-     V2 binds to HTTP Surface (GR3 BC-7 binding check).
-  2. trust_policy_id == V1 → load V1 policy + log deprecation WARN.
-  3. Otherwise → no-op.
+Covers the two branches:
+  1. trust_policy_id == SYSTEM_BOOTSTRAP_POLICY_ID -> load the bootstrap
+     policy + all 3 Surfaces; assert the policy binds to the HTTP
+     Surface (GR3 BC-7 binding check).
+  2. Otherwise -> no-op.
 
-Also pins the failure paths: missing V2 stream / missing seeded
-Surface / V2 mis-bound to non-HTTP surface / missing V1 stream.
+Also pins the failure paths: missing bootstrap-policy stream / missing
+seeded Surface / policy mis-bound to a non-HTTP surface.
 
-Closes GR3 BC-6 (verifier had zero tests pre-this).
+The retired nil-surface bootstrap policy (...0001) is no longer a
+branch here: its evaluate-time wildcard fold was removed, so the
+verifier has a single canonical (surface-bound) behavior.
 """
 
 from dataclasses import replace
@@ -23,7 +25,6 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.kernel import Kernel
 from cora.trust._bootstrap import (
     SYSTEM_BOOTSTRAP_POLICY_ID,
-    SYSTEM_BOOTSTRAP_POLICY_V2_ID,
     verify_bootstrap_seed_present,
 )
 from tests.integration._helpers import build_postgres_deps
@@ -46,27 +47,11 @@ def _deps_with_trust_policy_id(db_pool: asyncpg.Pool, policy_id: object) -> Kern
 
 
 @pytest.mark.integration
-async def test_verify_passes_when_v2_policy_and_surfaces_all_seeded(
+async def test_verify_passes_when_bootstrap_policy_and_surfaces_all_seeded(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """Happy path: V2 + 3 Surfaces present (the test DB template has
-    them via the bootstrap seed migration)."""
-    deps = _deps_with_trust_policy_id(db_pool, SYSTEM_BOOTSTRAP_POLICY_V2_ID)
-    await verify_bootstrap_seed_present(deps)  # no exception
-
-
-@pytest.mark.integration
-async def test_verify_passes_when_v1_policy_seeded(
-    db_pool: asyncpg.Pool,
-) -> None:
-    """V1 path: V1 stream exists → verifier completes without exception.
-
-    A deprecation WARN is emitted via structlog (visible to operators
-    in production logs); we don't pin it here because structlog +
-    caplog + xdist capture interactions are fragile. The WARN's
-    presence is exercised manually + via the structlog event-name
-    constant; the load-bearing behavior is 'no boot failure on V1'.
-    """
+    """Happy path: bootstrap policy + 3 Surfaces present (the test DB
+    template has them via the bootstrap seed migration)."""
     deps = _deps_with_trust_policy_id(db_pool, SYSTEM_BOOTSTRAP_POLICY_ID)
     await verify_bootstrap_seed_present(deps)  # no exception
 
@@ -95,15 +80,15 @@ async def test_verify_noop_when_no_policy_id_configured(
 
 
 @pytest.mark.integration
-async def test_verify_raises_when_v2_policy_stream_missing(
+async def test_verify_raises_when_bootstrap_policy_stream_missing(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """V2 configured but the policy stream isn't seeded — fail-fast
-    with a runbook pointer."""
-    deps = _deps_with_trust_policy_id(db_pool, SYSTEM_BOOTSTRAP_POLICY_V2_ID)
+    """Bootstrap policy configured but the policy stream isn't seeded —
+    fail-fast with a runbook pointer."""
+    deps = _deps_with_trust_policy_id(db_pool, SYSTEM_BOOTSTRAP_POLICY_ID)
     with (
         patch("cora.trust._bootstrap.load_policy", return_value=None),
-        pytest.raises(RuntimeError, match="V2 bootstrap policy"),
+        pytest.raises(RuntimeError, match="bootstrap policy"),
     ):
         await verify_bootstrap_seed_present(deps)
 
@@ -112,9 +97,9 @@ async def test_verify_raises_when_v2_policy_stream_missing(
 async def test_verify_raises_when_seeded_surface_missing(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """V2 configured + V2 stream present but one of the 3 Surfaces is
-    missing: partial-fail mitigation."""
-    deps = _deps_with_trust_policy_id(db_pool, SYSTEM_BOOTSTRAP_POLICY_V2_ID)
+    """Bootstrap policy configured + stream present but one of the 3
+    Surfaces is missing: partial-fail mitigation."""
+    deps = _deps_with_trust_policy_id(db_pool, SYSTEM_BOOTSTRAP_POLICY_ID)
     with (
         patch("cora.trust._bootstrap.load_surface", return_value=None),
         pytest.raises(RuntimeError, match=r"seeded Surface .* is missing"),
@@ -123,22 +108,23 @@ async def test_verify_raises_when_seeded_surface_missing(
 
 
 @pytest.mark.integration
-async def test_verify_raises_when_v2_policy_misbound_to_non_http_surface(
+async def test_verify_raises_when_bootstrap_policy_misbound_to_non_http_surface(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """GR3 BC-7: V2 policy loaded but folded `surface_id !=
-    SYSTEM_HTTP_SURFACE_ID` (for example, post-seed mutation, or unauthorized
-    PolicyDefined appended to V2 stream). The verifier catches it
-    instead of silently denying every request post-Iter-C-2."""
+    """GR3 BC-7: bootstrap policy loaded but folded `surface_id !=
+    SYSTEM_HTTP_SURFACE_ID` (for example, post-seed mutation, or an
+    unauthorized PolicyDefined appended to the stream). The verifier
+    catches it instead of silently denying every request, since
+    evaluate strict-matches the surface."""
+    from uuid import UUID
+
     from cora.trust.aggregates.policy import PolicyName
     from cora.trust.aggregates.policy.state import Policy
 
-    deps = _deps_with_trust_policy_id(db_pool, SYSTEM_BOOTSTRAP_POLICY_V2_ID)
-    # Stub V2 policy to fold with a non-HTTP surface_id (corrupted).
-    from uuid import UUID
-
+    deps = _deps_with_trust_policy_id(db_pool, SYSTEM_BOOTSTRAP_POLICY_ID)
+    # Stub the policy to fold with a non-HTTP surface_id (corrupted).
     bogus_policy = Policy(
-        id=SYSTEM_BOOTSTRAP_POLICY_V2_ID,
+        id=SYSTEM_BOOTSTRAP_POLICY_ID,
         name=PolicyName("Tampered"),
         conduit_id=UUID(int=0),
         permitted_principal_ids=frozenset(),
@@ -148,19 +134,5 @@ async def test_verify_raises_when_v2_policy_misbound_to_non_http_surface(
     with (
         patch("cora.trust._bootstrap.load_policy", return_value=bogus_policy),
         pytest.raises(RuntimeError, match="folded with surface_id="),
-    ):
-        await verify_bootstrap_seed_present(deps)
-
-
-@pytest.mark.integration
-async def test_verify_raises_when_v1_policy_stream_missing(
-    db_pool: asyncpg.Pool,
-) -> None:
-    """V1 configured but the V1 stream is somehow missing (corrupted
-    DB / unrestored backup). Fail-fast with a runbook pointer."""
-    deps = _deps_with_trust_policy_id(db_pool, SYSTEM_BOOTSTRAP_POLICY_ID)
-    with (
-        patch("cora.trust._bootstrap.load_policy", return_value=None),
-        pytest.raises(RuntimeError, match="legacy V1 bootstrap policy"),
     ):
         await verify_bootstrap_seed_present(deps)

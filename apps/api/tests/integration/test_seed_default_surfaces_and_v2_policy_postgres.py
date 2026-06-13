@@ -17,7 +17,7 @@ import pytest
 
 from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
 from cora.trust._bootstrap import (
-    SYSTEM_BOOTSTRAP_POLICY_V2_ID,
+    SYSTEM_BOOTSTRAP_POLICY_ID,
     SYSTEM_HTTP_SURFACE_ID,
     SYSTEM_MCP_STDIO_SURFACE_ID,
     SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID,
@@ -44,12 +44,12 @@ async def test_v2_bootstrap_policy_stream_exists(db_pool: asyncpg.Pool) -> None:
         WHERE stream_type = 'Policy' AND stream_id = $1
         ORDER BY version
         """,
-        SYSTEM_BOOTSTRAP_POLICY_V2_ID,
+        SYSTEM_BOOTSTRAP_POLICY_ID,
     )
     assert len(rows) == 1
     assert rows[0]["event_type"] == "PolicyDefined"
     payload = _decode(rows[0]["payload"])
-    assert payload["policy_id"] == str(SYSTEM_BOOTSTRAP_POLICY_V2_ID)
+    assert payload["policy_id"] == str(SYSTEM_BOOTSTRAP_POLICY_ID)
     assert payload["name"] == "System Bootstrap Policy V2"
     assert payload["conduit_id"] == "00000000-0000-0000-0000-000000000000"
     assert payload["surface_id"] == str(SYSTEM_HTTP_SURFACE_ID)
@@ -91,9 +91,9 @@ async def test_v2_policy_folds_with_surface_binding(db_pool: asyncpg.Pool) -> No
     """`load_policy` returns a Policy folded with `surface_id =
     SYSTEM_HTTP_SURFACE_ID` (the post-Iter-B Policy state shape)."""
     event_store = PostgresEventStore(db_pool)
-    policy = await load_policy(event_store, SYSTEM_BOOTSTRAP_POLICY_V2_ID)
+    policy = await load_policy(event_store, SYSTEM_BOOTSTRAP_POLICY_ID)
     assert policy is not None
-    assert policy.id == SYSTEM_BOOTSTRAP_POLICY_V2_ID
+    assert policy.id == SYSTEM_BOOTSTRAP_POLICY_ID
     assert policy.surface_id == SYSTEM_HTTP_SURFACE_ID
     assert policy.conduit_id == UUID(int=0)
     assert policy.permitted_commands == frozenset({"DefinePolicy", "RegisterActor"})
@@ -128,7 +128,7 @@ async def test_seed_migration_is_idempotent(db_pool: asyncpg.Pool) -> None:
     )
     v2_count_before = await db_pool.fetchval(
         "SELECT count(*) FROM events WHERE stream_type = 'Policy' AND stream_id = $1",
-        SYSTEM_BOOTSTRAP_POLICY_V2_ID,
+        SYSTEM_BOOTSTRAP_POLICY_ID,
     )
 
     async with db_pool.acquire() as conn:
@@ -139,7 +139,7 @@ async def test_seed_migration_is_idempotent(db_pool: asyncpg.Pool) -> None:
     )
     v2_count_after = await db_pool.fetchval(
         "SELECT count(*) FROM events WHERE stream_type = 'Policy' AND stream_id = $1",
-        SYSTEM_BOOTSTRAP_POLICY_V2_ID,
+        SYSTEM_BOOTSTRAP_POLICY_ID,
     )
 
     assert surface_count_before == surface_count_after

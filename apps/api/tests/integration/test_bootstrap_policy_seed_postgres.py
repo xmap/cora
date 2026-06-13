@@ -1,20 +1,28 @@
 """Integration tests for the System Bootstrap Policy seed.
 
 Covers the bootstrap authz-gap-fill: the seed migration
-`20260519000000_seed_bootstrap_policy.sql` ships a Policy aggregate
-with the well-known UUID `SYSTEM_BOOTSTRAP_POLICY_ID` that permits
-`{DefinePolicy, RegisterActor}` for `SYSTEM_PRINCIPAL_ID` on the nil
-conduit. Production deployments set `TRUST_POLICY_ID` to this UUID
-to collapse the 3-step bootstrap dance into a 1-step env-var set.
+`20260519200000_seed_default_surfaces_and_v2_policy.sql` ships a Policy
+aggregate with the well-known UUID `SYSTEM_BOOTSTRAP_POLICY_ID` that
+permits `{DefinePolicy, RegisterActor}` for `SYSTEM_PRINCIPAL_ID` on the
+nil conduit, bound to the seeded HTTP Surface. Production deployments
+set `TRUST_POLICY_ID` to this UUID to collapse the 3-step bootstrap
+dance into a 1-step env-var set.
 
-Design lock: `memory/project_bootstrap_policy_design.md`.
+The bootstrap policy strict-matches its bound Surface: every
+authorize / evaluate call against it must present
+`surface_id=SYSTEM_HTTP_SURFACE_ID` (the seeded HTTP Surface) to Allow.
+The retired nil-surface policy (...0001) stays in the event log forever
+(forward-only migrations) but is operationally inert: its nil-as-wildcard
+evaluate fold was removed, so it strict-denies every real-surface call.
+
+Design lock: `memory/project_bootstrap_policy_design.md` +
+`memory/project_conduit_injection_design.md`.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
 import json
 from datetime import UTC, datetime
-from pathlib import Path
 from uuid import UUID
 
 import asyncpg
@@ -24,7 +32,7 @@ from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import Allow, Deny
 from cora.infrastructure.ports.event_store import ConcurrencyError
-from cora.infrastructure.routing import SYSTEM_PRINCIPAL_ID
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID, SYSTEM_PRINCIPAL_ID
 from cora.trust._bootstrap import SYSTEM_BOOTSTRAP_POLICY_ID
 from cora.trust.aggregates.policy.events import (
     PolicyDefined,
@@ -47,8 +55,9 @@ async def test_bootstrap_policy_stream_exists_with_expected_payload(
     db_pool: asyncpg.Pool,
 ) -> None:
     """Raw-SQL check: the migration appended one PolicyDefined row with
-    the locked payload shape (sorted permitted_principal_ids + sorted
-    permitted_commands per `to_payload`)."""
+    the locked payload shape (bound to the HTTP Surface; sorted
+    permitted_principal_ids + sorted permitted_commands per
+    `to_payload`)."""
     rows = await db_pool.fetch(
         """
         SELECT event_type, payload, metadata, principal_id, version
@@ -71,11 +80,12 @@ async def test_bootstrap_policy_stream_exists_with_expected_payload(
     payload = json.loads(payload_raw) if isinstance(payload_raw, str) else payload_raw
     assert payload == {
         "policy_id": str(SYSTEM_BOOTSTRAP_POLICY_ID),
-        "name": "System Bootstrap Policy",
+        "name": "System Bootstrap Policy V2",
         "conduit_id": str(_NIL_CONDUIT),
+        "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
         "permitted_principal_ids": [str(SYSTEM_PRINCIPAL_ID)],
         "permitted_commands": ["DefinePolicy", "RegisterActor"],
-        "occurred_at": "2026-05-18T00:00:00+00:00",
+        "occurred_at": "2026-05-19T00:00:00+00:00",
     }
 
     metadata_raw = row["metadata"]
@@ -89,23 +99,26 @@ async def test_bootstrap_policy_folds_and_evaluates_correctly(
 ) -> None:
     """The seeded event must fold cleanly via `load_policy` (no
     `from_stored` errors) and `evaluate` must return Allow / Deny
-    consistently with the locked permitted-set."""
+    consistently with the locked permitted-set. Allow requires the
+    bound HTTP Surface; a mismatched surface strict-denies."""
     event_store = PostgresEventStore(db_pool)
     policy = await load_policy(event_store, SYSTEM_BOOTSTRAP_POLICY_ID)
 
     assert policy is not None
     assert policy.id == SYSTEM_BOOTSTRAP_POLICY_ID
     assert policy.conduit_id == _NIL_CONDUIT
+    assert policy.surface_id == SYSTEM_HTTP_SURFACE_ID
     assert policy.permitted_principal_ids == frozenset({SYSTEM_PRINCIPAL_ID})
     assert policy.permitted_commands == frozenset({"DefinePolicy", "RegisterActor"})
 
-    # Allow on the two permitted commands.
+    # Allow on the two permitted commands (with the bound HTTP surface).
     for command in ("DefinePolicy", "RegisterActor"):
         result = evaluate(
             policy,
             principal_id=SYSTEM_PRINCIPAL_ID,
             command_name=command,
             conduit_id=_NIL_CONDUIT,
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         )
         assert isinstance(result, Allow), f"expected Allow for {command}, got {result!r}"
 
@@ -115,6 +128,7 @@ async def test_bootstrap_policy_folds_and_evaluates_correctly(
         principal_id=SYSTEM_PRINCIPAL_ID,
         command_name="DefineZone",
         conduit_id=_NIL_CONDUIT,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     assert isinstance(deny_command, Deny)
 
@@ -125,6 +139,7 @@ async def test_bootstrap_policy_folds_and_evaluates_correctly(
         principal_id=other_principal,
         command_name="DefinePolicy",
         conduit_id=_NIL_CONDUIT,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     assert isinstance(deny_principal, Deny)
 
@@ -135,8 +150,21 @@ async def test_bootstrap_policy_folds_and_evaluates_correctly(
         principal_id=SYSTEM_PRINCIPAL_ID,
         command_name="DefinePolicy",
         conduit_id=other_conduit,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     assert isinstance(deny_conduit, Deny)
+
+    # Deny on a mismatched surface (strict surface matching).
+    other_surface = UUID("01900000-0000-7000-8000-00000000face")
+    deny_surface = evaluate(
+        policy,
+        principal_id=SYSTEM_PRINCIPAL_ID,
+        command_name="DefinePolicy",
+        conduit_id=_NIL_CONDUIT,
+        surface_id=other_surface,
+    )
+    assert isinstance(deny_surface, Deny)
+    assert "surface" in deny_surface.reason.lower()
 
 
 @pytest.mark.integration
@@ -145,18 +173,50 @@ async def test_trust_authorize_against_bootstrap_policy_permits_define_policy(
 ) -> None:
     """End-to-end: TrustAuthorize wired against the bootstrap policy
     permits SYSTEM_PRINCIPAL_ID to call DefinePolicy through the real
-    handler. This proves the 1-step bootstrap (env var only) works."""
+    handler. This proves the 1-step bootstrap (env var only) works.
+    The call must present the bound HTTP Surface to Allow."""
     event_store = PostgresEventStore(db_pool)
     authorize = TrustAuthorize(event_store, policy_id=SYSTEM_BOOTSTRAP_POLICY_ID)
 
-    # The two permitted commands authorize Allow.
+    # The two permitted commands authorize Allow (on the bound surface).
     for command in ("DefinePolicy", "RegisterActor"):
-        result = await authorize.authorize(SYSTEM_PRINCIPAL_ID, command, _NIL_CONDUIT)
+        result = await authorize.authorize(
+            SYSTEM_PRINCIPAL_ID,
+            command,
+            _NIL_CONDUIT,
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
+        )
         assert isinstance(result, Allow), f"expected Allow for {command}, got {result!r}"
 
     # An unpermitted command Denies (this is the scope-creep guardrail).
-    denied = await authorize.authorize(SYSTEM_PRINCIPAL_ID, "DefineZone", _NIL_CONDUIT)
+    denied = await authorize.authorize(
+        SYSTEM_PRINCIPAL_ID,
+        "DefineZone",
+        _NIL_CONDUIT,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
+    )
     assert isinstance(denied, Deny)
+
+
+@pytest.mark.integration
+async def test_trust_authorize_against_bootstrap_policy_denies_mismatched_surface(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The bootstrap policy strict-matches its bound HTTP Surface: a
+    call arriving on a different surface is denied even for the
+    permitted principal + command."""
+    event_store = PostgresEventStore(db_pool)
+    authorize = TrustAuthorize(event_store, policy_id=SYSTEM_BOOTSTRAP_POLICY_ID)
+
+    other_surface = UUID("01900000-0000-7000-8000-00000000face")
+    result = await authorize.authorize(
+        SYSTEM_PRINCIPAL_ID,
+        "DefinePolicy",
+        _NIL_CONDUIT,
+        surface_id=other_surface,
+    )
+    assert isinstance(result, Deny)
+    assert "surface" in result.reason.lower()
 
 
 @pytest.mark.integration
@@ -185,16 +245,19 @@ async def test_bootstrap_policy_can_define_a_real_policy_end_to_end(
     )
 
     # Under the bootstrap policy, SYSTEM_PRINCIPAL_ID is the only
-    # principal allowed to call DefinePolicy. This succeeds.
+    # principal allowed to call DefinePolicy. This succeeds when the
+    # call arrives on the bound HTTP Surface.
     returned_id = await define_policy.bind(deps)(
         DefinePolicy(
             name="Real Admin Policy",
             conduit_id=_NIL_CONDUIT,
             permitted_principal_ids=frozenset({admin_principal}),
             permitted_commands=frozenset({"DefinePolicy", "RegisterActor", "DefineZone"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=SYSTEM_PRINCIPAL_ID,
         correlation_id=correlation_id,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     assert returned_id == new_policy_id
 
@@ -203,6 +266,7 @@ async def test_bootstrap_policy_can_define_a_real_policy_end_to_end(
     assert loaded is not None
     assert loaded.name.value == "Real Admin Policy"
     assert loaded.permitted_principal_ids == frozenset({admin_principal})
+    assert loaded.surface_id == SYSTEM_HTTP_SURFACE_ID
 
 
 @pytest.mark.integration
@@ -218,41 +282,13 @@ async def test_bootstrap_policy_denies_non_system_principal(
     authorize = TrustAuthorize(event_store, policy_id=SYSTEM_BOOTSTRAP_POLICY_ID)
     rando = UUID("01900000-0000-7000-8000-000000000c01")
 
-    result = await authorize.authorize(rando, "DefinePolicy", _NIL_CONDUIT)
+    result = await authorize.authorize(
+        rando,
+        "DefinePolicy",
+        _NIL_CONDUIT,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
+    )
     assert isinstance(result, Deny)
-
-
-@pytest.mark.integration
-async def test_seed_migration_is_idempotent(db_pool: asyncpg.Pool) -> None:
-    """Re-running the seed migration must be a silent no-op. The
-    `ON CONFLICT (stream_type, stream_id, version) DO NOTHING` clause
-    is what guarantees this — without it, a re-applied migration would
-    fail on the unique-stream-version constraint and leave the DB in
-    a weird half-applied state."""
-    migration_sql = (
-        Path(__file__).resolve().parents[4]  # noqa: ASYNC240 — tiny SQL file, sync read OK in test
-        / "infra"
-        / "atlas"
-        / "migrations"
-        / "20260519000000_seed_bootstrap_policy.sql"
-    ).read_text()
-
-    before = await db_pool.fetchval(
-        "SELECT count(*) FROM events WHERE stream_type = 'Policy' AND stream_id = $1",
-        SYSTEM_BOOTSTRAP_POLICY_ID,
-    )
-    assert before == 1
-
-    # Re-execute the exact migration SQL. Must be silent — no exception,
-    # no extra row.
-    async with db_pool.acquire() as conn:
-        await conn.execute(migration_sql)
-
-    after = await db_pool.fetchval(
-        "SELECT count(*) FROM events WHERE stream_type = 'Policy' AND stream_id = $1",
-        SYSTEM_BOOTSTRAP_POLICY_ID,
-    )
-    assert after == 1
 
 
 @pytest.mark.integration
@@ -260,7 +296,7 @@ async def test_bootstrap_policy_id_is_a_fixed_constant() -> None:
     """The bootstrap UUID must be a code constant, not
     a Settings value. This test pins the exact UUID so a typo or
     refactor that changes it breaks loudly."""
-    assert UUID("00000000-0000-0000-0000-000000000001") == SYSTEM_BOOTSTRAP_POLICY_ID
+    assert UUID("00000000-0000-0000-0000-000000000002") == SYSTEM_BOOTSTRAP_POLICY_ID
 
 
 @pytest.mark.integration
@@ -303,6 +339,7 @@ async def test_concurrent_writes_against_bootstrap_stream_fail_loud(
         permitted_principal_ids=(UUID("01900000-0000-7000-8000-000000000d01"),),
         permitted_commands=("DefineEverything",),
         occurred_at=_NOW,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     new_event = to_new_event(
         event_type=event_type_name(bogus_event),

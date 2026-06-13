@@ -5363,7 +5363,7 @@
             "type": "array"
           },
           "surface_id": {
-            "description": "UUID of the Surface this policy governs. Defaults to nil so V1-shape callers don't need to send it; V2 bootstrap policy and Iter-C+ policies bind to a real Surface seeded by the deployment.",
+            "description": "UUID of the Surface this policy governs. Required: every policy binds a concrete Surface seeded by the deployment. The nil sentinel is rejected (InvalidPolicySurfaceError); it survives only on the retired V1 bootstrap seed stream.",
             "format": "uuid",
             "title": "Surface Id",
             "type": "string"
@@ -5373,7 +5373,8 @@
           "name",
           "conduit_id",
           "permitted_principal_ids",
-          "permitted_commands"
+          "permitted_commands",
+          "surface_id"
         ],
         "title": "DefinePolicyRequest",
         "type": "object"
@@ -34387,6 +34388,18 @@
             }
           },
           {
+            "description": "Arrival Surface the command would enter through.",
+            "in": "query",
+            "name": "evaluated_surface_id",
+            "required": true,
+            "schema": {
+              "description": "Arrival Surface the command would enter through.",
+              "format": "uuid",
+              "title": "Evaluated Surface Id",
+              "type": "string"
+            }
+          },
+          {
             "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
             "in": "header",
             "name": "X-Principal-Id",
@@ -34441,7 +34454,7 @@
             "description": "Path or query parameter failed schema validation."
           }
         },
-        "summary": "Evaluate a Policy against a (principal, command, conduit) tuple",
+        "summary": "Evaluate a Policy against a (principal, command, conduit, surface) tuple",
         "tags": [
           "trust"
         ]

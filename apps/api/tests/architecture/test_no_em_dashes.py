@@ -437,7 +437,6 @@ EMDASH_ALLOWLIST: frozenset[str] = frozenset(
         "tests/integration/test_add_asset_family_handler_postgres.py",
         "tests/integration/test_add_run_to_campaign_postgres.py",
         "tests/integration/test_append_observations_handler_postgres.py",
-        "tests/integration/test_bootstrap_policy_seed_postgres.py",
         "tests/integration/test_capability_end_to_end_postgres.py",
         "tests/integration/test_caution_drafter_subscriber_postgres.py",
         "tests/integration/test_condition_transitions_handler_postgres.py",

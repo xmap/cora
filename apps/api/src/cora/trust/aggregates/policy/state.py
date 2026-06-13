@@ -65,6 +65,22 @@ class PolicyAlreadyExistsError(Exception):
         self.policy_id = policy_id
 
 
+class InvalidPolicySurfaceError(ValueError):
+    """A new Policy must bind a real Surface; the nil sentinel is rejected.
+
+    The nil `surface_id` sentinel survives only on the immutable V1
+    bootstrap seed stream (folded by `from_stored`). New policies must
+    bind a concrete Surface so `evaluate` can strict-match the arrival
+    surface; a nil-surface policy denies every real-surface call.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Policy surface_id must bind a real Surface "
+            "(the nil sentinel is reserved for the retired V1 fold)"
+        )
+
+
 @bounded_name(max_length=POLICY_NAME_MAX_LENGTH, error_class=InvalidPolicyNameError)
 @dataclass(frozen=True)
 class PolicyName:
@@ -82,12 +98,12 @@ class Policy:
     """Aggregate root: an authorization rule attached to a Conduit + Surface pair.
 
     `surface_id`: the process-level arrival point this policy gates.
-    Defaults to nil so V1 PolicyDefined events on disk fold to a
-    nil-surface policy (operationally a "match any surface" policy
-    while route layers don't yet inject real Surface IDs). The V2
-    bootstrap policy binds to the seeded HTTP Surface and V1 becomes
-    operationally inert (per project_conduit_injection_design.md, V1
-    deprecation watch item).
+    `evaluate` strict-matches it against the call's arrival surface.
+    The nil sentinel survives only on the immutable V1 bootstrap seed
+    stream (folded by `from_stored`); such a policy strict-denies every
+    real-surface call and is therefore operationally inert. The
+    canonical bootstrap policy binds to the seeded HTTP Surface, and new
+    policies must bind a concrete Surface (`define_policy` rejects nil).
     """
 
     id: UUID
@@ -114,28 +130,14 @@ def evaluate(
     first: conduit mismatch → surface mismatch → principal not in
     set → command not in set.
 
-    ## Surface wildcard semantic for legacy V1 policies (GR3 RISK-7)
-
-    A policy with `policy.surface_id == NIL_SENTINEL` is interpreted
-    as "matches any call's surface_id." This is a *time-bounded
-    legacy-fold compatibility shim*, not a wildcard feature: V1
-    PolicyDefined events on disk (pre-Iter-B) lack the surface_id
-    field; `from_stored` folds them to NIL_SENTINEL; without this
-    branch the V1→V2 deploy ordering has no safe path (handler call
-    sites flip to passing real surface_ids while operators still
-    point at V1 → all deny).
-
-    V2+ policies bind to a specific surface_id and `evaluate()`
-    enforces strict `==`. Anti-hook policy (revised after GR3): no NEW
-    PolicyDefined events with NIL_SENTINEL surface_id; the sentinel
-    is reserved exclusively for this legacy-fold path. Sunset: once
-    V1 stream count goes to zero, delete this branch + the V1
-    deprecation WARN in the same PR.
-
-    Corpus convergence (GR3 RISK-7 research): Marten upcasters,
-    Stripe version transformers, OPA `default`, Cedar `has` all
-    recover missing fields at the read boundary, decide on concrete
-    values; this is the same shape applied to event-sourced authz.
+    Surface matching is strict equality. A policy that folded to a nil
+    `surface_id` (the immutable V1 bootstrap seed is the only such
+    stream) never matches a real arrival surface, so it strict-denies
+    every live call and is operationally inert. The nil-as-wildcard
+    legacy-fold shim was removed once the V1 bootstrap policy was
+    retired in favor of the surface-bound bootstrap policy; new
+    policies must bind a concrete Surface (`define_policy` rejects nil
+    via `InvalidPolicySurfaceError`).
 
     Living in `state.py` because it's a pure operation on Policy
     state (no I/O, no awaits, no mutation).
@@ -144,9 +146,7 @@ def evaluate(
         return Deny(
             reason=(f"Policy {policy.id} governs conduit {policy.conduit_id}, not {conduit_id}")
         )
-    # GR3 RISK-7 wildcard branch: V1 legacy policies (folded with
-    # surface_id=NIL_SENTINEL) match any call's surface_id.
-    if policy.surface_id != NIL_SENTINEL_ID and surface_id != policy.surface_id:
+    if surface_id != policy.surface_id:
         return Deny(
             reason=(f"Policy {policy.id} governs surface {policy.surface_id}, not {surface_id}")
         )

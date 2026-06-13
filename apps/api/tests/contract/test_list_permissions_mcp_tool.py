@@ -11,12 +11,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from tests.contract._mcp_helpers import open_session, parse_sse_data
 
 _CONDUIT = "01900000-0000-7000-8000-00000000aaaa"
 _OTHER_CONDUIT = "01900000-0000-7000-8000-00000000bbbb"
 _ALLOWED_PRINCIPAL = "01900000-0000-7000-8000-000000000a01"
 _OTHER_PRINCIPAL = "01900000-0000-7000-8000-000000000a02"
+_SURFACE = str(SYSTEM_HTTP_SURFACE_ID)
 
 
 def _define_policy_via_rest(client: TestClient) -> str:
@@ -27,6 +29,7 @@ def _define_policy_via_rest(client: TestClient) -> str:
             "conduit_id": _CONDUIT,
             "permitted_principal_ids": [_ALLOWED_PRINCIPAL],
             "permitted_commands": ["RegisterActor", "DefinePolicy"],
+            "surface_id": _SURFACE,
         },
     )
     assert response.status_code == 201

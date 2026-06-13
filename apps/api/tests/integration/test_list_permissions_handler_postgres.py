@@ -1,10 +1,15 @@
 """Integration test: `list_permissions` against the seeded bootstrap policy.
 
 End-to-end through PostgresEventStore: the System Bootstrap Policy
-seeded by `20260518000000_seed_bootstrap_policy.sql` permits
-`SYSTEM_PRINCIPAL_ID` to call `{DefinePolicy, RegisterActor}` on
-the nil conduit. `list_permissions` against that policy must return
+seeded by `20260519200000_seed_default_surfaces_and_v2_policy.sql`
+permits `SYSTEM_PRINCIPAL_ID` to call `{DefinePolicy, RegisterActor}`
+on the nil conduit. `list_permissions` against that policy must return
 exactly those two commands, sorted.
+
+`list_permissions` does NOT evaluate the arrival surface (it matches
+principal + conduit manually), so the bootstrap policy's HTTP-surface
+binding is irrelevant to these assertions; no surface_id is threaded
+through the query.
 
 Design lock: `memory/project_permissions_query_design.md`.
 """

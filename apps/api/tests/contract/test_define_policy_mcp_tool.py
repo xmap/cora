@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from tests.contract._mcp_helpers import open_session, parse_sse_data
 
 _CONDUIT = "01900000-0000-7000-8000-00000000aaaa"
@@ -47,6 +48,7 @@ def test_mcp_define_policy_tool_returns_structured_policy_id() -> None:
                         "conduit_id": _CONDUIT,
                         "permitted_principal_ids": [_PRINCIPAL],
                         "permitted_commands": ["RegisterActor"],
+                        "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
                     },
                 },
             },
@@ -79,6 +81,8 @@ def test_mcp_define_policy_tool_returns_iserror_on_invalid_input() -> None:
                         "conduit_id": _CONDUIT,
                         "permitted_principal_ids": [_PRINCIPAL],
                         "permitted_commands": ["RegisterActor"],
+                        # Valid surface so the deny is on the name VO, not surface.
+                        "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
                     },
                 },
             },
