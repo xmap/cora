@@ -721,6 +721,84 @@ class ProcedureCannotTruncateError(Exception):
         self.current_status = current_status
 
 
+class ProcedureCannotStartIterationError(Exception):
+    """Attempted to start an iteration that fails a start-gate.
+
+    Raised by the `start_iteration` decider for any of three reasons:
+      - The Procedure is not in `Running` (iterations only exist within
+        an active execution; same lifecycle gate as append_activities).
+      - An iteration is already open (`current_iteration_index` is set);
+        the open iteration must be ended first. Iterations do not nest.
+      - The supplied `iteration_index` is not the strict successor of
+        the current `iteration_count` (operator-supplied index must be
+        monotonic with no gaps or duplicates, per the
+        capture-don't-recompute principle).
+
+    Carries `current_status`, the open `current_iteration_index` (None
+    when none open), and `expected_iteration_index` / `iteration_index`
+    so operator-facing messaging can name the gate that failed. Distinct
+    class per verb per the conventions (Asset / Visit precedent). Mapped
+    to HTTP 409.
+    """
+
+    def __init__(
+        self,
+        procedure_id: UUID,
+        *,
+        current_status: "ProcedureStatus",
+        current_iteration_index: int | None,
+        expected_iteration_index: int,
+        iteration_index: int,
+    ) -> None:
+        super().__init__(
+            f"Procedure {procedure_id} cannot start iteration {iteration_index}: "
+            f"status={current_status.value} (requires {ProcedureStatus.RUNNING.value}), "
+            f"current_iteration_index={current_iteration_index} (requires no open "
+            f"iteration), expected next index {expected_iteration_index}."
+        )
+        self.procedure_id = procedure_id
+        self.current_status = current_status
+        self.current_iteration_index = current_iteration_index
+        self.expected_iteration_index = expected_iteration_index
+        self.iteration_index = iteration_index
+
+
+class ProcedureCannotEndIterationError(Exception):
+    """Attempted to end an iteration that fails an end-gate.
+
+    Raised by the `end_iteration` decider when:
+      - The Procedure is not in `Running`.
+      - No iteration is currently open (`current_iteration_index` is
+        None); there is nothing to end.
+      - The supplied `iteration_index` does not match the open
+        `current_iteration_index`.
+
+    Carries `current_status`, the open `current_iteration_index` (None
+    when none open), and the supplied `iteration_index`. Distinct class
+    per verb (sibling of `ProcedureCannotStartIterationError`). Mapped
+    to HTTP 409.
+    """
+
+    def __init__(
+        self,
+        procedure_id: UUID,
+        *,
+        current_status: "ProcedureStatus",
+        current_iteration_index: int | None,
+        iteration_index: int,
+    ) -> None:
+        super().__init__(
+            f"Procedure {procedure_id} cannot end iteration {iteration_index}: "
+            f"status={current_status.value} (requires {ProcedureStatus.RUNNING.value}), "
+            f"current open iteration={current_iteration_index} (must equal "
+            f"{iteration_index})."
+        )
+        self.procedure_id = procedure_id
+        self.current_status = current_status
+        self.current_iteration_index = current_iteration_index
+        self.iteration_index = iteration_index
+
+
 class InvalidProcedureTruncateReasonError(ValueError):
     """The supplied truncate reason is empty, whitespace-only, or too long.
 
@@ -734,6 +812,27 @@ class InvalidProcedureTruncateReasonError(ValueError):
         super().__init__(
             f"Procedure truncate reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
+        )
+        self.value = value
+
+
+class InvalidProcedureIterationEndReasonError(ValueError):
+    """The supplied iteration-end reason is whitespace-only or too long.
+
+    The end-iteration reason is OPTIONAL (None is allowed); when present
+    it is trimmed and bounded 1-500 chars. Validated at the API boundary
+    via Pydantic min_length / max_length AND defensively at the
+    `end_iteration` decider via `validate_bounded_text` so direct
+    in-process callers (sagas, tests) get the same trim + whitespace-only
+    rejection as abort / truncate. Sibling of
+    `InvalidProcedureAbortReasonError`; distinct class for BC-local
+    HTTP-status registration. Mapped to HTTP 400.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Procedure iteration-end reason must be 1-{REASON_MAX_LENGTH} "
+            f"chars after trimming (got: {value!r})"
         )
         self.value = value
 
@@ -977,3 +1076,20 @@ class Procedure:
     a denorm for audit-by-Capability read paths without requiring a
     Recipe join. Both fields are set by `register_procedure_from_recipe`
     to the same logical binding."""
+    current_iteration_index: int | None = field(default=None)
+    """The convergence-loop iteration currently open, or None.
+
+    Set to the operator-supplied `iteration_index` by
+    `ProcedureIterationStarted` and cleared back to None by
+    `ProcedureIterationEnded`. Acts as the open/close marker that lets
+    the deciders forbid nested iterations (start while one is open) and
+    forbid ending when none is open. Additive-state default None: legacy
+    streams and non-iterative Procedures fold cleanly."""
+    iteration_count: int = field(default=0)
+    """How many convergence-loop iterations have begun on this Procedure.
+
+    Denorm count (NOT a history; the boundary events are the history),
+    incremented by `ProcedureIterationStarted`. Mirrors
+    `Run.adjustment_count`. Surfaced as the `iteration_count` projection
+    column so "how many iterations did this alignment take" is a plain
+    SQL question. Additive-state default 0."""

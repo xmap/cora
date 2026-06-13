@@ -49,6 +49,8 @@ class ProcedureResponse(BaseModel):
     target_asset_ids: list[UUID]
     status: ProcedureStatus
     parent_run_id: UUID | None
+    current_iteration_index: int | None = None
+    iteration_count: int = 0
 
 
 def _get_handler(request: Request) -> Handler:
@@ -99,4 +101,6 @@ async def get_procedures(
         target_asset_ids=sorted(procedure.target_asset_ids, key=str),
         status=procedure.status,
         parent_run_id=procedure.parent_run_id,
+        current_iteration_index=procedure.current_iteration_index,
+        iteration_count=procedure.iteration_count,
     )

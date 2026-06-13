@@ -6067,6 +6067,48 @@
         "title": "EncodingResponse",
         "type": "object"
       },
+      "EndProcedureIterationRequest": {
+        "description": "Body for `POST /procedures/{procedure_id}/iterations/end`.",
+        "properties": {
+          "converged": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Convergence verdict for this iteration: true (met the target), false (did not), or null (no verdict, for example an inconclusive or interrupted pass).",
+            "title": "Converged"
+          },
+          "iteration_index": {
+            "description": "1-based index of the iteration to close. Must equal the currently-open iteration.",
+            "minimum": 1.0,
+            "title": "Iteration Index",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional free-form note about how the iteration ended (1-500 chars after trimming). Captured verbatim for audit.",
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "iteration_index"
+        ],
+        "title": "EndProcedureIterationRequest",
+        "type": "object"
+      },
       "ErrorResponse": {
         "description": "Shared error body for OpenAPI documentation.",
         "properties": {
@@ -9024,10 +9066,26 @@
       "ProcedureResponse": {
         "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. Decouples the wire format\nfrom the domain model so the two can evolve independently.\n`target_asset_ids` is sorted by UUID string form. `status` is the\nStrEnum's string value (Defined / Running / Completed / Aborted /\nTruncated). `parent_run_id` is null for standalone procedures.",
         "properties": {
+          "current_iteration_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Iteration Index"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "iteration_count": {
+            "default": 0,
+            "title": "Iteration Count",
+            "type": "integer"
           },
           "kind": {
             "maxLength": 50,
@@ -9167,6 +9225,11 @@
               }
             ],
             "title": "Interrupted At"
+          },
+          "iteration_count": {
+            "default": 0,
+            "title": "Iteration Count",
+            "type": "integer"
           },
           "kind": {
             "maxLength": 50,
@@ -12955,6 +13018,22 @@
           "new_secret_ref"
         ],
         "title": "StartCredentialRotationRequest",
+        "type": "object"
+      },
+      "StartProcedureIterationRequest": {
+        "description": "Body for `POST /procedures/{procedure_id}/iterations/start`.",
+        "properties": {
+          "iteration_index": {
+            "description": "1-based index of the iteration to begin. Operator-supplied (capture-don't-recompute); must be the strict successor of the current iteration_count (no gaps or duplicates). The first iteration is 1.",
+            "minimum": 1.0,
+            "title": "Iteration Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "iteration_index"
+        ],
+        "title": "StartProcedureIterationRequest",
         "type": "object"
       },
       "StartRunRequest": {
@@ -35864,6 +35943,196 @@
           }
         },
         "summary": "Conduct a Procedure: start -> walk steps via ControlPort + actions + checks -> complete (success) or abort (failure).",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
+    "/procedures/{procedure_id}/iterations/end": {
+      "post": {
+        "operationId": "post_procedures_end_iteration_procedures__procedure_id__iterations_end_post",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndProcedureIterationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated: whitespace-only reason."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No procedure exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Procedure is not in `Running`, no iteration is open, or iteration_index does not match the open iteration, OR a concurrent write to the same procedure stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Close the open convergence-loop iteration on a Running Procedure",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
+    "/procedures/{procedure_id}/iterations/start": {
+      "post": {
+        "operationId": "post_procedures_start_iteration_procedures__procedure_id__iterations_start_post",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartProcedureIterationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No procedure exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Procedure is not in `Running`, an iteration is already open, or iteration_index is not the strict successor of the current iteration_count, OR a concurrent write to the same procedure stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Begin one convergence-loop iteration on a Running Procedure",
         "tags": [
           "operation"
         ]

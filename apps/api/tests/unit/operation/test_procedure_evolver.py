@@ -11,6 +11,8 @@ from cora.operation.aggregates.procedure import (
     ProcedureAborted,
     ProcedureActivitiesLogbookOpened,
     ProcedureCompleted,
+    ProcedureIterationEnded,
+    ProcedureIterationStarted,
     ProcedureName,
     ProcedureRegistered,
     ProcedureStarted,
@@ -636,3 +638,150 @@ def test_evolve_steps_logbook_opened_preserves_capability_id() -> None:
         ),
     )
     assert after_open.capability_id == capability_id
+
+
+# --- iteration boundary pair (ProcedureIterationStarted / Ended) ---
+
+
+def _running(*, procedure_id: UUID | None = None) -> Procedure:
+    """Build a Procedure in RUNNING via Registered + Started fold."""
+    prior = _defined(procedure_id=procedure_id)
+    return evolve(prior, ProcedureStarted(procedure_id=prior.id, occurred_at=_NOW))
+
+
+@pytest.mark.unit
+def test_genesis_state_has_zero_iteration_count_and_none_open() -> None:
+    state = _defined()
+    assert state.iteration_count == 0
+    assert state.current_iteration_index is None
+
+
+@pytest.mark.unit
+def test_evolve_iteration_started_bumps_count_and_sets_open_index() -> None:
+    running = _running()
+    state = evolve(
+        running,
+        ProcedureIterationStarted(procedure_id=running.id, iteration_index=1, occurred_at=_NOW),
+    )
+    assert state.iteration_count == 1
+    assert state.current_iteration_index == 1
+    assert state.status is ProcedureStatus.RUNNING  # iteration is orthogonal to lifecycle
+
+
+@pytest.mark.unit
+def test_evolve_iteration_ended_clears_open_index_keeps_count() -> None:
+    running = _running()
+    started = evolve(
+        running,
+        ProcedureIterationStarted(procedure_id=running.id, iteration_index=1, occurred_at=_NOW),
+    )
+    ended = evolve(
+        started,
+        ProcedureIterationEnded(
+            procedure_id=running.id,
+            iteration_index=1,
+            converged=True,
+            reason=None,
+            occurred_at=_NOW,
+        ),
+    )
+    assert ended.current_iteration_index is None
+    assert ended.iteration_count == 1
+    assert ended.status is ProcedureStatus.RUNNING
+
+
+@pytest.mark.unit
+def test_fold_iteration_sequence_yields_expected_count_and_open_marker() -> None:
+    pid = uuid4()
+    state = fold(
+        [
+            ProcedureRegistered(
+                procedure_id=pid,
+                name="2-BM center alignment",
+                kind="center_alignment",
+                target_asset_ids=(),
+                parent_run_id=None,
+                occurred_at=_NOW,
+            ),
+            ProcedureStarted(procedure_id=pid, occurred_at=_NOW),
+            ProcedureIterationStarted(procedure_id=pid, iteration_index=1, occurred_at=_NOW),
+            ProcedureIterationEnded(
+                procedure_id=pid, iteration_index=1, converged=False, reason=None, occurred_at=_NOW
+            ),
+            ProcedureIterationStarted(procedure_id=pid, iteration_index=2, occurred_at=_NOW),
+        ]
+    )
+    assert state is not None
+    assert state.iteration_count == 2
+    assert state.current_iteration_index == 2  # iteration 2 still open
+
+
+@pytest.mark.unit
+def test_evolve_iteration_started_preserves_all_other_fields() -> None:
+    asset = uuid4()
+    parent_run = uuid4()
+    capability_id = uuid4()
+    prior = _defined(
+        name="2-BM center alignment",
+        kind="center_alignment",
+        target_asset_ids=(asset,),
+        parent_run_id=parent_run,
+        capability_id=capability_id,
+    )
+    running = evolve(prior, ProcedureStarted(procedure_id=prior.id, occurred_at=_NOW))
+    state = evolve(
+        running,
+        ProcedureIterationStarted(procedure_id=prior.id, iteration_index=1, occurred_at=_NOW),
+    )
+    assert state.name == prior.name
+    assert state.kind == "center_alignment"
+    assert state.target_asset_ids == frozenset({asset})
+    assert state.parent_run_id == parent_run
+    assert state.capability_id == capability_id
+
+
+@pytest.mark.unit
+def test_transition_arms_preserve_iteration_fields() -> None:
+    """A terminal transition after an open iteration keeps count + open index.
+
+    Iteration is orthogonal to the lifecycle FSM: the terminal deciders
+    (complete / abort / truncate) gate only on status==Running and do NOT
+    forbid terminating with an iteration still open, so a terminal
+    Procedure can retain a non-None current_iteration_index. That is
+    benign (the projection never reads current_iteration_index and
+    iteration_count stays correct); the evolver must still carry both
+    fields through every arm, pinned per the critical-invariant note."""
+    running = _running()
+    started = evolve(
+        running,
+        ProcedureIterationStarted(procedure_id=running.id, iteration_index=1, occurred_at=_NOW),
+    )
+    aborted = evolve(
+        started, ProcedureAborted(procedure_id=running.id, reason="x", occurred_at=_NOW)
+    )
+    assert aborted.iteration_count == 1
+    assert aborted.current_iteration_index == 1
+
+
+@pytest.mark.unit
+def test_evolve_iteration_started_on_empty_state_raises() -> None:
+    with pytest.raises(ValueError, match="ProcedureIterationStarted"):
+        evolve(
+            None,
+            ProcedureIterationStarted(procedure_id=uuid4(), iteration_index=1, occurred_at=_NOW),
+        )
+
+
+@pytest.mark.unit
+def test_evolve_iteration_ended_on_empty_state_raises() -> None:
+    with pytest.raises(ValueError, match="ProcedureIterationEnded"):
+        evolve(
+            None,
+            ProcedureIterationEnded(
+                procedure_id=uuid4(),
+                iteration_index=1,
+                converged=True,
+                reason=None,
+                occurred_at=_NOW,
+            ),
+        )

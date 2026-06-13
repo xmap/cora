@@ -26,11 +26,19 @@ already sorted in `to_payload` for persistence determinism.
 
 **Critical invariant**: every transition arm MUST carry `id`, `name`,
 `kind`, `target_asset_ids`, `parent_run_id`, `activity_logbook_id`,
-AND `capability_id` through from prior state.
+`capability_id`, `recipe_id`, `current_iteration_index`, AND
+`iteration_count` through from prior state.
 Constructing `Procedure(id=..., name=..., status=...)` without
 explicitly passing the additive fields would silently WIPE them to
-defaults (empty frozenset / None). Pinned by the per-transition
+defaults (empty frozenset / None / 0). Pinned by the per-transition
 preserve-fields tests. Same lesson as Run BC's evolver docstring.
+
+The iteration boundary pair folds onto the iteration denorm without
+touching `status`: `ProcedureIterationStarted` bumps `iteration_count`
+and records the open index in `current_iteration_index`;
+`ProcedureIterationEnded` clears `current_iteration_index` back to None
+(count unchanged). Both require the Procedure to be Running, enforced
+at the deciders (the evolver trusts the decider's guard).
 
 `activity_logbook_id` is set by the `ProcedureActivitiesLogbookOpened` arm
 (lazy open-on-first-write triggered by `append_activities`);
@@ -52,6 +60,8 @@ from cora.operation.aggregates.procedure.events import (
     ProcedureActivitiesLogbookOpened,
     ProcedureCompleted,
     ProcedureEvent,
+    ProcedureIterationEnded,
+    ProcedureIterationStarted,
     ProcedureRegistered,
     ProcedureStarted,
     ProcedureTruncated,
@@ -87,6 +97,8 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 activity_logbook_id=None,
                 capability_id=capability_id,
                 recipe_id=recipe_id,
+                current_iteration_index=None,
+                iteration_count=0,
             )
         case ProcedureStarted():
             prior = require_state(state, "ProcedureStarted")
@@ -100,6 +112,8 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 activity_logbook_id=prior.activity_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                current_iteration_index=prior.current_iteration_index,
+                iteration_count=prior.iteration_count,
             )
         case ProcedureCompleted():
             prior = require_state(state, "ProcedureCompleted")
@@ -113,6 +127,8 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 activity_logbook_id=prior.activity_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                current_iteration_index=prior.current_iteration_index,
+                iteration_count=prior.iteration_count,
             )
         case ProcedureAborted():
             prior = require_state(state, "ProcedureAborted")
@@ -126,6 +142,8 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 activity_logbook_id=prior.activity_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                current_iteration_index=prior.current_iteration_index,
+                iteration_count=prior.iteration_count,
             )
         case ProcedureTruncated():
             prior = require_state(state, "ProcedureTruncated")
@@ -139,6 +157,8 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 activity_logbook_id=prior.activity_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                current_iteration_index=prior.current_iteration_index,
+                iteration_count=prior.iteration_count,
             )
         case ProcedureActivitiesLogbookOpened(logbook_id=logbook_id):
             # Lazy open-on-first-write: preserve all
@@ -156,6 +176,8 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 activity_logbook_id=logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                current_iteration_index=prior.current_iteration_index,
+                iteration_count=prior.iteration_count,
             )
         case RecipeExpansionRecorded():
             # Provenance-only event: leaves Procedure state unchanged.
@@ -166,6 +188,43 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
             # there is no projection-folded denorm onto Procedure state
             # beyond what `ProcedureRegistered.recipe_id` already pins.
             return require_state(state, "RecipeExpansionRecorded")
+        case ProcedureIterationStarted(iteration_index=iteration_index):
+            # One convergence-loop iteration began: bump the denorm count
+            # and record the open index. Status untouched (iteration is
+            # orthogonal to the lifecycle FSM). The strict-successor /
+            # no-open-iteration guards live in the start_iteration decider.
+            prior = require_state(state, "ProcedureIterationStarted")
+            return Procedure(
+                id=prior.id,
+                name=prior.name,
+                kind=prior.kind,
+                target_asset_ids=prior.target_asset_ids,
+                status=prior.status,
+                parent_run_id=prior.parent_run_id,
+                activity_logbook_id=prior.activity_logbook_id,
+                capability_id=prior.capability_id,
+                recipe_id=prior.recipe_id,
+                current_iteration_index=iteration_index,
+                iteration_count=prior.iteration_count + 1,
+            )
+        case ProcedureIterationEnded():
+            # The open iteration closed: clear the open-index marker. The
+            # count is unchanged (it tracks iterations begun); the
+            # convergence verdict lives on the event payload, not state.
+            prior = require_state(state, "ProcedureIterationEnded")
+            return Procedure(
+                id=prior.id,
+                name=prior.name,
+                kind=prior.kind,
+                target_asset_ids=prior.target_asset_ids,
+                status=prior.status,
+                parent_run_id=prior.parent_run_id,
+                activity_logbook_id=prior.activity_logbook_id,
+                capability_id=prior.capability_id,
+                recipe_id=prior.recipe_id,
+                current_iteration_index=None,
+                iteration_count=prior.iteration_count,
+            )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 

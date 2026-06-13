@@ -151,6 +151,8 @@ An architecture fitness test in `apps/api/tests/architecture/test_rest_url_kebab
 
 Slice directory names, command class names, and MCP tool names carry the SUBJECT in the verb-phrase when the slice mutates a specific aggregate kind: `add_asset_family`, `decommission_asset`, `enter_asset_maintenance`, `update_asset_settings`. Reading aloud, "add asset family" and "enter asset maintenance" are parallel English noun-phrases.
 
+When the slice acts on a per-aggregate SUB-CONCEPT rather than the aggregate itself, the sub-concept noun is the subject: `append_observations` (Run), `append_activities` (Operation), `start_iteration` / `end_iteration` (Operation, the convergence-loop boundary on a Procedure). The command class still carries the aggregate qualifier (`AppendProcedureActivities`, `StartProcedureIteration`) while the slice directory and MCP tool drop it (the BC namespace disambiguates). These sub-concept nouns are tracked in the `_DOMAIN_NOUN_ALLOWLIST` of `tests/architecture/test_slice_verb_names_subject.py`.
+
 URLs use the BARE verb when the path scope already implies the subject. Sibling endpoints under `/assets/{asset_id}/` all follow this shape: `/activate`, `/decommission`, `/relocate`, `/degrade`, `/fault`, `/restore`, `/enter-maintenance`, `/exit-maintenance`, `/add-family`, `/remove-family`. The `/assets/{asset_id}/` segment is the subject; repeating it in the verb (`/enter-asset-maintenance`) would be redundant.
 
 ```

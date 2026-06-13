@@ -11,6 +11,8 @@ from cora.operation.aggregates.procedure import (
     ProcedureAborted,
     ProcedureActivitiesLogbookOpened,
     ProcedureCompleted,
+    ProcedureIterationEnded,
+    ProcedureIterationStarted,
     ProcedureRegistered,
     ProcedureStarted,
     ProcedureTruncated,
@@ -547,6 +549,78 @@ def test_to_payload_bindings_field_is_dict_after_canonical_json_hoist() -> None:
 
 
 @pytest.mark.unit
+def test_event_type_name_returns_iteration_boundary_class_names() -> None:
+    started = ProcedureIterationStarted(procedure_id=uuid4(), iteration_index=1, occurred_at=_NOW)
+    ended = ProcedureIterationEnded(
+        procedure_id=uuid4(), iteration_index=1, converged=True, reason=None, occurred_at=_NOW
+    )
+    assert event_type_name(started) == "ProcedureIterationStarted"
+    assert event_type_name(ended) == "ProcedureIterationEnded"
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_iteration_started() -> None:
+    pid = uuid4()
+    payload = to_payload(
+        ProcedureIterationStarted(procedure_id=pid, iteration_index=4, occurred_at=_NOW)
+    )
+    assert payload == {
+        "procedure_id": str(pid),
+        "iteration_index": 4,
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("converged", "reason"),
+    [(True, "within tolerance"), (False, None), (None, None)],
+)
+def test_to_payload_serializes_iteration_ended(converged: bool | None, reason: str | None) -> None:
+    pid = uuid4()
+    payload = to_payload(
+        ProcedureIterationEnded(
+            procedure_id=pid,
+            iteration_index=2,
+            converged=converged,
+            reason=reason,
+            occurred_at=_NOW,
+        )
+    )
+    assert payload == {
+        "procedure_id": str(pid),
+        "iteration_index": 2,
+        "converged": converged,
+        "reason": reason,
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+def test_iteration_started_round_trips() -> None:
+    event = ProcedureIterationStarted(procedure_id=uuid4(), iteration_index=7, occurred_at=_NOW)
+    rebuilt = from_stored(_stored("ProcedureIterationStarted", to_payload(event)))
+    assert rebuilt == event
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("converged", "reason"),
+    [(True, "ok"), (False, "off by 2px"), (None, None)],
+)
+def test_iteration_ended_round_trips(converged: bool | None, reason: str | None) -> None:
+    event = ProcedureIterationEnded(
+        procedure_id=uuid4(),
+        iteration_index=3,
+        converged=converged,
+        reason=reason,
+        occurred_at=_NOW,
+    )
+    rebuilt = from_stored(_stored("ProcedureIterationEnded", to_payload(event)))
+    assert rebuilt == event
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "event_type",
     [
@@ -556,6 +630,8 @@ def test_to_payload_bindings_field_is_dict_after_canonical_json_hoist() -> None:
         "ProcedureAborted",
         "ProcedureTruncated",
         "ProcedureActivitiesLogbookOpened",
+        "ProcedureIterationStarted",
+        "ProcedureIterationEnded",
     ],
 )
 def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:

@@ -26,6 +26,20 @@ per-step logbook table. `ProcedureTruncated` mirrors RunTruncated.
 `ProcedureHeld` / `ProcedureResumed` are deferred until the pilot
 needs the surface.
 
+`ProcedureIterationStarted` / `ProcedureIterationEnded` are the
+first-class boundary pair for the convergence-driven iteration loop
+(alignment sweeps and the like). They are operator-emitted and
+optional: a non-iterative Procedure (bakeout) never emits them and
+pays zero tax. Iteration is NOT a `ProcedureStatus` value (Running
+stays monolithic); the pair folds onto two additive state fields
+(`current_iteration_index`, `iteration_count`). `iteration_index` is
+operator-supplied (capture-don't-recompute); the start decider
+enforces a strict-successor invariant server-side. `ProcedureIterationEnded`
+carries the convergence verdict (`converged: bool | None`, None when an
+iteration ends without a verdict) and an optional free-form `reason`.
+Naming mirrors `ProcedureActivitiesLogbookOpened` (aggregate +
+sub-entity noun + past participle).
+
 ## Payload conventions
 
 `target_asset_ids` is stored as `tuple[UUID, ...]` in payloads (events
@@ -288,10 +302,61 @@ class ProcedureAborted:
     occurred_at: datetime
 
 
+@dataclass(frozen=True)
+class ProcedureIterationStarted:
+    """One convergence-loop iteration began on a Running Procedure.
+
+    Operator-emitted boundary event (optional; non-iterative Procedures
+    never emit it). `iteration_index` is operator-supplied per the
+    capture-don't-recompute principle; the `start_iteration` decider
+    enforces the strict-successor invariant (`iteration_index ==
+    iteration_count + 1`) and rejects starting while another iteration
+    is still open. The evolver bumps `iteration_count` and records the
+    open index in `current_iteration_index`.
+
+    Status is NOT carried (iteration is orthogonal to the lifecycle FSM;
+    the Procedure stays Running across iterations). Slim payload:
+    procedure_id + iteration_index + occurred_at.
+    """
+
+    procedure_id: UUID
+    iteration_index: int
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ProcedureIterationEnded:
+    """The currently-open convergence-loop iteration closed.
+
+    `iteration_index` must match the open `current_iteration_index`
+    (validated at the `end_iteration` decider). `converged` carries the
+    convergence verdict: True (the iteration met its target), False (it
+    did not), or None (the iteration ended without a verdict, for
+    example an inconclusive or interrupted pass). `reason` is an
+    optional free-form note; when present it is trimmed and bounded
+    1-500 chars at the decider (matching abort / truncate), so the
+    persisted value is post-trim and whitespace-only is rejected. The
+    evolver clears `current_iteration_index` back to None;
+    `iteration_count` is unchanged (the count tracks iterations begun).
+
+    `converged` / `reason` are stream-only for now: the convergence-rate
+    projection is a deferred watch item per
+    [[project_iteration_first_class_research]]. Status is NOT carried.
+    """
+
+    procedure_id: UUID
+    iteration_index: int
+    converged: bool | None
+    reason: str | None
+    occurred_at: datetime
+
+
 # Discriminated union of every event the Procedure aggregate emits.
 # The FSM is closed by the three transition events; the per-step
 # logbook envelope event `ProcedureActivitiesLogbookOpened` opens lazily
-# on first append.
+# on first append; the iteration boundary pair
+# (`ProcedureIterationStarted` / `ProcedureIterationEnded`) folds onto
+# the iteration denorm without touching the lifecycle status.
 ProcedureEvent = (
     ProcedureRegistered
     | ProcedureStarted
@@ -299,6 +364,8 @@ ProcedureEvent = (
     | ProcedureAborted
     | ProcedureTruncated
     | ProcedureActivitiesLogbookOpened
+    | ProcedureIterationStarted
+    | ProcedureIterationEnded
     | RecipeExpansionRecorded
 )
 
@@ -386,6 +453,30 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "logbook_id": str(logbook_id),
                 "kind": kind,
                 "schema": schema.to_dict(),
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case ProcedureIterationStarted(
+            procedure_id=procedure_id,
+            iteration_index=iteration_index,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "procedure_id": str(procedure_id),
+                "iteration_index": iteration_index,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case ProcedureIterationEnded(
+            procedure_id=procedure_id,
+            iteration_index=iteration_index,
+            converged=converged,
+            reason=reason,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "procedure_id": str(procedure_id),
+                "iteration_index": iteration_index,
+                "converged": converged,
+                "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
             }
         case RecipeExpansionRecorded(
@@ -518,6 +609,26 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
+        case "ProcedureIterationStarted":
+            return deserialize_or_raise(
+                "ProcedureIterationStarted",
+                lambda: ProcedureIterationStarted(
+                    procedure_id=UUID(payload["procedure_id"]),
+                    iteration_index=int(payload["iteration_index"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
+        case "ProcedureIterationEnded":
+            return deserialize_or_raise(
+                "ProcedureIterationEnded",
+                lambda: ProcedureIterationEnded(
+                    procedure_id=UUID(payload["procedure_id"]),
+                    iteration_index=int(payload["iteration_index"]),
+                    converged=payload["converged"],
+                    reason=payload["reason"],
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
         case "RecipeExpansionRecorded":
             return deserialize_or_raise(
                 "RecipeExpansionRecorded",
@@ -546,6 +657,8 @@ __all__ = [
     "ProcedureActivitiesLogbookOpened",
     "ProcedureCompleted",
     "ProcedureEvent",
+    "ProcedureIterationEnded",
+    "ProcedureIterationStarted",
     "ProcedureRegistered",
     "ProcedureStarted",
     "ProcedureTruncated",
