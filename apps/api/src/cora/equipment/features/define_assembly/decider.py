@@ -77,14 +77,14 @@ def decide(
       - command.parameter_overrides_schema, when non-None, must be a
         well-formed JSON Schema in CORA's constrained subset
         -> InvalidParameterOverridesSchemaError.
-      - No sub_assembly_refs link may point at this Assembly's own id
+      - No required_sub_assemblies link may point at this Assembly's own id
         -> SubAssemblyCycleError.
-      - Every sub_assembly_refs child must resolve to a defined Assembly
+      - Every required_sub_assemblies child must resolve to a defined Assembly
         -> SubAssemblyNotFoundForAssemblyError (sorted-first missing).
-      - Each sub_assembly_refs link's pinned content_hash must match the
+      - Each required_sub_assemblies link's pinned content_hash must match the
         child's current content_hash -> SubAssemblyContentHashMismatchError
         (sorted-first drift).
-      - No sub_assembly_refs link slot_name may collide with a leaf slot
+      - No required_sub_assemblies link slot_name may collide with a leaf slot
         or another link -> SubAssemblySlotNameConflictError.
     """
     if state is not None:
@@ -93,7 +93,7 @@ def decide(
         first_missing = next(iter(sorted(context.missing_family_ids, key=str)))
         raise FamilyNotFoundForAssemblyError(first_missing)
 
-    for ref in command.sub_assembly_refs:
+    for ref in command.required_sub_assemblies:
         if ref.sub_assembly_id == new_id:
             raise SubAssemblyCycleError(new_id)
     if context.missing_sub_assembly_ids:
@@ -125,7 +125,7 @@ def decide(
     # load-time evolver fault from Assembly.__post_init__ on a written
     # (poisoned) stream.
     seen_sub_assembly_names: set[str] = set()
-    for link in command.sub_assembly_refs:
+    for link in command.required_sub_assemblies:
         link_name = link.slot_name.value
         if link_name in slot_names:
             raise SubAssemblySlotNameConflictError(
@@ -149,7 +149,7 @@ def decide(
         required_slots=command.required_slots,
         required_wires=command.required_wires,
         parameter_overrides_schema=command.parameter_overrides_schema,
-        required_sub_assemblies=command.sub_assembly_refs,
+        required_sub_assemblies=command.required_sub_assemblies,
     )
 
     return [
@@ -159,7 +159,7 @@ def decide(
             presents_as_family_id=command.presents_as_family_id,
             required_slots=command.required_slots,
             required_wires=command.required_wires,
-            required_sub_assemblies=command.sub_assembly_refs,
+            required_sub_assemblies=command.required_sub_assemblies,
             parameter_overrides_schema=command.parameter_overrides_schema,
             drawing=command.drawing,
             version=command.version,

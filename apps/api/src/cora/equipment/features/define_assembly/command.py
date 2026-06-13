@@ -44,7 +44,7 @@ class DefineAssembly:
     presents_as_family_id: UUID
     required_slots: frozenset[TemplateSlot] = field(default_factory=frozenset[TemplateSlot])
     required_wires: frozenset[TemplateWire] = field(default_factory=frozenset[TemplateWire])
-    sub_assembly_refs: frozenset[SubAssemblyLink] = field(
+    required_sub_assemblies: frozenset[SubAssemblyLink] = field(
         default_factory=frozenset[SubAssemblyLink]
     )
     parameter_overrides_schema: dict[str, Any] | None = None

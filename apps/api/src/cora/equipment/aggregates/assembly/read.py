@@ -7,7 +7,7 @@ commands (`version_assembly`, `deprecate_assembly`,
 
 `resolve_sub_assembly_pins` is the shared cross-aggregate check that
 the `define_assembly` and `version_assembly` handlers run over a
-command's `sub_assembly_refs`: it loads each referenced child
+command's `required_sub_assemblies`: it loads each referenced child
 Assembly and classifies whether it exists and whether its current
 content_hash still matches the pin the parent was authored against.
 """

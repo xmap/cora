@@ -272,7 +272,7 @@ _SUB_HASH = "sha256:" + "a" * 8
 
 
 @pytest.mark.unit
-def test_decide_emits_defined_with_sub_assembly_refs() -> None:
+def test_decide_emits_defined_with_required_sub_assemblies() -> None:
     new_id = uuid4()
     link = SubAssemblyLink(
         slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
@@ -282,7 +282,7 @@ def test_decide_emits_defined_with_sub_assembly_refs() -> None:
         command=DefineAssembly(
             name="Microscope",
             presents_as_family_id=uuid4(),
-            sub_assembly_refs=frozenset({link}),
+            required_sub_assemblies=frozenset({link}),
         ),
         context=DefineAssemblyContext(missing_family_ids=frozenset()),
         now=_NOW,
@@ -303,7 +303,7 @@ def test_decide_rejects_missing_sub_assembly() -> None:
             command=DefineAssembly(
                 name="Microscope",
                 presents_as_family_id=uuid4(),
-                sub_assembly_refs=frozenset({link}),
+                required_sub_assemblies=frozenset({link}),
             ),
             context=DefineAssemblyContext(
                 missing_family_ids=frozenset(),
@@ -328,7 +328,7 @@ def test_decide_rejects_sub_assembly_content_hash_mismatch() -> None:
             command=DefineAssembly(
                 name="Microscope",
                 presents_as_family_id=uuid4(),
-                sub_assembly_refs=frozenset({link}),
+                required_sub_assemblies=frozenset({link}),
             ),
             context=DefineAssemblyContext(
                 missing_family_ids=frozenset(),
@@ -354,7 +354,7 @@ def test_decide_rejects_self_referential_sub_assembly() -> None:
             command=DefineAssembly(
                 name="Microscope",
                 presents_as_family_id=uuid4(),
-                sub_assembly_refs=frozenset({link}),
+                required_sub_assemblies=frozenset({link}),
             ),
             context=DefineAssemblyContext(missing_family_ids=frozenset()),
             now=_NOW,
@@ -377,7 +377,7 @@ def test_decide_rejects_sub_assembly_slot_name_colliding_with_leaf_slot() -> Non
                 name="Microscope",
                 presents_as_family_id=family_id,
                 required_slots=frozenset({leaf}),
-                sub_assembly_refs=frozenset({link}),
+                required_sub_assemblies=frozenset({link}),
             ),
             context=DefineAssemblyContext(missing_family_ids=frozenset()),
             now=_NOW,

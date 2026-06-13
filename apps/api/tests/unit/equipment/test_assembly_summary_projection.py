@@ -6,6 +6,7 @@ side behavior lands in the integration suite when the slice for
 define_assembly arrives.
 """
 
+import json
 from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock
@@ -250,3 +251,85 @@ async def test_assembly_presents_as_removed_uses_array_remove() -> None:
     assert "array_remove(presents_as, $2)" in sql
     assert args.args[1] == _ASSEMBLY_ID
     assert args.args[2] == role_id
+
+
+@pytest.mark.unit
+async def test_assembly_defined_writes_required_sub_assemblies_jsonb() -> None:
+    proj = AssemblySummaryProjection()
+    conn = AsyncMock()
+    refs = [{"slot_name": "optics", "sub_assembly_id": str(uuid4()), "content_hash": "h1"}]
+    event = _stored(
+        "AssemblyDefined",
+        {
+            "assembly_id": str(_ASSEMBLY_ID),
+            "name": "Microscope",
+            "presents_as_family_id": str(_FAMILY_ID),
+            "required_slots": [],
+            "required_wires": [],
+            "required_sub_assemblies": refs,
+            "parameter_overrides_schema": None,
+            "drawing": None,
+            "version": None,
+            "content_hash": "c" * 64,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    args = conn.execute.await_args
+    assert args is not None
+    # 7th positional arg (index 7 after the SQL string) is the JSONB text.
+    assert json.loads(args.args[7]) == refs
+
+
+@pytest.mark.unit
+async def test_assembly_defined_defaults_missing_required_sub_assemblies_to_empty() -> None:
+    proj = AssemblySummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "AssemblyDefined",
+        {
+            "assembly_id": str(_ASSEMBLY_ID),
+            "name": "Detector",
+            "presents_as_family_id": str(_FAMILY_ID),
+            "required_slots": [],
+            "required_wires": [],
+            "parameter_overrides_schema": None,
+            "drawing": None,
+            "version": None,
+            "content_hash": "d" * 64,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    args = conn.execute.await_args
+    assert args is not None
+    assert json.loads(args.args[7]) == []
+
+
+@pytest.mark.unit
+async def test_assembly_versioned_writes_required_sub_assemblies_jsonb() -> None:
+    proj = AssemblySummaryProjection()
+    conn = AsyncMock()
+    refs = [{"slot_name": "optics", "sub_assembly_id": str(uuid4()), "content_hash": "h2"}]
+    event = _stored(
+        "AssemblyVersioned",
+        {
+            "assembly_id": str(_ASSEMBLY_ID),
+            "name": "Microscope",
+            "presents_as_family_id": str(_FAMILY_ID),
+            "required_slots": [],
+            "required_wires": [],
+            "required_sub_assemblies": refs,
+            "parameter_overrides_schema": None,
+            "drawing": None,
+            "version": "v2",
+            "content_hash": "e" * 64,
+            "previous_content_hash": "c" * 64,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    args = conn.execute.await_args
+    assert args is not None
+    # 6th positional arg (index 6) is the JSONB text on UPDATE_VERSIONED.
+    assert json.loads(args.args[6]) == refs

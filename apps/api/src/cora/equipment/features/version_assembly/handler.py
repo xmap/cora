@@ -118,7 +118,7 @@ def bind(deps: Kernel) -> Handler:
         family_ids = _referenced_family_ids(command)
         missing = await find_missing_families_per_id(deps.event_store, family_ids)
         missing_subs, sub_mismatches = await resolve_sub_assembly_pins(
-            deps.event_store, command.sub_assembly_refs
+            deps.event_store, command.required_sub_assemblies
         )
         context = VersionAssemblyContext(
             missing_family_ids=missing,

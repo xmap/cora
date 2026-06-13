@@ -13,7 +13,7 @@ so error responses are stable across runs; surfacing the full set
 on a single error would force the route layer to encode a list shape
 that no shipped error currently uses.
 
-The same handler also resolves each `sub_assembly_refs` link via
+The same handler also resolves each `required_sub_assemblies` link via
 `resolve_sub_assembly_pins`: `missing_sub_assembly_ids` carries the
 referenced child Assembly ids that do not resolve, and
 `sub_assembly_hash_mismatches` carries `(sub_assembly_id, pinned,

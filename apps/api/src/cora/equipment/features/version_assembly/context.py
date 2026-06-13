@@ -10,7 +10,7 @@ When non-empty, the decider raises FamilyNotFoundForAssemblyError
 carrying the sorted-first missing id so error responses are stable
 across runs.
 
-The handler also resolves each `sub_assembly_refs` link via
+The handler also resolves each `required_sub_assemblies` link via
 `resolve_sub_assembly_pins`: `missing_sub_assembly_ids` carries the
 referenced child Assembly ids that do not resolve, and
 `sub_assembly_hash_mismatches` carries `(sub_assembly_id, pinned,
