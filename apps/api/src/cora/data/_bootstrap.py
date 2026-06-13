@@ -4,9 +4,10 @@ Two lifespan-Python startup steps per [[project-data-distribution-design]]
 Slice 2 (L23 + L23a + L24 + L24a + L24b):
 
   1. `bootstrap_default_storage_supply(kernel)`: resolves
-     `Settings.self_facility_default_storage_supply_code` against
-     `proj_supply_summary`, scoped to the current
-     `Settings.self_facility_code` and to `kind = 'Storage'`. Fail-loud
+     `Settings.self_facility_default_storage_supply_code` via the
+     `SupplyLookup` port over `proj_supply_summary`, scoped to the
+     current `Settings.self_facility_code` and to `kind = 'Storage'`.
+     Fail-loud
      on env-var-unset-with-legacy-Datasets, missing Supply, or
      non-Available status via a single
      `DefaultStorageSupplyBootstrapError` carrying a
@@ -80,11 +81,13 @@ async def bootstrap_default_storage_supply(kernel: Kernel) -> UUID | None:
     """Resolve the default storage Supply for the Distribution backfill.
 
     Reads `Settings.self_facility_default_storage_supply_code`; resolves
-    against `proj_supply_summary` by `name` column (Supply BC's
-    operator-readable identifier; there is no separate `code` column),
-    scoped to the current `Settings.self_facility_code` and to
-    `kind = 'Storage'` so a peer-facility's same-named non-Storage
-    Supply in a federated deployment never wins nondeterministically.
+    via the `SupplyLookup.find_supplies_by_name` port (which reads
+    `proj_supply_summary`) by `name` (Supply BC's operator-readable
+    identifier; there is no separate `code` column), scoped to the
+    current `Settings.self_facility_code` and to `kind = 'Storage'` so a
+    peer-facility's same-named non-Storage Supply in a federated
+    deployment never wins nondeterministically. Going through the port
+    keeps the Data BC off a direct cross-BC projection read.
 
     Returns the resolved `supply_id` (UUID), or `None` when the env var
     is unset AND no legacy Datasets exist (clean install no-op).
@@ -112,31 +115,32 @@ async def bootstrap_default_storage_supply(kernel: Kernel) -> UUID | None:
     async with pool.acquire() as conn:
         legacy_count: int = await conn.fetchval("SELECT COUNT(*) FROM proj_data_dataset_summary")
 
-        if supply_code is None:
-            if legacy_count > 0:
-                raise DefaultStorageSupplyBootstrapError(
-                    DefaultStorageSupplyBootstrapFailure.CODE_UNSET,
-                    message=(
-                        f"Cannot bootstrap default storage Supply: "
-                        f"SELF_FACILITY_DEFAULT_STORAGE_SUPPLY_CODE env var is unset "
-                        f"but {legacy_count} legacy Dataset row(s) exist that "
-                        f"need backfill. Set the env var to an existing storage-kind "
-                        f"Available Supply code, then restart."
-                    ),
-                    legacy_dataset_count=legacy_count,
-                )
-            _log.info("default_storage_supply.no_default_storage_supply_required")
-            return None
+    if supply_code is None:
+        if legacy_count > 0:
+            raise DefaultStorageSupplyBootstrapError(
+                DefaultStorageSupplyBootstrapFailure.CODE_UNSET,
+                message=(
+                    f"Cannot bootstrap default storage Supply: "
+                    f"SELF_FACILITY_DEFAULT_STORAGE_SUPPLY_CODE env var is unset "
+                    f"but {legacy_count} legacy Dataset row(s) exist that "
+                    f"need backfill. Set the env var to an existing storage-kind "
+                    f"Available Supply code, then restart."
+                ),
+                legacy_dataset_count=legacy_count,
+            )
+        _log.info("default_storage_supply.no_default_storage_supply_required")
+        return None
 
-        rows = await conn.fetch(
-            "SELECT supply_id, status FROM proj_supply_summary "
-            "WHERE name = $1 AND facility_code = $2 AND kind = $3",
-            supply_code,
-            facility_code,
-            STORAGE_SUPPLY_KIND,
-        )
+    # Cross-BC resolution goes through the SupplyLookup port, never a
+    # direct read of proj_supply_summary from the Data BC (the widened
+    # cross-BC projection-read fitness test enforces this).
+    results = await kernel.supply_lookup.find_supplies_by_name(
+        name=supply_code,
+        facility_code=facility_code,
+        kind=STORAGE_SUPPLY_KIND,
+    )
 
-    if len(rows) == 0:
+    if len(results) == 0:
         raise DefaultStorageSupplyBootstrapError(
             DefaultStorageSupplyBootstrapFailure.NOT_FOUND,
             message=(
@@ -148,19 +152,19 @@ async def bootstrap_default_storage_supply(kernel: Kernel) -> UUID | None:
             ),
             supply_code=supply_code,
         )
-    if len(rows) > 1:
+    if len(results) > 1:
         _log.warning(
             "default_storage_supply.multi_match",
             supply_code=supply_code,
             facility_code=facility_code,
-            match_count=len(rows),
+            match_count=len(results),
         )
         raise DefaultStorageSupplyBootstrapError(
             DefaultStorageSupplyBootstrapFailure.NOT_FOUND,
             message=(
                 f"Cannot bootstrap default storage Supply: "
                 f"SELF_FACILITY_DEFAULT_STORAGE_SUPPLY_CODE={supply_code!r} "
-                f"matched {len(rows)} rows in proj_supply_summary "
+                f"matched {len(results)} rows in proj_supply_summary "
                 f"(facility_code={facility_code!r}, kind={STORAGE_SUPPLY_KIND!r}); "
                 f"ambiguous default storage Supply. Remove duplicate Supply "
                 f"rows or rename the conflicting Supply, then restart."
@@ -168,9 +172,9 @@ async def bootstrap_default_storage_supply(kernel: Kernel) -> UUID | None:
             supply_code=supply_code,
         )
 
-    row = rows[0]
-    actual_status: str = row["status"]
-    supply_id: UUID = row["supply_id"]
+    result = results[0]
+    actual_status = result.status
+    supply_id = result.supply_id
 
     if actual_status != "Available":
         raise DefaultStorageSupplyBootstrapError(

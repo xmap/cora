@@ -41,6 +41,7 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.supply._projections import register_supply_projections
+from cora.supply.adapters import PostgresSupplyLookup
 from cora.supply.features import deregister_supply, register_supply
 from cora.supply.features.deregister_supply import DeregisterSupply
 from cora.supply.features.register_supply import RegisterSupply
@@ -74,12 +75,22 @@ async def _drain_dataset(db_pool: asyncpg.Pool) -> None:
     await drain_projections(db_pool, registry, deadline_seconds=2.0)
 
 
-def _with_settings_supply_code(deps: Kernel, supply_code: str | None) -> Kernel:
+def _bootstrap_deps(deps: Kernel, supply_code: str | None) -> Kernel:
+    """Deps for a `bootstrap_default_storage_supply` call.
+
+    Sets the default-storage-supply env code and wires the real
+    `PostgresSupplyLookup` so the bootstrap resolves against the actual
+    `proj_supply_summary` projection. The `build_postgres_deps` default
+    `supply_lookup` (the `AllSatisfiedSupplyLookup` stub) does not back
+    the by-name resolution path the bootstrap now uses.
+    """
+    assert deps.pool is not None
     return replace(
         deps,
         settings=deps.settings.model_copy(
             update={"self_facility_default_storage_supply_code": supply_code}
         ),
+        supply_lookup=PostgresSupplyLookup(deps.pool),
     )
 
 
@@ -152,7 +163,7 @@ async def test_env_var_unset_with_no_legacy_datasets_succeeds_no_op(
     db_pool: asyncpg.Pool,
 ) -> None:
     deps = build_postgres_deps(db_pool, now=_NOW)
-    deps = _with_settings_supply_code(deps, None)
+    deps = _bootstrap_deps(deps, None)
 
     supply_id = await bootstrap_default_storage_supply(deps)
     assert supply_id is None
@@ -169,7 +180,7 @@ async def test_env_var_unset_with_legacy_datasets_raises_unset_error(
     await _drain_dataset(db_pool)
 
     deps = build_postgres_deps(db_pool, now=_NOW)
-    deps = _with_settings_supply_code(deps, None)
+    deps = _bootstrap_deps(deps, None)
 
     with pytest.raises(DefaultStorageSupplyBootstrapError) as exc_info:
         await bootstrap_default_storage_supply(deps)
@@ -182,7 +193,7 @@ async def test_env_var_set_but_supply_missing_raises_not_found(
     db_pool: asyncpg.Pool,
 ) -> None:
     deps = build_postgres_deps(db_pool, now=_NOW)
-    deps = _with_settings_supply_code(deps, "NONEXISTENT")
+    deps = _bootstrap_deps(deps, "NONEXISTENT")
 
     with pytest.raises(DefaultStorageSupplyBootstrapError) as exc_info:
         await bootstrap_default_storage_supply(deps)
@@ -206,7 +217,7 @@ async def test_env_var_set_supply_wrong_kind_raises_not_found(
     await _mark_supply_available(db_pool, supply_id)
 
     deps = build_postgres_deps(db_pool, now=_NOW)
-    deps = _with_settings_supply_code(deps, "wrong-kind-store")
+    deps = _bootstrap_deps(deps, "wrong-kind-store")
 
     with pytest.raises(DefaultStorageSupplyBootstrapError) as exc_info:
         await bootstrap_default_storage_supply(deps)
@@ -223,7 +234,7 @@ async def test_env_var_set_supply_not_available_raises_not_available(
     # Skip mark_supply_available: the row stays at status='Unknown'.
 
     deps = build_postgres_deps(db_pool, now=_NOW)
-    deps = _with_settings_supply_code(deps, "unknown-store")
+    deps = _bootstrap_deps(deps, "unknown-store")
 
     with pytest.raises(DefaultStorageSupplyBootstrapError) as exc_info:
         await bootstrap_default_storage_supply(deps)
@@ -247,7 +258,7 @@ async def test_happy_path_backfills_three_datasets(db_pool: asyncpg.Pool) -> Non
     await _drain_dataset(db_pool)
 
     deps = build_postgres_deps(db_pool, now=_NOW)
-    deps = _with_settings_supply_code(deps, _STORAGE_SUPPLY_NAME)
+    deps = _bootstrap_deps(deps, _STORAGE_SUPPLY_NAME)
 
     resolved = await bootstrap_default_storage_supply(deps)
     assert resolved == supply_id
@@ -285,7 +296,7 @@ async def test_backfill_unmapped_uri_scheme_raises(db_pool: asyncpg.Pool) -> Non
     await _drain_dataset(db_pool)
 
     deps = build_postgres_deps(db_pool, now=_NOW)
-    deps = _with_settings_supply_code(deps, _STORAGE_SUPPLY_NAME)
+    deps = _bootstrap_deps(deps, _STORAGE_SUPPLY_NAME)
 
     resolved = await bootstrap_default_storage_supply(deps)
     assert resolved == supply_id
@@ -307,7 +318,7 @@ async def test_backfill_is_idempotent_on_rerun(db_pool: asyncpg.Pool) -> None:
     await _drain_dataset(db_pool)
 
     deps = build_postgres_deps(db_pool, now=_NOW)
-    deps = _with_settings_supply_code(deps, _STORAGE_SUPPLY_NAME)
+    deps = _bootstrap_deps(deps, _STORAGE_SUPPLY_NAME)
 
     resolved = await bootstrap_default_storage_supply(deps)
     first = await bootstrap_distribution_backfill(deps, resolved)
@@ -341,10 +352,11 @@ async def test_backfill_skips_decommissioned_path_when_supply_unset(
 async def test_decommissioned_supply_fails_status_check(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """Decommissioned Supplies are filtered from `proj_supply_summary`
-    by the deregister_supply slice (DELETE-style tombstone); the
-    bootstrap fails-loud with NotFoundError (not NotAvailableError)
-    because the row no longer exists in the projection."""
+    """Decommissioned Supplies are excluded at the query layer by
+    `find_supplies_by_name`'s `status != 'Decommissioned'` filter (the
+    deregister_supply slice UPDATEs the projection row to
+    status='Decommissioned'; it does not delete it), so the bootstrap
+    fails-loud deterministically with NOT_FOUND."""
     supply_id = uuid4()
     await _register_storage_supply(db_pool, supply_id, name="ephemeral-store")
     await _mark_supply_available(db_pool, supply_id)
@@ -358,16 +370,11 @@ async def test_decommissioned_supply_fails_status_check(
     await _drain_supply(db_pool)
 
     deps = build_postgres_deps(db_pool, now=_NOW)
-    deps = _with_settings_supply_code(deps, "ephemeral-store")
+    deps = _bootstrap_deps(deps, "ephemeral-store")
 
-    # Either NotFound (row removed) or NotAvailable (status flipped) is
-    # acceptable; the bootstrap fails-loud either way.
     with pytest.raises(DefaultStorageSupplyBootstrapError) as exc_info:
         await bootstrap_default_storage_supply(deps)
-    assert exc_info.value.kind in {
-        DefaultStorageSupplyBootstrapFailure.NOT_FOUND,
-        DefaultStorageSupplyBootstrapFailure.NOT_AVAILABLE,
-    }
+    assert exc_info.value.kind is DefaultStorageSupplyBootstrapFailure.NOT_FOUND
 
 
 def test_settings_default_storage_supply_code_defaults_to_none() -> None:
