@@ -12,10 +12,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.enclosure.aggregates._value_types import (
-    ENCLOSURE_REASON_MAX_LENGTH,
-    EnclosureId,
-)
+from cora.enclosure.aggregates._value_types import EnclosureId
 from cora.enclosure.aggregates.enclosure import (
     Enclosure,
     EnclosureCannotDecommissionError,
@@ -28,6 +25,7 @@ from cora.enclosure.aggregates.enclosure import (
 from cora.enclosure.features import decommission_enclosure
 from cora.enclosure.features.decommission_enclosure import DecommissionEnclosure
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _NOW = datetime(2026, 7, 1, 9, 30, 0, tzinfo=UTC)
 _REGISTERED_AT = datetime(2026, 6, 8, 12, 0, 0, tzinfo=UTC)
@@ -167,7 +165,7 @@ def test_decommission_enclosure_rejects_whitespace_only_reason() -> None:
 
 @pytest.mark.unit
 def test_decommission_enclosure_rejects_too_long_reason() -> None:
-    too_long = "a" * (ENCLOSURE_REASON_MAX_LENGTH + 1)
+    too_long = "a" * (REASON_MAX_LENGTH + 1)
     with pytest.raises(InvalidEnclosureReasonError):
         decommission_enclosure.decide(
             state=_active_enclosure(),
@@ -251,11 +249,11 @@ def test_decommission_enclosure_uses_handler_injected_now_verbatim() -> None:
 
 @pytest.mark.unit
 def test_decommission_enclosure_accepts_reason_at_max_length_boundary() -> None:
-    """`reason` of exactly ENCLOSURE_REASON_MAX_LENGTH chars is accepted.
+    """`reason` of exactly REASON_MAX_LENGTH chars is accepted.
 
     Pins the off-by-one upper boundary (the reject path is at +1).
     """
-    boundary = "a" * ENCLOSURE_REASON_MAX_LENGTH
+    boundary = "a" * REASON_MAX_LENGTH
     state = _active_enclosure()
     events = decommission_enclosure.decide(
         state,

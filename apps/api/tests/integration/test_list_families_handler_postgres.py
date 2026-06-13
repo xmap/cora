@@ -21,6 +21,7 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_family import bind as bind_define
 from cora.equipment.features.deprecate_family import DeprecateFamily
@@ -53,8 +54,8 @@ async def test_define_emits_defined_status_with_null_version_tag(
     db_pool: asyncpg.Pool,
 ) -> None:
     """Sanity: a freshly defined capability is Defined with version_tag NULL."""
-    cap_id = uuid4()
-    deps = _build_deps(db_pool, [cap_id, uuid4()])
+    cap_id = family_stream_id(FamilyName("Continuous Rotation Tomography"))
+    deps = _build_deps(db_pool, [uuid4()])
     await bind_define(deps)(
         DefineFamily(name="Continuous Rotation Tomography", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
@@ -79,8 +80,8 @@ async def test_version_writes_versioned_status_and_version_tag(
     db_pool: asyncpg.Pool,
 ) -> None:
     """Define -> version: status flips Versioned and version_tag lands."""
-    cap_id = uuid4()
-    deps = _build_deps(db_pool, [cap_id, uuid4(), uuid4()])
+    cap_id = family_stream_id(FamilyName("Powder Diffraction"))
+    deps = _build_deps(db_pool, [uuid4(), uuid4()])
     await bind_define(deps)(
         DefineFamily(name="Powder Diffraction", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
@@ -108,8 +109,8 @@ async def test_deprecate_preserves_version_tag(db_pool: asyncpg.Pool) -> None:
     """Define -> version -> deprecate: status flips Deprecated, but
     version_tag stays so the audit trail of "what was the last
     revision before deprecation?" is visible in the projection."""
-    cap_id = uuid4()
-    deps = _build_deps(db_pool, [cap_id, uuid4(), uuid4(), uuid4()])
+    cap_id = family_stream_id(FamilyName("X-ray Fluorescence Mapping"))
+    deps = _build_deps(db_pool, [uuid4(), uuid4(), uuid4()])
     await bind_define(deps)(
         DefineFamily(name="X-ray Fluorescence Mapping", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
@@ -143,8 +144,8 @@ async def test_deprecate_without_version_keeps_version_tag_null(
 ) -> None:
     """Define -> deprecate (skip version): status=Deprecated and
     version_tag stays NULL because nothing ever wrote it."""
-    cap_id = uuid4()
-    deps = _build_deps(db_pool, [cap_id, uuid4(), uuid4()])
+    cap_id = family_stream_id(FamilyName("ObsoleteMethod"))
+    deps = _build_deps(db_pool, [uuid4(), uuid4()])
     await bind_define(deps)(
         DefineFamily(name="ObsoleteMethod", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
@@ -173,18 +174,14 @@ async def test_status_filter_returns_only_matching_rows(
 ) -> None:
     """Three capabilities in different statuses; status=Versioned
     returns only the one Versioned row."""
-    defined_id = uuid4()
-    versioned_id = uuid4()
-    deprecated_id = uuid4()
+    versioned_id = family_stream_id(FamilyName("ToBeVersioned"))
+    deprecated_id = family_stream_id(FamilyName("ToBeDeprecated"))
     deps = _build_deps(
         db_pool,
         [
-            defined_id,
-            uuid4(),
-            versioned_id,
             uuid4(),
             uuid4(),
-            deprecated_id,
+            uuid4(),
             uuid4(),
             uuid4(),
         ],
@@ -234,10 +231,9 @@ async def test_cursor_walks_pages(db_pool: asyncpg.Pool) -> None:
     """5 defined capabilities; cursor walks 3 pages with limit=2."""
     cap_ids: list[UUID] = []
     fixed_ids: list[UUID] = []
-    for _ in range(5):
-        cap = uuid4()
-        cap_ids.append(cap)
-        fixed_ids.extend([cap, uuid4()])
+    for i in range(5):
+        cap_ids.append(family_stream_id(FamilyName(f"Cap{i:02d}")))
+        fixed_ids.append(uuid4())
     deps = _build_deps(db_pool, fixed_ids)
     define = bind_define(deps)
     for i in range(5):

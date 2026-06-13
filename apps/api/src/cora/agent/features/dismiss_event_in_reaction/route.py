@@ -25,13 +25,12 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
-# Mirror of the decider's `_REASON_MAX_LENGTH`. Kept in the route so
-# the Pydantic schema short-circuits oversize bodies before the handler
+# The Pydantic schema short-circuits oversize bodies before the handler
 # acquires a pool connection; the decider's check defends against
 # direct in-process callers (tests, future sagas).
 _REASON_MIN_LENGTH = 1
-_REASON_MAX_LENGTH = 500
 
 
 class DismissEventInReactionRequest(BaseModel):
@@ -51,7 +50,7 @@ class DismissEventInReactionRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=_REASON_MIN_LENGTH,
-        max_length=_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Free-form reason the operator gives for the dismissal "
             "(1-500 chars after trimming). Captured verbatim into "

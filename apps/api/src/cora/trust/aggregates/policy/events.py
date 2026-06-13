@@ -29,9 +29,11 @@ from cora.infrastructure.routing import NIL_SENTINEL_ID
 class PolicyDefined:
     """A new authorization Policy was defined for a Conduit + Surface pair.
 
-    `surface_id`: additive. V1 PolicyDefined events
-    on disk lack this field; `from_stored` defaults missing values to
-    `UUID(int=0)` so V1 events still fold cleanly.
+    `surface_id`: additive. The legacy V1 bootstrap PolicyDefined event
+    on disk lacks this field; `from_stored` defaults the missing value to
+    `UUID(int=0)` so that immutable seed still folds cleanly. New events
+    always carry a real Surface (`define_policy` rejects the nil
+    sentinel), so nil arises only from that one legacy seed.
     """
 
     policy_id: UUID

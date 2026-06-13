@@ -102,6 +102,7 @@ from cora.campaign.aggregates.campaign import CampaignIntent
 from cora.campaign.features.add_run_to_campaign import AddRunToCampaign
 from cora.campaign.features.add_run_to_campaign import bind as bind_add_run_to_campaign
 from cora.decision.aggregates.decision import load_decision
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.infrastructure.ports import FakeLLM, FakeLLMResponse
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.run.features.complete_run import CompleteRun
@@ -137,10 +138,10 @@ _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000404501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000404a01")
 
 # Capabilities (full imaging chain)
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000404c01")
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000404c11")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000404c21")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000404c31")
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 
 # Devices
 _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-000000404a11")

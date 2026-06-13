@@ -12,7 +12,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.trust.aggregates.visit import VISIT_REASON_MAX_LENGTH
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.trust.features.abort_visit.command import AbortVisit
 from cora.trust.features.abort_visit.handler import Handler
 
@@ -23,7 +23,7 @@ class AbortVisitRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=VISIT_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description="Operator-supplied reason for the abort (no PII).",
     )
 

@@ -17,7 +17,7 @@ instantiated: a Family or Assembly declares it satisfies a Role via
 positional role slot to a Role via `RoleRequirement.role_kind: UUID`
 (3D). The Plan-side satisfaction check at `bind_plan_role` walks
 `Family.presents_as` and requires the Family's `affordances` superset
-the Role's `required_affordances` (Lock 17 ANY-single-family
+the Role's `required_affordances` (ANY-single-family
 disjunction for multi-Family Assets).
 
 ## No FSM at 3A (Q1 user pick, 2026-06-10)

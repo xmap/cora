@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Equipment module owns CORA's record of what physical devices the facility runs, how they are catalogued and composed, where they are mounted, and what operational state each one is in. Eight aggregates carry the responsibility. `Family` is the device-class abstraction (what kind of thing a rotary stage, camera, or scintillator is). `Asset` is one physical instance the facility commissions, maintains, moves, and eventually decommissions. `Model` is the vendor catalog entry that pins a manufacturer plus part number to a set of declared Families. `Mount` is a named installation slot the facility provisions in advance; an Asset is later installed into that slot. `Frame` is a coordinate frame in the placement hierarchy that Mounts use to anchor their position. `Assembly` is a reusable composition blueprint that declares a slot map and wiring for a cluster of Assets, and presents the cluster as a single Family. `Fixture` is the materialization of an Assembly into concrete Asset instances on a particular Trust Surface. `Role` is the global functional binding contract (Imager, Positioner, Controller, Detector) that names WHAT operational shape a Method needs without pinning the anatomical Family that provides it; Families and Assemblies advertise which Roles they satisfy through a `presents_as` set.
+The Equipment module owns CORA's record of what physical devices the facility runs, how they are catalogued and composed, where they are mounted, and what operational state each one is in. <!-- arch:count kind=aggregate bc=equipment spell=true cap=true -->Eight<!-- /arch:count --> aggregates carry the responsibility. `Family` is the device-class abstraction (what kind of thing a rotary stage, camera, or scintillator is). `Asset` is one physical instance the facility commissions, maintains, moves, and eventually decommissions. `Model` is the vendor catalog entry that pins a manufacturer plus part number to a set of declared Families. `Mount` is a named installation slot the facility provisions in advance; an Asset is later installed into that slot. `Frame` is a coordinate frame in the placement hierarchy that Mounts use to anchor their position. `Assembly` is a reusable composition blueprint that declares a slot map and wiring for a cluster of Assets, and presents the cluster as a single Family. `Fixture` is the materialization of an Assembly into concrete Asset instances on a particular Trust Surface. `Role` is the global functional binding contract (Imager, Positioner, Controller, Detector) that names WHAT operational shape a Method needs without pinning the anatomical Family that provides it; Families and Assemblies advertise which Roles they satisfy through a `presents_as` set.
 
 Equipment is Foundation: every other module that needs to point at a specific piece of hardware references an `Asset.id`. The recipe ladder binds Methods to Assets through Plans, and a Method may now require not only Families but specific Assembly blueprints. Procedures target Assets. Calibrations key off an `Asset.id` plus a quantity. Supplies advertise resources whose physical delivery infrastructure lives as Assets. Trust groups Assets into Zones for security policy.
 
@@ -41,6 +41,8 @@ Out of scope
 `Assembly` and `Fixture` form a template-realization pair. An Assembly is a reusable composition blueprint that declares a slot map (which Families must occupy which named positions), an intra-cluster wiring map (which slot port connects to which other slot port), and an optional parameter-overrides schema. The Assembly presents through a single declared Family for the purposes of Capability binding, even though the cluster contains several underlying Assets. A Fixture is the materialization of an Assembly into concrete Assets on a particular Trust Surface; the Fixture binds named slots to specific `Asset.id` values, freezes the Assembly's content hash at registration time for federation matching, and carries any parameter overrides applied at this materialization.
 
 `Role` is the global functional binding contract: WHAT operational shape a Method needs (`Imager`, `Positioner`, `Controller`, `Detector`) without pinning the anatomical Family that provides it. Role is a sister aggregate to Family, not a kind of Family: it carries its own registry, events, and identifier (`RoleId`). A Role is a lightweight contract, `required_affordances` plus `optional_affordances` plus `produces` plus `consumes` plus a `docstring`; it has no settings schema, no instances, and no ports. A Family or Assembly declares it satisfies a Role through `presents_as: frozenset[RoleId]`, and a Method binds a positional role slot to a Role through its `RoleRequirement` in the [Recipe](../recipe/index.md) module. `RoleId` values are uuid5-derived from a fixed namespace (`role_stream_id(name) = uuid5(_ROLE_NAMESPACE, name.value.lower())`, `_ROLE_NAMESPACE = uuid5(NAMESPACE_DNS, 'cora.role')`) so the same Role gets the same id across deployments, which federation portability requires. Four seed Roles (Imager, Positioner, Controller, Detector) are auto-seeded at lifespan by `bootstrap_equipment`; defining a Role whose case-insensitive name collides with an existing one (a seed or any prior Role) returns `409 Conflict` via the deterministic stream id. Role ships no FSM today: status is implicit (`Defined`) on every Role, and the SiLA-2 FQN-terminal-major versioning slices are deferred until the first satisfaction-breaking affordance change forces them.
+
+`Family` and `Model` ids follow the same deterministic scheme as `RoleId`, for the same federation-portability reason. `family_stream_id(name) = uuid5(_FAMILY_NAMESPACE, name.value.lower())`, so the same-named Family converges across facilities and a duplicate `define_family` collides on the deterministic stream, returning `409`. `model_stream_id(manufacturer, part_number)` derives a Model id as `uuid5` over a canonical `(lowercased manufacturer name, case-preserved part number)` key, so the same vendor product converges and a second `define_model` on the same real vendor key returns `409`. The one exception is the `unknown-pending-confirmation` placeholder part number: a Model recorded with it falls back to a random id, so two genuinely-unconfirmed units stay distinct rather than collapsing onto one identity. Uniqueness is enforced at the deterministic-stream tier (`expected_version=0`), not a projection unique index, so Family deliberately carries no `LOWER(name)` projection index (unlike Role's `proj_equipment_role_summary_name_lower_uq`): the deterministic stream id already makes a duplicate-name Family unreachable on the write path.
 
 ## Value Objects
 
@@ -94,7 +96,7 @@ Addressability wins ties: if any other module references the sub-component by id
 
 `AssetOwner` and `AlternateIdentifier` are sortable VOs whose ordering follows the field that uniquely keys them (`owner_name` for owners, `(kind, value)` for alternate identifiers). Both feed the PIDINST serializer (`to_pidinst_record` at the module root) that maps Asset state into the external PIDINST record shape, which the `get_asset_pidinst` slice exposes at `GET /assets/{asset_id}/pidinst`. The PIDINST property numbers are: 5 for owners, 13 for alternate identifiers.
 
-`Assembly.content_hash` is a SHA-256 over the canonical serialization of the structural content (`name`, `presents_as_family_id`, `required_slots`, `required_wires`, `parameter_overrides_schema`); engineering metadata (drawing, version label) is intentionally excluded so two Assemblies with the same structural intent share a hash even when sourced from different facilities. `Fixture.assembly_content_hash` snapshots that hash at registration time, decoupling the materialization from any later Assembly revision.
+`Assembly.content_hash` is a SHA-256 over the canonical serialization of the structural content (`name`, `presents_as_family_id`, `required_slots`, `required_wires`, `parameter_overrides_schema`); engineering metadata (drawing, version label) is intentionally excluded so two Assemblies with the same structural intent share a hash even when sourced from different facilities. This cross-facility convergence holds because the Family ids the hash folds in (`presents_as_family_id` and each slot's `required_family_ids`) are themselves deterministic: `family_stream_id` derives a Family id as `uuid5` over the lowercased name, so two facilities that define the same-named Family arrive at the same id and therefore the same hash. (Until Family ids were made deterministic, the hash silently did NOT converge, the random per-facility Family ids broke it even though the canonical serialization was identical.) `Fixture.assembly_content_hash` snapshots that hash at registration time, decoupling the materialization from any later Assembly revision.
 
 ## Family naming conventions
 
@@ -111,7 +113,7 @@ Any field-replaceable, firmware-versioned active-control-electronics box gets a 
 | Family | Drives | Anchored at |
 |---|---|---|
 | `MotionController` | Stages, hexapods, sample motors | Aerotech Ensemble (`Aerotech_Ensemble_drive`), Aerotech Hexapod drive, Aerotech 2bmbAERO drive, OMS VME58 a-station + b-station drives at 2-BM |
-| `TimingController` | Hardware timing signal generation (triggers, gates, sync pulses) | softGlueZynq + future trigger sources (slot reserved, not yet defined; replaces the pre-rename `TriggerFPGA` candidate) |
+| `TimingController` | Hardware timing signal generation (triggers, gates, sync pulses) | softGlueZynq FPGA (`softGlueZynq_FPGA`) at 2-BM; further trigger sources to follow. Replaces the pre-rename `TriggerFPGA` candidate. Presents_as `Controller`, which carries `Pulsing`. |
 
 Plausible siblings that have NOT yet earned a slot (rule-of-three): `TemperatureController` (Lakeshore cryostats), `FlowController` (Bronkhorst mass flow), `PressureController` (MKS Baratron + PID), `DAQController` (Quantum Detectors Merlin, FPGA frame grabbers), `HVPSU` / `BiasController` (CAEN HV crate). Each lands per its own trigger. The convention is suffix-LAST per the locked R3 family-noun primacy rule.
 
@@ -277,7 +279,7 @@ stateDiagram-v2
 
 ## Events
 
-The eight aggregates emit forty-eight distinct event types, grouped by aggregate.
+The <!-- arch:count kind=aggregate bc=equipment spell=true -->eight<!-- /arch:count --> aggregates emit <!-- arch:count kind=event bc=equipment spell=true -->forty-eight<!-- /arch:count --> distinct event types, grouped by aggregate.
 
 ### Family events
 
@@ -371,103 +373,11 @@ The eight aggregates emit forty-eight distinct event types, grouped by aggregate
 
 ## Slices
 
-The eight aggregates expose fifty-six slices end to end.
+The <!-- arch:count kind=aggregate bc=equipment spell=true -->eight<!-- /arch:count --> aggregates expose <!-- arch:count kind=slice bc=equipment spell=true -->fifty-six<!-- /arch:count --> slices end to end.
 
-### Family slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineFamily` | NEW | `POST /families` | `define_family` | required |
-| `VersionFamily` | MODIFIED | `POST /families/{family_id}/version` | `version_family` | none |
-| `DeprecateFamily` | MODIFIED | `POST /families/{family_id}/deprecate` | `deprecate_family` | none |
-| `UpdateFamilySettingsSchema` | MODIFIED | `POST /families/{family_id}/settings-schema` | `update_family_settings_schema` | none |
-| `AddFamilyPresentsAs` | MODIFIED | `POST /families/{family_id}/add-presents-as` | `add_family_presents_as` | none |
-| `RemoveFamilyPresentsAs` | MODIFIED | `POST /families/{family_id}/remove-presents-as` | `remove_family_presents_as` | none |
-| `GetFamily` | QUERY | `GET /families/{family_id}` | `get_family` | none |
-| `ListFamilies` | QUERY | `GET /families` | `list_families` | none |
-
-### Model slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineModel` | NEW | `POST /models` | `define_model` | required |
-| `VersionModel` | MODIFIED | `POST /models/{model_id}/version` | `version_model` | none |
-| `DeprecateModel` | MODIFIED | `POST /models/{model_id}/deprecation` | `deprecate_model` | none |
-| `AddModelFamily` | MODIFIED | `POST /models/{model_id}/families` | `add_model_family` | none |
-| `RemoveModelFamily` | MODIFIED | `DELETE /models/{model_id}/families/{family_id}` | `remove_model_family` | none |
-| `GetModel` | QUERY | `GET /models/{model_id}` | `get_model` | none |
-
-### Asset slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterAsset` | NEW | `POST /assets` | `register_asset` | required |
-| `ActivateAsset` | MODIFIED | `POST /assets/{asset_id}/activate` | `activate_asset` | none |
-| `EnterAssetMaintenance` | MODIFIED | `POST /assets/{asset_id}/enter-maintenance` | `enter_asset_maintenance` | none |
-| `ExitAssetMaintenance` | MODIFIED | `POST /assets/{asset_id}/exit-maintenance` | `exit_asset_maintenance` | none |
-| `DecommissionAsset` | MODIFIED | `POST /assets/{asset_id}/decommission` | `decommission_asset` | none |
-| `RelocateAsset` | MODIFIED | `POST /assets/{asset_id}/relocate` | `relocate_asset` | none |
-| `AddAssetFamily` | MODIFIED | `POST /assets/{asset_id}/add-family` | `add_asset_family` | none |
-| `RemoveAssetFamily` | MODIFIED | `POST /assets/{asset_id}/remove-family` | `remove_asset_family` | none |
-| `AddAssetPort` | MODIFIED | `POST /assets/{asset_id}/add-port` | `add_asset_port` | none |
-| `RemoveAssetPort` | MODIFIED | `POST /assets/{asset_id}/remove-port` | `remove_asset_port` | none |
-| `UpdateAssetSettings` | MODIFIED | `PATCH /assets/{asset_id}/settings` | `update_asset_settings` | none |
-| `DegradeAsset` | MODIFIED | `POST /assets/{asset_id}/degrade` | `degrade_asset` | none |
-| `FaultAsset` | MODIFIED | `POST /assets/{asset_id}/fault` | `fault_asset` | none |
-| `RestoreAsset` | MODIFIED | `POST /assets/{asset_id}/restore` | `restore_asset` | none |
-| `AddAssetOwner` | MODIFIED | `POST /assets/{asset_id}/add-owner` | `add_asset_owner` | none |
-| `RemoveAssetOwner` | MODIFIED | `POST /assets/{asset_id}/remove-owner` | `remove_asset_owner` | none |
-| `AddAssetAlternateIdentifier` | MODIFIED | `POST /assets/{asset_id}/add-alternate-identifier` | `add_asset_alternate_identifier` | none |
-| `RemoveAssetAlternateIdentifier` | MODIFIED | `POST /assets/{asset_id}/remove-alternate-identifier` | `remove_asset_alternate_identifier` | none |
-| `AttachAssetToFixture` | MODIFIED | `POST /assets/{asset_id}/attach-to-fixture` | `attach_asset_to_fixture` | none |
-| `BindAssetToFacility` | MODIFIED | `POST /assets/{asset_id}/bind-to-facility` | `bind_asset_to_facility` | none |
-| `DetachAssetFromFixture` | MODIFIED | `POST /assets/{asset_id}/detach-from-fixture` | `detach_asset_from_fixture` | none |
-| `GetAsset` | QUERY | `GET /assets/{asset_id}` | `get_asset` | none |
-| `GetAssetIntegrationView` | QUERY | `GET /assets/{asset_id}/integration-view` | `get_asset_integration_view` | none |
-| `GetAssetPidinst` | QUERY | `GET /assets/{asset_id}/pidinst` | `get_asset_pidinst` | none |
-| `ListAssets` | QUERY | `GET /assets` | `list_assets` | none |
-
-### Frame slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterFrame` | NEW | `POST /frames` | `register_frame` | required |
-| `UpdateFramePlacement` | MODIFIED | `PATCH /frames/{frame_id}/placement` | `update_frame_placement` | none |
-| `DecommissionFrame` | MODIFIED | `DELETE /frames/{frame_id}` | `decommission_frame` | none |
-
-### Mount slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterMount` | NEW | `POST /mounts` | `register_mount` | required |
-| `UpdateMountPlacement` | MODIFIED | `PATCH /mounts/{mount_id}/placement` | `update_mount_placement` | none |
-| `InstallAsset` | MODIFIED | `PUT /mounts/{mount_id}/installed-asset` | `install_asset` | none |
-| `UninstallAsset` | MODIFIED | `DELETE /mounts/{mount_id}/installed-asset` | `uninstall_asset` | none |
-| `DecommissionMount` | MODIFIED | `DELETE /mounts/{mount_id}` | `decommission_mount` | none |
-
-### Assembly slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineAssembly` | NEW | `POST /assemblies` | `define_assembly` | required |
-| `VersionAssembly` | MODIFIED | `POST /assemblies/{assembly_id}/versions` | `version_assembly` | none |
-| `DeprecateAssembly` | MODIFIED | `POST /assemblies/{assembly_id}/deprecate` | `deprecate_assembly` | none |
-| `AddAssemblyPresentsAs` | MODIFIED | `POST /assemblies/{assembly_id}/add-presents-as` | `add_assembly_presents_as` | none |
-| `RemoveAssemblyPresentsAs` | MODIFIED | `POST /assemblies/{assembly_id}/remove-presents-as` | `remove_assembly_presents_as` | none |
-
-### Fixture slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterFixture` | NEW | `POST /assemblies/{assembly_id}/fixtures` | `register_fixture` | required |
-| `GetFixture` | QUERY | `GET /fixtures/{fixture_id}` | `get_fixture` | none |
-| `ListFixtures` | QUERY | `GET /fixtures` | `list_fixtures` | none |
-
-### Role slices
-
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineRole` | NEW | `POST /roles` | `define_role` | required |
+<!-- arch:slices-table bc=equipment -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 
@@ -914,7 +824,7 @@ The Fixture summary backs `GET /fixtures` plus filters by `assembly_id`, `surfac
 | [Caution](../caution/index.md) | targeted-by | Cautions with `AssetTarget` point at `Asset.id` values; with `propagate_to_children: true` the Caution surfaces on descendant Assets via projection walk of `Asset.parent_id` |
 | [Safety](../safety/index.md) | shared-id-with | `Clearance.facility_code` references the owning Site `Facility` (a Federation aggregate, not an Asset); `AssetBinding.asset_id` references any `Asset` a Clearance gates |
 | [Access](../access/index.md) | shared-id-with | Every Equipment event envelope carries the actor id that authored the change |
-| [Federation](../federation/index.md) | shared-content-hash-with | `Assembly.content_hash` and `Fixture.assembly_content_hash` are stable across facilities for federation dedup and cross-facility composition sharing |
+| [Federation](../federation/index.md) | shared-content-hash-with | `Assembly.content_hash` and `Fixture.assembly_content_hash` are stable across facilities for federation dedup and cross-facility composition sharing (this holds because the Family ids the hash folds in are deterministic `uuid5`-over-name) |
 | [Federation](../federation/index.md) | reads-from (via `FacilityLookup` port) | `Asset.facility_code` (optional) binds an Asset to its owning Federation Facility via the cross-deployment convergent slug. The `register_asset` handler resolves the slug via `FacilityLookup.lookup_by_code` and rejects unknown codes with `AssetFacilityNotFoundError` (HTTP 404). Decommissioned-Facility binding is allowed. Set-once at registration; rebind path is decommission + re-register. |
 
 The Asset hierarchy answers "where does this belong structurally"; Trust Zones answer "what security policy applies"; Frame / Mount answers "where is it physically installed". The three classifications are orthogonal: an Asset has all three, and zones, frames, and the structural parent tree all span Sites independently.
@@ -1060,7 +970,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
     }
     ```
 
-    Returns `201 Created` with the newly-assigned `assembly_id`. The Assembly starts in `Defined`; the decider computes the canonical `content_hash` from the structural content (slots, wires, schema) and pins it in the genesis event. Two Assemblies with identical structural intent across facilities share the same content_hash by design, which feeds the Federation dedup query.
+    Returns `201 Created` with the newly-assigned `assembly_id`. The Assembly starts in `Defined`; the decider computes the canonical `content_hash` from the structural content (slots, wires, schema) and pins it in the genesis event. Two Assemblies with identical structural intent across facilities share the same content_hash because their `presents_as_family_id` and slot `required_family_ids` are deterministic Family ids, which feeds the Federation dedup query.
 
 === "MCP"
 

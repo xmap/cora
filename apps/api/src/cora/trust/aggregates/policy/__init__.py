@@ -19,6 +19,7 @@ from cora.trust.aggregates.policy.read import load_policy
 from cora.trust.aggregates.policy.state import (
     POLICY_NAME_MAX_LENGTH,
     InvalidPolicyNameError,
+    InvalidPolicySurfaceError,
     Policy,
     PolicyAlreadyExistsError,
     PolicyName,
@@ -28,6 +29,7 @@ from cora.trust.aggregates.policy.state import (
 __all__ = [
     "POLICY_NAME_MAX_LENGTH",
     "InvalidPolicyNameError",
+    "InvalidPolicySurfaceError",
     "Policy",
     "PolicyAlreadyExistsError",
     "PolicyDefined",

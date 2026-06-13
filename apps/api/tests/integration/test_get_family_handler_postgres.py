@@ -13,7 +13,7 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
-from cora.equipment.aggregates.family import FamilyName, FamilyStatus
+from cora.equipment.aggregates.family import FamilyName, FamilyStatus, family_stream_id
 from cora.equipment.features import define_family, get_family
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.get_family import GetFamily
@@ -21,7 +21,7 @@ from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
-_CAPABILITY_ID = UUID("01900000-0000-7000-8000-00000054cb01")
+_CAPABILITY_ID = family_stream_id(FamilyName("X-ray Fluorescence Mapping"))
 _EVENT_ID = UUID("01900000-0000-7000-8000-00000054cb0e")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
@@ -31,7 +31,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 async def test_get_family_loads_state_from_real_postgres(
     db_pool: asyncpg.Pool,
 ) -> None:
-    deps = build_postgres_deps(db_pool, now=_NOW, ids=[_CAPABILITY_ID, _EVENT_ID])
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[_EVENT_ID])
 
     await define_family.bind(deps)(
         DefineFamily(name="X-ray Fluorescence Mapping", affordances=frozenset()),

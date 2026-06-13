@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
-from cora.supply.aggregates.supply import SUPPLY_REASON_MAX_LENGTH
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.supply.features.mark_supply_available.command import MarkSupplyAvailable
 from cora.supply.features.mark_supply_available.handler import Handler
 
@@ -46,7 +46,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             str,
             Field(
                 min_length=1,
-                max_length=SUPPLY_REASON_MAX_LENGTH,
+                max_length=REASON_MAX_LENGTH,
                 description=(
                     "Operator-supplied reason for declaring the supply Available "
                     "for the first time (audit-log breadcrumb)."

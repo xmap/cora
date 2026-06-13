@@ -19,11 +19,9 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.safety.aggregates.clearance.state import (
-    CLEARANCE_EXPIRE_REASON_MAX_LENGTH,
-)
 from cora.safety.features.expire_clearance.command import ExpireClearance
 from cora.safety.features.expire_clearance.handler import Handler
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class ExpireClearanceRequest(BaseModel):
@@ -32,7 +30,7 @@ class ExpireClearanceRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=CLEARANCE_EXPIRE_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Operator-supplied free-form reason for the expiration. Audit "
             "breadcrumb explaining why the clearance was retired "

@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Data module owns CORA's record of the research data products the facility produces or registers, from the logical content record down to the byte-copy at a storage backend and up to the citable publication package. Five aggregates carry the responsibility.
+The Data module owns CORA's record of the research data products the facility produces or registers, from the logical content record down to the byte-copy at a storage backend and up to the citable publication package. <!-- arch:count kind=aggregate bc=data spell=true cap=true -->Five<!-- /arch:count --> aggregates carry the responsibility.
 
 `Dataset` is the logical content record: a product's id, name, URI, checksum, byte size, encoding, lineage edges, lifecycle status, and trust intent. It is the metadata record, not the bytes themselves. `Distribution` is one byte-identical materialization of a Dataset at a storage-kind Supply (a DCAT-3 `dcat:Distribution`): the same content reachable at a concrete URI on a concrete backend. `Edition` is a citable publication package over a frozen set of Production-intent Datasets, the aggregate that mints a DOI and serializes a citation manifest. `Acquisition` is the birth-certificate fact that a producing Asset captured bytes into a Dataset under an optional Run context. `Attestation` is the verification fact that some integrity check (checksum, format, bit-rot, conformance) ran against a Dataset or one of its Distributions, with a recorded outcome.
 
@@ -148,7 +148,7 @@ Neither has an FSM. `record_acquisition` and `record_attestation` each append ex
 
 ## Events
 
-The five aggregates emit thirteen event types. Every event carries a fold-symmetry attribution field (`registered_by`, `promoted_by`, `discarded_by`, `recorded_by`, `attested_by`, and so on), the envelope `principal_id` of the actor that issued the command, paired with the event's `occurred_at`.
+The <!-- arch:count kind=aggregate bc=data spell=true -->five<!-- /arch:count --> aggregates emit <!-- arch:count kind=event bc=data spell=true -->thirteen<!-- /arch:count --> event types. Every event carries a fold-symmetry attribution field (`registered_by`, `promoted_by`, `discarded_by`, `recorded_by`, `attested_by`, and so on), the envelope `principal_id` of the actor that issued the command, paired with the event's `occurred_at`.
 
 ### Dataset events
 
@@ -198,23 +198,9 @@ The five aggregates emit thirteen event types. Every event carries a fold-symmet
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterDataset` | NEW | `POST /datasets` | `register_dataset` | required |
-| `PromoteDataset` | MODIFIED | `POST /datasets/{dataset_id}/promote` | `promote_dataset` | none |
-| `DemoteDataset` | MODIFIED | `POST /datasets/{dataset_id}/demote` | `demote_dataset` | none |
-| `DiscardDataset` | MODIFIED | `POST /datasets/{dataset_id}/discard` | `discard_dataset` | none |
-| `GetDataset` | QUERY | `GET /datasets/{dataset_id}` | `get_dataset` | none |
-| `ListDatasets` | QUERY | `GET /datasets` | `list_datasets` | none |
-| `RegisterDistribution` | NEW | `POST /distributions` | `register_distribution` | required |
-| `RecordAcquisition` | NEW | `POST /acquisitions` | `record_acquisition` | required |
-| `RecordAttestation` | NEW | `POST /attestations` | `record_attestation` | required |
-| `RegisterEdition` | NEW | `POST /editions` | `register_edition` | required |
-| `AddDatasetToEdition` | MODIFIED | `POST /editions/{edition_id}/datasets/{dataset_id}` | `add_dataset_to_edition` | none |
-| `RemoveDatasetFromEdition` | MODIFIED | `DELETE /editions/{edition_id}/datasets/{dataset_id}` | `remove_dataset_from_edition` | none |
-| `SealEdition` | MODIFIED | `POST /editions/{edition_id}/seal` | `seal_edition` | none |
-| `PublishEdition` | MODIFIED | `POST /editions/{edition_id}/publish` | `publish_edition` | none |
-| `WithdrawEdition` | MODIFIED | `POST /editions/{edition_id}/withdraw` | `withdraw_edition` | none |
+<!-- arch:slices-table bc=data -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 The five create-style slices (`register_dataset`, `register_distribution`, `record_acquisition`, `register_edition`, `record_attestation`) are idempotency-wrapped (an `Idempotency-Key` header replays the prior result).
 
@@ -264,7 +250,7 @@ The five create-style slices (`register_dataset`, `register_distribution`, `reco
 
 ## Cross-aggregate invariants
 
-The five aggregates compose around the `Dataset` hub; the write slices enforce the binding rules so a stranded reference cannot propagate into a downstream read.
+The <!-- arch:count kind=aggregate bc=data spell=true -->five<!-- /arch:count --> aggregates compose around the `Dataset` hub; the write slices enforce the binding rules so a stranded reference cannot propagate into a downstream read.
 
 - **Byte-identical copy (Distribution).** A `Distribution.checksum` and `byte_size` must equal the parent `Dataset`'s (`DistributionChecksumMismatch` / `DistributionByteSizeMismatch`). A Distribution is a copy of the same bytes at a different address, not a derivative.
 - **Storage-kind Supply only (Distribution).** `register_distribution` requires the resolved `supply_id` to name a storage-kind Supply (`DistributionCannotRegisterOnNonStorageSupply`).

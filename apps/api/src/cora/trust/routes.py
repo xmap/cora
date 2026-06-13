@@ -44,7 +44,11 @@ from cora.trust.aggregates.conduit import (
     ConduitLogbookNotOpenError,
     InvalidConduitNameError,
 )
-from cora.trust.aggregates.policy import InvalidPolicyNameError, PolicyAlreadyExistsError
+from cora.trust.aggregates.policy import (
+    InvalidPolicyNameError,
+    InvalidPolicySurfaceError,
+    PolicyAlreadyExistsError,
+)
 from cora.trust.aggregates.surface import InvalidSurfaceNameError, SurfaceAlreadyExistsError
 from cora.trust.aggregates.visit import (
     InvalidVisitPlannedPeriodError,
@@ -238,6 +242,7 @@ def register_trust_routes(app: FastAPI) -> None:
     ):
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for invalid_400_cls in (
+        InvalidPolicySurfaceError,
         InvalidVisitPlannedPeriodError,
         InvalidVisitReasonError,
     ):

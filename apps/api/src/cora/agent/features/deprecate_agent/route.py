@@ -11,7 +11,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.agent.aggregates.agent import AGENT_DEPRECATION_REASON_MAX_LENGTH
 from cora.agent.features.deprecate_agent.command import DeprecateAgent
 from cora.agent.features.deprecate_agent.handler import Handler
 from cora.infrastructure.routing import (
@@ -20,6 +19,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class DeprecateAgentRequest(BaseModel):
@@ -28,7 +28,7 @@ class DeprecateAgentRequest(BaseModel):
     reason: str | None = Field(
         default=None,
         min_length=1,
-        max_length=AGENT_DEPRECATION_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Optional operator-supplied deprecation reason (1-500 chars after "
             "trim). Pass null to omit."

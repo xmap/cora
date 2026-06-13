@@ -71,7 +71,7 @@ router = APIRouter(tags=["trust"])
             "description": "Path or query parameter failed schema validation.",
         },
     },
-    summary="Evaluate a Policy against a (principal, command, conduit) tuple",
+    summary="Evaluate a Policy against a (principal, command, conduit, surface) tuple",
 )
 async def get_policies_evaluate(
     policy_id: Annotated[UUID, Path(description="Target policy's id.")],
@@ -91,6 +91,10 @@ async def get_policies_evaluate(
         UUID,
         Query(description="Conduit through which the command would be issued."),
     ],
+    evaluated_surface_id: Annotated[
+        UUID,
+        Query(description="Arrival Surface the command would enter through."),
+    ],
     handler: Annotated[Handler, Depends(_get_handler)],
     cid: Annotated[UUID, Depends(get_correlation_id)],
     principal_id: Annotated[UUID, Depends(get_principal_id)],
@@ -102,6 +106,7 @@ async def get_policies_evaluate(
             evaluated_principal_id=evaluated_principal_id,
             evaluated_command_name=evaluated_command_name,
             evaluated_conduit_id=evaluated_conduit_id,
+            evaluated_surface_id=evaluated_surface_id,
         ),
         principal_id=principal_id,
         correlation_id=cid,

@@ -70,6 +70,7 @@ from cora.caution.aggregates.caution import (
 )
 from cora.caution.features.register_caution import RegisterCaution
 from cora.caution.features.register_caution import bind as bind_register_caution
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.equipment.features.degrade_asset import DegradeAsset
@@ -128,11 +129,11 @@ _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000352a01")
 # define_family call runs once per unique name; the per-DeviceSpec
 # definition here is a test-fixture convenience, not a semantic claim
 # about Family identity.
-_CAP_MOTION_CONTROLLER_AEROTECH_ID = UUID("01900000-0000-7000-8000-000000352c21")
-_CAP_MOTION_CONTROLLER_OMS_2BMB_ID = UUID("01900000-0000-7000-8000-000000352c41")
-_CAP_MOTION_CONTROLLER_OMS_2BMA_ID = UUID("01900000-0000-7000-8000-000000352c51")
-_CAP_ROTARY_STAGE_ID = UUID("01900000-0000-7000-8000-000000352c01")
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000352c11")
+_CAP_MOTION_CONTROLLER_AEROTECH_ID = family_stream_id(FamilyName("MotionController"))
+_CAP_MOTION_CONTROLLER_OMS_2BMB_ID = family_stream_id(FamilyName("MotionController"))
+_CAP_MOTION_CONTROLLER_OMS_2BMA_ID = family_stream_id(FamilyName("MotionController"))
+_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
 
 # Devices: controllers registered first (so each driven stage's
 # controller_id back-reference targets an already-registered Asset

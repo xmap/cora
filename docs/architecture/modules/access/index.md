@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Access module owns the identity record for every principal CORA recognises: human operators, machine bridges that act on their own credentials, and the AI agents the Agent module configures. One aggregate, `Actor`, is the canonical place where a principal's id, display name, kind, and active-or-not state live; every other module that needs to attribute an event to "who did this" references `Actor.id`.
+The Access module owns the identity record for every principal CORA recognises: human operators, machine bridges that act on their own credentials, and the AI agents the Agent module configures. <!-- arch:count kind=aggregate bc=access spell=true cap=true -->One<!-- /arch:count --> aggregate, `Actor`, is the canonical place where a principal's id, display name, kind, and active-or-not state live; every other module that needs to attribute an event to "who did this" references `Actor.id`.
 
 Access handles authentication identity only. It is the **who you are** layer; authorisation rules live in [Trust](../trust/index.md), and the agent-specific configuration (tool allowlists, budgets, suspended state) lives in [Agent](../agent/index.md). The two modules collaborate by sharing the same id: an Agent and the Actor that represents it have one UUID between them, written atomically in a single transaction.
 
@@ -59,13 +59,9 @@ The state is carried by the `active` boolean on the aggregate; `Active` and `Dea
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterActor` | NEW | `POST /actors` | `register_actor` | required |
-| `DeactivateActor` | MODIFIED | `POST /actors/{actor_id}/deactivate` | `deactivate_actor` | none |
-| `ForgetActor` | MODIFIED | `DELETE /actors/{actor_id}/profile` | `forget_actor` | optional |
-| `GetActor` | QUERY | `GET /actors/{actor_id}` | `get_actor` | none |
-| `ListActors` | QUERY | `GET /actors` | `list_actors` | none |
+<!-- arch:slices-table bc=access -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

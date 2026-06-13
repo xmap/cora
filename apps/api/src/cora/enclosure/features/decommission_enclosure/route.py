@@ -26,10 +26,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.enclosure.aggregates._value_types import (
-    ENCLOSURE_REASON_MAX_LENGTH,
-    EnclosureId,
-)
+from cora.enclosure.aggregates._value_types import EnclosureId
 from cora.enclosure.features.decommission_enclosure.command import DecommissionEnclosure
 from cora.enclosure.features.decommission_enclosure.handler import Handler
 from cora.infrastructure.routing import (
@@ -38,6 +35,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class DecommissionEnclosureRequest(BaseModel):
@@ -52,7 +50,7 @@ class DecommissionEnclosureRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=ENCLOSURE_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Operator-supplied reason for the decommission transition "
             "(audit-log breadcrumb). Flows onto the "

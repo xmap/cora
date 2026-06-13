@@ -12,12 +12,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
-from cora.enclosure.aggregates.enclosure import ENCLOSURE_REASON_MAX_LENGTH
 from cora.enclosure.errors import UnauthorizedError
 from cora.enclosure.features.decommission_enclosure.handler import Handler
 from cora.enclosure.features.decommission_enclosure.route import (
     _get_handler as _get_decommission_enclosure_handler,  # pyright: ignore[reportPrivateUsage]
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 def _register_enclosure(client: TestClient) -> UUID:
@@ -82,7 +82,7 @@ def test_post_decommission_rejects_too_long_reason_with_422() -> None:
         enclosure_id = _register_enclosure(client)
         response = client.post(
             f"/enclosures/{enclosure_id}/decommission",
-            json={"reason": "a" * (ENCLOSURE_REASON_MAX_LENGTH + 1)},
+            json={"reason": "a" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 

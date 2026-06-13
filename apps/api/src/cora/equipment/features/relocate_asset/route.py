@@ -22,8 +22,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-
-_REASON_MAX_LENGTH = 500
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class RelocateAssetRequest(BaseModel):
@@ -47,7 +46,7 @@ class RelocateAssetRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Operator-supplied reason for the relocation (audit-log "
             "breadcrumb), for example 'site reorganization', 'moved to BL2-IBP'."

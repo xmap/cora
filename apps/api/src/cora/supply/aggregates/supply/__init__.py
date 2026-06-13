@@ -29,7 +29,6 @@ from cora.supply.aggregates.supply.read import load_supply
 from cora.supply.aggregates.supply.state import (
     SUPPLY_KIND_MAX_LENGTH,
     SUPPLY_NAME_MAX_LENGTH,
-    SUPPLY_REASON_MAX_LENGTH,
     InvalidMonitorRefError,
     InvalidSupplyKindError,
     InvalidSupplyNameError,
@@ -56,7 +55,6 @@ from cora.supply.aggregates.supply.state import (
 __all__ = [
     "SUPPLY_KIND_MAX_LENGTH",
     "SUPPLY_NAME_MAX_LENGTH",
-    "SUPPLY_REASON_MAX_LENGTH",
     "InvalidMonitorRefError",
     "InvalidSupplyKindError",
     "InvalidSupplyNameError",

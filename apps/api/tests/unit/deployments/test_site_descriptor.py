@@ -177,7 +177,8 @@ def test_renders_single_site_narrative() -> None:
     assert "LiquidHelium" in page  # supplies
     assert "ESAF" in page  # clearances
     assert "beam-flux transients" in page  # cautions
-    assert "../argonne/index.md" in page  # facility -> institution
+    assert "Institution" in page and "Argonne" in page  # facility -> institution (context)
+    assert "../argonne/index.md" not in page  # institution is context, not a navigable deployment
 
 
 def test_practice_method_links_only_known() -> None:

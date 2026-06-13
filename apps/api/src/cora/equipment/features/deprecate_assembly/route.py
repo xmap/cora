@@ -19,6 +19,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class DeprecateAssemblyRequest(BaseModel):
@@ -27,7 +28,7 @@ class DeprecateAssemblyRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=500,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Operator-supplied reason for the deprecation (audit-log "
             "breadcrumb). REQUIRED. Mirrors decommission_mount's "

@@ -71,11 +71,11 @@ from uuid import UUID
 
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
 from cora.shared.identifier import Identifier
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 CAMPAIGN_NAME_MAX_LENGTH = 200
 CAMPAIGN_DESCRIPTION_MAX_LENGTH = 2000
 CAMPAIGN_TAG_MAX_LENGTH = 50
-CAMPAIGN_REASON_MAX_LENGTH = 500
 CAMPAIGN_EXTERNAL_ID_MAX_LENGTH = 100
 
 
@@ -182,7 +182,7 @@ class InvalidCampaignHoldReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Campaign hold reason must be 1-{CAMPAIGN_REASON_MAX_LENGTH} chars "
+            f"Campaign hold reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -198,7 +198,7 @@ class InvalidCampaignAbandonReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Campaign abandon reason must be 1-{CAMPAIGN_REASON_MAX_LENGTH} chars "
+            f"Campaign abandon reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -402,7 +402,7 @@ class InvalidCampaignRunRemoveReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Campaign run remove reason must be 1-{CAMPAIGN_REASON_MAX_LENGTH} chars "
+            f"Campaign run remove reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value

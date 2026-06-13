@@ -95,6 +95,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
@@ -140,10 +141,10 @@ _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000356501")
 
 # Capabilities (sample-Z motor needs LinearStage + the drive electronics
 # behind it needs MotionController; image chain needs Camera + Scintillator)
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000356c01")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000356c11")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000356c21")
-_CAP_MOTION_CONTROLLER_OMS_2BMB_ID = UUID("01900000-0000-7000-8000-000000356c31")
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
+_CAP_MOTION_CONTROLLER_OMS_2BMB_ID = family_stream_id(FamilyName("MotionController"))
 
 # Devices (sample-Z motor + image chain + the OMS-VME58 drive electronics
 # behind Sample_top_Z; the OMS-VME58 in the 2-BM b-station IOC crate

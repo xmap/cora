@@ -23,7 +23,6 @@ import pytest
 
 from cora.data.aggregates.dataset import (
     DATASET_CHECKSUM_SHA256_HEX_LENGTH,
-    DATASET_DEMOTION_REASON_MAX_LENGTH,
     Dataset,
     DatasetAlreadyRetractedError,
     DatasetCannotDemoteError,
@@ -40,6 +39,7 @@ from cora.data.aggregates.dataset import (
 from cora.data.features import demote_dataset
 from cora.data.features.demote_dataset import DemoteDataset
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
 _NOW = datetime(2026, 5, 20, 12, 0, 0, tzinfo=UTC)
@@ -139,7 +139,7 @@ def test_decide_raises_invalid_reason_for_whitespace_only() -> None:
 @pytest.mark.unit
 def test_decide_raises_invalid_reason_for_too_long() -> None:
     state = _dataset(intent=Intent.PRODUCTION)
-    overlong = "x" * (DATASET_DEMOTION_REASON_MAX_LENGTH + 1)
+    overlong = "x" * (REASON_MAX_LENGTH + 1)
     with pytest.raises(InvalidDemotionReasonError):
         demote_dataset.decide(
             state=state,

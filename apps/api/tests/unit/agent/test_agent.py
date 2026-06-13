@@ -9,7 +9,6 @@ from cora.agent.aggregates.agent import (
     AGENT_CANONICAL_URI_MAX_LENGTH,
     AGENT_CAPABILITIES_MAX_COUNT,
     AGENT_CAPABILITY_MAX_LENGTH,
-    AGENT_DEPRECATION_REASON_MAX_LENGTH,
     AGENT_DESCRIPTION_MAX_LENGTH,
     AGENT_KIND_MAX_LENGTH,
     AGENT_NAME_MAX_LENGTH,
@@ -36,6 +35,7 @@ from cora.agent.aggregates.agent import (
     InvalidModelRefError,
     ModelRef,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
 
@@ -199,7 +199,7 @@ def test_agent_deprecation_reason_rejects_empty() -> None:
 @pytest.mark.unit
 def test_agent_deprecation_reason_rejects_over_cap() -> None:
     with pytest.raises(InvalidAgentDeprecationReasonError):
-        AgentDeprecationReason("x" * (AGENT_DEPRECATION_REASON_MAX_LENGTH + 1))
+        AgentDeprecationReason("x" * (REASON_MAX_LENGTH + 1))
 
 
 # ---------- ModelRef ----------
@@ -356,13 +356,12 @@ def test_agent_suspension_reason_rejects_empty() -> None:
 @pytest.mark.unit
 def test_agent_suspension_reason_rejects_over_cap() -> None:
     from cora.agent.aggregates.agent import (
-        AGENT_SUSPENSION_REASON_MAX_LENGTH,
         AgentSuspensionReason,
         InvalidAgentSuspensionReasonError,
     )
 
     with pytest.raises(InvalidAgentSuspensionReasonError):
-        AgentSuspensionReason("x" * (AGENT_SUSPENSION_REASON_MAX_LENGTH + 1))
+        AgentSuspensionReason("x" * (REASON_MAX_LENGTH + 1))
 
 
 @pytest.mark.unit

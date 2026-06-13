@@ -101,6 +101,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
@@ -145,10 +146,12 @@ _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000359a01")
 # Opaque Practice-site UUID (the practice site, unrelated to Asset tier).
 _PRACTICE_SITE_ID = UUID("01900000-0000-7000-8000-000000359501")
 
-# Capabilities (Shutter is NEW; Camera + Scintillator are already in the catalog)
-_CAP_SHUTTER_ID = UUID("01900000-0000-7000-8000-000000359c01")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000359c11")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000359c21")
+# Family ids are derived from the name (deterministic uuid5), so they
+# converge with what install_aps_unit defines and with cross-facility
+# catalogs.
+_CAP_SHUTTER_ID = family_stream_id(FamilyName("Shutter"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 
 # Devices (shutter + image chain)
 _ASSET_SHUTTER_2BM_ID = UUID("01900000-0000-7000-8000-000000359a11")

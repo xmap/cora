@@ -45,11 +45,9 @@ from typing import NewType
 from uuid import UUID
 
 from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 EnclosureId = NewType("EnclosureId", UUID)
-
-
-ENCLOSURE_REASON_MAX_LENGTH = 500
 
 
 class InvalidEnclosureReasonError(Exception):
@@ -62,7 +60,7 @@ class InvalidEnclosureReasonError(Exception):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Enclosure transition reason must be 1-{ENCLOSURE_REASON_MAX_LENGTH} chars "
+            f"Enclosure transition reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -83,7 +81,7 @@ class EnclosureReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=ENCLOSURE_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidEnclosureReasonError,
         )
         object.__setattr__(self, "value", trimmed)
@@ -150,7 +148,6 @@ class MonitorRef:
 __all__ = [
     "ENCLOSURE_MONITOR_SOURCE_ID_MAX_LENGTH",
     "ENCLOSURE_MONITOR_SOURCE_KIND_MAX_LENGTH",
-    "ENCLOSURE_REASON_MAX_LENGTH",
     "EnclosureId",
     "EnclosureReason",
     "InvalidEnclosureReasonError",

@@ -87,18 +87,9 @@ Per-step records (one row per setpoint, action, or check) write directly to the 
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterProcedure` | NEW | `POST /procedures` | `register_procedure` | required |
-| `RegisterProcedureFromRecipe` | NEW | `POST /procedures/from-recipe` | `register_procedure_from_recipe` | required |
-| `StartProcedure` | MODIFIED | `POST /procedures/{procedure_id}/start` | `start_procedure` | none |
-| `AppendProcedureActivities` | MODIFIED | `POST /procedures/{procedure_id}/steps` | `append_activities` | producer-supplied `event_id` per entry |
-| `ConductProcedure` | MODIFIED | `POST /procedures/{procedure_id}/conduct` | `conduct_procedure` | none |
-| `CompleteProcedure` | MODIFIED | `POST /procedures/{procedure_id}/complete` | `complete_procedure` | none |
-| `AbortProcedure` | MODIFIED | `POST /procedures/{procedure_id}/abort` | `abort_procedure` | none |
-| `TruncateProcedure` | MODIFIED | `POST /procedures/{procedure_id}/truncate` | `truncate_procedure` | none |
-| `GetProcedure` | QUERY | `GET /procedures/{procedure_id}` | `get_procedure` | none |
-| `ListProcedures` | QUERY | `GET /procedures` | `list_procedures` | none |
+<!-- arch:slices-table bc=operation -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

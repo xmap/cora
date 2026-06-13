@@ -19,7 +19,9 @@ and `to_payload` sorts them deterministically).
 from datetime import datetime
 from uuid import UUID
 
+from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.trust.aggregates.policy import (
+    InvalidPolicySurfaceError,
     Policy,
     PolicyAlreadyExistsError,
     PolicyDefined,
@@ -40,11 +42,15 @@ def decide(
     Invariants:
       - State must be None (defensive AlreadyExists guard against
         UUID collision) -> PolicyAlreadyExistsError
+      - surface_id must bind a real Surface, not the nil sentinel
+        -> InvalidPolicySurfaceError
       - Name must be valid -> InvalidPolicyNameError
         (via PolicyName VO)
     """
     if state is not None:
         raise PolicyAlreadyExistsError(state.id)
+    if command.surface_id == NIL_SENTINEL_ID:
+        raise InvalidPolicySurfaceError
     name = PolicyName(command.name)  # validates + trims
     return [
         PolicyDefined(

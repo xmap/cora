@@ -19,7 +19,6 @@ from cora.equipment.features.version_assembly import VersionAssembly
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 2, 14, 0, 0, tzinfo=UTC)
-_FAMILY_ID = UUID("01900000-0000-7000-8000-00000054cd01")
 _FAMILY_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cd0e")
 _ASSEMBLY_ID = UUID("01900000-0000-7000-8000-00000054cd02")
 _DEFINED_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cd1e")
@@ -36,7 +35,6 @@ async def test_version_assembly_appends_versioned_event_to_postgres(
         db_pool,
         now=_NOW,
         ids=[
-            _FAMILY_ID,
             _FAMILY_EVENT_ID,
             _ASSEMBLY_ID,
             _DEFINED_EVENT_ID,

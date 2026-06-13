@@ -11,7 +11,6 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.operation.aggregates.procedure import (
-    PROCEDURE_ABORT_REASON_MAX_LENGTH,
     InvalidProcedureAbortReasonError,
     Procedure,
     ProcedureAborted,
@@ -22,6 +21,7 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.features import abort_procedure
 from cora.operation.features.abort_procedure import AbortProcedure
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
 
@@ -98,9 +98,7 @@ def test_decide_rejects_too_long_reason() -> None:
     with pytest.raises(InvalidProcedureAbortReasonError):
         abort_procedure.decide(
             state=proc,
-            command=AbortProcedure(
-                procedure_id=proc.id, reason="x" * (PROCEDURE_ABORT_REASON_MAX_LENGTH + 1)
-            ),
+            command=AbortProcedure(procedure_id=proc.id, reason="x" * (REASON_MAX_LENGTH + 1)),
             now=_NOW,
         )
 

@@ -11,7 +11,6 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.operation.aggregates.procedure import (
-    PROCEDURE_TRUNCATE_REASON_MAX_LENGTH,
     InvalidProcedureInterruptedAtError,
     InvalidProcedureTruncateReasonError,
     Procedure,
@@ -23,6 +22,7 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.features import truncate_procedure
 from cora.operation.features.truncate_procedure import TruncateProcedure
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
 
@@ -117,7 +117,7 @@ def test_decide_rejects_too_long_reason() -> None:
             state=proc,
             command=TruncateProcedure(
                 procedure_id=proc.id,
-                reason="x" * (PROCEDURE_TRUNCATE_REASON_MAX_LENGTH + 1),
+                reason="x" * (REASON_MAX_LENGTH + 1),
             ),
             now=_NOW,
         )

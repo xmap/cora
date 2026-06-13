@@ -109,6 +109,7 @@ from cora.caution.aggregates.caution import (
 )
 from cora.caution.features.register_caution import RegisterCaution
 from cora.caution.features.register_caution import bind as bind_register_caution
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.equipment.features.fault_asset import FaultAsset
@@ -155,8 +156,8 @@ _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000360501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000360a01")
 
 # Families (2: motion controller + hexapod)
-_CAP_MOTION_CONTROLLER_ID = UUID("01900000-0000-7000-8000-000000360c11")
-_CAP_HEXAPOD_ID = UUID("01900000-0000-7000-8000-000000360c01")
+_CAP_MOTION_CONTROLLER_ID = family_stream_id(FamilyName("MotionController"))
+_CAP_HEXAPOD_ID = family_stream_id(FamilyName("Hexapod"))
 
 # Devices: controller registered first (so the hexapod's controller_id
 # back-reference targets an already-registered Asset stream), then the

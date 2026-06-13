@@ -42,13 +42,14 @@ picks which conduit to gate first, others fall through to deny).
 Without a seed, the configured policy must already permit
 `DefinePolicy` for someone to define new policies through the API —
 chicken-and-egg. The Atlas migration
-`20260519000000_seed_bootstrap_policy.sql` seeds the System Bootstrap
-Policy at a fixed UUID (`cora.trust._bootstrap.SYSTEM_BOOTSTRAP_POLICY_ID`)
-permitting `SYSTEM_PRINCIPAL_ID` to call `{DefinePolicy, RegisterActor}`
-on the nil conduit. Production deployments collapse the prior 3-step
-dance to a single env var:
+`20260519200000_seed_default_surfaces_and_v2_policy.sql` seeds the
+System Bootstrap Policy at a fixed UUID
+(`cora.trust._bootstrap.SYSTEM_BOOTSTRAP_POLICY_ID`) permitting
+`SYSTEM_PRINCIPAL_ID` to call `{DefinePolicy, RegisterActor}` on the
+nil conduit, bound to the seeded HTTP Surface. Production deployments
+collapse the prior 3-step dance to a single env var:
 
-    TRUST_POLICY_ID=00000000-0000-0000-0000-000000000001
+    TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002
 
 Operators then register a real admin Actor and promote a real admin
 Policy via the API, and (optionally) re-point `TRUST_POLICY_ID` at

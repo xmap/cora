@@ -36,10 +36,8 @@ from cora.operation.aggregates.procedure.read import (
 )
 from cora.operation.aggregates.procedure.state import (
     LOGBOOK_KIND_ACTIVITY,
-    PROCEDURE_ABORT_REASON_MAX_LENGTH,
     PROCEDURE_KIND_MAX_LENGTH,
     PROCEDURE_NAME_MAX_LENGTH,
-    PROCEDURE_TRUNCATE_REASON_MAX_LENGTH,
     RECIPE_EXPANSION_STEP_MAX,
     STEP_KIND_VALUES,
     STEPS_LOGBOOK_SCHEMA,
@@ -81,10 +79,8 @@ from cora.operation.aggregates.procedure.state import (
 
 __all__ = [
     "LOGBOOK_KIND_ACTIVITY",
-    "PROCEDURE_ABORT_REASON_MAX_LENGTH",
     "PROCEDURE_KIND_MAX_LENGTH",
     "PROCEDURE_NAME_MAX_LENGTH",
-    "PROCEDURE_TRUNCATE_REASON_MAX_LENGTH",
     "RECIPE_EXPANSION_STEP_MAX",
     "STEPS_LOGBOOK_SCHEMA",
     "STEP_KIND_VALUES",

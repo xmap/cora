@@ -24,7 +24,6 @@ cascade. Per GLP §10.2.5, ISO 17025 §7.5, 21 CFR §11.10(e).
 from datetime import datetime
 
 from cora.campaign.aggregates.campaign import (
-    CAMPAIGN_REASON_MAX_LENGTH,
     Campaign,
     CampaignAbandoned,
     CampaignCannotAbandonError,
@@ -33,6 +32,7 @@ from cora.campaign.aggregates.campaign import (
     InvalidCampaignAbandonReasonError,
 )
 from cora.campaign.features.abandon_campaign.command import AbandonCampaign
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _ABANDONABLE_STATUSES: tuple[CampaignStatus, ...] = (
     CampaignStatus.PLANNED,
@@ -53,7 +53,7 @@ def decide(
       - State must not be None -> CampaignNotFoundError
       - Current status must be Planned, Active, or Held
         -> CampaignCannotAbandonError
-      - Reason must be 1-CAMPAIGN_REASON_MAX_LENGTH chars after trim
+      - Reason must be 1-REASON_MAX_LENGTH chars after trim
         -> InvalidCampaignAbandonReasonError
     """
     if state is None:
@@ -62,7 +62,7 @@ def decide(
         raise CampaignCannotAbandonError(state.id, state.status)
 
     trimmed = command.reason.strip()
-    if not trimmed or len(trimmed) > CAMPAIGN_REASON_MAX_LENGTH:
+    if not trimmed or len(trimmed) > REASON_MAX_LENGTH:
         raise InvalidCampaignAbandonReasonError(command.reason)
 
     return [

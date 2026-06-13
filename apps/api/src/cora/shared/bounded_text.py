@@ -54,10 +54,16 @@ which fall into three buckets:
      only on over-length, which `validate_bounded_text` does NOT
      express).
 
-Current `MAX_LENGTH` values across the codebase: {50, 100, 200, 255,
-2000}. The 2000-char value (`CautionText`) is single-field but its
+Current per-VO `MAX_LENGTH` values across the codebase: {50, 100, 200,
+255, 2000}. The 2000-char value (`CautionText`) is single-field but its
 naming-of-symbol semantics differ from the *Name VOs; whether it
 adopts the decorator is a per-VO call at refactor time.
+
+Operator free-text `reason` bounds (500) are NOT in that per-VO set:
+a reason is a bare validated string, not a value object, and the same
+bound applies across every aggregate, so it is shared as
+`REASON_MAX_LENGTH` in `cora.shared.text_bounds` rather than declared
+per aggregate.
 
 How VOs use the decorator
 -------------------------

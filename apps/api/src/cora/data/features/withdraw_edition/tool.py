@@ -7,12 +7,12 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.data.aggregates.edition.state import EDITION_WITHDRAWAL_REASON_MAX_LENGTH
 from cora.data.features.withdraw_edition.command import WithdrawEdition
 from cora.data.features.withdraw_edition.handler import Handler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class WithdrawEditionOutput(BaseModel):
@@ -40,7 +40,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             str,
             Field(
                 min_length=1,
-                max_length=EDITION_WITHDRAWAL_REASON_MAX_LENGTH,
+                max_length=REASON_MAX_LENGTH,
                 description="Why the Edition is being withdrawn. Recorded forever.",
             ),
         ],

@@ -86,11 +86,10 @@ from cora.shared.bounded_text import validate_bounded_text
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identifier import Identifier
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 CLEARANCE_TITLE_MAX_LENGTH = 200
 CLEARANCE_EXTERNAL_ID_MAX_LENGTH = 100
-CLEARANCE_REJECT_REASON_MAX_LENGTH = 500
-CLEARANCE_EXPIRE_REASON_MAX_LENGTH = 500
 CLEARANCE_REVIEWER_ROLE_MAX_LENGTH = 50
 CLEARANCE_REVIEWER_NOTES_MAX_LENGTH = 2000
 CLEARANCE_HAZARD_NOTES_MAX_LENGTH = 2000
@@ -290,8 +289,7 @@ class InvalidClearanceRejectReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Reject reason must be 1-{CLEARANCE_REJECT_REASON_MAX_LENGTH} chars "
-            f"after trimming (got: {value!r})"
+            f"Reject reason must be 1-{REASON_MAX_LENGTH} chars after trimming (got: {value!r})"
         )
         self.value = value
 
@@ -451,8 +449,7 @@ class InvalidClearanceExpireReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Expire reason must be 1-{CLEARANCE_EXPIRE_REASON_MAX_LENGTH} chars "
-            f"after trimming (got: {value!r})"
+            f"Expire reason must be 1-{REASON_MAX_LENGTH} chars after trimming (got: {value!r})"
         )
         self.value = value
 

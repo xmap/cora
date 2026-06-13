@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Calibration module records empirical instrument values that downstream consumers need to interpret raw data. A Calibration is the digital record of the kind of number that historically lived in a spreadsheet or a lab-notebook page: "the rotation axis of the Aerotech stage projects to pixel 1024.5 at 25 keV with the 5x optics"; "the Andor's pixel pitch is 6.5 microns with a 1.0x scintillator-detector geometry". Reconstructions, alignment procedures, and operator overrides all need to cite a specific value at a specific operating point.
+The Calibration module records empirical instrument values that downstream consumers need to interpret raw data. A Calibration is the digital record of the kind of number that historically lived in a spreadsheet or a lab-notebook page: "the rotation axis of the Aerotech stage projects to pixel 1024.5 at 25 keV with the 5x optics"; "the FLIR Oryx camera's pixel pitch is 3.45 microns with a 1.0x scintillator-detector geometry". Reconstructions, alignment procedures, and operator overrides all need to cite a specific value at a specific operating point.
 
 A Calibration is keyed by the triple `(target_id, quantity, operating_point)` and grows revisions append-only. Each revision carries its own status (Provisional or Verified) and a tagged source (Measured from a Procedure, Computed from a Dataset, or Asserted by an Actor). Earlier revisions stay readable for reproducibility; new revisions may explicitly supersede prior ones on the same calibration.
 
@@ -66,13 +66,9 @@ N/A. The Calibration aggregate has no load-bearing lifecycle FSM. Revisions accu
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `DefineCalibration` | NEW | `POST /calibrations` | `define_calibration` | required |
-| `AppendCalibrationRevision` | MODIFIED | `POST /calibrations/{calibration_id}/revisions` | `append_calibration_revision` | required |
-| `PublishRevision` | MODIFIED | `POST /calibrations/{calibration_id}/revisions/{revision_id}/publish` | `publish_revision` | required |
-| `GetCalibration` | QUERY | `GET /calibrations/{calibration_id}` | `get_calibration` | none |
-| `ListCalibrations` | QUERY | `GET /calibrations` | `list_calibrations` | none |
+<!-- arch:slices-table bc=calibration -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

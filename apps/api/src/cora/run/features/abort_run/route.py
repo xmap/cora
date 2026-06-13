@@ -16,9 +16,9 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.run.aggregates.run import RUN_ABORT_REASON_MAX_LENGTH
 from cora.run.features.abort_run.command import AbortRun
 from cora.run.features.abort_run.handler import Handler
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class AbortRunRequest(BaseModel):
@@ -27,7 +27,7 @@ class AbortRunRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=RUN_ABORT_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Free-form reason for the abort (1-500 chars after trimming). "
             "Today the field is unstructured; structured taxonomy is "

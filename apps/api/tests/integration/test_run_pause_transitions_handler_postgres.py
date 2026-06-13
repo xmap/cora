@@ -20,6 +20,7 @@ import asyncpg
 import pytest
 
 from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features import (
     add_asset_family,
     define_family,
@@ -143,7 +144,7 @@ async def test_multi_cycle_hold_resume_then_stop_persists_full_event_stream(
     """Multi-cycle hold/resume sequence then a controlled stop. The
     persisted event stream preserves cycle order; the fold lands at
     Stopped with the trimmed reason."""
-    cap_id = UUID("01900000-0000-7000-8000-00000066aa01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000066aa02")
     asset_id = UUID("01900000-0000-7000-8000-00000066ab01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000066ab02")
@@ -169,7 +170,6 @@ async def test_multi_cycle_hold_resume_then_stop_persists_full_event_stream(
     deps = _build_deps_with_ids(
         db_pool,
         [
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,
@@ -265,7 +265,7 @@ async def test_abort_from_held_state_persists_and_round_trips_to_aborted(
 ) -> None:
     """6f-3 widens abort source set to include Held. Hold + Abort
     yields Aborted without an intervening Resume."""
-    cap_id = UUID("01900000-0000-7000-8000-00000067aa01")
+    cap_id = family_stream_id(FamilyName("FlyMotion"))
     cap_event_id = UUID("01900000-0000-7000-8000-00000067aa02")
     asset_id = UUID("01900000-0000-7000-8000-00000067ab01")
     asset_register_event_id = UUID("01900000-0000-7000-8000-00000067ab02")
@@ -288,7 +288,6 @@ async def test_abort_from_held_state_persists_and_round_trips_to_aborted(
     deps = _build_deps_with_ids(
         db_pool,
         [
-            cap_id,
             cap_event_id,
             asset_id,
             asset_register_event_id,

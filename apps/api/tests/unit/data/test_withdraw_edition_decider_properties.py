@@ -27,13 +27,13 @@ from cora.data.aggregates.edition import (
     EditionTitle,
     EditionWithdrawn,
 )
-from cora.data.aggregates.edition.state import EDITION_WITHDRAWAL_REASON_MAX_LENGTH
 from cora.data.features.withdraw_edition.command import WithdrawEdition
 from cora.data.features.withdraw_edition.context import WithdrawEditionContext
 from cora.data.features.withdraw_edition.decider import decide
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identifier import PersistentIdentifier, PersistentIdentifierScheme
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -45,7 +45,7 @@ _NON_PUBLISHED_STATUS = st.sampled_from(
 # Reason text may carry leading / trailing whitespace; the VO trims it.
 # The non-whitespace core stays 1-500 chars so the trimmed value is
 # always valid.
-_VALID_REASON = st.text(min_size=1, max_size=EDITION_WITHDRAWAL_REASON_MAX_LENGTH)
+_VALID_REASON = st.text(min_size=1, max_size=REASON_MAX_LENGTH)
 
 
 def _edition(

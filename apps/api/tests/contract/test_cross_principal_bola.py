@@ -65,6 +65,7 @@ from fastapi.testclient import TestClient
 from cora.api.main import create_app
 from cora.equipment.aggregates.asset import AssetTier
 from cora.infrastructure.event_envelope import to_new_event
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.safety.aggregates.clearance_template import clearance_template_stream_id
 from cora.trust.aggregates.policy.events import (
     PolicyDefined,
@@ -83,7 +84,11 @@ def _seed_policy(
     """Seed a single PolicyDefined event into the running app's
     in-memory store. Same shape as `test_principal_header.py`'s
     helper; duplicated here to keep the BOLA test self-contained
-    rather than coupling two files via a shared fixture file."""
+    rather than coupling two files via a shared fixture file.
+
+    Binds the HTTP Surface so P1's commands (which arrive via the REST
+    TestClient on SYSTEM_HTTP_SURFACE_ID) strict-match; `evaluate`
+    denies any other surface."""
     event = PolicyDefined(
         policy_id=policy_id,
         name="Bola-test-policy",
@@ -91,6 +96,7 @@ def _seed_policy(
         permitted_principal_ids=(permitted_principal,),
         permitted_commands=tuple(permitted_commands),
         occurred_at=datetime.now(tz=UTC),
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     new_event = to_new_event(
         event_type=event_type_name(event),

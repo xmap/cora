@@ -23,8 +23,7 @@ For tracking what we haven't picked yet and why. Each row names a category, the 
 | Pick | Candidates | Trigger |
 | --- | --- | --- |
 | Authz engine | SpiceDB vs OpenFGA | First non-Cedar authz rule |
-| LLM provider + embedding | OpenAI vs Anthropic vs local (Ollama) | Reasoning generation lands (today only stored) |
-| Docs site generator | mkdocs, Docusaurus | If docs outgrow GitHub's renderer |
+| Embedding / vector workload | pgvector (in store) vs dedicated index | First embedding workload (no vector column today) |
 | Versioning / release | hatch + setuptools_scm vs custom | First external consumer of the API or library |
 
 ## Standards and publishing

@@ -178,3 +178,68 @@ async def test_find_supplies_by_kind_unknown_kind_returns_no_bucket(
     lookup = PostgresSupplyLookup(db_pool)
     result = await lookup.find_supplies_by_kind(kinds=frozenset({"NeverRegisteredKind"}))
     assert "NeverRegisteredKind" not in result
+
+
+@pytest.mark.integration
+async def test_find_supplies_by_name_returns_matching_row(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Happy path: the (name, facility_code, kind) match is returned with status."""
+    sup = uuid4()
+    name = f"primary-store-{uuid4()}"
+    await _register_supply(db_pool, supply_id=sup, kind="Storage", name=name, now=_T0)
+    await _mark_available(db_pool, supply_id=sup, now=_T1)
+    await _drain(db_pool)
+
+    lookup = PostgresSupplyLookup(db_pool)
+    result = await lookup.find_supplies_by_name(name=name, facility_code="cora", kind="Storage")
+
+    assert [r.supply_id for r in result] == [sup]
+    assert result[0].status == "Available"
+    assert result[0].kind == "Storage"
+    assert result[0].facility_code == "cora"
+
+
+@pytest.mark.integration
+async def test_find_supplies_by_name_excludes_decommissioned(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Tombstoned same-name Supply is excluded at the query layer.
+
+    Pins the `status != 'Decommissioned'` clause directly: deregister
+    UPDATEs the projection row to status='Decommissioned' (it is not
+    physically deleted), and the query must still exclude it.
+    """
+    sup = uuid4()
+    name = f"ephemeral-store-{uuid4()}"
+    await _register_supply(db_pool, supply_id=sup, kind="Storage", name=name, now=_T0)
+    await _mark_available(db_pool, supply_id=sup, now=_T1)
+    await _deregister(db_pool, supply_id=sup, now=_T2)
+    await _drain(db_pool)
+
+    lookup = PostgresSupplyLookup(db_pool)
+    result = await lookup.find_supplies_by_name(name=name, facility_code="cora", kind="Storage")
+
+    assert result == []
+
+
+@pytest.mark.integration
+async def test_find_supplies_by_name_scopes_by_facility_and_kind(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A match requires name AND facility_code AND kind; a wrong scope returns []."""
+    sup = uuid4()
+    name = f"scoped-store-{uuid4()}"
+    await _register_supply(db_pool, supply_id=sup, kind="Storage", name=name, now=_T0)
+    await _mark_available(db_pool, supply_id=sup, now=_T1)
+    await _drain(db_pool)
+
+    lookup = PostgresSupplyLookup(db_pool)
+    wrong_facility = await lookup.find_supplies_by_name(
+        name=name, facility_code="other-facility", kind="Storage"
+    )
+    wrong_kind = await lookup.find_supplies_by_name(
+        name=name, facility_code="cora", kind="Consumable"
+    )
+    assert wrong_facility == []
+    assert wrong_kind == []

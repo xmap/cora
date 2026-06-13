@@ -157,7 +157,10 @@ def render_count(model: ArchModel, args: dict[str, str]) -> str:
 
 
 def render_bc_aggregates(model: ArchModel, args: dict[str, str]) -> str:
-    return _aggs(model, args["bc"])
+    aggregates = model.bc(args["bc"]).aggregates
+    if args.get("case") == "type":
+        return ", ".join(f"`{a.type_name}`" for a in aggregates)
+    return ", ".join(f"`{a.name}`" for a in aggregates)
 
 
 def _surface_cell(value: str | None) -> str:
@@ -201,7 +204,7 @@ REQUIRED_ARGS: dict[str, frozenset[str]] = {
 OPTIONAL_ARGS: dict[str, frozenset[str]] = {
     "bc-table": frozenset(),
     "count": frozenset({"bc", "agg", "spell", "cap"}),
-    "bc-aggregates": frozenset(),
+    "bc-aggregates": frozenset({"case"}),
     "slices-table": frozenset(),
     "fsm-states": frozenset(),
 }

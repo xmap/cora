@@ -78,12 +78,16 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
     await drain_projections(db_pool, registry, deadline_seconds=2.0)
 
 
-async def _seed_plan(deps: Kernel) -> UUID:
+async def _seed_plan(deps: Kernel, family_name: str = "Tomography") -> UUID:
     """Seed the upstream chain (Family + Asset + Method +
     Practice + Plan) needed for start_run cross-aggregate validation.
-    Returns plan_id. Consumes 11 ids from the FixedIdGenerator."""
+    Returns plan_id. Consumes 10 ids from the FixedIdGenerator.
+
+    Family stream ids are deterministic (uuid5 over the name); a
+    second seed in the same db with the same family_name 409s, so
+    callers seeding multiple chains in one db pass distinct names."""
     cap_id = await define_family.bind(deps)(
-        DefineFamily(name="Tomography", affordances=frozenset()),
+        DefineFamily(name=family_name, affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -125,10 +129,11 @@ async def _seed_plan(deps: Kernel) -> UUID:
 
 
 def _chain_ids() -> list[UUID]:
-    """11 ids consumed by _seed_plan (define_family=2 +
-    register_asset=2 + add_asset_family=1 + define_method=2 +
-    define_practice=2 + define_plan=2)."""
-    return [uuid4() for _ in range(11)]
+    """10 ids consumed by _seed_plan (define_family=1 (event only,
+    stream id derived from name) + register_asset=2 +
+    add_asset_family=1 + define_method=2 + define_practice=2 +
+    define_plan=2)."""
+    return [uuid4() for _ in range(10)]
 
 
 @pytest.mark.integration
@@ -197,7 +202,7 @@ async def test_every_lifecycle_transition_writes_a_check_constraint_accepted_sta
     # Run 2: Started -> Held -> Resumed (proves "Held" then back to "Running").
     run_resumed_id = uuid4()
     deps_2 = _build_deps(db_pool, [*_chain_ids(), run_resumed_id, uuid4(), uuid4(), uuid4()])
-    plan_id_2 = await _seed_plan(deps_2)
+    plan_id_2 = await _seed_plan(deps_2, family_name="Tomography2")
     await bind_start(deps_2)(
         StartRun(name="resumed-run", plan_id=plan_id_2, subject_id=None),
         principal_id=_PRINCIPAL_ID,
@@ -217,7 +222,7 @@ async def test_every_lifecycle_transition_writes_a_check_constraint_accepted_sta
     # Run 3: Started -> Completed (proves "Completed").
     run_completed_id = uuid4()
     deps_3 = _build_deps(db_pool, [*_chain_ids(), run_completed_id, uuid4(), uuid4()])
-    plan_id_3 = await _seed_plan(deps_3)
+    plan_id_3 = await _seed_plan(deps_3, family_name="Tomography3")
     await bind_start(deps_3)(
         StartRun(name="completed-run", plan_id=plan_id_3, subject_id=None),
         principal_id=_PRINCIPAL_ID,
@@ -232,7 +237,7 @@ async def test_every_lifecycle_transition_writes_a_check_constraint_accepted_sta
     # Run 4: Started -> Aborted (proves "Aborted").
     run_aborted_id = uuid4()
     deps_4 = _build_deps(db_pool, [*_chain_ids(), run_aborted_id, uuid4(), uuid4()])
-    plan_id_4 = await _seed_plan(deps_4)
+    plan_id_4 = await _seed_plan(deps_4, family_name="Tomography4")
     await bind_start(deps_4)(
         StartRun(name="aborted-run", plan_id=plan_id_4, subject_id=None),
         principal_id=_PRINCIPAL_ID,
@@ -247,7 +252,7 @@ async def test_every_lifecycle_transition_writes_a_check_constraint_accepted_sta
     # Run 5: Started -> Stopped (proves "Stopped").
     run_stopped_id = uuid4()
     deps_5 = _build_deps(db_pool, [*_chain_ids(), run_stopped_id, uuid4(), uuid4()])
-    plan_id_5 = await _seed_plan(deps_5)
+    plan_id_5 = await _seed_plan(deps_5, family_name="Tomography5")
     await bind_start(deps_5)(
         StartRun(name="stopped-run", plan_id=plan_id_5, subject_id=None),
         principal_id=_PRINCIPAL_ID,
@@ -262,7 +267,7 @@ async def test_every_lifecycle_transition_writes_a_check_constraint_accepted_sta
     # Run 6: Started -> Truncated (proves "Truncated").
     run_truncated_id = uuid4()
     deps_6 = _build_deps(db_pool, [*_chain_ids(), run_truncated_id, uuid4(), uuid4()])
-    plan_id_6 = await _seed_plan(deps_6)
+    plan_id_6 = await _seed_plan(deps_6, family_name="Tomography6")
     await bind_start(deps_6)(
         StartRun(name="truncated-run", plan_id=plan_id_6, subject_id=None),
         principal_id=_PRINCIPAL_ID,
@@ -313,7 +318,7 @@ async def test_plan_id_filter_narrows_results(db_pool: asyncpg.Pool) -> None:
 
     run_b = uuid4()
     deps_b = _build_deps(db_pool, [*_chain_ids(), run_b, uuid4()])
-    plan_b = await _seed_plan(deps_b)
+    plan_b = await _seed_plan(deps_b, family_name="TomographyB")
     await bind_start(deps_b)(
         StartRun(name="for-plan-b", plan_id=plan_b, subject_id=None),
         principal_id=_PRINCIPAL_ID,
@@ -374,7 +379,7 @@ async def test_campaign_id_filter_narrows_results(db_pool: asyncpg.Pool) -> None
     # Standalone Run (no Campaign).
     run_standalone = uuid4()
     deps_standalone = _build_deps(db_pool, [*_chain_ids(), run_standalone, uuid4()])
-    plan_standalone = await _seed_plan(deps_standalone)
+    plan_standalone = await _seed_plan(deps_standalone, family_name="TomographyStandalone")
     await bind_start(deps_standalone)(
         StartRun(name="standalone-run", plan_id=plan_standalone, subject_id=None),
         principal_id=_PRINCIPAL_ID,

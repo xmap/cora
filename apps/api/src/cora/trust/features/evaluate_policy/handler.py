@@ -103,6 +103,7 @@ def bind(deps: Kernel) -> Handler:
             principal_id=query.evaluated_principal_id,
             command_name=query.evaluated_command_name,
             conduit_id=query.evaluated_conduit_id,
+            surface_id=query.evaluated_surface_id,
         )
 
         _log.info(

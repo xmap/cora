@@ -19,9 +19,9 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.operation.aggregates.procedure import PROCEDURE_TRUNCATE_REASON_MAX_LENGTH
 from cora.operation.features.truncate_procedure.command import TruncateProcedure
 from cora.operation.features.truncate_procedure.handler import Handler
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class TruncateProcedureRequest(BaseModel):
@@ -30,7 +30,7 @@ class TruncateProcedureRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=PROCEDURE_TRUNCATE_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Free-form reason for the truncation (1-500 chars after trimming). "
             "Today the field is unstructured; structured taxonomy is "

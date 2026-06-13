@@ -22,12 +22,18 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
-from cora.equipment.aggregates.family import FamilyNotFoundError
+from cora.equipment.aggregates.family import (
+    FamilyName,
+    FamilyNotFoundError,
+    family_stream_id,
+)
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerIdentifier,
     ManufacturerIdentifierType,
     ManufacturerName,
+    PartNumber,
+    model_stream_id,
 )
 from cora.equipment.features import define_family, define_model, deprecate_family
 from cora.equipment.features.define_family import DefineFamily
@@ -62,15 +68,20 @@ async def test_define_model_persists_event_to_postgres(
     read the events back from the event store, and verify ModelDefined
     is persisted with the expected payload shape (sorted
     declared_family_ids, no version_tag key when None)."""
-    family_id = UUID("01900000-0000-7000-8000-000000054c01")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-000000054c0e")
-    model_id = UUID("01900000-0000-7000-8000-00000054ca01")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000054ca01")
     model_event_id = UUID("01900000-0000-7000-8000-00000054ca0e")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
-        ids=[family_id, family_event_id, model_id, model_event_id],
+        ids=[family_event_id, model_fallback_id, model_event_id],
     )
     await define_family.bind(deps)(
         DefineFamily(name="ContinuousRotationTomography", affordances=frozenset()),
@@ -130,11 +141,16 @@ async def test_define_model_rejects_unregistered_family_id(
     """Cross-BC family_lookup: defining a Model with a Family id that
     has never been registered raises `FamilyNotFoundError`. Real PG
     lookup against `proj_equipment_family_summary`; no Family seeded."""
-    model_id = UUID("01900000-0000-7000-8000-00000054ca02")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000054ca02")
     model_event_id = UUID("01900000-0000-7000-8000-00000054ca0f")
     missing_family_id = UUID("01900000-0000-7000-8000-0000000bad01")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
-    deps = build_postgres_deps(db_pool, now=_NOW, ids=[model_id, model_event_id])
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[model_fallback_id, model_event_id])
 
     with pytest.raises(FamilyNotFoundError) as exc_info:
         await define_model.bind(deps)(
@@ -161,15 +177,20 @@ async def test_define_model_proceeds_when_family_is_registered(
     """Cross-BC family_lookup success: a Family seeded via
     `define_family` plus a projection drain resolves through
     `list_family_ids`, and `define_model` proceeds to event-write."""
-    family_id = UUID("01900000-0000-7000-8000-000000054d01")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-000000054d0e")
-    model_id = UUID("01900000-0000-7000-8000-00000054ca03")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000054ca03")
     model_event_id = UUID("01900000-0000-7000-8000-00000054ca1a")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
-        ids=[family_id, family_event_id, model_id, model_event_id],
+        ids=[family_event_id, model_fallback_id, model_event_id],
     )
     await define_family.bind(deps)(
         DefineFamily(name="ContinuousRotationTomography", affordances=frozenset()),
@@ -203,13 +224,18 @@ async def test_define_model_idempotency_key_replay_returns_same_model_id(
     """Same Idempotency-Key plus same command body returns the same
     model_id without writing a second Model stream. Storage-cardinality
     pin against the Brandur cache-miss regression class."""
-    family_id = UUID("01900000-0000-7000-8000-000000054e01")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-000000054e0e")
-    first_model_id = UUID("01900000-0000-7000-8000-00000054ca21")
+    first_model_fallback_id = UUID("01900000-0000-7000-8000-00000054ca21")
     first_event_id = UUID("01900000-0000-7000-8000-00000054ca2e")
-    # The second model_id is queued but never consumed: the Brandur
+    first_model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
+    # The second pair is queued but never consumed: the Brandur
     # cache hit short-circuits before `id_generator.new_id()` runs on
-    # the replay. The id sits unclaimed at the end of the test.
+    # the replay. The ids sit unclaimed at the end of the test.
     unused_replay_model_id = UUID("01900000-0000-7000-8000-00000054ca31")
     unused_replay_event_id = UUID("01900000-0000-7000-8000-00000054ca3e")
 
@@ -217,9 +243,8 @@ async def test_define_model_idempotency_key_replay_returns_same_model_id(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
-            first_model_id,
+            first_model_fallback_id,
             first_event_id,
             unused_replay_model_id,
             unused_replay_event_id,
@@ -277,20 +302,24 @@ async def test_define_model_succeeds_when_declared_family_is_deprecated(
     `list_family_ids` enforces for the discovery path), so
     `define_model` proceeds to event-write without raising
     `FamilyNotFoundError`."""
-    family_id = UUID("01900000-0000-7000-8000-000000054f01")
+    family_id = family_stream_id(FamilyName("LegacyTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-000000054f0e")
     deprecate_event_id = UUID("01900000-0000-7000-8000-000000054f1a")
-    model_id = UUID("01900000-0000-7000-8000-00000054ca04")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000054ca04")
     model_event_id = UUID("01900000-0000-7000-8000-00000054ca2a")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             family_event_id,
             deprecate_event_id,
-            model_id,
+            model_fallback_id,
             model_event_id,
         ],
     )

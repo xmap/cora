@@ -10,11 +10,9 @@ from pydantic import BaseModel, Field
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
-from cora.safety.aggregates.clearance.state import (
-    CLEARANCE_REJECT_REASON_MAX_LENGTH,
-)
 from cora.safety.features.reject_clearance.command import RejectClearance
 from cora.safety.features.reject_clearance.handler import Handler
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class RejectClearanceOutput(BaseModel):
@@ -42,7 +40,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             str,
             Field(
                 min_length=1,
-                max_length=CLEARANCE_REJECT_REASON_MAX_LENGTH,
+                max_length=REASON_MAX_LENGTH,
                 description="Free-form reason for the rejection (audit breadcrumb).",
             ),
         ],

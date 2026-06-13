@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
-from cora.supply.aggregates.supply import SUPPLY_REASON_MAX_LENGTH
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.supply.errors import UnauthorizedError
 from cora.supply.features.mark_supply_available.handler import (
     Handler as MarkAvailableHandler,
@@ -86,7 +86,7 @@ def test_post_mark_available_rejects_too_long_reason_with_422() -> None:
         supply_id = _register_supply(client)
         response = client.post(
             f"/supplies/{supply_id}/mark-available",
-            json={"reason": "a" * (SUPPLY_REASON_MAX_LENGTH + 1)},
+            json={"reason": "a" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 

@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
-from cora.supply.aggregates.supply import SUPPLY_REASON_MAX_LENGTH
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.supply.errors import UnauthorizedError
 from cora.supply.features.degrade_supply.handler import Handler
 from cora.supply.features.degrade_supply.route import (
@@ -77,7 +77,7 @@ def test_post_degrade_rejects_too_long_reason_with_422() -> None:
         supply_id = _register_and_mark_available(client)
         response = client.post(
             f"/supplies/{supply_id}/degrade",
-            json={"reason": "a" * (SUPPLY_REASON_MAX_LENGTH + 1)},
+            json={"reason": "a" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 

@@ -1,12 +1,14 @@
 """Unit tests for the `define_policy` slice's pure decider."""
 
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.aggregates.policy import (
     InvalidPolicyNameError,
+    InvalidPolicySurfaceError,
     Policy,
     PolicyAlreadyExistsError,
     PolicyDefined,
@@ -30,6 +32,7 @@ def test_decide_emits_policy_defined_when_stream_is_empty() -> None:
             conduit_id=conduit_id,
             permitted_principal_ids=frozenset({p1}),
             permitted_commands=frozenset({"RegisterActor"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         now=_NOW,
         new_id=new_id,
@@ -54,6 +57,7 @@ def test_decide_trims_name_via_value_object() -> None:
             conduit_id=uuid4(),
             permitted_principal_ids=frozenset({uuid4()}),
             permitted_commands=frozenset({"RegisterActor"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         now=_NOW,
         new_id=uuid4(),
@@ -71,6 +75,7 @@ def test_decide_rejects_invalid_name() -> None:
                 conduit_id=uuid4(),
                 permitted_principal_ids=frozenset({uuid4()}),
                 permitted_commands=frozenset({"RegisterActor"}),
+                surface_id=SYSTEM_HTTP_SURFACE_ID,
             ),
             now=_NOW,
             new_id=uuid4(),
@@ -94,6 +99,7 @@ def test_decide_rejects_existing_state() -> None:
                 conduit_id=uuid4(),
                 permitted_principal_ids=frozenset(),
                 permitted_commands=frozenset(),
+                surface_id=SYSTEM_HTTP_SURFACE_ID,
             ),
             now=_NOW,
             new_id=uuid4(),
@@ -113,12 +119,34 @@ def test_decide_allows_empty_permission_sets() -> None:
             conduit_id=uuid4(),
             permitted_principal_ids=frozenset(),
             permitted_commands=frozenset(),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         now=_NOW,
         new_id=uuid4(),
     )
     assert events[0].permitted_principal_ids == ()
     assert events[0].permitted_commands == ()
+
+
+@pytest.mark.unit
+def test_decide_rejects_nil_surface_id() -> None:
+    """A new Policy must bind a real Surface. The nil sentinel
+    (`UUID(int=0)`) is rejected with `InvalidPolicySurfaceError`: it
+    survives only on the retired V1 bootstrap seed stream, and a
+    nil-surface policy would strict-deny every real-surface call."""
+    with pytest.raises(InvalidPolicySurfaceError):
+        define_policy.decide(
+            state=None,
+            command=DefinePolicy(
+                name="Nil-surface",
+                conduit_id=uuid4(),
+                permitted_principal_ids=frozenset({uuid4()}),
+                permitted_commands=frozenset({"RegisterActor"}),
+                surface_id=UUID(int=0),
+            ),
+            now=_NOW,
+            new_id=uuid4(),
+        )
 
 
 @pytest.mark.unit
@@ -134,6 +162,7 @@ def test_decide_does_not_validate_conduit_existence() -> None:
             conduit_id=uuid4(),  # random — no corresponding Conduit events
             permitted_principal_ids=frozenset({uuid4()}),
             permitted_commands=frozenset({"X"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         now=_NOW,
         new_id=uuid4(),
@@ -151,6 +180,7 @@ def test_decide_is_pure_same_inputs_same_outputs() -> None:
         conduit_id=conduit,
         permitted_principal_ids=frozenset({p1}),
         permitted_commands=frozenset({"RegisterActor"}),
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     first = define_policy.decide(state=None, command=command, now=_NOW, new_id=new_id)
     second = define_policy.decide(state=None, command=command, now=_NOW, new_id=new_id)

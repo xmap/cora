@@ -25,7 +25,12 @@ from typing import Protocol
 from uuid import UUID
 
 from cora.equipment.aggregates.family import FamilyNotFoundError, list_all_family_ids
-from cora.equipment.aggregates.model import event_type_name, to_payload
+from cora.equipment.aggregates.model import (
+    PartNumber,
+    event_type_name,
+    model_stream_id,
+    to_payload,
+)
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.define_model.command import DefineModel
 from cora.equipment.features.define_model.decider import decide
@@ -136,7 +141,16 @@ def bind(deps: Kernel) -> Handler:
             )
             raise FamilyNotFoundError(first_missing)
 
-        new_id = deps.id_generator.new_id()
+        # The Model stream id is derived from the vendor key so the same
+        # product converges across facilities. The random id is the
+        # fallback for the unknown-pending-confirmation placeholder, and
+        # is popped on every path so the per-event id keeps a stable slot.
+        random_id = deps.id_generator.new_id()
+        new_id = model_stream_id(
+            command.manufacturer,
+            PartNumber(command.part_number),
+            new_id=random_id,
+        )
         now = deps.clock.now()
 
         domain_events = decide(

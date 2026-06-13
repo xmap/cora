@@ -159,6 +159,9 @@ def test_decision_slices_table_uses_real_surface() -> None:
 def test_bc_aggregates_renderer() -> None:
     aggs = ap.render_bc_aggregates(_MODEL, {"bc": "equipment"})
     assert "`role`" in aggs and "`asset`" in aggs
+    # case=type emits the PascalCase aggregate type names (for the index cards)
+    typed = ap.render_bc_aggregates(_MODEL, {"bc": "equipment", "case": "type"})
+    assert "`Role`" in typed and "`Asset`" in typed and "`role`" not in typed
 
 
 def test_expand_markers_idempotent() -> None:

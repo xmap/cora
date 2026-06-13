@@ -7,9 +7,7 @@ import pytest
 
 from cora.operation.aggregates.procedure import (
     LOGBOOK_KIND_ACTIVITY,
-    PROCEDURE_ABORT_REASON_MAX_LENGTH,
     PROCEDURE_NAME_MAX_LENGTH,
-    PROCEDURE_TRUNCATE_REASON_MAX_LENGTH,
     STEP_KIND_VALUES,
     STEPS_LOGBOOK_SCHEMA,
     InvalidProcedureAbortReasonError,
@@ -31,6 +29,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureStepsLogbookClosedError,
     ProcedureTruncateReason,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 # ---------- ProcedureName VO ----------
 
@@ -142,14 +141,14 @@ def test_procedure_abort_reason_rejects_whitespace_only() -> None:
 
 @pytest.mark.unit
 def test_procedure_abort_reason_accepts_max_length() -> None:
-    reason = "x" * PROCEDURE_ABORT_REASON_MAX_LENGTH
+    reason = "x" * REASON_MAX_LENGTH
     assert ProcedureAbortReason(reason).value == reason
 
 
 @pytest.mark.unit
 def test_procedure_abort_reason_rejects_over_max_length() -> None:
     with pytest.raises(InvalidProcedureAbortReasonError):
-        ProcedureAbortReason("x" * (PROCEDURE_ABORT_REASON_MAX_LENGTH + 1))
+        ProcedureAbortReason("x" * (REASON_MAX_LENGTH + 1))
 
 
 @pytest.mark.unit
@@ -275,14 +274,14 @@ def test_procedure_truncate_reason_rejects_whitespace_only() -> None:
 
 @pytest.mark.unit
 def test_procedure_truncate_reason_accepts_max_length() -> None:
-    reason = "x" * PROCEDURE_TRUNCATE_REASON_MAX_LENGTH
+    reason = "x" * REASON_MAX_LENGTH
     assert ProcedureTruncateReason(reason).value == reason
 
 
 @pytest.mark.unit
 def test_procedure_truncate_reason_rejects_over_max_length() -> None:
     with pytest.raises(InvalidProcedureTruncateReasonError):
-        ProcedureTruncateReason("x" * (PROCEDURE_TRUNCATE_REASON_MAX_LENGTH + 1))
+        ProcedureTruncateReason("x" * (REASON_MAX_LENGTH + 1))
 
 
 @pytest.mark.unit

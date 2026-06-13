@@ -6,7 +6,6 @@ from uuid import uuid4
 import pytest
 
 from cora.agent.aggregates.agent import (
-    AGENT_SUSPENSION_REASON_MAX_LENGTH,
     Agent,
     AgentCannotSuspendError,
     AgentKind,
@@ -21,6 +20,7 @@ from cora.agent.aggregates.agent import (
 from cora.agent.features.suspend_agent.command import SuspendAgent
 from cora.agent.features.suspend_agent.decider import decide
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 _SUSPENDED_BY = ActorId(uuid4())
@@ -111,7 +111,7 @@ def test_reason_over_cap_raises() -> None:
             state=agent,
             command=SuspendAgent(
                 agent_id=agent.id,
-                reason="x" * (AGENT_SUSPENSION_REASON_MAX_LENGTH + 1),
+                reason="x" * (REASON_MAX_LENGTH + 1),
             ),
             now=_NOW,
             suspended_by=_SUSPENDED_BY,

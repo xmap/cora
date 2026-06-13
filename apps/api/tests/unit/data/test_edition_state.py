@@ -12,7 +12,6 @@ from cora.data.aggregates.edition.state import (
     EDITION_PUBLICATION_YEAR_FUTURE_BUDGET,
     EDITION_PUBLICATION_YEAR_MIN,
     EDITION_TITLE_MAX_LENGTH,
-    EDITION_WITHDRAWAL_REASON_MAX_LENGTH,
     LICENSE_REQUIRED_KINDS,
     Creator,
     EditionKind,
@@ -29,6 +28,7 @@ from cora.data.aggregates.edition.state import (
     validate_publication_year,
 )
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 def test_edition_kind_has_six_values() -> None:
@@ -107,7 +107,7 @@ def test_withdrawal_reason_rejects_empty() -> None:
 
 def test_withdrawal_reason_rejects_oversize() -> None:
     with pytest.raises(InvalidEditionWithdrawalReasonError):
-        WithdrawalReason("x" * (EDITION_WITHDRAWAL_REASON_MAX_LENGTH + 1))
+        WithdrawalReason("x" * (REASON_MAX_LENGTH + 1))
 
 
 def test_creator_accepts_no_affiliation() -> None:

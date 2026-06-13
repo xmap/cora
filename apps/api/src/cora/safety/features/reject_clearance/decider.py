@@ -27,11 +27,9 @@ from cora.safety.aggregates.clearance import (
     ClearanceStatus,
     InvalidClearanceRejectReasonError,
 )
-from cora.safety.aggregates.clearance.state import (
-    CLEARANCE_REJECT_REASON_MAX_LENGTH,
-)
 from cora.safety.features.reject_clearance.command import RejectClearance
 from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _REJECTABLE_STATUSES: tuple[ClearanceStatus, ...] = (ClearanceStatus.UNDER_REVIEW,)
 
@@ -57,7 +55,7 @@ def decide(
 
     reason = validate_bounded_text(
         command.reason,
-        max_length=CLEARANCE_REJECT_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         error_class=InvalidClearanceRejectReasonError,
     )
 

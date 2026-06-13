@@ -14,7 +14,6 @@ from uuid import uuid4
 import pytest
 
 from cora.equipment.aggregates.model import (
-    MODEL_DEPRECATION_REASON_MAX_LENGTH,
     InvalidModelDeprecationReasonError,
     Manufacturer,
     ManufacturerName,
@@ -28,6 +27,7 @@ from cora.equipment.aggregates.model import (
 )
 from cora.equipment.features import deprecate_model
 from cora.equipment.features.deprecate_model import DeprecateModel
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
 _REASON = "Vendor end-of-life 2026-Q3; replaced by ANT130-LZS"
@@ -133,7 +133,7 @@ def test_decide_rejects_whitespace_only_reason() -> None:
 @pytest.mark.unit
 def test_decide_rejects_over_long_reason() -> None:
     state = _model()
-    too_long = "x" * (MODEL_DEPRECATION_REASON_MAX_LENGTH + 1)
+    too_long = "x" * (REASON_MAX_LENGTH + 1)
     with pytest.raises(InvalidModelDeprecationReasonError):
         deprecate_model.decide(
             state=state,

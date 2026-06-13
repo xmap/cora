@@ -27,6 +27,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.aggregates.policy import (
     Policy,
     PolicyAlreadyExistsError,
@@ -57,6 +58,7 @@ def _command(
         conduit_id=conduit_id,
         permitted_principal_ids=permitted_principal_ids,
         permitted_commands=permitted_commands,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
 
 
@@ -143,6 +145,7 @@ def test_define_emits_single_event_with_injected_fields(
     assert set(event.permitted_principal_ids) == permitted_principal_ids
     assert set(event.permitted_commands) == permitted_commands
     assert event.occurred_at == now
+    assert event.surface_id == SYSTEM_HTTP_SURFACE_ID
 
 
 @pytest.mark.unit

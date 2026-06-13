@@ -13,7 +13,6 @@ Single-source transition: `Active -> Held`. Strict-not-idempotent
 from datetime import datetime
 
 from cora.campaign.aggregates.campaign import (
-    CAMPAIGN_REASON_MAX_LENGTH,
     Campaign,
     CampaignCannotHoldError,
     CampaignHeld,
@@ -22,6 +21,7 @@ from cora.campaign.aggregates.campaign import (
     InvalidCampaignHoldReasonError,
 )
 from cora.campaign.features.hold_campaign.command import HoldCampaign
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _HOLDABLE_STATUSES: tuple[CampaignStatus, ...] = (CampaignStatus.ACTIVE,)
 
@@ -37,7 +37,7 @@ def decide(
     Invariants:
       - State must not be None -> CampaignNotFoundError
       - Current status must be Active -> CampaignCannotHoldError
-      - Reason must be 1-CAMPAIGN_REASON_MAX_LENGTH chars after trim
+      - Reason must be 1-REASON_MAX_LENGTH chars after trim
         -> InvalidCampaignHoldReasonError
     """
     if state is None:
@@ -46,7 +46,7 @@ def decide(
         raise CampaignCannotHoldError(state.id, state.status)
 
     trimmed = command.reason.strip()
-    if not trimmed or len(trimmed) > CAMPAIGN_REASON_MAX_LENGTH:
+    if not trimmed or len(trimmed) > REASON_MAX_LENGTH:
         raise InvalidCampaignHoldReasonError(command.reason)
 
     return [

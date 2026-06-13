@@ -47,6 +47,7 @@ from uuid import UUID
 
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 AGENT_KIND_MAX_LENGTH = 100
 AGENT_NAME_MAX_LENGTH = 100
@@ -55,8 +56,6 @@ AGENT_VERSION_MAX_LENGTH = 50
 AGENT_CANONICAL_URI_MAX_LENGTH = 2000
 AGENT_CAPABILITY_MAX_LENGTH = 100
 AGENT_CAPABILITIES_MAX_COUNT = 32
-AGENT_DEPRECATION_REASON_MAX_LENGTH = 500
-AGENT_SUSPENSION_REASON_MAX_LENGTH = 500
 AGENT_TOOL_NAME_MAX_LENGTH = 100
 AGENT_TOOLS_MAX_COUNT = 32
 MODEL_REF_PROVIDER_MAX_LENGTH = 100
@@ -192,7 +191,7 @@ class InvalidAgentDeprecationReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Agent deprecation reason must be 1-{AGENT_DEPRECATION_REASON_MAX_LENGTH} chars "
+            f"Agent deprecation reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -209,7 +208,7 @@ class InvalidAgentSuspensionReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Agent suspension reason must be 1-{AGENT_SUSPENSION_REASON_MAX_LENGTH} chars "
+            f"Agent suspension reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -591,7 +590,7 @@ class AgentDeprecationReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=AGENT_DEPRECATION_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidAgentDeprecationReasonError,
         )
         object.__setattr__(self, "value", trimmed)
@@ -611,7 +610,7 @@ class AgentSuspensionReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=AGENT_SUSPENSION_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidAgentSuspensionReasonError,
         )
         object.__setattr__(self, "value", trimmed)

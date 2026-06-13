@@ -39,6 +39,7 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | --- | --- |
 | `Shutter` | `Shutterable` |
 | `MotionController` | (empty at v1; controllers expose configuration + firmware identity through `settings` rather than command-tier affordances) |
+| `TimingController` | `Pulsing` (carried via the `Controller` Role). Unlike `MotionController`, a timing box is itself the actor: the pulse-generation affordance is its own, not a driven device's. softGlueZynq generates configurable trigger pulse trains for downstream timing; per-box identity + firmware/bitstream config live in `settings`. |
 | `RotaryStage` | `Rotatable`, `Homeable`, `Limitable`, `Following`, `Marking` |
 | `LinearStage` | `Translatable`, `Homeable`, `Limitable`, `Following` |
 | `Hexapod` | `Posable`, `Homeable`, `Limitable` |
@@ -67,6 +68,8 @@ Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manu
 | `oms_vme58` | Oregon Micro Systems | `VME58` | `MotionController` | `OMS_VME58_2bmb_drive`, `OMS_VME58_2bma_drive` |
 | `kohzu_cyat_070` | Kohzu | `CYAT-070` | `LinearStage` | `Sample_top_X`, `Sample_top_Z` |
 
+A Model id is deterministic: `model_stream_id` derives it as `uuid5` over the canonical `(lowercased manufacturer name, case-preserved part number)` vendor key, so the same vendor product converges on one id across facilities and a second `define_model` on the same real key returns `409`. `oms_vme58` is the convergence case in the table: both `OMS_VME58_2bmb_drive` and `OMS_VME58_2bma_drive` bind the one `oms_vme58` Model row (one product, two physical boards). The two `unknown-pending-confirmation` rows are the deliberate exception: that placeholder part number is NOT a real vendor key, so `model_stream_id` falls back to a random id, keeping `aerotech_hexapod_drive_unknown_pn` and `aerotech_2bmbaero_drive_unknown_pn` distinct rather than collapsing both unconfirmed drives onto one identity. When their real part numbers are confirmed, each re-registers under its derived id.
+
 Part-number suffix conventions vary by vendor: Aerotech's `HEX300-230HL-E1-PL4-TAS` encodes operationally significant variants (`-E1` incremental encoder, `-PL4` ultra-high-accuracy preload, `-TAS` thermal-actively-stabilized); `ABS250MP-M-AS` follows the same pattern (`-M` mid-precision class, `-AS` air-bearing series); `PRO225SL-1000` carries the `-1000` mm travel suffix natively. v1 stores the full type designation as a single `part_number` string; the catalog convention upgrades to suffix decomposition at the second case where a suffix axis crosses Model boundaries (rule-of-three), or at the first APS imaging stage+drive registration, whichever fires first.
 
 The Aerotech Ensemble HLE10-40-A-MXH (companion drive for `aerotech_abs250mp_m_as`) IS now modelled as a separate Asset (`Aerotech_Ensemble_drive`) with `tier = Device` under 2-BM, with `Aerotech_ABRS_rotary.controller_id` carrying the back-reference. This was the FIRST `MotionController` Asset shipped, anchoring the controller-as-Asset slice on the unambiguously-identified rotary drive per `project_controller_as_asset_stage1_design`. A SECOND `MotionController` Asset (`Aerotech_Hexapod_drive`) now models the drive for `Hexapod_2BM`, with `Hexapod_2BM.controller_id` carrying the back-reference; the 2-BM source page does not name the drive's specific product line (the EPICS interface is "native Aerotech Ensemble" but the box is not identified, nor is rack-separate vs sealed-in integration confirmed), so the Model row uses `unknown-pending-confirmation` for the part number and the per-Asset Settings block carries placeholders that operators replace via `update_asset_settings` once the physical hardware is verified. A THIRD `MotionController` Asset (`Aerotech_2bmbAERO_drive`) models the drive electronics that the `2bmbAERO` EPICS IOC manages on behalf of `Optique_Peter_focus_Z`; the Asset name uses the IOC handle (the most stable operator-facing identifier; the drive's product line is almost certainly Aerotech Ensemble-family but unconfirmed on the source page), and the same `unknown-pending-confirmation` pattern carries the per-unit identity placeholders. A FOURTH `MotionController` Asset (`OMS_VME58_2bmb_drive`) now models the Oregon Micro Systems VME58 motor controller card in the 2-BM b-station IOC crate (`ioc2bmb`), which drives the `2bmb:m1`-`2bmb:m91` motor band including `Sample_top_X` (`2bmb:m18`) and `Sample_top_Z` (`2bmb:m17`); both stage Assets now carry `controller_id` back-references to `OMS_VME58_2bmb_drive`. The remaining 89 driven motors on the 2bmb crate live in [Pending](#pending) until each earns its own Asset registration; the controller Asset is the addressability handle that makes a future "VME-bus glitch took out m1-m91" Caution scope honestly to the bus rather than dispersing across 91 motor Assets. A FIFTH `MotionController` Asset (`OMS_VME58_2bma_drive`) models the sibling OMS VME58 board in the 2-BM a-station IOC crate (`ioc2bma`), which drives the front-end / beam-conditioning motor band (`Mirror`, `DMM`, slits, monitor); none of those driven motors are modelled at v1, so the controller Asset ships in isolation with no current `controller_id` back-references pointing at it. The controller registration still ships because absence-of-tracking on hardware that demonstrably exists (and gets rebooted, replaced, firmware-versioned by 2-BM operators) is exactly the self-justifying-defer that `feedback_intentional_modeling_not_mirroring` exists to forbid. Both OMS-VME58 instances bind to the same `oms_vme58` Model row per the one-Model-per-product-line convention; per-instance identity (serial number, firmware version) lives in the per-Asset Settings block. PARTIAL SHIP today is 5 of 7 controller hardware classes; the remaining 2 (Nanotec ST4118 stepper inside Optique Peter, and the Schunk LPTM 30 inside the camera selector) remain deferred per `project_controller_as_asset_research`; each earns its own Stage-1 call when its own trigger fires.
@@ -75,7 +78,7 @@ The Aerotech Ensemble HLE10-40-A-MXH (companion drive for `aerotech_abs250mp_m_a
 
 ## Family settings schemas
 
-NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, `Camera`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. `Imager` and `PseudoAxis` carry no settings schema (they are presenter / facet Families).
+NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: the 2-BM detector classes (the active FLIR Oryx and the decommissioned PCO Dimax) differ along settings axes (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not Family axes, so the high-framerate variant stays a `Camera` rather than a separate Family. `Imager` and `PseudoAxis` carry no settings schema (they are presenter / facet Families).
 
 ### `Objective`
 
@@ -125,6 +128,34 @@ Identity + configuration + connectivity of a separately-modelled drive-electroni
 | `protocol` | closed enum: `EPICS \| Aerotech_Native \| OMS_VME \| Serial_RS232 \| Serial_RS485 \| Modbus_TCP \| Other` | yes | Communication protocol. Six known plus `Other` escape valve; future additions follow the add-only-enum convention. |
 
 `manufacturer` is NOT on this schema: vendor identity lives on the bound Model row per the Capability-declares-settings-schema pattern (`Aerotech` for `Aerotech_Ensemble_drive` comes from `aerotech_ensemble_hle10_40_a_mxh`).
+
+### `TimingController`
+
+Identity + configuration + connectivity of a separately-modelled timing-signal box, the second `<Domain>Controller` Family after `MotionController`. Same intentional-design posture: every field exists because reproducibility, federation, or operational reasoning needs it. The driven device (the camera) carries the `Triggerable` affordance; the timing box carries `Pulsing` (via the `Controller` Role) because it is the active generator of the trigger pulse train. Draft schema pending 2-BM operator confirmation on the softGlueZynq physical box.
+
+| Setting | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `serial_number` | string, 1-128 chars | yes | Per-unit identity; operator-facing canonical key. Same role as on `MotionController`. |
+| `firmware_version` | string, 1-64 chars | yes | Reproducibility provenance. For an FPGA box this is the gateware / bitstream version: the trigger logic itself can change between Runs, so a Run cannot honestly answer "did the timing change between Run X and Run Y" without it. Free-text in v1. |
+| `ip_address` | string, 7-45 chars | no | Network identity. The softGlueZynq is network-attached and EPICS-fronted; optional because future timing sources may not be. |
+| `output_channel_count` | integer, 1-64 | yes | Number of independent trigger / gate output lines the box drives. Analogue of `MotionController.axis_count`; bounds the eventual "one output line failed" Caution scope. |
+| `protocol` | closed enum: `EPICS \| Aerotech_Native \| OMS_VME \| Serial_RS232 \| Serial_RS485 \| Modbus_TCP \| Other` | yes | Communication protocol, shared closed enum with `MotionController`. softGlueZynq is `EPICS`. |
+
+The detailed trigger routing (the softGlue logic-block wiring, e.g. the `PSO -> MUX2-1 -> GateDly1 -> camera Line2` path on the 2-BM box) is per-Run / per-Method configuration, not Asset settings: it changes with the scan, while the schema above records the durable box identity.
+
+### `Camera`
+
+Intrinsic detector properties, made explicit at 2-BM because a second detector class (the high-framerate PCO Dimax) shares the Family with the FLIR Oryx and differs only along settings axes. The first four fields formalize what the per-Asset Settings already carry; the last three are the high-framerate extension that lets one `Camera` Family span both detectors (the `Mirror`-precedent rule: variant-as-settings, not variant-as-subtype).
+
+| Setting | Type | Unit | Notes |
+| --- | --- | --- | --- |
+| `sensor_width` | integer > 0 | pixel | Active sensor columns. |
+| `sensor_height` | integer > 0 | pixel | Active sensor rows. |
+| `pixel_size` | number > 0 | um | Physical sensor pixel pitch (before optical magnification). |
+| `bit_depth` | integer > 0 | bit | ADC bit depth per pixel. |
+| `max_framerate_hz` | number > 0 | Hz | Full-frame maximum frame rate; the axis that distinguishes a high-speed PCO Dimax from a general-purpose Oryx without a separate Family. |
+| `sensor_kind` | closed enum: `CMOS \| sCMOS \| CCD \| EMCCD` | | Sensor architecture. Four known values; add-only enum. |
+| `readout_mode` | closed enum: `RollingShutter \| GlobalShutter` | | Shutter / readout architecture; governs motion-blur behaviour under triggered fly-scans. |
 
 ## Settings
 
@@ -281,13 +312,13 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `focal_length` | `20 mm` |
 | `working_distance` | `33.5 mm` |
 
-### `MCTOptics_objective_1` (5x)
+### `MCTOptics_objective_1` (2x)
 
 | Setting | Value |
 | --- | --- |
-| `magnification` | `5.0` |
-| `numerical_aperture` | `0.14` |
-| `focal_length` | `40 mm` |
+| `magnification` | `2.0` |
+| `numerical_aperture` | `0.055` |
+| `focal_length` | `100 mm` |
 | `working_distance` | `34 mm` |
 
 ### `MCTOptics_objective_2` (1.1x)
@@ -382,8 +413,18 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 
 | Asset | Family |
 | --- | --- |
-| `Mirror_2BM` | `Mirror` |
-| `softGlueZynq_FPGA` | `TriggerFPGA` |
-| `PCO_Dimax_HS` | `HighSpeedCamera` |
+| `Y3-30_mirror` | `Mirror` |
+| `softGlueZynq_FPGA` | `TimingController` |
 | Broader sample-stage motors | `LinearStage` + tilt motors |
 | IOC-hosted EPICS Devices | |
+
+`TimingController` here is the catalog-aligned Family, replacing the earlier `TriggerFPGA` placeholder. Substrate ("FPGA") is not a Family axis: the softGlueZynq is a `TimingController` whose identity + gateware version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
+
+## Decommissioned (provenance only)
+
+Detectors 2-BM ran in the past. They are neither active Assets nor awaiting registration; [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) records them under `decommissioned` for provenance. When modelled they are `Camera` Assets in a terminal lifecycle state: the `Camera` Family spans them and the active FLIR Oryx, because performance class ("high-speed") is a settings axis, not a separate Family, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
+
+| Asset | Family | Note |
+| --- | --- | --- |
+| `PCO_Dimax_HS` | `Camera` | High-speed CMOS camera; superseded by the FLIR Oryx detector chain. |
+| `Adimec_Quartz_Q-12A180` | `Camera` | Earlier 2-BM CoaXPress camera. |

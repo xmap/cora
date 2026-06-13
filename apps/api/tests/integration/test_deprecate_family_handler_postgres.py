@@ -11,7 +11,12 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from cora.equipment.aggregates.family import FamilyStatus, load_family
+from cora.equipment.aggregates.family import (
+    FamilyName,
+    FamilyStatus,
+    family_stream_id,
+    load_family,
+)
 from cora.equipment.features import (
     define_family,
     deprecate_family,
@@ -31,7 +36,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 async def test_deprecate_family_persists_and_preserves_version_through_fold(
     db_pool: asyncpg.Pool,
 ) -> None:
-    family_id = UUID("01900000-0000-7000-8000-00000057fb01")
+    family_id = family_stream_id(FamilyName("X-ray Fluorescence Mapping"))
     defined_event_id = UUID("01900000-0000-7000-8000-00000057fb0e")
     versioned_event_id = UUID("01900000-0000-7000-8000-00000057fb0f")
     deprecated_event_id = UUID("01900000-0000-7000-8000-00000057fb10")
@@ -40,7 +45,6 @@ async def test_deprecate_family_persists_and_preserves_version_through_fold(
         db_pool,
         now=_NOW,
         ids=[
-            family_id,
             defined_event_id,
             versioned_event_id,
             deprecated_event_id,

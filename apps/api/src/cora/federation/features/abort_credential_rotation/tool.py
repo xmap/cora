@@ -17,8 +17,7 @@ from cora.federation.features.abort_credential_rotation.handler import Handler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
-
-_REASON_MAX_LENGTH = 500
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class AbortCredentialRotationOutput(BaseModel):
@@ -51,7 +50,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             str | None,
             Field(
                 default=None,
-                max_length=_REASON_MAX_LENGTH,
+                max_length=REASON_MAX_LENGTH,
                 description=(
                     "Optional operator-supplied reason for aborting the "
                     "rotation (audit-log breadcrumb)."

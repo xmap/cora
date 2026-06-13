@@ -189,6 +189,7 @@ async def test_bearer_trust_authorize_end_to_end_postgres(
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_PRINCIPAL_PERMITTED}),
             permitted_commands=frozenset({"RegisterActor"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_BOOTSTRAP_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
@@ -215,6 +216,7 @@ async def test_bearer_trust_authorize_end_to_end_postgres(
         RegisterActor(name="TrustGate-Permitted", kind=ActorKind.HUMAN),
         principal_id=permitted_principal.principal_id,
         correlation_id=_CORRELATION_ID,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     assert returned_id == permitted_actor_id
 
@@ -242,6 +244,8 @@ async def test_bearer_trust_authorize_end_to_end_postgres(
             RegisterActor(name="TrustGate-Denied", kind=ActorKind.HUMAN),
             principal_id=denied_principal.principal_id,
             correlation_id=_CORRELATION_ID,
+            # Matching surface so the deny is on principal, not surface.
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         )
     assert str(_PRINCIPAL_DENIED) in exc_info.value.reason
 

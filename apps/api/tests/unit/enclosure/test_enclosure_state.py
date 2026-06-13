@@ -16,7 +16,6 @@ import pytest
 from cora.enclosure.aggregates._value_types import EnclosureId
 from cora.enclosure.aggregates.enclosure import (
     ENCLOSURE_NAME_MAX_LENGTH,
-    ENCLOSURE_REASON_MAX_LENGTH,
     Enclosure,
     EnclosureLifecycle,
     EnclosureName,
@@ -26,6 +25,7 @@ from cora.enclosure.aggregates.enclosure import (
     InvalidEnclosureReasonError,
 )
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _ENCLOSURE_ID = EnclosureId(UUID("01900000-0000-7000-8000-00000000e001"))
 _CONTAINING_ASSET_ID = UUID("01900000-0000-7000-8000-00000000a501")
@@ -222,7 +222,7 @@ def test_enclosure_construction_with_genesis_defaults_lands_active_unknown() -> 
 def test_max_length_constants_are_pinned() -> None:
     """Public exports; silent shrinkage would be invisible to consumers."""
     assert ENCLOSURE_NAME_MAX_LENGTH == 200
-    assert ENCLOSURE_REASON_MAX_LENGTH == 500
+    assert REASON_MAX_LENGTH == 500
 
 
 # ---------- EnclosurePermitStatus enum (observation axis only per D6.L2) ----------

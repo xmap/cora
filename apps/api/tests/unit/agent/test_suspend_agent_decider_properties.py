@@ -27,7 +27,6 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from cora.agent.aggregates.agent import (
-    AGENT_SUSPENSION_REASON_MAX_LENGTH,
     Agent,
     AgentCannotSuspendError,
     AgentKind,
@@ -41,6 +40,7 @@ from cora.agent.aggregates.agent import (
 from cora.agent.features.suspend_agent.command import SuspendAgent
 from cora.agent.features.suspend_agent.decider import decide
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 if TYPE_CHECKING:
@@ -65,7 +65,7 @@ def _agent(*, agent_id: UUID, status: AgentStatus) -> Agent:
 @pytest.mark.unit
 @given(
     agent_id=st.uuids(),
-    reason=printable_ascii_text(max_size=AGENT_SUSPENSION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     suspended_by_uuid=st.uuids(),
 )
@@ -89,7 +89,7 @@ def test_suspend_with_none_state_always_raises_not_found(
 @pytest.mark.unit
 @given(
     agent_id=st.uuids(),
-    reason=printable_ascii_text(max_size=AGENT_SUSPENSION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     suspended_by_uuid=st.uuids(),
 )
@@ -121,7 +121,7 @@ def test_suspend_from_versioned_emits_single_event(
 @given(
     agent_id=st.uuids(),
     source=st.sampled_from(_DISALLOWED_SOURCES),
-    reason=printable_ascii_text(max_size=AGENT_SUSPENSION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     suspended_by_uuid=st.uuids(),
 )
@@ -147,7 +147,7 @@ def test_suspend_from_disallowed_source_always_raises_cannot_suspend(
 @given(
     state_agent_id=st.uuids(),
     command_agent_id=st.uuids(),
-    reason=printable_ascii_text(max_size=AGENT_SUSPENSION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     suspended_by_uuid=st.uuids(),
 )
@@ -172,7 +172,7 @@ def test_suspend_uses_state_id_not_command_agent_id(
 @pytest.mark.unit
 @given(
     agent_id=st.uuids(),
-    reason=printable_ascii_text(max_size=AGENT_SUSPENSION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     suspended_by_uuid=st.uuids(),
 )
@@ -196,7 +196,7 @@ def test_suspend_threads_suspended_by_attribution(
 @pytest.mark.unit
 @given(
     agent_id=st.uuids(),
-    reason=printable_ascii_text(max_size=AGENT_SUSPENSION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     suspended_by_uuid=st.uuids(),
 )

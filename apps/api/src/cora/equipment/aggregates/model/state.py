@@ -65,11 +65,11 @@ from enum import StrEnum
 from uuid import UUID
 
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 MODEL_NAME_MAX_LENGTH = 200
 MODEL_PART_NUMBER_MAX_LENGTH = 100
 MODEL_VERSION_TAG_MAX_LENGTH = 50
-MODEL_DEPRECATION_REASON_MAX_LENGTH = 500
 MANUFACTURER_NAME_MAX_LENGTH = 200
 MANUFACTURER_IDENTIFIER_MAX_LENGTH = 200
 
@@ -183,7 +183,7 @@ class InvalidModelDeprecationReasonError(ValueError):
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Model deprecation reason must be 1-{MODEL_DEPRECATION_REASON_MAX_LENGTH} chars "
+            f"Model deprecation reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -413,7 +413,7 @@ class ModelDeprecationReason:
     def __post_init__(self) -> None:
         trimmed = validate_bounded_text(
             self.value,
-            max_length=MODEL_DEPRECATION_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             error_class=InvalidModelDeprecationReasonError,
         )
         object.__setattr__(self, "value", trimmed)

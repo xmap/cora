@@ -5,8 +5,8 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from cora.agent.aggregates.agent import AGENT_SUSPENSION_REASON_MAX_LENGTH
 from cora.api.main import create_app
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 def _define_body(**overrides: object) -> dict[str, object]:
@@ -85,6 +85,6 @@ def test_post_suspend_422_on_over_cap_reason() -> None:
         agent_id = _define_and_version(client)
         response = client.post(
             f"/agents/{agent_id}/suspend",
-            json={"reason": "x" * (AGENT_SUSPENSION_REASON_MAX_LENGTH + 1)},
+            json={"reason": "x" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422

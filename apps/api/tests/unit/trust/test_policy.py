@@ -192,7 +192,7 @@ def test_evaluate_is_pure_same_inputs_same_outputs() -> None:
     assert isinstance(second, Allow)
 
 
-# ---------- GR3 RISK-7: nil-surface wildcard for legacy V1 fold ----------
+# ---------- surface binding: strict match (nil-surface fold is inert) ----------
 
 
 _SURFACE_HTTP = UUID("00000000-0000-0000-0000-000000000020")
@@ -200,11 +200,11 @@ _SURFACE_MCP = UUID("00000000-0000-0000-0000-000000000021")
 _NIL_SURFACE = UUID(int=0)
 
 
-def _v1_legacy_policy() -> Policy:
-    """A V1-shape policy: bound to nil-surface (the legacy-fold sentinel)."""
+def _nil_surface_policy() -> Policy:
+    """A policy folded to nil surface (only the retired V1 bootstrap seed)."""
     return Policy(
         id=uuid4(),
-        name=PolicyName("V1 legacy"),
+        name=PolicyName("nil surface"),
         conduit_id=_CONDUIT_OK,
         permitted_principal_ids=frozenset({_PRINCIPAL_OK}),
         permitted_commands=frozenset({"RegisterActor"}),
@@ -212,11 +212,11 @@ def _v1_legacy_policy() -> Policy:
     )
 
 
-def _v2_http_policy() -> Policy:
-    """A V2-shape policy: bound to a specific HTTP surface."""
+def _http_policy() -> Policy:
+    """A policy bound to a specific HTTP surface."""
     return Policy(
         id=uuid4(),
-        name=PolicyName("V2 HTTP"),
+        name=PolicyName("HTTP"),
         conduit_id=_CONDUIT_OK,
         permitted_principal_ids=frozenset({_PRINCIPAL_OK}),
         permitted_commands=frozenset({"RegisterActor"}),
@@ -225,12 +225,13 @@ def _v2_http_policy() -> Policy:
 
 
 @pytest.mark.unit
-def test_v1_policy_nil_surface_matches_any_call_surface() -> None:
-    """The legacy-fold compatibility shim: a V1 policy folded to nil
-    surface_id matches any call's surface_id. Closes the V1→V2 deploy
-    ordering trap from GR3 RISK-7."""
-    policy = _v1_legacy_policy()
-    for call_surface in (_NIL_SURFACE, _SURFACE_HTTP, _SURFACE_MCP):
+def test_nil_surface_policy_denies_real_surface_call() -> None:
+    """The nil-as-wildcard fold was removed at the V1 sunset: a policy
+    folded to nil surface (only the retired V1 bootstrap seed) now
+    strict-denies every real arrival surface and is operationally
+    inert."""
+    policy = _nil_surface_policy()
+    for call_surface in (_SURFACE_HTTP, _SURFACE_MCP):
         result = evaluate(
             policy,
             principal_id=_PRINCIPAL_OK,
@@ -238,15 +239,14 @@ def test_v1_policy_nil_surface_matches_any_call_surface() -> None:
             conduit_id=_CONDUIT_OK,
             surface_id=call_surface,
         )
-        assert isinstance(result, Allow), f"V1 policy should match surface={call_surface}"
+        assert isinstance(result, Deny), f"nil-surface policy must deny surface={call_surface}"
+        assert "surface" in result.reason.lower()
 
 
 @pytest.mark.unit
-def test_v2_policy_specific_surface_strictly_matches() -> None:
-    """V2+ policies bind to a specific surface and enforce strict ==.
-    Anti-hook (revised): no NEW PolicyDefined events with nil
-    surface_id; sentinel is reserved for V1 legacy fold only."""
-    policy = _v2_http_policy()
+def test_surface_bound_policy_allows_matching_surface() -> None:
+    """A surface-bound policy allows a call arriving on that surface."""
+    policy = _http_policy()
     allow = evaluate(
         policy,
         principal_id=_PRINCIPAL_OK,
@@ -258,9 +258,9 @@ def test_v2_policy_specific_surface_strictly_matches() -> None:
 
 
 @pytest.mark.unit
-def test_v2_policy_denies_wrong_surface() -> None:
-    """V2 HTTP-bound policy denies an MCP call's surface_id."""
-    policy = _v2_http_policy()
+def test_surface_bound_policy_denies_wrong_surface() -> None:
+    """An HTTP-bound policy denies an MCP call's surface_id."""
+    policy = _http_policy()
     result = evaluate(
         policy,
         principal_id=_PRINCIPAL_OK,
@@ -273,12 +273,10 @@ def test_v2_policy_denies_wrong_surface() -> None:
 
 
 @pytest.mark.unit
-def test_v2_policy_denies_nil_surface_call() -> None:
-    """V2 HTTP-bound policy denies a nil-surface call (pre-Iter-C-2
-    handler that hasn't been migrated yet, or a misconfigured caller).
-    Strict == in this direction; only the policy side has wildcard
-    semantics via NIL_SENTINEL."""
-    policy = _v2_http_policy()
+def test_surface_bound_policy_denies_nil_surface_call() -> None:
+    """An HTTP-bound policy denies a nil-surface call. Strict equality
+    in both directions: the nil sentinel never matches a real surface."""
+    policy = _http_policy()
     result = evaluate(
         policy,
         principal_id=_PRINCIPAL_OK,

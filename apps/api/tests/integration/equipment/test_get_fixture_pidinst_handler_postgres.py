@@ -141,10 +141,11 @@ def _aerotech_manufacturer() -> Manufacturer:
 
 
 async def _seed_family(db_pool: asyncpg.Pool, *, name: str) -> UUID:
-    family_id = uuid4()
+    # define_family derives the stream id from the name; return the
+    # handler's deterministic id, not a pre-minted random one.
     define_event_id = uuid4()
-    deps = _build_deps(db_pool, ids=[family_id, define_event_id])
-    await define_family.bind(deps)(
+    deps = _build_deps(db_pool, ids=[define_event_id])
+    family_id = await define_family.bind(deps)(
         DefineFamily(name=name, affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -156,10 +157,12 @@ async def _seed_family(db_pool: asyncpg.Pool, *, name: str) -> UUID:
 
 
 async def _seed_model(db_pool: asyncpg.Pool, *, declared_family_ids: frozenset[UUID]) -> UUID:
-    model_id = uuid4()
+    # define_model pops a random fallback (unused for a real part number)
+    # then the event id; the handler returns the derived stream id.
+    fallback_id = uuid4()
     define_event_id = uuid4()
-    deps = _build_deps(db_pool, ids=[model_id, define_event_id])
-    await define_model.bind(deps)(
+    deps = _build_deps(db_pool, ids=[fallback_id, define_event_id])
+    return await define_model.bind(deps)(
         DefineModel(
             name="ANT130-L",
             manufacturer=_aerotech_manufacturer(),
@@ -169,7 +172,6 @@ async def _seed_model(db_pool: asyncpg.Pool, *, declared_family_ids: frozenset[U
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    return model_id
 
 
 async def _add_family_to_asset(db_pool: asyncpg.Pool, *, asset_id: UUID, family_id: UUID) -> None:

@@ -23,7 +23,6 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from cora.equipment.aggregates.model import (
-    MODEL_DEPRECATION_REASON_MAX_LENGTH,
     InvalidModelDeprecationReasonError,
     Manufacturer,
     ManufacturerName,
@@ -37,6 +36,7 @@ from cora.equipment.aggregates.model import (
 )
 from cora.equipment.features import deprecate_model
 from cora.equipment.features.deprecate_model import DeprecateModel
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 if TYPE_CHECKING:
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
 
-_REASON = printable_ascii_text(min_size=1, max_size=MODEL_DEPRECATION_REASON_MAX_LENGTH)
+_REASON = printable_ascii_text(min_size=1, max_size=REASON_MAX_LENGTH)
 
 # Deprecatable source statuses: Defined (first revision) and Versioned
 # (subsequent revisions). Deprecated is excluded; it's covered by a
@@ -61,8 +61,8 @@ def _invalid_reason() -> st.SearchStrategy[str]:
         st.just(""),
         _WHITESPACE_CHARS,
         printable_ascii_text(
-            min_size=MODEL_DEPRECATION_REASON_MAX_LENGTH + 1,
-            max_size=MODEL_DEPRECATION_REASON_MAX_LENGTH + 50,
+            min_size=REASON_MAX_LENGTH + 1,
+            max_size=REASON_MAX_LENGTH + 50,
         ),
     )
 

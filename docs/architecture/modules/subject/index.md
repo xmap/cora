@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Subject module owns CORA's record of every entity that the facility measures, observes, or studies. One aggregate, `Subject`, is the canonical place where a sample's id, display name, current lifecycle status, and current sample-environment mount live. Subjects are generic across science domains: materials samples, biological specimens, manufactured parts (including in-flight additively-manufactured prints being formed during the experiment), astronomical targets, and computational subjects all flow through the same lifecycle.
+The Subject module owns CORA's record of every entity that the facility measures, observes, or studies. <!-- arch:count kind=aggregate bc=subject spell=true cap=true -->One<!-- /arch:count --> aggregate, `Subject`, is the canonical place where a sample's id, display name, current lifecycle status, and current sample-environment mount live. Subjects are generic across science domains: materials samples, biological specimens, manufactured parts (including in-flight additively-manufactured prints being formed during the experiment), astronomical targets, and computational subjects all flow through the same lifecycle.
 
 Subject identity crosses Run boundaries. The same `Subject.id` can be referenced by multiple Runs (in-situ and operando experiments, repeat measurements, calibration re-checks); the Subject aggregate does not maintain a list of Runs against it. The sample-environment apparatus the Subject is mounted on is an [Equipment](../equipment/index.md) `Asset`, not part of the Subject itself; the binding is one field on Subject state pointing at the Asset id.
 
@@ -85,7 +85,7 @@ Strict re-entry semantics apply across the board: re-measuring an already-`Measu
 
 ## Events
 
-The Subject aggregate emits eight event types.
+The Subject aggregate emits <!-- arch:count kind=event bc=subject spell=true agg=subject -->eight<!-- /arch:count --> event types.
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
@@ -102,18 +102,9 @@ The Subject aggregate emits eight event types.
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterSubject` | NEW | `POST /subjects` | `register_subject` | required |
-| `MountSubject` | MODIFIED | `POST /subjects/{subject_id}/mount` | `mount_subject` | none |
-| `MeasureSubject` | MODIFIED | `POST /subjects/{subject_id}/measure` | `measure_subject` | none |
-| `DismountSubject` | MODIFIED | `POST /subjects/{subject_id}/dismount` | `dismount_subject` | none |
-| `RemoveSubject` | MODIFIED | `POST /subjects/{subject_id}/remove` | `remove_subject` | none |
-| `ReturnSubject` | MODIFIED | `POST /subjects/{subject_id}/return` | `return_subject` | none |
-| `StoreSubject` | MODIFIED | `POST /subjects/{subject_id}/store` | `store_subject` | none |
-| `DiscardSubject` | MODIFIED | `POST /subjects/{subject_id}/discard` | `discard_subject` | none |
-| `GetSubject` | QUERY | `GET /subjects/{subject_id}` | `get_subject` | none |
-| `ListSubjects` | QUERY | `GET /subjects` | `list_subjects` | none |
+<!-- arch:slices-table bc=subject -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

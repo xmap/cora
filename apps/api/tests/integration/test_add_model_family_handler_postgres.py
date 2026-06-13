@@ -15,13 +15,19 @@ import asyncpg
 import pytest
 
 from cora.equipment._projections import register_equipment_projections
-from cora.equipment.aggregates.family import FamilyNotFoundError
+from cora.equipment.aggregates.family import (
+    FamilyName,
+    FamilyNotFoundError,
+    family_stream_id,
+)
 from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     ModelFamilyAlreadyPresentError,
+    PartNumber,
     fold,
     from_stored,
+    model_stream_id,
 )
 from cora.equipment.features import (
     add_model_family,
@@ -58,23 +64,26 @@ async def test_add_model_family_persists_event_with_payload(
     add the other via add_model_family. Verify ModelFamilyAdded is
     persisted with the expected payload shape and fold reflects the
     expanded declared_family_ids set."""
-    family_a_id = UUID("01900000-0000-7000-8000-00000061d001")
+    family_a_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_a_event_id = UUID("01900000-0000-7000-8000-00000061d00e")
-    family_b_id = UUID("01900000-0000-7000-8000-00000061d002")
+    family_b_id = family_stream_id(FamilyName("StepScanTomography"))
     family_b_event_id = UUID("01900000-0000-7000-8000-00000061d00f")
-    model_id = UUID("01900000-0000-7000-8000-00000061ca01")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000061ca01")
     define_event_id = UUID("01900000-0000-7000-8000-00000061ca0e")
     added_event_id = UUID("01900000-0000-7000-8000-00000061ca1a")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_a_id,
             family_a_event_id,
-            family_b_id,
             family_b_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             added_event_id,
         ],
@@ -134,19 +143,24 @@ async def test_add_model_family_rejects_unregistered_family_id(
     """Cross-BC family_lookup: adding a Family that has never been
     registered raises `FamilyNotFoundError` before the decider sees the
     command. Real PG lookup against `proj_equipment_family_summary`."""
-    family_id = UUID("01900000-0000-7000-8000-00000061e001")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-00000061e00e")
-    model_id = UUID("01900000-0000-7000-8000-00000061ca21")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000061ca21")
     define_event_id = UUID("01900000-0000-7000-8000-00000061ca2e")
     # The add_model_family call rejects before consuming any id; queue
     # an extra to be safe.
     unused_add_event_id = UUID("01900000-0000-7000-8000-00000061ca3a")
     missing_family_id = UUID("01900000-0000-7000-8000-0000000bad21")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
-        ids=[family_id, family_event_id, model_id, define_event_id, unused_add_event_id],
+        ids=[family_event_id, model_fallback_id, define_event_id, unused_add_event_id],
     )
     await define_family.bind(deps)(
         DefineFamily(name="ContinuousRotationTomography", affordances=frozenset()),
@@ -186,16 +200,21 @@ async def test_add_model_family_rejects_duplicate_family(
     """Strict-not-idempotent: re-adding a family already in
     declared_family_ids raises `ModelFamilyAlreadyPresentError` and writes
     no new event."""
-    family_id = UUID("01900000-0000-7000-8000-00000061f001")
+    family_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_event_id = UUID("01900000-0000-7000-8000-00000061f00e")
-    model_id = UUID("01900000-0000-7000-8000-00000061ca41")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000061ca41")
     define_event_id = UUID("01900000-0000-7000-8000-00000061ca4e")
     unused_add_event_id = UUID("01900000-0000-7000-8000-00000061ca5a")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
-        ids=[family_id, family_event_id, model_id, define_event_id, unused_add_event_id],
+        ids=[family_event_id, model_fallback_id, define_event_id, unused_add_event_id],
     )
     await define_family.bind(deps)(
         DefineFamily(name="ContinuousRotationTomography", affordances=frozenset()),
@@ -238,25 +257,28 @@ async def test_add_model_family_succeeds_when_family_is_deprecated(
     deprecated Family. The handler's cross-BC lookup goes through
     `list_all_family_ids` which INCLUDES Deprecated rows, so the call
     proceeds to event-write without raising `FamilyNotFoundError`."""
-    family_a_id = UUID("01900000-0000-7000-8000-00000062d001")
+    family_a_id = family_stream_id(FamilyName("ContinuousRotationTomography"))
     family_a_event_id = UUID("01900000-0000-7000-8000-00000062d00e")
-    family_b_id = UUID("01900000-0000-7000-8000-00000062d002")
+    family_b_id = family_stream_id(FamilyName("LegacyStepScan"))
     family_b_event_id = UUID("01900000-0000-7000-8000-00000062d00f")
     family_b_deprecate_event_id = UUID("01900000-0000-7000-8000-00000062d01a")
-    model_id = UUID("01900000-0000-7000-8000-00000062ca01")
+    model_fallback_id = UUID("01900000-0000-7000-8000-00000062ca01")
     define_event_id = UUID("01900000-0000-7000-8000-00000062ca0e")
     added_event_id = UUID("01900000-0000-7000-8000-00000062ca1a")
+    model_id = model_stream_id(
+        Manufacturer(name=ManufacturerName("Aerotech")),
+        PartNumber("ANT130-L"),
+        new_id=UUID(int=0),
+    )
 
     deps = build_postgres_deps(
         db_pool,
         now=_NOW,
         ids=[
-            family_a_id,
             family_a_event_id,
-            family_b_id,
             family_b_event_id,
             family_b_deprecate_event_id,
-            model_id,
+            model_fallback_id,
             define_event_id,
             added_event_id,
         ],

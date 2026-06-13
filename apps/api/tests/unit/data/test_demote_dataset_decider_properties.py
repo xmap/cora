@@ -37,7 +37,6 @@ from hypothesis import strategies as st
 
 from cora.data.aggregates.dataset import (
     DATASET_CHECKSUM_SHA256_HEX_LENGTH,
-    DATASET_DEMOTION_REASON_MAX_LENGTH,
     Dataset,
     DatasetAlreadyRetractedError,
     DatasetChecksum,
@@ -52,6 +51,7 @@ from cora.data.aggregates.dataset import (
 from cora.data.features import demote_dataset
 from cora.data.features.demote_dataset import DemoteDataset
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 if TYPE_CHECKING:
@@ -89,7 +89,7 @@ def _command(*, dataset_id: UUID, reason: str) -> DemoteDataset:
 @pytest.mark.unit
 @given(
     dataset_id=st.uuids(),
-    reason=printable_ascii_text(max_size=DATASET_DEMOTION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     demoted_by_uuid=st.uuids(),
 )
@@ -113,7 +113,7 @@ def test_demote_with_none_state_always_raises_not_found(
 @pytest.mark.unit
 @given(
     dataset_id=st.uuids(),
-    reason=printable_ascii_text(max_size=DATASET_DEMOTION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     demoted_by_uuid=st.uuids(),
 )
@@ -143,7 +143,7 @@ def test_demote_when_already_retracted_always_raises_already_retracted(
 @pytest.mark.unit
 @given(
     dataset_id=st.uuids(),
-    reason=printable_ascii_text(max_size=DATASET_DEMOTION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     demoted_by_uuid=st.uuids(),
 )
@@ -180,7 +180,7 @@ def test_demote_from_clean_demotable_emits_single_event(
 @given(
     state_dataset_id=st.uuids(),
     command_dataset_id=st.uuids(),
-    reason=printable_ascii_text(max_size=DATASET_DEMOTION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     demoted_by_uuid=st.uuids(),
 )
@@ -210,7 +210,7 @@ def test_demote_uses_state_id_not_command_dataset_id(
 @pytest.mark.unit
 @given(
     dataset_id=st.uuids(),
-    reason=printable_ascii_text(max_size=DATASET_DEMOTION_REASON_MAX_LENGTH),
+    reason=printable_ascii_text(max_size=REASON_MAX_LENGTH),
     now=aware_datetimes(),
     demoted_by_uuid=st.uuids(),
 )

@@ -89,10 +89,6 @@ from cora.shared.identity import ActorId
 #: but the length bound is the same.
 DISTRIBUTION_URI_MAX_LENGTH = 2048
 
-#: Reasons attached to discard transitions. Same bound as
-#: `DATASET_DISCARD_REASON_MAX_LENGTH` for operator UX symmetry.
-DISTRIBUTION_DISCARD_REASON_MAX_LENGTH = 500
-
 
 # ----------------------------------------------------------------------
 # Status enum (closed; 4 values day-one per L4)

@@ -81,6 +81,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
@@ -126,10 +127,10 @@ _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000355a01")
 # Capabilities (focus motor needs LinearStage; image chain needs Camera +
 # Scintillator; the focus motor's drive electronics is a separate
 # MotionController Asset per [[project-controller-as-asset-stage1-design]])
-_CAP_LINEAR_STAGE_ID = UUID("01900000-0000-7000-8000-000000355c01")
-_CAP_CAMERA_ID = UUID("01900000-0000-7000-8000-000000355c11")
-_CAP_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000355c21")
-_CAP_MOTION_CONTROLLER_ID = UUID("01900000-0000-7000-8000-000000355c31")
+_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
+_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
+_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
+_CAP_MOTION_CONTROLLER_ID = family_stream_id(FamilyName("MotionController"))
 
 # Devices: the focus motor's controller (Aerotech_2bmbAERO_drive) is
 # registered FIRST so Optique_Peter_focus_Z's controller_id back-

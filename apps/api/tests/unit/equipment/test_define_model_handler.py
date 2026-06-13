@@ -12,6 +12,12 @@ returns `[]` when `pool is None` (the in-memory test default).
 Tests that need a populated Family set monkeypatch the symbol
 imported into `define_model.handler` rather than seeding a real
 projection.
+
+The Model stream id is derived from the vendor key (manufacturer +
+part number), so the handler pops a random fallback id on every path
+(used only for the unknown-pending-confirmation placeholder) and then
+the per-event id. Real-key tests assert the derived id; the placeholder
+test asserts the random fallback.
 """
 
 from datetime import UTC, datetime
@@ -21,7 +27,12 @@ import pytest
 
 from cora.equipment import UnauthorizedError
 from cora.equipment.aggregates.family import FamilyNotFoundError
-from cora.equipment.aggregates.model import Manufacturer, ManufacturerName
+from cora.equipment.aggregates.model import (
+    Manufacturer,
+    ManufacturerName,
+    PartNumber,
+    model_stream_id,
+)
 from cora.equipment.features import define_model
 from cora.equipment.features.define_model import DefineModel
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
@@ -29,13 +40,21 @@ from cora.infrastructure.kernel import Kernel
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
-_NEW_ID = UUID("01900000-0000-7000-8000-000000007ab1")
+# Real-key Models derive their stream id; the random id is popped but
+# unused, so it stands in as the fallback slot ahead of the event id.
+_FALLBACK_ID = UUID("01900000-0000-7000-8000-000000007ab1")
 _EVENT_ID = UUID("01900000-0000-7000-8000-000000007be1")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 _FAMILY_A_ID = UUID("01900000-0000-7000-8000-00000000fa01")
 _FAMILY_B_ID = UUID("01900000-0000-7000-8000-00000000fa02")
 _FAMILY_MISSING_ID = UUID("01900000-0000-7000-8000-00000000fa99")
+
+_DERIVED_ID = model_stream_id(
+    Manufacturer(name=ManufacturerName("Aerotech")),
+    PartNumber("ANT130-L"),
+    new_id=UUID(int=0),
+)
 
 
 def _build_deps(
@@ -45,7 +64,7 @@ def _build_deps(
 ) -> Kernel:
     """Thin wrapper preserving this file's ID list + clock."""
     return _build_deps_shared(
-        ids=[_NEW_ID, _EVENT_ID],
+        ids=[_FALLBACK_ID, _EVENT_ID],
         now=_NOW,
         event_store=event_store,
         deny=deny,
@@ -74,17 +93,21 @@ def _patch_known_families(
     )
 
 
-def _command(declared_family_ids: frozenset[UUID]) -> DefineModel:
+def _command(
+    declared_family_ids: frozenset[UUID],
+    *,
+    part_number: str = "ANT130-L",
+) -> DefineModel:
     return DefineModel(
         name="Aerotech ANT130-L",
         manufacturer=Manufacturer(name=ManufacturerName("Aerotech")),
-        part_number="ANT130-L",
+        part_number=part_number,
         declared_family_ids=declared_family_ids,
     )
 
 
 @pytest.mark.unit
-async def test_handler_returns_generated_model_id(
+async def test_handler_returns_derived_model_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _patch_known_families(monkeypatch, [_FAMILY_A_ID])
@@ -97,7 +120,27 @@ async def test_handler_returns_generated_model_id(
         correlation_id=_CORRELATION_ID,
     )
 
-    assert result == _NEW_ID
+    assert result == _DERIVED_ID
+
+
+@pytest.mark.unit
+async def test_handler_placeholder_part_number_uses_random_fallback_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A Model recorded with the unknown-pending-confirmation placeholder
+    cannot derive a stable id, so the handler falls back to the random
+    id rather than colliding distinct unconfirmed Models."""
+    _patch_known_families(monkeypatch, [_FAMILY_A_ID])
+    deps = _build_deps()
+    handler = define_model.bind(deps)
+
+    result = await handler(
+        _command(frozenset({_FAMILY_A_ID}), part_number="unknown-pending-confirmation"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert result == _FALLBACK_ID
 
 
 @pytest.mark.unit
@@ -133,7 +176,7 @@ async def test_handler_does_not_append_when_denied(
             correlation_id=_CORRELATION_ID,
         )
 
-    events, version = await store.load("Model", _NEW_ID)
+    events, version = await store.load("Model", _DERIVED_ID)
     assert events == []
     assert version == 0
 
@@ -161,7 +204,7 @@ async def test_handler_proceeds_when_all_declared_family_ids_resolve(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Every declared family resolves against the fake lookup, so the
-    handler reaches the decider and returns the new id."""
+    handler reaches the decider and returns the derived id."""
     _patch_known_families(monkeypatch, [_FAMILY_A_ID, _FAMILY_B_ID])
     deps = _build_deps()
     handler = define_model.bind(deps)
@@ -172,7 +215,7 @@ async def test_handler_proceeds_when_all_declared_family_ids_resolve(
         correlation_id=_CORRELATION_ID,
     )
 
-    assert result == _NEW_ID
+    assert result == _DERIVED_ID
 
 
 @pytest.mark.unit
@@ -192,7 +235,7 @@ async def test_handler_appends_model_defined_event_to_store(
         correlation_id=_CORRELATION_ID,
     )
 
-    events, version = await store.load("Model", _NEW_ID)
+    events, version = await store.load("Model", _DERIVED_ID)
     assert version == 1
     assert len(events) == 1
     stored = events[0]
@@ -203,7 +246,7 @@ async def test_handler_appends_model_defined_event_to_store(
     assert stored.event_id == _EVENT_ID
     assert stored.metadata == {"command": "DefineModel"}
     assert stored.occurred_at == _NOW
-    assert stored.payload["model_id"] == str(_NEW_ID)
+    assert stored.payload["model_id"] == str(_DERIVED_ID)
     assert stored.payload["name"] == "Aerotech ANT130-L"
     assert stored.payload["part_number"] == "ANT130-L"
     assert stored.payload["declared_family_ids"] == [str(_FAMILY_A_ID)]

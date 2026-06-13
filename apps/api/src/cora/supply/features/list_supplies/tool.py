@@ -12,10 +12,10 @@ from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
 from cora.shared.facility_code import FACILITY_CODE_MAX_LENGTH
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 from cora.supply.aggregates.supply import (
     SUPPLY_KIND_MAX_LENGTH,
     SUPPLY_NAME_MAX_LENGTH,
-    SUPPLY_REASON_MAX_LENGTH,
     SupplyStatus,
     TriggerSource,
 )
@@ -46,7 +46,7 @@ class SupplySummaryRow(BaseModel):
     status: SupplyStatus
     registered_at: datetime
     last_status_changed_at: datetime | None = None
-    last_status_reason: str | None = Field(default=None, max_length=SUPPLY_REASON_MAX_LENGTH)
+    last_status_reason: str | None = Field(default=None, max_length=REASON_MAX_LENGTH)
     last_trigger: TriggerSource | None = None
 
 

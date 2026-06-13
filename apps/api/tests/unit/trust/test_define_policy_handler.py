@@ -6,6 +6,7 @@ from uuid import UUID
 import pytest
 
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust import TrustHandlers, UnauthorizedError, wire_trust
 from cora.trust.aggregates.policy import InvalidPolicyNameError
 from cora.trust.features import define_policy
@@ -27,6 +28,7 @@ def _command(name: str = "Beam-team") -> DefinePolicy:
         conduit_id=_CONDUIT_ID,
         permitted_principal_ids=frozenset({_ALLOWED_PRINCIPAL}),
         permitted_commands=frozenset({"RegisterActor"}),
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
 
 
@@ -66,8 +68,7 @@ async def test_handler_appends_policy_defined_event_to_store() -> None:
         "policy_id": str(_NEW_ID),
         "name": "Beam-team",
         "conduit_id": str(_CONDUIT_ID),
-        # for V1-shape callers that don't pass it.
-        "surface_id": "00000000-0000-0000-0000-000000000000",
+        "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
         "permitted_principal_ids": [str(_ALLOWED_PRINCIPAL)],
         "permitted_commands": ["RegisterActor"],
         "occurred_at": _NOW.isoformat(),

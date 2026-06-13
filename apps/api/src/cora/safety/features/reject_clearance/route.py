@@ -19,11 +19,9 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.safety.aggregates.clearance.state import (
-    CLEARANCE_REJECT_REASON_MAX_LENGTH,
-)
 from cora.safety.features.reject_clearance.command import RejectClearance
 from cora.safety.features.reject_clearance.handler import Handler
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class RejectClearanceRequest(BaseModel):
@@ -32,7 +30,7 @@ class RejectClearanceRequest(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        max_length=CLEARANCE_REJECT_REASON_MAX_LENGTH,
+        max_length=REASON_MAX_LENGTH,
         description=(
             "Operator-supplied free-form reason for the rejection. Audit "
             "breadcrumb explaining why the reviewer rejected the clearance."

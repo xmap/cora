@@ -32,7 +32,6 @@ from tests.integration._equipment_helpers import seed_installed_asset
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 4, 14, 0, 0, tzinfo=UTC)
-_FAMILY_ID = UUID("01900000-0000-7000-8000-00000054cc01")
 _FAMILY_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cc0e")
 _ADD_FAMILY_EVENT_ID = UUID("01900000-0000-7000-8000-00000054cc10")
 _ASSEMBLY_ID = UUID("01900000-0000-7000-8000-00000054cc03")
@@ -58,7 +57,6 @@ async def test_detach_asset_from_fixture_clears_back_reference_in_postgres(
         db_pool,
         now=_NOW,
         ids=[
-            _FAMILY_ID,
             _FAMILY_EVENT_ID,
             _ADD_FAMILY_EVENT_ID,
             _ASSEMBLY_ID,

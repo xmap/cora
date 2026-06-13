@@ -10,7 +10,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, Field
 
-from cora.data.aggregates.edition.state import EDITION_WITHDRAWAL_REASON_MAX_LENGTH
 from cora.data.features.withdraw_edition.command import WithdrawEdition
 from cora.data.features.withdraw_edition.handler import Handler
 from cora.infrastructure.routing import (
@@ -19,6 +18,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class WithdrawEditionRequest(BaseModel):
@@ -28,7 +28,7 @@ class WithdrawEditionRequest(BaseModel):
         str,
         Field(
             min_length=1,
-            max_length=EDITION_WITHDRAWAL_REASON_MAX_LENGTH,
+            max_length=REASON_MAX_LENGTH,
             description=(
                 "Why the Edition is being withdrawn. Recorded forever on "
                 "the DataCite tombstone; mandatory."

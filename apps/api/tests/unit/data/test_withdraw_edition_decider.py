@@ -21,13 +21,13 @@ from cora.data.aggregates.edition import (
     EditionWithdrawn,
     InvalidEditionWithdrawalReasonError,
 )
-from cora.data.aggregates.edition.state import EDITION_WITHDRAWAL_REASON_MAX_LENGTH
 from cora.data.features.withdraw_edition.command import WithdrawEdition
 from cora.data.features.withdraw_edition.context import WithdrawEditionContext
 from cora.data.features.withdraw_edition.decider import decide
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identifier import PersistentIdentifier, PersistentIdentifierScheme
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
 _EDITION_ID = UUID("01900000-0000-7000-8000-00000000ed01")
@@ -125,4 +125,4 @@ def test_decider_rejects_whitespace_only_reason() -> None:
 @pytest.mark.unit
 def test_decider_rejects_too_long_reason() -> None:
     with pytest.raises(InvalidEditionWithdrawalReasonError):
-        _decide(state=_edition(), reason="x" * (EDITION_WITHDRAWAL_REASON_MAX_LENGTH + 1))
+        _decide(state=_edition(), reason="x" * (REASON_MAX_LENGTH + 1))

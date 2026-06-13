@@ -10,9 +10,9 @@ from pydantic import Field
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
-from cora.run.aggregates.run import RUN_ADJUST_REASON_MAX_LENGTH
 from cora.run.features.adjust_run.command import AdjustRun
 from cora.run.features.adjust_run.handler import IdempotentHandler
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> None:
@@ -53,7 +53,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             str,
             Field(
                 min_length=1,
-                max_length=RUN_ADJUST_REASON_MAX_LENGTH,
+                max_length=REASON_MAX_LENGTH,
                 description=(
                     "Free-form justification for the adjustment (1-500 chars after trimming)."
                 ),

@@ -6,7 +6,6 @@ from uuid import uuid4
 import pytest
 
 from cora.agent.aggregates.agent import (
-    AGENT_DEPRECATION_REASON_MAX_LENGTH,
     Agent,
     AgentCannotDeprecateError,
     AgentDeprecated,
@@ -20,6 +19,7 @@ from cora.agent.aggregates.agent import (
 )
 from cora.agent.features.deprecate_agent.command import DeprecateAgent
 from cora.agent.features.deprecate_agent.decider import decide
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
 
@@ -73,9 +73,7 @@ def test_invalid_reason_raises() -> None:
     with pytest.raises(InvalidAgentDeprecationReasonError):
         decide(
             state=agent,
-            command=DeprecateAgent(
-                agent_id=agent.id, reason="x" * (AGENT_DEPRECATION_REASON_MAX_LENGTH + 1)
-            ),
+            command=DeprecateAgent(agent_id=agent.id, reason="x" * (REASON_MAX_LENGTH + 1)),
             now=_NOW,
         )
 

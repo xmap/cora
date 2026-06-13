@@ -90,13 +90,9 @@ The authoring actor is carried on the event envelope (`StoredEvent.principal_id`
 
 ## Slices
 
-| Command | Category | REST | MCP tool | Idempotency |
-|---|---|---|---|---|
-| `RegisterCaution` | NEW | `POST /cautions` | `register_caution` | required |
-| `SupersedeCaution` | NEW | `POST /cautions/{parent_id}/supersede` | `supersede_caution` | required |
-| `RetireCaution` | MODIFIED | `POST /cautions/{caution_id}/retire` | `retire_caution` | none |
-| `GetCaution` | QUERY | `GET /cautions/{caution_id}` | `get_caution` | none |
-| `ListCautions` | QUERY | `GET /cautions` | `list_cautions` | none |
+<!-- arch:slices-table bc=caution -->
+_Generated from the code at build time._
+<!-- /arch:slices-table -->
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 

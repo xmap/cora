@@ -53,7 +53,6 @@ for steering it; we don't second-guess at adjust time.
 from datetime import datetime
 
 from cora.run.aggregates.run import (
-    RUN_ADJUST_REASON_MAX_LENGTH,
     InvalidRunAdjustPatchError,
     InvalidRunAdjustReasonError,
     Run,
@@ -67,6 +66,7 @@ from cora.run.features.adjust_run.command import AdjustRun
 from cora.run.features.adjust_run.context import RunAdjustContext
 from cora.shared.identity import ActorId
 from cora.shared.json_merge_patch import merge_patch
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _ADJUSTABLE_STATUSES: tuple[RunStatus, ...] = (RunStatus.RUNNING, RunStatus.HELD)
 
@@ -78,7 +78,7 @@ def _validate_reason(value: str) -> str:
     adjust-specific error class for unambiguous API responses.
     """
     trimmed = value.strip()
-    if not trimmed or len(trimmed) > RUN_ADJUST_REASON_MAX_LENGTH:
+    if not trimmed or len(trimmed) > REASON_MAX_LENGTH:
         raise InvalidRunAdjustReasonError(value)
     return trimmed
 
@@ -98,7 +98,7 @@ def decide(
       - Current status must be Running or Held -> RunCannotAdjustError
       - parameters_patch must be non-empty
         -> InvalidRunAdjustPatchError
-      - Reason must be 1-RUN_ADJUST_REASON_MAX_LENGTH chars after
+      - Reason must be 1-REASON_MAX_LENGTH chars after
         trim -> InvalidRunAdjustReasonError
       - When Method has a parameters_schema, merged effective
         parameters must validate (RELAXED)
