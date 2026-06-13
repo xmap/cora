@@ -1,4 +1,4 @@
-# Operation module <span class="md-maturity md-maturity--stable" title="Aggregate, FSM, seven events, ten slices, projection, and per-step entry table all locked.">stable</span>
+# Operation module <span class="md-maturity md-maturity--stable" title="Aggregate, FSM, nine events, thirteen slices, two projections, and per-step entry table all locked.">stable</span>
 
 ## Purpose & Scope
 
@@ -7,6 +7,8 @@ The Operation module models one execution of an episodic operational task: bakeo
 A Procedure is distinct from a Run: a Run executes one Plan against a Subject through the experiment lifecycle (ISA-88 batch lens); a Procedure executes one episodic task that may or may not be bound to a Run (ISA-106 lens). When `parent_run_id` is set, the Procedure is a Phase-of-Run (calibration sweep invoked mid-Run); when None, it stands alone (bakeout run between Runs).
 
 **Execution.** Walking a Procedure step by step, applying each setpoint, running each action, verifying each check, is an optional edge runtime CORA offers for facilities that choose it. The `Conductor` dispatches steps through a substrate-neutral `ControlPort`, with EPICS Channel Access and PVA adapters shipped; a facility may use it or keep its own tooling. Its lower bound is the deterministic real-time loop, which stays in the control system. See [the recording spine and the optional execution edge](../../standards.md#the-recording-spine-and-the-optional-execution-edge).
+
+**Iteration.** Many procedures converge over repeated passes: an optical alignment nudges a mirror, re-measures, and repeats until the beam is centered. CORA models each pass as a first-class iteration through the `ProcedureIterationStarted` / `ProcedureIterationEnded` boundary pair, recording per-pass timing and a convergence verdict (`converged` true, false, or no-verdict, plus an optional `reason`). Iteration is orthogonal to the lifecycle FSM: it is a counter and a per-pass read model on a `Running` Procedure, not a status. An optional `max_consecutive_unconverged_iterations` cap, set at register time (the "patience" of early-stopping vocabulary), lets the loop give up: once that many consecutive passes end without `converged=true`, `start_iteration` refuses with `ProcedureIterationLimitReachedError` and the operator or agent decides whether to abort, truncate, or complete. A `converged=true` pass resets the streak. Before iteration was first-class, alignment scenarios smuggled the pass number into a free-form `evidence['iteration']` key; that ad-hoc convention is now retired and banned by a fitness test.
 
 <div class="cora-aside cora-aside--deferred" markdown>
 
@@ -24,7 +26,7 @@ Out of scope
 
 | Name | Identity | State summary | FSM |
 |---|---|---|---|
-| `Procedure` | `id: UUID` (opaque) | name, kind, target asset ids, status, optional `parent_run_id`, optional `activity_logbook_id`, optional `capability_id`, optional `recipe_id` | yes |
+| `Procedure` | `id: UUID` (opaque) | name, kind, target asset ids, status, optional `parent_run_id`, optional `activity_logbook_id`, optional `capability_id`, optional `recipe_id`, `iteration_count`, optional `current_iteration_index`, `consecutive_unconverged_iterations`, optional `max_consecutive_unconverged_iterations` | yes |
 
 ## Value Objects
 
@@ -60,6 +62,8 @@ stateDiagram-v2
 | `Running` | `Aborted` | `abort_procedure` | `ProcedureAborted` |
 | `Running` | `Truncated` | `truncate_procedure` | `ProcedureTruncated` |
 
+**Iteration is orthogonal to the FSM.** `start_iteration` and `end_iteration` open and close a convergence pass on a `Running` Procedure. They emit `ProcedureIterationStarted` / `ProcedureIterationEnded` and bump counters, but do NOT change `status`, so they are not rows in the table above. `start_iteration` is rejected unless the Procedure is `Running`, no iteration is already open, and the supplied `iteration_index` is the strict successor of `iteration_count` (`ProcedureCannotStartIterationError`); it also enforces the optional patience cap (`ProcedureIterationLimitReachedError`). `end_iteration` requires the supplied index to match the open iteration (`ProcedureCannotEndIterationError`) and records the convergence verdict.
+
 **Guards.** Beyond the source-state check, each transition enforces:
 
 `start_procedure`
@@ -75,9 +79,11 @@ stateDiagram-v2
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
-| `ProcedureRegistered` | `procedure_id, name, kind, target_asset_ids, parent_run_id?, capability_id?, occurred_at` | `register_procedure` accepted; status implicitly `Defined`. |
+| `ProcedureRegistered` | `procedure_id, name, kind, target_asset_ids, parent_run_id?, capability_id?, max_consecutive_unconverged_iterations?, occurred_at` | `register_procedure` accepted; status implicitly `Defined`. |
 | `ProcedureStarted` | `procedure_id, occurred_at` | `start_procedure` accepted (Defined → Running). |
 | `ProcedureActivitiesLogbookOpened` | `procedure_id, logbook_id, kind="steps", schema, occurred_at` | First `append_activities` call for the Procedure (lazy open). |
+| `ProcedureIterationStarted` | `procedure_id, iteration_index, occurred_at` | `start_iteration` accepted; opens a convergence pass on a `Running` Procedure. Bumps `iteration_count`, does not change `status`. |
+| `ProcedureIterationEnded` | `procedure_id, iteration_index, converged?, reason?, occurred_at` | `end_iteration` accepted; closes the open pass with its convergence verdict. Resets the unconverged streak on `converged=true`, otherwise increments it. |
 | `ProcedureCompleted` | `procedure_id, occurred_at` | `complete_procedure` accepted (Running → Completed). |
 | `ProcedureAborted` | `procedure_id, reason, occurred_at` | `abort_procedure` accepted (Running → Aborted). |
 | `ProcedureTruncated` | `procedure_id, reason, interrupted_at?, occurred_at` | `truncate_procedure` accepted (Running → Truncated). |
@@ -94,7 +100,7 @@ _Generated from the code at build time._
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises:
 
 `RegisterProcedure`
-: `ProcedureAlreadyExistsError`, `InvalidProcedureNameError`, `InvalidProcedureKindError`, `Unauthorized`
+: `ProcedureAlreadyExistsError`, `InvalidProcedureNameError`, `InvalidProcedureKindError`, `InvalidProcedureIterationCapError` (the optional patience cap must be `>= 1`), `Unauthorized`. `register_procedure_from_recipe` raises the same set plus its Recipe-expansion errors.
 
 `StartProcedure`
 : `ProcedureNotFoundError`, `ProcedureCannotStartError`, `ProcedurePlanAssetDecommissionedError`, `ProcedureCapabilityExecutorMismatchError`, `ProcedureRequiresAvailableSupplyError` (no Supply registered for a kind in the parent Run's `Method.needed_supplies`), `ProcedureSupplyCoverageMismatchError` (Supplies exist but none Available), and (for Phase-of-Run Procedures only) `RunNotFoundError` / `PlanNotFoundError` / `PracticeNotFoundError` / `MethodNotFoundError` if the parent-resolution chain has a broken link, `Unauthorized`. The Supply gate fires only when `parent_run_id` is set; standalone Procedures pass trivially today (Capability-level `needed_supplies` is a watch item).
@@ -105,10 +111,16 @@ _Generated from the code at build time._
 `CompleteProcedure` / `AbortProcedure` / `TruncateProcedure`
 : `ProcedureNotFoundError`, `ProcedureCannot<Verb>Error` (single-source from `Running`), `Unauthorized`. Abort additionally raises `InvalidProcedureAbortReasonError`; Truncate additionally raises `InvalidProcedureTruncateReasonError` and `InvalidProcedureInterruptedAtError`.
 
+`StartIteration`
+: `ProcedureNotFoundError`, `ProcedureCannotStartIterationError` (not `Running`, an iteration is already open, or the supplied index is not the strict successor of `iteration_count`), `ProcedureIterationLimitReachedError` (the patience cap was reached; 409), `Unauthorized`
+
+`EndIteration`
+: `ProcedureNotFoundError`, `ProcedureCannotEndIterationError` (no open iteration, or the supplied index does not match the open one), `InvalidProcedureIterationEndReasonError`, `Unauthorized`
+
 `GetProcedure`
 : `ProcedureNotFoundError`
 
-`ListProcedures`
+`ListProcedures` / `ListProcedureIterations`
 : (boundary 422 only)
 
 ## Storage & Projections
@@ -130,6 +142,7 @@ CREATE TABLE proj_operation_procedure_summary (
     last_status_changed_at TIMESTAMPTZ,
     last_status_reason     TEXT,
     interrupted_at         TIMESTAMPTZ,
+    iteration_count        INTEGER     NOT NULL DEFAULT 0 CHECK (iteration_count >= 0),
     updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -139,7 +152,30 @@ CREATE INDEX proj_operation_procedure_summary_target_assets_gin_idx
     ON proj_operation_procedure_summary USING GIN (target_asset_ids);
 ```
 
-`last_status_changed_at` updates on every transition out of Defined; `last_status_reason` is populated by Aborted and Truncated only (Completed is happy-path, no reason). `interrupted_at` is Truncated-only and carries the operator's best guess at when the actual interruption happened (distinct from `last_status_changed_at`, which is when the truncate command was processed). `activity_logbook_id` is NULL until the first step is appended and is set by `ProcedureActivitiesLogbookOpened` independently of any lifecycle transition.
+`last_status_changed_at` updates on every transition out of Defined; `last_status_reason` is populated by Aborted and Truncated only (Completed is happy-path, no reason). `interrupted_at` is Truncated-only and carries the operator's best guess at when the actual interruption happened (distinct from `last_status_changed_at`, which is when the truncate command was processed). `activity_logbook_id` is NULL until the first step is appended and is set by `ProcedureActivitiesLogbookOpened` independently of any lifecycle transition. `iteration_count` is the single-row denorm of how many iterations the Procedure has begun, folded from `ProcedureIterationStarted`; "how many passes did this alignment take" is then a plain column read rather than a per-kind dig into the free-form step evidence.
+
+`proj_operation_procedure_iterations`:
+
+```sql title="proj_operation_procedure_iterations"
+CREATE TABLE proj_operation_procedure_iterations (
+    procedure_id    UUID        NOT NULL,
+    iteration_index INTEGER     NOT NULL,
+    started_at      TIMESTAMPTZ NOT NULL,
+    ended_at        TIMESTAMPTZ,
+    converged       BOOLEAN,
+    reason          TEXT,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (procedure_id, iteration_index)
+);
+
+CREATE INDEX proj_operation_procedure_iterations_by_started_idx
+    ON proj_operation_procedure_iterations (procedure_id, started_at);
+CREATE INDEX proj_operation_procedure_iterations_converged_idx
+    ON proj_operation_procedure_iterations (converged)
+    WHERE converged IS NOT NULL;
+```
+
+The per-iteration convergence read model, one row per `(procedure_id, iteration_index)`, surfaced by the `list_procedure_iterations` query slice. `ProcedureIterationStarted` inserts the row with `started_at` (`ON CONFLICT DO NOTHING`, replay-safe); `ProcedureIterationEnded` updates `ended_at`, `converged`, and `reason` by primary key. It answers in plain SQL what the single-row `iteration_count` denorm cannot: which passes converged (`WHERE converged`), time per pass (`ended_at - started_at`), and convergence rate. Because the verdict is already durable on the Procedure event stream, this is a rebuildable, mutable projection (truncate + replay re-derives it), not an immutable system-of-record `entries_*` table. The column shape deliberately equals the body a future `entries_operation_procedure_iterations` substream would carry, so promoting iteration writes off the aggregate stream (the trigger is any Procedure exceeding ~100 iterations in a run) is a write-tier shift with no event-shape change.
 
 `entries_operation_procedure_activities`:
 
