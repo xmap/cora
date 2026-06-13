@@ -310,13 +310,13 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `focal_length` | `20 mm` |
 | `working_distance` | `33.5 mm` |
 
-### `MCTOptics_objective_1` (5x)
+### `MCTOptics_objective_1` (2x)
 
 | Setting | Value |
 | --- | --- |
-| `magnification` | `5.0` |
-| `numerical_aperture` | `0.14` |
-| `focal_length` | `40 mm` |
+| `magnification` | `2.0` |
+| `numerical_aperture` | `0.055` |
+| `focal_length` | `100 mm` |
 | `working_distance` | `34 mm` |
 
 ### `MCTOptics_objective_2` (1.1x)

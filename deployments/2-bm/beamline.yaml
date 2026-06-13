@@ -270,16 +270,16 @@ detector:
           status: Provisional
     - name: MCTOptics_objective_1
       family: Objective
-      magnification: 5.0
-      numerical_aperture: 0.14
+      magnification: 2.0
+      numerical_aperture: 0.055
       working_distance: 34 mm
       replaceable: true
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
       calibrations:
         - name: cal_objective_1_mag
           quantity: magnification
-          operating_point: { objective_designation: "5x_Mitutoyo", energy: 25 }
-          value: 4.93
+          operating_point: { objective_designation: "2x_Mitutoyo", energy: 25 }
+          value: 2.0
           source: AssertedSource
           status: Provisional
     - name: MCTOptics_objective_2

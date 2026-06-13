@@ -28,7 +28,7 @@ The MCTOptics detector sits about 55 m from the source in the 2-BM hutch. It is 
         lens_select   -> MCTOptics_lens_select   (Asset, Family PseudoAxis;
                                                    partition_rule = LookupTable
                                                      0 -> 121.5942 deg  (10x in beam)
-                                                     1 ->  61.9841 deg  (5x  in beam)
+                                                     1 ->  61.9841 deg  (2x  in beam)
                                                      2 ->   2.3006 deg  (1.1x in beam))
 ```
 
@@ -47,7 +47,7 @@ Four Models cover the hardware:
 
 Each Model carries the vendor identity that DOIs and citations need (PIDINST property 7). Assets bind to a Model at registration; the Asset's Family set must be a subset of the Model's declared families.
 
-Two open vendor questions worth confirming with the 2-BM operator before the catalog locks. First, the Optique Peter Triple Objective ships with a turret motor whose underlying vendor may differ from Optique Peter (system integrators often source motors from third parties). Second, Mitutoyo Plan Apo NIR is a product family with one part number per magnification (10x, 5x, 1.1x each carry distinct catalog numbers); folding all three into one Model row is a v1 simplification that splits into three rows once part numbers are verified.
+Two open vendor questions worth confirming with the 2-BM operator before the catalog locks. First, the Optique Peter Triple Objective ships with a turret motor whose underlying vendor may differ from Optique Peter (system integrators often source motors from third parties). Second, Mitutoyo Plan Apo NIR is a product family with one part number per magnification (10x, 2x, 1.1x each carry distinct catalog numbers); folding all three into one Model row is a v1 simplification that splits into three rows once part numbers are verified.
 
 ## Assembly: MCTOptics
 
@@ -96,7 +96,7 @@ Where Fixture and Mount fit together: the Fixture answers "what logical cluster 
 | `lens_select` | Turret position | Objective in beam |
 | --- | --- | --- |
 | `0` | `121.5942 deg` | 10x Mitutoyo |
-| `1` | `61.9841 deg` | 5x Mitutoyo |
+| `1` | `61.9841 deg` | 2x Mitutoyo |
 | `2` | `2.3006 deg` | 1.1x Mitutoyo |
 
 When an operator or Method writes `lens_select = 1`, CORA's command-execution layer looks up the partition rule and writes the corresponding turret setpoint to the `MCTOptics_lens_turret` motor. Every actuation is recorded as a control-dispatch event with a correlation id linking back to the originating partition-rule resolution, so the full chain (operator command, virtual-axis lookup, constituent setpoint) is reconstructable from the event log. The lookup table itself is event-sourced; revising it (for example, after a turret re-homing campaign) leaves a complete audit trail of which values were in effect at which times.
@@ -107,7 +107,7 @@ This replaces the older convention of carrying `lens_select` as a Method paramet
 
 Four Calibrations downstream of this deployment, shown against their device on the [Layout](../beamline.md):
 
-- Three `magnification` revisions, one per objective (9.83x / 4.93x / 1.10x effective, derived from measured pixel size divided by sensor pitch)
+- Three `magnification` revisions, one per objective (9.83x / ~2x / 1.10x effective, derived from measured pixel size divided by sensor pitch; the 2x figure is nominal, pending re-measurement)
 - One `effective_thickness` revision on the LuAG scintillator (100 micrometers)
 
 All initial revisions are `AssertedSource` (operator-attested from vendor datasheets) with status `Provisional`. They get superseded by `MeasuredSource` revisions when the corresponding calibration Procedure runs.
