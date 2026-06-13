@@ -10,8 +10,8 @@ name: Mutation audit (per-BC rotation, nightly)
 # `select` job picks 2 BCs per night from the day-of-year, cycling through
 # the PBT-covered roster so each BC is audited roughly weekly. This keeps
 # the nightly load and the survivor-triage backlog digestible, versus a
-# full 11-way matrix every night. The trigger to scale to per-BC rotation
-# (>=5 BCs PBT-covered) fired; there are 11 today.
+# full 17-way matrix every night. The trigger to scale to per-BC rotation
+# (>=5 BCs PBT-covered) fired; there are 17 today.
 #
 # Runs on Linux (ubuntu-latest). The local `make mutmut-audit` target works
 # on macOS too but mutmut 3.5's per-mutant subprocess wrapper reports every
@@ -69,7 +69,7 @@ jobs:
           # PBT-covered BC roster (each has tests/unit/<bc> property-based
           # coverage + a decider/evolver pure-logic surface). Adding a BC
           # to the rotation is a deliberate edit here.
-          BCS=(access agent calibration data enclosure equipment federation operation recipe safety trust)
+          BCS=(access agent calibration campaign caution data decision enclosure equipment federation operation recipe run safety subject supply trust)
           N=${#BCS[@]}
 
           if [ -n "${INPUT_BC}" ]; then
@@ -78,7 +78,7 @@ jobs:
             # Day-of-year (1..366), base-10 to avoid octal parsing of 008/009.
             doy=$((10#$(date -u +%j)))
             # 2-wide window stepping by 2 each night; wraps mod N so the
-            # whole roster cycles in ~6 nights (each BC ~weekly).
+            # whole roster cycles in ~9 nights (each BC ~every 9 days).
             start=$(( ((doy - 1) * 2) % N ))
             picked="${BCS[$start]} ${BCS[$(((start + 1) % N))]}"
           fi
