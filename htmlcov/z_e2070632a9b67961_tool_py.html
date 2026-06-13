@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1353e0000380b6af___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-13 15:59 +0000
+            created at 2026-06-13 16:36 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -97,7 +97,7 @@
     <p class="run"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">mcp_principal</span> <span class="key">import</span> <span class="nam">get_mcp_principal_id</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">observability</span> <span class="key">import</span> <span class="nam">current_correlation_id</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">routing</span> <span class="key">import</span> <span class="nam">get_mcp_surface_id</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">supply</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">supply</span> <span class="key">import</span> <span class="nam">SUPPLY_REASON_MAX_LENGTH</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">text_bounds</span> <span class="key">import</span> <span class="nam">REASON_MAX_LENGTH</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">supply</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">mark_supply_available</span><span class="op">.</span><span class="nam">command</span> <span class="key">import</span> <span class="nam">MarkSupplyAvailable</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">supply</span><span class="op">.</span><span class="nam">features</span><span class="op">.</span><span class="nam">mark_supply_available</span><span class="op">.</span><span class="nam">handler</span> <span class="key">import</span> <span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -130,7 +130,7 @@
     <p class="run run2"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t">            <span class="nam">str</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t">            <span class="nam">Field</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t">                <span class="nam">min_length</span><span class="op">=</span><span class="num">1</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">                <span class="nam">max_length</span><span class="op">=</span><span class="nam">SUPPLY_REASON_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">                <span class="nam">max_length</span><span class="op">=</span><span class="nam">REASON_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">                <span class="nam">description</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">                    <span class="str">"Operator-supplied reason for declaring the supply Available "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">                    <span class="str">"for the first time (audit-log breadcrumb)."</span>&nbsp;</span><span class="r"></span></p>
@@ -155,7 +155,7 @@
             <a class="nav" href="z_1353e0000380b6af___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-13 15:59 +0000
+            created at 2026-06-13 16:36 +0000
         </p>
     </div>
 </footer>

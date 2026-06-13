@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_30b024220836067d_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-13 15:59 +0000
+            created at 2026-06-13 16:36 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -120,9 +120,9 @@
     <p class="run run2"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">    <span class="nam">DECISION_CONTEXT_REACTION_DISMISSAL</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">identity</span> <span class="key">import</span> <span class="nam">ActorId</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t"><span class="nam">_REASON_MIN_LENGTH</span> <span class="op">=</span> <span class="num">1</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t"><span class="nam">_REASON_MAX_LENGTH</span> <span class="op">=</span> <span class="num">500</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">text_bounds</span> <span class="key">import</span> <span class="nam">REASON_MAX_LENGTH</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t"><span class="nam">_REASON_MIN_LENGTH</span> <span class="op">=</span> <span class="num">1</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t"><span class="nam">_DISMISSAL_CHOICE</span> <span class="op">=</span> <span class="str">"EventDismissed"</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -172,9 +172,9 @@
     <p class="run"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">        <span class="key">raise</span> <span class="nam">InvalidDismissalReasonError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">            <span class="fst">f"</span><span class="fst">reason must be non-empty after strip; got </span><span class="op">{</span><span class="nam">command</span><span class="op">.</span><span class="nam">reason</span><span class="op">!</span><span class="nam">r</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">    <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">trimmed_reason</span><span class="op">)</span> <span class="op">></span> <span class="nam">_REASON_MAX_LENGTH</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">    <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">trimmed_reason</span><span class="op">)</span> <span class="op">></span> <span class="nam">REASON_MAX_LENGTH</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">        <span class="key">raise</span> <span class="nam">InvalidDismissalReasonError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">            <span class="fst">f"</span><span class="fst">reason must be at most </span><span class="op">{</span><span class="nam">_REASON_MAX_LENGTH</span><span class="op">}</span><span class="fst"> chars after strip; </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">            <span class="fst">f"</span><span class="fst">reason must be at most </span><span class="op">{</span><span class="nam">REASON_MAX_LENGTH</span><span class="op">}</span><span class="fst"> chars after strip; </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">            <span class="fst">f"</span><span class="fst">got </span><span class="op">{</span><span class="nam">len</span><span class="op">(</span><span class="nam">trimmed_reason</span><span class="op">)</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -230,7 +230,7 @@
             <a class="nav" href="z_30b024220836067d_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-13 15:59 +0000
+            created at 2026-06-13 16:36 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_5c01696988e01440_query_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-13 15:59 +0000
+            created at 2026-06-13 16:36 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -187,20 +187,21 @@
     <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">            <span class="nam">principal_id</span><span class="op">=</span><span class="nam">query</span><span class="op">.</span><span class="nam">evaluated_principal_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="nam">query</span><span class="op">.</span><span class="nam">evaluated_command_name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">            <span class="nam">conduit_id</span><span class="op">=</span><span class="nam">query</span><span class="op">.</span><span class="nam">evaluated_conduit_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">        <span class="nam">_log</span><span class="op">.</span><span class="nam">info</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">            <span class="str">"evaluate_policy.success"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">            <span class="nam">query_name</span><span class="op">=</span><span class="nam">_QUERY_NAME</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">            <span class="nam">policy_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">query</span><span class="op">.</span><span class="nam">policy_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">            <span class="nam">principal_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">principal_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">            <span class="nam">correlation_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">correlation_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">            <span class="nam">found</span><span class="op">=</span><span class="key">True</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">            <span class="nam">decision</span><span class="op">=</span><span class="nam">type</span><span class="op">(</span><span class="nam">result</span><span class="op">)</span><span class="op">.</span><span class="nam">__name__</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">        <span class="key">return</span> <span class="nam">result</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="key">return</span> <span class="nam">handler</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">            <span class="nam">surface_id</span><span class="op">=</span><span class="nam">query</span><span class="op">.</span><span class="nam">evaluated_surface_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">        <span class="nam">_log</span><span class="op">.</span><span class="nam">info</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">            <span class="str">"evaluate_policy.success"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">            <span class="nam">query_name</span><span class="op">=</span><span class="nam">_QUERY_NAME</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">            <span class="nam">policy_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">query</span><span class="op">.</span><span class="nam">policy_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">            <span class="nam">principal_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">principal_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">            <span class="nam">correlation_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">correlation_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">            <span class="nam">found</span><span class="op">=</span><span class="key">True</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">            <span class="nam">decision</span><span class="op">=</span><span class="nam">type</span><span class="op">(</span><span class="nam">result</span><span class="op">)</span><span class="op">.</span><span class="nam">__name__</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">        <span class="key">return</span> <span class="nam">result</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">    <span class="key">return</span> <span class="nam">handler</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -210,7 +211,7 @@
             <a class="nav" href="z_5c01696988e01440_query_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-13 15:59 +0000
+            created at 2026-06-13 16:36 +0000
         </p>
     </div>
 </footer>

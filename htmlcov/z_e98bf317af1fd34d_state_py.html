@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_c5a3c1404951b4ee_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-13 15:59 +0000
+            created at 2026-06-13 16:36 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -235,10 +235,10 @@
     <p class="run"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">bounded_text</span> <span class="key">import</span> <span class="nam">bounded_name</span><span class="op">,</span> <span class="nam">validate_bounded_text</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">facility_code</span> <span class="key">import</span> <span class="nam">FacilityCode</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">scope_markers</span> <span class="key">import</span> <span class="nam">Annotated</span><span class="op">,</span> <span class="nam">DeferredVocabulary</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t"><span class="nam">SUPPLY_NAME_MAX_LENGTH</span> <span class="op">=</span> <span class="num">200</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t"><span class="nam">SUPPLY_KIND_MAX_LENGTH</span> <span class="op">=</span> <span class="num">50</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t"><span class="nam">SUPPLY_REASON_MAX_LENGTH</span> <span class="op">=</span> <span class="num">500</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">shared</span><span class="op">.</span><span class="nam">text_bounds</span> <span class="key">import</span> <span class="nam">REASON_MAX_LENGTH</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t"><span class="nam">SUPPLY_NAME_MAX_LENGTH</span> <span class="op">=</span> <span class="num">200</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t"><span class="nam">SUPPLY_KIND_MAX_LENGTH</span> <span class="op">=</span> <span class="num">50</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t"><span class="key">class</span> <span class="nam">SupplyStatus</span><span class="op">(</span><span class="nam">StrEnum</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -348,7 +348,7 @@
     <p class="pln"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t265" href="#t265">265</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">value</span><span class="op">:</span> <span class="nam">str</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t266" href="#t266">266</a></span><span class="t">        <span class="nam">super</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">__init__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t">            <span class="fst">f"</span><span class="fst">Supply transition reason must be 1-</span><span class="op">{</span><span class="nam">SUPPLY_REASON_MAX_LENGTH</span><span class="op">}</span><span class="fst"> chars </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t">            <span class="fst">f"</span><span class="fst">Supply transition reason must be 1-</span><span class="op">{</span><span class="nam">REASON_MAX_LENGTH</span><span class="op">}</span><span class="fst"> chars </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t">            <span class="fst">f"</span><span class="fst">after trimming (got: </span><span class="op">{</span><span class="nam">value</span><span class="op">!</span><span class="nam">r</span><span class="op">}</span><span class="fst">)</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">value</span> <span class="op">=</span> <span class="nam">value</span>&nbsp;</span><span class="r"></span></p>
@@ -603,7 +603,7 @@
     <p class="run"><span class="n"><a id="t519" href="#t519">519</a></span><span class="t">    <span class="key">def</span> <span class="nam">__post_init__</span><span class="op">(</span><span class="nam">self</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t520" href="#t520">520</a></span><span class="t">        <span class="nam">trimmed</span> <span class="op">=</span> <span class="nam">validate_bounded_text</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t521" href="#t521">521</a></span><span class="t">            <span class="nam">self</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t522" href="#t522">522</a></span><span class="t">            <span class="nam">max_length</span><span class="op">=</span><span class="nam">SUPPLY_REASON_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t522" href="#t522">522</a></span><span class="t">            <span class="nam">max_length</span><span class="op">=</span><span class="nam">REASON_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t523" href="#t523">523</a></span><span class="t">            <span class="nam">error_class</span><span class="op">=</span><span class="nam">InvalidSupplyReasonError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t524" href="#t524">524</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t525" href="#t525">525</a></span><span class="t">        <span class="nam">object</span><span class="op">.</span><span class="nam">__setattr__</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="str">"value"</span><span class="op">,</span> <span class="nam">trimmed</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -753,7 +753,7 @@
             <a class="nav" href="z_c5a3c1404951b4ee_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-13 15:59 +0000
+            created at 2026-06-13 16:36 +0000
         </p>
     </div>
 </footer>
