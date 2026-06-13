@@ -9,6 +9,13 @@ to a defined Family.
 When non-empty, the decider raises FamilyNotFoundForAssemblyError
 carrying the sorted-first missing id so error responses are stable
 across runs.
+
+The handler also resolves each `sub_assembly_refs` link via
+`resolve_sub_assembly_pins`: `missing_sub_assembly_ids` carries the
+referenced child Assembly ids that do not resolve, and
+`sub_assembly_hash_mismatches` carries `(sub_assembly_id, pinned,
+current)` for refs whose pinned content_hash has drifted from the
+child's current content_hash.
 """
 
 from dataclasses import dataclass
@@ -17,6 +24,8 @@ from uuid import UUID
 
 @dataclass(frozen=True)
 class VersionAssemblyContext:
-    """Snapshot of FamilyId existence checks for version_assembly."""
+    """Snapshot of FamilyId + sub-assembly existence/pin checks for version_assembly."""
 
     missing_family_ids: frozenset[UUID]
+    missing_sub_assembly_ids: frozenset[UUID] = frozenset()
+    sub_assembly_hash_mismatches: frozenset[tuple[UUID, str, str | None]] = frozenset()

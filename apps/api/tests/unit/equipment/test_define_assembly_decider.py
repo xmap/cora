@@ -16,6 +16,11 @@ from cora.equipment.aggregates.assembly import (
     InvalidParameterOverridesSchemaError,
     SlotCardinality,
     SlotName,
+    SubAssemblyContentHashMismatchError,
+    SubAssemblyCycleError,
+    SubAssemblyLink,
+    SubAssemblyNotFoundForAssemblyError,
+    SubAssemblySlotNameConflictError,
     TemplateSlot,
     TemplateWire,
 )
@@ -261,3 +266,121 @@ def test_decide_emits_assembly_defined_with_drawing() -> None:
         new_id=uuid4(),
     )
     assert events[0].drawing == drawing
+
+
+_SUB_HASH = "sha256:" + "a" * 8
+
+
+@pytest.mark.unit
+def test_decide_emits_defined_with_sub_assembly_refs() -> None:
+    new_id = uuid4()
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
+    )
+    events = define_assembly.decide(
+        state=None,
+        command=DefineAssembly(
+            name="Microscope",
+            presents_as_family_id=uuid4(),
+            sub_assembly_refs=frozenset({link}),
+        ),
+        context=DefineAssemblyContext(missing_family_ids=frozenset()),
+        now=_NOW,
+        new_id=new_id,
+    )
+    assert events[0].required_sub_assemblies == frozenset({link})
+
+
+@pytest.mark.unit
+def test_decide_rejects_missing_sub_assembly() -> None:
+    child = uuid4()
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=child, content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblyNotFoundForAssemblyError) as exc_info:
+        define_assembly.decide(
+            state=None,
+            command=DefineAssembly(
+                name="Microscope",
+                presents_as_family_id=uuid4(),
+                sub_assembly_refs=frozenset({link}),
+            ),
+            context=DefineAssemblyContext(
+                missing_family_ids=frozenset(),
+                missing_sub_assembly_ids=frozenset({child}),
+            ),
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.sub_assembly_id == child
+
+
+@pytest.mark.unit
+def test_decide_rejects_sub_assembly_content_hash_mismatch() -> None:
+    child = uuid4()
+    current = "sha256:" + "b" * 8
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=child, content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblyContentHashMismatchError) as exc_info:
+        define_assembly.decide(
+            state=None,
+            command=DefineAssembly(
+                name="Microscope",
+                presents_as_family_id=uuid4(),
+                sub_assembly_refs=frozenset({link}),
+            ),
+            context=DefineAssemblyContext(
+                missing_family_ids=frozenset(),
+                sub_assembly_hash_mismatches=frozenset({(child, _SUB_HASH, current)}),
+            ),
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.sub_assembly_id == child
+    assert exc_info.value.pinned == _SUB_HASH
+    assert exc_info.value.current == current
+
+
+@pytest.mark.unit
+def test_decide_rejects_self_referential_sub_assembly() -> None:
+    new_id = uuid4()
+    link = SubAssemblyLink(
+        slot_name=SlotName("self"), sub_assembly_id=new_id, content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblyCycleError) as exc_info:
+        define_assembly.decide(
+            state=None,
+            command=DefineAssembly(
+                name="Microscope",
+                presents_as_family_id=uuid4(),
+                sub_assembly_refs=frozenset({link}),
+            ),
+            context=DefineAssemblyContext(missing_family_ids=frozenset()),
+            now=_NOW,
+            new_id=new_id,
+        )
+    assert exc_info.value.assembly_id == new_id
+
+
+@pytest.mark.unit
+def test_decide_rejects_sub_assembly_slot_name_colliding_with_leaf_slot() -> None:
+    family_id = uuid4()
+    leaf = _slot("optics", family_id)
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblySlotNameConflictError) as exc_info:
+        define_assembly.decide(
+            state=None,
+            command=DefineAssembly(
+                name="Microscope",
+                presents_as_family_id=family_id,
+                required_slots=frozenset({leaf}),
+                sub_assembly_refs=frozenset({link}),
+            ),
+            context=DefineAssemblyContext(missing_family_ids=frozenset()),
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.slot_name == "optics"

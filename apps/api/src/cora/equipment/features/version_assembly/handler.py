@@ -26,6 +26,7 @@ from cora.equipment.aggregates.assembly import (
     event_type_name,
     fold,
     from_stored,
+    resolve_sub_assembly_pins,
     to_payload,
 )
 from cora.equipment.aggregates.family import find_missing_families_per_id
@@ -116,7 +117,14 @@ def bind(deps: Kernel) -> Handler:
 
         family_ids = _referenced_family_ids(command)
         missing = await find_missing_families_per_id(deps.event_store, family_ids)
-        context = VersionAssemblyContext(missing_family_ids=missing)
+        missing_subs, sub_mismatches = await resolve_sub_assembly_pins(
+            deps.event_store, command.sub_assembly_refs
+        )
+        context = VersionAssemblyContext(
+            missing_family_ids=missing,
+            missing_sub_assembly_ids=missing_subs,
+            sub_assembly_hash_mismatches=sub_mismatches,
+        )
 
         domain_events = decide(
             state=state,

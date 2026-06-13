@@ -34,7 +34,7 @@ from cora.equipment.aggregates.assembly.events import (
     to_payload,
 )
 from cora.equipment.aggregates.assembly.evolver import evolve, fold
-from cora.equipment.aggregates.assembly.read import load_assembly
+from cora.equipment.aggregates.assembly.read import load_assembly, resolve_sub_assembly_pins
 from cora.equipment.aggregates.assembly.state import (
     ASSEMBLY_NAME_MAX_LENGTH,
     SLOT_NAME_MAX_LENGTH,
@@ -124,5 +124,6 @@ __all__ = [
     "fold",
     "from_stored",
     "load_assembly",
+    "resolve_sub_assembly_pins",
     "to_payload",
 ]

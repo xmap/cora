@@ -41,6 +41,10 @@ from cora.equipment.aggregates.assembly import (
     AssemblyName,
     FamilyNotFoundForAssemblyError,
     InvalidParameterOverridesSchemaError,
+    SubAssemblyContentHashMismatchError,
+    SubAssemblyCycleError,
+    SubAssemblyNotFoundForAssemblyError,
+    SubAssemblySlotNameConflictError,
     WireReferencesUnknownSlotError,
 )
 from cora.equipment.aggregates.assembly._content_hash import compute_assembly_content_hash
@@ -73,12 +77,33 @@ def decide(
       - command.parameter_overrides_schema, when non-None, must be a
         well-formed JSON Schema in CORA's constrained subset
         -> InvalidParameterOverridesSchemaError.
+      - No sub_assembly_refs link may point at this Assembly's own id
+        -> SubAssemblyCycleError.
+      - Every sub_assembly_refs child must resolve to a defined Assembly
+        -> SubAssemblyNotFoundForAssemblyError (sorted-first missing).
+      - Each sub_assembly_refs link's pinned content_hash must match the
+        child's current content_hash -> SubAssemblyContentHashMismatchError
+        (sorted-first drift).
+      - No sub_assembly_refs link slot_name may collide with a leaf slot
+        or another link -> SubAssemblySlotNameConflictError.
     """
     if state is not None:
         raise AssemblyAlreadyExistsError(state.id)
     if context.missing_family_ids:
         first_missing = next(iter(sorted(context.missing_family_ids, key=str)))
         raise FamilyNotFoundForAssemblyError(first_missing)
+
+    for ref in command.sub_assembly_refs:
+        if ref.sub_assembly_id == new_id:
+            raise SubAssemblyCycleError(new_id)
+    if context.missing_sub_assembly_ids:
+        first_missing_sub = next(iter(sorted(context.missing_sub_assembly_ids, key=str)))
+        raise SubAssemblyNotFoundForAssemblyError(first_missing_sub)
+    if context.sub_assembly_hash_mismatches:
+        sub_id, pinned, current = next(
+            iter(sorted(context.sub_assembly_hash_mismatches, key=lambda m: str(m[0])))
+        )
+        raise SubAssemblyContentHashMismatchError(sub_id, pinned=pinned, current=current)
 
     name = AssemblyName(command.name)
 
@@ -94,6 +119,24 @@ def decide(
         if wire.target_slot_name not in slot_names:
             raise WireReferencesUnknownSlotError(wire.target_slot_name)
 
+    # Front-stop the slot-name-namespace closure the same way the wire
+    # closure is front-stopped: a link slot_name colliding with a leaf
+    # slot (or another link) is caught here as a 400 rather than as a
+    # load-time evolver fault from Assembly.__post_init__ on a written
+    # (poisoned) stream.
+    seen_sub_assembly_names: set[str] = set()
+    for link in command.sub_assembly_refs:
+        link_name = link.slot_name.value
+        if link_name in slot_names:
+            raise SubAssemblySlotNameConflictError(
+                link_name, reason="already a required_slots slot_name"
+            )
+        if link_name in seen_sub_assembly_names:
+            raise SubAssemblySlotNameConflictError(
+                link_name, reason="duplicate sub-assembly slot_name"
+            )
+        seen_sub_assembly_names.add(link_name)
+
     if command.parameter_overrides_schema is not None:
         validate_schema_declaration(
             command.parameter_overrides_schema,
@@ -106,6 +149,7 @@ def decide(
         required_slots=command.required_slots,
         required_wires=command.required_wires,
         parameter_overrides_schema=command.parameter_overrides_schema,
+        required_sub_assemblies=command.sub_assembly_refs,
     )
 
     return [
@@ -115,6 +159,7 @@ def decide(
             presents_as_family_id=command.presents_as_family_id,
             required_slots=command.required_slots,
             required_wires=command.required_wires,
+            required_sub_assemblies=command.sub_assembly_refs,
             parameter_overrides_schema=command.parameter_overrides_schema,
             drawing=command.drawing,
             version=command.version,
