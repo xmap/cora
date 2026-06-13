@@ -39,12 +39,13 @@ class SupplyLookupResult:
     """Summary row from `proj_supply_summary` for cross-BC consumers.
 
     Carries the minimal columns the cross-BC consumers (Run / Operation
-    pre-flight gate; Data BC register_distribution; future Trust BC
-    credential rotation) need to make their decisions and produce
-    diagnostics. Loaded by the handler via
-    `SupplyLookup.find_supplies_by_kind` (grouped query) or
-    `SupplyLookup.lookup` (single-id query) and handed to the
-    consumer's decider.
+    pre-flight gate; Data BC register_distribution + default-storage-supply
+    bootstrap; future Trust BC credential rotation) need to make their
+    decisions and produce diagnostics. Loaded by the handler via
+    `SupplyLookup.find_supplies_by_kind` (grouped query),
+    `SupplyLookup.lookup` (single-id query), or
+    `SupplyLookup.find_supplies_by_name` (by natural-key attributes) and
+    handed to the consumer's decider.
 
     `status` is the StrEnum value as a plain string (matches the
     projection's `TEXT` column); consumers treat it opaquely and
@@ -121,6 +122,29 @@ class SupplyLookup(Protocol):
         """
         ...
 
+    async def find_supplies_by_name(
+        self,
+        *,
+        name: str,
+        facility_code: str,
+        kind: str,
+    ) -> list[SupplyLookupResult]:
+        """Return non-Decommissioned Supplies matching (name, facility_code, kind).
+
+        A by-attributes search used by the Data BC lifespan bootstrap to
+        resolve the default storage Supply from
+        `Settings.self_facility_default_storage_supply_code` without a
+        direct cross-BC projection read. Like `find_supplies_by_kind`,
+        Decommissioned rows are filtered at the query layer, so a
+        tombstoned same-name Supply never resolves as the default.
+
+        Returns every matching non-Decommissioned row, ordered
+        deterministically. The caller distinguishes no-match (empty
+        list), ambiguous-match (length > 1), and not-Available (the
+        single row's `status`) itself.
+        """
+        ...
+
 
 class AllSatisfiedSupplyLookup:
     """Test-default stub: returns ONE synthetic Available Supply per requested kind.
@@ -168,6 +192,16 @@ class AllSatisfiedSupplyLookup:
         _ = supply_id
         return None
 
+    async def find_supplies_by_name(
+        self,
+        *,
+        name: str,
+        facility_code: str,
+        kind: str,
+    ) -> list[SupplyLookupResult]:
+        _ = (name, facility_code, kind)
+        return []
+
 
 class NoSuppliesRegisteredLookup:
     """Test stub: returns an empty mapping for any input.
@@ -194,6 +228,16 @@ class NoSuppliesRegisteredLookup:
         _ = supply_id
         return None
 
+    async def find_supplies_by_name(
+        self,
+        *,
+        name: str,
+        facility_code: str,
+        kind: str,
+    ) -> list[SupplyLookupResult]:
+        _ = (name, facility_code, kind)
+        return []
+
 
 class UnknownSupplyLookup:
     """Test stub: `lookup(supply_id)` always returns `None`.
@@ -217,6 +261,16 @@ class UnknownSupplyLookup:
     async def lookup(self, supply_id: UUID) -> SupplyLookupResult | None:
         _ = supply_id
         return None
+
+    async def find_supplies_by_name(
+        self,
+        *,
+        name: str,
+        facility_code: str,
+        kind: str,
+    ) -> list[SupplyLookupResult]:
+        _ = (name, facility_code, kind)
+        return []
 
 
 class SingleSupplyLookup:
@@ -244,3 +298,13 @@ class SingleSupplyLookup:
         if supply_id == self._reference.supply_id:
             return self._reference
         return None
+
+    async def find_supplies_by_name(
+        self,
+        *,
+        name: str,
+        facility_code: str,
+        kind: str,
+    ) -> list[SupplyLookupResult]:
+        _ = (name, facility_code, kind)
+        return []
