@@ -15,6 +15,7 @@ from cora.equipment.aggregates.assembly import (
     AssemblyVersioned,
     SlotCardinality,
     SlotName,
+    SubAssemblyLink,
     TemplateSlot,
     evolve,
     fold,
@@ -55,6 +56,88 @@ def test_evolve_genesis_sets_defined_status() -> None:
     assert state.required_slots == frozenset({slot})
     assert state.version == "v0.1.0"
     assert state.content_hash == "a" * 64
+
+
+@pytest.mark.unit
+def test_evolve_carries_sub_assemblies_through_genesis_and_lifecycle() -> None:
+    """required_sub_assemblies folds in at genesis and is preserved
+    across deprecate (full-dataclass-construction invariant)."""
+    assembly_id = uuid4()
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"),
+        sub_assembly_id=uuid4(),
+        content_hash="sha256:" + "a" * 8,
+    )
+    defined = AssemblyDefined(
+        assembly_id=assembly_id,
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=uuid4(),
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        drawing=None,
+        version=None,
+        content_hash="a" * 64,
+        occurred_at=_NOW,
+        required_sub_assemblies=frozenset({link}),
+    )
+    deprecated = AssemblyDeprecated(
+        assembly_id=assembly_id,
+        reason="end of life",
+        occurred_at=_NOW,
+    )
+    state = fold([defined, deprecated])
+    assert state is not None
+    assert state.required_sub_assemblies == frozenset({link})
+    assert state.status == AssemblyStatus.DEPRECATED
+
+
+@pytest.mark.unit
+def test_evolve_versioned_replaces_sub_assemblies() -> None:
+    """AssemblyVersioned replaces required_sub_assemblies with the new
+    snapshot's set (replace-on-version, mirroring slots/wires)."""
+    assembly_id = uuid4()
+    fam = uuid4()
+    link_v1 = SubAssemblyLink(
+        slot_name=SlotName("optics"),
+        sub_assembly_id=uuid4(),
+        content_hash="sha256:" + "a" * 8,
+    )
+    link_v2 = SubAssemblyLink(
+        slot_name=SlotName("optics"),
+        sub_assembly_id=uuid4(),
+        content_hash="sha256:" + "b" * 8,
+    )
+    defined = AssemblyDefined(
+        assembly_id=assembly_id,
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=fam,
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        drawing=None,
+        version="v1",
+        content_hash="a" * 64,
+        occurred_at=_NOW,
+        required_sub_assemblies=frozenset({link_v1}),
+    )
+    versioned = AssemblyVersioned(
+        assembly_id=assembly_id,
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=fam,
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        drawing=None,
+        version="v2",
+        content_hash="b" * 64,
+        previous_content_hash="a" * 64,
+        occurred_at=_NOW,
+        required_sub_assemblies=frozenset({link_v2}),
+    )
+    state = fold([defined, versioned])
+    assert state is not None
+    assert state.required_sub_assemblies == frozenset({link_v2})
 
 
 @pytest.mark.unit

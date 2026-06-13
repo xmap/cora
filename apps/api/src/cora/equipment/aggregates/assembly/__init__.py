@@ -9,9 +9,9 @@ single Asset.
 
 Content-addressed: `content_hash` is the SHA-256 hex fingerprint of
 the canonical subset {name, presents_as_family_id, required_slots,
-required_wires, parameter_overrides_schema}. Two operators
-independently authoring the same Assembly converge on the same
-content_hash.
+required_wires, required_sub_assemblies, parameter_overrides_schema}.
+Two operators independently authoring the same Assembly converge on
+the same content_hash.
 
 Lifecycle: `Defined | Versioned | Deprecated`. Multiple
 AssemblyVersioned events per stream (append-only revisions).
@@ -60,10 +60,16 @@ from cora.equipment.aggregates.assembly.state import (
     InvalidParameterOverridesSchemaError,
     InvalidSlotCardinalityError,
     InvalidSlotNameError,
+    InvalidSubAssemblyLinkError,
     InvalidTemplateSlotError,
     InvalidWireSpecError,
     SlotCardinality,
     SlotName,
+    SubAssemblyContentHashMismatchError,
+    SubAssemblyCycleError,
+    SubAssemblyLink,
+    SubAssemblyNotFoundForAssemblyError,
+    SubAssemblySlotNameConflictError,
     TemplateSlot,
     TemplateWire,
     WireReferencesUnknownSlotError,
@@ -100,10 +106,16 @@ __all__ = [
     "InvalidParameterOverridesSchemaError",
     "InvalidSlotCardinalityError",
     "InvalidSlotNameError",
+    "InvalidSubAssemblyLinkError",
     "InvalidTemplateSlotError",
     "InvalidWireSpecError",
     "SlotCardinality",
     "SlotName",
+    "SubAssemblyContentHashMismatchError",
+    "SubAssemblyCycleError",
+    "SubAssemblyLink",
+    "SubAssemblyNotFoundForAssemblyError",
+    "SubAssemblySlotNameConflictError",
     "TemplateSlot",
     "TemplateWire",
     "WireReferencesUnknownSlotError",
