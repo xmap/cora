@@ -28,4 +28,4 @@ Image chain = `Oryx_5MP_camera`, `Scintillator_LuAG`.
 | `energy_calibration` | channel-cut crystal + DMM |
 | `ioc_restart` | EPICS IOC-hosted Assets |
 | `vibration_baseline` | high-speed camera |
-| `mirror_recoat_return` | `Mirror_2BM` |
+| `mirror_recoat_return` | `Y3-30_mirror` |

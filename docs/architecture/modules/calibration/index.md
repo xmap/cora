@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Calibration module records empirical instrument values that downstream consumers need to interpret raw data. A Calibration is the digital record of the kind of number that historically lived in a spreadsheet or a lab-notebook page: "the rotation axis of the Aerotech stage projects to pixel 1024.5 at 25 keV with the 5x optics"; "the Andor's pixel pitch is 6.5 microns with a 1.0x scintillator-detector geometry". Reconstructions, alignment procedures, and operator overrides all need to cite a specific value at a specific operating point.
+The Calibration module records empirical instrument values that downstream consumers need to interpret raw data. A Calibration is the digital record of the kind of number that historically lived in a spreadsheet or a lab-notebook page: "the rotation axis of the Aerotech stage projects to pixel 1024.5 at 25 keV with the 5x optics"; "the FLIR Oryx camera's pixel pitch is 3.45 microns with a 1.0x scintillator-detector geometry". Reconstructions, alignment procedures, and operator overrides all need to cite a specific value at a specific operating point.
 
 A Calibration is keyed by the triple `(target_id, quantity, operating_point)` and grows revisions append-only. Each revision carries its own status (Provisional or Verified) and a tagged source (Measured from a Procedure, Computed from a Dataset, or Asserted by an Actor). Earlier revisions stay readable for reproducibility; new revisions may explicitly supersede prior ones on the same calibration.
 

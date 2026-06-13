@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-The Agent module records the typed configuration for each AI agent that participates in CORA. An Agent is the digital identity card of a kind of automation: "the RunDebriefer agent runs on Claude Sonnet 4.6 pinned to snapshot `20251001`, gets the prompt template at this id, and writes its findings as Decisions on the Run it watched"; "the CautionDrafter agent watches terminal Run events and proposes Cautions for operator review". The aggregate carries everything needed to identify, version, and gate an agent's behaviour for reproducibility; the runtime lives in the subscriber layer that invokes it.
+The Agent module records the typed configuration for each AI agent that participates in CORA. An Agent is the digital identity card of a kind of automation: "the RunDebriefer agent runs on Claude Haiku 4.5, gets the prompt template at this id, and writes its findings as Decisions on the Run it watched"; "the CautionDrafter agent watches terminal Run events and proposes Cautions for operator review". The aggregate carries everything needed to identify, version, and gate an agent's behaviour for reproducibility; the runtime lives in the subscriber layer that invokes it.
 
 Agents share their identity with the Access module's Actors: the same UUID names the agent's record here and the agent's Actor record over there, written atomically at definition. Every Decision an agent writes, and every authorisation check that runs against an agent's action, refers to that single id.
 
@@ -209,12 +209,11 @@ The four examples below follow the canonical path for one Agent: define it (atom
 
     {
       "kind": "RunDebriefer",
-      "name": "Run Debrief (Claude Sonnet 4.6)",
+      "name": "Run Debrief (Claude Haiku 4.5)",
       "version": "v1.0.0",
       "model_ref": {
         "provider": "anthropic",
-        "model": "claude-sonnet-4-6",
-        "snapshot_pin": "20251001"
+        "model": "claude-haiku-4-5"
       },
       "description": "Watches terminal Run events and writes an advisory Decision summarising what happened.",
       "canonical_uri": "https://agents.cora.aps.anl.gov/run-debrief/v1",
@@ -231,12 +230,11 @@ The four examples below follow the canonical path for one Agent: define it (atom
         "define_agent",
         {
             "kind": "RunDebriefer",
-            "name": "Run Debrief (Claude Sonnet 4.6)",
+            "name": "Run Debrief (Claude Haiku 4.5)",
             "version": "v1.0.0",
             "model_ref": {
                 "provider": "anthropic",
-                "model": "claude-sonnet-4-6",
-                "snapshot_pin": "20251001",
+                "model": "claude-haiku-4-5",
             },
             "description": "Watches terminal Run events and writes an advisory Decision summarising what happened.",
             "canonical_uri": "https://agents.cora.aps.anl.gov/run-debrief/v1",

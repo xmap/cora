@@ -52,6 +52,8 @@ families:
   - name: Shutter
   - name: Hexapod
   - name: MotionController
+  - name: TimingController
+    note: "Hardware timing-signal generation and distribution (triggers, gates, sync pulses); presents_as Controller, which carries Pulsing. Anchored at 2-BM by softGlueZynq_FPGA. Substrate (FPGA, Zynq) stays out of the name and lives in settings or the bound Model."
   - name: Objective
     note: "Per-lens identity inside the MCTOptics Assembly."
   - name: PseudoAxis
@@ -61,7 +63,7 @@ families:
   - name: ProbeGeneric
     note: "APS facility-scope template, an abstract detector probe-chain."
   # Pending in code (documented, not yet defined): Goniometer, Monochromator,
-  # Slit, Mirror, TimingController; future: OpticalRelay.
+  # Slit, Mirror; future: OpticalRelay.
 
 capabilities:
   - code: cora.capability.tomography
