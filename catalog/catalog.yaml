@@ -19,7 +19,7 @@
 
 roles:
   - name: Imager
-    docstring: "Acquires 2D image frames on exposure or trigger. Satisfying Assets or composed Assemblies emit Image / Frame signals. Direct-detection Cameras and composed scintillator-relay Assemblies both satisfy this Role; the multi-Family disjunction (Lock 17) accepts either path."
+    docstring: "Acquires 2D image frames on exposure or trigger. Satisfying Assets or composed Assemblies emit Image / Frame signals. Direct-detection Cameras and composed scintillator-relay Assemblies both satisfy this Role; the multi-Family disjunction accepts either path."
     required_affordances: [Imageable]
     optional_affordances: [Binnable, Coolable, Triggerable, Streamable]
     produces: [Image, Frame]

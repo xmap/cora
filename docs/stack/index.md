@@ -54,6 +54,14 @@ For implementers and operators modifying `pyproject.toml`, `docker-compose.yml`,
 
     [Read →](operations.md)
 
+-   :material-rocket-launch-outline:{ .lg .middle } __Deployment__
+
+    ---
+
+    Env vars, bootstrap authz workflow, edge auth, recovery.
+
+    [Read →](deployment.md)
+
 -   :material-clock-outline:{ .lg .middle } __Deferred__
 
     ---

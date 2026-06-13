@@ -89,7 +89,7 @@ IMAGER: Final[Role] = Role(
         "Acquires 2D image frames on exposure or trigger. Satisfying Assets "
         "or composed Assemblies emit Image / Frame signals. Direct-detection "
         "Cameras and composed scintillator-relay Assemblies both satisfy this "
-        "Role; the multi-Family disjunction (Lock 17) accepts either path."
+        "Role; the multi-Family disjunction accepts either path."
     ),
     required_affordances=frozenset({Affordance.IMAGEABLE}),
     optional_affordances=frozenset(

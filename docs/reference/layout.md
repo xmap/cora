@@ -61,7 +61,7 @@ The slice-contract fitness function ([apps/api/tests/architecture/test_slice_con
 
 ### Optional slice files
 
-- `context.py`: slice-local cross-aggregate pre-load. Used when a decider needs sibling-aggregate state (for example `start_run` pre-loads Asset, Method, Plan, Practice, Subject before calling the pure decider). Used by 29 slices today across `agent`, `campaign`, `caution`, `data`, `decision`, `equipment`, `operation`, `recipe`, `run`, `safety`, `subject`, `trust` (12 BCs). Lives in the slice folder, not the aggregate.
+- `context.py`: slice-local cross-aggregate pre-load. Used when a decider needs sibling-aggregate state (for example `start_run` pre-loads Asset, Method, Plan, Practice, Subject before calling the pure decider). Used by 38 slices today across `agent`, `campaign`, `caution`, `data`, `decision`, `equipment`, `operation`, `recipe`, `run`, `safety`, `subject`, `trust` (12 BCs). Lives in the slice folder, not the aggregate.
 
   The decider for a context-using slice takes a keyword-only `context: <X>Context` parameter immediately before `now`, where `<X>Context` is a frozen dataclass exported from the slice's `context.py` (for example `RunStartContext`, `ClearanceAmendmentContext`, `CautionSupersessionContext`). The handler builds the context by loading the sibling aggregates and passes it to the pure `decide`; the decider itself never reads from a port.
 
@@ -158,6 +158,6 @@ Layer direction: `BCs -> infrastructure -> shared`, plus `BCs -> shared` directl
 
 ### When the Rule of Three yields to local clarity
 
-The 32 `aggregates/<aggregate>/read.py` files are 7-line near-clones that differ only in the stream-type constant and three import lines. Rule of Three was crossed long ago, but the duplication stays. A generic `load_aggregate(event_store, stream_type, from_stored, fold)` would save ~3 lines per call site at the cost of an extra parameter-passing chain — the caller still has to import the aggregate-specific `from_stored` / `fold` to pass them in. The wrappers are mechanical, stable, and locally legible: opening `aggregates/<aggregate>/read.py` shows the entire fold-on-read path for that aggregate without a hop. A 33rd aggregate doesn't change the answer.
+The 39 `aggregates/<aggregate>/read.py` files are 7-line near-clones that differ only in the stream-type constant and three import lines. Rule of Three was crossed long ago, but the duplication stays. A generic `load_aggregate(event_store, stream_type, from_stored, fold)` would save ~3 lines per call site at the cost of an extra parameter-passing chain: the caller still has to import the aggregate-specific `from_stored` / `fold` to pass them in. The wrappers are mechanical, stable, and locally legible: opening `aggregates/<aggregate>/read.py` shows the entire fold-on-read path for that aggregate without a hop. Each additional aggregate doesn't change the answer.
 
 The same posture applies to other "mechanical near-clones" surfaces (per-aggregate `events.py` `event_type_name` / `to_payload` / `from_stored`, evolver `fold` walker): per-aggregate locality wins over a generic helper that wouldn't actually shrink the call sites.

@@ -214,13 +214,13 @@ The `_ids` suffix fitness test (`test_uuid_collection_field_suffix.py`) carves t
 
 ### Self-referential parent pointers use `parent_id`
 
-Self-referential parent pointers on aggregate state use the field name `parent_id` with type `<Aggregate>Id | None` (or the bare `UUID | None` carrier where the typed-Id alias has not been introduced). The aggregate's own module namespace already disambiguates the target type, so the verbose `parent_<aggregate>_id` and `part_of_<aggregate>_id` forms are forbidden: `Asset.parent_id`, not `Asset.parent_asset_id`. Cross-aggregate parent pointers keep their qualifier because the qualifier is NOT the aggregate's own name (`Procedure.parent_run_id` references a Run, `Visit.parent_surface_id` references a Surface). The 7 self-parent sites that follow this convention today are `Asset`, `Mount`, `Frame`, `Caution`, `Clearance`, `Visit`, and `Decision`. The rule is enforced by `tests/architecture/test_self_parent_field_naming.py`.
+Self-referential parent pointers on aggregate state use the field name `parent_id` with type `<Aggregate>Id | None` (or the bare `UUID | None` carrier where the typed-Id alias has not been introduced). The aggregate's own module namespace already disambiguates the target type, so the verbose `parent_<aggregate>_id` and `part_of_<aggregate>_id` forms are forbidden: `Asset.parent_id`, not `Asset.parent_asset_id`. Cross-aggregate parent pointers keep their qualifier because the qualifier is NOT the aggregate's own name (`Procedure.parent_run_id` references a Run, `Visit.parent_surface_id` references a Surface). The 8 self-parent sites that follow this convention today are `Asset`, `Mount`, `Frame`, `Caution`, `Clearance`, `Visit`, `Decision`, and `Facility`. The rule is enforced by `tests/architecture/test_self_parent_field_naming.py`.
 
 ## Documentation
 
 Docstrings carry intent. Comments carry hidden constraints. Test names carry scenarios. Everything else is noise.
 
-No emoji anywhere in source — comments, docstrings, log strings, error messages, `Field(description=...)`. Emoji in source is a documented LLM tell ([LLM Slop Taxonomy](https://github.com/nokusukun/sublime/blob/main/llm-slop-taxonomy.md) Cat 4.5 and 7.1) that accumulates as noise across reviews. Mirrors the no-em-dash rule applied to prose.
+No emoji anywhere in source: comments, docstrings, log strings, error messages, `Field(description=...)`. Emoji in source is a documented LLM tell ([LLM Slop Taxonomy](https://github.com/nokusukun/sublime/blob/main/llm-slop-taxonomy.md) Cat 4.5 and 7.1) that accumulates as noise across reviews. Mirrors the no-em-dash rule applied to prose.
 
 ### Docstrings
 
@@ -262,7 +262,7 @@ Add a `#` comment only when the WHY is non-obvious: a hidden constraint, a subtl
 - Do not leave dead-code markers (`# was`, `# previously`, `# old`). Delete the dead code.
 - Do not leave `# TODO`, `# FIXME`, `# HACK` without an owner and a trigger. File an issue or drop it.
 - Do not use `# noqa: <code>` without a trailing comment explaining the suppression.
-- Do not draw section dividers (`# === STATE ===`). The role-typed file layout — one aggregate per file, one slice per directory — already provides navigation. ([antirez](https://antirez.com/news/124) defends "guide comments" as cognitive-load reduction for long single-purpose files; CORA's files don't reach that length.)
+- Do not draw section dividers (`# === STATE ===`). The role-typed file layout, one aggregate per file, one slice per directory, already provides navigation. ([antirez](https://antirez.com/news/124) defends "guide comments" as cognitive-load reduction for long single-purpose files; CORA's files don't reach that length.)
 
 ### Tests
 

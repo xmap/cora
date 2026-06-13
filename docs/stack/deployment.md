@@ -10,7 +10,7 @@ The load-bearing auth vars (full list in `.env.example`):
 | --- | --- | --- |
 | `DATABASE_URL` | `postgresql://cora:cora@localhost:5432/cora` | Always |
 | `TRUST_POLICY_ID` | unset → `AllowAllAuthorize` | When you want real authz |
-| `REQUIRE_AUTHENTICATED_PRINCIPAL` | `false` | Must be `true` whenever `TRUST_POLICY_ID` is set (the boot gate refuses otherwise — see below) |
+| `REQUIRE_AUTHENTICATED_PRINCIPAL` | `false` | Must be `true` whenever `TRUST_POLICY_ID` is set (the boot gate refuses otherwise; see below) |
 | `IDENTITY_PROVIDERS` | unset → legacy `X-Principal-Id` header mode | JSON list of `IdentityProviderConfig` entries (see [Auth](auth.md)); enables bearer-token mode at the HTTP edge |
 | `ANTHROPIC_API_KEY` | unset → AI subscribers log-and-skip | When you want RunDebriefer / CautionDrafter live |
 
@@ -18,7 +18,7 @@ The load-bearing auth vars (full list in `.env.example`):
 
 If you set `TRUST_POLICY_ID` without `REQUIRE_AUTHENTICATED_PRINCIPAL=true`, `create_app()` raises `RuntimeError` at boot. Rationale: without the header check, anyone can send `X-Principal-Id: 00000000-…0` and impersonate SYSTEM under the configured policy. Setting both together is the only safe combination; the seeded bootstrap policy permits SYSTEM to register Actors + define Policies, so anyone who can spoof the header gets standing admin.
 
-Test env (`APP_ENV=test`) is exempt — legitimate test fixtures exercise the SYSTEM-fallback-under-real-policy scenario.
+Test env (`APP_ENV=test`) is exempt: legitimate test fixtures exercise the SYSTEM-fallback-under-real-policy scenario.
 
 ## Edge authentication
 
@@ -30,7 +30,7 @@ When `IDENTITY_PROVIDERS` is set, `BearerAuthMiddleware` reads `Authorization: B
 
 - **JWT IdPs** (Entra, Okta, Auth0, Helmholtz AAI): set `jwks_url`. PyJWT verifies signature + audience + expiry locally.
 - **Opaque-token IdPs** (Globus Auth): set `introspection_url` + `introspection_client_id` + `introspection_client_secret`. Verifier calls RFC 7662 introspection per request (per-token TTL cache).
-- **Subject mapping**: each IdP carries `subject_bindings: list[IdpSubjectBinding]` — `(subject, actor_id, kind?)`. Tokens whose subject is unbound get 401. JIT provisioning is deferred until the first concrete use case.
+- **Subject mapping**: each IdP carries `subject_bindings: list[IdpSubjectBinding]`, each a `(subject, actor_id, kind?)` triple. Tokens whose subject is unbound get 401. JIT provisioning is deferred until the first concrete use case.
 - **Discovery**: `GET /.well-known/oauth-protected-resource` returns RFC 9728 metadata listing accepted IdPs.
 
 Token-related failures:
@@ -49,7 +49,7 @@ Token-related failures:
 Without `IDENTITY_PROVIDERS`, production MUST still sit behind a verifying proxy (nginx, Caddy, Cloud-IAP, AWS ALB, Globus Auth at APS) that:
 
 1. Verifies the caller's identity via your facility's identity protocol (OIDC / Globus / SAML / mTLS).
-2. **Strips any client-supplied `X-Principal-Id` header.** Critical — otherwise the boot gate's protection is bypassed by a header injection.
+2. **Strips any client-supplied `X-Principal-Id` header.** Critical: otherwise the boot gate's protection is bypassed by a header injection.
 3. Sets `X-Principal-Id: <verified-caller-uuid>` based on the verified identity.
 
 The proxy owns the identity → UUID mapping in this mode. Migrating to bearer mode replaces the mapping step (and the strip step) with `subject_bindings`.
@@ -58,7 +58,7 @@ The proxy owns the identity → UUID mapping in this mode. Migrating to bearer m
 
 MCP streamable-HTTP runs the same `BearerAuthMiddleware` as REST (shipped 2026-05-20). Per-path audience dispatch binds `/mcp/*` to the MCP Surface UUID (`SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID`); a token issued for HTTP cannot replay against MCP. Under bearer-auth posture the middleware enforces bearer-required for every `/mcp/*` path including FastMCP framing methods (`initialize`, `tools/list`, `notifications/initialized`), so a missing-bearer request returns 401 before reaching the tool layer. Tool handlers resolve the calling `principal_id` via `get_mcp_principal_id(ctx)`, the MCP-side mirror of `get_principal_id`. Write tools remain visible in `tools/list` and are gated at call time, not by deregistration. MCP_STDIO (subprocess transport) inherits the operator's local OS identity per spec; bearer auth is HTTP-edge only.
 
-## Surface decomposition — V1 vs V2 bootstrap policy
+## Surface decomposition: V1 vs V2 bootstrap policy
 
 The Trust BC carries a `Surface` aggregate (HTTP, MCP stdio, MCP streamable-http) and a V2 bootstrap policy bound to the HTTP Surface. Two well-known policy ids now coexist in the event log:
 
@@ -74,11 +74,11 @@ The Trust BC carries a `Surface` aggregate (HTTP, MCP stdio, MCP streamable-http
 3. Set `TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002`.
 4. Restart. V2 is now the gating policy. The verifier confirms V2 binds to `SYSTEM_HTTP_SURFACE_ID` and all 3 seeded Surfaces are present at lifespan start; boot fails loud if anything is missing.
 
-**Deploy ordering is safe in both directions** thanks to the V1-legacy-fold wildcard in `evaluate()`: V1 policies (`policy.surface_id == nil`) match any call's surface_id. You can deploy new code first or flip the env var first — neither produces a denial window. The wildcard is a *time-bounded legacy compatibility shim*, not a feature; once your fleet is on V2, the WARN goes silent. Sunset planned when V1 stream count reaches zero across all deployments.
+**Deploy ordering is safe in both directions** thanks to the V1-legacy-fold wildcard in `evaluate()`: V1 policies (`policy.surface_id == nil`) match any call's surface_id. You can deploy new code first or flip the env var first; neither produces a denial window. The wildcard is a *time-bounded legacy compatibility shim*, not a feature; once your fleet is on V2, the WARN goes silent. Sunset planned when V1 stream count reaches zero across all deployments.
 
 ## First-boot workflow
 
-A fresh deployment with `TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002` (V2 bootstrap policy) starts in a deliberate narrow-permissive state:
+A fresh deployment with `TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002` (V2 bootstrap policy) starts in a deliberate narrow-permissive state. The `.env.example` template still ships the commented-out V1 value (`...000000000001`); set it to the V2 id above, which the Surface decomposition section recommends for new and existing deployments.
 
 - The seed permits `SYSTEM_PRINCIPAL_ID` (the nil UUID `00000000-…0`) to call `DefinePolicy` and `RegisterActor` on the nil conduit + the HTTP Surface.
 - That's it. Every other command Denies.
@@ -86,7 +86,7 @@ A fresh deployment with `TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002` (
 The operator's bootstrap path:
 
 1. **Boot CORA** with both env vars set + the auth proxy in front.
-2. **Configure the auth proxy to set `X-Principal-Id: 00000000-0000-0000-0000-000000000000`** for the operator's initial admin session. (Document this as a temporary "bootstrap session" in your proxy config — strip it after step 4.)
+2. **Configure the auth proxy to set `X-Principal-Id: 00000000-0000-0000-0000-000000000000`** for the operator's initial admin session. (Document this as a temporary "bootstrap session" in your proxy config; strip it after step 4.)
 3. **Register your real admin Actor** via the API:
 
    ```
@@ -96,7 +96,7 @@ The operator's bootstrap path:
    { "name": "<real admin name>" }
    ```
 
-   Record the returned `actor_id` — this is your real admin's principal UUID.
+   Record the returned `actor_id`; this is your real admin's principal UUID.
 
 4. **Define your real admin Policy** via the API:
 
@@ -118,7 +118,7 @@ The operator's bootstrap path:
 
 6. **Update `TRUST_POLICY_ID`** to the new `policy_id` from step 4 and restart.
 
-The bootstrap seed stays on disk + in the event log forever — you can re-point at it during recovery scenarios.
+The bootstrap seed stays on disk + in the event log forever; you can re-point at it during recovery scenarios.
 
 ## Recovery
 
@@ -156,7 +156,7 @@ For self-service "what CAN I do?" debugging, use:
 GET /policies/{policy_id}/permissions?evaluated_principal_id=<me>&evaluated_conduit_id=00000000-0000-0000-0000-000000000000
 ```
 
-This returns the sorted list of commands the named principal can run via the named conduit. The result is **not authoritative for authorization decisions** — it's a UX / debugging aid; only the PEP at each handler actually authorizes.
+This returns the sorted list of commands the named principal can run via the named conduit. The result is **not authoritative for authorization decisions**: it's a UX / debugging aid; only the PEP at each handler actually authorizes.
 
 ## Deferred
 
