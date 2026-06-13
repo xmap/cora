@@ -74,6 +74,14 @@ this routine does not manipulate them. They participate in the
 
 ## What this scenario surfaces (gap-finding intent)
 
+  - **Iteration loop is first-class**: roll alignment IS iterative
+    (rotate -> check Y -> adjust roll -> re-rotate); each pass is
+    bracketed by ProcedureIterationStarted / ProcedureIterationEnded,
+    the convergence verdict rides on IterationEnded.converged, the count
+    denorms to iteration_count, and per-iteration history is queryable
+    via proj_operation_procedure_iterations. (This loop previously had no
+    first-class shape and was encoded ad-hoc via an `iteration` payload
+    key on Check steps; that convention is retired.)
   - **Mount tilt vs axis tilt are not distinguishable from a single
     sphere measurement.** If the sphere is mounted off-center, its
     Y trace can vary at 0° vs 180° even when the rotation axis is
@@ -92,6 +100,7 @@ this routine does not manipulate them. They participate in the
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
+import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -119,8 +128,16 @@ from cora.operation.features.append_activities import (
 from cora.operation.features.append_activities import bind as bind_append_step
 from cora.operation.features.complete_procedure import CompleteProcedure
 from cora.operation.features.complete_procedure import bind as bind_complete
+from cora.operation.features.end_iteration import EndProcedureIteration
+from cora.operation.features.end_iteration import bind as bind_end_iteration
+from cora.operation.features.list_procedure_iterations import ListProcedureIterations
+from cora.operation.features.list_procedure_iterations import bind as bind_list_iterations
+from cora.operation.features.list_procedures import ListProcedures
+from cora.operation.features.list_procedures import bind as bind_list
 from cora.operation.features.register_procedure import RegisterProcedure
 from cora.operation.features.register_procedure import bind as bind_register_procedure
+from cora.operation.features.start_iteration import StartProcedureIteration
+from cora.operation.features.start_iteration import bind as bind_start_iteration
 from cora.operation.features.start_procedure import StartProcedure
 from cora.operation.features.start_procedure import bind as bind_start
 from cora.recipe.features.define_method import DefineMethod
@@ -218,9 +235,18 @@ def _id_queue() -> list[UUID]:
         e(),
         # start_procedure: event_id
         e(),
-        # append_activities (lazy open on first call): logbook_id, open_event_id
+        # start_iteration(1): event_id
+        e(),
+        # append_activities iter1 (lazy-open on first call): logbook_id, open_event_id
         _STEPS_LOGBOOK_ID,
         _STEPS_OPEN_EVENT_ID,
+        # end_iteration(1): event_id
+        e(),
+        # start_iteration(2): event_id
+        e(),
+        # (append_activities iter2 + finalize: no generator ids; logbook already open)
+        # end_iteration(2): event_id
+        e(),
         # complete_procedure: event_id
         e(),
     ]
@@ -463,7 +489,7 @@ async def test_roll_alignment_plays_out_end_to_end(
         _check_y(
             value_px=515.0,
             sampled_at=t,
-            evidence={"iteration": 1, "delta_y_px": 3.0, "lever_arm_mm": 75.0},
+            evidence={"delta_y_px": 3.0, "lever_arm_mm": 75.0},
         ),
         _setpoint(
             channel="Sample_top_Roll",
@@ -496,7 +522,7 @@ async def test_roll_alignment_plays_out_end_to_end(
             value_px=512.5,
             sampled_at=t,
             passed=True,
-            evidence={"iteration": 2, "delta_y_px": 0.3, "tolerance_px": 0.5},
+            evidence={"delta_y_px": 0.3, "tolerance_px": 0.5},
         ),
     )
     finalize = (
@@ -509,15 +535,65 @@ async def test_roll_alignment_plays_out_end_to_end(
         ),
     )
 
-    all_entries = iter1 + iter2 + finalize
-    assert len(all_entries) == 14, "expected 14 entries for a 2-iteration converged roll routine"
+    # Each convergence pass is bracketed by start_iteration / end_iteration:
+    # iteration is first-class now, so the count + verdict live on the
+    # boundary events, not on an `evidence['iteration']` payload key.
+    step_store = _postgres_step_store(db_pool)
 
-    count = await bind_append_step(deps, step_store=_postgres_step_store(db_pool))(
-        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=all_entries),
+    # Iteration 1: 3.0 px Y delta exceeds tolerance; does not converge.
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=1),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    assert count == 14
+    count1 = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=iter1),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count1 == 7
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=_PROCEDURE_ID,
+            iteration_index=1,
+            converged=False,
+            reason="sphere centroid Y delta 3.0px exceeds 0.5px tolerance",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Iteration 2: 0.3 px Y delta within tolerance; converges.
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=2),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    count2 = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=iter2),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count2 == 6
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=_PROCEDURE_ID,
+            iteration_index=2,
+            converged=True,
+            reason=None,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Finalize (post-convergence, outside the iteration loop): lock the
+    # calibrated roll value on the Sample_top_Roll motor.
+    count_final = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=finalize),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count_final == 1
 
     # ----- Operation BC: complete the Procedure -----
 
@@ -527,14 +603,23 @@ async def test_roll_alignment_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Assert: Procedure stream lifecycle (4 events) -----
+    # ----- Assert: Procedure stream lifecycle (8 events) -----
+    #
+    # The iteration boundary pair now interleaves with the lifecycle: the
+    # logbook opens on the first append (inside iteration 1), so the order is
+    # Registered, Started, IterationStarted(1), ActivitiesLogbookOpened,
+    # IterationEnded(1), IterationStarted(2), IterationEnded(2), Completed.
 
     events, version = await deps.event_store.load("Procedure", _PROCEDURE_ID)
-    assert version == 4
+    assert version == 8
     assert [e.event_type for e in events] == [
         "ProcedureRegistered",
         "ProcedureStarted",
+        "ProcedureIterationStarted",
         "ProcedureActivitiesLogbookOpened",
+        "ProcedureIterationEnded",
+        "ProcedureIterationStarted",
+        "ProcedureIterationEnded",
         "ProcedureCompleted",
     ]
 
@@ -567,7 +652,7 @@ async def test_roll_alignment_plays_out_end_to_end(
     await _drain(db_pool)
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(
-            "SELECT step_kind FROM entries_operation_procedure_activities "
+            "SELECT step_kind, payload FROM entries_operation_procedure_activities "
             "WHERE procedure_id = $1 ORDER BY sampled_at",
             _PROCEDURE_ID,
         )
@@ -588,3 +673,35 @@ async def test_roll_alignment_plays_out_end_to_end(
         "check",  # iteration 2 @ 180° (passed)
         "setpoint",  # finalize (lock_at_calibrated)
     ]
+
+    # The convergence Check (iteration 2 @ 180°) records the operator's
+    # judgment + supporting evidence. Iteration is no longer encoded here
+    # (no `evidence['iteration']`); it is first-class, asserted via the
+    # per-iteration read model below.
+    convergence_check_payload = json.loads(rows[12]["payload"])
+    assert convergence_check_payload["passed"] is True
+    assert convergence_check_payload["evidence"]["delta_y_px"] == 0.3
+    assert "iteration" not in convergence_check_payload["evidence"]
+
+    # ----- Iteration is first-class: the count denorms onto the summary -----
+
+    page = await bind_list(deps)(
+        ListProcedures(kind="roll_alignment"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    matching = [item for item in page.items if item.procedure_id == _PROCEDURE_ID]
+    assert len(matching) == 1
+    assert matching[0].iteration_count == 2
+
+    # ----- Per-iteration convergence read model: which passes converged -----
+
+    iterations = await bind_list_iterations(deps)(
+        ListProcedureIterations(procedure_id=_PROCEDURE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert [i.iteration_index for i in iterations.items] == [1, 2]
+    assert iterations.items[0].converged is False  # iteration 1 missed
+    assert iterations.items[0].reason == "sphere centroid Y delta 3.0px exceeds 0.5px tolerance"
+    assert iterations.items[1].converged is True  # iteration 2 converged

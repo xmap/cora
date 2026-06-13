@@ -58,6 +58,14 @@ during resolution; they participate in the downstream `center` and
 
 ## What this scenario surfaces (gap-finding intent)
 
+  - **Iteration loop is first-class**: the peak search IS iterative (step ->
+    measure -> bracket -> bisect); each pass is bracketed by
+    ProcedureIterationStarted / ProcedureIterationEnded, the convergence
+    verdict rides on IterationEnded.converged, the count denorms to
+    iteration_count, and per-iteration history is queryable via
+    proj_operation_procedure_iterations. (This loop previously had no
+    first-class shape and was encoded ad-hoc via per-iteration step
+    grouping with no boundary events; that convention is retired.)
   - **Sharpness metric is target-dependent.** A `target` payload key on
     Check entries records which resolution target was mounted; absolute
     values are not comparable across `target` values. Whether the
@@ -93,8 +101,14 @@ from cora.operation.features.append_activities import (
 from cora.operation.features.append_activities import bind as bind_append_step
 from cora.operation.features.complete_procedure import CompleteProcedure
 from cora.operation.features.complete_procedure import bind as bind_complete
+from cora.operation.features.end_iteration import EndProcedureIteration
+from cora.operation.features.end_iteration import bind as bind_end_iteration
+from cora.operation.features.list_procedure_iterations import ListProcedureIterations
+from cora.operation.features.list_procedure_iterations import bind as bind_list_iterations
 from cora.operation.features.register_procedure import RegisterProcedure
 from cora.operation.features.register_procedure import bind as bind_register_procedure
+from cora.operation.features.start_iteration import StartProcedureIteration
+from cora.operation.features.start_iteration import bind as bind_start_iteration
 from cora.operation.features.start_procedure import StartProcedure
 from cora.operation.features.start_procedure import bind as bind_start
 from cora.recipe.features.define_method import DefineMethod
@@ -207,9 +221,26 @@ def _id_queue() -> list[UUID]:
         e(),
         # start_procedure: event_id
         e(),
-        # append_activities (lazy open on first call): logbook_id, open_event_id
+        # start_iteration(1): event_id
+        e(),
+        # append_activities iter1 (lazy-open on first call): logbook_id, open_event_id
         _STEPS_LOGBOOK_ID,
         _STEPS_OPEN_EVENT_ID,
+        # end_iteration(1): event_id
+        e(),
+        # start_iteration(2): event_id
+        e(),
+        # end_iteration(2): event_id
+        e(),
+        # start_iteration(3): event_id
+        e(),
+        # end_iteration(3): event_id
+        e(),
+        # start_iteration(4): event_id
+        e(),
+        # (appends for iter2-4 + finalize consume no generator ids; logbook already open)
+        # end_iteration(4): event_id
+        e(),
         # complete_procedure: event_id
         e(),
     ]
@@ -439,15 +470,55 @@ async def test_resolution_alignment_plays_out_end_to_end(
     )
     finalize = (_setpoint(target_mm=0.075, role="lock_at_peak", sampled_at=t),)
 
-    all_entries = iter1 + iter2 + iter3 + iter4 + finalize
-    assert len(all_entries) == 13, "expected 13 entries for a 4-iteration converged search"
+    # Each peak-search pass is bracketed by start_iteration / end_iteration:
+    # iteration is first-class now, so the count + verdict live on the
+    # boundary events, not on per-iteration step grouping. The first three
+    # passes do not converge (climbing, then bracketing); the fourth bisect
+    # lands on the peak and converges. The finalize lock_at_peak setpoint is
+    # appended after the loop closes.
+    step_store = _postgres_step_store(db_pool)
 
-    count = await bind_append_step(deps, step_store=_postgres_step_store(db_pool))(
-        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=all_entries),
+    iteration_steps = (iter1, iter2, iter3, iter4)
+    iteration_verdicts: tuple[tuple[bool, str | None], ...] = (
+        (False, "initial sample; no prior measurement to compare against"),
+        (False, "sharpness still climbing (0.62 -> 0.78); peak not yet bracketed"),
+        (False, "sharpness dropped (0.78 -> 0.71); peak bracketed in [0.050, 0.100] mm"),
+        (True, None),
+    )
+
+    for i, (steps, (converged, reason)) in enumerate(
+        zip(iteration_steps, iteration_verdicts, strict=True), start=1
+    ):
+        await bind_start_iteration(deps)(
+            StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=i),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+        count = await bind_append_step(deps, step_store=step_store)(
+            AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=steps),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+        assert count == len(steps)
+        await bind_end_iteration(deps)(
+            EndProcedureIteration(
+                procedure_id=_PROCEDURE_ID,
+                iteration_index=i,
+                converged=converged,
+                reason=reason,
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+    # Finalize (post-convergence, outside the iteration loop): lock the focus
+    # at the peak position.
+    count_final = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=finalize),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    assert count == 13
+    assert count_final == 1
 
     # ----- Operation BC: complete the Procedure -----
 
@@ -457,14 +528,27 @@ async def test_resolution_alignment_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Assert: Procedure stream lifecycle (4 events) -----
+    # ----- Assert: Procedure stream lifecycle (4 lifecycle + 2 per iteration) -----
+    # The iteration boundary pairs interleave with the lifecycle: the logbook
+    # opens on the first append (inside iteration 1), so the order is
+    # Registered, Started, IterationStarted(1), ActivitiesLogbookOpened,
+    # IterationEnded(1), then (IterationStarted, IterationEnded) x 3, Completed.
+    # version = 4 (Registered + Started + LogbookOpened + Completed) + 2 x 4.
 
     events, version = await deps.event_store.load("Procedure", _PROCEDURE_ID)
-    assert version == 4
+    assert version == 12
     assert [e.event_type for e in events] == [
         "ProcedureRegistered",
         "ProcedureStarted",
+        "ProcedureIterationStarted",
         "ProcedureActivitiesLogbookOpened",
+        "ProcedureIterationEnded",
+        "ProcedureIterationStarted",
+        "ProcedureIterationEnded",
+        "ProcedureIterationStarted",
+        "ProcedureIterationEnded",
+        "ProcedureIterationStarted",
+        "ProcedureIterationEnded",
         "ProcedureCompleted",
     ]
 
@@ -527,3 +611,26 @@ async def test_resolution_alignment_plays_out_end_to_end(
         "check",  # iteration 4 (bisect, peak)
         "setpoint",  # finalize (lock_at_peak)
     ]
+
+    # ----- Assert: iteration is first-class -- count denorms onto the summary -----
+
+    async with db_pool.acquire() as conn:
+        iteration_count = await conn.fetchval(
+            "SELECT iteration_count FROM proj_operation_procedure_summary WHERE procedure_id = $1",
+            _PROCEDURE_ID,
+        )
+    assert iteration_count == 4
+
+    # ----- Per-iteration convergence read model: which passes converged -----
+    # The first three passes climb / bracket the peak (converged is False);
+    # the fourth bisect lands on the peak (converged is True).
+
+    iterations = await bind_list_iterations(deps)(
+        ListProcedureIterations(procedure_id=_PROCEDURE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert [i.iteration_index for i in iterations.items] == [1, 2, 3, 4]
+    assert [i.converged for i in iterations.items] == [False, False, False, True]
+    assert iterations.items[0].reason == "initial sample; no prior measurement to compare against"
+    assert iterations.items[3].reason is None
