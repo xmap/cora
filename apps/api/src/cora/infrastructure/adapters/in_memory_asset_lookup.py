@@ -41,6 +41,7 @@ class InMemoryAssetLookup:
         lifecycle: str = "Active",
         family_affordances: frozenset[str] | None = None,
         parent_id: UUID | None = None,
+        located_in_enclosure_id: UUID | None = None,
     ) -> None:
         """Test helper: install an asset summary keyed by `asset_id`.
 
@@ -56,6 +57,12 @@ class InMemoryAssetLookup:
         keeps the existing single-arg callers untouched. Pass a
         non-null `parent_id` to register a sub-Asset whose chain walks
         up to its root.
+
+        `located_in_enclosure_id` seeds the snapshot's operational
+        enclosure-zone pointer (the field the enclosure pre-flight gate
+        reads per ancestor row); default `None` keeps existing callers
+        untouched. Pass a non-null value to model an Asset located in a
+        specific Enclosure.
         """
         with self._lock:
             self._records[asset_id] = AssetLookupResult(
@@ -66,6 +73,7 @@ class InMemoryAssetLookup:
                 family_affordances=(
                     family_affordances if family_affordances is not None else frozenset[str]()
                 ),
+                located_in_enclosure_id=located_in_enclosure_id,
             )
             self._parents[asset_id] = parent_id
 

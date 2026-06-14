@@ -570,6 +570,111 @@ def test_to_payload_then_from_stored_round_trips_with_controller_id() -> None:
     assert from_stored(stored) == original
 
 
+# ---------- AssetRegistered.located_in_enclosure_id ----------
+
+
+@pytest.mark.unit
+def test_to_payload_omits_located_in_enclosure_id_key_when_none() -> None:
+    """Omit-when-None convention: legacy AssetRegistered shape (no
+    located_in_enclosure_id) must serialize without the key so existing
+    stream readers can't accidentally observe a JSON null where they
+    previously saw the key missing. Mirrors the controller_id / model_id
+    precedent."""
+    event = AssetRegistered(
+        asset_id=uuid4(),
+        name="X",
+        tier="Unit",
+        parent_id=uuid4(),
+        occurred_at=_NOW,
+        commissioned_by=_TEST_ACTOR_ID,
+    )
+    payload = to_payload(event)
+    assert "located_in_enclosure_id" not in payload
+
+
+@pytest.mark.unit
+def test_to_payload_includes_located_in_enclosure_id_when_set() -> None:
+    located_in_enclosure_id = uuid4()
+    event = AssetRegistered(
+        asset_id=uuid4(),
+        name="Aerotech_ABRS_rotary",
+        tier="Device",
+        parent_id=uuid4(),
+        occurred_at=_NOW,
+        located_in_enclosure_id=located_in_enclosure_id,
+        commissioned_by=_TEST_ACTOR_ID,
+    )
+    payload = to_payload(event)
+    assert payload["located_in_enclosure_id"] == str(located_in_enclosure_id)
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_asset_registered_with_located_in_enclosure_id() -> None:
+    asset_id = uuid4()
+    parent_id = uuid4()
+    located_in_enclosure_id = uuid4()
+    stored = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(asset_id),
+            "name": "Aerotech_ABRS_rotary",
+            "tier": "Device",
+            "parent_id": str(parent_id),
+            "occurred_at": _NOW.isoformat(),
+            "commissioned_by": str(_TEST_ACTOR_ID),
+            "located_in_enclosure_id": str(located_in_enclosure_id),
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert rebuilt == AssetRegistered(
+        asset_id=asset_id,
+        name="Aerotech_ABRS_rotary",
+        tier="Device",
+        parent_id=parent_id,
+        occurred_at=_NOW,
+        located_in_enclosure_id=located_in_enclosure_id,
+        commissioned_by=_TEST_ACTOR_ID,
+    )
+
+
+@pytest.mark.unit
+def test_from_stored_folds_legacy_payload_without_located_in_enclosure_id_to_none() -> None:
+    """Backward-compat pin: existing AssetRegistered events written
+    before the located_in_enclosure_id widen had no such key; they MUST
+    fold to located_in_enclosure_id=None without raising. Mirrors the
+    controller_id legacy-fold precedent."""
+    asset_id = uuid4()
+    stored = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(asset_id),
+            "name": "Pre-widen Asset",
+            "tier": "Unit",
+            "parent_id": str(uuid4()),
+            "occurred_at": _NOW.isoformat(),
+            "commissioned_by": str(_TEST_ACTOR_ID),
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, AssetRegistered)
+    assert rebuilt.located_in_enclosure_id is None
+
+
+@pytest.mark.unit
+def test_to_payload_then_from_stored_round_trips_with_located_in_enclosure_id() -> None:
+    original = AssetRegistered(
+        asset_id=uuid4(),
+        name="Aerotech_ABRS_rotary",
+        tier="Device",
+        parent_id=uuid4(),
+        occurred_at=_NOW,
+        located_in_enclosure_id=uuid4(),
+        commissioned_by=_TEST_ACTOR_ID,
+    )
+    stored = _stored("AssetRegistered", to_payload(original))
+    assert from_stored(stored) == original
+
+
 @pytest.mark.unit
 def test_from_stored_raises_on_unknown_event_type() -> None:
     """Foreign event_types in a stream must fail loud, not be silently dropped."""

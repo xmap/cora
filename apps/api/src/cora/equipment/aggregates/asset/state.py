@@ -1345,6 +1345,22 @@ class Asset:
     # standards convergence (OPC UA DI, ISA-88, AAS DigitalNameplate,
     # MTConnect, PIDINST).
     controller_id: UUID | None = None
+    # Optional bare cross-BC opaque pointer to the Enclosure (the
+    # operational access-gated volume) this Asset is located in. This
+    # is the device's OPERATIONAL where (where it physically sits and
+    # whose access-control envelope governs it), distinct from
+    # `facility_code`, its INSTITUTIONAL where (which Federation
+    # Facility owns it). Kept a bare `UUID` (no import of any
+    # cora.enclosure type) so the Equipment BC takes on no module
+    # dependency on the Enclosure BC; the pointer round-trips opaque.
+    # Set ONCE at `register_asset` per the model-binding Lock A
+    # precedent (mirrors `controller_id`); rebind path is decommission +
+    # re-register. Eventual-consistency: the decider does NOT verify the
+    # referenced Enclosure exists (mirrors `parent_id`, `model_id`,
+    # `fixture_id`, `controller_id` precedents). Defaults to None so
+    # legacy AssetRegistered streams without the field fold cleanly via
+    # the additive-state pattern.
+    located_in_enclosure_id: UUID | None = None
     # Optional cross-BC reference to the Federation Facility that owns
     # this Asset, keyed on the cross-deployment convergent slug
     # (`FacilityCode`) per [[project-facility-aggregate-design]]

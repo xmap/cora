@@ -68,6 +68,7 @@ SELECT
     a.name,
     a.tier,
     a.lifecycle,
+    a.located_in_enclosure_id,
     COALESCE(
         array_agg(DISTINCT aff.affordance) FILTER (WHERE aff.affordance IS NOT NULL),
         ARRAY[]::text[]
@@ -79,7 +80,7 @@ LEFT JOIN proj_equipment_family_summary f
     ON f.family_id = m.family_id
 LEFT JOIN LATERAL unnest(f.affordances) AS aff(affordance) ON TRUE
 WHERE a.asset_id = $1
-GROUP BY a.asset_id, a.name, a.tier, a.lifecycle
+GROUP BY a.asset_id, a.name, a.tier, a.lifecycle, a.located_in_enclosure_id
 """
 
 # Inclusive ancestor closure via a `parent_id` recursive walk.
@@ -127,6 +128,7 @@ SELECT
     a.name,
     a.tier,
     a.lifecycle,
+    a.located_in_enclosure_id,
     COALESCE(
         array_agg(DISTINCT aff.affordance) FILTER (WHERE aff.affordance IS NOT NULL),
         ARRAY[]::text[]
@@ -142,7 +144,7 @@ LEFT JOIN proj_equipment_asset_family_membership m
 LEFT JOIN proj_equipment_family_summary f
     ON f.family_id = m.family_id
 LEFT JOIN LATERAL unnest(f.affordances) AS aff(affordance) ON TRUE
-GROUP BY a.asset_id, a.name, a.tier, a.lifecycle
+GROUP BY a.asset_id, a.name, a.tier, a.lifecycle, a.located_in_enclosure_id
 """
 
 
@@ -195,6 +197,7 @@ def _row_to_result(row: Any) -> AssetLookupResult:
         tier=AssetTier(row["tier"]),
         lifecycle=AssetLifecycle(row["lifecycle"]),
         family_affordances=frozenset(str(a) for a in row["family_affordances"]),
+        located_in_enclosure_id=row["located_in_enclosure_id"],
     )
 
 

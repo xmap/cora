@@ -78,6 +78,16 @@ stages to them; a dangling reference is operator error, not a
 domain invariant violation. The handler does not load any external
 stream on this field's behalf.
 
+## Enclosure location binding (Lock A precedent)
+
+`command.located_in_enclosure_id` flows through to the emitted
+AssetRegistered event verbatim. Mirrors the `controller_id`
+precedent exactly: the decider does NOT load the Enclosure
+snapshot, does NOT verify it exists, and applies no validation.
+The pointer stays a bare opaque UUID so the Equipment BC takes on
+no module dependency on the Enclosure BC. The handler does not
+load any external stream on this field's behalf.
+
 ## Facility binding (Slice 8A)
 
 `command.facility_code` flows through to the emitted AssetRegistered
@@ -183,6 +193,7 @@ def decide(
             alternate_identifiers=command.alternate_identifiers,
             owners=command.owners,
             controller_id=command.controller_id,
+            located_in_enclosure_id=command.located_in_enclosure_id,
             facility_code=(
                 facility_lookup_result.code if facility_lookup_result is not None else None
             ),

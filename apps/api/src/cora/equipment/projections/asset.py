@@ -7,7 +7,8 @@ Subscribed events:
                                          condition=Nominal; tier + parent_id
                                          + drawing trio + model_id +
                                          alternate_identifiers + owners +
-                                         commissioned_at from payload)
+                                         commissioned_at + facility_code +
+                                         located_in_enclosure_id from payload)
   - AssetActivated                    -> UPDATE lifecycle=Active
   - AssetDecommissioned               -> UPDATE lifecycle=Decommissioned
                                          AND decommissioned_at=occurred_at
@@ -66,9 +67,9 @@ INSERT INTO proj_equipment_asset_summary
     (asset_id, name, tier, lifecycle, condition, parent_id,
      drawing_system, drawing_number, drawing_revision, model_id,
      alternate_identifiers, owners, commissioned_at, commissioned_by,
-     facility_code, created_at)
+     facility_code, located_in_enclosure_id, created_at)
 VALUES ($1, $2, $3, 'Commissioned', 'Nominal', $4, $5, $6, $7, $8,
-        $9, $10, $11, $12, $13, $11)
+        $9, $10, $11, $12, $13, $14, $11)
 ON CONFLICT (asset_id) DO NOTHING
 """
 
@@ -276,6 +277,10 @@ class AssetSummaryProjection:
                 model_id_raw = event.payload.get("model_id")
                 model_id = UUID(model_id_raw) if model_id_raw else None
                 facility_code = event.payload.get("facility_code")
+                located_in_enclosure_id_raw = event.payload.get("located_in_enclosure_id")
+                located_in_enclosure_id = (
+                    UUID(located_in_enclosure_id_raw) if located_in_enclosure_id_raw else None
+                )
                 alternate_identifiers_list = _canonical_alternate_identifiers_list(
                     event.payload.get("alternate_identifiers")
                 )
@@ -295,6 +300,7 @@ class AssetSummaryProjection:
                     datetime.fromisoformat(event.payload["occurred_at"]),
                     UUID(event.payload["commissioned_by"]),
                     facility_code,
+                    located_in_enclosure_id,
                 )
             case "AssetActivated" | "AssetMaintenanceExited":
                 await self._update_lifecycle(event, conn, "Active")

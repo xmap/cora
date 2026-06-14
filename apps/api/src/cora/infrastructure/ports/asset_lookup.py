@@ -99,9 +99,20 @@ class AssetLookupResult:
     decider gates on `"Capturing"` membership; future cross-BC
     affordance-gated consumers read the same set.
 
+    `located_in_enclosure_id` is the bare opaque pointer to the
+    Enclosure (the operational access-gated volume) the Asset is
+    located in, carried on the snapshot so the enclosure pre-flight
+    gate can read each ancestor's operational enclosure-zone in one hop
+    (the gate walks the Asset ancestor closure via `ancestors_of` and
+    inspects this field per row, never traversing into the Enclosure
+    BC). `None` when the Asset declared no enclosure at registration.
+    Typed `UUID | None` (not an Enclosure BC type) so this port stays
+    inside `cora.infrastructure`'s `depends_on = []` tach contract.
+
     Snapshot columns whose purpose is a one-hop read (for example
-    `controller_id`, `fixture_id`, `facility_code`) can be added
-    additively as cross-BC consumers need them; the slice 6A
+    `controller_id`, `fixture_id`, `facility_code`,
+    `located_in_enclosure_id`) can be added additively as cross-BC
+    consumers need them; the slice 6A
     `FacilityLookupResult.trust_anchor_credential_ids` extension is
     the precedent. Walk-axis fields go behind walk methods: a field
     whose purpose is to TRAVERSE a chain (notably `parent_id`) does
@@ -116,6 +127,7 @@ class AssetLookupResult:
     tier: str
     lifecycle: str
     family_affordances: frozenset[str]
+    located_in_enclosure_id: UUID | None = None
 
 
 class AncestorWalkDepthExceededError(Exception):
