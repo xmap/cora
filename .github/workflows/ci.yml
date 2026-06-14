@@ -297,7 +297,11 @@ jobs:
           COVERAGE_PATH: apps/api
 
   migrations:
-    name: Migrations (atlas hash + validate + safety scan)
+    # NOTE: this job's name is a required status check in branch protection
+    # for main, matched by exact string. Do not rename it without updating
+    # the protection rule, or PRs will block forever waiting on a context
+    # that never reports. The validate step lives inside; the name stays put.
+    name: Migrations (atlas hash + safety scan)
     runs-on: ubuntu-latest
     defaults:
       run:
