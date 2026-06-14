@@ -184,6 +184,10 @@ def decide(
             occurred_at=now,
             registered_by=registered_by,
             producing_run_end_state=producing_run_end_state,
+            # raw ActuationKind value the orchestrator captured from the
+            # producing conduct (None for non-conducted registrations); the
+            # promote gate blocks Simulated / Hybrid.
+            producing_actuation_kind=command.actuation_kind,
             # intent defaults to "Trial" on the dataclass; promotion is a
             # separate explicit slice (promote_dataset).
             # sort before emit so the event-payload bytes are

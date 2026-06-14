@@ -99,6 +99,14 @@ class DatasetRegistered:
     registered_by: ActorId
     # additions:
     producing_run_end_state: str | None = None
+    # `producing_actuation_kind`: raw ActuationKind value (Physical /
+    # Simulated / Hybrid) the producing conduct observed, snapshotted at
+    # registration (per non-determinism principle: capture, don't
+    # recompute). None when no actuation kind was recorded (standalone
+    # upload, or a conduct with no routing table to consult). Powers the
+    # `promote_dataset` simulator-origin guard. Forward-compat via
+    # `payload.get("producing_actuation_kind")` for legacy streams.
+    producing_actuation_kind: str | None = None
     intent: str = "Trial"
     # Calibration BC AsShot citation; revision-cited
     # atomic-ID model per [[project_calibration_design]]. See state.py
@@ -228,6 +236,7 @@ def to_payload(event: DatasetEvent) -> dict[str, Any]:
             occurred_at=occurred_at,
             registered_by=registered_by,
             producing_run_end_state=producing_run_end_state,
+            producing_actuation_kind=producing_actuation_kind,
             intent=intent,
             used_calibration_ids=used_calibration_ids,
         ):
@@ -253,6 +262,7 @@ def to_payload(event: DatasetEvent) -> dict[str, Any]:
                 "registered_by": str(registered_by),
                 # additions:
                 "producing_run_end_state": producing_run_end_state,
+                "producing_actuation_kind": producing_actuation_kind,
                 "intent": intent,
                 # addition (sorted for deterministic jsonb bytes,
                 # mirrors derived_from + Run.pinned_calibration_ids precedent).
@@ -331,6 +341,7 @@ def from_stored(stored: StoredEvent) -> DatasetEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     registered_by=ActorId(UUID(payload["registered_by"])),
                     producing_run_end_state=payload.get("producing_run_end_state"),
+                    producing_actuation_kind=payload.get("producing_actuation_kind"),
                     intent=payload.get("intent", "Trial"),
                     used_calibration_ids=tuple(
                         UUID(c) for c in payload.get("used_calibration_ids", [])
