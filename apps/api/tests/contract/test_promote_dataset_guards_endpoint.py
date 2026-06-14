@@ -22,6 +22,7 @@ from fastapi.testclient import TestClient
 from cora.api.main import create_app
 from cora.data.aggregates.dataset import DATASET_CHECKSUM_SHA256_HEX_LENGTH
 from cora.infrastructure.event_envelope import to_new_event
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.aggregates.policy.events import (
     PolicyDefined,
     event_type_name,
@@ -184,7 +185,10 @@ def _seed_policy(
     permitted_principal: UUID,
     permitted_commands: frozenset[str],
 ) -> None:
-    """Same shape as test_cross_principal_bola.py + test_plan_wire_authz_endpoint.py."""
+    """Same shape as test_cross_principal_bola.py + test_plan_wire_authz_endpoint.py.
+
+    Binds the HTTP Surface so REST commands (arriving on
+    SYSTEM_HTTP_SURFACE_ID) strict-match under `evaluate`."""
     event = PolicyDefined(
         policy_id=policy_id,
         name="Promote-dataset-authz-test-policy",
@@ -192,6 +196,7 @@ def _seed_policy(
         permitted_principal_ids=(permitted_principal,),
         permitted_commands=tuple(permitted_commands),
         occurred_at=datetime.now(tz=UTC),
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     new_event = to_new_event(
         event_type=event_type_name(event),

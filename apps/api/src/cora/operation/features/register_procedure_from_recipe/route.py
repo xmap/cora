@@ -96,6 +96,15 @@ class RegisterProcedureFromRecipeRequest(BaseModel):
             "BindingRefs."
         ),
     )
+    max_consecutive_unconverged_iterations: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Optional 'patience' cap: max consecutive unconverged "
+            "iterations before start_iteration refuses the next one (409). "
+            "Resets on a converged iteration. None = no cap."
+        ),
+    )
 
 
 class RegisterProcedureFromRecipeResponse(BaseModel):
@@ -183,6 +192,7 @@ async def post_procedures_from_recipe(
             parent_run_id=body.parent_run_id,
             recipe_id=body.recipe_id,
             bindings=dict(body.bindings),
+            max_consecutive_unconverged_iterations=body.max_consecutive_unconverged_iterations,
         ),
         principal_id=principal_id,
         correlation_id=cid,

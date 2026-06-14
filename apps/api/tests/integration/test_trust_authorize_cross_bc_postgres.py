@@ -27,6 +27,7 @@ from cora.access.features.deactivate_actor import DeactivateActor
 from cora.access.features.register_actor import RegisterActor
 from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.subject import UnauthorizedError as SubjectUnauthorizedError
 from cora.subject import wire_subject
 from cora.subject.features.mount_subject import MountSubject
@@ -77,6 +78,7 @@ async def _seed_policy(
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
             permitted_commands=permitted_commands,
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_BOOTSTRAP_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
@@ -115,6 +117,7 @@ async def test_trust_policy_gates_subject_register_for_permitted_principal(
         RegisterSubject(name="GateB-AllowedSubject"),
         principal_id=_PERMITTED_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     assert result == subject_id
 
@@ -149,6 +152,8 @@ async def test_trust_policy_gates_subject_register_denies_other_principal(
             RegisterSubject(name="GateB-DeniedSubject"),
             principal_id=_OTHER_PRINCIPAL,
             correlation_id=_CORRELATION_ID,
+            # Matching surface so the deny is on principal, not surface.
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         )
     assert str(_OTHER_PRINCIPAL) in exc_info.value.reason
 
@@ -189,6 +194,7 @@ async def test_trust_policy_gates_subject_update_style_command(
         RegisterSubject(name="GateB-MountTarget"),
         principal_id=_PERMITTED_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
 
     # Now mount under TrustAuthorize via the make_subject_update_handler chain.
@@ -197,6 +203,7 @@ async def test_trust_policy_gates_subject_update_style_command(
         MountSubject(subject_id=subject_id, asset_id=asset_id, reason=""),
         principal_id=_PERMITTED_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
 
     # Other principal cannot mount even though they could try.
@@ -216,6 +223,7 @@ async def test_trust_policy_gates_subject_update_style_command(
         RegisterSubject(name="GateB-OtherMountTarget"),
         principal_id=_PERMITTED_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
 
     with pytest.raises(SubjectUnauthorizedError):
@@ -223,6 +231,8 @@ async def test_trust_policy_gates_subject_update_style_command(
             MountSubject(subject_id=other_subject_id, asset_id=asset_id, reason=""),
             principal_id=_OTHER_PRINCIPAL,
             correlation_id=_CORRELATION_ID,
+            # Matching surface so the deny is on principal, not surface.
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         )
 
 
@@ -264,6 +274,7 @@ async def test_trust_policy_gates_access_handler_with_distinct_error_class(
         RegisterActor(name="GateB-PermittedActor"),
         principal_id=_PERMITTED_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
 
     # But cannot deactivate (DeactivateActor not in permitted_commands) —
@@ -273,6 +284,8 @@ async def test_trust_policy_gates_access_handler_with_distinct_error_class(
             DeactivateActor(actor_id=actor_id),
             principal_id=_PERMITTED_PRINCIPAL,
             correlation_id=_CORRELATION_ID,
+            # Matching surface so the deny is on command, not surface.
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         )
     assert "DeactivateActor" in exc_info.value.reason
 
@@ -320,6 +333,7 @@ async def test_documented_bootstrap_workflow_produces_working_authz(
             # Permissive enough to keep working post-restart.
             permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
             permitted_commands=frozenset({"RegisterSubject"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_BOOTSTRAP_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
@@ -345,5 +359,6 @@ async def test_documented_bootstrap_workflow_produces_working_authz(
         RegisterSubject(name="GateB-PostBootstrapSubject"),
         principal_id=_PERMITTED_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     assert result == subject_id_step3

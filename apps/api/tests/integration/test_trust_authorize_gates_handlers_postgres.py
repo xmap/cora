@@ -34,6 +34,7 @@ import pytest
 
 from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust import UnauthorizedError, wire_trust
 from cora.trust.authorize import TrustAuthorize
 from cora.trust.features import define_policy
@@ -98,6 +99,7 @@ async def test_trust_authorize_allows_handler_call_for_permitted_principal(
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
             permitted_commands=frozenset({"DefineZone"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_BOOTSTRAP_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
@@ -108,10 +110,13 @@ async def test_trust_authorize_allows_handler_call_for_permitted_principal(
     handlers = wire_trust(gated)
 
     # 3) Permitted principal calls define_zone via the production chain.
+    #    Present the same arrival surface the policy binds so the gate
+    #    Allows on principal + command (not a surface mismatch).
     result = await handlers.define_zone(
         DefineZone(name="GateA-AllowedZone"),
         principal_id=_PERMITTED_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
     assert result == zone_id
 
@@ -137,6 +142,7 @@ async def test_trust_authorize_denies_handler_call_for_other_principal(
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
             permitted_commands=frozenset({"DefineZone"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_BOOTSTRAP_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
@@ -150,6 +156,8 @@ async def test_trust_authorize_denies_handler_call_for_other_principal(
             DefineZone(name="GateA-DeniedZone"),
             principal_id=_OTHER_PRINCIPAL,
             correlation_id=_CORRELATION_ID,
+            # Matching surface so the deny is on principal, not surface.
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         )
     assert str(_OTHER_PRINCIPAL) in exc_info.value.reason
 
@@ -175,6 +183,7 @@ async def test_trust_authorize_denies_handler_call_when_command_not_permitted(
             permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
             # Note: DefineZone is NOT in this set.
             permitted_commands=frozenset({"RegisterActor"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_BOOTSTRAP_PRINCIPAL,
         correlation_id=_CORRELATION_ID,
@@ -188,6 +197,8 @@ async def test_trust_authorize_denies_handler_call_when_command_not_permitted(
             DefineZone(name="GateA-WrongCommandZone"),
             principal_id=_PERMITTED_PRINCIPAL,
             correlation_id=_CORRELATION_ID,
+            # Matching surface so the deny is on command, not surface.
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         )
     assert "DefineZone" in exc_info.value.reason
 
@@ -248,6 +259,7 @@ async def test_trust_authorize_denies_when_policy_conduit_does_not_match_handler
             conduit_id=other_conduit_id,
             permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
             permitted_commands=frozenset({"DefineZone"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_BOOTSTRAP_PRINCIPAL,
         correlation_id=_CORRELATION_ID,

@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.aggregates.policy import POLICY_NAME_MAX_LENGTH
 
 _CONDUIT = "01900000-0000-7000-8000-00000000aaaa"
@@ -23,6 +24,7 @@ def _body(name: str = "Beam-team", **overrides: object) -> dict[str, object]:
         "conduit_id": _CONDUIT,
         "permitted_principal_ids": [_PRINCIPAL],
         "permitted_commands": ["RegisterActor"],
+        "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
     }
     base.update(overrides)
     return base
@@ -67,6 +69,21 @@ def test_post_policies_rejects_missing_conduit_id_with_422() -> None:
             "/policies",
             json={
                 "name": "Beam-team",
+                "permitted_principal_ids": [_PRINCIPAL],
+                "permitted_commands": ["RegisterActor"],
+            },
+        )
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_policies_rejects_missing_surface_id_with_422() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/policies",
+            json={
+                "name": "Beam-team",
+                "conduit_id": _CONDUIT,
                 "permitted_principal_ids": [_PRINCIPAL],
                 "permitted_commands": ["RegisterActor"],
             },

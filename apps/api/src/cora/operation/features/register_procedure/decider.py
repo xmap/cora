@@ -36,6 +36,7 @@ from uuid import UUID
 
 from cora.operation.aggregates.procedure import (
     PROCEDURE_KIND_MAX_LENGTH,
+    InvalidProcedureIterationCapError,
     InvalidProcedureKindError,
     Procedure,
     ProcedureAlreadyExistsError,
@@ -73,6 +74,8 @@ def decide(
       - kind must be valid -> InvalidProcedureKindError
       - Name must be valid -> InvalidProcedureNameError
         (via ProcedureName VO)
+      - max_consecutive_unconverged_iterations, when set, must be >= 1
+        -> InvalidProcedureIterationCapError
 
     Optional `capability` parameter (additive): the loaded
     Capability state for `command.capability_id` (loaded by
@@ -98,6 +101,10 @@ def decide(
         if ExecutorShape.PROCEDURE not in capability.executor_shapes:
             raise ProcedureCapabilityExecutorMismatchError(new_id, command.capability_id)
 
+    cap = command.max_consecutive_unconverged_iterations
+    if cap is not None and cap < 1:
+        raise InvalidProcedureIterationCapError(cap)
+
     # validate + trim kind (bare str; not a VO per Supply.kind precedent)
     kind = validate_bounded_text(
         command.kind,
@@ -115,6 +122,7 @@ def decide(
             target_asset_ids=tuple(command.target_asset_ids),
             parent_run_id=command.parent_run_id,
             capability_id=command.capability_id,
+            max_consecutive_unconverged_iterations=cap,
             occurred_at=now,
         )
     ]

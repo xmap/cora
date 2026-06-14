@@ -11,6 +11,7 @@ from cora.infrastructure.ports import (
     Allow,
     Deny,
 )
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust import TrustHandlers, UnauthorizedError, wire_trust
 from cora.trust.aggregates.policy.events import (
     PolicyDefined,
@@ -29,6 +30,8 @@ _CONDUIT_ID = UUID("01900000-0000-7000-8000-00000000aaaa")
 _OTHER_CONDUIT = UUID("01900000-0000-7000-8000-00000000bbbb")
 _ALLOWED_PRINCIPAL = UUID("01900000-0000-7000-8000-000000000a01")
 _OTHER_PRINCIPAL = UUID("01900000-0000-7000-8000-000000000a02")
+_SURFACE = SYSTEM_HTTP_SURFACE_ID
+_OTHER_SURFACE = UUID("01900000-0000-7000-8000-00000000face")
 
 
 async def _seed_policy(
@@ -38,11 +41,14 @@ async def _seed_policy(
     conduit_id: UUID = _CONDUIT_ID,
     principals: frozenset[UUID] = frozenset({_ALLOWED_PRINCIPAL}),
     commands: frozenset[str] = frozenset({"RegisterActor"}),
+    surface_id: UUID = _SURFACE,
 ) -> None:
     """Seed the event store with a single PolicyDefined event.
 
     Bypasses define_policy so the test exercises only evaluate_policy's
-    load-and-evaluate path (define_policy has its own unit tests).
+    load-and-evaluate path (define_policy has its own unit tests). The
+    policy binds the HTTP Surface so `evaluate` (strict surface match)
+    can Allow a query carrying the same surface.
     """
     event = PolicyDefined(
         policy_id=policy_id,
@@ -51,6 +57,7 @@ async def _seed_policy(
         permitted_principal_ids=tuple(principals),
         permitted_commands=tuple(commands),
         occurred_at=_NOW,
+        surface_id=surface_id,
     )
     new_event = to_new_event(
         event_type=event_type_name(event),
@@ -70,12 +77,14 @@ def _query(
     evaluated_principal_id: UUID = _ALLOWED_PRINCIPAL,
     evaluated_command_name: str = "RegisterActor",
     evaluated_conduit_id: UUID = _CONDUIT_ID,
+    evaluated_surface_id: UUID = _SURFACE,
 ) -> EvaluatePolicy:
     return EvaluatePolicy(
         policy_id=policy_id,
         evaluated_principal_id=evaluated_principal_id,
         evaluated_command_name=evaluated_command_name,
         evaluated_conduit_id=evaluated_conduit_id,
+        evaluated_surface_id=evaluated_surface_id,
     )
 
 
@@ -154,6 +163,25 @@ async def test_handler_returns_deny_when_conduit_does_not_match() -> None:
     )
     assert isinstance(result, Deny)
     assert "conduit" in result.reason.lower()
+
+
+@pytest.mark.unit
+async def test_handler_returns_deny_when_surface_does_not_match() -> None:
+    """Strict surface matching: the seeded policy binds the HTTP Surface,
+    so a query carrying a different evaluated surface denies even when
+    principal, command, and conduit all match."""
+    store = InMemoryEventStore()
+    deps = build_deps(ids=[uuid4() for _ in range(8)], now=_NOW, event_store=store)
+    await _seed_policy(store)
+    handler = evaluate_policy.bind(deps)
+
+    result = await handler(
+        _query(evaluated_surface_id=_OTHER_SURFACE),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert isinstance(result, Deny)
+    assert "surface" in result.reason.lower()
 
 
 @pytest.mark.unit

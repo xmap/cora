@@ -125,12 +125,12 @@ def test_drawing_system_mirror_matches_code() -> None:
 def test_drawings_and_calibrations_loaded() -> None:
     descriptor = bd.load(_DESCRIPTOR)
     devices = {d.name: d for _name, group in descriptor.groups for d in group.devices}
-    obj0 = devices["objective_10x"]
+    obj0 = devices["Objective_10x"]
     assert obj0.drawing is not None
     assert obj0.drawing.system == "EDMS"
     assert obj0.calibrations
     assert obj0.calibrations[0].quantity == "magnification"
-    assert devices["Hexapod_2BM"].drawing is not None
+    assert devices["Hexapod"].drawing is not None
 
 
 def test_malformed_descriptor_raises(tmp_path: Path) -> None:

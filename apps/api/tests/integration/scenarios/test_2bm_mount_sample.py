@@ -128,11 +128,7 @@ _BEAMTIME = BeamtimeSpec(
 )
 
 
-_DEVICES = (
-    DeviceSpec(
-        "Aerotech_ABRS_rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID
-    ),
-)
+_DEVICES = (DeviceSpec("Rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID),)
 
 
 def _id_queue() -> list[UUID]:

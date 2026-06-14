@@ -17,21 +17,20 @@ referenced Conduit exists, same eventual-consistency stance as
 from dataclasses import dataclass
 from uuid import UUID
 
-from cora.infrastructure.routing import NIL_SENTINEL_ID
-
 
 @dataclass(frozen=True)
 class DefinePolicy:
     """Define a new authorization Policy for a Conduit + Surface pair.
 
-    `surface_id`: defaults to nil so existing callers (V1
-    bootstrap-shape tests + pre-Surface handlers) don't need to
-    pass it. V2 bootstrap policy sets a real
-    SYSTEM_HTTP_SURFACE_ID.
+    `surface_id` is required: every new Policy must bind a concrete
+    arrival Surface (the route resolves it from the request via
+    `get_surface_id`). The decider rejects the nil sentinel
+    (`InvalidPolicySurfaceError`); the sentinel survives only on the
+    retired V1 bootstrap seed stream.
     """
 
     name: str
     conduit_id: UUID
     permitted_principal_ids: frozenset[UUID]
     permitted_commands: frozenset[str]
-    surface_id: UUID = NIL_SENTINEL_ID
+    surface_id: UUID

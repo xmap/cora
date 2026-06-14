@@ -11,6 +11,7 @@ import pytest
 from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.ports.control_port import (
+    ActuationKind,
     ControlPort,
     NoAdapterForAddressError,
     Reading,
@@ -161,3 +162,58 @@ async def test_aclose_continues_when_one_adapter_raises() -> None:
     registry.register("ok:", survivor)
     await registry.aclose()
     assert survivor._closed is True  # pyright: ignore[reportPrivateUsage]
+
+
+@pytest.mark.unit
+def test_route_is_simulated_defaults_false() -> None:
+    """A route registered without the flag is physical by default."""
+    registry = ControlPortRegistry()
+    registry.register("2bma:", InMemoryControlPort())
+    assert registry.route_is_simulated("2bma:rot:rbv") is False
+
+
+@pytest.mark.unit
+def test_route_is_simulated_returns_declared_flag() -> None:
+    registry = ControlPortRegistry()
+    registry.register("sim:", InMemoryControlPort(), is_simulated=True)
+    assert registry.route_is_simulated("sim:rot:rbv") is True
+
+
+@pytest.mark.unit
+def test_route_is_simulated_uses_longest_prefix_match() -> None:
+    """The simulated flag follows the same longest-match rule as `route`.
+
+    A simulated specific prefix overrides a physical general one for
+    addresses it covers, and vice versa, so a deployment can carve a
+    simulated sub-band out of an otherwise live crate.
+    """
+    registry = ControlPortRegistry()
+    registry.register("2bma:", InMemoryControlPort(), is_simulated=False)
+    registry.register("2bma:sim:", InMemoryControlPort(), is_simulated=True)
+    assert registry.route_is_simulated("2bma:sim:rot") is True
+    assert registry.route_is_simulated("2bma:rot:rbv") is False
+
+
+@pytest.mark.unit
+def test_route_is_simulated_raises_when_no_prefix_matches() -> None:
+    """An unrouted address is an error, never silently treated as physical."""
+    registry = ControlPortRegistry()
+    registry.register("7bma:", InMemoryControlPort(), is_simulated=True)
+    with pytest.raises(NoAdapterForAddressError) as exc_info:
+        registry.route_is_simulated("2bma:rot:rbv")
+    assert exc_info.value.address == "2bma:rot:rbv"
+
+
+@pytest.mark.unit
+def test_register_replacement_preserves_new_simulated_flag() -> None:
+    """Re-registering a prefix replaces both the adapter and its flag."""
+    registry = ControlPortRegistry()
+    registry.register("2bma:", InMemoryControlPort(), is_simulated=False)
+    registry.register("2bma:", InMemoryControlPort(), is_simulated=True)
+    assert registry.route_is_simulated("2bma:rot:rbv") is True
+
+
+@pytest.mark.unit
+def test_actuation_kind_has_three_values() -> None:
+    """The closed enum the gate snapshots: physical, simulated, both."""
+    assert [k.value for k in ActuationKind] == ["Physical", "Simulated", "Hybrid"]

@@ -17,7 +17,7 @@ end-to-end against Postgres:
   - one **Fixture** (microscope_at_2bm) that binds the UNION of the 8
     leaf slots (the Microscope's 2 plus the Optics sub-assembly's 6) to
     the 8 concrete Assets,
-  - one **optical_housing** Asset (Family OpticalHousing) that physically
+  - one **OpticalHousing** Asset (Family OpticalHousing) that physically
     contains all 8 constituents (Asset.parent_id) and carries the Mount.
 
 This is the Assembly + Fixture conversion that the flat-composition
@@ -159,9 +159,9 @@ _CAPABILITY_RECIPE_ID = UUID("01900000-0000-7000-8000-000000c0420e")
 _DRAFT = "https://json-schema.org/draft/2020-12/schema"
 
 _DEVICES = (
-    DeviceSpec("camera", _ASSET_CAMERA_ID, "Camera", _CAP_CAMERA_ID),
-    DeviceSpec("scintillator", _ASSET_SCINTILLATOR_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
-    DeviceSpec("focus", _ASSET_FOCUS_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
+    DeviceSpec("Camera", _ASSET_CAMERA_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
+    DeviceSpec("Focus", _ASSET_FOCUS_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
 )
 
 
@@ -449,7 +449,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
 
     # ----- optical_housing (Component, containment parent) -----
     housing_id = await bind_register_asset(deps)(
-        RegisterAsset(name="optical_housing", tier=AssetTier.COMPONENT, parent_id=_2BM_UNIT_ID),
+        RegisterAsset(name="OpticalHousing", tier=AssetTier.COMPONENT, parent_id=_2BM_UNIT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -460,20 +460,23 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     )
 
     # ----- Optics-cluster Assets (children of the housing) -----
+    # The dict key is the lowercase blueprint slot name (used for the
+    # Fixture binding); the registered Asset carries a PascalCase
+    # instance name per the facility Asset-instance-name convention.
     optics_assets: dict[str, UUID] = {}
-    for name, fam_id, settings in (
-        ("turret", _CAP_ROTARY_STAGE_ID, _SETTINGS_TURRET),
-        ("objective_10x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_10X),
-        ("objective_2x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_2X),
-        ("objective_1.1x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_1P1X),
-        ("objective_select", _CAP_PSEUDO_AXIS_ID, None),
+    for slot, asset_name, fam_id, settings in (
+        ("turret", "Turret", _CAP_ROTARY_STAGE_ID, _SETTINGS_TURRET),
+        ("objective_10x", "Objective_10x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_10X),
+        ("objective_2x", "Objective_2x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_2X),
+        ("objective_1.1x", "Objective_1.1x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_1P1X),
+        ("objective_select", "Objective_Select", _CAP_PSEUDO_AXIS_ID, None),
     ):
         aid = await bind_register_asset(deps)(
-            RegisterAsset(name=name, tier=AssetTier.DEVICE, parent_id=housing_id),
+            RegisterAsset(name=asset_name, tier=AssetTier.DEVICE, parent_id=housing_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
-        optics_assets[name] = aid
+        optics_assets[slot] = aid
         await bind_add_asset_family(deps)(
             AddAssetFamily(asset_id=aid, family_id=fam_id),
             principal_id=_PRINCIPAL_ID,

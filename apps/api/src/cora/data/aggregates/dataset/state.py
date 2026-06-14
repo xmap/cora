@@ -136,6 +136,13 @@ DATASET_USED_CALIBRATIONS_MAX_ENTRIES = 64
 DATASET_CHECKSUM_ALGORITHM_SHA256 = "sha256"
 DATASET_CHECKSUM_SHA256_HEX_LENGTH = 64
 RUN_END_STATE_COMPLETED = "Completed"  # raw string match against Run BC's RunStatus.COMPLETED.value
+# Raw string matches against Operation BC's ActuationKind.value. Stored as a
+# string snapshot on the Dataset (the producing BC owns the enum), mirroring
+# the producing_run_end_state pattern above. The promote gate blocks the two
+# simulator-tainted kinds; Physical (and None, no kind recorded) pass.
+ACTUATION_KIND_PHYSICAL = "Physical"
+ACTUATION_KIND_SIMULATED = "Simulated"
+ACTUATION_KIND_HYBRID = "Hybrid"
 
 # URI schemes that are never legitimate Dataset URIs and that pose
 # XSS risk if a downstream UI renders the URI as a clickable link.
@@ -493,7 +500,7 @@ class DatasetAlreadyPromotedError(Exception):
 class DatasetCannotPromoteError(Exception):
     """A guard rejected the promotion to Production.
 
-    Three branches, all surfaced via this single error class with a
+    Four branches, all surfaced via this single error class with a
     branch-specific reason string:
 
       - `dataset is discarded; cannot promote` (status guard)
@@ -502,6 +509,9 @@ class DatasetCannotPromoteError(Exception):
       - `derived_from Datasets [...] are still Trial; cannot promote
         dataset above its inputs` (lineage-must-be-Production guard;
         mirrors the prior lineage-into-Discarded guard)
+      - `data was produced by Simulated / Hybrid actuation; rehearsal /
+        simulator-origin data cannot be promoted to Production`
+        (actuation-must-not-be-simulated guard)
 
     Mapped to HTTP 409. Carries the offending entity ids in the
     reason string for operator clarity.
@@ -893,6 +903,11 @@ class Dataset:
     status: DatasetStatus = DatasetStatus.REGISTERED
     # additions:
     producing_run_end_state: str | None = None
+    # Raw ActuationKind value (Physical / Simulated / Hybrid) the producing
+    # conduct observed, snapshotted at registration. None for standalone
+    # uploads, conducts with no routing table, and legacy events. Powers the
+    # promote_dataset simulator-origin guard (Simulated / Hybrid block).
+    producing_actuation_kind: str | None = None
     intent: Intent = Intent.TRIAL
     # Calibration BC AsShot citation (revision-cited
     # atomic-ID model per [[project_calibration_design]]). Each entry

@@ -68,6 +68,7 @@ import pytest
 
 from cora.infrastructure.ports.clock import FakeClock
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.conductor import (
     ActionContext,
@@ -82,7 +83,12 @@ from cora.operation.conductor import (
     WithinToleranceCriterion,
 )
 from cora.operation.features.append_activities.command import AppendProcedureActivities
-from cora.operation.ports.control_port import ControlTimeoutError, Reading
+from cora.operation.ports.control_port import (
+    ActuationKind,
+    ControlPort,
+    ControlTimeoutError,
+    Reading,
+)
 
 _FIXED_NOW = datetime(2026, 5, 30, 9, 0, 0, tzinfo=UTC)
 
@@ -150,7 +156,7 @@ class _SequenceIdGenerator:
 
 
 def _conductor(
-    port: InMemoryControlPort,
+    port: ControlPort,
     appender: _FakeAppendStep,
     *,
     ids: Sequence[UUID] = (),
@@ -403,7 +409,11 @@ async def test_execute_action_invokes_registered_body_and_records_result_data() 
     assert result.completed_count == 1
     assert len(captured) == 1
     assert captured[0].params == {"axis": "rot"}
-    assert captured[0].control_port is port
+    # The action body receives the per-conduct observing wrapper (so its IO
+    # is captured for actuation provenance); it delegates to the real port.
+    port.simulate_connect("2bma:rot:val")
+    await captured[0].control_port.write("2bma:rot:val", 4.2)
+    assert (await port.read("2bma:rot:val")).value == 4.2
     entry = appender.calls[0].command.entries[0]
     assert entry.step_kind == "action"
     assert entry.payload == {
@@ -1426,3 +1436,160 @@ async def test_execute_setpoint_via_registry_with_unrouted_address_records_failu
     # Recorded in logbook, not propagated as a 500.
     assert len(appender.calls) == 1
     assert appender.calls[0].command.entries[0].payload["result"] == "failed"
+
+
+# --- actuation provenance (ActuationKind) -------------------------------
+
+
+@pytest.mark.unit
+async def test_actuation_kind_is_physical_when_route_not_simulated() -> None:
+    """A conduct over only physical routes records ActuationKind.Physical."""
+    inner = InMemoryControlPort()
+    inner.simulate_connect("2bma:rot:val")
+    registry = ControlPortRegistry()
+    registry.register("2bma:", inner, is_simulated=False)
+    appender = _FakeAppendStep()
+    conductor = _conductor(registry, appender, ids=[uuid4()])
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="2bma:rot:val", value=1.0),),
+    )
+    assert result.succeeded is True
+    assert result.actuation_kind is ActuationKind.PHYSICAL
+
+
+@pytest.mark.unit
+async def test_actuation_kind_is_simulated_when_route_is_simulated() -> None:
+    """A route declared simulated records ActuationKind.Simulated.
+
+    The transport here is in-memory, but the same holds for a soft IOC
+    fronted by a real CA adapter: only the declared is_simulated flag,
+    not the transport, distinguishes a rehearsal from real hardware.
+    """
+    inner = InMemoryControlPort()
+    inner.simulate_connect("sim:rot:val")
+    registry = ControlPortRegistry()
+    registry.register("sim:", inner, is_simulated=True)
+    appender = _FakeAppendStep()
+    conductor = _conductor(registry, appender, ids=[uuid4()])
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="sim:rot:val", value=1.0),),
+    )
+    assert result.succeeded is True
+    assert result.actuation_kind is ActuationKind.SIMULATED
+
+
+@pytest.mark.unit
+async def test_actuation_kind_is_hybrid_when_conduct_touches_both() -> None:
+    """One conduct over a simulated and a physical route records Hybrid."""
+    sim = InMemoryControlPort()
+    sim.simulate_connect("sim:m1")
+    real = InMemoryControlPort()
+    real.simulate_connect("real:m1")
+    registry = ControlPortRegistry()
+    registry.register("sim:", sim, is_simulated=True)
+    registry.register("real:", real, is_simulated=False)
+    appender = _FakeAppendStep()
+    conductor = _conductor(registry, appender, ids=[uuid4(), uuid4()])
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(
+            SetpointStep(address="sim:m1", value=1.0),
+            SetpointStep(address="real:m1", value=2.0),
+        ),
+    )
+    assert result.succeeded is True
+    assert result.actuation_kind is ActuationKind.HYBRID
+
+
+@pytest.mark.unit
+async def test_actuation_kind_is_none_for_bare_port_without_routing_table() -> None:
+    """An opt-out in-memory deployment (no registry) records no kind.
+
+    Nothing declares simulated-ness, so the kind stays None and the
+    downstream promotion gate is inactive.
+    """
+    port = InMemoryControlPort()
+    port.simulate_connect("2bma:rot:val")
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4()])
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="2bma:rot:val", value=1.0),),
+    )
+    assert result.succeeded is True
+    assert result.actuation_kind is None
+
+
+@pytest.mark.unit
+async def test_actuation_kind_is_none_when_no_step_touches_control_port() -> None:
+    """A conduct that drives nothing (empty steps) records no kind."""
+    registry = ControlPortRegistry()
+    registry.register("2bma:", InMemoryControlPort(), is_simulated=True)
+    appender = _FakeAppendStep()
+    conductor = _conductor(registry, appender)
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(),
+    )
+    assert result.actuation_kind is None
+
+
+@pytest.mark.unit
+async def test_actuation_kind_is_simulated_when_action_body_drives_simulated_route() -> None:
+    """Action-body IO routes through the same observer seam: an action that
+    writes to a simulated route taints the conduct Simulated."""
+    inner = InMemoryControlPort()
+    inner.simulate_connect("sim:m1")
+    control = ControlPortRegistry()
+    control.register("sim:", inner, is_simulated=True)
+
+    async def drive(ctx: ActionContext) -> Mapping[str, Any]:
+        await ctx.control_port.write("sim:m1", 1.0)
+        return {}
+
+    appender = _FakeAppendStep()
+    conductor = _conductor(
+        control,
+        appender,
+        ids=[uuid4()],
+        registry=InMemoryActionRegistry({"drive": drive}),
+    )
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(ActionStep(name="drive", params={}),),
+    )
+    assert result.succeeded is True
+    assert result.actuation_kind is ActuationKind.SIMULATED
+
+
+@pytest.mark.unit
+async def test_actuation_kind_is_simulated_when_setpoint_write_fails_on_simulated_route() -> None:
+    """A write that resolves a simulated route and then fails still taints the
+    conduct: the kind reflects routes attempted, not only succeeded."""
+    inner = InMemoryControlPort()  # never connected -> write raises
+    control = ControlPortRegistry()
+    control.register("sim:", inner, is_simulated=True)
+    appender = _FakeAppendStep()
+    conductor = _conductor(control, appender, ids=[uuid4()])
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="sim:m1", value=1.0),),
+    )
+    assert result.succeeded is False
+    assert result.actuation_kind is ActuationKind.SIMULATED

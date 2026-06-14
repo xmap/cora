@@ -61,13 +61,18 @@ by `tests/contract/test_principal_header.py`.
 
 
 NIL_SENTINEL_ID = UUID(int=0)
-"""Canonical wildcard / unspecified-id sentinel.
+"""Canonical unspecified-id sentinel.
 
-`UUID(int=0)` means "any" or "unspecified" wherever the Authorize
-port quadrant takes a UUID identifier (conduit_id, surface_id, and
-any future axis). Policy.evaluate honors it as a wildcard in the
-matching predicate: a policy bound to conduit_id=NIL matches any
-conduit on the call site, ditto for surface_id.
+`UUID(int=0)` means "unspecified" wherever the Authorize port quadrant
+takes a UUID identifier (conduit_id, surface_id, and any future axis).
+It is NOT a wildcard: `Policy.evaluate` strict-matches every axis, so a
+policy bound to conduit_id=NIL matches only a call that also presents
+NIL, and likewise for surface_id. The conduit axis is operationally
+inert today because every handler passes NIL on both sides (nil matches
+nil); the surface axis is bound to a real Surface on the bootstrap
+policy and every request resolves a real arrival surface. (An earlier
+nil-as-wildcard fold for surface_id was removed when the nil-surface
+bootstrap policy was retired.)
 
 Previously declared as `_NIL_SENTINEL_ID` / `_CONDUIT_DEFAULT_ID`
 per-file in ~80 slice handlers + 3 cross-BC factories. Consolidated

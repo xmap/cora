@@ -89,6 +89,7 @@ nav:
     - deployments/index.md
     - 2-BM:
       - deployments/2-bm/index.md
+      - Open questions: deployments/2-bm/questions.md
       - The beamline:
         - Layout: deployments/2-bm/beamline.md
         - Assets: deployments/2-bm/assets.md
@@ -108,9 +109,10 @@ nav:
         - Policies: deployments/2-bm/policies.md
         - Cautions: deployments/2-bm/cautions.md
         - Actors: deployments/2-bm/actors.md
-    - APS (the site 2-BM runs at):
-      - deployments/aps/index.md
-      - Assets: deployments/aps/assets.md
+    - Facility envelope:
+      - APS (Site):
+        - deployments/aps/index.md
+        - Assets: deployments/aps/assets.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

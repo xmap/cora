@@ -123,8 +123,8 @@ _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000352a01")
 # Capabilities (5: 3 motion controllers + rotary + linear). Each
 # DeviceSpec defines its own Family aggregate; the install ceremony
 # does not dedupe by name, so the three MotionController-family
-# Assets (Aerotech_Ensemble_drive, OMS_VME58_2bmb_drive,
-# OMS_VME58_2bma_drive) attach to distinct Family aggregates that
+# Assets (RotaryDrive, SampleStageDrive,
+# FrontEndDrive) attach to distinct Family aggregates that
 # happen to share the name. In production the operator-side
 # define_family call runs once per unique name; the per-DeviceSpec
 # definition here is a test-fixture convenience, not a semantic claim
@@ -139,15 +139,15 @@ _CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
 # controller_id back-reference targets an already-registered Asset
 # stream), then the 2 motor stages. Camera + scintillator are passive
 # and omitted.
-# Aerotech_Ensemble_drive is the first MotionController Asset shipped
-# (commit 4a0c7ac62), driving Aerotech_ABRS_rotary. OMS_VME58_2bmb_drive
+# RotaryDrive is the first MotionController Asset shipped
+# (commit 4a0c7ac62), driving Rotary. SampleStageDrive
 # is the fourth MotionController Asset shipped: the Oregon Micro Systems
 # VME58 motor controller in the 2-BM b-station IOC crate (`ioc2bmb`),
 # which drives the Kohzu m1-m91 motor band including Sample_top_X
 # (2bmb:m18) and Sample_top_Z (2bmb:m17). Only Sample_top_X is in this
 # scenario's inventory; Sample_top_Z's back-reference is set in the
 # focus-alignment scenario.
-# OMS_VME58_2bma_drive is the fifth MotionController Asset shipped:
+# FrontEndDrive is the fifth MotionController Asset shipped:
 # the sibling OMS-VME58 board in the 2-BM a-station IOC crate
 # (`ioc2bma`), which drives the front-end / beam-conditioning motor
 # band. NO modelled driven stages bind to it at v1; the front-end
@@ -192,25 +192,25 @@ _DEVICES = (
     # mirroring `parent_id` / `model_id` / `fixture_id`), but registering
     # in dependency order matches real-world ceremony.
     DeviceSpec(
-        "Aerotech_Ensemble_drive",
+        "RotaryDrive",
         _ASSET_AEROTECH_ENSEMBLE_ID,
         "MotionController",
         _CAP_MOTION_CONTROLLER_AEROTECH_ID,
     ),
     DeviceSpec(
-        "OMS_VME58_2bmb_drive",
+        "SampleStageDrive",
         _ASSET_OMS_VME58_2BMB_DRIVE_ID,
         "MotionController",
         _CAP_MOTION_CONTROLLER_OMS_2BMB_ID,
     ),
     DeviceSpec(
-        "OMS_VME58_2bma_drive",
+        "FrontEndDrive",
         _ASSET_OMS_VME58_2BMA_DRIVE_ID,
         "MotionController",
         _CAP_MOTION_CONTROLLER_OMS_2BMA_ID,
     ),
     DeviceSpec(
-        "Aerotech_ABRS_rotary",
+        "Rotary",
         _ASSET_AEROTECH_ABRS_ID,
         "RotaryStage",
         _CAP_ROTARY_STAGE_ID,
@@ -435,7 +435,7 @@ async def test_motor_homing_plays_out_end_to_end(
             procedure_id=_PROCEDURE_ID,
             entries=(
                 _setpoint(
-                    channel="Aerotech_ABRS_rotary",
+                    channel="Rotary",
                     target_value="HOME",
                     units="cmd",
                     role="home_command",
@@ -444,11 +444,11 @@ async def test_motor_homing_plays_out_end_to_end(
                 ),
                 _action(
                     action_name="home_motor",
-                    motor="Aerotech_ABRS_rotary",
+                    motor="Rotary",
                     sampled_at=t,
                 ),
                 _check(
-                    channel="Aerotech_ABRS_rotary.index_pulse",
+                    channel="Rotary.index_pulse",
                     passed=False,
                     source="encoder_index",
                     expected=1,
@@ -480,7 +480,7 @@ async def test_motor_homing_plays_out_end_to_end(
             procedure_id=_PROCEDURE_ID,
             entries=(
                 _setpoint(
-                    channel="Aerotech_ABRS_rotary",
+                    channel="Rotary",
                     target_value="HOME",
                     units="cmd",
                     role="home_command_retry",
@@ -489,11 +489,11 @@ async def test_motor_homing_plays_out_end_to_end(
                 ),
                 _action(
                     action_name="home_motor",
-                    motor="Aerotech_ABRS_rotary",
+                    motor="Rotary",
                     sampled_at=t,
                 ),
                 _check(
-                    channel="Aerotech_ABRS_rotary.index_pulse",
+                    channel="Rotary.index_pulse",
                     passed=True,
                     source="encoder_index",
                     expected=1,
@@ -614,7 +614,7 @@ async def test_motor_homing_plays_out_end_to_end(
         "AssetRegistered",  # genesis (Commissioned)
         "AssetFamilyAdded",  # +MotionController
     ]
-    # Same controller-is-leaf rule as Aerotech_Ensemble_drive: the VME
+    # Same controller-is-leaf rule as RotaryDrive: the VME
     # crate carries no controller_id of its own. Omit-when-None wire.
     assert "controller_id" not in oms_events[0].payload
 

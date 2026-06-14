@@ -625,3 +625,36 @@ def test_decide_does_not_compare_used_calibration_ids_against_producing_run() ->
         registered_by=_REGISTERED_BY,
     )
     assert events[0].used_calibration_ids == (cal_dataset_only,)
+
+
+# ---------- actuation kind capture ----------
+
+
+@pytest.mark.unit
+def test_decide_captures_actuation_kind_into_event() -> None:
+    """The orchestrator-supplied actuation_kind is snapshotted verbatim
+    onto DatasetRegistered (the promote gate reads it later)."""
+    events = register_dataset.decide(
+        state=None,
+        command=_good_command(actuation_kind="Simulated"),
+        context=DatasetRegistrationContext(),
+        now=_NOW,
+        new_id=uuid4(),
+        registered_by=_REGISTERED_BY,
+    )
+    assert events[0].producing_actuation_kind == "Simulated"
+
+
+@pytest.mark.unit
+def test_decide_defaults_actuation_kind_to_none() -> None:
+    """A registration with no actuation_kind (external upload) records None,
+    leaving the promote gate inactive."""
+    events = register_dataset.decide(
+        state=None,
+        command=_good_command(),
+        context=DatasetRegistrationContext(),
+        now=_NOW,
+        new_id=uuid4(),
+        registered_by=_REGISTERED_BY,
+    )
+    assert events[0].producing_actuation_kind is None

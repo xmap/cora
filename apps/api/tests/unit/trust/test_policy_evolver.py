@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.aggregates.policy import Policy, PolicyName, evolve, fold
 from cora.trust.aggregates.policy.events import PolicyDefined
 from cora.trust.features import define_policy
@@ -115,6 +116,7 @@ def test_decider_and_evolver_round_trip() -> None:
         conduit_id=conduit,
         permitted_principal_ids=frozenset({p1, p2}),
         permitted_commands=frozenset({"RegisterActor", "DefineZone"}),
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )
 
     events = define_policy.decide(state=None, command=command, now=_NOW, new_id=new_id)
@@ -126,4 +128,5 @@ def test_decider_and_evolver_round_trip() -> None:
         conduit_id=conduit,
         permitted_principal_ids=frozenset({p1, p2}),
         permitted_commands=frozenset({"RegisterActor", "DefineZone"}),
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
     )

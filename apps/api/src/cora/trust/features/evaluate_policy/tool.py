@@ -38,8 +38,8 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
     @mcp.tool(
         name="evaluate_policy",
         description=(
-            "Evaluate a specific Policy against a (principal, command, conduit) "
-            "tuple and return Allow or Deny."
+            "Evaluate a specific Policy against a (principal, command, conduit, "
+            "surface) tuple and return Allow or Deny."
         ),
     )
     async def evaluate_policy_tool(  # pyright: ignore[reportUnusedFunction]
@@ -64,6 +64,10 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             UUID,
             Field(description="Conduit through which the command would be issued."),
         ],
+        evaluated_surface_id: Annotated[
+            UUID,
+            Field(description="Arrival Surface the command would enter through."),
+        ],
     ) -> EvaluatePolicyOutput:
         handler = get_handler()
         result = await handler(
@@ -72,6 +76,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                 evaluated_principal_id=evaluated_principal_id,
                 evaluated_command_name=evaluated_command_name,
                 evaluated_conduit_id=evaluated_conduit_id,
+                evaluated_surface_id=evaluated_surface_id,
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

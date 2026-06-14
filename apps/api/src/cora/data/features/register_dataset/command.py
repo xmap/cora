@@ -66,3 +66,11 @@ class RegisterDataset:
     # optional Calibration BC AsShot citation set
     # (revision-cited atomic IDs; see state.py for full rationale).
     used_calibration_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
+    # Raw ActuationKind value (Physical / Simulated / Hybrid) the producing
+    # conduct observed, supplied by the orchestrator from ConductorResult.
+    # None when there was no conduct (external upload) or no routing table to
+    # consult. Snapshotted onto the Dataset; powers the promote gate. The
+    # value is server-observed (the Conductor saw the routes), so this is not
+    # a free operator assertion; the REST / MCP edge constrains it to the
+    # ActuationKind members.
+    actuation_kind: str | None = None

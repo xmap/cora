@@ -11,48 +11,48 @@ The Microscope detector sits about 55 m from the source in the 2-BM hutch. It is
 |
 +-- Frame: 2BM_hutch_frame
 |     |
-|     +-- Mount: optics_mount   ----holds---->   optical_housing
+|     +-- Mount: optics_mount   ----holds---->   OpticalHousing
 |                (6-DoF placement)               (the OpticalHousing carries the placement; its
 |                                                 contents inherit position from the known layout)
 |
-+-- optical_housing (Component, Family OpticalHousing)   <-- containment parent
++-- OpticalHousing (Component, Family OpticalHousing)   <-- containment parent
 |     |   physical containment tree (Asset.parent_id):
-|     +-- turret      (Device, Family RotaryStage)
-|     +-- objective_10x      (Device, Family Objective)    10x
-|     +-- objective_2x      (Device, Family Objective)     2x
-|     +-- objective_1.1x      (Device, Family Objective)   1.1x
-|     +-- objective_select      (Device, Family PseudoAxis)   virtual selector
-|     +-- focus (Device, Family LinearStage)
-|     +-- camera  (Device, Family Camera)
-|     +-- scintillator (Device, Family Scintillator)
+|     +-- Turret      (Device, Family RotaryStage)
+|     +-- Objective_10x      (Device, Family Objective)    10x
+|     +-- Objective_2x      (Device, Family Objective)     2x
+|     +-- Objective_1.1x      (Device, Family Objective)   1.1x
+|     +-- Objective_Select      (Device, Family PseudoAxis)   virtual selector
+|     +-- Focus (Device, Family LinearStage)
+|     +-- Camera  (Device, Family Camera)
+|     +-- Scintillator (Device, Family Scintillator)
 |
 +-- Fixture: microscope_at_2bm   (surface_id = 2-BM Trust Surface)
       materializes Assembly = Microscope, which composes:
         sub-assembly  optics  -> Assembly = Optics (content-hash pinned)
-        leaf slot     camera        -> camera
-        leaf slot     scintillator  -> scintillator
+        leaf slot     camera        -> Camera
+        leaf slot     scintillator  -> Scintillator
       and the Optics sub-assembly contributes its own leaf slots, bound in the same Fixture:
-        turret   -> turret
-        objective_10x   -> objective_10x
-        objective_2x   -> objective_2x
-        objective_1.1x   -> objective_1.1x
-        focus         -> focus
-        objective_select   -> objective_select   (partition_rule = LookupTable
+        turret   -> Turret
+        objective_10x   -> Objective_10x
+        objective_2x   -> Objective_2x
+        objective_1.1x   -> Objective_1.1x
+        focus         -> Focus
+        objective_select   -> Objective_Select   (partition_rule = LookupTable
                                           0 -> 121.5942 deg  (10x in beam)
                                           1 ->  61.9841 deg  (2x  in beam)
                                           2 ->   2.3006 deg  (1.1x in beam))
 ```
 
-`Microscope` is the name of the top Assembly (the blueprint) and, with `microscope_at_2bm`, of the Fixture (the materialization at 2-BM). `Optics` is a reusable sub-assembly the Microscope composes. `OpticalHousing` is the physical container. None of the three is an operator-facing Asset row in its own right except the housing: the conceptual Microscope-the-thing IS the Assembly plus Fixture pair, the reusable optics cluster IS the Optics sub-assembly, and the physical chassis IS the `optical_housing` Asset that parents the eight functional constituents.
+`Microscope` is the name of the top Assembly (the blueprint) and, with `microscope_at_2bm`, of the Fixture (the materialization at 2-BM). `Optics` is a reusable sub-assembly the Microscope composes. `OpticalHousing` is the physical container. None of the three is an operator-facing Asset row in its own right except the housing: the conceptual Microscope-the-thing IS the Assembly plus Fixture pair, the reusable optics cluster IS the Optics sub-assembly, and the physical chassis IS the `OpticalHousing` Asset that parents the eight functional constituents.
 
 ## Two axes: composition and containment
 
 This deployment uses both of CORA's structural axes, and they answer different questions.
 
 - **Composition** (Assembly to Fixture, flat) answers *what logical cluster presents here for binding*. The Microscope Assembly composes the Optics sub-assembly plus two leaf slots (camera, scintillator). The Fixture binds the union of every leaf slot, the Microscope's own two plus the Optics sub-assembly's six, to eight concrete Assets.
-- **Containment** (`Asset.parent_id`, a recursive tree) answers *what physical thing holds what*. The `optical_housing` Asset is the parent of all eight functional constituents. The housing is the part that is installed into the Mount; everything inside it inherits position from the housing's known internal layout. (The housing also physically holds a passive vitreous-carbon window, recorded in the descriptor but not yet registered as a CORA Asset.)
+- **Containment** (`Asset.parent_id`, a recursive tree) answers *what physical thing holds what*. The `OpticalHousing` Asset is the parent of all eight functional constituents. The housing is the part that is installed into the Mount; everything inside it inherits position from the housing's known internal layout. (The housing also physically holds a passive vitreous-carbon window, recorded in the descriptor but not yet registered as a CORA Asset.)
 
-The same eight Assets sit on both axes at once: each is a Fixture-bound constituent (composition) and a child of the `optical_housing` (containment). The two axes are orthogonal, which is exactly why CORA keeps them separate.
+The same eight Assets sit on both axes at once: each is a Fixture-bound constituent (composition) and a child of the `OpticalHousing` (containment). The two axes are orthogonal, which is exactly why CORA keeps them separate.
 
 ## Vendor catalog (Models)
 
@@ -114,13 +114,13 @@ When the Fixture is registered, the decider expands the union of the top Assembl
 
 A Fixture is single-event genesis: it never changes after registration. Each of the eight bound Assets carries a `fixture_id` back-reference. Operators do not see this field directly; it is a query helper so "which Fixture is this Asset bound into" answers in one lookup.
 
-The exclusivity invariant matters: an Asset can only belong to one Fixture at a time. `focus` is bound into the Microscope Fixture, which means it cannot simultaneously be bound into a different Fixture for, say, a non-microscope imaging path. If a future deployment needs the same physical focus motor for a different cluster, the operator detaches it first.
+The exclusivity invariant matters: an Asset can only belong to one Fixture at a time. `Focus` is bound into the Microscope Fixture, which means it cannot simultaneously be bound into a different Fixture for, say, a non-microscope imaging path. If a future deployment needs the same physical focus motor for a different cluster, the operator detaches it first.
 
 ## Physical placement and containment (OpticalHousing + Mount + Frame)
 
 The **2BM_hutch_frame** is a named coordinate frame anchored to the hutch's optical table. The **optics_mount** is a named slot on that frame with a 6-DoF placement (translation in mm, rotation in degrees, extrinsic Tait-Bryan).
 
-The `optical_housing` Asset is installed into this Mount. It is the rigid mechanical anchor for the whole detector: the housing's position fixes the cluster in space, and the eight functional constituents, which are its children in the containment tree, inherit their position geometrically from the housing's known internal layout. The housing is the one part with an explicit placement; the constituents do not each carry a Mount.
+The `OpticalHousing` Asset is installed into this Mount. It is the rigid mechanical anchor for the whole detector: the housing's position fixes the cluster in space, and the eight functional constituents, which are its children in the containment tree, inherit their position geometrically from the housing's known internal layout. The housing is the one part with an explicit placement; the constituents do not each carry a Mount.
 
 This is a documented approximation. The constituents have their own internal offsets that the model does not yet pin per-part. For tomography reconstruction (where the rotation center is calibrated separately) the approximation is comfortable. If a future use case needs pixel-accurate beam-propagation modelling, the escape valve is to give the constituents their own Mounts referenced to the housing's frame. Not in v1.
 
@@ -128,17 +128,17 @@ Where the axes meet: the Fixture answers "what logical cluster lives here for go
 
 ## Routing the lens selector (PseudoAxis)
 
-`objective_select` is a virtual axis inside the Optics sub-assembly. Its **partition rule** is a closed `LookupTable` decomposing an integer index (0, 1, 2) into a turret rotation in degrees:
+`Objective_Select` is a virtual axis inside the Optics sub-assembly. Its **partition rule** is a closed `LookupTable` decomposing an integer index (0, 1, 2) into a turret rotation in degrees:
 
-| `objective_select` | Turret position | Objective in beam |
+| `Objective_Select` | Turret position | Objective in beam |
 | --- | --- | --- |
 | `0` | `121.5942 deg` | 10x Mitutoyo |
 | `1` | `61.9841 deg` | 2x Mitutoyo |
 | `2` | `2.3006 deg` | 1.1x Mitutoyo |
 
-When an operator or Method writes `objective_select = 1`, CORA's command-execution layer looks up the partition rule and writes the corresponding turret setpoint to the `turret` motor. Every actuation is recorded as a control-dispatch event with a correlation id linking back to the originating partition-rule resolution, so the full chain (operator command, virtual-axis lookup, constituent setpoint) is reconstructable from the event log. The lookup table itself is event-sourced; revising it (for example, after a turret re-homing campaign) leaves a complete audit trail of which values were in effect at which times.
+When an operator or Method writes `Objective_Select = 1`, CORA's command-execution layer looks up the partition rule and writes the corresponding turret setpoint to the `Turret` motor. Every actuation is recorded as a control-dispatch event with a correlation id linking back to the originating partition-rule resolution, so the full chain (operator command, virtual-axis lookup, constituent setpoint) is reconstructable from the event log. The lookup table itself is event-sourced; revising it (for example, after a turret re-homing campaign) leaves a complete audit trail of which values were in effect at which times.
 
-This replaces the older convention of carrying `objective_select` as a Method parameter. The virtual axis is addressable, typed, and audit-complete.
+This replaces the older convention of carrying `Objective_Select` as a Method parameter. The virtual axis is addressable, typed, and audit-complete.
 
 ## Calibrations
 
@@ -151,7 +151,7 @@ All initial revisions are `AssertedSource` (operator-attested from vendor datash
 
 ## Engineering drawings
 
-Four carriers hold a canonical engineering reference under the [Drawing VO](../../../architecture/modules/equipment/index.md): the Microscope Assembly (top composition blueprint), the `optical_housing` Asset (the physical chassis), the Mount (where the housing sits in the beamline), and each bound constituent Asset (build-to document for the specimen). Per the VO's anti-hook, these drawings are NOT collapsed even when they happen to point at the same vendor document.
+Four carriers hold a canonical engineering reference under the [Drawing VO](../../../architecture/modules/equipment/index.md): the Microscope Assembly (top composition blueprint), the `OpticalHousing` Asset (the physical chassis), the Mount (where the housing sits in the beamline), and each bound constituent Asset (build-to document for the specimen). Per the VO's anti-hook, these drawings are NOT collapsed even when they happen to point at the same vendor document.
 
 The Optique Peter MICRX080 manual covers the housing composition, the slot layout, and every physical constituent, so v1 attaches the same `(EDMS, MAN-11863, 0521-0465-A)` triple to the Microscope Assembly, the housing, and the Mount. When the per-magnification Mitutoyo datasheets land they take over the Objective Asset drawings; the Assembly, housing, and Mount stay on MAN-11863.
 
@@ -160,7 +160,7 @@ The Optique Peter MICRX080 manual covers the housing composition, the slot layou
 | Microscope Assembly | `system` | `EDMS` |
 | | `number` | `MAN-11863` |
 | | `revision` | `0521-0465-A` |
-| `optical_housing` (Asset) | `system` | `EDMS` |
+| `OpticalHousing` (Asset) | `system` | `EDMS` |
 | | `number` | `MAN-11863` |
 | | `revision` | `0521-0465-A` |
 | `optics_mount` (Mount) | `system` | `EDMS` |
@@ -174,15 +174,15 @@ Per-Asset drawings for the bound physical constituents are listed on the [Engine
 Two tiers of persistent identifiers:
 
 - **The Fixture earns one DOI** as a citable experimental station. This mirrors the HZB PEAXIS precedent where the composite imaging station is published as a single Instrument with `HasComponent` relations to its parts.
-- **Each physical bound Asset earns its own DOI**, plus the `optical_housing` chassis: the housing, the three Objectives, the Oryx camera, the LuAG scintillator, and the lens turret motor. The Fixture's PIDINST record references the constituents via `HasComponent`; each Asset's record references the Fixture via `IsComponentOf`.
+- **Each physical bound Asset earns its own DOI**, plus the `OpticalHousing` chassis: the housing, the three Objectives, the Oryx camera, the LuAG scintillator, and the lens turret motor. The Fixture's PIDINST record references the constituents via `HasComponent`; each Asset's record references the Fixture via `IsComponentOf`.
 
-`objective_select` is intentionally NOT PIDINST-minted. PIDINST v1.0 requires a Manufacturer (Property 6) and Owner (Property 5), both of which assume a physical instrument with a vendor and an institutional steward. Virtual axes are software routing constructs over a real motor: they carry no Manufacturer (there is no vendor of LookupTables), no independent Owner, and no serial number. The lens index to turret angle table is event-sourced via the partition rule and is fully audit-complete without a DOI; if a citation handle is ever needed it lives on the lens turret motor's DOI, not on the virtual axis. `GET /assets/{lens_select_id}/pidinst` returns 404 (not applicable) by design.
+`Objective_Select` is intentionally NOT PIDINST-minted. PIDINST v1.0 requires a Manufacturer (Property 6) and Owner (Property 5), both of which assume a physical instrument with a vendor and an institutional steward. Virtual axes are software routing constructs over a real motor: they carry no Manufacturer (there is no vendor of LookupTables), no independent Owner, and no serial number. The lens index to turret angle table is event-sourced via the partition rule and is fully audit-complete without a DOI; if a citation handle is ever needed it lives on the turret motor's DOI, not on the virtual axis. `GET /assets/{objective_select_id}/pidinst` returns 404 (not applicable) by design.
 
 For pilot v1, persistent identifiers are stub-minted (no real DOIs registered with DataCite). The production mint path is deferred until 2-BM commissions with real facility DataCite credentials.
 
 ## Operator runbook
 
-**Switch the active objective.** Write the desired `objective_select` index (0, 1, or 2) to the `objective_select` PseudoAxis. The execution layer looks up the turret position and writes it to the `turret` motor via the ControlPort. The full chain is audited.
+**Switch the active objective.** Write the desired `Objective_Select` index (0, 1, or 2) to the `Objective_Select` PseudoAxis. The execution layer looks up the turret position and writes it to the `Turret` motor via the ControlPort. The full chain is audited.
 
 Removing or replacing the scintillator or camera splits into two ceremonies. The light one returns the same Asset to its slot; the heavy one brings in a different physical Asset. Pick by intent, not by reflex.
 

@@ -18,7 +18,7 @@ Finer-grained hutch enclosures (a separate permit per the 2-BM-A and 2-BM-B stat
 
 `start_run` and `start_procedure` both run an Enclosure pre-flight gate. The gate derives the Asset scope from the chain, not from an explicit per-Method enclosure list: it starts from the Plan-bound (or Procedure-target) Assets and widens the scope UP the `parent_id` chain to the facility-rooted Unit, then asks the Enclosure read model which Enclosures contain any Asset in that widened scope.
 
-For 2-BM this means a Run whose Plan binds only a Device (say `Aerotech_ABRS_rotary`) is gated by the `2-BM` Unit's enclosure permit, because the walk climbs `Aerotech_ABRS_rotary` to its parent `2-BM` and finds the Unit-bound enclosure. Without the walk the Unit-bound enclosure would never match a Device-binding Plan, and the gate would silently pass.
+For 2-BM this means a Run whose Plan binds only a Device (say `Rotary`) is gated by the `2-BM` Unit's enclosure permit, because the walk climbs `Rotary` to its parent `2-BM` and finds the Unit-bound enclosure. Without the walk the Unit-bound enclosure would never match a Device-binding Plan, and the gate would silently pass.
 
 The decider then requires every referencing Enclosure to be `Permitted` and `Active`:
 

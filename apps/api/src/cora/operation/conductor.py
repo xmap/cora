@@ -89,7 +89,7 @@ a fake without standing up the full handler machinery.
 
 import asyncio
 import contextlib
-from collections.abc import Awaitable, Callable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 from uuid import UUID
@@ -117,6 +117,7 @@ from cora.operation.features.complete_procedure.handler import (
 from cora.operation.features.start_procedure.command import StartProcedure
 from cora.operation.features.start_procedure.handler import Handler as StartProcedureHandler
 from cora.operation.ports.control_port import (
+    ActuationKind,
     ControlAccessDeniedError,
     ControlNotConnectedError,
     ControlPort,
@@ -397,15 +398,91 @@ class ConductorResult:
     recorded a success entry. The failing step (if any) is NOT
     counted in `completed_count`; its failure IS recorded in the
     logbook AND surfaced in `failure`.
+
+    `actuation_kind` is the provenance fact the producing Dataset
+    snapshots: `Physical` / `Simulated` / `Hybrid` when the conduct
+    touched a routing table that declares simulated routes, else
+    `None` (no routing table to consult, e.g. an opt-out in-memory
+    deployment) which leaves the promotion gate inactive. It reflects
+    routes ATTEMPTED, not only successfully actuated: a dispatch that
+    resolves a simulated route and then raises still taints the conduct
+    (any simulator touch is disqualifying), so the failure-path result
+    still reports the kind. Do not "fix" the observe-before-dispatch
+    ordering in `_ActuationObserver` without revisiting this contract.
     """
 
     procedure_id: UUID
     completed_count: int
     failure: ConductorFailure | None = None
+    actuation_kind: ActuationKind | None = None
 
     @property
     def succeeded(self) -> bool:
         return self.failure is None
+
+
+class _ActuationObserver:
+    """Per-conduct `ControlPort` decorator that records actuation provenance.
+
+    Wraps the Conductor's `ControlPort` for the duration of one
+    `execute` call so every dispatch (setpoint write, verify/check
+    read, and action-body IO) passes through one seam. For each touched
+    address it asks the inner port whether the address routes to a
+    simulated adapter, then collapses the observations to an
+    `ActuationKind`.
+
+    When the inner port does not expose `route_is_simulated` (a bare
+    adapter or an opt-out in-memory deployment with no routing table),
+    nothing is recorded and `actuation_kind` stays `None`, leaving the
+    promotion gate inactive. The simulated determination is the
+    inner port's declared per-route flag, never inferred here from the
+    adapter class: a soft IOC speaks real Channel Access yet is a
+    simulator.
+    """
+
+    def __init__(self, inner: ControlPort) -> None:
+        self._inner = inner
+        self._route_is_simulated: Callable[[str], bool] | None = getattr(
+            inner, "route_is_simulated", None
+        )
+        self._simulated_flags: set[bool] = set()
+
+    def _observe(self, address: str) -> None:
+        if self._route_is_simulated is None:
+            return
+        # A routing miss surfaces on the real read/write below; here it
+        # just means there is nothing to observe for this address.
+        with contextlib.suppress(NoAdapterForAddressError):
+            self._simulated_flags.add(bool(self._route_is_simulated(address)))
+
+    async def read(self, address: str) -> Reading:
+        self._observe(address)
+        return await self._inner.read(address)
+
+    async def write(
+        self,
+        address: str,
+        value: int | float | bool | str | tuple[Any, ...],
+        *,
+        wait: bool = True,
+        timeout_s: float = 30.0,
+    ) -> None:
+        self._observe(address)
+        await self._inner.write(address, value, wait=wait, timeout_s=timeout_s)
+
+    def subscribe(self, address: str) -> AsyncIterator[Reading]:
+        self._observe(address)
+        return self._inner.subscribe(address)
+
+    @property
+    def actuation_kind(self) -> ActuationKind | None:
+        if not self._simulated_flags:
+            return None
+        if self._simulated_flags == {True}:
+            return ActuationKind.SIMULATED
+        if self._simulated_flags == {False}:
+            return ActuationKind.PHYSICAL
+        return ActuationKind.HYBRID
 
 
 class Conductor:
@@ -472,6 +549,7 @@ class Conductor:
             causation_id=causation_id,
             surface_id=surface_id,
         )
+        observer = _ActuationObserver(self._control_port)
         completed = 0
         for index, step in enumerate(steps):
             # Bind correlation_id to the ContextVar scoped per dispatch so
@@ -480,15 +558,20 @@ class Conductor:
             # the why; contextvars survive each `await` inside `_dispatch`
             # and reset cleanly on exception.
             with with_dispatch_correlation_id(correlation_id):
-                failure = await self._dispatch(step, index=index, envelope=envelope)
+                failure = await self._dispatch(step, index=index, envelope=envelope, port=observer)
             if failure is not None:
                 return ConductorResult(
                     procedure_id=procedure_id,
                     completed_count=completed,
                     failure=failure,
+                    actuation_kind=observer.actuation_kind,
                 )
             completed += 1
-        return ConductorResult(procedure_id=procedure_id, completed_count=completed)
+        return ConductorResult(
+            procedure_id=procedure_id,
+            completed_count=completed,
+            actuation_kind=observer.actuation_kind,
+        )
 
     async def conduct(
         self,
@@ -625,13 +708,19 @@ class Conductor:
         *,
         index: int,
         envelope: "_Envelope",
+        port: ControlPort,
     ) -> ConductorFailure | None:
-        """Run one step + record outcome; return ConductorFailure on halt-condition."""
+        """Run one step + record outcome; return ConductorFailure on halt-condition.
+
+        `port` is the per-conduct observing wrapper around the
+        Conductor's ControlPort; every dispatch goes through it so
+        actuation provenance is captured once for the whole conduct.
+        """
         if isinstance(step, SetpointStep):
-            return await self._run_setpoint(step, index=index, envelope=envelope)
+            return await self._run_setpoint(step, index=index, envelope=envelope, port=port)
         if isinstance(step, ActionStep):
-            return await self._run_action(step, index=index, envelope=envelope)
-        return await self._run_check(step, index=index, envelope=envelope)
+            return await self._run_action(step, index=index, envelope=envelope, port=port)
+        return await self._run_check(step, index=index, envelope=envelope, port=port)
 
     async def _run_setpoint(
         self,
@@ -639,10 +728,11 @@ class Conductor:
         *,
         index: int,
         envelope: "_Envelope",
+        port: ControlPort,
     ) -> ConductorFailure | None:
         payload_body: dict[str, Any] = {"address": step.address, "value": step.value}
         try:
-            await self._control_port.write(step.address, step.value, wait=True)
+            await port.write(step.address, step.value, wait=True)
         except _CONTROL_ERRORS as exc:
             await self._record(
                 envelope=envelope,
@@ -660,7 +750,10 @@ class Conductor:
                 message=str(exc),
             )
         if step.verify:
-            payload_body = {**payload_body, **(await self._post_read_evidence(step.address))}
+            payload_body = {
+                **payload_body,
+                **(await self._post_read_evidence(step.address, port=port)),
+            }
         await self._record(
             envelope=envelope,
             step_kind=_STEP_KIND_SETPOINT,
@@ -669,7 +762,7 @@ class Conductor:
         )
         return None
 
-    async def _post_read_evidence(self, address: str) -> dict[str, Any]:
+    async def _post_read_evidence(self, address: str, *, port: ControlPort) -> dict[str, Any]:
         """Best-effort post-write `ControlPort.read` for the verify flag.
 
         Returns a dict with either `post_reading` (success) or
@@ -678,7 +771,7 @@ class Conductor:
         and evidence capture is observational.
         """
         try:
-            reading = await self._control_port.read(address)
+            reading = await port.read(address)
         except _CONTROL_ERRORS as exc:
             return {
                 "post_read_error": {
@@ -694,6 +787,7 @@ class Conductor:
         *,
         index: int,
         envelope: "_Envelope",
+        port: ControlPort,
     ) -> ConductorFailure | None:
         payload_body: dict[str, Any] = {"name": step.name, "params": dict(step.params)}
         body = self._action_registry.lookup(step.name)
@@ -717,7 +811,7 @@ class Conductor:
         try:
             result_data = await body(
                 ActionContext(
-                    control_port=self._control_port,
+                    control_port=port,
                     clock=self._clock,
                     params=step.params,
                 )
@@ -752,13 +846,14 @@ class Conductor:
         *,
         index: int,
         envelope: "_Envelope",
+        port: ControlPort,
     ) -> ConductorFailure | None:
         payload_body: dict[str, Any] = {
             "address": step.address,
             "criterion": _criterion_to_dict(step.criterion),
         }
         try:
-            reading = await self._control_port.read(step.address)
+            reading = await port.read(step.address)
         except _CONTROL_ERRORS as exc:
             await self._record(
                 envelope=envelope,

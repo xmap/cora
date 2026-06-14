@@ -50,6 +50,7 @@ def test_projection_metadata() -> None:
             "ProcedureAborted",
             "ProcedureTruncated",
             "ProcedureActivitiesLogbookOpened",
+            "ProcedureIterationStarted",
         }
     )
 
@@ -59,6 +60,14 @@ def test_projection_does_not_subscribe_to_unrelated_events() -> None:
     proj = ProcedureSummaryProjection()
     for foreign in ("AssetRegistered", "RunStarted", "SubjectMounted", "SupplyRegistered"):
         assert foreign not in proj.subscribed_event_types
+
+
+@pytest.mark.unit
+def test_projection_does_not_subscribe_to_iteration_ended() -> None:
+    # iteration_count tracks iterations begun; the convergence-verdict
+    # projection from ProcedureIterationEnded is a deferred watch item.
+    proj = ProcedureSummaryProjection()
+    assert "ProcedureIterationEnded" not in proj.subscribed_event_types
 
 
 @pytest.mark.unit
@@ -231,5 +240,66 @@ async def test_unsubscribed_event_type_is_no_op() -> None:
     proj = ProcedureSummaryProjection()
     conn = AsyncMock()
     event = _stored("BogusEvent", {"procedure_id": str(_PROCEDURE_ID)})
+    await proj.apply(event, conn)
+    conn.execute.assert_not_awaited()
+
+
+@pytest.mark.unit
+async def test_procedure_registered_seeds_iteration_count_to_zero() -> None:
+    proj = ProcedureSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "ProcedureRegistered",
+        {
+            "procedure_id": str(_PROCEDURE_ID),
+            "name": "X",
+            "kind": "center_alignment",
+            "target_asset_ids": [],
+            "parent_run_id": None,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    sql = conn.execute.call_args.args[0]
+    assert "iteration_count" in sql
+    # iteration_count is seeded with the literal 0 (no positional arg).
+    assert ", 0)" in sql.replace("\n", " ").replace("  ", " ")
+
+
+@pytest.mark.unit
+async def test_iteration_started_sets_iteration_count_to_index() -> None:
+    proj = ProcedureSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "ProcedureIterationStarted",
+        {
+            "procedure_id": str(_PROCEDURE_ID),
+            "iteration_index": 3,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    sql = conn.execute.call_args.args[0]
+    assert "SET iteration_count = $2" in sql
+    assert conn.execute.call_args.args[1] == _PROCEDURE_ID
+    assert conn.execute.call_args.args[2] == 3
+
+
+@pytest.mark.unit
+async def test_iteration_ended_is_no_op_for_projection() -> None:
+    # Not subscribed: the worker would not deliver it, and the defensive
+    # dispatch skips it without a write.
+    proj = ProcedureSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "ProcedureIterationEnded",
+        {
+            "procedure_id": str(_PROCEDURE_ID),
+            "iteration_index": 1,
+            "converged": True,
+            "reason": None,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
     await proj.apply(event, conn)
     conn.execute.assert_not_awaited()

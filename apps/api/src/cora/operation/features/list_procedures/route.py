@@ -45,6 +45,7 @@ class ProcedureSummaryDTO(BaseModel):
     last_status_changed_at: datetime | None = None
     last_status_reason: str | None = Field(default=None, max_length=REASON_MAX_LENGTH)
     interrupted_at: datetime | None = None
+    iteration_count: int = 0
 
 
 class ProcedureListResponse(BaseModel):
@@ -161,6 +162,7 @@ async def list_procedures(
                 last_status_changed_at=item.last_status_changed_at,
                 last_status_reason=item.last_status_reason,
                 interrupted_at=item.interrupted_at,
+                iteration_count=item.iteration_count,
             )
             for item in page.items
         ],

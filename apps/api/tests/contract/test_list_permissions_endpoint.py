@@ -17,6 +17,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.errors import UnauthorizedError
 from cora.trust.features.list_permissions.route import (
     _get_handler as _get_list_permissions_handler,  # pyright: ignore[reportPrivateUsage]
@@ -26,11 +27,14 @@ _CONDUIT = "01900000-0000-7000-8000-00000000aaaa"
 _OTHER_CONDUIT = "01900000-0000-7000-8000-00000000bbbb"
 _ALLOWED_PRINCIPAL = "01900000-0000-7000-8000-000000000a01"
 _OTHER_PRINCIPAL = "01900000-0000-7000-8000-000000000a02"
+_SURFACE = str(SYSTEM_HTTP_SURFACE_ID)
 
 
 def _define_policy(client: TestClient) -> str:
     """Create a Policy via the real define_policy endpoint and return
-    its id. Same in-memory app backs both endpoints."""
+    its id. Same in-memory app backs both endpoints. The policy binds
+    the HTTP Surface (required by define_policy); list_permissions does
+    not evaluate the surface, so it doesn't affect these assertions."""
     response = client.post(
         "/policies",
         json={
@@ -38,6 +42,7 @@ def _define_policy(client: TestClient) -> str:
             "conduit_id": _CONDUIT,
             "permitted_principal_ids": [_ALLOWED_PRINCIPAL],
             "permitted_commands": ["RegisterActor", "DefinePolicy"],
+            "surface_id": _SURFACE,
         },
     )
     assert response.status_code == 201

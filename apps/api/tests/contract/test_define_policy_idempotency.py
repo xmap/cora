@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 
 _CONDUIT = "01900000-0000-7000-8000-00000000aaaa"
 _PRINCIPAL = "01900000-0000-7000-8000-000000000a01"
@@ -22,6 +23,7 @@ def _body(name: str = "Beam-team") -> dict[str, object]:
         "conduit_id": _CONDUIT,
         "permitted_principal_ids": [_PRINCIPAL],
         "permitted_commands": ["RegisterActor"],
+        "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
     }
 
 

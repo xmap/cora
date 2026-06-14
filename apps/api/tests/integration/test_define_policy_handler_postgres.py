@@ -12,6 +12,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.features import define_policy
 from cora.trust.features.define_policy import DefinePolicy
 from tests.integration._helpers import build_postgres_deps
@@ -38,6 +39,7 @@ async def test_handler_persists_policy_defined_to_postgres(
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_ALLOWED_PRINCIPAL}),
             permitted_commands=frozenset({"RegisterActor"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -55,8 +57,7 @@ async def test_handler_persists_policy_defined_to_postgres(
         "policy_id": str(_NEW_ID),
         "name": "Beam-team",
         "conduit_id": str(_CONDUIT_ID),
-        # for V1-shape callers.
-        "surface_id": "00000000-0000-0000-0000-000000000000",
+        "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
         "permitted_principal_ids": [str(_ALLOWED_PRINCIPAL)],
         "permitted_commands": ["RegisterActor"],
         "occurred_at": _NOW.isoformat(),

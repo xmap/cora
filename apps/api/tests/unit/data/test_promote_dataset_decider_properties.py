@@ -61,6 +61,11 @@ _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
 
 _ALREADY_PROMOTED_INTENTS = (Intent.PRODUCTION, Intent.RETRACTED)
 _ANY_INTENT = (Intent.TRIAL, Intent.PRODUCTION, Intent.RETRACTED)
+# Simulator-tainted kinds the one-way gate must always block.
+_SIMULATOR_TAINTED = ("Simulated", "Hybrid")
+# Kinds that leave the gate inactive (None = nothing recorded) or pass it
+# (Physical = real hardware); both promote when otherwise clean.
+_PROMOTABLE_KINDS = (None, "Physical")
 
 
 def _reasons() -> st.SearchStrategy[str]:
@@ -74,6 +79,7 @@ def _dataset(
     intent: Intent = Intent.TRIAL,
     producing_run_id: UUID | None = None,
     producing_run_end_state: str | None = None,
+    producing_actuation_kind: str | None = None,
     derived_from: frozenset[UUID] = frozenset(),
 ) -> Dataset:
     return Dataset(
@@ -87,6 +93,7 @@ def _dataset(
         derived_from=derived_from,
         status=status,
         producing_run_end_state=producing_run_end_state,
+        producing_actuation_kind=producing_actuation_kind,
         intent=intent,
     )
 
@@ -175,20 +182,29 @@ def test_decide_non_trial_intent_always_raises_already_promoted(
 
 
 @pytest.mark.unit
-@given(dataset_id=st.uuids(), reason=_reasons(), now=aware_datetimes(), actor=st.uuids())
+@given(
+    dataset_id=st.uuids(),
+    kind=st.sampled_from(_PROMOTABLE_KINDS),
+    reason=_reasons(),
+    now=aware_datetimes(),
+    actor=st.uuids(),
+)
 def test_decide_clean_promotable_emits_one_promoted_event(
     dataset_id: UUID,
+    kind: str | None,
     reason: str,
     now: datetime,
     actor: UUID,
 ) -> None:
-    """A Registered + Trial Dataset with no Run and empty lineage emits one DatasetPromoted."""
+    """A Registered + Trial Dataset with no Run and empty lineage emits one
+    DatasetPromoted, for a Physical or unrecorded (None) actuation kind."""
     promoted_by = ActorId(actor)
     state = _dataset(
         dataset_id=dataset_id,
         status=DatasetStatus.REGISTERED,
         intent=Intent.TRIAL,
         producing_run_id=None,
+        producing_actuation_kind=kind,
         derived_from=frozenset(),
     )
     events = promote_dataset.decide(
@@ -206,6 +222,55 @@ def test_decide_clean_promotable_emits_one_promoted_event(
             promoted_by=promoted_by,
         )
     ]
+
+
+@pytest.mark.unit
+@given(
+    dataset_id=st.uuids(),
+    kind=st.sampled_from(_SIMULATOR_TAINTED),
+    has_run=st.booleans(),
+    reason=_reasons(),
+    now=aware_datetimes(),
+    actor=st.uuids(),
+)
+def test_decide_simulator_origin_always_rejects(
+    dataset_id: UUID,
+    kind: str,
+    has_run: bool,
+    reason: str,
+    now: datetime,
+    actor: UUID,
+) -> None:
+    """The one-way gate: a Simulated / Hybrid producing_actuation_kind never
+    promotes, even when every other promotion precondition is satisfied.
+
+    This is the single most load-bearing claim of the slice: rehearsal /
+    simulator-origin data is structurally non-promotable to Production.
+    intent is pinned to Trial so the actuation guard (guard 6), not the
+    earlier intent guard, is necessarily the one that rejects; the
+    assertion checks the exact error and that the kind names itself in the
+    reason, so a regression dropping guard 6 fails here rather than being
+    absorbed by an earlier guard. has_run varies to show the gate holds
+    both with a Completed producing Run and with none.
+    """
+    state = _dataset(
+        dataset_id=dataset_id,
+        status=DatasetStatus.REGISTERED,
+        intent=Intent.TRIAL,
+        producing_run_id=actor if has_run else None,
+        producing_run_end_state="Completed" if has_run else None,
+        producing_actuation_kind=kind,
+        derived_from=frozenset(),
+    )
+    with pytest.raises(DatasetCannotPromoteError) as exc:
+        promote_dataset.decide(
+            state=state,
+            command=_command(dataset_id=dataset_id, reason=reason),
+            context=_context(),
+            now=now,
+            promoted_by=ActorId(actor),
+        )
+    assert kind in exc.value.reason
 
 
 @pytest.mark.unit

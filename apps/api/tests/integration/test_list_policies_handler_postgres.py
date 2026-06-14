@@ -19,6 +19,7 @@ import pytest
 
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust._projections import register_trust_projections
 from cora.trust.features.define_policy import DefinePolicy
 from cora.trust.features.define_policy import bind as bind_define_policy
@@ -55,6 +56,7 @@ async def test_policy_defined_inserts_with_conduit_ref(
             conduit_id=conduit_id,
             permitted_principal_ids=frozenset({_PRINCIPAL_ID}),
             permitted_commands=frozenset({"StartRun"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -86,6 +88,7 @@ async def test_conduit_id_filter_narrows_results(db_pool: asyncpg.Pool) -> None:
             conduit_id=conduit_a,
             permitted_principal_ids=frozenset(),
             permitted_commands=frozenset(),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -99,6 +102,7 @@ async def test_conduit_id_filter_narrows_results(db_pool: asyncpg.Pool) -> None:
             conduit_id=conduit_b,
             permitted_principal_ids=frozenset(),
             permitted_commands=frozenset(),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

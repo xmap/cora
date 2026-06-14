@@ -20,7 +20,8 @@ Dataset field through from prior state. Constructing
 encoding=..., status=...)` without explicitly passing the optional
 cross-aggregate refs (`producing_run_id`, `subject_id`,
 `derived_from`) AND the additive fields (`producing_run_end_state`,
-`intent`, `used_calibration_ids`) would silently WIPE them to defaults.
+`producing_actuation_kind`, `intent`, `used_calibration_ids`) would
+silently WIPE them to defaults.
 Aligned to explicit construction post-domain-audit to match the
 documented pattern in Asset/Plan/Method/Practice/Family/Subject/Run
 evolvers. The `used_calibration_ids` AsShot citation set is IMMUTABLE
@@ -73,6 +74,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
             subject_id=subject_id,
             derived_from=derived_from,
             producing_run_end_state=producing_run_end_state,
+            producing_actuation_kind=producing_actuation_kind,
             intent=intent,
             used_calibration_ids=used_calibration_ids,
         ):
@@ -97,6 +99,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
                 # carry from event payload (default-handled
                 # via payload.get for legacy events in from_stored).
                 producing_run_end_state=producing_run_end_state,
+                producing_actuation_kind=producing_actuation_kind,
                 intent=Intent(intent),
                 # AsShot citation set at genesis (frozenset for
                 # in-memory equality semantics; the event carries a tuple
@@ -119,6 +122,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
                 # carry-through: discard preserves intent +
                 # producing_run_end_state (audit-relevant historical artifacts).
                 producing_run_end_state=prior.producing_run_end_state,
+                producing_actuation_kind=prior.producing_actuation_kind,
                 intent=prior.intent,
                 # AsShot invariant: never change after register.
                 used_calibration_ids=prior.used_calibration_ids,
@@ -138,6 +142,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
                 # Status preserved (intent is orthogonal to lifecycle).
                 status=prior.status,
                 producing_run_end_state=prior.producing_run_end_state,
+                producing_actuation_kind=prior.producing_actuation_kind,
                 # The state change: intent flips Trial -> Production.
                 intent=Intent.PRODUCTION,
                 # AsShot invariant: never change after register.
@@ -158,6 +163,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
                 # Status preserved (intent is orthogonal to lifecycle).
                 status=prior.status,
                 producing_run_end_state=prior.producing_run_end_state,
+                producing_actuation_kind=prior.producing_actuation_kind,
                 # The state change: intent flips Production -> Retracted
                 # (terminal Intent value; no re-promote from Retracted per
                 # [[project-dataset-demote-design]] lock).

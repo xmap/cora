@@ -37,6 +37,8 @@ from fastapi.responses import JSONResponse
 from cora.operation.aggregates.procedure import (
     InvalidProcedureAbortReasonError,
     InvalidProcedureInterruptedAtError,
+    InvalidProcedureIterationCapError,
+    InvalidProcedureIterationEndReasonError,
     InvalidProcedureKindError,
     InvalidProcedureNameError,
     InvalidProcedureTruncateReasonError,
@@ -46,10 +48,13 @@ from cora.operation.aggregates.procedure import (
     ProcedureBoundCapabilityDeprecatedError,
     ProcedureCannotAbortError,
     ProcedureCannotCompleteError,
+    ProcedureCannotEndIterationError,
     ProcedureCannotStartError,
+    ProcedureCannotStartIterationError,
     ProcedureCannotTruncateError,
     ProcedureCapabilityExecutorMismatchError,
     ProcedureEnclosureCoverageMismatchError,
+    ProcedureIterationLimitReachedError,
     ProcedureNotFoundError,
     ProcedurePlanAssetDecommissionedError,
     ProcedureRequiresAvailableSupplyError,
@@ -79,10 +84,13 @@ from cora.operation.features import (
     append_activities,
     complete_procedure,
     conduct_procedure,
+    end_iteration,
     get_procedure,
+    list_procedure_iterations,
     list_procedures,
     register_procedure,
     register_procedure_from_recipe,
+    start_iteration,
     start_procedure,
     truncate_procedure,
 )
@@ -219,15 +227,20 @@ def register_operation_routes(app: FastAPI) -> None:
     app.include_router(complete_procedure.router)
     app.include_router(abort_procedure.router)
     app.include_router(truncate_procedure.router)
+    app.include_router(start_iteration.router)
+    app.include_router(end_iteration.router)
     app.include_router(append_activities.router)
     app.include_router(get_procedure.router)
     app.include_router(list_procedures.router)
+    app.include_router(list_procedure_iterations.router)
     app.include_router(conduct_procedure.router)
     for validation_cls in (
         InvalidProcedureNameError,
         InvalidProcedureKindError,
         InvalidProcedureAbortReasonError,
         InvalidProcedureTruncateReasonError,
+        InvalidProcedureIterationEndReasonError,
+        InvalidProcedureIterationCapError,
         InvalidProcedureInterruptedAtError,
         InvalidStepKindError,
         # Recipe-driven conduct_procedure path: caller-supplied steps with
@@ -251,6 +264,14 @@ def register_operation_routes(app: FastAPI) -> None:
         ProcedureCannotCompleteError,
         ProcedureCannotAbortError,
         ProcedureCannotTruncateError,
+        # iteration boundary guards (start/end): not-Running, no/already-open
+        # iteration, and non-sequential / mismatched operator-supplied index.
+        ProcedureCannotStartIterationError,
+        ProcedureCannotEndIterationError,
+        # patience cap exhausted: the convergence loop gave up after N
+        # consecutive unconverged iterations (operator-actionable: abort
+        # or complete the Procedure).
+        ProcedureIterationLimitReachedError,
         ProcedurePlanAssetDecommissionedError,
         ProcedureStepsLogbookClosedError,
         # cross-BC guard: Procedure binds to a Capability whose

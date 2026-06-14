@@ -89,6 +89,7 @@ _DOMAIN_NOUN_ALLOWLIST: frozenset[str] = frozenset(
         "inference",  # Decision: append_inferences (logbook-entry rename)
         "observation",  # Run: append_observations (logbook-entry rename, slice 3)
         "activity",  # Operation: append_activities (logbook-entry rename, slice 4)
+        "iteration",  # Operation: start_iteration / end_iteration (convergence-loop boundary noun)
         "entry",  # generic logbook-entry vocabulary
         "permission",  # Trust: list_permissions
         "event",  # Agent: dismiss_event_in_reaction

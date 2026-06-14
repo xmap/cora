@@ -58,23 +58,22 @@ The proxy owns the identity → UUID mapping in this mode. Migrating to bearer m
 
 MCP streamable-HTTP runs the same `BearerAuthMiddleware` as REST (shipped 2026-05-20). Per-path audience dispatch binds `/mcp/*` to the MCP Surface UUID (`SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID`); a token issued for HTTP cannot replay against MCP. Under bearer-auth posture the middleware enforces bearer-required for every `/mcp/*` path including FastMCP framing methods (`initialize`, `tools/list`, `notifications/initialized`), so a missing-bearer request returns 401 before reaching the tool layer. Tool handlers resolve the calling `principal_id` via `get_mcp_principal_id(ctx)`, the MCP-side mirror of `get_principal_id`. Write tools remain visible in `tools/list` and are gated at call time, not by deregistration. MCP_STDIO (subprocess transport) inherits the operator's local OS identity per spec; bearer auth is HTTP-edge only.
 
-## Surface decomposition: V1 vs V2 bootstrap policy
+## Surface decomposition and the bootstrap policy
 
-The Trust BC carries a `Surface` aggregate (HTTP, MCP stdio, MCP streamable-http) and a V2 bootstrap policy bound to the HTTP Surface. Two well-known policy ids now coexist in the event log:
+The Trust BC carries a `Surface` aggregate (HTTP, MCP stdio, MCP streamable-http) and a bootstrap policy bound to the HTTP Surface. `evaluate` strict-matches a policy's `surface_id` against the request's arrival surface, so every policy binds a concrete Surface.
 
 | Id | Surface binding | Status |
 | --- | --- | --- |
-| `00000000-0000-0000-0000-000000000001` (V1) | nil (folded as legacy wildcard) | Deprecated. Still works under the current code via the V1-legacy-fold wildcard branch in `evaluate()`. |
-| `00000000-0000-0000-0000-000000000002` (V2) | HTTP Surface (`...0020`) | **Recommended for new and existing deployments.** |
+| `00000000-0000-0000-0000-000000000002` | HTTP Surface (`...0020`) | The bootstrap policy. Set `TRUST_POLICY_ID` to this. |
+| `00000000-0000-0000-0000-000000000001` | nil | Retired. Its nil surface no longer matches any real arrival surface, so it strict-denies every call. Do not point `TRUST_POLICY_ID` at it; a deployment that does is locked out. The stream stays in the event log (forward-only migrations) but is operationally inert. |
 
-**V1→V2 migration** is a single env-var flip:
+To enable real authz:
 
-1. Apply the Surface seed migration: `make migrate-apply`. Seeds the 3 default Surfaces + the V2 policy. Idempotent.
-2. Restart the API. The V1 verifier will log `trust.v1_bootstrap_policy_deprecation` WARN on every boot until you flip the env var.
-3. Set `TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002`.
-4. Restart. V2 is now the gating policy. The verifier confirms V2 binds to `SYSTEM_HTTP_SURFACE_ID` and all 3 seeded Surfaces are present at lifespan start; boot fails loud if anything is missing.
+1. Apply the seed migration: `make migrate-apply`. Seeds the 3 default Surfaces and the bootstrap policy. Idempotent.
+2. Set `TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002` and `REQUIRE_AUTHENTICATED_PRINCIPAL=true`.
+3. Restart. At lifespan start the verifier confirms the policy stream exists, binds to `SYSTEM_HTTP_SURFACE_ID`, and that all 3 seeded Surfaces are present; boot fails loud if anything is missing.
 
-**Deploy ordering is safe in both directions** thanks to the V1-legacy-fold wildcard in `evaluate()`: V1 policies (`policy.surface_id == nil`) match any call's surface_id. You can deploy new code first or flip the env var first; neither produces a denial window. The wildcard is a *time-bounded legacy compatibility shim*, not a feature; once your fleet is on V2, the WARN goes silent. Sunset planned when V1 stream count reaches zero across all deployments.
+An earlier nil-surface bootstrap policy (`...0001`) existed before the Surface decomposition. Its evaluate-time nil-as-wildcard shim has been removed, so it is inert; use `...0002`.
 
 ## First-boot workflow
 
@@ -132,7 +131,7 @@ Recovery:
 make migrate-apply
 ```
 
-The seed migration (`infra/atlas/migrations/20260519000000_seed_bootstrap_policy.sql`) is idempotent (`ON CONFLICT DO NOTHING`) and safe to re-apply. After it lands, restart CORA.
+The seed migration (`infra/atlas/migrations/20260519200000_seed_default_surfaces_and_v2_policy.sql`) is idempotent (`ON CONFLICT DO NOTHING`) and safe to re-apply. After it lands, restart CORA.
 
 ### Real admin policy unreachable
 

@@ -16,6 +16,7 @@ from cora.infrastructure.ports import (
     Allow,
     Deny,
 )
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.authorize import TrustAuthorize
 from cora.trust.features import define_policy
 from cora.trust.features.define_policy import DefinePolicy
@@ -53,18 +54,26 @@ async def test_trust_authorize_gates_via_real_postgres_policy(
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_ALLOWED_PRINCIPAL}),
             permitted_commands=frozenset({"RegisterActor"}),
+            surface_id=SYSTEM_HTTP_SURFACE_ID,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
 
     # Now wire TrustAuthorize against that policy and verify it gates.
+    # The policy binds SYSTEM_HTTP_SURFACE_ID; authorize calls present
+    # the same arrival surface so the Allow/Deny verdicts turn on the
+    # principal (not a surface mismatch).
     authorize = TrustAuthorize(event_store, policy_id=_POLICY_ID)
 
-    allowed = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+    allowed = await authorize.authorize(
+        _ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0), SYSTEM_HTTP_SURFACE_ID
+    )
     assert isinstance(allowed, Allow)
 
-    denied = await authorize.authorize(_OTHER_PRINCIPAL, "RegisterActor", UUID(int=0))
+    denied = await authorize.authorize(
+        _OTHER_PRINCIPAL, "RegisterActor", UUID(int=0), SYSTEM_HTTP_SURFACE_ID
+    )
     assert isinstance(denied, Deny)
 
 

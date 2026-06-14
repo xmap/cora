@@ -60,7 +60,7 @@ confirming consistent beam delivery.
 ## Asset stack (shutter + image chain)
 
 Same as `first_light` and `dark_baseline`:
-Shutter_2BM, camera, scintillator.
+Shutter, Camera, Scintillator.
 
 ## What this scenario surfaces (gap-finding intent)
 
@@ -157,9 +157,9 @@ _DATASET_FLAT_BASELINE_ID = UUID("01900000-0000-7000-8000-00000035bf21")
 
 
 _DEVICES = (
-    DeviceSpec("Shutter_2BM", _ASSET_SHUTTER_2BM_ID, "Shutter", _CAP_SHUTTER_ID),
-    DeviceSpec("camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
-    DeviceSpec("scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
+    DeviceSpec("Shutter", _ASSET_SHUTTER_2BM_ID, "Shutter", _CAP_SHUTTER_ID),
+    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
 
 
@@ -204,7 +204,7 @@ def _shutter(
     *, state: str, role: str, sampled_at: datetime, note: str | None = None
 ) -> ActivityInput:
     payload: dict[str, Any] = {
-        "channel": "Shutter_2BM",
+        "channel": "Shutter",
         "target_value": state,
         "units": "state",
         "role": role,

@@ -47,6 +47,7 @@ class ProcedureSummaryItem:
     last_status_changed_at: datetime | None
     last_status_reason: str | None
     interrupted_at: datetime | None
+    iteration_count: int
 
 
 @dataclass(frozen=True)
@@ -73,7 +74,7 @@ class Handler(Protocol):
 _SELECT_COLUMNS = (
     "procedure_id, name, kind, target_asset_ids, parent_run_id, status, "
     "activity_logbook_id, registered_at, "
-    "last_status_changed_at, last_status_reason, interrupted_at"
+    "last_status_changed_at, last_status_reason, interrupted_at, iteration_count"
 )
 
 
@@ -92,6 +93,7 @@ def _row_to_item(row: Any) -> ProcedureSummaryItem:
             str(row["last_status_reason"]) if row["last_status_reason"] is not None else None
         ),
         interrupted_at=row["interrupted_at"],
+        iteration_count=int(row["iteration_count"]),
     )
 
 
