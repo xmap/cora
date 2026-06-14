@@ -57,7 +57,7 @@ families:
   - name: Objective
     note: "Per-lens identity inside the Microscope Assembly."
   - name: PseudoAxis
-    note: "Virtual-axis Family; the objective_select Asset carries a LookupTable partition rule decomposing a lens index to turret rotation."
+    note: "Virtual-axis Family; the Objective_Selector Asset carries a LookupTable partition rule decomposing an objective index to turret rotation."
   - name: Imager
     note: "Presenter Family for detector Assemblies; the 2-BM Optique Peter detector materializes as the Microscope Assembly + Fixture."
   - name: Housing

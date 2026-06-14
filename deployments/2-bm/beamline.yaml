@@ -235,7 +235,7 @@ sample-environment:
 detector:
   enclosure: 2-BM-B
   intro: Convert the transmitted beam to light and record it (the Microscope detector, a scintillator-relay-camera assembly).
-  cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (turret, objectives, objective select, focus) plus camera and scintillator leaf slots, anchored to a Housing. Fixture(microscope_at_2bm) presents as a Detector
+  cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (turret, objectives, objective selector, focus) plus camera and scintillator leaf slots, anchored to a Housing. Fixture(microscope_at_2bm) presents as a Detector
   placement: Mount + Frame (2BM_hutch_frame)
   note: >
     A second camera (FLIR Oryx 31 MP, pv 2bmSP2:) appears in the docs, but the CORA
@@ -296,7 +296,7 @@ detector:
           value: 1.10
           source: AssertedSource
           status: Provisional
-    - name: Objective_Select
+    - name: Objective_Selector
       family: PseudoAxis          # virtual, decomposes a lens index to turret rotation
       pv: "2bm:MCTOptics:LensSelect"
     - name: Focus

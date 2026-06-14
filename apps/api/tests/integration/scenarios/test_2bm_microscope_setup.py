@@ -9,7 +9,7 @@ Materializes the 2-BM Optique Peter detector as the Microscope model,
 end-to-end against Postgres:
 
   - a reusable, content-hashed **Optics** sub-assembly (turret + 3
-    objectives + objective_select + focus),
+    objectives + objective_selector + focus),
   - a top **Microscope** Assembly that references Optics by a
     version-pinned sub-assembly link and adds camera + scintillator
     leaf slots, presenting as the Detector Role via the Imager
@@ -416,7 +416,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
                     # per-magnification identity lives on the Asset (name +
                     # settings + calibration), not the slot.
                     _slot("objectives", _CAP_OBJECTIVE_ID, SlotCardinality.ONE_OR_MORE),
-                    _slot("objective_select", _CAP_PSEUDO_AXIS_ID),
+                    _slot("objective_selector", _CAP_PSEUDO_AXIS_ID),
                     _slot("focus", _CAP_LINEAR_STAGE_ID),
                 }
             ),
@@ -466,7 +466,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     )
 
     # ----- Optics-cluster Assets (children of the housing) -----
-    # The dict key is a local handle: turret/objective_select equal their
+    # The dict key is a local handle: turret/objective_selector equal their
     # blueprint slot name, while the three objectives all bind the single
     # OneOrMore `objectives` slot. The registered Asset carries a PascalCase
     # instance name per the facility Asset-instance-name convention.
@@ -476,7 +476,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         ("objective_10x", "Objective_10x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_10X),
         ("objective_2x", "Objective_2x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_2X),
         ("objective_1.1x", "Objective_1.1x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_1P1X),
-        ("objective_select", "Objective_Select", _CAP_PSEUDO_AXIS_ID, None),
+        ("objective_selector", "Objective_Selector", _CAP_PSEUDO_AXIS_ID, None),
     ):
         aid = await bind_register_asset(deps)(
             RegisterAsset(name=asset_name, tier=AssetTier.DEVICE, parent_id=housing_id),
@@ -522,7 +522,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         ("objectives", optics_assets["objective_10x"]),
         ("objectives", optics_assets["objective_2x"]),
         ("objectives", optics_assets["objective_1.1x"]),
-        ("objective_select", optics_assets["objective_select"]),
+        ("objective_selector", optics_assets["objective_selector"]),
         ("focus", _ASSET_FOCUS_ID),
     ]
     for i, (slot_name, asset_id) in enumerate(bound):
@@ -619,7 +619,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         )
         rev_ids.append(rev_id)
 
-    # ----- LookupTable partition rule on objective_select -----
+    # ----- LookupTable partition rule on objective_selector -----
     # The calibration_revision_id is a placeholder: the runtime evaluator
     # expects a revision carrying the index-to-angle table (a
     # CalibrationQuantity the closed catalog does not have yet), and the
@@ -627,7 +627,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     # id satisfies construction without inventing a sentinel.
     await bind_update_asset_partition_rule(deps)(
         UpdateAssetPartitionRule(
-            asset_id=optics_assets["objective_select"],
+            asset_id=optics_assets["objective_selector"],
             partition_rule=LookupTable(
                 calibration_revision_id=rev_ids[0],
                 invertible=False,
@@ -681,7 +681,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     # ===== Assertions =====
 
     # Optics sub-assembly stream: AssemblyDefined with 4 leaf slots
-    # (turret, objectives [OneOrMore], objective_select, focus).
+    # (turret, objectives [OneOrMore], objective_selector, focus).
     optics_events, _ = await deps.event_store.load("Assembly", optics_id)
     assert [e.event_type for e in optics_events] == ["AssemblyDefined"]
     assert len(optics_events[0].payload["required_slots"]) == 4
@@ -721,8 +721,8 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         if slot_name in ("camera", "scintillator", "focus"):
             assert "AssetRelocated" in types, f"{slot_name}: expected re-parent"
 
-    # objective_select carries the partition rule + no settings.
-    sel_events, _ = await deps.event_store.load("Asset", optics_assets["objective_select"])
+    # objective_selector carries the partition rule + no settings.
+    sel_events, _ = await deps.event_store.load("Asset", optics_assets["objective_selector"])
     sel_types = [e.event_type for e in sel_events]
     assert "AssetPartitionRuleUpdated" in sel_types
     assert "AssetSettingsUpdated" not in sel_types

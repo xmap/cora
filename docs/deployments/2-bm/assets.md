@@ -31,7 +31,7 @@ The Microscope detector is modelled as an Assembly + Fixture pair over a reusabl
 | `Objective_10x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) |
 | `Objective_2x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) |
 | `Objective_1.1x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) |
-| `Objective_Select` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret rotation) |
+| `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret rotation) |
 | `Focus` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `FocusDrive`) |
 | `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) |
 | `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) |

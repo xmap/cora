@@ -21,7 +21,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM hutch. It is
 |     +-- Objective_10x      (Device, Family Objective)    10x
 |     +-- Objective_2x      (Device, Family Objective)     2x
 |     +-- Objective_1.1x      (Device, Family Objective)   1.1x
-|     +-- Objective_Select      (Device, Family PseudoAxis)   objective selector
+|     +-- Objective_Selector      (Device, Family PseudoAxis)   objective selector
 |     +-- Focus (Device, Family LinearStage)
 |     +-- Camera  (Device, Family Camera)
 |     +-- Scintillator (Device, Family Scintillator)
@@ -37,7 +37,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM hutch. It is
         objectives (1+)   -> Objective_2x      |  three bindings
         objectives (1+)   -> Objective_1.1x    |
         focus             -> Focus
-        objective_select  -> Objective_Select  (the objective selector; partition_rule = LookupTable
+        objective_selector  -> Objective_Selector  (the objective selector; partition_rule = LookupTable
                                           0 -> 121.5942 deg  (10x in beam)
                                           1 ->  61.9841 deg  (2x  in beam)
                                           2 ->   2.3006 deg  (1.1x in beam))
@@ -94,10 +94,10 @@ The **Optics** Assembly is the reusable core: the turret, the three objectives, 
 | --- | --- | --- |
 | `turret` | `Exactly1` | `RotaryStage` |
 | `objectives` | `OneOrMore` | `Objective` |
-| `objective_select` | `Exactly1` | `PseudoAxis` |
+| `objective_selector` | `Exactly1` | `PseudoAxis` |
 | `focus` | `Exactly1` | `LinearStage` |
 
-The three installed objectives (10x, 2x, 1.1x) all bind the single `objectives` slot. They differ only by the `magnification` setting, so one `OneOrMore` slot keeps the Optics blueprint (and its content hash) reusable across turret loadouts rather than baking three specific magnifications into the structure; a second beamline with a five-position turret reuses the same blueprint. Per-objective identity lives on the Asset (its name, settings, and calibration), not the slot. `objective_select` is **the objective selector**: the virtual axis that picks which objective is in the beam (distinct from the separate, deferred camera selector).
+The three installed objectives (10x, 2x, 1.1x) all bind the single `objectives` slot. They differ only by the `magnification` setting, so one `OneOrMore` slot keeps the Optics blueprint (and its content hash) reusable across turret loadouts rather than baking three specific magnifications into the structure; a second beamline with a five-position turret reuses the same blueprint. Per-objective identity lives on the Asset (its name, settings, and calibration), not the slot. `objective_selector` is **the objective selector**: the virtual axis that picks which objective is in the beam (distinct from the separate, deferred camera selector).
 
 The Optics sub-assembly is composed one level deep: it does not itself reference further sub-assemblies. At Fixture time, a Microscope expands one composing level, the Optics cluster, and rejects deeper nesting; that keeps the materialization rule simple until a real two-tier case earns the extra depth.
 
@@ -107,7 +107,7 @@ The **Fixture** materializes the Microscope Assembly at this specific facility. 
 
 - The Assembly id and its content hash (frozen at registration so later Assembly revisions do not silently change this materialization)
 - The Trust Surface (`2-BM`) for governance scope
-- The slot-to-Asset map binding eight Assets across six leaf slots (the Microscope's `camera` and `scintillator`, plus the Optics sub-assembly's `turret`, `objectives` [the three magnification objectives], `objective_select`, and `focus`) to the eight specific Asset IDs above
+- The slot-to-Asset map binding eight Assets across six leaf slots (the Microscope's `camera` and `scintillator`, plus the Optics sub-assembly's `turret`, `objectives` [the three magnification objectives], `objective_selector`, and `focus`) to the eight specific Asset IDs above
 - Parameter overrides, if any (none in v1)
 
 When the Fixture is registered, the decider expands the union of the top Assembly's leaf slots and the referenced Optics sub-assembly's leaf slots into one flat slot namespace, then validates the bindings against that union. A leaf slot name that appeared in both blueprints would be rejected as a namespace collision; here the two sets are disjoint.
@@ -128,17 +128,17 @@ Where the axes meet: the Fixture answers "what logical cluster lives here for go
 
 ## Routing the objective selector (PseudoAxis)
 
-`Objective_Select` is a virtual axis inside the Optics sub-assembly. Its **partition rule** is a closed `LookupTable` decomposing an integer index (0, 1, 2) into a turret rotation in degrees:
+`Objective_Selector` is a virtual axis inside the Optics sub-assembly. Its **partition rule** is a closed `LookupTable` decomposing an integer index (0, 1, 2) into a turret rotation in degrees:
 
-| `Objective_Select` | Turret position | Objective in beam |
+| `Objective_Selector` | Turret position | Objective in beam |
 | --- | --- | --- |
 | `0` | `121.5942 deg` | 10x Mitutoyo |
 | `1` | `61.9841 deg` | 2x Mitutoyo |
 | `2` | `2.3006 deg` | 1.1x Mitutoyo |
 
-When an operator or Method writes `Objective_Select = 1`, CORA's command-execution layer looks up the partition rule and writes the corresponding turret setpoint to the `Turret` motor. Every actuation is recorded as a control-dispatch event with a correlation id linking back to the originating partition-rule resolution, so the full chain (operator command, virtual-axis lookup, constituent setpoint) is reconstructable from the event log. The lookup table itself is event-sourced; revising it (for example, after a turret re-homing campaign) leaves a complete audit trail of which values were in effect at which times.
+When an operator or Method writes `Objective_Selector = 1`, CORA's command-execution layer looks up the partition rule and writes the corresponding turret setpoint to the `Turret` motor. Every actuation is recorded as a control-dispatch event with a correlation id linking back to the originating partition-rule resolution, so the full chain (operator command, virtual-axis lookup, constituent setpoint) is reconstructable from the event log. The lookup table itself is event-sourced; revising it (for example, after a turret re-homing campaign) leaves a complete audit trail of which values were in effect at which times.
 
-This replaces the older convention of carrying `Objective_Select` as a Method parameter. The virtual axis is addressable, typed, and audit-complete.
+This replaces the older convention of carrying `Objective_Selector` as a Method parameter. The virtual axis is addressable, typed, and audit-complete.
 
 ## Calibrations
 
@@ -176,13 +176,13 @@ Two tiers of persistent identifiers:
 - **The Fixture earns one DOI** as a citable experimental station. This mirrors the HZB PEAXIS precedent where the composite imaging station is published as a single Instrument with `HasComponent` relations to its parts.
 - **Each physical bound Asset earns its own DOI**, plus the `Housing` chassis: the housing, the three Objectives, the Oryx camera, the LuAG scintillator, and the lens turret motor. The Fixture's PIDINST record references the constituents via `HasComponent`; each Asset's record references the Fixture via `IsComponentOf`.
 
-`Objective_Select` is intentionally NOT PIDINST-minted. PIDINST v1.0 requires a Manufacturer (Property 6) and Owner (Property 5), both of which assume a physical instrument with a vendor and an institutional steward. Virtual axes are software routing constructs over a real motor: they carry no Manufacturer (there is no vendor of LookupTables), no independent Owner, and no serial number. The lens index to turret angle table is event-sourced via the partition rule and is fully audit-complete without a DOI; if a citation handle is ever needed it lives on the turret motor's DOI, not on the virtual axis. `GET /assets/{objective_select_id}/pidinst` returns 404 (not applicable) by design.
+`Objective_Selector` is intentionally NOT PIDINST-minted. PIDINST v1.0 requires a Manufacturer (Property 6) and Owner (Property 5), both of which assume a physical instrument with a vendor and an institutional steward. Virtual axes are software routing constructs over a real motor: they carry no Manufacturer (there is no vendor of LookupTables), no independent Owner, and no serial number. The lens index to turret angle table is event-sourced via the partition rule and is fully audit-complete without a DOI; if a citation handle is ever needed it lives on the turret motor's DOI, not on the virtual axis. `GET /assets/{objective_selector_id}/pidinst` returns 404 (not applicable) by design.
 
 For pilot v1, persistent identifiers are stub-minted (no real DOIs registered with DataCite). The production mint path is deferred until 2-BM commissions with real facility DataCite credentials.
 
 ## Operator runbook
 
-**Switch the active objective.** Write the desired `Objective_Select` index (0, 1, or 2) to the `Objective_Select` PseudoAxis. The execution layer looks up the turret position and writes it to the `Turret` motor via the ControlPort. The full chain is audited.
+**Switch the active objective.** Write the desired `Objective_Selector` index (0, 1, or 2) to the `Objective_Selector` PseudoAxis. The execution layer looks up the turret position and writes it to the `Turret` motor via the ControlPort. The full chain is audited.
 
 Removing or replacing the scintillator or camera splits into two ceremonies. The light one returns the same Asset to its slot; the heavy one brings in a different physical Asset. Pick by intent, not by reflex.
 
