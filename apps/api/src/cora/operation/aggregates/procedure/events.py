@@ -26,6 +26,20 @@ per-step logbook table. `ProcedureTruncated` mirrors RunTruncated.
 `ProcedureHeld` / `ProcedureResumed` are deferred until the pilot
 needs the surface.
 
+`ProcedureIterationStarted` / `ProcedureIterationEnded` are the
+first-class boundary pair for the convergence-driven iteration loop
+(alignment sweeps and the like). They are operator-emitted and
+optional: a non-iterative Procedure (bakeout) never emits them and
+pays zero tax. Iteration is NOT a `ProcedureStatus` value (Running
+stays monolithic); the pair folds onto two additive state fields
+(`current_iteration_index`, `iteration_count`). `iteration_index` is
+operator-supplied (capture-don't-recompute); the start decider
+enforces a strict-successor invariant server-side. `ProcedureIterationEnded`
+carries the convergence verdict (`converged: bool | None`, None when an
+iteration ends without a verdict) and an optional free-form `reason`.
+Naming mirrors `ProcedureActivitiesLogbookOpened` (aggregate +
+sub-entity noun + past participle).
+
 ## Payload conventions
 
 `target_asset_ids` is stored as `tuple[UUID, ...]` in payloads (events
@@ -99,6 +113,11 @@ class ProcedureRegistered:
     occurred_at: datetime
     capability_id: UUID | None = None
     recipe_id: UUID | None = None
+    max_consecutive_unconverged_iterations: int | None = None
+    """Optional operator-supplied 'patience' cap (>= 1, None = no cap):
+    max consecutive unconverged iterations before start_iteration refuses
+    the next one. Additive payload field; legacy streams fold via
+    `payload.get("max_consecutive_unconverged_iterations")` -> None."""
 
 
 @dataclass(frozen=True)
@@ -184,10 +203,19 @@ class ProcedureCompleted:
     consumers needing post-completion read state should fold the
     Procedure stream (short and bounded for terminal-by-design
     Lifecycle Aggregates).
+
+    `actuation_kind` is the raw `ActuationKind` value (Physical /
+    Simulated / Hybrid) the Conductor observed during this conduct, or
+    None when nothing instrumented was actuated (no routing table, no
+    control-port write) or the complete was issued outside a conduct.
+    Additive payload field: legacy streams fold via
+    `payload.get("actuation_kind")` -> None. This is the gate carrier
+    the Data BC reads back at Dataset registration.
     """
 
     procedure_id: UUID
     occurred_at: datetime
+    actuation_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -278,6 +306,12 @@ class ProcedureAborted:
     shape; same future-additive structured-taxonomy posture parked
     at `InvalidProcedureAbortReasonError`.
 
+    `actuation_kind` is the raw `ActuationKind` value the Conductor
+    observed before the abort (routes attempted before the failing step
+    still taint it), or None. Additive payload field: legacy streams
+    fold via `payload.get("actuation_kind")` -> None. Carries honest
+    provenance for a Dataset produced by an aborted conduct.
+
     Single-source guard at the decider (Running only). Held/Resumed
     deferred to 10c-c per pilot need; if Held lands, the abort source
     set widens to `Running | Held` to match Run BC's precedent.
@@ -286,12 +320,64 @@ class ProcedureAborted:
     procedure_id: UUID
     reason: str
     occurred_at: datetime
+    actuation_kind: str | None = None
+
+
+@dataclass(frozen=True)
+class ProcedureIterationStarted:
+    """One convergence-loop iteration began on a Running Procedure.
+
+    Operator-emitted boundary event (optional; non-iterative Procedures
+    never emit it). `iteration_index` is operator-supplied per the
+    capture-don't-recompute principle; the `start_iteration` decider
+    enforces the strict-successor invariant (`iteration_index ==
+    iteration_count + 1`) and rejects starting while another iteration
+    is still open. The evolver bumps `iteration_count` and records the
+    open index in `current_iteration_index`.
+
+    Status is NOT carried (iteration is orthogonal to the lifecycle FSM;
+    the Procedure stays Running across iterations). Slim payload:
+    procedure_id + iteration_index + occurred_at.
+    """
+
+    procedure_id: UUID
+    iteration_index: int
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ProcedureIterationEnded:
+    """The currently-open convergence-loop iteration closed.
+
+    `iteration_index` must match the open `current_iteration_index`
+    (validated at the `end_iteration` decider). `converged` carries the
+    convergence verdict: True (the iteration met its target), False (it
+    did not), or None (the iteration ended without a verdict, for
+    example an inconclusive or interrupted pass). `reason` is an
+    optional free-form note; when present it is trimmed and bounded
+    1-500 chars at the decider (matching abort / truncate), so the
+    persisted value is post-trim and whitespace-only is rejected. The
+    evolver clears `current_iteration_index` back to None;
+    `iteration_count` is unchanged (the count tracks iterations begun).
+
+    `converged` / `reason` are stream-only for now: the convergence-rate
+    projection is a deferred watch item per
+    [[project_iteration_first_class_research]]. Status is NOT carried.
+    """
+
+    procedure_id: UUID
+    iteration_index: int
+    converged: bool | None
+    reason: str | None
+    occurred_at: datetime
 
 
 # Discriminated union of every event the Procedure aggregate emits.
 # The FSM is closed by the three transition events; the per-step
 # logbook envelope event `ProcedureActivitiesLogbookOpened` opens lazily
-# on first append.
+# on first append; the iteration boundary pair
+# (`ProcedureIterationStarted` / `ProcedureIterationEnded`) folds onto
+# the iteration denorm without touching the lifecycle status.
 ProcedureEvent = (
     ProcedureRegistered
     | ProcedureStarted
@@ -299,6 +385,8 @@ ProcedureEvent = (
     | ProcedureAborted
     | ProcedureTruncated
     | ProcedureActivitiesLogbookOpened
+    | ProcedureIterationStarted
+    | ProcedureIterationEnded
     | RecipeExpansionRecorded
 )
 
@@ -326,6 +414,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             occurred_at=occurred_at,
             capability_id=capability_id,
             recipe_id=recipe_id,
+            max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -343,6 +432,9 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 # Recipe's capability_id. Pre-rewrite streams fold via
                 # `.get("recipe_id")` in from_stored.
                 "recipe_id": str(recipe_id) if recipe_id is not None else None,
+                # Optional patience cap (None = no cap). Legacy streams fold
+                # via `.get("max_consecutive_unconverged_iterations")` -> None.
+                "max_consecutive_unconverged_iterations": max_consecutive_unconverged_iterations,
                 "occurred_at": occurred_at.isoformat(),
             }
         case ProcedureStarted(procedure_id=procedure_id, occurred_at=occurred_at):
@@ -350,16 +442,29 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "procedure_id": str(procedure_id),
                 "occurred_at": occurred_at.isoformat(),
             }
-        case ProcedureCompleted(procedure_id=procedure_id, occurred_at=occurred_at):
+        case ProcedureCompleted(
+            procedure_id=procedure_id,
+            occurred_at=occurred_at,
+            actuation_kind=actuation_kind,
+        ):
             return {
                 "procedure_id": str(procedure_id),
                 "occurred_at": occurred_at.isoformat(),
+                # Raw ActuationKind value or None. Pre-activation streams
+                # fold via `.get("actuation_kind")` -> None in from_stored.
+                "actuation_kind": actuation_kind,
             }
-        case ProcedureAborted(procedure_id=procedure_id, reason=reason, occurred_at=occurred_at):
+        case ProcedureAborted(
+            procedure_id=procedure_id,
+            reason=reason,
+            occurred_at=occurred_at,
+            actuation_kind=actuation_kind,
+        ):
             return {
                 "procedure_id": str(procedure_id),
                 "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
+                "actuation_kind": actuation_kind,
             }
         case ProcedureTruncated(
             procedure_id=procedure_id,
@@ -386,6 +491,30 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "logbook_id": str(logbook_id),
                 "kind": kind,
                 "schema": schema.to_dict(),
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case ProcedureIterationStarted(
+            procedure_id=procedure_id,
+            iteration_index=iteration_index,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "procedure_id": str(procedure_id),
+                "iteration_index": iteration_index,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case ProcedureIterationEnded(
+            procedure_id=procedure_id,
+            iteration_index=iteration_index,
+            converged=converged,
+            reason=reason,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "procedure_id": str(procedure_id),
+                "iteration_index": iteration_index,
+                "converged": converged,
+                "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
             }
         case RecipeExpansionRecorded(
@@ -462,6 +591,10 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     parent_run_id=UUID(raw_parent) if raw_parent is not None else None,
                     capability_id=UUID(raw_capability) if raw_capability is not None else None,
                     recipe_id=UUID(raw_recipe) if raw_recipe is not None else None,
+                    # Optional patience cap; legacy streams omit the key.
+                    max_consecutive_unconverged_iterations=payload.get(
+                        "max_consecutive_unconverged_iterations"
+                    ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
 
@@ -480,6 +613,8 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                 lambda: ProcedureCompleted(
                     procedure_id=UUID(payload["procedure_id"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    # Additive: pre-activation streams omit the key -> None.
+                    actuation_kind=payload.get("actuation_kind"),
                 ),
             )
         case "ProcedureAborted":
@@ -489,6 +624,7 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     procedure_id=UUID(payload["procedure_id"]),
                     reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    actuation_kind=payload.get("actuation_kind"),
                 ),
             )
         case "ProcedureTruncated":
@@ -515,6 +651,26 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     logbook_id=UUID(payload["logbook_id"]),
                     kind=payload["kind"],
                     schema=LogbookSchema.from_dict(payload["schema"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
+        case "ProcedureIterationStarted":
+            return deserialize_or_raise(
+                "ProcedureIterationStarted",
+                lambda: ProcedureIterationStarted(
+                    procedure_id=UUID(payload["procedure_id"]),
+                    iteration_index=int(payload["iteration_index"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
+        case "ProcedureIterationEnded":
+            return deserialize_or_raise(
+                "ProcedureIterationEnded",
+                lambda: ProcedureIterationEnded(
+                    procedure_id=UUID(payload["procedure_id"]),
+                    iteration_index=int(payload["iteration_index"]),
+                    converged=payload["converged"],
+                    reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
@@ -546,6 +702,8 @@ __all__ = [
     "ProcedureActivitiesLogbookOpened",
     "ProcedureCompleted",
     "ProcedureEvent",
+    "ProcedureIterationEnded",
+    "ProcedureIterationStarted",
     "ProcedureRegistered",
     "ProcedureStarted",
     "ProcedureTruncated",

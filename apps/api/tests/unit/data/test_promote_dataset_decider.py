@@ -6,7 +6,8 @@ Validation cascade pinned in order (fail-fast):
   3. DatasetAlreadyPromotedError on Production intent (strict-not-idempotent)
   4. DatasetCannotPromoteError when producing Run did not Complete
   5. DatasetCannotPromoteError when any derived_from is still Trial
-  6. InvalidPromotionReasonError on bad reason length
+  6. DatasetCannotPromoteError when producing_actuation_kind is Simulated / Hybrid
+  7. InvalidPromotionReasonError on bad reason length
 
 Plus happy paths:
   - emits DatasetPromoted with trimmed reason
@@ -50,7 +51,9 @@ def _dataset(
     status: DatasetStatus = DatasetStatus.REGISTERED,
     intent: Intent = Intent.TRIAL,
     producing_run_id: UUID | None = None,
+    producing_procedure_id: UUID | None = None,
     producing_run_end_state: str | None = None,
+    producing_actuation_kind: str | None = None,
     derived_from: frozenset[UUID] = frozenset(),
 ) -> Dataset:
     return Dataset(
@@ -61,9 +64,11 @@ def _dataset(
         byte_size=0,
         encoding=DatasetEncoding(media_type="application/x-hdf5"),
         producing_run_id=producing_run_id,
+        producing_procedure_id=producing_procedure_id,
         derived_from=derived_from,
         status=status,
         producing_run_end_state=producing_run_end_state,
+        producing_actuation_kind=producing_actuation_kind,
         intent=intent,
     )
 
@@ -299,3 +304,116 @@ def test_decide_validates_status_before_intent_guard() -> None:
         )
     # Verify the discard-related message wins, not the already-promoted message
     assert "discarded" in exc_info.value.reason.lower()
+
+
+# --- guard 6: actuation-must-not-be-simulated ---------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("kind", ["Simulated", "Hybrid"])
+def test_decide_rejects_promotion_when_actuation_kind_is_simulator_tainted(kind: str) -> None:
+    """Simulator-origin data (Simulated or Hybrid) cannot be promoted.
+
+    Both simulator-tainted kinds reject even though every other guard
+    (status, intent, Run-Completed, lineage) is satisfied: the one-way
+    provenance gate is independent of them.
+    """
+    state = _dataset(
+        producing_run_id=uuid4(),
+        producing_run_end_state="Completed",
+        producing_actuation_kind=kind,
+    )
+    with pytest.raises(DatasetCannotPromoteError) as exc_info:
+        promote_dataset.decide(
+            state=state,
+            command=PromoteDataset(dataset_id=state.id, reason="passed peer review"),
+            context=DatasetPromotionContext(derived_from={}),
+            now=_NOW,
+            promoted_by=_PROMOTED_BY,
+        )
+    assert kind in exc_info.value.reason
+    assert "Production" in exc_info.value.reason
+
+
+@pytest.mark.unit
+def test_decide_allows_promotion_when_actuation_kind_is_physical() -> None:
+    """Real-hardware data (Physical) is promotable like any clean Dataset."""
+    state = _dataset(
+        producing_run_id=uuid4(),
+        producing_run_end_state="Completed",
+        producing_actuation_kind="Physical",
+    )
+    events = promote_dataset.decide(
+        state=state,
+        command=PromoteDataset(dataset_id=state.id, reason="passed peer review"),
+        context=DatasetPromotionContext(derived_from={}),
+        now=_NOW,
+        promoted_by=_PROMOTED_BY,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], DatasetPromoted)
+
+
+@pytest.mark.unit
+def test_decide_allows_promotion_when_actuation_kind_is_none_and_no_producing_procedure() -> None:
+    """No recorded kind AND no producing Procedure (external upload / Run not
+    driven by a CORA conduct) leaves the gate inactive: governed by intent and
+    the other guards alone."""
+    state = _dataset(
+        producing_run_id=uuid4(),
+        producing_run_end_state="Completed",
+        producing_actuation_kind=None,
+    )
+    events = promote_dataset.decide(
+        state=state,
+        command=PromoteDataset(dataset_id=state.id, reason="passed peer review"),
+        context=DatasetPromotionContext(derived_from={}),
+        now=_NOW,
+        promoted_by=_PROMOTED_BY,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], DatasetPromoted)
+
+
+# --- guard 7: unprovable-provenance (producing Procedure named, kind None) ---
+
+
+@pytest.mark.unit
+def test_decide_rejects_promotion_when_producing_procedure_named_but_kind_none() -> None:
+    """A Dataset that names a producing Procedure whose actuation kind is None
+    (conduct observed nothing: no routing table / cancelled / truncated) has
+    unproven provenance and cannot be promoted (item-6 None-tightening)."""
+    procedure_id = uuid4()
+    state = _dataset(
+        producing_procedure_id=procedure_id,
+        producing_actuation_kind=None,
+    )
+    with pytest.raises(DatasetCannotPromoteError) as exc_info:
+        promote_dataset.decide(
+            state=state,
+            command=PromoteDataset(dataset_id=state.id, reason="passed peer review"),
+            context=DatasetPromotionContext(derived_from={}),
+            now=_NOW,
+            promoted_by=_PROMOTED_BY,
+        )
+    assert str(procedure_id) in exc_info.value.reason
+    assert "unproven" in exc_info.value.reason
+
+
+@pytest.mark.unit
+def test_decide_allows_promotion_when_producing_procedure_named_and_kind_physical() -> None:
+    """A producing Procedure that recorded Physical is promotable: the
+    unprovable-provenance guard only fires on None."""
+    state = _dataset(
+        producing_procedure_id=uuid4(),
+        producing_actuation_kind="Physical",
+    )
+    events = promote_dataset.decide(
+        state=state,
+        command=PromoteDataset(dataset_id=state.id, reason="passed peer review"),
+        context=DatasetPromotionContext(derived_from={}),
+        now=_NOW,
+        promoted_by=_PROMOTED_BY,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], DatasetPromoted)

@@ -15,6 +15,16 @@ Subscribed events:
   - ProcedureActivitiesLogbookOpened  -> UPDATE activity_logbook_id (status NOT touched;
                                                              logbook is orthogonal
                                                              to lifecycle)
+  - ProcedureIterationStarted    -> UPDATE iteration_count = iteration_index
+                                           (status NOT touched; iteration is
+                                           orthogonal to lifecycle)
+
+`ProcedureIterationEnded` is deliberately NOT subscribed: the iteration
+denorm tracks iterations begun, and the convergence-verdict projection
+(`converged` false-rate) is a deferred watch item. `iteration_count` is
+set to the operator-supplied `iteration_index` (replay-safe under
+ordered per-stream delivery; equals the count because the start decider
+enforces strict-successor indexing).
 
 The 4 status-change UPDATEs share the same SQL shape (status literal +
 status-change timestamp + optional reason); per-event arms differ only
@@ -41,8 +51,8 @@ INSERT INTO proj_operation_procedure_summary
     (procedure_id, name, kind, target_asset_ids, parent_run_id, status,
      activity_logbook_id, registered_at,
      last_status_changed_at, last_status_reason, interrupted_at,
-     recipe_id)
-VALUES ($1, $2, $3, $4::uuid[], $5, 'Defined', NULL, $6, NULL, NULL, NULL, $7)
+     recipe_id, iteration_count)
+VALUES ($1, $2, $3, $4::uuid[], $5, 'Defined', NULL, $6, NULL, NULL, NULL, $7, 0)
 ON CONFLICT (procedure_id) DO NOTHING
 """
 
@@ -88,6 +98,13 @@ SET activity_logbook_id = $2,
 WHERE procedure_id = $1
 """
 
+_UPDATE_ITERATION_STARTED_SQL = """
+UPDATE proj_operation_procedure_summary
+SET iteration_count = $2,
+    updated_at = now()
+WHERE procedure_id = $1
+"""
+
 
 class ProcedureSummaryProjection:
     """Maintains the `proj_operation_procedure_summary` read model."""
@@ -101,6 +118,7 @@ class ProcedureSummaryProjection:
             "ProcedureAborted",
             "ProcedureTruncated",
             "ProcedureActivitiesLogbookOpened",
+            "ProcedureIterationStarted",
         }
     )
 
@@ -178,6 +196,17 @@ class ProcedureSummaryProjection:
                 _UPDATE_STEPS_LOGBOOK_OPENED_SQL,
                 UUID(event.payload["procedure_id"]),
                 UUID(event.payload["logbook_id"]),
+            )
+            return
+
+        if event.event_type == "ProcedureIterationStarted":
+            # iteration_count := iteration_index (operator-supplied, strict
+            # successor). Set-to-index is idempotent under ordered per-stream
+            # delivery, so re-delivery does not double-count.
+            await conn.execute(
+                _UPDATE_ITERATION_STARTED_SQL,
+                UUID(event.payload["procedure_id"]),
+                int(event.payload["iteration_index"]),
             )
             return
 

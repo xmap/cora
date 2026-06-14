@@ -10,15 +10,26 @@ Validation cascade (fail-fast in this order; cheap rejections first):
      "Completed" -> DatasetCannotPromoteError
   5. All derived_from Datasets are Production -> DatasetCannotPromoteError
      (lineage integrity; mirrors prior lineage-into-Discarded guard)
-  6. PromotionReason VO validates length (1-500 after trim)
+  6. producing_actuation_kind is not Simulated / Hybrid
+     -> DatasetCannotPromoteError (simulator-origin data is rehearsal
+     data and can never be promoted; one-way gate)
+  7. If producing_procedure_id is set, producing_actuation_kind must
+     not be None -> DatasetCannotPromoteError (a named producing
+     Procedure with no recorded kind = unproven provenance; item-6
+     None-tightening. Datasets with no producing_procedure_id keep the
+     gate-inactive-on-None semantics.)
+  8. PromotionReason VO validates length (1-500 after trim)
      -> InvalidPromotionReasonError
 
-See [[project_dataset_lineage_design]] for the locked design.
+See [[project_dataset_lineage_design]] for the locked design and
+[[project_actuation_kind_stage1_design]] for the simulator-origin gate.
 """
 
 from datetime import datetime
 
 from cora.data.aggregates.dataset import (
+    ACTUATION_KIND_HYBRID,
+    ACTUATION_KIND_SIMULATED,
     RUN_END_STATE_COMPLETED,
     Dataset,
     DatasetAlreadyPromotedError,
@@ -53,6 +64,10 @@ def decide(
         be Completed -> DatasetCannotPromoteError
       - All derived_from Datasets must be Production
         -> DatasetCannotPromoteError
+      - producing_actuation_kind must not be Simulated / Hybrid
+        -> DatasetCannotPromoteError
+      - When producing_procedure_id is set, producing_actuation_kind
+        must not be None -> DatasetCannotPromoteError (unproven provenance)
       - Reason must be valid -> InvalidPromotionReasonError
         (via PromotionReason VO)
     """
@@ -117,7 +132,43 @@ def decide(
                 ),
             )
 
-    # Guard 6: reason length validation. Last because it's a primitive
+    # Guard 6: actuation-must-not-be-simulated. A Dataset whose producing
+    # conduct touched a simulator (Simulated or Hybrid) is rehearsal data
+    # and can never be promoted to Production. This is a one-way gate: any
+    # simulator touch is disqualifying. Skipped when no kind was recorded
+    # (None: external upload, or a conduct with no routing table to consult)
+    # — those are governed by intent + the other guards alone, per the
+    # gate-inactive-on-None semantics in project_actuation_kind_stage1_design.
+    if state.producing_actuation_kind in (ACTUATION_KIND_SIMULATED, ACTUATION_KIND_HYBRID):
+        raise DatasetCannotPromoteError(
+            state.id,
+            reason=(
+                f"data was produced by {state.producing_actuation_kind} actuation; "
+                "rehearsal / simulator-origin data cannot be promoted to Production"
+            ),
+        )
+
+    # Guard 7: unprovable-provenance. A Dataset that NAMES a producing
+    # Procedure whose actuation kind is None was conducted but the conduct
+    # observed nothing instrumented (no routing table, cancelled mid-execute,
+    # or a Truncated cleanup), so what it actuated is unproven and it cannot be
+    # promoted. register_dataset requires the producing Procedure to be
+    # terminal, so this None is final (never an in-situ stale snapshot that
+    # later resolves to Physical). Datasets with NO producing_procedure_id
+    # (external / non-conducted uploads) keep the gate-inactive-on-None
+    # semantics and are governed by intent + the other guards alone. See
+    # [[project_actuation_kind_stage1_design]] item-6.
+    if state.producing_procedure_id is not None and state.producing_actuation_kind is None:
+        raise DatasetCannotPromoteError(
+            state.id,
+            reason=(
+                f"producing Procedure {state.producing_procedure_id} recorded no "
+                "actuation kind (None); its provenance is unproven and it cannot be "
+                "promoted to Production"
+            ),
+        )
+
+    # Guard 8: reason length validation. Last because it's a primitive
     # check the operator can fix without changing any state.
     reason = PromotionReason(command.reason)
 

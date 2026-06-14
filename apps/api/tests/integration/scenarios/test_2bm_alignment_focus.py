@@ -30,7 +30,7 @@ stage in the 2-BM Asset inventory.
 Both routines optimize image sharpness, but on different motors:
 
   - `resolution_alignment` adjusts the **microscope internal focus**
-    (`Optique_Peter_focus_Z`, lens-to-scintillator distance, small
+    (`Focus`, lens-to-scintillator distance, small
     range, sub-micron resolution).
   - `focus_alignment` adjusts the **sample-to-scintillator distance**
     (`Sample_top_Z`, cm-range linear stage, ~10um resolution).
@@ -71,6 +71,15 @@ upstream `resolution` routine respectively.
 
 ## What this scenario surfaces (gap-finding intent)
 
+  - **Iteration loop is first-class**: the peak-search IS iterative
+    (step -> measure -> bracket -> bisect); each pass is bracketed by
+    ProcedureIterationStarted / ProcedureIterationEnded, the convergence
+    verdict rides on IterationEnded.converged, the count denorms to
+    iteration_count, and per-iteration history is queryable via
+    proj_operation_procedure_iterations. (This loop previously had no
+    first-class shape and was encoded ad-hoc via the Setpoint `role` /
+    Check `direction` payload keys; that convention is retired as the
+    source of iteration truth.)
   - **Magnification couples with focus on this axis.** Moving
     Sample_top_Z changes both depth-of-focus AND projection
     magnification. The sharpness Check captures the focus quality,
@@ -107,8 +116,16 @@ from cora.operation.features.append_activities import (
 from cora.operation.features.append_activities import bind as bind_append_step
 from cora.operation.features.complete_procedure import CompleteProcedure
 from cora.operation.features.complete_procedure import bind as bind_complete
+from cora.operation.features.end_iteration import EndProcedureIteration
+from cora.operation.features.end_iteration import bind as bind_end_iteration
+from cora.operation.features.list_procedure_iterations import ListProcedureIterations
+from cora.operation.features.list_procedure_iterations import bind as bind_list_iterations
+from cora.operation.features.list_procedures import ListProcedures
+from cora.operation.features.list_procedures import bind as bind_list
 from cora.operation.features.register_procedure import RegisterProcedure
 from cora.operation.features.register_procedure import bind as bind_register_procedure
+from cora.operation.features.start_iteration import StartProcedureIteration
+from cora.operation.features.start_iteration import bind as bind_start_iteration
 from cora.operation.features.start_procedure import StartProcedure
 from cora.operation.features.start_procedure import bind as bind_start
 from cora.recipe.features.define_method import DefineMethod
@@ -178,7 +195,7 @@ _DEVICES = (
     # the rotary anchor), but dependency-order registration matches
     # real-world ceremony.
     DeviceSpec(
-        "OMS_VME58_2bmb_drive",
+        "SampleStageDrive",
         _ASSET_OMS_VME58_2BMB_DRIVE_ID,
         "MotionController",
         _CAP_MOTION_CONTROLLER_OMS_2BMB_ID,
@@ -190,10 +207,8 @@ _DEVICES = (
         _CAP_LINEAR_STAGE_ID,
         controller_id=_ASSET_OMS_VME58_2BMB_DRIVE_ID,
     ),
-    DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
-    DeviceSpec(
-        "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
-    ),
+    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
 
 
@@ -223,9 +238,26 @@ def _id_queue() -> list[UUID]:
         e(),
         # start_procedure: event_id
         e(),
-        # append_activities (lazy open on first call): logbook_id, open_event_id
+        # start_iteration(1): event_id
+        e(),
+        # append_activities iter1 (lazy-open on first call): logbook_id, open_event_id
         _STEPS_LOGBOOK_ID,
         _STEPS_OPEN_EVENT_ID,
+        # end_iteration(1): event_id
+        e(),
+        # start_iteration(2): event_id
+        e(),
+        # end_iteration(2): event_id
+        e(),
+        # start_iteration(3): event_id
+        e(),
+        # end_iteration(3): event_id
+        e(),
+        # start_iteration(4): event_id
+        e(),
+        # (append_activities iter4 + finalize: no generator ids; logbook already open)
+        # end_iteration(4): event_id
+        e(),
         # complete_procedure: event_id
         e(),
     ]
@@ -448,15 +480,111 @@ async def test_focus_alignment_plays_out_end_to_end(
     )
     finalize = (_setpoint(target_mm=0.750, role="lock_at_peak", sampled_at=t),)
 
-    all_entries = iter1 + iter2 + iter3 + iter4 + finalize
-    assert len(all_entries) == 13, "expected 13 entries for a 4-iteration converged search"
+    # Each peak-search pass is bracketed by start_iteration / end_iteration:
+    # iteration is first-class now, so the count + convergence verdict live on
+    # the boundary events, not on the Setpoint `role` / Check `direction` keys.
+    step_store = _postgres_step_store(db_pool)
 
-    count = await bind_append_step(deps, step_store=_postgres_step_store(db_pool))(
-        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=all_entries),
+    # Iteration 1: initial position; no bracket yet, does not converge.
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=1),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    assert count == 13
+    count1 = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=iter1),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count1 == 3
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=_PROCEDURE_ID,
+            iteration_index=1,
+            converged=False,
+            reason="initial sharpness 0.50; peak not yet bracketed",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Iteration 2: step +0.5mm; sharpness improves but peak not bracketed.
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=2),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    count2 = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=iter2),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count2 == 3
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=_PROCEDURE_ID,
+            iteration_index=2,
+            converged=False,
+            reason="sharpness improving (0.70); peak not yet bracketed",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Iteration 3: step +1.0mm; sharpness drops, peak now bracketed in [0.5, 1.0]mm.
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=3),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    count3 = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=iter3),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count3 == 3
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=_PROCEDURE_ID,
+            iteration_index=3,
+            converged=False,
+            reason="sharpness dropped to 0.65; peak bracketed in [0.500, 1.000]mm",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Iteration 4: bisect at 0.75mm; sharpness peaks, converged.
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=4),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    count4 = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=iter4),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count4 == 3
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=_PROCEDURE_ID,
+            iteration_index=4,
+            converged=True,
+            reason=None,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Finalize (post-convergence, outside the iteration loop): lock Sample_top_Z
+    # at the peak position for the downstream science scan.
+    count_final = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=finalize),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count_final == 1
 
     # ----- Operation BC: complete the Procedure -----
 
@@ -466,14 +594,29 @@ async def test_focus_alignment_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Assert: Procedure stream lifecycle (4 events) -----
+    # ----- Assert: Procedure stream lifecycle (12 events) -----
+    #
+    # The iteration boundary pairs now interleave with the lifecycle: the
+    # logbook opens on the first append (inside iteration 1), so the order is
+    # Registered, Started, IterationStarted(1), ActivitiesLogbookOpened,
+    # IterationEnded(1), then (IterationStarted, IterationEnded) x 3, Completed.
+    # version = 4 (Registered + Started + LogbookOpened + Completed) + 2 per
+    # iteration = 4 + 2*4 = 12.
 
     events, version = await deps.event_store.load("Procedure", _PROCEDURE_ID)
-    assert version == 4
+    assert version == 12
     assert [e.event_type for e in events] == [
         "ProcedureRegistered",
         "ProcedureStarted",
+        "ProcedureIterationStarted",
         "ProcedureActivitiesLogbookOpened",
+        "ProcedureIterationEnded",
+        "ProcedureIterationStarted",
+        "ProcedureIterationEnded",
+        "ProcedureIterationStarted",
+        "ProcedureIterationEnded",
+        "ProcedureIterationStarted",
+        "ProcedureIterationEnded",
         "ProcedureCompleted",
     ]
 
@@ -531,3 +674,27 @@ async def test_focus_alignment_plays_out_end_to_end(
         "check",  # iteration 4 (bisect, peak)
         "setpoint",  # finalize (lock_at_peak)
     ]
+
+    # ----- Assert: iteration is first-class on the summary + per-iteration read -----
+    #
+    # The convergence loop is no longer encoded ad-hoc via the Setpoint `role`
+    # / Check `direction` payload keys; it lives on the boundary events. The
+    # count denorms to the summary, and the per-iteration verdicts are queryable.
+
+    page = await bind_list(deps)(
+        ListProcedures(kind="focus_alignment"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    matching = [item for item in page.items if item.procedure_id == _PROCEDURE_ID]
+    assert len(matching) == 1
+    assert matching[0].iteration_count == 4
+
+    iterations = await bind_list_iterations(deps)(
+        ListProcedureIterations(procedure_id=_PROCEDURE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert [i.iteration_index for i in iterations.items] == [1, 2, 3, 4]
+    assert [i.converged for i in iterations.items] == [False, False, False, True]
+    assert iterations.items[3].reason is None  # the converged pass carries no reason

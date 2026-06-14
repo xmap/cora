@@ -112,7 +112,7 @@ Any field-replaceable, firmware-versioned active-control-electronics box gets a 
 
 | Family | Drives | Anchored at |
 |---|---|---|
-| `MotionController` | Stages, hexapods, sample motors | Aerotech Ensemble (`Aerotech_Ensemble_drive`), Aerotech Hexapod drive, Aerotech 2bmbAERO drive, OMS VME58 a-station + b-station drives at 2-BM |
+| `MotionController` | Stages, hexapods, sample motors | Aerotech Ensemble (`RotaryDrive`), Aerotech Hexapod drive, Aerotech 2bmbAERO drive, OMS VME58 a-station + b-station drives at 2-BM |
 | `TimingController` | Hardware timing signal generation (triggers, gates, sync pulses) | softGlueZynq FPGA (`softGlueZynq_FPGA`) at 2-BM; further trigger sources to follow. Replaces the pre-rename `TriggerFPGA` candidate. Presents_as `Controller`, which carries `Pulsing`. |
 
 Plausible siblings that have NOT yet earned a slot (rule-of-three): `TemperatureController` (Lakeshore cryostats), `FlowController` (Bronkhorst mass flow), `PressureController` (MKS Baratron + PID), `DAQController` (Quantum Detectors Merlin, FPGA frame grabbers), `HVPSU` / `BiasController` (CAEN HV crate). Each lands per its own trigger. The convention is suffix-LAST per the locked R3 family-noun primacy rule.

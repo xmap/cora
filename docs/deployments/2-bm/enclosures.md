@@ -14,7 +14,7 @@ An Enclosure models the observed permit status of an access-gated volume: a phys
 
 Each hutch Enclosure is anchored to the APS Site via `facility_code = "aps"`: it is a space contained in a larger space, NOT a pointer to an equipment Asset. `register_enclosure` takes the Facility slug, and the handler resolves it through the Federation BC's FacilityLookup port (an unknown slug is refused).
 
-A Device declares which hutch it physically sits in via `located_in_enclosure_id`. That is the operational where, distinct from the institutional where (`facility_code`) the Device shares with the rest of the beamline. At 2-BM, `OMS_VME58_2bma_drive` is located in `2-BM-A` (the optics band); every other modelled Device sits in `2-BM-B` (the experiment hutch, including the P6-50 safety stack and its SBS shutter, which gates that hutch). See [Assets](assets.md) for the per-Device located-in column.
+A Device declares which hutch it physically sits in via `located_in_enclosure_id`. That is the operational where, distinct from the institutional where (`facility_code`) the Device shares with the rest of the beamline. At 2-BM, `FrontEndDrive` is located in `2-BM-A` (the optics band); every other modelled Device sits in `2-BM-B` (the experiment hutch, including the P6-50 safety stack and its SBS shutter, which gates that hutch). See [Assets](assets.md) for the per-Device located-in column.
 
 | Enclosure | Role | Anchored to | Gates |
 | --- | --- | --- | --- |

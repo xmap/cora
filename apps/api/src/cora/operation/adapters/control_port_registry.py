@@ -64,18 +64,22 @@ class ControlPortRegistry:
     """
 
     def __init__(self) -> None:
-        self._routes: list[tuple[str, ControlPort]] = []
+        self._routes: list[tuple[str, ControlPort, bool]] = []
         self._closed = False
 
-    def register(self, prefix: str, port: ControlPort) -> None:
+    def register(self, prefix: str, port: ControlPort, *, is_simulated: bool = False) -> None:
         """Add a route. Calling with a prefix already registered replaces it.
 
         Replacement is intentional: hot-swapping a substrate adapter
         during integration tests should not require dropping and
         reconstructing the registry.
+
+        `is_simulated` marks the route as driving a simulator (declared
+        per deployment, not inferred from the adapter class); it feeds
+        `route_is_simulated` and, downstream, the Dataset provenance gate.
         """
-        self._routes = [(p, a) for (p, a) in self._routes if p != prefix]
-        self._routes.append((prefix, port))
+        self._routes = [(p, a, s) for (p, a, s) in self._routes if p != prefix]
+        self._routes.append((prefix, port, is_simulated))
 
     def route(self, address: str) -> ControlPort:
         """Return the adapter for `address` via longest-prefix-match.
@@ -84,9 +88,22 @@ class ControlPortRegistry:
         is a prefix of `address`. The error carries the address so
         operators can spot the missing route from logs alone.
         """
-        for prefix, port in sorted(self._routes, key=lambda r: -len(r[0])):
+        for prefix, port, _is_simulated in sorted(self._routes, key=lambda r: -len(r[0])):
             if address.startswith(prefix):
                 return port
+        raise NoAdapterForAddressError(address)
+
+    def route_is_simulated(self, address: str) -> bool:
+        """Return whether `address`'s route drives a simulator.
+
+        Same longest-prefix-match as `route`, returning the route's
+        declared `is_simulated` flag. Raises `NoAdapterForAddressError`
+        when no registered prefix matches, so the caller cannot mistake
+        an unrouted address for a physical one.
+        """
+        for prefix, _port, is_simulated in sorted(self._routes, key=lambda r: -len(r[0])):
+            if address.startswith(prefix):
+                return is_simulated
         raise NoAdapterForAddressError(address)
 
     async def read(self, address: str) -> Reading:
@@ -115,7 +132,7 @@ class ControlPortRegistry:
         if self._closed:
             return
         self._closed = True
-        for _, port in self._routes:
+        for _, port, _is_simulated in self._routes:
             close = getattr(port, "aclose", None)
             if close is None:
                 continue

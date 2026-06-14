@@ -11,8 +11,8 @@ locked in [[mctoptics-2bm-assets-design]] against the actual 2-BM
 facility: 4 NEW Asset registrations (MCTOptics presenter + 3
 Objective children) plus 2 NEW sibling Devices under 2-BM (the lens
 turret RotaryStage + the lens_select PseudoAxis), 2 RelocateAsset
-commands to re-parent the existing `Oryx_5MP_camera` and
-`Scintillator_LuAG` under MCTOptics, 4 Calibration revisions (3 lens
+commands to re-parent the existing `Camera` and
+`Scintillator` under MCTOptics, 4 Calibration revisions (3 lens
 magnification + 1 scintillator effective_thickness), 1 LookupTable
 partition rule on the lens_select PseudoAxis, 13 typed ports, and 6
 Plan wires connecting the presenter to its motor siblings, camera
@@ -60,7 +60,7 @@ and represent placeholder assumptions until 2-BM staff verify:
     the Family to `LinearStage` and update `lens_turret_setpoint` /
     `lens_turret_feedback` signal_type strings to the `_linear_mm`
     variants.
-  - **Pending(2-BM operator confirmation)**: `Optique_Peter_focus_Z` control-path
+  - **Pending(2-BM operator confirmation)**: `Focus` control-path
     confirmation. The 5-Wire Plan assumes MCTOptics is the writer for
     this motor's `position_setpoint_in`. If the MCTOptics IOC drives
     the motor through an EPICS channel that bypasses CORA's command
@@ -71,7 +71,7 @@ and represent placeholder assumptions until 2-BM staff verify:
     LinearStage as a sibling under 2-BM.
   - **Pending(2-BM operator confirmation)**: `camera_rotation` motor usage. v1 assumes the
     Optique Peter camera bay is fixed-rotation. If 2-BM rotates the
-    camera, register `Oryx_5MP_camera_rotation` (RotaryStage) and add
+    camera, register `Camera_rotation` (RotaryStage) and add
     2 wires.
 
 ## Asset stack post-deployment
@@ -82,11 +82,11 @@ and represent placeholder assumptions until 2-BM staff verify:
 |   +-- MCTOptics_objective_0 (Device, NEW)        Family: Objective    10x
 |   +-- MCTOptics_objective_1 (Device, NEW)        Family: Objective     5x
 |   +-- MCTOptics_objective_2 (Device, NEW)        Family: Objective    1.1x
-|   +-- Oryx_5MP_camera (Device, RE-PARENTED)      Family: Camera
-|   +-- Scintillator_LuAG (Device, RE-PARENTED)    Family: Scintillator
+|   +-- Camera (Device, RE-PARENTED)      Family: Camera
+|   +-- Scintillator (Device, RE-PARENTED)    Family: Scintillator
 +-- MCTOptics_lens_turret (Device, NEW sibling)    Family: RotaryStage (pending)
 +-- MCTOptics_lens_select (Device, NEW sibling)    Family: PseudoAxis
-+-- Optique_Peter_focus_Z (Device, pre-existing)   Family: LinearStage
++-- Focus (Device, pre-existing)   Family: LinearStage
 ```
 
 ## Calibration cardinality (4 revisions downstream)
@@ -100,7 +100,7 @@ and represent placeholder assumptions until 2-BM staff verify:
     (3.45 micrometer).
   - 1 scintillator effective_thickness calibration:
     `{scintillator_material: "LuAG", energy: 25}` -> 100 micrometer
-    Sourced from the existing Scintillator_LuAG.settings.thickness.
+    Sourced from the existing Scintillator.settings.thickness.
 
 All 4 revisions are AssertedSource (operator-attested from vendor
 datasheet + Optique Peter doc), status Provisional. Measured-source
@@ -476,12 +476,10 @@ _SIG_IMAGE = "image_frame_uri"
 _SIG_DISCRETE_INDEX = "discrete_index_count"
 
 _DEVICES = (
-    DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
     DeviceSpec(
-        "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
-    ),
-    DeviceSpec(
-        "Optique_Peter_focus_Z",
+        "Focus",
         _ASSET_OPTIQUE_PETER_FOCUS_Z_ID,
         "LinearStage",
         _CAP_LINEAR_STAGE_ID,
@@ -707,7 +705,7 @@ _PORT_SPECS: tuple[tuple[UUID, str, PortDirection, str], ...] = (
         PortDirection.OUTPUT,
         _SIG_POS_FB_ROT,
     ),
-    # Optique_Peter_focus_Z: setpoint in + feedback out
+    # Focus: setpoint in + feedback out
     (
         _ASSET_OPTIQUE_PETER_FOCUS_Z_ID,
         "position_setpoint_in",
@@ -720,7 +718,7 @@ _PORT_SPECS: tuple[tuple[UUID, str, PortDirection, str], ...] = (
         PortDirection.OUTPUT,
         _SIG_POS_FB_LIN,
     ),
-    # Oryx_5MP_camera: trigger in + image out
+    # Camera: trigger in + image out
     (_ASSET_ORYX_5MP_ID, "trigger_in", PortDirection.INPUT, _SIG_TRIGGER),
     (_ASSET_ORYX_5MP_ID, "image_out", PortDirection.OUTPUT, _SIG_IMAGE),
     # MCTOptics_lens_select (PseudoAxis): 1 constituent INPUT (receives
@@ -816,7 +814,7 @@ _CALIBRATION_SPECS: tuple[
         {"effective_thickness": 100.0},
         (
             "Initial AssertedSource revision. Source: existing "
-            "Scintillator_LuAG.settings.thickness = 100 um, registered "
+            "Scintillator.settings.thickness = 100 um, registered "
             "in 2-BM inventory pre-deployment "
             "(see apps/api/docs/deployments/2-bm/assets.md). Supersede with "
             "MeasuredSource once a beam-on attenuation-length measurement runs."

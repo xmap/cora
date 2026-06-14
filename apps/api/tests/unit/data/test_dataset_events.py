@@ -1,6 +1,7 @@
 """Unit tests for the Dataset event union: payload round-trip + discriminator."""
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -95,6 +96,8 @@ def test_to_payload_serializes_all_fields_with_nulls_and_empties() -> None:
         "occurred_at": _NOW.isoformat(),
         "registered_by": str(_REGISTERED_BY),
         "producing_run_end_state": None,
+        "producing_procedure_id": None,
+        "producing_actuation_kind": None,
         "intent": "Trial",
         "used_calibration_ids": [],
     }
@@ -206,6 +209,72 @@ def test_round_trip_through_stored_envelope() -> None:
 
 
 @pytest.mark.unit
+def test_to_payload_serializes_producing_procedure_id() -> None:
+    procedure_id = uuid4()
+    event = DatasetRegistered(
+        dataset_id=uuid4(),
+        name="D",
+        uri="s3://b/k",
+        checksum_algorithm="sha256",
+        checksum_value=_GOOD_SHA256,
+        byte_size=0,
+        media_type="application/x-hdf5",
+        conforms_to=frozenset(),
+        producing_run_id=None,
+        subject_id=None,
+        derived_from=frozenset(),
+        occurred_at=_NOW,
+        registered_by=_REGISTERED_BY,
+        producing_procedure_id=procedure_id,
+        producing_actuation_kind="Simulated",
+    )
+    payload = to_payload(event)
+    assert payload["producing_procedure_id"] == str(procedure_id)
+    assert payload["producing_actuation_kind"] == "Simulated"
+
+
+@pytest.mark.unit
+def test_from_stored_legacy_payload_folds_producing_procedure_id_to_none() -> None:
+    """A pre-activation DatasetRegistered payload omits producing_procedure_id;
+    it must fold to None, not raise."""
+    from cora.infrastructure.ports.event_store import StoredEvent
+
+    legacy_payload: dict[str, Any] = {
+        "dataset_id": str(uuid4()),
+        "name": "D",
+        "uri": "s3://b/k",
+        "checksum": {"algorithm": "sha256", "value": _GOOD_SHA256},
+        "byte_size": 0,
+        "encoding": {"media_type": "application/x-hdf5", "conforms_to": []},
+        "producing_run_id": None,
+        "subject_id": None,
+        "derived_from": [],
+        "occurred_at": _NOW.isoformat(),
+        "registered_by": str(_REGISTERED_BY),
+        # producing_procedure_id + producing_actuation_kind deliberately absent.
+    }
+    stored = StoredEvent(
+        position=1,
+        event_id=uuid4(),
+        stream_type="Dataset",
+        stream_id=uuid4(),
+        version=1,
+        event_type="DatasetRegistered",
+        schema_version=1,
+        payload=legacy_payload,
+        correlation_id=uuid4(),
+        causation_id=None,
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        metadata={},
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, DatasetRegistered)
+    assert rebuilt.producing_procedure_id is None
+    assert rebuilt.producing_actuation_kind is None
+
+
+@pytest.mark.unit
 def test_from_stored_raises_on_unknown_event_type() -> None:
     """Stream contamination fails loud rather than silently."""
     from cora.infrastructure.ports.event_store import StoredEvent
@@ -256,6 +325,54 @@ def test_to_payload_includes_producing_run_end_state_and_intent_when_set() -> No
     payload = to_payload(event)
     assert payload["producing_run_end_state"] == "Completed"
     assert payload["intent"] == "Trial"
+
+
+@pytest.mark.unit
+def test_producing_actuation_kind_round_trips_through_stored_envelope() -> None:
+    """A non-null actuation kind survives to_payload -> from_stored."""
+    event = DatasetRegistered(
+        dataset_id=uuid4(),
+        name="D",
+        uri="s3://b/k",
+        checksum_algorithm="sha256",
+        checksum_value=_GOOD_SHA256,
+        byte_size=0,
+        media_type="application/x-hdf5",
+        conforms_to=frozenset(),
+        producing_run_id=uuid4(),
+        subject_id=None,
+        derived_from=frozenset(),
+        occurred_at=_NOW,
+        producing_actuation_kind="Hybrid",
+        registered_by=_REGISTERED_BY,
+    )
+    assert to_payload(event)["producing_actuation_kind"] == "Hybrid"
+    restored = from_stored(_stored("DatasetRegistered", to_payload(event)))
+    assert isinstance(restored, DatasetRegistered)
+    assert restored.producing_actuation_kind == "Hybrid"
+
+
+@pytest.mark.unit
+def test_from_stored_legacy_dataset_registered_defaults_actuation_kind_to_none() -> None:
+    """Legacy DatasetRegistered events without the field fold to None."""
+    dataset_id = uuid4()
+    legacy_payload: dict[str, object] = {
+        "dataset_id": str(dataset_id),
+        "name": "D",
+        "uri": "s3://b/k",
+        "checksum": {"algorithm": "sha256", "value": _GOOD_SHA256},
+        "byte_size": 0,
+        "encoding": {"media_type": "application/x-hdf5", "conforms_to": []},
+        "producing_run_id": None,
+        "subject_id": None,
+        "derived_from": [],
+        "occurred_at": _NOW.isoformat(),
+        "registered_by": str(_REGISTERED_BY),
+        # NOTE: producing_actuation_kind deliberately ABSENT
+    }
+    restored = from_stored(_stored("DatasetRegistered", legacy_payload))
+    assert isinstance(restored, DatasetRegistered)
+    assert restored.producing_actuation_kind is None
 
 
 @pytest.mark.unit

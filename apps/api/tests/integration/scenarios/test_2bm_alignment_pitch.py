@@ -6,8 +6,8 @@ bc_primary: Operation
 bc_touches: Equipment, Operation, Recipe
 
 Scenario test for the `pitch` step of the rotation-axis alignment
-chain. Drives the `Sample_top_Pitch` tilt motor (orthogonal to
-`Sample_top_Roll`) to remove the rotation axis's out-of-plane tilt
+chain. Drives the `Hexapod_Pitch` tilt motor (orthogonal to
+`Hexapod_Roll`) to remove the rotation axis's out-of-plane tilt
 toward/away from the camera. Measured via image-sharpness delta
 between 0° and 180° projections of a fiducial sphere: a pitch tilt
 moves the sphere closer to / further from the scintillator across
@@ -21,7 +21,7 @@ taxonomy this scenario fits into.
 
 To ground the `pitch_alignment` Procedure inventory row on
 `docs/deployments/2-bm/procedures.md`, register a new Asset
-(`Sample_top_Pitch`), and complete the five-routine alignment chain
+(`Hexapod_Pitch`), and complete the five-routine alignment chain
 in code. After this scenario, the chain's full inventory is
 exercised end-to-end.
 
@@ -53,7 +53,7 @@ Iterative tilt correction on sharpness delta:
   4. Compute `delta_sharpness = sharpness_at_0 - sharpness_at_180`.
      A non-zero delta means the sphere moved closer to / further
      from the scintillator between the two rotations: pitch is off.
-  5. If `|delta_sharpness| > tolerance`: adjust Sample_top_Pitch by
+  5. If `|delta_sharpness| > tolerance`: adjust Hexapod_Pitch by
      a small angle proportional to -delta_sharpness, goto 2.
   6. Else: lock the calibrated pitch value.
 
@@ -64,8 +64,8 @@ steps are milliradians.
 ## Asset stack (rotary + pitch-tilt + detector chain)
 
   - Aerotech ABRS rotary stage (the rotation axis)
-  - Sample_top_Pitch tilt motor (the pitch correction; orthogonal
-    to Sample_top_Roll)
+  - Hexapod_Pitch tilt motor (the pitch correction; orthogonal
+    to Hexapod_Roll)
   - FLIR Oryx 5MP camera (the alignment-frame detector)
   - LuAG scintillator (visible-light conversion)
 
@@ -75,6 +75,14 @@ this routine does not manipulate them. They participate in `center`,
 
 ## What this scenario surfaces (gap-finding intent)
 
+  - **Iteration loop is first-class**: pitch alignment IS iterative
+    (rotate -> measure sharpness -> adjust -> re-rotate); each pass is
+    bracketed by ProcedureIterationStarted / ProcedureIterationEnded,
+    the convergence verdict rides on IterationEnded.converged, the count
+    denorms to iteration_count, and per-iteration history is queryable
+    via proj_operation_procedure_iterations. (This loop previously had
+    no first-class shape and was encoded ad-hoc via an `iteration`
+    payload key on Check steps; that convention is retired.)
   - **Sharpness vs centroid signals are not interchangeable.** Both
     roll and pitch correct rotation-axis tilt, but the signals are
     different physical quantities (Y centroid in pixels vs sharpness
@@ -94,6 +102,7 @@ this routine does not manipulate them. They participate in `center`,
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
+import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -121,8 +130,16 @@ from cora.operation.features.append_activities import (
 from cora.operation.features.append_activities import bind as bind_append_step
 from cora.operation.features.complete_procedure import CompleteProcedure
 from cora.operation.features.complete_procedure import bind as bind_complete
+from cora.operation.features.end_iteration import EndProcedureIteration
+from cora.operation.features.end_iteration import bind as bind_end_iteration
+from cora.operation.features.list_procedure_iterations import ListProcedureIterations
+from cora.operation.features.list_procedure_iterations import bind as bind_list_iterations
+from cora.operation.features.list_procedures import ListProcedures
+from cora.operation.features.list_procedures import bind as bind_list
 from cora.operation.features.register_procedure import RegisterProcedure
 from cora.operation.features.register_procedure import bind as bind_register_procedure
+from cora.operation.features.start_iteration import StartProcedureIteration
+from cora.operation.features.start_iteration import bind as bind_start_iteration
 from cora.operation.features.start_procedure import StartProcedure
 from cora.operation.features.start_procedure import bind as bind_start
 from cora.recipe.features.define_method import DefineMethod
@@ -153,7 +170,7 @@ _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000358501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000358a01")
 
 # Capabilities (4: rotary + pseudo-axis pitch + camera + scintillator).
-# Sample_top_Pitch is a PseudoAxis (virtual DoF over an underlying solver),
+# Hexapod_Pitch is a PseudoAxis (virtual DoF over an underlying solver),
 # not a LinearStage. See project_pitch_roll_retag memo for the partial-fix
 # rationale; the remaining four hexapod DoFs are deferred until trigger.
 _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
@@ -180,14 +197,10 @@ _STEPS_OPEN_EVENT_ID = UUID("01900000-0000-7000-8000-000000358f12")
 
 
 _DEVICES = (
-    DeviceSpec(
-        "Aerotech_ABRS_rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID
-    ),
-    DeviceSpec("Sample_top_Pitch", _ASSET_SAMPLE_TOP_PITCH_ID, "PseudoAxis", _CAP_PSEUDO_AXIS_ID),
-    DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
-    DeviceSpec(
-        "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
-    ),
+    DeviceSpec("Rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID),
+    DeviceSpec("Hexapod_Pitch", _ASSET_SAMPLE_TOP_PITCH_ID, "PseudoAxis", _CAP_PSEUDO_AXIS_ID),
+    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
 
 
@@ -204,7 +217,7 @@ def _id_queue() -> list[UUID]:
         e(),
         e(),
         e(),
-        # update_asset_partition_rule for Sample_top_Pitch (PseudoAxis): event_id only
+        # update_asset_partition_rule for Hexapod_Pitch (PseudoAxis): event_id only
         e(),
         # define_method: method_id, event_id
         _METHOD_PITCH_ID,
@@ -220,9 +233,18 @@ def _id_queue() -> list[UUID]:
         e(),
         # start_procedure: event_id
         e(),
-        # append_activities (lazy open on first call): logbook_id, open_event_id
+        # start_iteration(1): event_id
+        e(),
+        # append_activities iter1 (lazy-open on first call): logbook_id, open_event_id
         _STEPS_LOGBOOK_ID,
         _STEPS_OPEN_EVENT_ID,
+        # end_iteration(1): event_id
+        e(),
+        # start_iteration(2): event_id
+        e(),
+        # (append_activities iter2 + finalize: no generator ids; logbook already open)
+        # end_iteration(2): event_id
+        e(),
         # complete_procedure: event_id
         e(),
     ]
@@ -337,10 +359,10 @@ async def test_pitch_alignment_plays_out_end_to_end(
             correlation_id=_CORRELATION_ID,
         )
 
-    # ----- Equipment BC: set partition_rule on the Sample_top_Pitch PseudoAxis -----
+    # ----- Equipment BC: set partition_rule on the Hexapod_Pitch PseudoAxis -----
     #
     # SolverReference points at the 2bmHXP hexapod-kinematics solver. The
-    # constituent topology (Hexapod_2BM physical axes feeding the virtual
+    # constituent topology (Hexapod physical axes feeding the virtual
     # Pitch DoF) is not wired here: the runtime evaluator
     # eval_solver_reference is NotImplemented, and these alignment
     # scenarios use no Plan wires, so the data-substrate retag only needs
@@ -450,7 +472,7 @@ async def test_pitch_alignment_plays_out_end_to_end(
     target = "calibration_sphere"
     iter1 = (
         _setpoint(
-            channel="Aerotech_ABRS_rotary",
+            channel="Rotary",
             target_value=0.0,
             units="deg",
             role="rotate_to_0",
@@ -459,7 +481,7 @@ async def test_pitch_alignment_plays_out_end_to_end(
         _acquire(exposure_ms=150, sampled_at=t),
         _check_sharpness(value=0.82, target=target, sampled_at=t),
         _setpoint(
-            channel="Aerotech_ABRS_rotary",
+            channel="Rotary",
             target_value=180.0,
             units="deg",
             role="rotate_to_180",
@@ -470,10 +492,10 @@ async def test_pitch_alignment_plays_out_end_to_end(
             value=0.71,
             target=target,
             sampled_at=t,
-            evidence={"iteration": 1, "delta_sharpness": 0.11, "lever_arm_mm": 75.0},
+            evidence={"delta_sharpness": 0.11, "lever_arm_mm": 75.0},
         ),
         _setpoint(
-            channel="Sample_top_Pitch",
+            channel="Hexapod_Pitch",
             target_value=-0.0008,
             units="deg",
             role="adjust",
@@ -483,7 +505,7 @@ async def test_pitch_alignment_plays_out_end_to_end(
     )
     iter2 = (
         _setpoint(
-            channel="Aerotech_ABRS_rotary",
+            channel="Rotary",
             target_value=0.0,
             units="deg",
             role="rotate_to_0",
@@ -492,7 +514,7 @@ async def test_pitch_alignment_plays_out_end_to_end(
         _acquire(exposure_ms=150, sampled_at=t),
         _check_sharpness(value=0.83, target=target, sampled_at=t),
         _setpoint(
-            channel="Aerotech_ABRS_rotary",
+            channel="Rotary",
             target_value=180.0,
             units="deg",
             role="rotate_to_180",
@@ -504,12 +526,12 @@ async def test_pitch_alignment_plays_out_end_to_end(
             target=target,
             sampled_at=t,
             passed=True,
-            evidence={"iteration": 2, "delta_sharpness": 0.02, "tolerance": 0.05},
+            evidence={"delta_sharpness": 0.02, "tolerance": 0.05},
         ),
     )
     finalize = (
         _setpoint(
-            channel="Sample_top_Pitch",
+            channel="Hexapod_Pitch",
             target_value=-0.0008,
             units="deg",
             role="lock_at_calibrated",
@@ -517,15 +539,69 @@ async def test_pitch_alignment_plays_out_end_to_end(
         ),
     )
 
-    all_entries = iter1 + iter2 + finalize
-    assert len(all_entries) == 14, "expected 14 entries for a 2-iteration converged pitch routine"
+    assert len(iter1) + len(iter2) + len(finalize) == 14, (
+        "expected 14 entries for a 2-iteration converged pitch routine"
+    )
 
-    count = await bind_append_step(deps, step_store=_postgres_step_store(db_pool))(
-        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=all_entries),
+    # Each convergence pass is bracketed by start_iteration / end_iteration:
+    # iteration is first-class now, so the count + verdict live on the
+    # boundary events, not on an `evidence['iteration']` payload key.
+    step_store = _postgres_step_store(db_pool)
+
+    # Iteration 1: 0.11 sharpness delta exceeds tolerance; does not converge.
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=1),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    assert count == 14
+    count1 = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=iter1),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count1 == 7
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=_PROCEDURE_ID,
+            iteration_index=1,
+            converged=False,
+            reason="sharpness delta 0.11 exceeds 0.05 tolerance",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Iteration 2: 0.02 sharpness delta within tolerance; converges.
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=2),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    count2 = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=iter2),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count2 == 6
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=_PROCEDURE_ID,
+            iteration_index=2,
+            converged=True,
+            reason=None,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Finalize (post-convergence, outside the iteration loop): lock the
+    # calibrated pitch value on the Sample_top_Pitch motor.
+    count_final = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=finalize),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count_final == 1
 
     # ----- Operation BC: complete the Procedure -----
 
@@ -535,20 +611,29 @@ async def test_pitch_alignment_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Assert: Procedure stream lifecycle (4 events) -----
+    # ----- Assert: Procedure stream lifecycle (8 events) -----
 
+    # The iteration boundary pair now interleaves with the lifecycle: the
+    # logbook opens on the first append (inside iteration 1), so the order is
+    # Registered, Started, IterationStarted(1), ActivitiesLogbookOpened,
+    # IterationEnded(1), IterationStarted(2), IterationEnded(2), Completed.
+    # version = 4 + 2*N = 8 for N=2 iterations.
     events, version = await deps.event_store.load("Procedure", _PROCEDURE_ID)
-    assert version == 4
+    assert version == 8
     assert [e.event_type for e in events] == [
         "ProcedureRegistered",
         "ProcedureStarted",
+        "ProcedureIterationStarted",
         "ProcedureActivitiesLogbookOpened",
+        "ProcedureIterationEnded",
+        "ProcedureIterationStarted",
+        "ProcedureIterationEnded",
         "ProcedureCompleted",
     ]
 
     # ----- Assert: each target Asset reached Active lifecycle -----
     #
-    # Sample_top_Pitch carries an extra AssetPartitionRuleUpdated event
+    # Hexapod_Pitch carries an extra AssetPartitionRuleUpdated event
     # from the SolverReference rule set above; the other 3 Assets have
     # the canonical 3-event sequence.
 
@@ -575,7 +660,7 @@ async def test_pitch_alignment_plays_out_end_to_end(
     await _drain(db_pool)
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(
-            "SELECT step_kind FROM entries_operation_procedure_activities "
+            "SELECT step_kind, payload FROM entries_operation_procedure_activities "
             "WHERE procedure_id = $1 ORDER BY sampled_at",
             _PROCEDURE_ID,
         )
@@ -596,3 +681,38 @@ async def test_pitch_alignment_plays_out_end_to_end(
         "check",  # iteration 2 @ 180° (passed)
         "setpoint",  # finalize (lock_at_calibrated)
     ]
+
+    # The convergence Check (iteration 2's 180° check) records the sharpness
+    # delta. Iteration is no longer encoded here (no `evidence['iteration']`);
+    # it is first-class, asserted via the per-iteration read model below.
+    convergence_check_payload = json.loads(rows[12]["payload"])
+    assert convergence_check_payload["passed"] is True
+    assert convergence_check_payload["evidence"]["delta_sharpness"] == 0.02
+    assert "iteration" not in convergence_check_payload["evidence"]
+
+    # ----- Assert: iteration is first-class on the read side -----
+    #
+    # The count denorms onto the procedure summary; the per-iteration
+    # history (which passes converged) is queryable via the dedicated
+    # per-iteration projection.
+
+    page = await bind_list(deps)(
+        ListProcedures(kind="pitch_alignment"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    matching = [item for item in page.items if item.procedure_id == _PROCEDURE_ID]
+    assert len(matching) == 1
+    proc_summary = matching[0]
+    assert proc_summary.iteration_count == 2
+
+    iterations = await bind_list_iterations(deps)(
+        ListProcedureIterations(procedure_id=_PROCEDURE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert [i.iteration_index for i in iterations.items] == [1, 2]
+    assert iterations.items[0].converged is False  # iteration 1 missed
+    assert iterations.items[0].reason == "sharpness delta 0.11 exceeds 0.05 tolerance"
+    assert iterations.items[1].converged is True  # iteration 2 converged
+    assert iterations.items[1].reason is None

@@ -33,6 +33,7 @@ class _ToolResult(BaseModel):
     completed_count: int
     succeeded: bool
     failure: dict[str, Any] | None = None
+    actuation_kind: str | None = None
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
@@ -77,4 +78,5 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             completed_count=wire.completed_count,
             succeeded=wire.succeeded,
             failure=wire.failure.model_dump() if wire.failure is not None else None,
+            actuation_kind=wire.actuation_kind,
         )

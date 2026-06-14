@@ -89,6 +89,17 @@ class RegisterProcedureRequest(BaseModel):
             "Same additive shape as Method.capability_id (6l-additive)."
         ),
     )
+    max_consecutive_unconverged_iterations: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Optional 'patience' cap for an iterative Procedure: the max "
+            "number of consecutive iterations that may end NOT converged "
+            "before start_iteration refuses the next one (409). The streak "
+            "resets on a converged iteration. None = no cap. Never "
+            "auto-aborts; the operator completes or aborts when blocked."
+        ),
+    )
 
 
 class RegisterProcedureResponse(BaseModel):
@@ -161,6 +172,7 @@ async def post_procedures(
             target_asset_ids=frozenset(body.target_asset_ids),
             parent_run_id=body.parent_run_id,
             capability_id=body.capability_id,
+            max_consecutive_unconverged_iterations=body.max_consecutive_unconverged_iterations,
         ),
         principal_id=principal_id,
         correlation_id=cid,

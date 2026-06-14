@@ -51,6 +51,22 @@ def test_decide_emits_procedure_completed_when_running() -> None:
     assert isinstance(events[0], ProcedureCompleted)
     assert events[0].procedure_id == proc.id
     assert events[0].occurred_at == _NOW
+    # No actuation kind supplied -> the terminal event carries None.
+    assert events[0].actuation_kind is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("kind", ["Physical", "Simulated", "Hybrid"])
+def test_decide_snapshots_actuation_kind_onto_completed_event(kind: str) -> None:
+    """The Conductor supplies the observed actuation kind on the command; the
+    decider snapshots it verbatim onto ProcedureCompleted (the gate carrier)."""
+    proc = _procedure()
+    events = complete_procedure.decide(
+        state=proc,
+        command=CompleteProcedure(procedure_id=proc.id, actuation_kind=kind),
+        now=_NOW,
+    )
+    assert events[0].actuation_kind == kind
 
 
 @pytest.mark.unit

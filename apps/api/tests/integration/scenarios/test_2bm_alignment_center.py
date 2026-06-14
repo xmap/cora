@@ -59,11 +59,14 @@ not directly manipulated during the center routine.
 See `docs/deployments/2-bm/procedures.md` (the operator-facing
 companion) for the gaps documented in domain terms. The most consequential surfaces are:
 
-  - **Iteration loop has no first-class shape**: alignment IS iterative
-    (rotate → check → adjust → re-rotate); we encode iteration via
-    repeated step entries with an `iteration` payload key. Whether
-    iteration deserves a dedicated step_kind ("loop_marker") is a
-    watch item.
+  - **Iteration loop is first-class**: alignment IS iterative (rotate ->
+    check -> adjust -> re-rotate); each pass is bracketed by
+    ProcedureIterationStarted / ProcedureIterationEnded, the convergence
+    verdict rides on IterationEnded.converged, the count denorms to
+    iteration_count, and per-iteration history is queryable via
+    proj_operation_procedure_iterations. (This loop previously had no
+    first-class shape and was encoded ad-hoc via an `iteration` payload
+    key on Check steps; that convention is retired.)
   - **External-tool delegation**: the convergence Check requires
     off-line reconstruction. We model that via `payload.source =
     "operator_visual" | "tomopy_find_center_vo" | "live_tomostream"`
@@ -119,6 +122,10 @@ from cora.operation.features.complete_procedure import (
 from cora.operation.features.complete_procedure import (
     bind as bind_complete,
 )
+from cora.operation.features.end_iteration import EndProcedureIteration
+from cora.operation.features.end_iteration import bind as bind_end_iteration
+from cora.operation.features.list_procedure_iterations import ListProcedureIterations
+from cora.operation.features.list_procedure_iterations import bind as bind_list_iterations
 from cora.operation.features.list_procedures import (
     ListProcedures,
 )
@@ -131,6 +138,8 @@ from cora.operation.features.register_procedure import (
 from cora.operation.features.register_procedure import (
     bind as bind_register_procedure,
 )
+from cora.operation.features.start_iteration import StartProcedureIteration
+from cora.operation.features.start_iteration import bind as bind_start_iteration
 from cora.operation.features.start_procedure import (
     StartProcedure,
 )
@@ -201,14 +210,10 @@ _STEPS_OPEN_EVENT_ID = UUID("01900000-0000-7000-8000-000000035f02")
 
 
 _DEVICES = (
-    DeviceSpec(
-        "Aerotech_ABRS_rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID
-    ),
+    DeviceSpec("Rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID),
     DeviceSpec("Sample_top_X", _ASSET_SAMPLE_TOP_X_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
-    DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
-    DeviceSpec(
-        "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
-    ),
+    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
 
 
@@ -405,9 +410,18 @@ def _id_queue() -> list[UUID]:
         e(),
         # start_procedure: event_id
         e(),
-        # append_activities (lazy-open on first call): logbook_id, open_event_id
+        # start_iteration(1): event_id
+        e(),
+        # append_activities iter1 (lazy-open on first call): logbook_id, open_event_id
         _STEPS_LOGBOOK_ID,
         _STEPS_OPEN_EVENT_ID,
+        # end_iteration(1): event_id
+        e(),
+        # start_iteration(2): event_id
+        e(),
+        # (append_activities iter2 + finalize: no generator ids; logbook already open)
+        # end_iteration(2): event_id
+        e(),
         # complete_procedure: event_id
         e(),
     ]
@@ -620,7 +634,7 @@ async def test_center_alignment_plays_out_end_to_end(
             channel="Tomo_Rot",
             target_value=0.0,
             units="deg",
-            note="initial 0deg reference; iteration=1",
+            note="initial 0deg reference",
             sampled_at=t(1),
         ),
         _action(
@@ -637,14 +651,13 @@ async def test_center_alignment_plays_out_end_to_end(
             expected=1024.0,
             tolerance=5.0,
             source="live_tomostream_centroid",
-            iteration=1,
             sampled_at=t(3),
         ),
         _setpoint(
             channel="Tomo_Rot",
             target_value=180.0,
             units="deg",
-            note="180deg counterpart; iteration=1",
+            note="180deg counterpart",
             sampled_at=t(4),
         ),
         _action(
@@ -661,7 +674,6 @@ async def test_center_alignment_plays_out_end_to_end(
             expected=1024.0,
             tolerance=1.0,
             source="live_tomostream_centroid",
-            iteration=1,
             offset_px=7.0,
             sampled_at=t(6),
         ),
@@ -683,7 +695,7 @@ async def test_center_alignment_plays_out_end_to_end(
             channel="Tomo_Rot",
             target_value=0.0,
             units="deg",
-            note="post-correction 0deg reference; iteration=2",
+            note="post-correction 0deg reference",
             sampled_at=t(8),
         ),
         _action(
@@ -697,7 +709,7 @@ async def test_center_alignment_plays_out_end_to_end(
             channel="Tomo_Rot",
             target_value=180.0,
             units="deg",
-            note="180deg post-correction; iteration=2",
+            note="180deg post-correction",
             sampled_at=t(10),
         ),
         _action(
@@ -714,7 +726,6 @@ async def test_center_alignment_plays_out_end_to_end(
             expected=1024.0,
             tolerance=1.0,
             source="live_tomostream_centroid",
-            iteration=2,
             offset_px=0.5,
             sampled_at=t(12),
         ),
@@ -730,17 +741,65 @@ async def test_center_alignment_plays_out_end_to_end(
         sampled_at=t(13),
     )
 
-    all_steps = iter1_steps + iter2_steps + (finalize_step,)
-    assert len(all_steps) == 13, "expected 13 steps for one full convergence"
+    # Each convergence pass is bracketed by start_iteration / end_iteration:
+    # iteration is first-class now, so the count + verdict live on the
+    # boundary events, not on an `evidence['iteration']` payload key.
+    step_store = _postgres_step_store(db_pool)
 
-    # Append all steps in one batch (operator-realistic; matches how DAQ
-    # adapters batch and matches the AppendProcedureActivities batch shape).
-    count = await bind_append_step(deps, step_store=_postgres_step_store(db_pool))(
-        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=all_steps),
+    # Iteration 1: large initial offset; does not converge.
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=1),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    assert count == 13
+    count1 = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=iter1_steps),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count1 == 7
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=_PROCEDURE_ID,
+            iteration_index=1,
+            converged=False,
+            reason="sphere centroid offset 7.0px exceeds 1.0px tolerance",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Iteration 2: converges within tolerance.
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=_PROCEDURE_ID, iteration_index=2),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    count2 = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=iter2_steps),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count2 == 5
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=_PROCEDURE_ID,
+            iteration_index=2,
+            converged=True,
+            reason=None,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Finalize (post-convergence, outside the iteration loop): write the
+    # calibrated rotation-axis pixel position to the PV downstream scans read.
+    count_final = await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=(finalize_step,)),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count_final == 1
 
     # ----- Complete the Procedure -----
 
@@ -753,13 +812,20 @@ async def test_center_alignment_plays_out_end_to_end(
     # ----- Assert the Procedure stream tells the right lifecycle story -----
 
     procedure_events, procedure_version = await deps.event_store.load("Procedure", _PROCEDURE_ID)
-    # Expected event sequence: Registered, Started, StepsLogbookOpened, Completed.
-    assert procedure_version == 4, f"expected 4 events on Procedure stream, got {procedure_version}"
+    # The iteration boundary pair now interleaves with the lifecycle: the
+    # logbook opens on the first append (inside iteration 1), so the order is
+    # Registered, Started, IterationStarted(1), ActivitiesLogbookOpened,
+    # IterationEnded(1), IterationStarted(2), IterationEnded(2), Completed.
+    assert procedure_version == 8, f"expected 8 events on Procedure stream, got {procedure_version}"
     procedure_event_types = [e.event_type for e in procedure_events]
     assert procedure_event_types == [
         "ProcedureRegistered",
         "ProcedureStarted",
+        "ProcedureIterationStarted",
         "ProcedureActivitiesLogbookOpened",
+        "ProcedureIterationEnded",
+        "ProcedureIterationStarted",
+        "ProcedureIterationEnded",
         "ProcedureCompleted",
     ]
 
@@ -796,12 +862,14 @@ async def test_center_alignment_plays_out_end_to_end(
     assert final_setpoint_payload["units"] == "px"
 
     # The convergence Check (iteration 2's last check) records the operator's
-    # judgment + supporting evidence.
+    # judgment + supporting evidence. Iteration is no longer encoded here
+    # (no `evidence['iteration']`); it is first-class, asserted via the
+    # per-iteration read model below.
     convergence_check_payload = json.loads(step_rows[11]["payload"])
     assert convergence_check_payload["passed"] is True
     assert convergence_check_payload["source"] == "live_tomostream_centroid"
-    assert convergence_check_payload["evidence"]["iteration"] == 2
     assert convergence_check_payload["evidence"]["offset_px"] == 0.5
+    assert "iteration" not in convergence_check_payload["evidence"]
 
     # ----- Drain the projection and assert the read-side record is operator-correct -----
 
@@ -828,6 +896,19 @@ async def test_center_alignment_plays_out_end_to_end(
     }
     assert proc_summary.parent_run_id is None  # standalone alignment, not Phase-of-Run
     assert proc_summary.last_status_changed_at == _NOW
+    # Iteration is first-class: the count denorms onto the summary.
+    assert proc_summary.iteration_count == 2
+
+    # ----- Per-iteration convergence read model: which passes converged -----
+    iterations = await bind_list_iterations(deps)(
+        ListProcedureIterations(procedure_id=_PROCEDURE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert [i.iteration_index for i in iterations.items] == [1, 2]
+    assert iterations.items[0].converged is False  # iteration 1 missed
+    assert iterations.items[0].reason == "sphere centroid offset 7.0px exceeds 1.0px tolerance"
+    assert iterations.items[1].converged is True  # iteration 2 converged
 
     # ----- Reverse-direction filter: the target_asset_id GIN index works for
     #       "show me all procedures touching the Aerotech rotary stage" -----

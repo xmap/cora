@@ -281,7 +281,7 @@ def test_decide_propagates_controller_id_to_emitted_event() -> None:
     events = register_asset.decide(
         state=None,
         command=RegisterAsset(
-            name="Aerotech_ABRS_rotary",
+            name="Rotary",
             tier=AssetTier.DEVICE,
             parent_id=uuid4(),
             controller_id=controller_id,

@@ -220,6 +220,21 @@ class ProcedureStatus(StrEnum):
     ABORTED = "Aborted"
     TRUNCATED = "Truncated"
 
+    @property
+    def is_terminal(self) -> bool:
+        """True for the closed-set terminal states (Completed / Aborted /
+        Truncated), False for Defined / Running.
+
+        The FSM owns this truth so consumers (for example the Data BC's
+        register_dataset, which requires a producing Procedure to be terminal
+        before snapshotting its actuation kind) don't hard-code the terminal
+        set and drift when a state is added."""
+        return self in (
+            ProcedureStatus.COMPLETED,
+            ProcedureStatus.ABORTED,
+            ProcedureStatus.TRUNCATED,
+        )
+
 
 class InvalidProcedureNameError(ValueError):
     """The supplied procedure name is empty, whitespace-only, or too long."""
@@ -723,6 +738,139 @@ class ProcedureCannotTruncateError(Exception):
         self.current_status = current_status
 
 
+class ProcedureCannotStartIterationError(Exception):
+    """Attempted to start an iteration that fails a start-gate.
+
+    Raised by the `start_iteration` decider for any of three reasons:
+      - The Procedure is not in `Running` (iterations only exist within
+        an active execution; same lifecycle gate as append_activities).
+      - An iteration is already open (`current_iteration_index` is set);
+        the open iteration must be ended first. Iterations do not nest.
+      - The supplied `iteration_index` is not the strict successor of
+        the current `iteration_count` (operator-supplied index must be
+        monotonic with no gaps or duplicates, per the
+        capture-don't-recompute principle).
+
+    Carries `current_status`, the open `current_iteration_index` (None
+    when none open), and `expected_iteration_index` / `iteration_index`
+    so operator-facing messaging can name the gate that failed. Distinct
+    class per verb per the conventions (Asset / Visit precedent). Mapped
+    to HTTP 409.
+    """
+
+    def __init__(
+        self,
+        procedure_id: UUID,
+        *,
+        current_status: "ProcedureStatus",
+        current_iteration_index: int | None,
+        expected_iteration_index: int,
+        iteration_index: int,
+    ) -> None:
+        super().__init__(
+            f"Procedure {procedure_id} cannot start iteration {iteration_index}: "
+            f"status={current_status.value} (requires {ProcedureStatus.RUNNING.value}), "
+            f"current_iteration_index={current_iteration_index} (requires no open "
+            f"iteration), expected next index {expected_iteration_index}."
+        )
+        self.procedure_id = procedure_id
+        self.current_status = current_status
+        self.current_iteration_index = current_iteration_index
+        self.expected_iteration_index = expected_iteration_index
+        self.iteration_index = iteration_index
+
+
+class ProcedureCannotEndIterationError(Exception):
+    """Attempted to end an iteration that fails an end-gate.
+
+    Raised by the `end_iteration` decider when:
+      - The Procedure is not in `Running`.
+      - No iteration is currently open (`current_iteration_index` is
+        None); there is nothing to end.
+      - The supplied `iteration_index` does not match the open
+        `current_iteration_index`.
+
+    Carries `current_status`, the open `current_iteration_index` (None
+    when none open), and the supplied `iteration_index`. Distinct class
+    per verb (sibling of `ProcedureCannotStartIterationError`). Mapped
+    to HTTP 409.
+    """
+
+    def __init__(
+        self,
+        procedure_id: UUID,
+        *,
+        current_status: "ProcedureStatus",
+        current_iteration_index: int | None,
+        iteration_index: int,
+    ) -> None:
+        super().__init__(
+            f"Procedure {procedure_id} cannot end iteration {iteration_index}: "
+            f"status={current_status.value} (requires {ProcedureStatus.RUNNING.value}), "
+            f"current open iteration={current_iteration_index} (must equal "
+            f"{iteration_index})."
+        )
+        self.procedure_id = procedure_id
+        self.current_status = current_status
+        self.current_iteration_index = current_iteration_index
+        self.iteration_index = iteration_index
+
+
+class ProcedureIterationLimitReachedError(Exception):
+    """The convergence loop hit its consecutive-unconverged cap; refuse to start.
+
+    A Procedure may declare `max_consecutive_unconverged_iterations` (the
+    "patience" cap, from ML early-stopping vocabulary): the maximum number
+    of consecutive iterations that may end NOT converged before the loop
+    gives up. `start_iteration` rejects the next iteration once
+    `consecutive_unconverged_iterations >= max_consecutive_unconverged_iterations`.
+    The streak resets to 0 whenever an iteration ends `converged=True`, so
+    a recovering loop keeps going; an iteration ending `converged=False`
+    OR `converged=None` (no verdict) counts toward the cap.
+
+    Distinct from the sequencing guard `ProcedureCannotStartIterationError`:
+    this is an expected, operator-actionable budget outcome (stop and
+    abort / complete the Procedure), not a malformed request. The cap is
+    declaration-only and does NOT auto-abort the Procedure (mirrors
+    `Agent.budget`: a cap is an attribute, not an FSM state). Mapped to
+    HTTP 409.
+    """
+
+    def __init__(
+        self,
+        procedure_id: UUID,
+        *,
+        consecutive_unconverged_iterations: int,
+        max_consecutive_unconverged_iterations: int,
+    ) -> None:
+        super().__init__(
+            f"Procedure {procedure_id} cannot start another iteration: "
+            f"{consecutive_unconverged_iterations} consecutive unconverged "
+            f"iterations reached the cap of {max_consecutive_unconverged_iterations}. "
+            f"Resolve by completing or aborting the Procedure (a converged "
+            f"iteration would reset the streak)."
+        )
+        self.procedure_id = procedure_id
+        self.consecutive_unconverged_iterations = consecutive_unconverged_iterations
+        self.max_consecutive_unconverged_iterations = max_consecutive_unconverged_iterations
+
+
+class InvalidProcedureIterationCapError(ValueError):
+    """The supplied max_consecutive_unconverged_iterations cap is below 1.
+
+    The patience cap is optional (None = no cap); when present it must be
+    >= 1 (a cap of 0 would forbid even the first iteration). Validated at
+    the API boundary via Pydantic `ge=1` AND defensively at the
+    register deciders. Mapped to HTTP 400.
+    """
+
+    def __init__(self, value: int) -> None:
+        super().__init__(
+            f"max_consecutive_unconverged_iterations must be >= 1 when set (got: {value})"
+        )
+        self.value = value
+
+
 class InvalidProcedureTruncateReasonError(ValueError):
     """The supplied truncate reason is empty, whitespace-only, or too long.
 
@@ -736,6 +884,27 @@ class InvalidProcedureTruncateReasonError(ValueError):
         super().__init__(
             f"Procedure truncate reason must be 1-{REASON_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
+        )
+        self.value = value
+
+
+class InvalidProcedureIterationEndReasonError(ValueError):
+    """The supplied iteration-end reason is whitespace-only or too long.
+
+    The end-iteration reason is OPTIONAL (None is allowed); when present
+    it is trimmed and bounded 1-500 chars. Validated at the API boundary
+    via Pydantic min_length / max_length AND defensively at the
+    `end_iteration` decider via `validate_bounded_text` so direct
+    in-process callers (sagas, tests) get the same trim + whitespace-only
+    rejection as abort / truncate. Sibling of
+    `InvalidProcedureAbortReasonError`; distinct class for BC-local
+    HTTP-status registration. Mapped to HTTP 400.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Procedure iteration-end reason must be 1-{REASON_MAX_LENGTH} "
+            f"chars after trimming (got: {value!r})"
         )
         self.value = value
 
@@ -979,3 +1148,51 @@ class Procedure:
     a denorm for audit-by-Capability read paths without requiring a
     Recipe join. Both fields are set by `register_procedure_from_recipe`
     to the same logical binding."""
+    current_iteration_index: int | None = field(default=None)
+    """The convergence-loop iteration currently open, or None.
+
+    Set to the operator-supplied `iteration_index` by
+    `ProcedureIterationStarted` and cleared back to None by
+    `ProcedureIterationEnded`. Acts as the open/close marker that lets
+    the deciders forbid nested iterations (start while one is open) and
+    forbid ending when none is open. Additive-state default None: legacy
+    streams and non-iterative Procedures fold cleanly."""
+    iteration_count: int = field(default=0)
+    """How many convergence-loop iterations have begun on this Procedure.
+
+    Denorm count (NOT a history; the boundary events are the history),
+    incremented by `ProcedureIterationStarted`. Mirrors
+    `Run.adjustment_count`. Surfaced as the `iteration_count` projection
+    column so "how many iterations did this alignment take" is a plain
+    SQL question. Additive-state default 0."""
+    consecutive_unconverged_iterations: int = field(default=0)
+    """How many iterations in a row have ended NOT converged.
+
+    Folded by `ProcedureIterationEnded`: +1 when `converged` is not True
+    (False OR None), reset to 0 when `converged` is True. This is the
+    running "patience" streak the `start_iteration` decider checks against
+    `max_consecutive_unconverged_iterations`. Additive-state default 0."""
+    max_consecutive_unconverged_iterations: int | None = field(default=None)
+    """Optional cap on `consecutive_unconverged_iterations`; None = no cap.
+
+    The "patience" limit (ML early-stopping vocabulary): once the streak
+    reaches this, `start_iteration` refuses the next iteration with
+    `ProcedureIterationLimitReachedError` (the operator then aborts or
+    completes; no auto-abort, mirroring `Agent.budget`). Operator-supplied
+    at register time (>= 1 when set); declaration-only, never an FSM
+    state. Additive-state default None: legacy + uncapped Procedures fold
+    cleanly."""
+    actuation_kind: str | None = field(default=None)
+    """The raw `ActuationKind` value (Physical / Simulated / Hybrid) the
+    Conductor observed during the conduct that drove this Procedure to a
+    terminal state, or None.
+
+    Set by the `ProcedureCompleted` / `ProcedureAborted` terminal arms
+    from the event's `actuation_kind`; None while Defined / Running and
+    for completes/aborts issued outside a conduct. This is the gate
+    carrier: `register_dataset` reads it off a loaded producing Procedure
+    and snapshots it onto the Dataset, where `promote_dataset` blocks
+    Simulated / Hybrid origins. The Operation BC owns the `ActuationKind`
+    enum; state stores the raw string (cross-BC string-snapshot seam,
+    mirroring how the Data BC stores it). Additive-state default None:
+    legacy + pre-activation streams fold cleanly."""

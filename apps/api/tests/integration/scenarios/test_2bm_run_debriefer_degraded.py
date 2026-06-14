@@ -35,7 +35,7 @@ sibling `test_2bm_run_debrief_aborted.py` covers `EquipmentAbort`.
   1. Scan starts at normal parameters.
   2. Mid-flight, operator observes alignment drift (Aerotech
      bearing showing intermittent encoder jitter).
-  3. Operator marks `Aerotech_ABRS_rotary` condition `Degraded`
+  3. Operator marks `Rotary` condition `Degraded`
      with a reason (the audit trail records the intervention).
   4. Operator pauses long enough to verify the encoder reseats;
      no formal fix beyond letting it settle.

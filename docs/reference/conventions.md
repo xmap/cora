@@ -30,6 +30,29 @@ Cross-entity links between externally published entities use the publishing syst
 - Do not block aggregate creation on external mint. A network failure on the mint side should never prevent a Subject from being registered or a Run from starting.
 - Do not embed the scheme in the value (`"doi:10.1234/abc"`). Carry the namespace separately so the value stays opaque to the namespace.
 
+## Asset instance names
+
+The human `name` on a registered instance (most visibly an Asset) is an intentional label for the thing's role in the experiment, not a place to encode where it lives or who made it. The name is free-form: it is not a uniqueness key, and it never derives the aggregate id (that comes from `IdGenerator`). So it costs nothing to rename and nothing to choose well, which is exactly why it should carry meaning rather than borrowed identifiers.
+
+- **Name the role, in CORA vocabulary.** `Hexapod`, not `Aerotech_HEX300`; `Hexapod_Yaw`, not `2bmHXP:m6`. What the device IS or DOES, in words that travel across facilities.
+- **One word; qualify only on a real collision.** A single hexapod at a beamline is just `Hexapod`. Add a qualifier when a second instance actually exists (`SampleHexapod` / `DetectorHexapod`), not before. Same defer-until-the-second-instance discipline that the single-word rule applies to domain types.
+- **Deployment is not part of the name.** `facility_code` plus the Unit parent already carry "this is the 2-BM one." `Hexapod`, not `Hexapod_2BM`.
+
+The borrowed identifiers each have a home that survives a vendor swap; keep the name out of their job:
+
+| Tempting to put in the name | Borrowed-identity example | Home instead |
+| --- | --- | --- |
+| Deployment / beamline | `Hexapod_2BM` | `facility_code` + Unit parent |
+| Vendor / part number | `Aerotech_ABRS_rotary` | bound `Model` (PIDINST Manufacturer + Model) |
+| EPICS PV / channel | `OMS_VME58_2bmb_drive` | `alternate_identifiers` (kind `EPICS_PV`) |
+| IOC handle / serial / firmware | `Aerotech_2bmbAERO_drive` | `settings` (`serial_number`, `firmware_version`) |
+
+**Anti-patterns:**
+
+- Do not mirror the EPICS PV, IOC name, or vendor catalog string into the name because "that is what operators type." Those identifiers have homes that survive a vendor swap; the name should survive it too.
+- Do not pre-qualify against a hypothetical second instance. The qualifier is cheap to add when the collision is real, because names are not keys.
+- Do not encode the deployment in the name to make it globally unique. Names are not unique keys; `facility_code` scopes them.
+
 ## Units of measurement
 
 Numeric fields whose meaning depends on a unit carry the unit as a three-field annotation on the declaring JSON Schema, not in the field name. The annotation is `{system, code, label?}`.
@@ -150,6 +173,8 @@ An architecture fitness test in `apps/api/tests/architecture/test_rest_url_kebab
 ### URL paths and slice/command/MCP names are independent conventions
 
 Slice directory names, command class names, and MCP tool names carry the SUBJECT in the verb-phrase when the slice mutates a specific aggregate kind: `add_asset_family`, `decommission_asset`, `enter_asset_maintenance`, `update_asset_settings`. Reading aloud, "add asset family" and "enter asset maintenance" are parallel English noun-phrases.
+
+When the slice acts on a per-aggregate SUB-CONCEPT rather than the aggregate itself, the sub-concept noun is the subject: `append_observations` (Run), `append_activities` (Operation), `start_iteration` / `end_iteration` (Operation, the convergence-loop boundary on a Procedure). The command class still carries the aggregate qualifier (`AppendProcedureActivities`, `StartProcedureIteration`) while the slice directory and MCP tool drop it (the BC namespace disambiguates). These sub-concept nouns are tracked in the `_DOMAIN_NOUN_ALLOWLIST` of `tests/architecture/test_slice_verb_names_subject.py`.
 
 URLs use the BARE verb when the path scope already implies the subject. Sibling endpoints under `/assets/{asset_id}/` all follow this shape: `/activate`, `/decommission`, `/relocate`, `/degrade`, `/fault`, `/restore`, `/enter-maintenance`, `/exit-maintenance`, `/add-family`, `/remove-family`. The `/assets/{asset_id}/` segment is the subject; repeating it in the verb (`/enter-asset-maintenance`) would be redundant.
 

@@ -115,6 +115,18 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 description=("Optional id of the Run that produced this Dataset."),
             ),
         ] = None,
+        producing_procedure_id: Annotated[
+            UUID | None,
+            Field(
+                default=None,
+                description=(
+                    "Optional id of the conducted Procedure that produced this "
+                    "Dataset. The server derives the actuation-kind provenance "
+                    "from it to gate promotion; the kind itself is never a "
+                    "caller input. None for non-conducted / external data."
+                ),
+            ),
+        ] = None,
         subject_id: Annotated[
             UUID | None,
             Field(
@@ -158,6 +170,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 media_type=media_type,
                 conforms_to=frozenset(conforms_to or []),
                 producing_run_id=producing_run_id,
+                producing_procedure_id=producing_procedure_id,
                 subject_id=subject_id,
                 derived_from=frozenset(derived_from or []),
                 used_calibration_ids=frozenset(used_calibration_ids or []),

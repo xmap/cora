@@ -17,6 +17,13 @@ already-existing artefact). Same convention as `register_actor`,
   - `producing_run_id`: the Run that produced this Dataset. None
     for externally-sourced data, uploaded reference sets, or any
     Dataset registered without a Run context.
+  - `producing_procedure_id`: the conducted Procedure that produced
+    this Dataset. None for externally-sourced data and Runs not
+    driven by a CORA-conducted Procedure. An opaque reference (like
+    `producing_run_id`): the handler loads it and DERIVES the
+    actuation-kind provenance server-side from the Procedure's
+    terminal state. The kind itself is NEVER a caller input (a caller
+    could otherwise self-declare Physical to bypass the promote gate).
   - `subject_id`: the Subject the Dataset is "about." None for
     calibration / dark-field / synthetic data with no sample.
   - `derived_from`: lineage edges to other Datasets this one was
@@ -61,6 +68,13 @@ class RegisterDataset:
     media_type: str
     conforms_to: frozenset[str] = field(default_factory=frozenset[str])
     producing_run_id: UUID | None = None
+    # Opaque reference to the conducted Procedure that produced this Dataset.
+    # The handler loads it and the decider DERIVES producing_actuation_kind
+    # from the Procedure's terminal state (the same server-derive shape as
+    # producing_run_end_state from the producing Run). None for non-conducted
+    # / external Datasets. The actuation kind itself is intentionally NOT a
+    # command field: it is server-observed, never caller-asserted.
+    producing_procedure_id: UUID | None = None
     subject_id: UUID | None = None
     derived_from: frozenset[UUID] = field(default_factory=frozenset[UUID])
     # optional Calibration BC AsShot citation set

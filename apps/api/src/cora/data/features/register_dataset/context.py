@@ -18,6 +18,14 @@ CONTRIBUTING.md).
   - `producing_run`: the Run that produced this Dataset. None
     when the command's `producing_run_id` is None (standalone
     upload, externally-sourced data).
+  - `producing_procedure`: the conducted Procedure that produced
+    this Dataset. None when the command's `producing_procedure_id`
+    is None. Unlike the other refs, the decider DOES read one field
+    off it (`actuation_kind`) to derive `producing_actuation_kind`,
+    mirroring how `producing_run.status` derives
+    `producing_run_end_state`. The terminal kind is server-observed
+    (recorded by the Conductor on the Procedure stream), so deriving
+    it here keeps the gate unforgeable.
   - `subject`: the Subject the Dataset is about. None when the
     command's `subject_id` is None (calibration / dark-field /
     synthetic data).
@@ -36,6 +44,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from cora.data.aggregates.dataset import Dataset
+from cora.operation.aggregates.procedure import Procedure
 from cora.run.aggregates.run import Run
 from cora.subject.aggregates.subject import Subject
 
@@ -44,12 +53,15 @@ from cora.subject.aggregates.subject import Subject
 class DatasetRegistrationContext:
     """Snapshot of cross-aggregate references at Dataset-registration time.
 
-    All three fields are optional / possibly-empty; the handler
-    populates each only when the corresponding command field is set.
-    The decider uses this purely as proof of existence (never
-    inspects state).
+    All fields are optional / possibly-empty; the handler populates
+    each only when the corresponding command field is set. The decider
+    uses `producing_run`, `subject`, and `derived_from` purely as proof
+    of existence (never inspects state) and reads exactly one field off
+    each of `producing_run` (status) and `producing_procedure`
+    (actuation_kind) to snapshot provenance.
     """
 
     producing_run: Run | None = None
+    producing_procedure: Procedure | None = None
     subject: Subject | None = None
     derived_from: dict[UUID, Dataset] = field(default_factory=dict[UUID, Dataset])

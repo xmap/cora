@@ -136,6 +136,13 @@ DATASET_USED_CALIBRATIONS_MAX_ENTRIES = 64
 DATASET_CHECKSUM_ALGORITHM_SHA256 = "sha256"
 DATASET_CHECKSUM_SHA256_HEX_LENGTH = 64
 RUN_END_STATE_COMPLETED = "Completed"  # raw string match against Run BC's RunStatus.COMPLETED.value
+# Raw string matches against Operation BC's ActuationKind.value. Stored as a
+# string snapshot on the Dataset (the producing BC owns the enum), mirroring
+# the producing_run_end_state pattern above. The promote gate blocks the two
+# simulator-tainted kinds; Physical (and None, no kind recorded) pass.
+ACTUATION_KIND_PHYSICAL = "Physical"
+ACTUATION_KIND_SIMULATED = "Simulated"
+ACTUATION_KIND_HYBRID = "Hybrid"
 
 # URI schemes that are never legitimate Dataset URIs and that pose
 # XSS risk if a downstream UI renders the URI as a clickable link.
@@ -355,6 +362,50 @@ class ProducingRunNotFoundError(Exception):
         self.run_id = run_id
 
 
+class ProducingProcedureNotFoundError(Exception):
+    """Attempted to register a Dataset against a Procedure that doesn't exist.
+
+    Cross-aggregate validation at registration: when
+    `producing_procedure_id` is set, the handler pre-loads the
+    Procedure (Operation BC) and confirms its stream is non-empty.
+    No status check (mirrors ProducingRunNotFoundError): the decider
+    derives `producing_actuation_kind` from whatever terminal state
+    the Procedure holds (None while non-terminal). Mapped to HTTP 404
+    via the locked <X>NotFoundError -> 404 taxonomy.
+    """
+
+    def __init__(self, procedure_id: UUID) -> None:
+        super().__init__(
+            f"Cannot register Dataset: producing_procedure_id {procedure_id} does not exist"
+        )
+        self.procedure_id = procedure_id
+
+
+class ProducingProcedureNotTerminalError(Exception):
+    """Attempted to register a Dataset against a non-terminal producing Procedure.
+
+    The actuation kind is snapshotted from the producing Procedure's
+    terminal state at registration (capture, don't recompute). A
+    still-Defined / Running Procedure has no final kind yet, so its
+    snapshot would be a stale None even after the conduct later resolves
+    to Physical -- which the promote-time unprovable-provenance guard
+    would then wrongly block. Requiring the Procedure to be terminal at
+    registration keeps "producing_procedure_id set + kind None" an
+    unambiguous "unprovable" signal. Cross-aggregate state conflict;
+    mapped to HTTP 409.
+    """
+
+    def __init__(self, procedure_id: UUID, *, current_status: str) -> None:
+        super().__init__(
+            f"Cannot register Dataset: producing_procedure_id {procedure_id} is "
+            f"{current_status!r}; a producing Procedure must be terminal "
+            "(Completed / Aborted / Truncated) at registration so its actuation "
+            "kind is final"
+        )
+        self.procedure_id = procedure_id
+        self.current_status = current_status
+
+
 class LinkedSubjectNotFoundError(Exception):
     """Attempted to register a Dataset against a Subject that doesn't exist.
 
@@ -493,7 +544,7 @@ class DatasetAlreadyPromotedError(Exception):
 class DatasetCannotPromoteError(Exception):
     """A guard rejected the promotion to Production.
 
-    Three branches, all surfaced via this single error class with a
+    Four branches, all surfaced via this single error class with a
     branch-specific reason string:
 
       - `dataset is discarded; cannot promote` (status guard)
@@ -502,6 +553,9 @@ class DatasetCannotPromoteError(Exception):
       - `derived_from Datasets [...] are still Trial; cannot promote
         dataset above its inputs` (lineage-must-be-Production guard;
         mirrors the prior lineage-into-Discarded guard)
+      - `data was produced by Simulated / Hybrid actuation; rehearsal /
+        simulator-origin data cannot be promoted to Production`
+        (actuation-must-not-be-simulated guard)
 
     Mapped to HTTP 409. Carries the offending entity ids in the
     reason string for operator clarity.
@@ -888,11 +942,21 @@ class Dataset:
     byte_size: int
     encoding: DatasetEncoding
     producing_run_id: UUID | None = None
+    # The conducted Procedure that produced this Dataset; the lineage edge the
+    # actuation kind was derived from at registration. None for non-conducted
+    # / external Datasets. Eventual-consistency ref (loaded at register time,
+    # not re-verified at fold). Additive-state default None.
+    producing_procedure_id: UUID | None = None
     subject_id: UUID | None = None
     derived_from: frozenset[UUID] = field(default_factory=frozenset[UUID])
     status: DatasetStatus = DatasetStatus.REGISTERED
     # additions:
     producing_run_end_state: str | None = None
+    # Raw ActuationKind value (Physical / Simulated / Hybrid) the producing
+    # conduct observed, snapshotted at registration. None for standalone
+    # uploads, conducts with no routing table, and legacy events. Powers the
+    # promote_dataset simulator-origin guard (Simulated / Hybrid block).
+    producing_actuation_kind: str | None = None
     intent: Intent = Intent.TRIAL
     # Calibration BC AsShot citation (revision-cited
     # atomic-ID model per [[project_calibration_design]]). Each entry

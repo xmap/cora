@@ -36,6 +36,8 @@ Invariants:
     -> InvalidProcedureKindError
   - name: 1-200 chars via ProcedureName VO
     -> InvalidProcedureNameError
+  - max_consecutive_unconverged_iterations, when set, must be >= 1
+    -> InvalidProcedureIterationCapError
   - Expanded step count must not exceed RECIPE_EXPANSION_STEP_MAX
     -> RecipeExpansionOverflowError
   - Two consecutive expansion calls must yield identical results
@@ -52,6 +54,7 @@ from cora.operation._recipe_expansion import canonical_json_bytes, steps_to_wire
 from cora.operation.aggregates.procedure import (
     PROCEDURE_KIND_MAX_LENGTH,
     RECIPE_EXPANSION_STEP_MAX,
+    InvalidProcedureIterationCapError,
     InvalidProcedureKindError,
     InvalidRecipeBindingsError,
     Procedure,
@@ -128,6 +131,10 @@ def decide(
     )
     name = ProcedureName(command.name)
 
+    cap = command.max_consecutive_unconverged_iterations
+    if cap is not None and cap < 1:
+        raise InvalidProcedureIterationCapError(cap)
+
     steps_first = expansion_port.expand(recipe.steps, bindings_dict)
     if len(steps_first) > RECIPE_EXPANSION_STEP_MAX:
         raise RecipeExpansionOverflowError(
@@ -150,6 +157,7 @@ def decide(
             parent_run_id=command.parent_run_id,
             capability_id=recipe.capability_id,
             recipe_id=recipe.id,
+            max_consecutive_unconverged_iterations=cap,
             occurred_at=now,
         ),
         RecipeExpansionRecorded(

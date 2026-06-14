@@ -2408,7 +2408,7 @@ def test_evolve_register_with_controller_id_folds_to_state() -> None:
         None,
         AssetRegistered(
             asset_id=asset_id,
-            name="Aerotech_ABRS_rotary",
+            name="Rotary",
             tier="Device",
             parent_id=uuid4(),
             occurred_at=_NOW,
@@ -2597,7 +2597,7 @@ def test_fold_register_with_controller_id_then_lifecycle_transitions_preserves_c
         [
             AssetRegistered(
                 asset_id=asset_id,
-                name="Aerotech_ABRS_rotary",
+                name="Rotary",
                 tier="Device",
                 parent_id=parent_id,
                 occurred_at=_NOW,

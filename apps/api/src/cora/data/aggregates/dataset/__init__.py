@@ -31,6 +31,9 @@ from cora.data.aggregates.dataset.events import (
 from cora.data.aggregates.dataset.evolver import evolve, fold
 from cora.data.aggregates.dataset.read import load_dataset
 from cora.data.aggregates.dataset.state import (
+    ACTUATION_KIND_HYBRID,
+    ACTUATION_KIND_PHYSICAL,
+    ACTUATION_KIND_SIMULATED,
     DATASET_CHECKSUM_ALGORITHM_SHA256,
     DATASET_CHECKSUM_SHA256_HEX_LENGTH,
     DATASET_CONFORMS_TO_ENTRY_MAX_LENGTH,
@@ -71,6 +74,8 @@ from cora.data.aggregates.dataset.state import (
     InvalidPromotionReasonError,
     InvalidUsedCalibrationsError,
     LinkedSubjectNotFoundError,
+    ProducingProcedureNotFoundError,
+    ProducingProcedureNotTerminalError,
     ProducingRunNotFoundError,
     PromotionReason,
     validate_byte_size,
@@ -79,6 +84,9 @@ from cora.data.aggregates.dataset.state import (
 )
 
 __all__ = [
+    "ACTUATION_KIND_HYBRID",
+    "ACTUATION_KIND_PHYSICAL",
+    "ACTUATION_KIND_SIMULATED",
     "DATASET_CHECKSUM_ALGORITHM_SHA256",
     "DATASET_CHECKSUM_SHA256_HEX_LENGTH",
     "DATASET_CONFORMS_TO_ENTRY_MAX_LENGTH",
@@ -124,6 +132,8 @@ __all__ = [
     "InvalidPromotionReasonError",
     "InvalidUsedCalibrationsError",
     "LinkedSubjectNotFoundError",
+    "ProducingProcedureNotFoundError",
+    "ProducingProcedureNotTerminalError",
     "ProducingRunNotFoundError",
     "PromotionReason",
     "event_type_name",

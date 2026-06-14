@@ -203,12 +203,12 @@ _TEMPLATE_ID: ClearanceTemplateId = ClearanceTemplateId(
 
 _DEVICES = (
     DeviceSpec(
-        "Aerotech_ABRS_rotary",
+        "Rotary",
         _ASSET_AEROTECH_ABRS_ID,
         "RotaryStage",
         _CAP_ROTARY_STAGE_ID,
     ),
-    DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
 )
 
 _BEAMTIME = BeamtimeSpec(

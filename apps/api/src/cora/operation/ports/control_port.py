@@ -75,6 +75,7 @@ through the iterator so silent stream pause is impossible.
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 from typing import Any, Literal, Protocol, runtime_checkable
 
 ReadingKind = Literal["Scalar", "Array", "Image", "Categorical", "Tabular"]
@@ -113,6 +114,28 @@ string detail, OPC UA's ~240 named sub-codes such as
 `Reading.quality_detail` as an opaque string; the closed enum stays
 tight.
 """
+
+
+class ActuationKind(StrEnum):
+    """How a conducted episode drove its addresses: real hardware, a
+    simulator, or both.
+
+    Derived by the Conductor from the per-route simulated flag the
+    registry carries, and snapshotted (as a raw string) onto the
+    producing Dataset so simulator-origin data can never be promoted
+    to Production. Simulated-ness is a declared property of a route
+    (ControlPortRoute.is_simulated), not the transport substrate: a
+    soft IOC speaks real Channel Access yet is still a simulator.
+
+    Physical: every address routed to a non-simulated adapter.
+    Simulated: every address routed to a simulated adapter.
+    Hybrid: a single conduct drove both. The promotion gate treats
+    Hybrid exactly as Simulated (any simulator touch disqualifies).
+    """
+
+    PHYSICAL = "Physical"
+    SIMULATED = "Simulated"
+    HYBRID = "Hybrid"
 
 
 @dataclass(frozen=True)
@@ -338,6 +361,7 @@ class ControlPort(Protocol):
 
 
 __all__ = [
+    "ActuationKind",
     "ControlAccessDeniedError",
     "ControlNotConnectedError",
     "ControlPort",

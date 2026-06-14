@@ -1,10 +1,11 @@
 """Operation BC projections.
 
-Today: just `ProcedureSummaryProjection`. Future projections
-(per-step rollup, per-Run aggregation, etc.) land here as sibling
-modules.
+`ProcedureSummaryProjection` (one row per Procedure) +
+`ProcedureIterationsProjection` (one row per convergence-loop
+iteration). Future projections land here as sibling modules.
 """
 
 from cora.operation.projections.procedure import ProcedureSummaryProjection
+from cora.operation.projections.procedure_iterations import ProcedureIterationsProjection
 
-__all__ = ["ProcedureSummaryProjection"]
+__all__ = ["ProcedureIterationsProjection", "ProcedureSummaryProjection"]

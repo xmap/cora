@@ -15,6 +15,8 @@ from cora.data.aggregates.dataset import (
     DATASET_CHECKSUM_SHA256_HEX_LENGTH,
     DerivedFromDatasetsNotFoundError,
     LinkedSubjectNotFoundError,
+    ProducingProcedureNotFoundError,
+    ProducingProcedureNotTerminalError,
     ProducingRunNotFoundError,
 )
 from cora.data.aggregates.dataset.events import (
@@ -26,6 +28,17 @@ from cora.data.features import register_dataset
 from cora.data.features.register_dataset import RegisterDataset
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
+from cora.operation.aggregates.procedure.events import (
+    ProcedureCompleted,
+    ProcedureRegistered,
+    ProcedureStarted,
+)
+from cora.operation.aggregates.procedure.events import (
+    event_type_name as procedure_event_type_name,
+)
+from cora.operation.aggregates.procedure.events import (
+    to_payload as procedure_to_payload,
+)
 from cora.run.aggregates.run.events import (
     RunStarted,
 )
@@ -89,6 +102,72 @@ async def _seed_run(store: InMemoryEventStore, run_id: UUID) -> None:
         principal_id=uuid4(),
     )
     await store.append(stream_type="Run", stream_id=run_id, expected_version=0, events=[new_event])
+
+
+async def _seed_procedure(
+    store: InMemoryEventStore, procedure_id: UUID, *, actuation_kind: str | None
+) -> None:
+    """Append a terminal Procedure stream (Registered -> Started -> Completed)
+    carrying `actuation_kind` on the completion, as the Conductor would."""
+    events = [
+        ProcedureRegistered(
+            procedure_id=procedure_id,
+            name="seed-procedure",
+            kind="alignment",
+            target_asset_ids=(),
+            parent_run_id=None,
+            occurred_at=_NOW,
+        ),
+        ProcedureStarted(procedure_id=procedure_id, occurred_at=_NOW),
+        ProcedureCompleted(
+            procedure_id=procedure_id, occurred_at=_NOW, actuation_kind=actuation_kind
+        ),
+    ]
+    new_events = [
+        to_new_event(
+            event_type=procedure_event_type_name(e),
+            payload=procedure_to_payload(e),
+            occurred_at=_NOW,
+            event_id=uuid4(),
+            command_name="seed",
+            correlation_id=_CORRELATION_ID,
+            principal_id=uuid4(),
+        )
+        for e in events
+    ]
+    await store.append(
+        stream_type="Procedure", stream_id=procedure_id, expected_version=0, events=new_events
+    )
+
+
+async def _seed_running_procedure(store: InMemoryEventStore, procedure_id: UUID) -> None:
+    """Append Registered + Started (no terminal) so the Procedure is Running."""
+    events = [
+        ProcedureRegistered(
+            procedure_id=procedure_id,
+            name="seed-procedure",
+            kind="alignment",
+            target_asset_ids=(),
+            parent_run_id=None,
+            occurred_at=_NOW,
+        ),
+        ProcedureStarted(procedure_id=procedure_id, occurred_at=_NOW),
+    ]
+    new_events = [
+        to_new_event(
+            event_type=procedure_event_type_name(e),
+            payload=procedure_to_payload(e),
+            occurred_at=_NOW,
+            event_id=uuid4(),
+            command_name="seed",
+            correlation_id=_CORRELATION_ID,
+            principal_id=uuid4(),
+        )
+        for e in events
+    ]
+    await store.append(
+        stream_type="Procedure", stream_id=procedure_id, expected_version=0, events=new_events
+    )
 
 
 async def _seed_subject(store: InMemoryEventStore, subject_id: UUID) -> None:
@@ -244,6 +323,56 @@ async def test_handler_loads_existing_run_and_appends_with_link() -> None:
     )
     events, _ = await store.load("Dataset", _DATASET_ID)
     assert events[0].payload["producing_run_id"] == str(run_id)
+
+
+@pytest.mark.unit
+async def test_handler_raises_producing_procedure_not_found_when_missing() -> None:
+    deps = build_deps(ids=[_DATASET_ID, _REG_EVENT_ID], now=_NOW)
+    missing_procedure = uuid4()
+    with pytest.raises(ProducingProcedureNotFoundError) as exc_info:
+        await register_dataset.bind(deps)(
+            _good_command(producing_procedure_id=missing_procedure),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.procedure_id == missing_procedure
+
+
+@pytest.mark.unit
+async def test_handler_rejects_non_terminal_producing_procedure() -> None:
+    """A still-Running producing Procedure is rejected at registration (its
+    actuation kind is not final yet); item-6 option A."""
+    store = InMemoryEventStore()
+    procedure_id = uuid4()
+    await _seed_running_procedure(store, procedure_id)
+    deps = build_deps(ids=[_DATASET_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
+    with pytest.raises(ProducingProcedureNotTerminalError) as exc_info:
+        await register_dataset.bind(deps)(
+            _good_command(producing_procedure_id=procedure_id),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.procedure_id == procedure_id
+    assert exc_info.value.current_status == "Running"
+
+
+@pytest.mark.unit
+async def test_handler_derives_actuation_kind_from_loaded_procedure() -> None:
+    """The server-observed path: the handler loads the producing Procedure and
+    the decider snapshots its terminal actuation_kind onto the Dataset. The
+    kind never appears in the command/request."""
+    store = InMemoryEventStore()
+    procedure_id = uuid4()
+    await _seed_procedure(store, procedure_id, actuation_kind="Simulated")
+    deps = build_deps(ids=[_DATASET_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
+    await register_dataset.bind(deps)(
+        _good_command(producing_procedure_id=procedure_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    events, _ = await store.load("Dataset", _DATASET_ID)
+    assert events[0].payload["producing_procedure_id"] == str(procedure_id)
+    assert events[0].payload["producing_actuation_kind"] == "Simulated"
 
 
 @pytest.mark.unit

@@ -12,6 +12,7 @@ from cora.operation.adapters.in_memory_recipe_expander import (
     InMemoryRecipeExpander,
 )
 from cora.operation.aggregates.procedure import (
+    InvalidProcedureIterationCapError,
     InvalidRecipeBindingsError,
     Procedure,
     ProcedureAlreadyExistsError,
@@ -108,6 +109,58 @@ def test_decide_emits_registered_plus_recipe_expansion_recorded() -> None:
     assert prov.capability_id == cap.id
     assert prov.expansion_port_version == "v2-pseudoaxis-aware"
     assert prov.step_count == 1
+
+
+@pytest.mark.unit
+def test_decide_records_patience_cap_on_event() -> None:
+    cap = _capability()
+    recipe = _recipe(cap.id)
+    cmd = RegisterProcedureFromRecipe(
+        name="P",
+        kind="center_alignment",
+        target_asset_ids=(),
+        parent_run_id=None,
+        recipe_id=recipe.id,
+        bindings={},
+        max_consecutive_unconverged_iterations=4,
+    )
+    events = decide(
+        state=None,
+        command=cmd,
+        recipe=recipe,
+        capability=cap,
+        expansion_port=InMemoryRecipeExpander(),
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    reg = events[0]
+    assert isinstance(reg, ProcedureRegistered)
+    assert reg.max_consecutive_unconverged_iterations == 4
+
+
+@pytest.mark.unit
+def test_decide_rejects_patience_cap_below_one() -> None:
+    cap = _capability()
+    recipe = _recipe(cap.id)
+    cmd = RegisterProcedureFromRecipe(
+        name="P",
+        kind="center_alignment",
+        target_asset_ids=(),
+        parent_run_id=None,
+        recipe_id=recipe.id,
+        bindings={},
+        max_consecutive_unconverged_iterations=0,
+    )
+    with pytest.raises(InvalidProcedureIterationCapError):
+        decide(
+            state=None,
+            command=cmd,
+            recipe=recipe,
+            capability=cap,
+            expansion_port=InMemoryRecipeExpander(),
+            now=_NOW,
+            new_id=uuid4(),
+        )
 
 
 @pytest.mark.unit

@@ -492,7 +492,7 @@ def test_to_payload_includes_controller_id_when_set() -> None:
     controller_id = uuid4()
     event = AssetRegistered(
         asset_id=asset_id,
-        name="Aerotech_ABRS_rotary",
+        name="Rotary",
         tier="Device",
         parent_id=parent_id,
         occurred_at=_NOW,
@@ -512,7 +512,7 @@ def test_from_stored_rebuilds_asset_registered_with_controller_id() -> None:
         "AssetRegistered",
         {
             "asset_id": str(asset_id),
-            "name": "Aerotech_ABRS_rotary",
+            "name": "Rotary",
             "tier": "Device",
             "parent_id": str(parent_id),
             "occurred_at": _NOW.isoformat(),
@@ -523,7 +523,7 @@ def test_from_stored_rebuilds_asset_registered_with_controller_id() -> None:
     rebuilt = from_stored(stored)
     assert rebuilt == AssetRegistered(
         asset_id=asset_id,
-        name="Aerotech_ABRS_rotary",
+        name="Rotary",
         tier="Device",
         parent_id=parent_id,
         occurred_at=_NOW,
@@ -559,7 +559,7 @@ def test_from_stored_folds_legacy_payload_without_controller_id_to_none() -> Non
 def test_to_payload_then_from_stored_round_trips_with_controller_id() -> None:
     original = AssetRegistered(
         asset_id=uuid4(),
-        name="Aerotech_ABRS_rotary",
+        name="Rotary",
         tier="Device",
         parent_id=uuid4(),
         occurred_at=_NOW,

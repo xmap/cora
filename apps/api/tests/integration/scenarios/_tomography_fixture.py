@@ -117,10 +117,10 @@ from tests.integration.scenarios._facility_fixture import (
 # Canonical 2-BM micro-CT imaging chain. Names + Family kinds are
 # fixture-owned because they describe the physical apparatus, not the
 # scenario; UUIDs remain scenario-supplied per the audit-trail convention.
-ROTARY_NAME = "Aerotech_ABRS_rotary"
+ROTARY_NAME = "Rotary"
 LINEAR_X_NAME = "Sample_top_X"
-CAMERA_NAME = "Oryx_5MP_camera"
-SCINTILLATOR_NAME = "Scintillator_LuAG"
+CAMERA_NAME = "Camera"
+SCINTILLATOR_NAME = "Scintillator"
 
 ROTARY_CAP_NAME = "RotaryStage"
 LINEAR_X_CAP_NAME = "LinearStage"
