@@ -21,7 +21,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM hutch. It is
 |     +-- Objective_10x      (Device, Family Objective)    10x
 |     +-- Objective_2x      (Device, Family Objective)     2x
 |     +-- Objective_1.1x      (Device, Family Objective)   1.1x
-|     +-- Objective_Select      (Device, Family PseudoAxis)   virtual selector
+|     +-- Objective_Select      (Device, Family PseudoAxis)   objective selector
 |     +-- Focus (Device, Family LinearStage)
 |     +-- Camera  (Device, Family Camera)
 |     +-- Scintillator (Device, Family Scintillator)
@@ -37,7 +37,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM hutch. It is
         objectives (1+)   -> Objective_2x      |  three bindings
         objectives (1+)   -> Objective_1.1x    |
         focus             -> Focus
-        objective_select  -> Objective_Select  (the selector; partition_rule = LookupTable
+        objective_select  -> Objective_Select  (the objective selector; partition_rule = LookupTable
                                           0 -> 121.5942 deg  (10x in beam)
                                           1 ->  61.9841 deg  (2x  in beam)
                                           2 ->   2.3006 deg  (1.1x in beam))
@@ -80,7 +80,7 @@ The top **Assembly** is the reusable composition blueprint. It does two things: 
 | `camera` | leaf slot | `Exactly1` | `Camera` |
 | `scintillator` | leaf slot | `Exactly1` | `Scintillator` |
 
-The sub-assembly link pins the Optics Assembly's content hash, so a later revision of Optics does not silently change what a Microscope built today materializes (snapshot semantics). The camera and scintillator are leaf slots on the Microscope rather than the Optics sub-assembly because they are the parts a deployment swaps most often and the parts that vary between detector builds; the optics cluster (turret, objectives, selector, focus) is the stable, shareable core.
+The sub-assembly link pins the Optics Assembly's content hash, so a later revision of Optics does not silently change what a Microscope built today materializes (snapshot semantics). The camera and scintillator are leaf slots on the Microscope rather than the Optics sub-assembly because they are the parts a deployment swaps most often and the parts that vary between detector builds; the optics cluster (turret, objectives, objective selector, focus) is the stable, shareable core.
 
 The Microscope Assembly presents as the **`Detector`** Role, the functional binding contract a Method targets when it needs a 2D imaging device without pinning a specific Family. It also carries the legacy scalar `presents_as_family_id` pointing at the `Imager` presenter Family (the satisfaction handle for Methods still written against `needed_family_ids = {Imager}`); the Role-based `presents_as` set is the forward-looking path. The Assembly's content hash (SHA-256 over its name, its slots, its sub-assembly links, the presented Family, and the parameter overrides schema) is stable: two facilities that publish the same Microscope Assembly converge on the same hash, which makes the blueprint cross-facility shareable when the federation layer lands.
 
@@ -88,7 +88,7 @@ The Microscope carries **zero `required_wires` in v1**. Earlier sketches modelle
 
 ## Sub-assembly: Optics
 
-The **Optics** Assembly is the reusable core: the turret, the three objectives, the virtual lens selector, and the focus stage. It is content-hashed in its own right, so the same optics cluster can be referenced by more than one detector build (a second microscope at another station, a spare optics bench) without redeclaring its slot map.
+The **Optics** Assembly is the reusable core: the turret, the three objectives, the virtual objective selector, and the focus stage. It is content-hashed in its own right, so the same optics cluster can be referenced by more than one detector build (a second microscope at another station, a spare optics bench) without redeclaring its slot map.
 
 | Slot | Cardinality | Required Family |
 | --- | --- | --- |
@@ -97,7 +97,7 @@ The **Optics** Assembly is the reusable core: the turret, the three objectives, 
 | `objective_select` | `Exactly1` | `PseudoAxis` |
 | `focus` | `Exactly1` | `LinearStage` |
 
-The three installed objectives (10x, 2x, 1.1x) all bind the single `objectives` slot. They differ only by the `magnification` setting, so one `OneOrMore` slot keeps the Optics blueprint (and its content hash) reusable across turret loadouts rather than baking three specific magnifications into the structure; a second beamline with a five-position turret reuses the same blueprint. Per-objective identity lives on the Asset (its name, settings, and calibration), not the slot. `objective_select` is **the selector**: the virtual axis that picks which objective is in the beam.
+The three installed objectives (10x, 2x, 1.1x) all bind the single `objectives` slot. They differ only by the `magnification` setting, so one `OneOrMore` slot keeps the Optics blueprint (and its content hash) reusable across turret loadouts rather than baking three specific magnifications into the structure; a second beamline with a five-position turret reuses the same blueprint. Per-objective identity lives on the Asset (its name, settings, and calibration), not the slot. `objective_select` is **the objective selector**: the virtual axis that picks which objective is in the beam (distinct from the separate, deferred camera selector).
 
 The Optics sub-assembly is composed one level deep: it does not itself reference further sub-assemblies. At Fixture time, a Microscope expands one composing level, the Optics cluster, and rejects deeper nesting; that keeps the materialization rule simple until a real two-tier case earns the extra depth.
 
@@ -126,7 +126,7 @@ This is a documented approximation. The constituents have their own internal off
 
 Where the axes meet: the Fixture answers "what logical cluster lives here for governance," the Mount answers "where in space the housing sits," and the containment tree answers "what the housing physically holds." Three orthogonal questions. The Fixture has no placement of its own; only Assets do, via the Mounts they are installed into, and at 2-BM only the housing is mounted.
 
-## Routing the lens selector (PseudoAxis)
+## Routing the objective selector (PseudoAxis)
 
 `Objective_Select` is a virtual axis inside the Optics sub-assembly. Its **partition rule** is a closed `LookupTable` decomposing an integer index (0, 1, 2) into a turret rotation in degrees:
 
