@@ -137,9 +137,7 @@ async def test_lookup_returns_located_in_enclosure_id() -> None:
     so the enclosure pre-flight gate can read it in one hop."""
     lookup = InMemoryAssetLookup()
     asset_id, enclosure_id = uuid4(), uuid4()
-    lookup.register(
-        asset_id, name="rotary", tier="Device", located_in_enclosure_id=enclosure_id
-    )
+    lookup.register(asset_id, name="rotary", tier="Device", located_in_enclosure_id=enclosure_id)
     result = await lookup.lookup(asset_id)
     assert result is not None
     assert result.located_in_enclosure_id == enclosure_id

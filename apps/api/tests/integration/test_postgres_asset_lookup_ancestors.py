@@ -235,7 +235,10 @@ async def test_lookup_returns_located_in_enclosure_id(db_pool: asyncpg.Pool) -> 
     # reads it in one hop.
     asset_id, enclosure_id = uuid4(), uuid4()
     await _register_asset(
-        db_pool, asset_id=asset_id, parent_id=None, tier="Unit",
+        db_pool,
+        asset_id=asset_id,
+        parent_id=None,
+        tier="Unit",
         located_in_enclosure_id=enclosure_id,
     )
 
@@ -264,11 +267,17 @@ async def test_ancestors_of_rows_carry_located_in_enclosure_id(db_pool: asyncpg.
     root, device = uuid4(), uuid4()
     root_enclosure, device_enclosure = uuid4(), uuid4()
     await _register_asset(
-        db_pool, asset_id=root, parent_id=None, tier="Unit",
+        db_pool,
+        asset_id=root,
+        parent_id=None,
+        tier="Unit",
         located_in_enclosure_id=root_enclosure,
     )
     await _register_asset(
-        db_pool, asset_id=device, parent_id=root, tier="Device",
+        db_pool,
+        asset_id=device,
+        parent_id=root,
+        tier="Device",
         located_in_enclosure_id=device_enclosure,
     )
 

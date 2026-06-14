@@ -67,9 +67,7 @@ class InMemoryEnclosureLookup:
         with self._lock:
             return self._records.get(enclosure_id)
 
-    async def find_by_ids(
-        self, *, enclosure_ids: frozenset[UUID]
-    ) -> list[EnclosureLookupResult]:
+    async def find_by_ids(self, *, enclosure_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         if not enclosure_ids:
             return []
         with self._lock:

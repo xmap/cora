@@ -118,9 +118,7 @@ class EnclosureLookup(Protocol):
         """
         ...
 
-    async def find_by_ids(
-        self, *, enclosure_ids: frozenset[UUID]
-    ) -> list[EnclosureLookupResult]:
+    async def find_by_ids(self, *, enclosure_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         """Return every Active enclosure whose `enclosure_id` is in `enclosure_ids`.
 
         Used by consumer deciders that hold a known set of enclosure
@@ -176,9 +174,7 @@ class AlwaysPermittedEnclosureLookup:
             source_id=None,
         )
 
-    async def find_by_ids(
-        self, *, enclosure_ids: frozenset[UUID]
-    ) -> list[EnclosureLookupResult]:
+    async def find_by_ids(self, *, enclosure_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         return []
 
 

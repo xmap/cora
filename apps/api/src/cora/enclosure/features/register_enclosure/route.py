@@ -90,8 +90,7 @@ router = APIRouter(tags=["enclosure"])
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
             "description": (
-                "The supplied facility_code does not resolve to a known "
-                "Federation Facility."
+                "The supplied facility_code does not resolve to a known Federation Facility."
             ),
         },
         status.HTTP_409_CONFLICT: {

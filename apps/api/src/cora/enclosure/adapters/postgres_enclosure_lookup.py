@@ -93,9 +93,7 @@ class PostgresEnclosureLookup:
             return None
         return _row_to_reference(row)
 
-    async def find_by_ids(
-        self, *, enclosure_ids: frozenset[UUID]
-    ) -> list[EnclosureLookupResult]:
+    async def find_by_ids(self, *, enclosure_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         if not enclosure_ids:
             return []
         async with self._pool.acquire() as conn:
