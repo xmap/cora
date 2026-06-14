@@ -214,7 +214,7 @@ async def test_handler_role_kind_path_succeeds_when_family_advertises_role() -> 
     role_lookup = InMemoryRoleLookup()
     role_lookup.register(
         role_id=_ROLE_KIND_ID,
-        name="Imager",
+        name="Detector",
         required_affordances=frozenset(),
     )
     family_lookup = InMemoryFamilyLookup()
@@ -277,7 +277,7 @@ async def test_handler_role_kind_path_raises_when_family_satisfaction_fails() ->
     role_lookup = InMemoryRoleLookup()
     role_lookup.register(
         role_id=_ROLE_KIND_ID,
-        name="Imager",
+        name="Detector",
         required_affordances=frozenset(),
     )
     family_lookup = InMemoryFamilyLookup()

@@ -30,7 +30,7 @@ The kinds below are not five separate lists; they are one chain, sliced per kind
 
 ## Roles
 
-The four Roles (`Imager`, `Positioner`, `Controller`, `Detector`) ship as a closed-core seed registry. A fifth candidate, `Conditioner` (attenuators / shutters / mirrors), was deferred: no affordance is universally required across those Families, so the required-set would be vacuous. A rule-of-three trigger gates a future definition.
+The four Roles (`Detector`, `Positioner`, `Controller`, `Sensor`) ship as a closed-core seed registry. A fifth candidate, `Conditioner` (attenuators / shutters / mirrors), was deferred: no affordance is universally required across those Families, so the required-set would be vacuous. A rule-of-three trigger gates a future definition.
 
 Every `RoleId` is `uuid5(_ROLE_NAMESPACE, name.lower())` with `_ROLE_NAMESPACE = uuid5(NAMESPACE_DNS, 'cora.role')`. Deterministic ids make a Method authored at APS 2-BM bind against the same Role uuid when shipped to MAX IV or DLS. A `define_role` with a seed Role's name collides on the same stream and returns 409.
 

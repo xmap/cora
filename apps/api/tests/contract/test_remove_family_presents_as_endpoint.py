@@ -13,8 +13,8 @@ from fastapi.testclient import TestClient
 from cora.api.main import create_app
 
 
-def _seed_family_with_imager(client: TestClient, app: FastAPI) -> tuple[str, str]:
-    """Create Camera Family + Imager Role + advertise. Return (family_id, role_id)."""
+def _seed_family_with_detector(client: TestClient, app: FastAPI) -> tuple[str, str]:
+    """Create Camera Family + Detector Role + advertise. Return (family_id, role_id)."""
     family_resp = client.post(
         "/families",
         json={"name": "Camera", "affordances": ["Imageable"]},
@@ -35,7 +35,7 @@ def _seed_family_with_imager(client: TestClient, app: FastAPI) -> tuple[str, str
     # Seed in-memory RoleLookup so add-presents-as handler resolves it.
     app.state.deps.role_lookup.register(
         role_id=UUID(role_id),
-        name="Imager",
+        name="Detector",
         required_affordances=["Imageable"],
     )
     add_resp = client.post(
@@ -50,7 +50,7 @@ def _seed_family_with_imager(client: TestClient, app: FastAPI) -> tuple[str, str
 def test_post_remove_presents_as_returns_204_on_success() -> None:
     app = create_app()
     with TestClient(app) as client:
-        family_id, role_id = _seed_family_with_imager(client, app)
+        family_id, role_id = _seed_family_with_detector(client, app)
         response = client.post(
             f"/families/{family_id}/remove-presents-as",
             json={"role_id": role_id},
@@ -101,7 +101,7 @@ def test_post_remove_presents_as_double_remove_returns_409() -> None:
     """First remove succeeds; second raises strict-not-idempotent."""
     app = create_app()
     with TestClient(app) as client:
-        family_id, role_id = _seed_family_with_imager(client, app)
+        family_id, role_id = _seed_family_with_detector(client, app)
         first = client.post(
             f"/families/{family_id}/remove-presents-as",
             json={"role_id": role_id},

@@ -50,7 +50,7 @@ def _seed_role(deps: Kernel) -> None:
     assert hasattr(lookup, "register"), "deps.role_lookup must be in-memory"
     lookup.register(  # type: ignore[union-attr]
         role_id=_ROLE_ID,
-        name="Imager",
+        name="Detector",
         required_affordances=frozenset({"Imageable"}),
     )
 

@@ -31,7 +31,7 @@ def _seed_family_and_role(client: TestClient, app: FastAPI) -> tuple[str, str]:
     # Seed in-memory RoleLookup so the handler edge resolves it.
     app.state.deps.role_lookup.register(
         role_id=UUID(role_id),
-        name="Imager",
+        name="Detector",
         required_affordances=["Imageable"],
     )
     return family_id, role_id

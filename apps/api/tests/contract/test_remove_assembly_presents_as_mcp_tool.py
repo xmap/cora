@@ -40,7 +40,7 @@ def _seed_with_role(client: TestClient, app: FastAPI) -> tuple[UUID, UUID]:
     role_id = UUID(role_resp.json()["role_id"])
     app.state.deps.role_lookup.register(
         role_id=role_id,
-        name="Imager",
+        name="Detector",
         required_affordances=["Imageable"],
     )
     add_resp = client.post(

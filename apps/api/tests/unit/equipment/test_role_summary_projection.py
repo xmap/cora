@@ -60,7 +60,7 @@ async def test_role_defined_inserts_with_full_contract_payload() -> None:
         "RoleDefined",
         {
             "role_id": str(_ROLE_ID),
-            "name": "Imager",
+            "name": "Detector",
             "docstring": "Acquires 2D image frames on exposure or trigger.",
             "occurred_at": _NOW.isoformat(),
             "required_affordances": ["Imageable"],
@@ -79,7 +79,7 @@ async def test_role_defined_inserts_with_full_contract_payload() -> None:
     assert "INSERT INTO proj_equipment_role_summary" in sql
     assert "ON CONFLICT (role_id) DO NOTHING" in sql
     assert args.args[1] == _ROLE_ID
-    assert args.args[2] == "Imager"
+    assert args.args[2] == "Detector"
     assert args.args[3] == "Acquires 2D image frames on exposure or trigger."
     assert args.args[4] == ["Imageable"]
     assert args.args[5] == ["Binnable"]

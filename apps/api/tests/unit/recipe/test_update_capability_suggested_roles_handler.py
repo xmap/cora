@@ -38,7 +38,7 @@ def _build_3e_deps(store: InMemoryEventStore) -> Kernel:
     )
 
 
-def _seed_role(deps: Kernel, role_id: UUID, *, name: str = "Imager") -> None:
+def _seed_role(deps: Kernel, role_id: UUID, *, name: str = "Detector") -> None:
     lookup = deps.role_lookup
     assert hasattr(lookup, "register"), "deps.role_lookup must be in-memory"
     lookup.register(  # type: ignore[union-attr]
