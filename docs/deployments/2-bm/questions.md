@@ -46,8 +46,8 @@ CORA records each controller box's identity (serial, firmware) so it can later a
 | DRIVE-2 | `Blocks-go-live` | Firmware versions for those same five boxes? | `unknown-pending-confirmation` | [Settings](assets.md#settings) |
 | DRIVE-3 | `Nice-to-have` | Are the Aerotech drives network-attached, and if so their IP addresses? | left blank (assumed not needed) | [Settings](assets.md#settings) |
 | DRIVE-4 | `Nice-to-have` | Exact Aerotech model / part number for the hexapod drive and the focus-stage drive? The source page says "native Aerotech Ensemble" but does not name the box. | `unknown-pending-confirmation`; vendor known to be Aerotech | [Vendor catalog](assets.md#vendor-catalog-models) |
-| DRIVE-5 | `Nice-to-have` | Model and serial of the Nanotec ST4118 stepper driving the Microscope objective selector? CORA has no record of this controller class yet, so this answer is optional for now; send it when you can. | not yet registered | [Pending](assets.md#pending) |
-| DRIVE-6 | `Nice-to-have` | Model and serial of the Schunk LPTM 30 stepper driving the Microscope camera selector? CORA has no record of this controller class yet, so this answer is optional for now; send it when you can. | not yet registered | [Pending](assets.md#pending) |
+| DRIVE-5 | `Nice-to-have` | Model and serial of the stepper driving the Microscope objective selector? Our beamline docs name a Nanotec ST4118M1404-B (1.8 deg/step, 1.7 VDC, 1.4 A/phase) with a Heidenhain ERO 1420 encoder; please confirm and add the serial. CORA has no record of this controller yet, so this is optional for now. | likely Nanotec ST4118M1404-B; not yet registered | [Pending](assets.md#pending) |
+| DRIVE-6 | `Nice-to-have` | Model and serial of the stepper driving the Microscope camera selector? Our docs name a Schunk LPTM 30 (200 steps/rev, 0.5 mm pitch); please confirm and add the serial. CORA has no record of this controller yet, so this is optional for now. | likely Schunk LPTM 30; not yet registered | [Pending](assets.md#pending) |
 
 ## The hexapod
 
@@ -61,7 +61,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| HXP-1 | `Blocks-go-live` | Which EPICS channel (`2bmHXP:m1` through `m6`) is which axis? The source page names two rotational channels (`m4`, `m5`); the full six-channel map is unconfirmed. | not asserted in the docs | [Hexapod DoF model](assets.md#hexapod-dof-model) |
+| HXP-1 | `Blocks-go-live` | Which EPICS channel (`2bmHXP:m1` through `m6`) is which axis? Our docs suggest `m1` = X, `m2` = Y, `m3` = Z (translations) and `m4`, `m5`, `m6` are the three rotations (`m3` and `m6` not user-exposed). Please confirm each channel, and which rotation (Roll, Pitch, Yaw) each of `m4` / `m5` / `m6` is (see HXP-2 for the naming). | suggested: m1=X, m2=Y, m3=Z, m4/m5/m6 the rotations | [Hexapod DoF model](assets.md#hexapod-dof-model) |
 | HXP-2 | `Nice-to-have` | Do our rotation names match yours? We used Roll = about X, Pitch = about Y, Yaw = about Z (matching the vendor datasheet's A/B/C envelope). | A = Roll, B = Pitch, C = Yaw | [Hexapod DoF model](assets.md#hexapod-dof-model) |
 | HXP-3 | `Blocks-go-live` | What is the hexapod's motion solver called, and where does it run? | `2bmHXP`, an EPICS soft IOC | [Hexapod DoF model](assets.md#hexapod-dof-model) |
 | HXP-4 | `Blocks-go-live` | What version of that solver is in use? | `1.0.0` placeholder | [Hexapod DoF model](assets.md#hexapod-dof-model) |
@@ -71,8 +71,8 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| STAGE-1 | `Blocks-build` | Is `Sample_pitch_lam` (the Kohzu SA16A-RM goniometer in the source page) the SAME physical thing as the hexapod's Pitch axis, or a SEPARATE stage mounted on the hexapod? Your answer decides whether CORA describes one device or two. | treated as the hexapod's Pitch axis | [Hexapod DoF model](assets.md#hexapod-dof-model) |
-| STAGE-2 | `Nice-to-have` | Full part number and datasheet for the Kohzu CYAT-070 alignment stages (`Sample_top_X` / `Sample_top_Z`)? | `Kohzu CYAT-070`, no datasheet on file | [Engineering drawings](assets.md#engineering-drawings) |
+| STAGE-1 | `Blocks-build` | `Sample_pitch_lam` (the Kohzu SA16A-RM laminography goniometer, `2bmb:m49`): CORA now describes it as a SEPARATE stage mounted on the hexapod, carrying the rotary stage through a fixed -10 deg wedge, distinct from the hexapod's own Pitch axis (`2bmHXP:m4`). Please confirm this two-device picture is right (one device, or two?). | described as a separate Kohzu SA16A-RM goniometer, distinct from hexapod Pitch | [Hexapod DoF model](assets.md#hexapod-dof-model) |
+| STAGE-2 | `Nice-to-have` | Full part number and datasheet for the Kohzu CYAT-070 alignment stages (`Sample_top_X` / `Sample_top_Z`)? Also: our docs quote 15 mm of travel each way, but CORA records 10 mm each way (`-10..10 mm`); which is right? | `Kohzu CYAT-070`, no datasheet on file; travel -10..10 mm (docs say 15 mm each way) | [Engineering drawings](assets.md#engineering-drawings) |
 | STAGE-3 | `Nice-to-have` | Full part number and datasheet for the Aerotech ABS250MP-M-AS rotary stage (`Rotary`)? | `Aerotech ABS250MP-M-AS`, no datasheet on file | [Engineering drawings](assets.md#engineering-drawings) |
 | STAGE-4 | `Nice-to-have` | The measured motor-sensitivity constants (K_roll, K_pitch) that link a hexapod tilt to the observed image-centroid shift? Today they are re-derived per alignment rather than stored. | derived in-procedure, not persisted | [Procedures](procedures.md) |
 
@@ -80,36 +80,36 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| DET-1 | `Blocks-build` | Is the lens turret a rotating turret, or a sliding (translating) objective selector? This sets whether its positions are degrees or millimeters. | rotating (degrees) | [Microscope](equipment/microscope.md) |
-| DET-2 | `Blocks-build` | Does CORA drive the focus stage directly, or does the detector's own IOC move it behind the scenes? This decides which side owns that control path. | CORA drives it | [Microscope](equipment/microscope.md) |
-| DET-3 | `Blocks-build` | How are cameras selected: a single fixed bay, or is there a selection stage? | single bay, no selection stage | [Microscope](equipment/microscope.md) |
-| DET-4 | `Blocks-build` | How does the camera bay move, if at all: fixed, or is there a rotation stage? | fixed, no rotation stage | [Microscope](equipment/microscope.md) |
-| DET-5 | `Blocks-build` | Is there a second active FLIR Oryx camera bay (`2bmSP2:`), or is 2-BM genuinely single-camera? | single-camera; any second Oryx is offline | [Microscope](equipment/microscope.md) |
-| DET-6 | `Nice-to-have` | Who actually makes the lens-turret motor (Optique Peter, or a third-party motor inside the housing), and its part number? | assumed Optique Peter | [Vendor catalog](assets.md#vendor-catalog-models) |
-| DET-7 | `Nice-to-have` | The three distinct Mitutoyo part numbers, one per magnification (10x / 2x / 1.1x)? Today all three share one catalog row. | one `Plan-Apo-NIR` family row | [Vendor catalog](assets.md#vendor-catalog-models) |
-| DET-8 | `Blocks-go-live` | The FLIR Oryx's max frame rate, sensor kind, and readout mode (rolling vs global), plus its part number for the datasheet? CORA needs these camera values and they are currently blank. | only sensor size / pixel / bit-depth recorded | [Settings](assets.md#settings) |
-| DET-9 | `Nice-to-have` | The measured magnification of the 2x Mitutoyo objective at 25 keV? The current 2.0x is nominal, pending re-measurement. | 2.0x nominal (provisional) | [Microscope](equipment/microscope.md) |
+| DET-1 | `Blocks-build` | Is the objective changer a rotating turret, or a sliding (translating) selector? This sets whether its positions are degrees or millimeters. Our control software and beamline docs describe a ball-screw selector that translates the chosen lens onto the beam (about 2 mm/rev, about 60 mm of travel, positions in mm), which would make it a sliding selector. Please confirm rotating or sliding. | rotating (degrees) | [Microscope](equipment/microscope.md) |
+| DET-2 | `Blocks-build` | Does CORA drive the focus stage directly, or does the detector's own IOC move it behind the scenes? Our reading of the Microscope IOC code is that the IOC sets focus per objective and stores/restores focus on each camera switch, which would put the focus path on the IOC side. There also appear to be three per-objective focus motors (`2bmb:m2` / `m3` / `m4`) separate from the `2bmbAERO:m1` microscope-body Z stage. Please confirm who owns focus and how many focus motors there are. | CORA drives it | [Microscope](equipment/microscope.md) |
+| DET-3 | `Blocks-build` | How are cameras selected: a single fixed bay, or is there a selection stage? Our docs show a Schunk LPTM 30 folding-mirror selector on `2bmb:m5` with two positions (`CameraSelect` Pos. 0 / Pos. 1), which would mean a two-position selection stage. Please confirm. | single bay, no selection stage | [Microscope](equipment/microscope.md) |
+| DET-4 | `Blocks-build` | How does the camera bay move, if at all: fixed, or is there a rotation stage? We looked and found only per-camera calibration offsets, not a rotation-stage channel, which is consistent with "fixed." Please confirm there is no camera-rotation stage. | fixed, no rotation stage | [Microscope](equipment/microscope.md) |
+| DET-5 | `Blocks-build` | Is there a second active FLIR Oryx camera bay (`2bmSP2:`), or is 2-BM genuinely single-camera? Our docs show a second FLIR Oryx (31 MP, `2bmSP2:`) as camera 1 on a dual-port system, but CORA describes single-camera for now. Is the second bay live at 2-BM, or offline? | single-camera; any second Oryx is offline | [Microscope](equipment/microscope.md) |
+| DET-6 | `Nice-to-have` | Who actually makes the objective-selector motor, and its part number? Our docs point to a third-party Nanotec ST4118M1404-B stepper (with a Heidenhain ERO 1420 encoder) inside the Optique Peter housing, rather than an Optique Peter motor. Please confirm. | assumed Optique Peter; docs suggest Nanotec ST4118M1404-B | [Vendor catalog](assets.md#vendor-catalog-models) |
+| DET-7 | `Nice-to-have` | The exact part number for each installed objective (with NA, focal length, working distance)? Our docs call the family Mitutoyo MPLAPO (not Plan-Apo-NIR) and the installed set 10x / 5x or 2x / 1.1x; please give one part number per magnification, and confirm the middle magnification (see DET-9). | one `Plan-Apo-NIR` family row | [Vendor catalog](assets.md#vendor-catalog-models) |
+| DET-8 | `Blocks-go-live` | The FLIR Oryx's max frame rate, sensor kind, and readout mode (rolling vs global), plus its part number for the datasheet? Our docs give part number ORX-10G-51S5M-C and a max frame rate of about 162 fps; please confirm those and add the sensor kind (CMOS?) and readout mode. | sensor size / pixel / bit-depth recorded; docs suggest ORX-10G-51S5M-C, about 162 fps | [Settings](assets.md#settings) |
+| DET-9 | `Nice-to-have` | Which magnification is the middle objective physically at 2-BM, and its measured value at 25 keV? CORA records 2.0x (nominal), but the Microscope lens table lists the installed middle objective as 5x (measured about 4.93). Objectives are swappable, so please confirm what is installed now. | 2.0x nominal (provisional); docs suggest 5x installed | [Microscope](equipment/microscope.md) |
 
 ## Timing
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| TIME-1 | `Nice-to-have` | The softGlueZynq timing box's identity and gateware (bitstream) version, so we can finalize the list of settings CORA records for it? CORA has no record of this device yet, so this answer is optional for now. | draft schema, not yet registered | [Pending](assets.md#pending) |
+| TIME-1 | `Nice-to-have` | The softGlueZynq timing box's gateware (bitstream) version and serial number? CORA already has its identity (a Xilinx Zynq board on the `2bmbMZ1:SG:` IOC); we just need the loaded gateware version to finalize what CORA records. Optional for now. | identity known (`2bmbMZ1:SG:`); gateware version not yet recorded | [Pending](assets.md#pending) |
 
 ## Beam path and front end
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| BEAM-1 | `Blocks-go-live` | Is the beam shutter already open when a tomography run starts, or does the operator open it as part of run startup? | open before the run (handled by commissioning / a pre-run caution) | [Procedures](procedures.md) |
+| BEAM-1 | `Blocks-go-live` | Is the beam shutter already open when a tomography run starts, or does the operator (or the scan software) open it as part of run startup? Our reading of the 2-BM tomoscan code is that the scan opens the front-end shutter at the start of each run; please confirm whether that, an operator step, or a pre-run caution is the real sequence. | open before the run (handled by commissioning / a pre-run caution) | [Procedures](procedures.md) |
 | BEAM-2 | `Nice-to-have` | How many front-end Be windows are in the stack, and what is their total thickness? | windows exist; count and thickness unconfirmed | [Pending](assets.md#pending) |
 | BEAM-3 | `Nice-to-have` | The canonical APS drawing reference for the B-station safety shutter (`Shutter`)? | shutter modelled; no drawing on file | [Engineering drawings](assets.md#engineering-drawings) |
-| BEAM-4 | `Nice-to-have` | Is the beamline layout drawing `ICMS A342-RT1000` Rev 02 (May 2026) still the current revision? | assumed current | [2-BM index](index.md) |
+| BEAM-4 | `Nice-to-have` | Is the beamline layout drawing `ICMS A342-RT1000` Rev 02 still the current revision? Our docs show Rev 02 dated 27 May 2026; please confirm it has not been superseded. | Rev 02 (27 May 2026) assumed current | [2-BM index](index.md) |
 
 ## Safety interlocks
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| PSS-1 | `Blocks-go-live` | Does the APS Personnel Safety System expose hutch-search and shutter-permit status as readable Channel Access PVs? If so, what are the PV names; if not, what is the integration path for an external observer? CORA needs this so it can decide whether to start its own data-collection run, by reading the hutch-permit status. To be clear: CORA only reads the permit. It never drives, holds, or releases the PSS permit or the beam; the PSS remains the sole interlock. Confirming the PV names does not put CORA into the safety chain. Confirmer: APS safety-systems / PSS contact. | no PV names known; confirmer: APS safety-systems / PSS contact | [Enclosures](enclosures.md) |
+| PSS-1 | `Blocks-go-live` | Does the APS Personnel Safety System expose hutch-search and shutter-permit status as readable Channel Access PVs? We found candidate PVs in an APS 2-BM status screen: hutch searched `PA:02BM:STA_A_SRCHD_TO_B` and `PA:02BM:STA_B_SRCHD_TO_B`, beam permission `PA:02BM:STA_A_BEAMREADY_PL`, front-end shutter `PA:02BM:STA_A_FES_OPEN_PL`, B-station shutter `PA:02BM:STA_B_SBS_OPEN_PL`. Are these the right PVs for an external read-only observer (the people-interlock `PA:` reflections, as opposed to BLEPS equipment-protection tags)? CORA needs this so it can decide whether to start its own data-collection run, by reading the hutch-permit status. To be clear: CORA only reads the permit. It never drives, holds, or releases the PSS permit or the beam; the PSS remains the sole interlock. Confirming the PV names does not put CORA into the safety chain. Confirmer: APS safety-systems / PSS contact. | candidate `PA:02BM:` PVs identified (listed at left); names unconfirmed; confirmer: APS safety-systems / PSS contact | [Enclosures](enclosures.md) |
 
 ## Supplies
 
