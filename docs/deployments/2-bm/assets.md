@@ -4,7 +4,7 @@
 
 The Devices that hang off 2-BM. The 2-BM Asset itself is a root Asset with `tier = Unit` (bound to its Site Facility via `facility_code`) and is declared on the [2-BM index](index.md). See [Model](../../architecture/model.md) for the aggregate shape.
 
-The Microscope detector is modelled as an Assembly + Fixture pair over a reusable Optics sub-assembly, with the constituents contained in one `OpticalHousing` Asset. The constituent Assets appear in the inventory below; the composition, containment, and wiring story lives on the dedicated [Microscope deployment](equipment/microscope.md) page.
+The Microscope detector is modelled as an Assembly + Fixture pair over a reusable Optics sub-assembly, with the constituents contained in one `Housing` Asset. The constituent Assets appear in the inventory below; the composition, containment, and wiring story lives on the dedicated [Microscope deployment](equipment/microscope.md) page.
 
 ## Inventory
 
@@ -26,15 +26,15 @@ The Microscope detector is modelled as an Assembly + Fixture pair over a reusabl
 | `Hexapod_Pitch` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation B about Y) |
 | `Hexapod_Yaw` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation C about Z) |
 | `FocusDrive` | `Device` | `MotionController` | `2-BM` |
-| `OpticalHousing` | `Component` | `OpticalHousing` | `2-BM` (installed into a Mount; parents the Microscope constituents) |
-| `Turret` | `Device` | `RotaryStage` (pending) | `OpticalHousing` (bound into Microscope Fixture) |
-| `Objective_10x` | `Device` | `Objective` | `OpticalHousing` (bound into Microscope Fixture) |
-| `Objective_2x` | `Device` | `Objective` | `OpticalHousing` (bound into Microscope Fixture) |
-| `Objective_1.1x` | `Device` | `Objective` | `OpticalHousing` (bound into Microscope Fixture) |
-| `Objective_Select` | `Device` | `PseudoAxis` | `OpticalHousing` (bound into Microscope Fixture; partition rule decomposes lens index to turret rotation) |
-| `Focus` | `Device` | `LinearStage` | `OpticalHousing` (bound into Microscope Fixture; driven by `FocusDrive`) |
-| `Camera` | `Device` | `Camera` | `OpticalHousing` (bound into Microscope Fixture) |
-| `Scintillator` | `Device` | `Scintillator` | `OpticalHousing` (bound into Microscope Fixture) |
+| `Housing` | `Component` | `Housing` | `2-BM` (installed into a Mount; parents the Microscope constituents) |
+| `Turret` | `Device` | `RotaryStage` (pending) | `Housing` (bound into Microscope Fixture) |
+| `Objective_10x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) |
+| `Objective_2x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) |
+| `Objective_1.1x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) |
+| `Objective_Select` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret rotation) |
+| `Focus` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `FocusDrive`) |
+| `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) |
+| `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) |
 
 ## Family affordances
 
@@ -51,7 +51,7 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `Scintillator` | `Consumable` |
 | `Camera` | `Imageable`, `Binnable`, `Triggerable`, `Streamable`, `Recording` |
 | `Imager` | (empty; this Family exists as the `presents_as_family_id` target for detector Assemblies, including the Microscope; was `ImagingDetector` before the role-aggregate-design rename) |
-| `OpticalHousing` | (empty; the containment chassis Family carried by the `OpticalHousing` Asset that parents the Microscope constituents; no command surface) |
+| `Housing` | (empty; the containment chassis Family carried by the `Housing` Asset that parents the Microscope constituents; no command surface) |
 | `Objective` | (pending: empty at initial registration) |
 | `PseudoAxis` | (empty; partition rules live on `Asset.partition_rule`, not as affordances) |
 

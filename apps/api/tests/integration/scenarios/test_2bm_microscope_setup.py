@@ -17,7 +17,7 @@ end-to-end against Postgres:
   - one **Fixture** (microscope_at_2bm) that binds the UNION of the 8
     leaf slots (the Microscope's 2 plus the Optics sub-assembly's 6) to
     the 8 concrete Assets,
-  - one **OpticalHousing** Asset (Family OpticalHousing) that physically
+  - one **Housing** Asset (Family Housing) that physically
     contains all 8 constituents (Asset.parent_id) and carries the Mount.
 
 This is the Assembly + Fixture conversion that the flat-composition
@@ -145,7 +145,7 @@ _CAP_IMAGER_ID = family_stream_id(FamilyName("Imager"))
 _CAP_OBJECTIVE_ID = family_stream_id(FamilyName("Objective"))
 _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
-_CAP_OPTICAL_HOUSING_ID = family_stream_id(FamilyName("OpticalHousing"))
+_CAP_HOUSING_ID = family_stream_id(FamilyName("Housing"))
 
 # Facility-install Device asset ids (scenario-supplied; the leaf detector
 # parts that pre-exist under 2-BM before the microscope is composed).
@@ -282,7 +282,7 @@ _SCHEMA_ROTARY_STAGE: dict[str, Any] = {
     "required": ["min_position", "max_position", "max_speed", "encoder_resolution"],
 }
 
-# PseudoAxis + OpticalHousing carry no operator-tunable settings.
+# PseudoAxis + Housing carry no operator-tunable settings.
 _SCHEMA_EMPTY: dict[str, Any] = {
     "$schema": _DRAFT,
     "type": "object",
@@ -333,7 +333,7 @@ _SETTINGS_TURRET: dict[str, Any] = {
 @pytest.mark.integration
 async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool) -> None:
     """Compose the 2-BM detector as Microscope(Optics) + Fixture +
-    OpticalHousing end-to-end: facility install, NEW Families, the Optics
+    Housing end-to-end: facility install, NEW Families, the Optics
     sub-assembly + Microscope assembly, the housing + constituent Assets,
     per-constituent Mount/install, the Fixture binding the 8-slot union +
     8 attaches, partition rule, 4 Calibrations, and a Method/Practice/Plan.
@@ -374,8 +374,8 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         )
 
     # ----- NEW Families (Imager presenter, Objective, RotaryStage,
-    #       PseudoAxis, OpticalHousing) + schemas -----
-    for name in ("Imager", "Objective", "RotaryStage", "PseudoAxis", "OpticalHousing"):
+    #       PseudoAxis, Housing) + schemas -----
+    for name in ("Imager", "Objective", "RotaryStage", "PseudoAxis", "Housing"):
         await bind_define_family(deps)(
             DefineFamily(name=name, affordances=frozenset()),
             principal_id=_PRINCIPAL_ID,
@@ -447,14 +447,14 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- optical_housing (Component, containment parent) -----
+    # ----- Housing (Component, containment parent) -----
     housing_id = await bind_register_asset(deps)(
-        RegisterAsset(name="OpticalHousing", tier=AssetTier.COMPONENT, parent_id=_2BM_UNIT_ID),
+        RegisterAsset(name="Housing", tier=AssetTier.COMPONENT, parent_id=_2BM_UNIT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     await bind_add_asset_family(deps)(
-        AddAssetFamily(asset_id=housing_id, family_id=_CAP_OPTICAL_HOUSING_ID),
+        AddAssetFamily(asset_id=housing_id, family_id=_CAP_HOUSING_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
