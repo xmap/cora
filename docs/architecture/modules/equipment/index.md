@@ -938,7 +938,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "name": "MCTOptics",
+      "name": "Microscope",
       "presents_as_family_id": "ffff0000-0000-0000-0000-000000000001",
       "required_slots": [
         {
@@ -976,7 +976,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
     mcp.call_tool(
         "define_assembly",
         {
-            "name": "MCTOptics",
+            "name": "Microscope",
             "presents_as_family_id": "ffff0000-0000-0000-0000-000000000001",
             "required_slots": [
                 {"slot_name": "rotary_stage", "required_family_ids": ["aaaa1111-1111-1111-1111-111111111111"], "cardinality": "Exactly1"},

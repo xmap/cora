@@ -4,7 +4,7 @@
 
 The Devices that hang off 2-BM. The 2-BM Asset itself is a root Asset with `tier = Unit` (bound to its Site Facility via `facility_code`) and is declared on the [2-BM index](index.md). See [Model](../../architecture/model.md) for the aggregate shape.
 
-The MCTOptics detector is modelled as an Assembly + Fixture pair (not an Asset row in its own right). The constituent Assets appear in the inventory below; the composition and wiring story lives on the dedicated [MCTOptics deployment](equipment/mctoptics.md) page.
+The Microscope detector is modelled as an Assembly + Fixture pair over a reusable Optics sub-assembly, with the constituents contained in one `optical_housing` Asset. The constituent Assets appear in the inventory below; the composition, containment, and wiring story lives on the dedicated [Microscope deployment](equipment/microscope.md) page.
 
 ## Inventory
 
@@ -22,14 +22,15 @@ The MCTOptics detector is modelled as an Assembly + Fixture pair (not an Asset r
 | `Aerotech_Hexapod_drive` | `Device` | `MotionController` | `2-BM` |
 | `Hexapod_2BM` | `Device` | `Hexapod` | `2-BM` (driven by `Aerotech_Hexapod_drive`) |
 | `Aerotech_2bmbAERO_drive` | `Device` | `MotionController` | `2-BM` |
-| `Optique_Peter_focus_Z` | `Device` | `LinearStage` | `2-BM` (bound into MCTOptics Fixture; driven by `Aerotech_2bmbAERO_drive`) |
-| `MCTOptics_lens_turret` | `Device` | `RotaryStage` (pending) | `2-BM` (bound into MCTOptics Fixture) |
-| `MCTOptics_objective_0` | `Device` | `Objective` | `2-BM` (bound into MCTOptics Fixture) |
-| `MCTOptics_objective_1` | `Device` | `Objective` | `2-BM` (bound into MCTOptics Fixture) |
-| `MCTOptics_objective_2` | `Device` | `Objective` | `2-BM` (bound into MCTOptics Fixture) |
-| `Oryx_5MP_camera` | `Device` | `Camera` | `2-BM` (bound into MCTOptics Fixture) |
-| `Scintillator_LuAG` | `Device` | `Scintillator` | `2-BM` (bound into MCTOptics Fixture) |
-| `MCTOptics_lens_select` | `Device` | `PseudoAxis` | `2-BM` (bound into MCTOptics Fixture; partition rule decomposes lens index to turret rotation) |
+| `optical_housing` | `Component` | `OpticalHousing` | `2-BM` (installed into `optics_mount`; parents the Microscope constituents) |
+| `lens_turret` | `Device` | `RotaryStage` (pending) | `optical_housing` (bound into Microscope Fixture) |
+| `objective_0` | `Device` | `Objective` | `optical_housing` (bound into Microscope Fixture) |
+| `objective_1` | `Device` | `Objective` | `optical_housing` (bound into Microscope Fixture) |
+| `objective_2` | `Device` | `Objective` | `optical_housing` (bound into Microscope Fixture) |
+| `lens_select` | `Device` | `PseudoAxis` | `optical_housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret rotation) |
+| `Optique_Peter_focus_Z` | `Device` | `LinearStage` | `optical_housing` (bound into Microscope Fixture; driven by `Aerotech_2bmbAERO_drive`) |
+| `Oryx_5MP_camera` | `Device` | `Camera` | `optical_housing` (bound into Microscope Fixture) |
+| `Scintillator_LuAG` | `Device` | `Scintillator` | `optical_housing` (bound into Microscope Fixture) |
 
 ## Family affordances
 
@@ -45,7 +46,8 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `Hexapod` | `Posable`, `Homeable`, `Limitable` |
 | `Scintillator` | `Consumable` |
 | `Camera` | `Imageable`, `Binnable`, `Triggerable`, `Streamable`, `Recording` |
-| `Imager` | (empty; this Family exists as the `presents_as_family_id` target for detector Assemblies, including MCTOptics; was `ImagingDetector` before the role-aggregate-design rename) |
+| `Imager` | (empty; this Family exists as the `presents_as_family_id` target for detector Assemblies, including the Microscope; was `ImagingDetector` before the role-aggregate-design rename) |
+| `OpticalHousing` | (empty; the containment chassis Family carried by the `optical_housing` Asset that parents the Microscope constituents; no command surface) |
 | `Objective` | (pending — empty at initial registration) |
 | `PseudoAxis` | (empty; partition rules live on `Asset.partition_rule`, not as affordances) |
 
@@ -55,7 +57,7 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 
 ## Vendor catalog (Models)
 
-Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manufacturer) and Property 7 (Model) need. Assets bind to a Model at registration; the Asset's Family set must be a subset of the Model's declared families. The four MCTOptics-housing Models (lens turret motor, Mitutoyo MPLAPO objective kit, FLIR Oryx camera, Crytur LuAG scintillator) live on the [MCTOptics deployment](equipment/mctoptics.md#vendor-catalog-models) page; the table below tracks Models bound to non-MCTOptics 2-BM Assets.
+Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manufacturer) and Property 7 (Model) need. Assets bind to a Model at registration; the Asset's Family set must be a subset of the Model's declared families. The four Microscope-housing Models (lens turret motor, Mitutoyo MPLAPO objective kit, FLIR Oryx camera, Crytur LuAG scintillator) live on the [Microscope deployment](equipment/microscope.md#vendor-catalog-models) page; the table below tracks Models bound to non-microscope 2-BM Assets.
 
 | Model | Manufacturer | Part number | Declared Families | Bound at 2-BM |
 | --- | --- | --- | --- | --- |
@@ -301,7 +303,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `pixel_size` | `3.45 um` |
 | `bit_depth` | `12 bit` |
 
-### `MCTOptics_objective_0` (10x)
+### `objective_0` (10x)
 
 | Setting | Value |
 | --- | --- |
@@ -310,7 +312,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `focal_length` | `20 mm` |
 | `working_distance` | `33.5 mm` |
 
-### `MCTOptics_objective_1` (2x)
+### `objective_1` (2x)
 
 | Setting | Value |
 | --- | --- |
@@ -319,7 +321,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `focal_length` | `100 mm` |
 | `working_distance` | `34 mm` |
 
-### `MCTOptics_objective_2` (1.1x)
+### `objective_2` (1.1x)
 
 | Setting | Value |
 | --- | --- |
@@ -328,7 +330,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `focal_length` | `200 mm` |
 | `working_distance` | `50 mm` |
 
-### `MCTOptics_lens_turret`
+### `lens_turret`
 
 `RotaryStage` Family assumed (pending 2-BM operator confirmation; if the turret is a translating slide, the Family flips to `LinearStage` and the signal types switch from `rotation_deg` to `linear_mm`).
 
@@ -341,7 +343,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 
 ## Engineering drawings
 
-Each Asset may carry one canonical engineering reference as a `(system, number, revision)` triple per the [Drawing VO](../../architecture/modules/equipment/index.md). The carrier holds the build-to document for the physical specimen; the [Mount drawing](equipment/mctoptics.md#engineering-drawings) on the slot is a separate document (where the slot lives in the beamline). v1 is single-valued; the Drawing-frozenset promotion and `Model.drawing` / `Fixture.drawing` extensions defer to the rule-of-three trigger.
+Each Asset may carry one canonical engineering reference as a `(system, number, revision)` triple per the [Drawing VO](../../architecture/modules/equipment/index.md). The carrier holds the build-to document for the physical specimen; the [Mount drawing](equipment/microscope.md#engineering-drawings) on the slot is a separate document (where the slot lives in the beamline). v1 is single-valued; the Drawing-frozenset promotion and `Model.drawing` / `Fixture.drawing` extensions defer to the rule-of-three trigger.
 
 Assets not listed below have no canonical document cited on the 2-BM source page yet (Aerotech `ABS250MP` datasheet for `Aerotech_ABRS_rotary`, Kohzu `CYAT-070` datasheet for the four `Sample_top_*` stages, an APS shutter drawing for `Shutter_2BM`, and a FLIR Oryx datasheet for `Oryx_5MP_camera`). These populate when the operator confirms the canonical reference.
 
@@ -353,7 +355,7 @@ Assets not listed below have no canonical document cited on the 2-BM source page
 | `number` | `Hex300-Data-Sheet` |
 | `revision` | `D20250203` |
 
-Aerotech HEX300-230HL hexapod product datasheet (Hex300-Data-Sheet-D20250203.pdf). The MCTOptics deployment cites this as the structured reference for the 6-DoF positioner that anchors the sample stack.
+Aerotech HEX300-230HL hexapod product datasheet (Hex300-Data-Sheet-D20250203.pdf). The Microscope deployment cites this as the structured reference for the 6-DoF positioner that anchors the sample stack.
 
 ### `Optique_Peter_focus_Z`
 
@@ -363,17 +365,9 @@ Aerotech HEX300-230HL hexapod product datasheet (Hex300-Data-Sheet-D20250203.pdf
 | `number` | `MAN-11863` |
 | `revision` | `0521-0465-A` |
 
-Optique Peter MICRX080 microscope manual (MAN-11863-0521-0465-A, 21 May 2021, 53 pages). The shared vendor manual covers every Optique Peter housing constituent (focus stage, lens turret, lens kit, scintillator). Same reference attaches to each MCTOptics-bound Asset below.
+Optique Peter MICRX080 microscope manual (MAN-11863-0521-0465-A, 21 May 2021, 53 pages). The shared vendor manual covers every Optique Peter housing constituent (focus stage, lens turret, lens kit, scintillator). Same reference attaches to each Microscope-bound Asset below.
 
-### `MCTOptics_lens_turret`
-
-| Field | Value |
-| --- | --- |
-| `system` | `EDMS` |
-| `number` | `MAN-11863` |
-| `revision` | `0521-0465-A` |
-
-### `MCTOptics_objective_0`
+### `lens_turret`
 
 | Field | Value |
 | --- | --- |
@@ -381,9 +375,7 @@ Optique Peter MICRX080 microscope manual (MAN-11863-0521-0465-A, 21 May 2021, 53
 | `number` | `MAN-11863` |
 | `revision` | `0521-0465-A` |
 
-v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO LWD per-magnification datasheet is the eventual upgrade once part numbers are verified (see the [vendor catalog note](equipment/mctoptics.md#vendor-catalog-models) on the Plan-Apo-NIR three-part-number split).
-
-### `MCTOptics_objective_1`
+### `objective_0`
 
 | Field | Value |
 | --- | --- |
@@ -391,7 +383,17 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 | `number` | `MAN-11863` |
 | `revision` | `0521-0465-A` |
 
-### `MCTOptics_objective_2`
+v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO LWD per-magnification datasheet is the eventual upgrade once part numbers are verified (see the [vendor catalog note](equipment/microscope.md#vendor-catalog-models) on the Plan-Apo-NIR three-part-number split).
+
+### `objective_1`
+
+| Field | Value |
+| --- | --- |
+| `system` | `EDMS` |
+| `number` | `MAN-11863` |
+| `revision` | `0521-0465-A` |
+
+### `objective_2`
 
 | Field | Value |
 | --- | --- |
