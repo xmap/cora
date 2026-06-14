@@ -32,12 +32,12 @@ The Microscope detector sits about 55 m from the source in the 2-BM hutch. It is
         leaf slot     camera        -> Camera
         leaf slot     scintillator  -> Scintillator
       and the Optics sub-assembly contributes its own leaf slots, bound in the same Fixture:
-        turret   -> Turret
-        objective_10x   -> Objective_10x
-        objective_2x   -> Objective_2x
-        objective_1.1x   -> Objective_1.1x
-        focus         -> Focus
-        objective_select   -> Objective_Select   (partition_rule = LookupTable
+        turret            -> Turret
+        objectives (1+)   -> Objective_10x     |  one OneOrMore slot,
+        objectives (1+)   -> Objective_2x      |  three bindings
+        objectives (1+)   -> Objective_1.1x    |
+        focus             -> Focus
+        objective_select  -> Objective_Select  (the selector; partition_rule = LookupTable
                                           0 -> 121.5942 deg  (10x in beam)
                                           1 ->  61.9841 deg  (2x  in beam)
                                           2 ->   2.3006 deg  (1.1x in beam))
@@ -93,11 +93,11 @@ The **Optics** Assembly is the reusable core: the turret, the three objectives, 
 | Slot | Cardinality | Required Family |
 | --- | --- | --- |
 | `turret` | `Exactly1` | `RotaryStage` |
-| `objective_10x` | `Exactly1` | `Objective` |
-| `objective_2x` | `Exactly1` | `Objective` |
-| `objective_1.1x` | `Exactly1` | `Objective` |
+| `objectives` | `OneOrMore` | `Objective` |
 | `objective_select` | `Exactly1` | `PseudoAxis` |
 | `focus` | `Exactly1` | `LinearStage` |
+
+The three installed objectives (10x, 2x, 1.1x) all bind the single `objectives` slot. They differ only by the `magnification` setting, so one `OneOrMore` slot keeps the Optics blueprint (and its content hash) reusable across turret loadouts rather than baking three specific magnifications into the structure; a second beamline with a five-position turret reuses the same blueprint. Per-objective identity lives on the Asset (its name, settings, and calibration), not the slot. `objective_select` is **the selector**: the virtual axis that picks which objective is in the beam.
 
 The Optics sub-assembly is composed one level deep: it does not itself reference further sub-assemblies. At Fixture time, a Microscope expands one composing level, the Optics cluster, and rejects deeper nesting; that keeps the materialization rule simple until a real two-tier case earns the extra depth.
 
@@ -107,7 +107,7 @@ The **Fixture** materializes the Microscope Assembly at this specific facility. 
 
 - The Assembly id and its content hash (frozen at registration so later Assembly revisions do not silently change this materialization)
 - The Trust Surface (`2-BM`) for governance scope
-- The slot-to-Asset map binding the eight leaf slots (the Microscope's `camera` and `scintillator`, plus the Optics sub-assembly's `turret`, `objective_10x..2`, `objective_select`, and `focus`) to the eight specific Asset IDs above
+- The slot-to-Asset map binding eight Assets across six leaf slots (the Microscope's `camera` and `scintillator`, plus the Optics sub-assembly's `turret`, `objectives` [the three magnification objectives], `objective_select`, and `focus`) to the eight specific Asset IDs above
 - Parameter overrides, if any (none in v1)
 
 When the Fixture is registered, the decider expands the union of the top Assembly's leaf slots and the referenced Optics sub-assembly's leaf slots into one flat slot namespace, then validates the bindings against that union. A leaf slot name that appeared in both blueprints would be rejected as a namespace collision; here the two sets are disjoint.

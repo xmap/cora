@@ -14,9 +14,9 @@ end-to-end against Postgres:
     version-pinned sub-assembly link and adds camera + scintillator
     leaf slots, presenting as the Detector Role via the Imager
     presenter Family,
-  - one **Fixture** (microscope_at_2bm) that binds the UNION of the 8
-    leaf slots (the Microscope's 2 plus the Optics sub-assembly's 6) to
-    the 8 concrete Assets,
+  - one **Fixture** (microscope_at_2bm) that binds 8 concrete Assets across
+    the union of leaf slots (the Microscope's 2 plus the Optics
+    sub-assembly's 4; the three objectives share one OneOrMore slot),
   - one **Housing** Asset (Family Housing) that physically
     contains all 8 constituents (Asset.parent_id) and carries the Mount.
 
@@ -392,12 +392,14 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
             correlation_id=_CORRELATION_ID,
         )
 
-    # ----- Optics sub-assembly (6 leaf slots) -----
-    def _slot(name: str, fam_id: UUID) -> TemplateSlot:
+    # ----- Optics sub-assembly (4 leaf slots; objectives is OneOrMore) -----
+    def _slot(
+        name: str, fam_id: UUID, cardinality: SlotCardinality = SlotCardinality.EXACTLY_1
+    ) -> TemplateSlot:
         return TemplateSlot(
             slot_name=SlotName(name),
             required_family_ids=frozenset({fam_id}),
-            cardinality=SlotCardinality.EXACTLY_1,
+            cardinality=cardinality,
         )
 
     optics_id = await bind_define_assembly(deps)(
@@ -407,9 +409,13 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
             required_slots=frozenset(
                 {
                     _slot("turret", _CAP_ROTARY_STAGE_ID),
-                    _slot("objective_10x", _CAP_OBJECTIVE_ID),
-                    _slot("objective_2x", _CAP_OBJECTIVE_ID),
-                    _slot("objective_1.1x", _CAP_OBJECTIVE_ID),
+                    # The three objectives differ only by magnification (a
+                    # settings axis), so they share ONE OneOrMore slot rather
+                    # than three Exactly1 slots. This keeps the Optics blueprint
+                    # and its content_hash reusable across turret loadouts;
+                    # per-magnification identity lives on the Asset (name +
+                    # settings + calibration), not the slot.
+                    _slot("objectives", _CAP_OBJECTIVE_ID, SlotCardinality.ONE_OR_MORE),
                     _slot("objective_select", _CAP_PSEUDO_AXIS_ID),
                     _slot("focus", _CAP_LINEAR_STAGE_ID),
                 }
@@ -460,11 +466,12 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     )
 
     # ----- Optics-cluster Assets (children of the housing) -----
-    # The dict key is the lowercase blueprint slot name (used for the
-    # Fixture binding); the registered Asset carries a PascalCase
+    # The dict key is a local handle: turret/objective_select equal their
+    # blueprint slot name, while the three objectives all bind the single
+    # OneOrMore `objectives` slot. The registered Asset carries a PascalCase
     # instance name per the facility Asset-instance-name convention.
     optics_assets: dict[str, UUID] = {}
-    for slot, asset_name, fam_id, settings in (
+    for key, asset_name, fam_id, settings in (
         ("turret", "Turret", _CAP_ROTARY_STAGE_ID, _SETTINGS_TURRET),
         ("objective_10x", "Objective_10x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_10X),
         ("objective_2x", "Objective_2x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_2X),
@@ -476,7 +483,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
-        optics_assets[slot] = aid
+        optics_assets[key] = aid
         await bind_add_asset_family(deps)(
             AddAssetFamily(asset_id=aid, family_id=fam_id),
             principal_id=_PRINCIPAL_ID,
@@ -506,19 +513,21 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     #       is the conceptual anchor; per-constituent Mounts are the
     #       pool-backed approximation). The helper runs on its own id
     #       pool: activate + Frame + Mount + install + drain. -----
-    bound: dict[str, UUID] = {
-        "camera": _ASSET_CAMERA_ID,
-        "scintillator": _ASSET_SCINTILLATOR_ID,
-        "turret": optics_assets["turret"],
-        "objective_10x": optics_assets["objective_10x"],
-        "objective_2x": optics_assets["objective_2x"],
-        "objective_1.1x": optics_assets["objective_1.1x"],
-        "objective_select": optics_assets["objective_select"],
-        "focus": _ASSET_FOCUS_ID,
-    }
-    for slot_name, asset_id in bound.items():
+    # slot_name -> asset_id pairs as a LIST (not a dict): the three objectives
+    # all bind the single OneOrMore `objectives` slot, so that name repeats.
+    bound: list[tuple[str, UUID]] = [
+        ("camera", _ASSET_CAMERA_ID),
+        ("scintillator", _ASSET_SCINTILLATOR_ID),
+        ("turret", optics_assets["turret"]),
+        ("objectives", optics_assets["objective_10x"]),
+        ("objectives", optics_assets["objective_2x"]),
+        ("objectives", optics_assets["objective_1.1x"]),
+        ("objective_select", optics_assets["objective_select"]),
+        ("focus", _ASSET_FOCUS_ID),
+    ]
+    for i, (slot_name, asset_id) in enumerate(bound):
         await install_existing_asset_into_fresh_mount(
-            db_pool, now=_NOW, asset_id=asset_id, slot_code=f"microscope_{slot_name}"
+            db_pool, now=_NOW, asset_id=asset_id, slot_code=f"microscope_{slot_name}_{i}"
         )
 
     # ----- Register the Microscope Fixture (binds the 8-slot union) -----
@@ -527,7 +536,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
             assembly_id=microscope_id,
             slot_asset_bindings=frozenset(
                 SlotAssetBinding(slot_name=slot_name, asset_id=asset_id)
-                for slot_name, asset_id in bound.items()
+                for slot_name, asset_id in bound
             ),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -535,7 +544,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     )
 
     # ----- Attach each bound Asset (sets its fixture_id back-reference) -----
-    for asset_id in bound.values():
+    for _, asset_id in bound:
         await bind_attach_asset_to_fixture(deps)(
             AttachAssetToFixture(asset_id=asset_id, fixture_id=fixture_id),
             principal_id=_PRINCIPAL_ID,
@@ -663,7 +672,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         DefinePlan(
             name="2BM_microscope_plan",
             practice_id=practice_id,
-            asset_ids=frozenset(bound.values()),
+            asset_ids=frozenset(asset_id for _, asset_id in bound),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -671,10 +680,11 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
 
     # ===== Assertions =====
 
-    # Optics sub-assembly stream: AssemblyDefined with 6 leaf slots.
+    # Optics sub-assembly stream: AssemblyDefined with 4 leaf slots
+    # (turret, objectives [OneOrMore], objective_select, focus).
     optics_events, _ = await deps.event_store.load("Assembly", optics_id)
     assert [e.event_type for e in optics_events] == ["AssemblyDefined"]
-    assert len(optics_events[0].payload["required_slots"]) == 6
+    assert len(optics_events[0].payload["required_slots"]) == 4
 
     # Microscope stream: AssemblyDefined with the sub-assembly link + 2 leaves.
     micro_events, _ = await deps.event_store.load("Assembly", microscope_id)
@@ -685,12 +695,15 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     assert micro_payload["required_sub_assemblies"][0]["sub_assembly_id"] == str(optics_id)
     assert micro_payload["required_sub_assemblies"][0]["content_hash"] == optics.content_hash
 
-    # Fixture stream: FixtureRegistered binding the 8-slot union.
+    # Fixture stream: FixtureRegistered binding 8 Assets across 6 slot names
+    # (the `objectives` OneOrMore slot carries 3 of the 8 bindings).
     fixture_events, _ = await deps.event_store.load("Fixture", fixture_id)
     assert [e.event_type for e in fixture_events] == ["FixtureRegistered"]
-    assert len(fixture_events[0].payload["slot_asset_bindings"]) == 8
-    bound_slot_names = {b["slot_name"] for b in fixture_events[0].payload["slot_asset_bindings"]}
-    assert bound_slot_names == set(bound)
+    bindings = fixture_events[0].payload["slot_asset_bindings"]
+    assert len(bindings) == 8
+    bound_slot_names = {b["slot_name"] for b in bindings}
+    assert bound_slot_names == {slot for slot, _ in bound}
+    assert sum(1 for b in bindings if b["slot_name"] == "objectives") == 3
 
     # Containment: every constituent's parent is the housing; the housing's
     # parent is the 2-BM Unit. Each bound Asset carries AssetAttachedToFixture.
@@ -700,7 +713,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     for name, asset_id in optics_assets.items():
         events, _ = await deps.event_store.load("Asset", asset_id)
         assert events[0].payload["parent_id"] == str(housing_id), f"{name}: expected housing parent"
-    for slot_name, asset_id in bound.items():
+    for slot_name, asset_id in bound:
         events, _ = await deps.event_store.load("Asset", asset_id)
         types = [e.event_type for e in events]
         assert "AssetAttachedToFixture" in types, f"{slot_name}: expected fixture attach"
