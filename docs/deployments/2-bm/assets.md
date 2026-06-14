@@ -37,6 +37,11 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `Focus` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `FocusDrive`) | `2-BM-B` |
 | `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `DetectorTable` | `Device` | `OpticalTable` | `2-BM` (driven by `SampleStageDrive`) | `2-BM-B` |
+| `DetectorTable_AX` | `Device` | `PseudoAxis` | `DetectorTable` (DoF; corrective pitch about lab-X) | `2-BM-B` |
+| `DetectorTable_AY` | `Device` | `PseudoAxis` | `DetectorTable` (DoF; corrective yaw about lab-Y) | `2-BM-B` |
+| `DetectorTable_X` | `Device` | `PseudoAxis` | `DetectorTable` (DoF; centering X) | `2-BM-B` |
+| `DetectorTable_Y` | `Device` | `PseudoAxis` | `DetectorTable` (DoF; centering Y) | `2-BM-B` |
 
 ## Family affordances
 
@@ -50,6 +55,7 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `RotaryStage` | `Rotatable`, `Homeable`, `Limitable`, `Following`, `Marking` |
 | `LinearStage` | `Translatable`, `Homeable`, `Limitable`, `Following` |
 | `Hexapod` | `Posable`, `Homeable`, `Limitable` |
+| `OpticalTable` | `Translatable`, `Homeable`, `Limitable` (a multi-axis positioning table; the corrective tilt DoFs are surfaced as `PseudoAxis` facets over an IOC solver, not as `OpticalTable` affordances) |
 | `Scintillator` | `Consumable` |
 | `Camera` | `Imageable`, `Binnable`, `Triggerable`, `Streamable`, `Recording` |
 | `Imager` | (empty; this Family exists as the `presents_as_family_id` target for detector Assemblies, including the Microscope; was `ImagingDetector` before the role-aggregate-design rename) |
@@ -92,6 +98,34 @@ Each DoF reads its feedback from the physical `Hexapod` and exposes one operator
 Six wires, one per DoF (`Hexapod.<axis>_feedback_out -> Hexapod_<Axis>.constituent_in`), carry the feedback each PseudoAxis needs to reconstruct its readback. `validate_pseudoaxis_fanout` accepts each: exactly one OUTPUT port on the facet, one incoming wire, homogeneous `signal_type`, and `SolverReference` is exempt from the arity check.
 
 These ports and wires are modelled and validate at Plan-bind, but the runtime that would decompose a virtual setpoint into hexapod motion (`eval_solver_reference`) is still deferred and raises `NotImplementedError`, so the wired Plan is not yet runtime-executable. The executable model lives in `apps/api/tests/integration/scenarios/test_2bm_hexapod_pose_wiring.py`.
+
+## Detector optical table DoF model
+
+`DetectorTable` is the SRI-geometry table the Microscope detector rides on. Six physical motors on the b-station OMS VME58 crate (`SampleStageDrive`) feed the virtual EPICS record `2bmb:table3`, whose IOC solver resolves them into four operator-addressable corrective degrees of freedom. As with the `Hexapod`, those DoFs are surfaced as `PseudoAxis` sub-modules parented to the physical table (Device-in-Device), each carrying a `SolverReference` partition rule naming the `2bmb_table3` solver; the six-motor kinematics stay with the IOC rather than being duplicated into CORA. The motor map (`M0X`=`2bmb:m13`, `M0Y`=`2bmb:m14`, `M1Y`=`2bmb:m12`, `M2X`=`2bmb:m10`, `M2Y`=`2bmb:m9`, `M2Z`=`2bmb:m11`) is recorded in the descriptor for provenance; the six motors are not registered as Assets (the IOC owns them, exactly as the hexapod's six legs are unregistered).
+
+| DoF Asset | Kind | Axis |
+| --- | --- | --- |
+| `DetectorTable_X` | translation | centering along X |
+| `DetectorTable_Y` | translation | centering along Y |
+| `DetectorTable_AX` | rotation | corrective pitch about lab-X |
+| `DetectorTable_AY` | rotation | corrective yaw about lab-Y |
+
+The EPICS handles (`2bmb:table3.X`, `.Y`, `.AX`, `.AY`) live in each facet's `alternate_identifiers`, not in its name.
+
+### Detector-table constituent-port wiring
+
+Each DoF reads its feedback from the physical `DetectorTable` and exposes one operator-addressable virtual port, the same `Plan.wires` pattern as the hexapod.
+
+| Asset | Port | Direction | `signal_type` |
+| --- | --- | --- | --- |
+| `DetectorTable` | `x_feedback_out`, `y_feedback_out` | OUTPUT | `position_feedback_linear_mm` |
+| `DetectorTable` | `ax_feedback_out`, `ay_feedback_out` | OUTPUT | `position_feedback_rotation_deg` |
+| `DetectorTable_X` / `_Y` | `constituent_in` | INPUT | `position_feedback_linear_mm` |
+| `DetectorTable_X` / `_Y` | `x_out` / `y_out` | OUTPUT | `position_setpoint_linear_mm` |
+| `DetectorTable_AX` / `_AY` | `constituent_in` | INPUT | `position_feedback_rotation_deg` |
+| `DetectorTable_AX` / `_AY` | `ax_out` / `ay_out` | OUTPUT | `position_setpoint_rotation_deg` |
+
+Four wires, one per DoF (`DetectorTable.<axis>_feedback_out -> DetectorTable_<Axis>.constituent_in`), carry the feedback each PseudoAxis needs. `validate_pseudoaxis_fanout` accepts each (exactly one OUTPUT port on the facet, one incoming wire, homogeneous `signal_type`; `SolverReference` is exempt from the arity check). As with the hexapod, `eval_solver_reference` is still deferred and raises `NotImplementedError`, so the wired Plan validates but is not yet runtime-executable. The executable model lives in `apps/api/tests/integration/scenarios/test_2bm_detector_table_setup.py`.
 
 ## Vendor catalog (Models)
 

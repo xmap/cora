@@ -62,6 +62,8 @@ families:
     note: "Presenter Family for detector Assemblies; the 2-BM Optique Peter detector materializes as the Microscope Assembly + Fixture."
   - name: Housing
     note: "Containment chassis Family; the Housing Asset parents the Microscope constituents and carries the Mount."
+  - name: OpticalTable
+    note: "Multi-axis optical positioning table. At 2-BM the DetectorTable (virtual record 2bmb:table3) surfaces corrective DoFs (pitch, yaw, centering) as PseudoAxis sub-modules over an IOC solver, mirroring the Hexapod DoF model."
   - name: ProbeGeneric
     note: "APS facility-scope template, an abstract detector probe-chain."
   # Pending in code (documented, not yet defined): Goniometer, Monochromator,

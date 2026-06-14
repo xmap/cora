@@ -139,6 +139,8 @@ This is a documented approximation. The constituents have their own internal off
 
 Where the axes meet: the Fixture answers "what logical cluster lives here for governance," the Mount answers "where in space the housing sits," and the containment tree answers "what the housing physically holds." Three orthogonal questions. The Fixture has no placement of its own; only Assets do, via the Mounts they are installed into, and at 2-BM only the housing is mounted.
 
+The hutch optical table that `2BM_hutch_frame` is anchored to is itself a modelled, motorized device: `DetectorTable` (virtual record `2bmb:table3`) carries corrective pitch / yaw / centering DoFs that align the whole detector in the hutch, separate from the focus Z rail (`Focus`) that moves the optics inside the housing. See the [Detector optical table DoF model](../assets.md#detector-optical-table-dof-model).
+
 ## Routing the objective selector (PseudoAxis)
 
 `Objective_Selector` is a virtual axis inside the Optics sub-assembly. Its **partition rule** is a closed `LookupTable` decomposing an integer index (0, 1, 2) into a turret position in millimeters (the selector is a sliding ball-screw stage, not a rotating turret):

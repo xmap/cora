@@ -363,6 +363,20 @@ detector:
       passive: true
       replaceable: true
       new: true
+    - name: DetectorTable
+      family: OpticalTable        # SRI-geometry table the detector rides on; corrective DoFs over 6 motors via the 2bmb:table3 IOC solver
+      pv: "2bmb:table3"
+      controller: SampleStageDrive
+      motors: { M0X: "2bmb:m13", M0Y: "2bmb:m14", M1Y: "2bmb:m12", M2X: "2bmb:m10", M2Y: "2bmb:m9", M2Z: "2bmb:m11" }  # 6 physical motors aggregated by table3 (item_020)
+      confirm: "corrective-DoF ranges (.AX/.AY/.X/.Y) not yet recorded"
+    - name: DetectorTable_AX
+      family: PseudoAxis          # corrective pitch about lab-X (2bmb:table3.AX)
+    - name: DetectorTable_AY
+      family: PseudoAxis          # corrective yaw about lab-Y (2bmb:table3.AY)
+    - name: DetectorTable_X
+      family: PseudoAxis          # centering X (2bmb:table3.X)
+    - name: DetectorTable_Y
+      family: PseudoAxis          # centering Y (2bmb:table3.Y)
   decommissioned:                 # provenance only, not active assets
     - PCO Dimax HS
     - Adimec Quartz Q-12A180
