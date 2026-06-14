@@ -70,7 +70,7 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `Hexapod_Pitch` | rotation | about Y | B (`travel_b`) |
 | `Hexapod_Yaw` | rotation | about Z | C (`travel_c`) |
 
-The A/B/C labels are the schema's own (`travel_a` = about X, etc.). The EPICS channel map (`2bmHXP:m1`-`2bmHXP:m6`) is operator-confirmed and lives in each facet's `alternate_identifiers`; the 2-BM source page names two rotational channels (`2bmHXP:m4`, `2bmHXP:m5`) but the full six-channel-to-axis mapping is unverified, so it is not asserted here.
+The A/B/C labels are the schema's own (`travel_a` = about X, etc.). The EPICS channel map (`2bmHXP:m1`-`2bmHXP:m6`) will live in each facet's `alternate_identifiers` once an operator confirms it; the 2-BM source page names two rotational channels (`2bmHXP:m4`, `2bmHXP:m5`) but the full six-channel-to-axis mapping is unverified, so it is not asserted here (tracked as `HXP-1` in [Open questions](questions.md)).
 
 ### Constituent-port wiring
 
