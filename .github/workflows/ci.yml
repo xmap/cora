@@ -297,7 +297,7 @@ jobs:
           COVERAGE_PATH: apps/api
 
   migrations:
-    name: Migrations (atlas hash + safety scan)
+    name: Migrations (atlas hash + validate + safety scan)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -321,6 +321,18 @@ jobs:
             git diff migrations/atlas.sum
             exit 1
           fi
+
+      # `atlas migrate hash` is blind to version collisions: it happily
+      # re-hashes a directory that holds two files with the same timestamp,
+      # so the hash check above stays green even when `atlas migrate apply`
+      # would refuse to run. Each colliding file also lands in a separate PR
+      # (the pair only meets on main), so per-PR hashing never sees both.
+      # `validate` replays the directory against an ephemeral dev database and
+      # rejects duplicate versions, out-of-order files, and checksum drift,
+      # which is exactly the fresh-clone install break this guards against.
+      # No target DATABASE_URL needed; validate only uses the dev url.
+      - name: Validate migration directory
+        run: atlas migrate validate --env local
 
       # Atlas v0.38+ moved `atlas migrate lint` behind atlas-cloud login.
       # We deliberately skip that path (no signup, no payment) and run a
