@@ -89,6 +89,7 @@ nav:
     - deployments/index.md
     - 2-BM:
       - deployments/2-bm/index.md
+      - Open questions: deployments/2-bm/questions.md
       - The beamline:
         - Layout: deployments/2-bm/beamline.md
         - Assets: deployments/2-bm/assets.md

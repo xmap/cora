@@ -12,6 +12,8 @@
 
 The measurement lifecycle below is the reading order: the beamline itself, then getting it ready, running a measurement, the results, and the envelope that governs it. The physical layer is generated from the descriptor; the operational stages are hand-authored today and become CORA-projection-generated in a later phase.
 
+Things CORA still needs the beamline team to confirm are collected on [Open questions](questions.md).
+
 ## The beamline
 
 What 2-BM physically is, walked source to detector.
