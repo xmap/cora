@@ -61,7 +61,7 @@ scenario.
 ## Asset stack (hexapod controller + hexapod stage)
 
 This scenario registers the Hexapod Device alongside its drive
-electronics (`Aerotech_Hexapod_drive`, the second MotionController
+electronics (`HexapodDrive`, the second MotionController
 Asset shipped per the controller-as-Asset design). The
 hexapod's `controller_id` carries the back-reference to the drive.
 The broader 2-BM stack (other motors, optics, detector) doesn't
@@ -161,7 +161,7 @@ _CAP_HEXAPOD_ID = family_stream_id(FamilyName("Hexapod"))
 
 # Devices: controller registered first (so the hexapod's controller_id
 # back-reference targets an already-registered Asset stream), then the
-# hexapod stage itself. Aerotech_Hexapod_drive is the SECOND
+# hexapod stage itself. HexapodDrive is the SECOND
 # MotionController Asset shipped per
 # [[project-controller-as-asset-stage1-design]], anchoring the hexapod
 # controller class. The drive's specific product line is not named on
@@ -192,7 +192,7 @@ _CAUTION_HEXAPOD_LOCKUP_ID = UUID("01900000-0000-7000-8000-000000360f21")
 
 _DEVICES = (
     DeviceSpec(
-        "Aerotech_Hexapod_drive",
+        "HexapodDrive",
         _ASSET_AEROTECH_HEXAPOD_DRIVE_ID,
         "MotionController",
         _CAP_MOTION_CONTROLLER_ID,
@@ -587,7 +587,7 @@ async def test_hexapod_reboot_plays_out_end_to_end(
     )
 
     # ----- Caution BC: register the operator-playbook Caution on the controller -----
-    # Targets Aerotech_Hexapod_drive (the actual hardware that locks up)
+    # Targets HexapodDrive (the actual hardware that locks up)
     # rather than the stage proxy. The failure mode and the workaround
     # were always controller-side; only with controller-as-Asset shipped
     # does CORA have a controller Asset to point at honestly. In
@@ -630,7 +630,7 @@ async def test_hexapod_reboot_plays_out_end_to_end(
         _events, version = await deps.event_store.load("Asset", asset_id)
         assert version >= 1, f"Asset {asset_id} did not land"
 
-    # ----- Assert: Aerotech_Hexapod_drive controller stream landed -----
+    # ----- Assert: HexapodDrive controller stream landed -----
 
     controller_events, _ = await deps.event_store.load("Asset", _ASSET_AEROTECH_HEXAPOD_DRIVE_ID)
     assert [e.event_type for e in controller_events] == [

@@ -21,10 +21,10 @@ The MCTOptics detector sits about 55 m from the source in the 2-BM hutch. It is 
         objective_0   -> MCTOptics_objective_0   (Asset, Family Objective)
         objective_1   -> MCTOptics_objective_1   (Asset, Family Objective)
         objective_2   -> MCTOptics_objective_2   (Asset, Family Objective)
-        camera        -> Oryx_5MP_camera         (Asset, Family Camera)
-        scintillator  -> Scintillator_LuAG       (Asset, Family Scintillator)
+        camera        -> Camera         (Asset, Family Camera)
+        scintillator  -> Scintillator       (Asset, Family Scintillator)
         lens_turret   -> MCTOptics_lens_turret   (Asset, Family RotaryStage)
-        focus         -> Optique_Peter_focus_Z   (Asset, Family LinearStage)
+        focus         -> Focus   (Asset, Family LinearStage)
         lens_select   -> MCTOptics_lens_select   (Asset, Family PseudoAxis;
                                                    partition_rule = LookupTable
                                                      0 -> 121.5942 deg  (10x in beam)
@@ -79,7 +79,7 @@ The **Fixture** materializes the Assembly at this specific facility. It records:
 
 A Fixture is single-event genesis: it never changes after registration. Each of the 8 bound Assets carries a `fixture_id` back-reference. Operators do not see this field directly; it is a query helper so "which Fixture is this Asset bound into" answers in one lookup.
 
-The exclusivity invariant matters: an Asset can only belong to one Fixture at a time. `Optique_Peter_focus_Z` is bound into the MCTOptics Fixture, which means it cannot simultaneously be bound into a different Fixture for, say, a non-MCTOptics imaging path. If a future deployment needs the same physical focus motor for a different cluster, the operator detaches it from MCTOptics first.
+The exclusivity invariant matters: an Asset can only belong to one Fixture at a time. `Focus` is bound into the MCTOptics Fixture, which means it cannot simultaneously be bound into a different Fixture for, say, a non-MCTOptics imaging path. If a future deployment needs the same physical focus motor for a different cluster, the operator detaches it from MCTOptics first.
 
 ## Physical placement (Mount + Frame)
 

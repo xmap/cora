@@ -19,7 +19,7 @@ this scenario fits into.
 
 To ground the `resolution_alignment` Procedure inventory row on
 `docs/deployments/2-bm/procedures.md`, and to register a new Asset
-(`Optique_Peter_focus_Z`) that no prior scenario has touched. Per
+(`Focus`) that no prior scenario has touched. Per
 [[project_pilot_docs_design]] no doc page may name an aggregate until
 a scenario test registers it; this file unlocks the focus-Z motor in
 the 2-BM Asset inventory.
@@ -132,11 +132,11 @@ _CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
 _CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 _CAP_MOTION_CONTROLLER_ID = family_stream_id(FamilyName("MotionController"))
 
-# Devices: the focus motor's controller (Aerotech_2bmbAERO_drive) is
-# registered FIRST so Optique_Peter_focus_Z's controller_id back-
+# Devices: the focus motor's controller (FocusDrive) is
+# registered FIRST so Focus's controller_id back-
 # reference targets an already-registered Asset stream. Image chain
 # (camera + scintillator) is passive and carries no controller_id.
-# Aerotech_2bmbAERO_drive is the THIRD MotionController Asset shipped
+# FocusDrive is the THIRD MotionController Asset shipped
 # at 2-BM (rotary + hexapod first); the drive's specific product line
 # is not named on the 2-BM source page (operators address it via the
 # IOC handle `2bmbAERO`; the drive itself is almost certainly Aerotech
@@ -162,22 +162,20 @@ _STEPS_OPEN_EVENT_ID = UUID("01900000-0000-7000-8000-000000355f12")
 
 _DEVICES = (
     DeviceSpec(
-        "Aerotech_2bmbAERO_drive",
+        "FocusDrive",
         _ASSET_AEROTECH_2BMBAERO_DRIVE_ID,
         "MotionController",
         _CAP_MOTION_CONTROLLER_ID,
     ),
     DeviceSpec(
-        "Optique_Peter_focus_Z",
+        "Focus",
         _ASSET_FOCUS_Z_ID,
         "LinearStage",
         _CAP_LINEAR_STAGE_ID,
         controller_id=_ASSET_AEROTECH_2BMBAERO_DRIVE_ID,
     ),
-    DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
-    DeviceSpec(
-        "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
-    ),
+    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
 
 
@@ -225,7 +223,7 @@ def _setpoint(
     """Build a focus-Z Setpoint step input. `role` distinguishes
     initial position, search steps, bisection, and final lock."""
     payload: dict[str, Any] = {
-        "channel": "Optique_Peter_focus_Z",
+        "channel": "Focus",
         "target_value": target_mm,
         "units": "mm",
         "role": role,
@@ -306,7 +304,7 @@ async def test_resolution_alignment_plays_out_end_to_end(
     db_pool: asyncpg.Pool,
 ) -> None:
     """Seed facility + focus-Z motor + image chain + the focus motor's
-    drive-electronics controller (`Aerotech_2bmbAERO_drive`, the third
+    drive-electronics controller (`FocusDrive`, the third
     MotionController Asset shipped at 2-BM per the controller-as-Asset
     design). Run an iterative focus-peak search Procedure on a
     Siemens-star resolution target. Assert the auditable record carries
@@ -475,11 +473,11 @@ async def test_resolution_alignment_plays_out_end_to_end(
         event_types = [e.event_type for e in asset_events]
         assert event_types == ["AssetRegistered", "AssetFamilyAdded", "AssetActivated"]
 
-    # ----- Assert: Aerotech_2bmbAERO_drive controller stream landed -----
+    # ----- Assert: FocusDrive controller stream landed -----
     # Controller stays Commissioned (not activated): controllers are the
     # leaf of the drive-electronics chain at v1, and activation is a
     # stage-side ceremony. Same shape as the rotary anchor's
-    # Aerotech_Ensemble_drive and the hexapod's Aerotech_Hexapod_drive.
+    # RotaryDrive and the hexapod's HexapodDrive.
 
     controller_events, _ = await deps.event_store.load("Asset", _ASSET_AEROTECH_2BMBAERO_DRIVE_ID)
     assert [e.event_type for e in controller_events] == [

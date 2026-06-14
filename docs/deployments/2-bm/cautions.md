@@ -6,8 +6,8 @@ Operator tribal knowledge captured at shakedown, first-light, or production time
 
 | Target | Category | Severity | Text |
 | --- | --- | --- | --- |
-| `Aerotech_ABRS_rotary` | `Wear` | `Caution` | Misses index pulse on cold-start home; retry after 5s |
-| `Aerotech_Hexapod_drive` | `Wear` | `Caution` | Locks up under sustained load; recover via `hexapod_reboot` |
+| `Rotary` | `Wear` | `Caution` | Misses index pulse on cold-start home; retry after 5s |
+| `HexapodDrive` | `Wear` | `Caution` | Locks up under sustained load; recover via `hexapod_reboot` |
 
 ## Aerotech cold-start index miss
 
@@ -27,15 +27,15 @@ Operator tribal knowledge captured at shakedown, first-light, or production time
 
 **Workaround.** Run `hexapod_reboot.py` (in [`2bmb-bin`](https://github.com/xray-imaging/2bmb-bin)): stops the hexapod IOC, power-cycles PDU outlet 4 with 10s settling each way, restarts the IOC, polls `HexapodAllEnabled` for up to 180s. If the PV is still `0` after the timeout, `caput 2bmHXP:EnableWork.PROC 1` to force-enable, then re-poll. Manual checks during recovery: verify outlet state via NetBooter `/status.xml`; SSH `2bmb@arcturus` for IOC log inspection.
 
-**Modeling note.** This Caution NOW targets `Aerotech_Hexapod_drive` (the controller Asset) rather than `Hexapod` (the stage Asset), reflecting the honest physical location of the failure mode: the lockup is in the drive electronics, not in the stage, and the workaround above is entirely controller-side (PDU outlet, IOC restart, EPICS PV poll). The retarget is the second `MotionController` Asset shipped after the rotary anchor (`Aerotech_Ensemble_drive` driving `Aerotech_ABRS_rotary`); the controller-as-Asset slice partial-ship is now 2 of 7 hardware classes at 2-BM (see [assets.md](assets.md) and `project_controller_as_asset_stage1_design`). The drive's specific Aerotech product line is not named on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) (which calls the EPICS interface "native Aerotech Ensemble" but does not name the controller box, nor confirm rack-separate vs sealed-in integration), so the Asset name records what is known (Aerotech vendor, drives the hexapod) and defers identity details to settings placeholders that operators verify via `update_asset_settings` once they confirm the physical hardware. In production, the retarget itself uses the locked retire + re-register path (CautionRetired with `reason=WrongTarget` on the stage stream, fresh CautionRegistered on the controller stream); the `Caution.target` field is intentionally immutable per the supersede_caution discipline. This scenario's test fixture uses an ephemeral event store, so the rewrite is in-place rather than retire + re-register.
+**Modeling note.** This Caution NOW targets `HexapodDrive` (the controller Asset) rather than `Hexapod` (the stage Asset), reflecting the honest physical location of the failure mode: the lockup is in the drive electronics, not in the stage, and the workaround above is entirely controller-side (PDU outlet, IOC restart, EPICS PV poll). The retarget is the second `MotionController` Asset shipped after the rotary anchor (`RotaryDrive` driving `Rotary`); the controller-as-Asset slice partial-ship is now 2 of 7 hardware classes at 2-BM (see [assets.md](assets.md) and `project_controller_as_asset_stage1_design`). The drive's specific Aerotech product line is not named on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) (which calls the EPICS interface "native Aerotech Ensemble" but does not name the controller box, nor confirm rack-separate vs sealed-in integration), so the Asset name records what is known (Aerotech vendor, drives the hexapod) and defers identity details to settings placeholders that operators verify via `update_asset_settings` once they confirm the physical hardware. In production, the retarget itself uses the locked retire + re-register path (CautionRetired with `reason=WrongTarget` on the stage stream, fresh CautionRegistered on the controller stream); the `Caution.target` field is intentionally immutable per the supersede_caution discipline. This scenario's test fixture uses an ephemeral event store, so the rewrite is in-place rather than retire + re-register.
 
-**Lifetime.** No `expires_at` (permanent until superseded or retired). Surfaces on every future Run start at 2-BM that targets `Aerotech_Hexapod_drive` (or, by `controller_id` back-reference traversal, `Hexapod`), so operators know to run the recovery routine on first sign of unresponsiveness rather than chasing a phantom motion-control bug.
+**Lifetime.** No `expires_at` (permanent until superseded or retired). Surfaces on every future Run start at 2-BM that targets `HexapodDrive` (or, by `controller_id` back-reference traversal, `Hexapod`), so operators know to run the recovery routine on first sign of unresponsiveness rather than chasing a phantom motion-control bug.
 
 ## Pending
 
 | Target | Category | Severity | Text |
 | --- | --- | --- | --- |
 | 2-BM Unit | | | Vibration threshold exceeded after air-handler shutdown |
-| `Oryx_5MP_camera` | | | Detector dark-frame drift after long beam-off periods |
-| `Scintillator_LuAG` | | | Scintillator browning under prolonged white-beam exposure |
+| `Camera` | | | Detector dark-frame drift after long beam-off periods |
+| `Scintillator` | | | Scintillator browning under prolonged white-beam exposure |
 | Sample-stage Devices | | | Sample-stage backlash after manual handling |

@@ -171,14 +171,10 @@ _PLAN_TOMO_ID = UUID("01900000-0000-7000-8000-000000421d21")
 _RUN_ID = UUID("01900000-0000-7000-8000-000000421f02")
 
 _DEVICES = (
-    DeviceSpec(
-        "Aerotech_ABRS_rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID
-    ),
+    DeviceSpec("Rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID),
     DeviceSpec("Sample_top_X", _ASSET_SAMPLE_TOP_X_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
-    DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
-    DeviceSpec(
-        "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
-    ),
+    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
     DeviceSpec("Hexapod", _ASSET_HEXAPOD_ID, "Hexapod", _CAP_HEXAPOD_ID),
 )
 

@@ -77,9 +77,7 @@ _ASSET_AEROTECH_ABRS_ID = UUID("01900000-0000-7000-8000-0000002f00a2")
 _ASSET_SAMPLE_TOP_X_ID = UUID("01900000-0000-7000-8000-0000002f00a3")
 
 _DEVICES = (
-    DeviceSpec(
-        "Aerotech_ABRS_rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID
-    ),
+    DeviceSpec("Rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID),
     DeviceSpec("Sample_top_X", _ASSET_SAMPLE_TOP_X_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
 )
 

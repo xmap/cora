@@ -6,19 +6,19 @@ Each Procedure binds a Method + Practice + Plan to a set of target Assets. See [
 
 | Procedure | Target Assets |
 | --- | --- |
-| `motor_homing` | `Aerotech_ABRS_rotary`, `Sample_top_X` |
-| `first_light` | `Shutter_2BM` + image chain |
-| `dark_baseline` | `Shutter_2BM` + image chain |
-| `flat_baseline` | `Shutter_2BM` + image chain |
-| `resolution_alignment` | `Optique_Peter_focus_Z` + image chain |
+| `motor_homing` | `Rotary`, `Sample_top_X` |
+| `first_light` | `Shutter` + image chain |
+| `dark_baseline` | `Shutter` + image chain |
+| `flat_baseline` | `Shutter` + image chain |
+| `resolution_alignment` | `Focus` + image chain |
 | `focus_alignment` | `Sample_top_Z` + image chain |
-| `center_alignment` | `Aerotech_ABRS_rotary`, `Sample_top_X` + image chain |
-| `roll_alignment` | `Aerotech_ABRS_rotary`, `Hexapod_Roll` + image chain |
-| `pitch_alignment` | `Aerotech_ABRS_rotary`, `Hexapod_Pitch` + image chain |
+| `center_alignment` | `Rotary`, `Sample_top_X` + image chain |
+| `roll_alignment` | `Rotary`, `Hexapod_Roll` + image chain |
+| `pitch_alignment` | `Rotary`, `Hexapod_Pitch` + image chain |
 | `alignment_calibration` | `Hexapod_Roll` |
 | `hexapod_reboot` | `Hexapod` |
 
-Image chain = `Oryx_5MP_camera`, `Scintillator_LuAG`.
+Image chain = `Camera`, `Scintillator`.
 
 ## Pending
 

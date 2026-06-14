@@ -121,11 +121,7 @@ _SUBJECT_ID = UUID("01900000-0000-7000-8000-000000405b11")
 _CAMPAIGN_ID = UUID("01900000-0000-7000-8000-000000405b21")
 
 
-_DEVICES = (
-    DeviceSpec(
-        "Aerotech_ABRS_rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID
-    ),
-)
+_DEVICES = (DeviceSpec("Rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID),)
 
 _BEAMTIME = BeamtimeSpec(
     pi_actor_id=_PI_ACTOR_ID,

@@ -103,7 +103,7 @@ conditioning-optics:
     - name: Y3-30_mirror
       family: Mirror
       pv: { downstream_y: "2bma:m2", upstream_y: "2bma:m5", stripe_select: "2bma:m3" }
-      controller: OMS_VME58_2bma_drive
+      controller: FrontEndDrive
       material: Si
       length: 0.993 m
       water_cooled: true
@@ -134,7 +134,7 @@ beam-defining-and-safety:
       new: true
       confirm: true
       constituents:
-        - name: Shutter_2BM        # the B-station safety shutter (SBS); CORA-modeled
+        - name: Shutter        # the B-station safety shutter (SBS); CORA-modeled
           family: Shutter
           pv: "S02BM-PSS:SBS"
           material: "W 21 mm"
@@ -182,7 +182,7 @@ sample-environment:
       family: Hexapod
       model: aerotech_hexgen_hex300_230hl   # Aerotech HEX300-230HL
       pv: "2bmHXP:"
-      controller: Aerotech_Hexapod_drive
+      controller: HexapodDrive
       replaceable: true
       travel: "x 55 mm, y 60 mm, z 25 mm, a 15 deg, b 15 deg, c 30 deg"
       confirm: true
@@ -199,11 +199,11 @@ sample-environment:
       passive: true
       replaceable: true
       new: true
-    - name: Aerotech_ABRS_rotary
+    - name: Rotary
       family: RotaryStage         # the rotation axis (theta)
       model: aerotech_abs250mp_m_as   # Aerotech ABS250MP-M-AS, air-bearing
       pv: "2bmb:m102"
-      controller: Aerotech_Ensemble_drive
+      controller: RotaryDrive
       trigger_source: PSO         # position-synchronized output drives the camera
       replaceable: true
       range: -360..360 deg
@@ -215,7 +215,7 @@ sample-environment:
       family: LinearStage
       model: kohzu_cyat_070
       pv: "2bmb:m18"
-      controller: OMS_VME58_2bmb_drive
+      controller: SampleStageDrive
       range: -10..10 mm
       max_speed: 1 mm/s
       encoder_resolution: 0.0005 mm
@@ -223,7 +223,7 @@ sample-environment:
       family: LinearStage
       model: kohzu_cyat_070
       pv: "2bmb:m17"
-      controller: OMS_VME58_2bmb_drive
+      controller: SampleStageDrive
       range: -10..10 mm
       max_speed: 1 mm/s
       encoder_resolution: 0.0005 mm
@@ -299,14 +299,14 @@ detector:
     - name: lens_select
       family: PseudoAxis          # virtual, decomposes a lens index to turret rotation
       pv: "2bm:MCTOptics:LensSelect"
-    - name: Optique_Peter_focus_Z
+    - name: Focus
       family: LinearStage         # the single shared focus stage; per-lens offsets in software
       model: aerotech_pro225sl_1000
       pv: "2bmbAERO:m1"
-      controller: Aerotech_2bmbAERO_drive
+      controller: FocusDrive
       travel: 1000 mm
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
-    - name: Scintillator_LuAG
+    - name: Scintillator
       family: Scintillator
       material: LuAG
       thickness: 100 um
@@ -322,7 +322,7 @@ detector:
           value: "100 um"
           source: AssertedSource
           status: Provisional
-    - name: Oryx_5MP_camera
+    - name: Camera
       family: Camera
       model: flir_oryx_orx_10g_51s5m_c
       pv: "2bmSP1:"
@@ -349,26 +349,26 @@ controls:
     The drive-electronics boxes and trigger hardware. Driven stages above point
     back here via their controller field.
   motion_controllers:
-    - name: Aerotech_Ensemble_drive
+    - name: RotaryDrive
       family: MotionController
       model: aerotech_ensemble_hle10_40_a_mxh
       protocol: Aerotech_Native
       axis_count: 1
-    - name: Aerotech_Hexapod_drive
+    - name: HexapodDrive
       family: MotionController
       protocol: Aerotech_Native
       axis_count: 6
-    - name: Aerotech_2bmbAERO_drive
+    - name: FocusDrive
       family: MotionController
       protocol: Aerotech_Native
       axis_count: 1
-    - name: OMS_VME58_2bmb_drive
+    - name: SampleStageDrive
       family: MotionController
       model: oms_vme58
       protocol: OMS_VME
       axis_count: 91
       note: b-station crate (ioc2bmb), drives 2bmb:m1-m91 including the sample stages
-    - name: OMS_VME58_2bma_drive
+    - name: FrontEndDrive
       family: MotionController
       model: oms_vme58
       protocol: OMS_VME
