@@ -75,9 +75,9 @@ Five Models cover the hardware:
 | --- | --- | --- | --- |
 | `optique_peter_micrx080` | Optique Peter | `MICRX080` | `Housing` |
 | `optique_peter_lens_turret_motor` | Optique Peter | `TripleObj-MCT-turret` | `RotaryStage` |
-| `mitutoyo_plan_apo_nir` | Mitutoyo | `Plan-Apo-NIR` | `Objective` |
-| `flir_oryx_orx_10g_51s5m_c` | FLIR | `ORX-10G-51S5M-C` | `Camera` |
-| `crytur_luag_ce_100um` | Crytur | `LuAG:Ce-100um` | `Scintillator` |
+| `mitutoyo_plan_apo` | Mitutoyo | `Plan-Apo-NIR` | `Objective` |
+| `flir_oryx` | FLIR | `ORX-10G-51S5M-C` | `Camera` |
+| `crytur_luag` | Crytur | `LuAG:Ce-100um` | `Scintillator` |
 
 Each Model carries the vendor identity that DOIs and citations need (PIDINST property 7). Assets bind to a Model at registration; the Asset's Family set must be a subset of the Model's declared families.
 

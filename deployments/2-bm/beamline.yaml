@@ -190,7 +190,7 @@ sample-environment:
       confirm: true
     - name: Hexapod
       family: Hexapod
-      model: aerotech_hexgen_hex300_230hl   # Aerotech HEX300-230HL
+      model: aerotech_hex300   # Aerotech HEX300-230HL
       pv: "2bmHXP:"
       controller: HexapodDrive
       replaceable: true
@@ -212,7 +212,7 @@ sample-environment:
       new: true
     - name: Rotary
       family: RotaryStage         # the rotation axis (theta)
-      model: aerotech_abs250mp_m_as   # Aerotech ABS250MP-M-AS, air-bearing
+      model: aerotech_abs250mp   # Aerotech ABS250MP-M-AS, air-bearing
       pv: "2bmb:m102"
       controller: RotaryDrive
       trigger_source: PSO         # position-synchronized output drives the camera
@@ -224,7 +224,7 @@ sample-environment:
       confirm: true
     - name: SampleTop_X
       family: LinearStage
-      model: kohzu_cyat_070
+      model: kohzu_cyat070
       pv: "2bmb:m18"
       controller: SampleStageDrive
       range: -10..10 mm
@@ -232,7 +232,7 @@ sample-environment:
       encoder_resolution: 0.0005 mm
     - name: SampleTop_Z
       family: LinearStage
-      model: kohzu_cyat_070
+      model: kohzu_cyat070
       pv: "2bmb:m17"
       controller: SampleStageDrive
       range: -10..10 mm
@@ -312,7 +312,7 @@ detector:
       pv: "2bm:MCTOptics:LensSelect"
     - name: Focus
       family: LinearStage         # the single shared focus stage; per-lens offsets in software
-      model: aerotech_pro225sl_1000
+      model: aerotech_pro225sl
       pv: "2bmbAERO:m1"
       controller: FocusDrive
       travel: 1000 mm
@@ -335,7 +335,7 @@ detector:
           status: Provisional
     - name: Camera
       family: Camera
-      model: flir_oryx_orx_10g_51s5m_c
+      model: flir_oryx
       pv: "2bmSP1:"
       sensor: 2448 x 2048 pixel
       pixel_size: 3.45 um
@@ -362,7 +362,7 @@ controls:
   motion_controllers:
     - name: RotaryDrive
       family: MotionController
-      model: aerotech_ensemble_hle10_40_a_mxh
+      model: aerotech_ensemble
       protocol: Aerotech_Native
       axis_count: 1
     - name: HexapodDrive
