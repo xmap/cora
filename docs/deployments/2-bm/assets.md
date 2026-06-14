@@ -98,8 +98,8 @@ Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manu
 | `aerotech_hexgen_hex300_230hl` | Aerotech | `HEX300-230HL-E1-PL4-TAS` | `Hexapod` | `Hexapod` |
 | `aerotech_abs250mp_m_as` | Aerotech | `ABS250MP-M-AS` | `RotaryStage` | `Rotary` |
 | `aerotech_ensemble_hle10_40_a_mxh` | Aerotech | `HLE10-40-A-MXH` | `MotionController` | `RotaryDrive` |
-| `aerotech_hexapod_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` | `MotionController` | `HexapodDrive` |
-| `aerotech_2bmbaero_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` | `MotionController` | `FocusDrive` |
+| `aerotech_hexapod_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` (DRIVE-4) | `MotionController` | `HexapodDrive` |
+| `aerotech_2bmbaero_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` (DRIVE-4) | `MotionController` | `FocusDrive` |
 | `aerotech_pro225sl_1000` | Aerotech | `PRO225SL-1000` | `LinearStage` | `Focus` |
 | `oms_vme58` | Oregon Micro Systems | `VME58` | `MotionController` | `SampleStageDrive`, `FrontEndDrive` |
 | `kohzu_cyat_070` | Kohzu | `CYAT-070` | `LinearStage` | `Sample_top_X`, `Sample_top_Z` |
@@ -203,8 +203,8 @@ Placeholder values below are intentional. The controller-as-Asset design ships t
 
 | Setting | Value |
 | --- | --- |
-| `serial_number` | `unknown-pending-confirmation` |
-| `firmware_version` | `unknown-pending-confirmation` |
+| `serial_number` | `unknown-pending-confirmation` (DRIVE-1) |
+| `firmware_version` | `unknown-pending-confirmation` (DRIVE-2) |
 | `axis_count` | `1` |
 | `protocol` | `Aerotech_Native` |
 
@@ -220,8 +220,8 @@ Operators address the focus motor via `2bmbAERO:m1` (IOC name + motor channel); 
 
 | Setting | Value |
 | --- | --- |
-| `serial_number` | `unknown-pending-confirmation` |
-| `firmware_version` | `unknown-pending-confirmation` |
+| `serial_number` | `unknown-pending-confirmation` (DRIVE-1) |
+| `firmware_version` | `unknown-pending-confirmation` (DRIVE-2) |
 | `axis_count` | `1` |
 | `protocol` | `Aerotech_Native` |
 
@@ -237,8 +237,8 @@ Operators address motors on this crate via the EPICS channel naming `2bmb:m<N>` 
 
 | Setting | Value |
 | --- | --- |
-| `serial_number` | `unknown-pending-confirmation` |
-| `firmware_version` | `unknown-pending-confirmation` |
+| `serial_number` | `unknown-pending-confirmation` (DRIVE-1) |
+| `firmware_version` | `unknown-pending-confirmation` (DRIVE-2) |
 | `axis_count` | `91` |
 | `protocol` | `OMS_VME` |
 
@@ -254,8 +254,8 @@ The controller still ships as an Asset because its existence in reality is the l
 
 | Setting | Value |
 | --- | --- |
-| `serial_number` | `unknown-pending-confirmation` |
-| `firmware_version` | `unknown-pending-confirmation` |
+| `serial_number` | `unknown-pending-confirmation` (DRIVE-1) |
+| `firmware_version` | `unknown-pending-confirmation` (DRIVE-2) |
 | `axis_count` | `91` |
 | `protocol` | `OMS_VME` |
 
@@ -271,8 +271,8 @@ Placeholder values below follow the same intentional-design posture as `RotaryDr
 
 | Setting | Value |
 | --- | --- |
-| `serial_number` | `unknown-pending-confirmation` |
-| `firmware_version` | `unknown-pending-confirmation` |
+| `serial_number` | `unknown-pending-confirmation` (DRIVE-1) |
+| `firmware_version` | `unknown-pending-confirmation` (DRIVE-2) |
 | `axis_count` | `6` |
 | `protocol` | `Aerotech_Native` |
 
