@@ -98,7 +98,7 @@ _ARGONNE_ENTERPRISE_ID = UUID("01900000-0000-7000-8000-000000a00e01")
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000a00501")
 _SECTOR_2_AREA_ID = UUID("01900000-0000-7000-8000-000000a00701")
 _ACTOR_OPERATOR_ID = UUID("01900000-0000-7000-8000-000000a00a01")
-_CAP_PROBE_GENERIC_ID = family_stream_id(FamilyName("ProbeGeneric"))
+_CAP_GENERIC_PROBE_ID = family_stream_id(FamilyName("GenericProbe"))
 _METHOD_DARK_BASELINE_ID = UUID("01900000-0000-7000-8000-000000a00d01")
 _CAPABILITY_ID = UUID("01900000-0000-7000-8000-000000c0ed79")
 _PRACTICE_DARK_BASELINE_APS_ID = UUID("01900000-0000-7000-8000-000000a00d11")
@@ -214,7 +214,7 @@ async def test_facility_install_plays_out_end_to_end(
     # ----- Recipe BC: Method + Practice (Practice.site_id = APS Site Asset) -----
 
     await bind_define_family(deps)(
-        DefineFamily(name="ProbeGeneric", affordances=frozenset()),
+        DefineFamily(name="GenericProbe", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -228,7 +228,7 @@ async def test_facility_install_plays_out_end_to_end(
         DefineMethod(
             capability_id=_CAPABILITY_ID,
             name="dark_baseline",
-            needed_family_ids=frozenset({_CAP_PROBE_GENERIC_ID}),
+            needed_family_ids=frozenset({_CAP_GENERIC_PROBE_ID}),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

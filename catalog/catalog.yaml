@@ -62,7 +62,7 @@ families:
     note: "Presenter Family for detector Assemblies; the 2-BM Optique Peter detector materializes as the Microscope Assembly + Fixture."
   - name: Housing
     note: "Containment chassis Family; the Housing Asset parents the Microscope constituents and carries the Mount."
-  - name: ProbeGeneric
+  - name: GenericProbe
     note: "APS facility-scope template, an abstract detector probe-chain."
   # Pending in code (documented, not yet defined): Goniometer, Monochromator,
   # Slit, Mirror; future: OpticalRelay.

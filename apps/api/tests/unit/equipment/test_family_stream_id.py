@@ -1,5 +1,6 @@
 """Family stream-id derivation: deterministic UUID5 over a fixed namespace."""
 
+import unicodedata
 from uuid import UUID, uuid5
 
 import pytest
@@ -12,6 +13,13 @@ from cora.equipment.aggregates.role import RoleName, role_stream_id
 # constant MUST stay byte-identical to this value or every existing
 # Family stream becomes unreachable.
 _EXPECTED_FAMILY_NAMESPACE = UUID("14ce275b-7d45-54b0-887e-972a88c69d98")
+
+# 'e' followed by the combining acute accent (U+0301): a decomposed
+# spelling that renders as 'e-acute' but is a different code-point
+# sequence from the precomposed single character (U+00E9). Built with
+# chr() so the source stays pure ASCII and the two forms cannot be
+# silently folded together by an editor.
+_COMBINING_ACUTE = chr(0x0301)
 
 
 @pytest.mark.unit
@@ -35,10 +43,29 @@ def test_family_stream_id_differs_for_different_names() -> None:
 def test_family_stream_id_matches_uuid5_namespace_derivation() -> None:
     """Regression guard: the namespace UUID is load-bearing for stream
     continuity. Changing it would orphan every existing Family stream.
-    The derivation lower-cases the name before uuid5."""
+    The derivation NFC-normalizes then lower-cases the name before uuid5."""
     assert family_stream_id(FamilyName("Tomography")) == uuid5(
         _EXPECTED_FAMILY_NAMESPACE, "tomography"
     )
+
+
+@pytest.mark.unit
+def test_family_stream_id_is_nfc_normalized() -> None:
+    """Composed vs decomposed Unicode for the same name converge on one
+    stream id, so a federation-shared Family name cannot fork on a
+    spelling that renders identically."""
+    decomposed = "Cafe" + _COMBINING_ACUTE + "Probe"
+    composed = unicodedata.normalize("NFC", decomposed)
+    assert decomposed != composed
+    assert family_stream_id(FamilyName(decomposed)) == family_stream_id(FamilyName(composed))
+
+
+@pytest.mark.unit
+def test_role_stream_id_is_nfc_normalized() -> None:
+    decomposed = "Cafe" + _COMBINING_ACUTE + "Role"
+    composed = unicodedata.normalize("NFC", decomposed)
+    assert decomposed != composed
+    assert role_stream_id(RoleName(decomposed)) == role_stream_id(RoleName(composed))
 
 
 @pytest.mark.unit
