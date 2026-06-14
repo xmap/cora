@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_def5c95bd11f7d26_state_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-14 13:16 +0000
+            created at 2026-06-14 13:40 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -145,7 +145,7 @@
     <p class="run"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">        <span class="key">case</span> <span class="nam">EnclosureRegistered</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">            <span class="nam">enclosure_id</span><span class="op">=</span><span class="nam">enclosure_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">            <span class="nam">name</span><span class="op">=</span><span class="nam">name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">            <span class="nam">containing_asset_id</span><span class="op">=</span><span class="nam">containing_asset_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">            <span class="nam">facility_code</span><span class="op">=</span><span class="nam">facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">            <span class="nam">registered_by</span><span class="op">=</span><span class="nam">registered_by</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">            <span class="nam">occurred_at</span><span class="op">=</span><span class="nam">occurred_at</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">        <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -153,7 +153,7 @@
     <p class="run"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">            <span class="key">return</span> <span class="nam">Enclosure</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">                <span class="nam">id</span><span class="op">=</span><span class="nam">EnclosureId</span><span class="op">(</span><span class="nam">enclosure_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">                <span class="nam">name</span><span class="op">=</span><span class="nam">EnclosureName</span><span class="op">(</span><span class="nam">name</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">                <span class="nam">containing_asset_id</span><span class="op">=</span><span class="nam">containing_asset_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">                <span class="nam">facility_code</span><span class="op">=</span><span class="nam">facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">                <span class="nam">permit_status</span><span class="op">=</span><span class="nam">EnclosurePermitStatus</span><span class="op">.</span><span class="nam">UNKNOWN</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">                <span class="nam">lifecycle</span><span class="op">=</span><span class="nam">EnclosureLifecycle</span><span class="op">.</span><span class="nam">ACTIVE</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">                <span class="nam">registered_at</span><span class="op">=</span><span class="nam">occurred_at</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -166,7 +166,7 @@
     <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">            <span class="key">return</span> <span class="nam">Enclosure</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">                <span class="nam">id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">                <span class="nam">name</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">                <span class="nam">containing_asset_id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">containing_asset_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">                <span class="nam">facility_code</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">                <span class="nam">permit_status</span><span class="op">=</span><span class="nam">EnclosurePermitStatus</span><span class="op">(</span><span class="nam">to_status</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">                <span class="nam">lifecycle</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">lifecycle</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">                <span class="nam">registered_at</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">registered_at</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -182,7 +182,7 @@
     <p class="run"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">            <span class="key">return</span> <span class="nam">Enclosure</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">                <span class="nam">id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">                <span class="nam">name</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">                <span class="nam">containing_asset_id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">containing_asset_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">                <span class="nam">facility_code</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">facility_code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">                <span class="nam">permit_status</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">permit_status</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">                <span class="nam">lifecycle</span><span class="op">=</span><span class="nam">EnclosureLifecycle</span><span class="op">.</span><span class="nam">DECOMMISSIONED</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">                <span class="nam">registered_at</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">registered_at</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -209,7 +209,7 @@
             <a class="nav" href="z_def5c95bd11f7d26_state_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-14 13:16 +0000
+            created at 2026-06-14 13:40 +0000
         </p>
     </div>
 </footer>
