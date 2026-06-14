@@ -17,10 +17,14 @@ The MCTOptics detector is modelled as an Assembly + Fixture pair (not an Asset r
 | `OMS_VME58_2bma_drive` | `Device` | `MotionController` | `2-BM` (front-end / beam-conditioning band; no modelled driven stages at v1) |
 | `Sample_top_X` | `Device` | `LinearStage` | `2-BM` (driven by `OMS_VME58_2bmb_drive`) |
 | `Sample_top_Z` | `Device` | `LinearStage` | `2-BM` (driven by `OMS_VME58_2bmb_drive`) |
-| `Sample_top_Roll` | `Device` | `PseudoAxis` | `2-BM` |
-| `Sample_top_Pitch` | `Device` | `PseudoAxis` | `2-BM` |
 | `Aerotech_Hexapod_drive` | `Device` | `MotionController` | `2-BM` |
-| `Hexapod_2BM` | `Device` | `Hexapod` | `2-BM` (driven by `Aerotech_Hexapod_drive`) |
+| `Hexapod` | `Device` | `Hexapod` | `2-BM` (driven by `Aerotech_Hexapod_drive`) |
+| `Hexapod_X` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along X) |
+| `Hexapod_Y` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along Y) |
+| `Hexapod_Z` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along Z) |
+| `Hexapod_Roll` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation A about X) |
+| `Hexapod_Pitch` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation B about Y) |
+| `Hexapod_Yaw` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation C about Z) |
 | `Aerotech_2bmbAERO_drive` | `Device` | `MotionController` | `2-BM` |
 | `Optique_Peter_focus_Z` | `Device` | `LinearStage` | `2-BM` (bound into MCTOptics Fixture; driven by `Aerotech_2bmbAERO_drive`) |
 | `MCTOptics_lens_turret` | `Device` | `RotaryStage` (pending) | `2-BM` (bound into MCTOptics Fixture) |
@@ -53,13 +57,45 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 
 `MotionController` is the first separately-modelled drive-electronics Family. v1 ships empty affordances by design: the meaningful state on a controller is configuration (firmware version, IP address, axis count, protocol) and identity (serial number), captured in `settings` and `alternate_identifiers`. Command-tier affordances (firmware-update, reboot, sync-output toggling) are deferred until an operator-side Procedure demands them, at which point they grow on the existing add-only affordance amendment path.
 
+## Hexapod DoF model
+
+`Hexapod` is one physical Device (the vendor-sealed Aerotech HEX300; inverse kinematics runs in controller firmware). Its six degrees of freedom are surfaced as six `PseudoAxis` sub-modules parented to it (Device-in-Device, the addressable-sub-module case the `register_asset` decider sanctions), so a Plan, Procedure, or Caution can address a single DoF by name. Each DoF carries a `SolverReference` partition rule naming the firmware solver (`2bmHXP`); the per-DoF envelope is NOT duplicated onto the facets (it stays on the [`Hexapod` settings schema](#hexapod) for the physical unit), and the EPICS PVs live in each facet's `alternate_identifiers`, not in its name.
+
+| DoF Asset | Kind | Axis | Vendor rotation label |
+| --- | --- | --- | --- |
+| `Hexapod_X` | translation | along X | n/a |
+| `Hexapod_Y` | translation | along Y | n/a |
+| `Hexapod_Z` | translation | along Z | n/a |
+| `Hexapod_Roll` | rotation | about X | A (`travel_a`) |
+| `Hexapod_Pitch` | rotation | about Y | B (`travel_b`) |
+| `Hexapod_Yaw` | rotation | about Z | C (`travel_c`) |
+
+The A/B/C labels are the schema's own (`travel_a` = about X, etc.). The EPICS channel map (`2bmHXP:m1`-`2bmHXP:m6`) is operator-confirmed and lives in each facet's `alternate_identifiers`; the 2-BM source page names two rotational channels (`2bmHXP:m4`, `2bmHXP:m5`) but the full six-channel-to-axis mapping is unverified, so it is not asserted here.
+
+### Constituent-port wiring
+
+Each DoF reads its feedback from the physical `Hexapod` and exposes one operator-addressable virtual port. The link is `Plan.wires`, not a field on the partition rule: no rule shape carries a constituent id, and `SolverReference` lets the firmware own the kinematics, so the constituents are read from the wires at evaluate time.
+
+| Asset | Port | Direction | `signal_type` |
+| --- | --- | --- | --- |
+| `Hexapod` | `x_feedback_out`, `y_feedback_out`, `z_feedback_out` | OUTPUT | `position_feedback_linear_mm` |
+| `Hexapod` | `roll_feedback_out`, `pitch_feedback_out`, `yaw_feedback_out` | OUTPUT | `position_feedback_rotation_deg` |
+| `Hexapod_X` / `_Y` / `_Z` | `constituent_in` | INPUT | `position_feedback_linear_mm` |
+| `Hexapod_X` / `_Y` / `_Z` | `x_out` / `y_out` / `z_out` | OUTPUT | `position_setpoint_linear_mm` |
+| `Hexapod_Roll` / `_Pitch` / `_Yaw` | `constituent_in` | INPUT | `position_feedback_rotation_deg` |
+| `Hexapod_Roll` / `_Pitch` / `_Yaw` | `roll_out` / `pitch_out` / `yaw_out` | OUTPUT | `position_setpoint_rotation_deg` |
+
+Six wires, one per DoF (`Hexapod.<axis>_feedback_out -> Hexapod_<Axis>.constituent_in`), carry the feedback each PseudoAxis needs to reconstruct its readback. `validate_pseudoaxis_fanout` accepts each: exactly one OUTPUT port on the facet, one incoming wire, homogeneous `signal_type`, and `SolverReference` is exempt from the arity check.
+
+These ports and wires are modelled and validate at Plan-bind, but the runtime that would decompose a virtual setpoint into hexapod motion (`eval_solver_reference`) is still deferred and raises `NotImplementedError`, so the wired Plan is not yet runtime-executable. The executable model lives in `apps/api/tests/integration/scenarios/test_2bm_hexapod_pose_wiring.py`.
+
 ## Vendor catalog (Models)
 
 Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manufacturer) and Property 7 (Model) need. Assets bind to a Model at registration; the Asset's Family set must be a subset of the Model's declared families. The four MCTOptics-housing Models (lens turret motor, Mitutoyo MPLAPO objective kit, FLIR Oryx camera, Crytur LuAG scintillator) live on the [MCTOptics deployment](equipment/mctoptics.md#vendor-catalog-models) page; the table below tracks Models bound to non-MCTOptics 2-BM Assets.
 
 | Model | Manufacturer | Part number | Declared Families | Bound at 2-BM |
 | --- | --- | --- | --- | --- |
-| `aerotech_hexgen_hex300_230hl` | Aerotech | `HEX300-230HL-E1-PL4-TAS` | `Hexapod` | `Hexapod_2BM` |
+| `aerotech_hexgen_hex300_230hl` | Aerotech | `HEX300-230HL-E1-PL4-TAS` | `Hexapod` | `Hexapod` |
 | `aerotech_abs250mp_m_as` | Aerotech | `ABS250MP-M-AS` | `RotaryStage` | `Aerotech_ABRS_rotary` |
 | `aerotech_ensemble_hle10_40_a_mxh` | Aerotech | `HLE10-40-A-MXH` | `MotionController` | `Aerotech_Ensemble_drive` |
 | `aerotech_hexapod_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` | `MotionController` | `Aerotech_Hexapod_drive` |
@@ -72,9 +108,9 @@ A Model id is deterministic: `model_stream_id` derives it as `uuid5` over the ca
 
 Part-number suffix conventions vary by vendor: Aerotech's `HEX300-230HL-E1-PL4-TAS` encodes operationally significant variants (`-E1` incremental encoder, `-PL4` ultra-high-accuracy preload, `-TAS` thermal-actively-stabilized); `ABS250MP-M-AS` follows the same pattern (`-M` mid-precision class, `-AS` air-bearing series); `PRO225SL-1000` carries the `-1000` mm travel suffix natively. v1 stores the full type designation as a single `part_number` string; the catalog convention upgrades to suffix decomposition at the second case where a suffix axis crosses Model boundaries (rule-of-three), or at the first APS imaging stage+drive registration, whichever fires first.
 
-The Aerotech Ensemble HLE10-40-A-MXH (companion drive for `aerotech_abs250mp_m_as`) IS now modelled as a separate Asset (`Aerotech_Ensemble_drive`) with `tier = Device` under 2-BM, with `Aerotech_ABRS_rotary.controller_id` carrying the back-reference. This was the FIRST `MotionController` Asset shipped, anchoring the controller-as-Asset slice on the unambiguously-identified rotary drive per `project_controller_as_asset_stage1_design`. A SECOND `MotionController` Asset (`Aerotech_Hexapod_drive`) now models the drive for `Hexapod_2BM`, with `Hexapod_2BM.controller_id` carrying the back-reference; the 2-BM source page does not name the drive's specific product line (the EPICS interface is "native Aerotech Ensemble" but the box is not identified, nor is rack-separate vs sealed-in integration confirmed), so the Model row uses `unknown-pending-confirmation` for the part number and the per-Asset Settings block carries placeholders that operators replace via `update_asset_settings` once the physical hardware is verified. A THIRD `MotionController` Asset (`Aerotech_2bmbAERO_drive`) models the drive electronics that the `2bmbAERO` EPICS IOC manages on behalf of `Optique_Peter_focus_Z`; the Asset name uses the IOC handle (the most stable operator-facing identifier; the drive's product line is almost certainly Aerotech Ensemble-family but unconfirmed on the source page), and the same `unknown-pending-confirmation` pattern carries the per-unit identity placeholders. A FOURTH `MotionController` Asset (`OMS_VME58_2bmb_drive`) now models the Oregon Micro Systems VME58 motor controller card in the 2-BM b-station IOC crate (`ioc2bmb`), which drives the `2bmb:m1`-`2bmb:m91` motor band including `Sample_top_X` (`2bmb:m18`) and `Sample_top_Z` (`2bmb:m17`); both stage Assets now carry `controller_id` back-references to `OMS_VME58_2bmb_drive`. The remaining 89 driven motors on the 2bmb crate live in [Pending](#pending) until each earns its own Asset registration; the controller Asset is the addressability handle that makes a future "VME-bus glitch took out m1-m91" Caution scope honestly to the bus rather than dispersing across 91 motor Assets. A FIFTH `MotionController` Asset (`OMS_VME58_2bma_drive`) models the sibling OMS VME58 board in the 2-BM a-station IOC crate (`ioc2bma`), which drives the front-end / beam-conditioning motor band (`Mirror`, `DMM`, slits, monitor); none of those driven motors are modelled at v1, so the controller Asset ships in isolation with no current `controller_id` back-references pointing at it. The controller registration still ships because absence-of-tracking on hardware that demonstrably exists (and gets rebooted, replaced, firmware-versioned by 2-BM operators) is exactly the self-justifying-defer that `feedback_intentional_modeling_not_mirroring` exists to forbid. Both OMS-VME58 instances bind to the same `oms_vme58` Model row per the one-Model-per-product-line convention; per-instance identity (serial number, firmware version) lives in the per-Asset Settings block. PARTIAL SHIP today is 5 of 7 controller hardware classes; the remaining 2 (Nanotec ST4118 stepper inside Optique Peter, and the Schunk LPTM 30 inside the camera selector) remain deferred per `project_controller_as_asset_research`; each earns its own Stage-1 call when its own trigger fires.
+The Aerotech Ensemble HLE10-40-A-MXH (companion drive for `aerotech_abs250mp_m_as`) IS now modelled as a separate Asset (`Aerotech_Ensemble_drive`) with `tier = Device` under 2-BM, with `Aerotech_ABRS_rotary.controller_id` carrying the back-reference. This was the FIRST `MotionController` Asset shipped, anchoring the controller-as-Asset slice on the unambiguously-identified rotary drive per `project_controller_as_asset_stage1_design`. A SECOND `MotionController` Asset (`Aerotech_Hexapod_drive`) now models the drive for `Hexapod`, with `Hexapod.controller_id` carrying the back-reference; the 2-BM source page does not name the drive's specific product line (the EPICS interface is "native Aerotech Ensemble" but the box is not identified, nor is rack-separate vs sealed-in integration confirmed), so the Model row uses `unknown-pending-confirmation` for the part number and the per-Asset Settings block carries placeholders that operators replace via `update_asset_settings` once the physical hardware is verified. A THIRD `MotionController` Asset (`Aerotech_2bmbAERO_drive`) models the drive electronics that the `2bmbAERO` EPICS IOC manages on behalf of `Optique_Peter_focus_Z`; the Asset name uses the IOC handle (the most stable operator-facing identifier; the drive's product line is almost certainly Aerotech Ensemble-family but unconfirmed on the source page), and the same `unknown-pending-confirmation` pattern carries the per-unit identity placeholders. A FOURTH `MotionController` Asset (`OMS_VME58_2bmb_drive`) now models the Oregon Micro Systems VME58 motor controller card in the 2-BM b-station IOC crate (`ioc2bmb`), which drives the `2bmb:m1`-`2bmb:m91` motor band including `Sample_top_X` (`2bmb:m18`) and `Sample_top_Z` (`2bmb:m17`); both stage Assets now carry `controller_id` back-references to `OMS_VME58_2bmb_drive`. The remaining 89 driven motors on the 2bmb crate live in [Pending](#pending) until each earns its own Asset registration; the controller Asset is the addressability handle that makes a future "VME-bus glitch took out m1-m91" Caution scope honestly to the bus rather than dispersing across 91 motor Assets. A FIFTH `MotionController` Asset (`OMS_VME58_2bma_drive`) models the sibling OMS VME58 board in the 2-BM a-station IOC crate (`ioc2bma`), which drives the front-end / beam-conditioning motor band (`Mirror`, `DMM`, slits, monitor); none of those driven motors are modelled at v1, so the controller Asset ships in isolation with no current `controller_id` back-references pointing at it. The controller registration still ships because absence-of-tracking on hardware that demonstrably exists (and gets rebooted, replaced, firmware-versioned by 2-BM operators) is exactly the self-justifying-defer that `feedback_intentional_modeling_not_mirroring` exists to forbid. Both OMS-VME58 instances bind to the same `oms_vme58` Model row per the one-Model-per-product-line convention; per-instance identity (serial number, firmware version) lives in the per-Asset Settings block. PARTIAL SHIP today is 5 of 7 controller hardware classes; the remaining 2 (Nanotec ST4118 stepper inside Optique Peter, and the Schunk LPTM 30 inside the camera selector) remain deferred per `project_controller_as_asset_research`; each earns its own Stage-1 call when its own trigger fires.
 
-`Sample_top_Pitch` and `Sample_top_Roll` are PseudoAxis Assets (virtual DoFs over the 2bmHXP hexapod-kinematics solver) and do not bind to a vendor Model. The Model-binding flow (PIDINST) targets physical commissioned hardware; the underlying constituents (the Hexapod_2BM physical axes) carry the Model binding. The remaining four hexapod DoFs (X, Y, Z, Yaw) and the constituent-port wiring from Hexapod_2BM to the virtual DoFs are deferred until the trigger named in `project_pitch_roll_retag`. The Kohzu SA16A-RM goniometer (`Sample_pitch_lam` in the 2-BM source page, possibly the same physical thing as `Sample_top_Pitch` or a third stage) gets its own Model row when the operator-naming question lands.
+The six `Hexapod_*` DoF facets are PseudoAxis Assets (virtual DoFs over the `2bmHXP` hexapod-kinematics solver) and do not bind to a vendor Model: the Model-binding flow (PIDINST) targets physical commissioned hardware, so the physical `Hexapod` carries the Model binding (`aerotech_hexgen_hex300_230hl`) and the facets inherit vendor identity through the constituent wiring. The full six-DoF surface and its constituent-port wiring are described under [Hexapod DoF model](#hexapod-dof-model). The Kohzu SA16A-RM goniometer (`Sample_pitch_lam` in the 2-BM source page, possibly the same physical thing as `Hexapod_Pitch` or a separate stage) gets its own Model row when the operator-naming question lands.
 
 ## Family settings schemas
 
@@ -93,16 +129,16 @@ Intrinsic per-lens properties. Motion is via the lens turret motor wired into th
 
 ### `Hexapod`
 
-Operational envelope of a 6-DoF parallel-kinematic positioner. The schema captures the vendor-published envelope (per-DoF travel, speed, resolution, accuracy, load capacity) without exploding the legs as sub-Assets (vendor-sealed unit; inverse kinematics runs in controller firmware, not in CORA). DoF-level addressability (Shape 2: per-DoF PseudoAxis facets referencing this Hexapod as constituent) is a separate design question gated on the Plan.wiring terminal-typing contract.
+Operational envelope of a 6-DoF parallel-kinematic positioner. The schema captures the vendor-published envelope (per-DoF travel, speed, resolution, accuracy, load capacity) without exploding the legs as sub-Assets (vendor-sealed unit; inverse kinematics runs in controller firmware, not in CORA). DoF-level addressability is realized by six per-DoF PseudoAxis sub-modules (`Hexapod_X` ... `Hexapod_Yaw`) parented to this Hexapod, each carrying a `SolverReference` partition rule and wired to a hexapod feedback port; see [Constituent-port wiring](#constituent-port-wiring). The envelope below stays the single contract for the physical unit; the DoF facets carry no settings of their own.
 
 | Setting | Type | Unit | Notes |
 | --- | --- | --- | --- |
 | `travel_x` | number > 0 | mm | single-axis from home; translation envelope |
 | `travel_y` | number > 0 | mm | |
 | `travel_z` | number > 0 | mm | |
-| `travel_a` | number > 0 | deg | rotation envelope around X (tilt) |
-| `travel_b` | number > 0 | deg | rotation envelope around Y (tilt) |
-| `travel_c` | number > 0 | deg | rotation envelope around Z (yaw) |
+| `travel_a` | number > 0 | deg | rotation envelope around X (Roll; DoF `Hexapod_Roll`) |
+| `travel_b` | number > 0 | deg | rotation envelope around Y (Pitch; DoF `Hexapod_Pitch`) |
+| `travel_c` | number > 0 | deg | rotation envelope around Z (Yaw; DoF `Hexapod_Yaw`) |
 | `max_speed_translation` | number > 0 | mm/s | typically dominated by the slowest translation axis |
 | `max_speed_rotation` | number > 0 | deg/s | typically dominated by the slowest rotation axis |
 | `resolution_translation` | number > 0 | nm | encoder resolution for X/Y/Z (vendor reports a common value) |
@@ -113,7 +149,7 @@ Operational envelope of a 6-DoF parallel-kinematic positioner. The schema captur
 | `load_capacity_horizontal` | number > 0 | kg | rated load with platform vertical |
 | `stage_mass` | number > 0 | kg | bare platform mass (excludes mounted payload) |
 
-The pairs `max_speed_translation` / `max_speed_rotation`, `resolution_*`, and `accuracy_*` collapse the six per-DoF measurements down to two values per metric in v1; the vendor datasheet reports per-DoF variation small enough that the dominant-DoF figure is a faithful envelope. When a Method binds against per-DoF setpoints (currently no such Method exists), Shape 2 (PseudoAxis facets) is the surface that grows; the schema above stays as the envelope contract.
+The pairs `max_speed_translation` / `max_speed_rotation`, `resolution_*`, and `accuracy_*` collapse the six per-DoF measurements down to two values per metric in v1; the vendor datasheet reports per-DoF variation small enough that the dominant-DoF figure is a faithful envelope. The six per-DoF PseudoAxis facets (`Hexapod_X` ... `Hexapod_Yaw`) are the surface a Method binds against when it addresses a single DoF; the schema above stays as the envelope contract for the physical unit. No pilot Method addresses a single DoF yet, and the runtime solver bridge that would execute such a setpoint (`eval_solver_reference`) is still deferred, so the facets are modelled and wiring-validated but not yet runtime-executable.
 
 ### `MotionController`
 
@@ -227,7 +263,7 @@ The controller still ships as an Asset because its existence in reality is the l
 
 ### `Aerotech_Hexapod_drive`
 
-Bound to Model `aerotech_hexapod_drive_unknown_pn`. The Aerotech drive electronics that run `Hexapod_2BM`. Second `MotionController` Asset shipped at 2-BM; the back-reference lives on `Hexapod_2BM.controller_id`.
+Bound to Model `aerotech_hexapod_drive_unknown_pn`. The Aerotech drive electronics that run `Hexapod`. Second `MotionController` Asset shipped at 2-BM; the back-reference lives on `Hexapod.controller_id`.
 
 The Asset name records what the [2-BM source page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) actually says (Aerotech vendor, drives the hexapod stage, EPICS interface is "native Aerotech Ensemble") without overclaiming the drive's specific product line. The page does not name the controller box, nor confirm whether the drive sits in a separate rack or is sealed into the HexGen stage. The Asset still ships now per the intentional-modeling rule (waiting for source-page disambiguation would let the ad-hoc absence-of-tracking self-justify indefinitely); operator confirmation lands later via `update_asset_settings` and a `version_model` of the bound Model row.
 
@@ -265,9 +301,9 @@ Bound to Model `kohzu_cyat_070`, driven by `OMS_VME58_2bmb_drive` (referenced vi
 | `max_speed` | `1 mm/s` |
 | `encoder_resolution` | `0.0005 mm` |
 
-### `Hexapod_2BM`
+### `Hexapod`
 
-Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive` (referenced via `Hexapod_2BM.controller_id`). Values from the Aerotech HEX300-230HL product datasheet (Hex300-Data-Sheet-D20250203). Per-DoF figures collapse to the dominant axis where the vendor's range across DoFs fits within a faithful envelope (e.g., translation accuracy reported as the laxest of X / Y / Z).
+Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive` (referenced via `Hexapod.controller_id`). Values from the Aerotech HEX300-230HL product datasheet (Hex300-Data-Sheet-D20250203). Per-DoF figures collapse to the dominant axis where the vendor's range across DoFs fits within a faithful envelope (e.g., translation accuracy reported as the laxest of X / Y / Z).
 
 | Setting | Value |
 | --- | --- |
@@ -347,7 +383,7 @@ Each Asset may carry one canonical engineering reference as a `(system, number, 
 
 Assets not listed below have no canonical document cited on the 2-BM source page yet (Aerotech `ABS250MP` datasheet for `Aerotech_ABRS_rotary`, Kohzu `CYAT-070` datasheet for the four `Sample_top_*` stages, an APS shutter drawing for `Shutter_2BM`, and a FLIR Oryx datasheet for `Oryx_5MP_camera`). These populate when the operator confirms the canonical reference.
 
-### `Hexapod_2BM`
+### `Hexapod`
 
 | Field | Value |
 | --- | --- |
