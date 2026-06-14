@@ -12,7 +12,7 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 
 | Asset | Tier | Family | Parent | Located in |
 | --- | --- | --- | --- | --- |
-| `Shutter` | `Device` | `Shutter` | `2-BM` | `2-BM-B` |
+| `StationShutter` | `Device` | `Shutter` | `2-BM` | `2-BM-B` |
 | `RotaryDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `Rotary` | `Device` | `RotaryStage` | `2-BM` (driven by `RotaryDrive`) | `2-BM-B` |
 | `SampleStageDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
@@ -385,7 +385,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `HexapodDrive` (referen
 
 Each Asset may carry one canonical engineering reference as a `(system, number, revision)` triple per the [Drawing VO](../../architecture/modules/equipment/index.md). The carrier holds the build-to document for the physical specimen; the [Mount drawing](equipment/microscope.md#engineering-drawings) on the slot is a separate document (where the slot lives in the beamline). v1 is single-valued; the Drawing-frozenset promotion and `Model.drawing` / `Fixture.drawing` extensions defer to the rule-of-three trigger.
 
-Assets not listed below have no canonical document cited on the 2-BM source page yet (Aerotech `ABS250MP` datasheet for `Rotary`, Kohzu `CYAT-070` datasheet for the four `SampleTop_*` stages, an APS shutter drawing for `Shutter`, and a FLIR Oryx datasheet for `Camera`). These populate when the operator confirms the canonical reference.
+Assets not listed below have no canonical document cited on the 2-BM source page yet (Aerotech `ABS250MP` datasheet for `Rotary`, Kohzu `CYAT-070` datasheet for the four `SampleTop_*` stages, an APS shutter drawing for `StationShutter`, and a FLIR Oryx datasheet for `Camera`). These populate when the operator confirms the canonical reference.
 
 ### `Hexapod`
 

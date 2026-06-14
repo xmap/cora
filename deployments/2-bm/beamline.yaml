@@ -146,9 +146,7 @@ beam-defining-and-safety:
       new: true
       confirm: true
       constituents:
-        - name: Shutter        # B-station safety shutter (SBS); CORA-modeled. Bare name kept per
-                               # qualify-only-on-a-real-collision: the front-end FES (FrontEndShutter)
-                               # is not modeled yet. Re-qualify to StationShutter when it is.
+        - name: StationShutter   # B-station safety shutter (SBS); distinct role from the front-end FES (FrontEndShutter)
           family: Shutter
           pv: "S02BM-PSS:SBS"
           material: "W 21 mm"

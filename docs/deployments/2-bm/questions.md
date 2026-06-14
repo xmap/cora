@@ -102,7 +102,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 | --- | --- | --- | --- | --- |
 | BEAM-1 | `Blocks-go-live` | Is the beam shutter already open when a tomography run starts, or does the operator open it as part of run startup? | open before the run (handled by commissioning / a pre-run caution) | [Procedures](procedures.md) |
 | BEAM-2 | `Nice-to-have` | How many front-end Be windows are in the stack, and what is their total thickness? | windows exist; count and thickness unconfirmed | [Pending](assets.md#pending) |
-| BEAM-3 | `Nice-to-have` | The canonical APS drawing reference for the B-station safety shutter (`Shutter`)? | shutter modelled; no drawing on file | [Engineering drawings](assets.md#engineering-drawings) |
+| BEAM-3 | `Nice-to-have` | The canonical APS drawing reference for the B-station safety shutter (`StationShutter`)? | shutter modelled; no drawing on file | [Engineering drawings](assets.md#engineering-drawings) |
 | BEAM-4 | `Nice-to-have` | Is the beamline layout drawing `ICMS A342-RT1000` Rev 02 (May 2026) still the current revision? | assumed current | [2-BM index](index.md) |
 
 ## Safety interlocks

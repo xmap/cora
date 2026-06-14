@@ -7,9 +7,9 @@ Each Procedure binds a Method + Practice + Plan to a set of target Assets. See [
 | Procedure | Target Assets |
 | --- | --- |
 | `motor_homing` | `Rotary`, `SampleTop_X` |
-| `first_light` | `Shutter` + image chain |
-| `dark_baseline` | `Shutter` + image chain |
-| `flat_baseline` | `Shutter` + image chain |
+| `first_light` | `StationShutter` + image chain |
+| `dark_baseline` | `StationShutter` + image chain |
+| `flat_baseline` | `StationShutter` + image chain |
 | `resolution_alignment` | `Focus` + image chain |
 | `focus_alignment` | `SampleTop_Z` + image chain |
 | `center_alignment` | `Rotary`, `SampleTop_X` + image chain |

@@ -49,7 +49,7 @@ above ~5x the median std flag pixels to mask in reconstruction.
 
 ## Asset stack (shutter + image chain)
 
-Same as `first_light`: Shutter, Camera, Scintillator.
+Same as `first_light`: StationShutter, Camera, Scintillator.
 Dark baseline does not move any motors.
 
 ## What this scenario surfaces (gap-finding intent)
@@ -153,7 +153,7 @@ _DATASET_DARK_BASELINE_ID = UUID("01900000-0000-7000-8000-00000035af21")
 
 
 _DEVICES = (
-    DeviceSpec("Shutter", _ASSET_SHUTTER_2BM_ID, "Shutter", _CAP_SHUTTER_ID),
+    DeviceSpec("StationShutter", _ASSET_SHUTTER_2BM_ID, "Shutter", _CAP_SHUTTER_ID),
     DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
@@ -200,7 +200,7 @@ def _shutter(
     *, state: str, role: str, sampled_at: datetime, note: str | None = None
 ) -> ActivityInput:
     payload: dict[str, Any] = {
-        "channel": "Shutter",
+        "channel": "StationShutter",
         "target_value": state,
         "units": "state",
         "role": role,
