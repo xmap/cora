@@ -174,9 +174,19 @@ def decide(
         on a schema-less Assembly rejects)
         -> FixtureParameterOverridesInvalidError.
 
+    A referenced sub-assembly contributes ONLY its leaf slots to the
+    materialized binding union. Its own required_wires,
+    parameter_overrides_schema, and presents_as_family_id are NOT honored
+    at the parent Fixture; they are meaningful only when that child is
+    registered as a Fixture in its own right.
+
     Wires (the top Assembly's and any sub-assembly's required_wires) are
-    not validated at fixture time; wire direction, signal-type, and fan-in
-    are enforced at define/version time per the Assembly wire-timing note.
+    not validated at fixture time. In fact wire direction, signal-type,
+    and fan-in are enforced NOWHERE today: define / version closure-check
+    only that endpoints name declared slots. Per-port conformance against
+    materialized Asset.ports is a deferred read-side projection (the
+    AssemblyConformanceMismatch posture); enforced whole-experiment
+    routing lives in Plan.wiring, keyed by concrete Asset UUIDs.
     """
     if state is not None:
         raise FixtureAlreadyExistsError(state.id)
