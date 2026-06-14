@@ -112,10 +112,20 @@ class Group(BaseModel):
 
 
 class Enclosure(BaseModel):
+    """An access-gated volume (a hutch, cabin, vault, room) that gates work.
+
+    `facility_code` is the containing geography: the Site / Area slug the
+    enclosure sits within (a space inside a larger space), not an equipment
+    pointer. `permit_signal` carries the personnel-safety permit handle when
+    known, or a `confirm` note when it is still an operator-confirm item.
+    """
+
     model_config = _MODEL_CONFIG
 
     name: str
     role: str | None = None
+    facility_code: str | None = None
+    permit_signal: str | dict[str, Any] | None = None
 
 
 class Beamline(BaseModel):
@@ -206,6 +216,16 @@ def load(path: str | Path) -> BeamlineDescriptor:
         ]
     except ValidationError as exc:
         raise DescriptorError(f"{path}: descriptor failed validation:\n{exc}") from exc
+
+    declared = {enclosure.name for enclosure in enclosures}
+    for key, group in groups:
+        refs = [group.enclosure] + [device.enclosure for device in group.devices]
+        for ref in refs:
+            if ref is not None and ref not in declared:
+                raise DescriptorError(
+                    f"{path}: group '{key}' names enclosure '{ref}', "
+                    f"which is not a declared enclosure {sorted(declared)}"
+                )
 
     return BeamlineDescriptor(
         beamline=beamline,

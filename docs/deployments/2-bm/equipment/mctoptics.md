@@ -2,7 +2,7 @@
 
 *The Optique Peter detector deployment: one Assembly, one Fixture, eight bound Assets, four Calibrations.*
 
-The MCTOptics detector sits about 55 m from the source in the 2-BM hutch. It is the operator-facing imaging system: a vendor housing that carries three swappable microscope objectives on a turret, a linear focus stage, a single Oryx scientific camera, and a LuAG scintillator. The whole unit is controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py). This page explains how CORA models it.
+The MCTOptics detector sits about 55 m from the source in the 2-BM experiment hutch. Its Assets are located in the `2-BM-B` Enclosure (the access-gated volume that gates them via the pre-flight permit check). It is the operator-facing imaging system: a vendor housing that carries three swappable microscope objectives on a turret, a linear focus stage, a single Oryx scientific camera, and a LuAG scintillator. The whole unit is controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py). This page explains how CORA models it.
 
 ## The model in one picture
 
@@ -166,7 +166,7 @@ A few model questions this deployment surfaces but does not pin down:
 
 - [2-BM Assets](../assets.md) for the flat inventory listing the underlying Asset rows
 - [2-BM Layout](../beamline.md) for the four downstream Calibration revisions, shown on their device
-- [2-BM Enclosures](../enclosures.md) for the hutch permit that gates Runs and Procedures binding these Assets: an Enclosure on the `2-BM` Unit covers every Device here through the pre-flight chain walk
+- [2-BM Enclosures](../enclosures.md) for the hutch permit that gates Runs and Procedures binding these Assets: these Assets are located in the `2-BM-B` Enclosure, which gates them through the located-in pre-flight chain walk
 - [Equipment module](../../../architecture/modules/equipment/index.md) for the aggregate shapes (Family, Model, Asset, Mount, Frame, Assembly, Fixture)
 
 The deployment scenario test at `apps/api/tests/integration/scenarios/test_2bm_mctoptics_setup.py` currently exercises an earlier shape of this deployment (flat parent-child composition); it will be rewritten to match the Assembly + Fixture model described here.

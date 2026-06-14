@@ -103,6 +103,18 @@ def _pv_cell(pv: str | dict[str, Any] | None) -> str:
     return "<br>".join(parts)
 
 
+def _permit_signal_cell(permit_signal: str | dict[str, Any] | None) -> str:
+    """Render an Enclosure's permit signal: a PV string, or a confirm note."""
+    if permit_signal is None:
+        return ""
+    if isinstance(permit_signal, str):
+        return f"`{permit_signal}`"
+    note = permit_signal.get("confirm")
+    if note:
+        return f"confirm: {note}"
+    return ""
+
+
 def _specs_cell(device: Device) -> str:
     parts: list[str] = []
     if device.passive:
@@ -286,9 +298,17 @@ def _render_page(descriptor: BeamlineDescriptor) -> str:
         blocks.append(_table(["Property", "Value"], facts))
 
     if descriptor.enclosures:
-        rows = [[f"`{e.name}`", e.role or ""] for e in descriptor.enclosures]
+        rows = [
+            [
+                f"`{e.name}`",
+                e.role or "",
+                f"`{e.facility_code}`" if e.facility_code else "",
+                _permit_signal_cell(e.permit_signal),
+            ]
+            for e in descriptor.enclosures
+        ]
         blocks.append("## Enclosures")
-        blocks.append(_table(["Enclosure", "Role"], rows))
+        blocks.append(_table(["Enclosure", "Role", "Facility", "Permit signal"], rows))
 
     for name, group in descriptor.groups:
         blocks.append(_render_group(name, group))

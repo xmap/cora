@@ -6,30 +6,32 @@ The Devices that hang off 2-BM. The 2-BM Asset itself is a root Asset with `tier
 
 The MCTOptics detector is modelled as an Assembly + Fixture pair (not an Asset row in its own right). The constituent Assets appear in the inventory below; the composition and wiring story lives on the dedicated [MCTOptics deployment](equipment/mctoptics.md) page.
 
+Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A` or the experiment hutch `2-BM-B`, declared per Device via `located_in_enclosure_id`. The Located-in column below records where each Device sits; the two hutches and the pre-flight gate they drive are on the [Enclosures](enclosures.md) page. The hutches are Enclosures, not Assets, so they do not appear as inventory rows.
+
 ## Inventory
 
-| Asset | Tier | Family | Parent |
-| --- | --- | --- | --- |
-| `Shutter_2BM` | `Device` | `Shutter` | `2-BM` |
-| `Aerotech_Ensemble_drive` | `Device` | `MotionController` | `2-BM` |
-| `Aerotech_ABRS_rotary` | `Device` | `RotaryStage` | `2-BM` (driven by `Aerotech_Ensemble_drive`) |
-| `OMS_VME58_2bmb_drive` | `Device` | `MotionController` | `2-BM` |
-| `OMS_VME58_2bma_drive` | `Device` | `MotionController` | `2-BM` (front-end / beam-conditioning band; no modelled driven stages at v1) |
-| `Sample_top_X` | `Device` | `LinearStage` | `2-BM` (driven by `OMS_VME58_2bmb_drive`) |
-| `Sample_top_Z` | `Device` | `LinearStage` | `2-BM` (driven by `OMS_VME58_2bmb_drive`) |
-| `Sample_top_Roll` | `Device` | `PseudoAxis` | `2-BM` |
-| `Sample_top_Pitch` | `Device` | `PseudoAxis` | `2-BM` |
-| `Aerotech_Hexapod_drive` | `Device` | `MotionController` | `2-BM` |
-| `Hexapod_2BM` | `Device` | `Hexapod` | `2-BM` (driven by `Aerotech_Hexapod_drive`) |
-| `Aerotech_2bmbAERO_drive` | `Device` | `MotionController` | `2-BM` |
-| `Optique_Peter_focus_Z` | `Device` | `LinearStage` | `2-BM` (bound into MCTOptics Fixture; driven by `Aerotech_2bmbAERO_drive`) |
-| `MCTOptics_lens_turret` | `Device` | `RotaryStage` (pending) | `2-BM` (bound into MCTOptics Fixture) |
-| `MCTOptics_objective_0` | `Device` | `Objective` | `2-BM` (bound into MCTOptics Fixture) |
-| `MCTOptics_objective_1` | `Device` | `Objective` | `2-BM` (bound into MCTOptics Fixture) |
-| `MCTOptics_objective_2` | `Device` | `Objective` | `2-BM` (bound into MCTOptics Fixture) |
-| `Oryx_5MP_camera` | `Device` | `Camera` | `2-BM` (bound into MCTOptics Fixture) |
-| `Scintillator_LuAG` | `Device` | `Scintillator` | `2-BM` (bound into MCTOptics Fixture) |
-| `MCTOptics_lens_select` | `Device` | `PseudoAxis` | `2-BM` (bound into MCTOptics Fixture; partition rule decomposes lens index to turret rotation) |
+| Asset | Tier | Family | Parent | Located in |
+| --- | --- | --- | --- | --- |
+| `Shutter_2BM` | `Device` | `Shutter` | `2-BM` | `2-BM-B` |
+| `Aerotech_Ensemble_drive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `Aerotech_ABRS_rotary` | `Device` | `RotaryStage` | `2-BM` (driven by `Aerotech_Ensemble_drive`) | `2-BM-B` |
+| `OMS_VME58_2bmb_drive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `OMS_VME58_2bma_drive` | `Device` | `MotionController` | `2-BM` (front-end / beam-conditioning band; no modelled driven stages at v1) | `2-BM-A` |
+| `Sample_top_X` | `Device` | `LinearStage` | `2-BM` (driven by `OMS_VME58_2bmb_drive`) | `2-BM-B` |
+| `Sample_top_Z` | `Device` | `LinearStage` | `2-BM` (driven by `OMS_VME58_2bmb_drive`) | `2-BM-B` |
+| `Sample_top_Roll` | `Device` | `PseudoAxis` | `2-BM` | `2-BM-B` |
+| `Sample_top_Pitch` | `Device` | `PseudoAxis` | `2-BM` | `2-BM-B` |
+| `Aerotech_Hexapod_drive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `Hexapod_2BM` | `Device` | `Hexapod` | `2-BM` (driven by `Aerotech_Hexapod_drive`) | `2-BM-B` |
+| `Aerotech_2bmbAERO_drive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `Optique_Peter_focus_Z` | `Device` | `LinearStage` | `2-BM` (bound into MCTOptics Fixture; driven by `Aerotech_2bmbAERO_drive`) | `2-BM-B` |
+| `MCTOptics_lens_turret` | `Device` | `RotaryStage` (pending) | `2-BM` (bound into MCTOptics Fixture) | `2-BM-B` |
+| `MCTOptics_objective_0` | `Device` | `Objective` | `2-BM` (bound into MCTOptics Fixture) | `2-BM-B` |
+| `MCTOptics_objective_1` | `Device` | `Objective` | `2-BM` (bound into MCTOptics Fixture) | `2-BM-B` |
+| `MCTOptics_objective_2` | `Device` | `Objective` | `2-BM` (bound into MCTOptics Fixture) | `2-BM-B` |
+| `Oryx_5MP_camera` | `Device` | `Camera` | `2-BM` (bound into MCTOptics Fixture) | `2-BM-B` |
+| `Scintillator_LuAG` | `Device` | `Scintillator` | `2-BM` (bound into MCTOptics Fixture) | `2-BM-B` |
+| `MCTOptics_lens_select` | `Device` | `PseudoAxis` | `2-BM` (bound into MCTOptics Fixture; partition rule decomposes lens index to turret rotation) | `2-BM-B` |
 
 ## Family affordances
 
