@@ -1,8 +1,8 @@
 """Closed-set fitness for the Role seed registry.
 
 Per [[project-role-aggregate-design]] Q1 + Q3 (2026-06-10 user picks):
-the 3A seed ships exactly 4 Roles (Imager, Positioner, Controller,
-Detector); Conditioner is deferred. Every change to the seed list
+the 3A seed ships exactly 4 Roles (Detector, Positioner, Controller,
+Sensor); Conditioner is deferred. Every change to the seed list
 fires this test, ensuring the closed-set claim is enforceable.
 
 Federation portability requires deterministic UUID5 ids: every
@@ -18,13 +18,13 @@ import pytest
 from cora.equipment.aggregates.role import (
     CONTROLLER,
     DETECTOR,
-    IMAGER,
     POSITIONER,
     SEED_ROLE_CONTROLLER_ID,
     SEED_ROLE_DETECTOR_ID,
-    SEED_ROLE_IMAGER_ID,
     SEED_ROLE_POSITIONER_ID,
+    SEED_ROLE_SENSOR_ID,
     SEED_ROLES,
+    SENSOR,
 )
 
 
@@ -37,7 +37,7 @@ def test_seed_roles_closed_set_count_is_four() -> None:
 @pytest.mark.unit
 def test_seed_role_names_are_pinned() -> None:
     names = {role.name.value for role in SEED_ROLES}
-    assert names == {"Imager", "Positioner", "Controller", "Detector"}
+    assert names == {"Detector", "Positioner", "Controller", "Sensor"}
 
 
 @pytest.mark.unit
@@ -48,10 +48,10 @@ def test_seed_role_ids_are_pinned_uuid5() -> None:
     name.value.lower() (matches the projection UNIQUE INDEX on
     LOWER(name)).
     """
-    assert UUID("9aabbecf-e4d4-5851-affc-ee2f2929ce30") == SEED_ROLE_IMAGER_ID
+    assert UUID("dd5378c9-31af-50a3-86b8-16aa3df23e42") == SEED_ROLE_DETECTOR_ID
     assert UUID("ed3cde7c-af58-5320-b323-c62e0af0834a") == SEED_ROLE_POSITIONER_ID
     assert UUID("8fe49028-04a4-5a23-9fb3-b2b79eb9c620") == SEED_ROLE_CONTROLLER_ID
-    assert UUID("dd5378c9-31af-50a3-86b8-16aa3df23e42") == SEED_ROLE_DETECTOR_ID
+    assert UUID("9763082c-fd15-5ac6-8855-2da74c4ed661") == SEED_ROLE_SENSOR_ID
 
 
 @pytest.mark.unit
@@ -72,8 +72,8 @@ def test_seed_required_optional_affordance_sets_are_disjoint() -> None:
 
 
 @pytest.mark.unit
-def test_imager_requires_imageable_affordance() -> None:
-    assert "Imageable" in {a.value for a in IMAGER.required_affordances}
+def test_detector_requires_imageable_affordance() -> None:
+    assert "Imageable" in {a.value for a in DETECTOR.required_affordances}
 
 
 @pytest.mark.unit
@@ -93,11 +93,11 @@ def test_controller_required_affordances_non_empty() -> None:
 
 
 @pytest.mark.unit
-def test_detector_distinct_from_imager_required_set() -> None:
-    """Detector requires Reportable; Imager requires Imageable. The
+def test_sensor_distinct_from_detector_required_set() -> None:
+    """Sensor requires Reportable; Detector requires Imageable. The
     distinction is the contract-level separation between scalar-reading
     point sensors and 2D frame imagers."""
-    assert DETECTOR.required_affordances != IMAGER.required_affordances
+    assert SENSOR.required_affordances != DETECTOR.required_affordances
 
 
 @pytest.mark.unit

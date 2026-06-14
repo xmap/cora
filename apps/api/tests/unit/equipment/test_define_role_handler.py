@@ -8,7 +8,7 @@ import pytest
 from cora.equipment import EquipmentHandlers, UnauthorizedError, wire_equipment
 from cora.equipment.aggregates.family import Affordance
 from cora.equipment.aggregates.role import (
-    SEED_ROLE_IMAGER_ID,
+    SEED_ROLE_DETECTOR_ID,
     InvalidRoleNameError,
 )
 from cora.equipment.features import define_role
@@ -18,10 +18,10 @@ from cora.infrastructure.kernel import Kernel
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
-# Per role_stream_id(RoleName("Imager")) = uuid5(_ROLE_NAMESPACE, "imager")
-# = SEED_ROLE_IMAGER_ID. The handler derives the stream_id deterministically,
-# so a "Imager" command and the SEED constant collide on the same stream.
-_NEW_ID = SEED_ROLE_IMAGER_ID
+# Per role_stream_id(RoleName("Detector")) = uuid5(_ROLE_NAMESPACE, "detector")
+# = SEED_ROLE_DETECTOR_ID. The handler derives the stream_id deterministically,
+# so a "Detector" command and the SEED constant collide on the same stream.
+_NEW_ID = SEED_ROLE_DETECTOR_ID
 _EVENT_ID = UUID("01900000-0000-7000-8000-000000007be1")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
@@ -44,7 +44,7 @@ def _build_deps(
 
 def _command() -> DefineRole:
     return DefineRole(
-        name="Imager",
+        name="Detector",
         docstring="Acquires 2D image frames on exposure or trigger.",
         required_affordances=frozenset({Affordance.IMAGEABLE}),
         optional_affordances=frozenset({Affordance.BINNABLE}),
@@ -87,7 +87,7 @@ async def test_handler_appends_role_defined_event_to_store() -> None:
     assert stored.schema_version == 1
     assert stored.payload == {
         "role_id": str(_NEW_ID),
-        "name": "Imager",
+        "name": "Detector",
         "docstring": "Acquires 2D image frames on exposure or trigger.",
         "occurred_at": _NOW.isoformat(),
         "required_affordances": ["Imageable"],
@@ -110,7 +110,7 @@ async def test_handler_trims_role_name_via_value_object() -> None:
 
     await handler(
         DefineRole(
-            name="  Imager  ",
+            name="  Detector  ",
             docstring="x",
             required_affordances=frozenset(),
             optional_affordances=frozenset(),
@@ -122,7 +122,7 @@ async def test_handler_trims_role_name_via_value_object() -> None:
     )
 
     events, _ = await store.load("Role", _NEW_ID)
-    assert events[0].payload["name"] == "Imager"
+    assert events[0].payload["name"] == "Detector"
 
 
 @pytest.mark.unit

@@ -1,8 +1,8 @@
 """Role aggregate state, errors, and value objects.
 
 `Role` is the Equipment BC's global functional binding contract: WHAT
-operational shape a Method needs (`Imager`, `Positioner`, `Controller`,
-`Detector`) without pinning the anatomical Family that provides it.
+operational shape a Method needs (`Detector`, `Positioner`, `Controller`,
+`Sensor`) without pinning the anatomical Family that provides it.
 Per [[project-role-aggregate-design]] Lock 1, Role is a sister
 aggregate to Family, NOT a kind of Family: separate registry, separate
 events, separate identifier (`RoleId`).

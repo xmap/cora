@@ -9,8 +9,8 @@ from cora.equipment import bootstrap_equipment
 from cora.equipment.aggregates.role import (
     SEED_ROLE_CONTROLLER_ID,
     SEED_ROLE_DETECTOR_ID,
-    SEED_ROLE_IMAGER_ID,
     SEED_ROLE_POSITIONER_ID,
+    SEED_ROLE_SENSOR_ID,
     SEED_ROLES,
     load_role,
 )
@@ -60,10 +60,10 @@ async def test_bootstrap_seeds_pinned_deterministic_ids() -> None:
     await bootstrap_equipment(kernel)
 
     for pinned_id in (
-        SEED_ROLE_IMAGER_ID,
+        SEED_ROLE_DETECTOR_ID,
         SEED_ROLE_POSITIONER_ID,
         SEED_ROLE_CONTROLLER_ID,
-        SEED_ROLE_DETECTOR_ID,
+        SEED_ROLE_SENSOR_ID,
     ):
         events, version = await kernel.event_store.load("Role", pinned_id)
         assert version == 1
@@ -89,5 +89,5 @@ async def test_bootstrap_stamps_system_principal_id() -> None:
     """The seed-emitted events carry principal_id=SYSTEM_PRINCIPAL_ID."""
     kernel = _kernel()
     await bootstrap_equipment(kernel)
-    events, _version = await kernel.event_store.load("Role", SEED_ROLE_IMAGER_ID)
+    events, _version = await kernel.event_store.load("Role", SEED_ROLE_DETECTOR_ID)
     assert events[0].principal_id == SYSTEM_PRINCIPAL_ID

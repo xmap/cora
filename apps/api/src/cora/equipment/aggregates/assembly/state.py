@@ -742,7 +742,7 @@ class Assembly:
     keeps the scalar (per anti-hook #6, one migration cycle), and
     layers `presents_as` alongside for Role-based binding via 3D's
     bind_plan_role role_kind path. MCTOptics-Assembly seeds
-    `{Imager}` at scenario-fixture time.
+    `{Detector}` at scenario-fixture time.
 
     NOT included in `content_subset()` -- additive orthogonal-axis
     field, parallel to Family.settings_schema; adding or removing a

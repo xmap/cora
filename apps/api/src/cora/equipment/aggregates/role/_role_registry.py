@@ -1,8 +1,8 @@
 """Seed Role registry: the four closed-core Roles available at lifespan.
 
 Per [[project-role-aggregate-design]] sub-slice 3A:
-- 4 Roles ship as the closed-core registry: Imager, Positioner,
-  Controller, Detector.
+- 4 Roles ship as the closed-core registry: Detector, Positioner,
+  Controller, Sensor.
 - Conditioner is DEFERRED per Q3 (2026-06-10 user pick): no Affordance
   is universally required across Attenuators / Shutters / Mirrors, so
   the required-set would be vacuous, degenerating the Role to a tag.
@@ -19,8 +19,8 @@ contractual content; the registration ceremony lives downstream.
 `RoleId` values are UUID5-derived from a fixed namespace so the same
 Role gets the same id across deployments. Federation-portability
 (post-Layer-4 cross-facility catalog) requires this: a Method
-authored at APS 2-BM that binds `role_kind=Imager` must resolve to
-the same Imager UUID when shipped to MAX IV or DLS for execution.
+authored at APS 2-BM that binds `role_kind=Detector` must resolve to
+the same Detector UUID when shipped to MAX IV or DLS for execution.
 
 The namespace UUID is derived from `uuid5(NAMESPACE_DNS, 'cora.role')`
 once at lock-time and hardcoded so re-derivation is deterministic
@@ -30,8 +30,8 @@ recompute it from the same string seed.
 The per-Role stream_id derivation `role_stream_id(name)` lower-cases
 `name.value` before uuid5 so the deterministic id matches the
 projection's `UNIQUE INDEX (LOWER(name))` constraint. A
-`define_role` call with `name="imager"` and the SEED constant
-`SEED_ROLE_IMAGER_ID` (derived from `Imager`) collide on the same
+`define_role` call with `name="detector"` and the SEED constant
+`SEED_ROLE_DETECTOR_ID` (derived from `Detector`) collide on the same
 stream, surfacing as `ConcurrencyError` at the event store before
 the projection writer.
 
@@ -76,15 +76,15 @@ def role_stream_id(name: RoleName) -> RoleId:
     return RoleId(uuid5(_ROLE_NAMESPACE, name.value.lower()))
 
 
-SEED_ROLE_IMAGER_ID: Final[RoleId] = role_stream_id(RoleName("Imager"))
+SEED_ROLE_DETECTOR_ID: Final[RoleId] = role_stream_id(RoleName("Detector"))
 SEED_ROLE_POSITIONER_ID: Final[RoleId] = role_stream_id(RoleName("Positioner"))
 SEED_ROLE_CONTROLLER_ID: Final[RoleId] = role_stream_id(RoleName("Controller"))
-SEED_ROLE_DETECTOR_ID: Final[RoleId] = role_stream_id(RoleName("Detector"))
+SEED_ROLE_SENSOR_ID: Final[RoleId] = role_stream_id(RoleName("Sensor"))
 
 
-IMAGER: Final[Role] = Role(
-    id=SEED_ROLE_IMAGER_ID,
-    name=RoleName("Imager"),
+DETECTOR: Final[Role] = Role(
+    id=SEED_ROLE_DETECTOR_ID,
+    name=RoleName("Detector"),
     docstring=(
         "Acquires 2D image frames on exposure or trigger. Satisfying Assets "
         "or composed Assemblies emit Image / Frame signals. Direct-detection "
@@ -143,13 +143,13 @@ CONTROLLER: Final[Role] = Role(
 )
 
 
-DETECTOR: Final[Role] = Role(
-    id=SEED_ROLE_DETECTOR_ID,
-    name=RoleName("Detector"),
+SENSOR: Final[Role] = Role(
+    id=SEED_ROLE_SENSOR_ID,
+    name=RoleName("Sensor"),
     docstring=(
         "Reports a continuous or discrete measurement on query or trigger. "
         "Satisfying Families include ion chambers, photodiodes, thermocouples, "
-        "and other point-sensor anatomies. Distinct from Imager: a Detector "
+        "and other point-sensor anatomies. Distinct from Detector: a Sensor "
         "produces a scalar or short-vector Reading, not a 2D frame."
     ),
     required_affordances=frozenset({Affordance.REPORTABLE}),
@@ -160,22 +160,22 @@ DETECTOR: Final[Role] = Role(
 
 
 SEED_ROLES: Final[tuple[Role, ...]] = (
-    IMAGER,
+    DETECTOR,
     POSITIONER,
     CONTROLLER,
-    DETECTOR,
+    SENSOR,
 )
 
 
 __all__ = [
     "CONTROLLER",
     "DETECTOR",
-    "IMAGER",
     "POSITIONER",
     "SEED_ROLES",
     "SEED_ROLE_CONTROLLER_ID",
     "SEED_ROLE_DETECTOR_ID",
-    "SEED_ROLE_IMAGER_ID",
     "SEED_ROLE_POSITIONER_ID",
+    "SEED_ROLE_SENSOR_ID",
+    "SENSOR",
     "role_stream_id",
 ]

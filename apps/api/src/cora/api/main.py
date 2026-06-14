@@ -498,9 +498,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # MUST run BEFORE any handler that resolves a Role via
             # RoleLookup (bind_plan_role role_kind path,
             # update_capability_suggested_roles, future Method authoring
-            # gates). The 4 SEED_ROLES (Imager, Positioner, Controller,
-            # Detector) ship at deterministic uuid5 ids so a Method
-            # authored at APS 2-BM that binds role_kind=Imager resolves
+            # gates). The 4 SEED_ROLES (Detector, Positioner, Controller,
+            # Sensor) ship at deterministic uuid5 ids so a Method
+            # authored at APS 2-BM that binds role_kind=Detector resolves
             # to the same id when shipped to MAX IV or DLS.
             await bootstrap_equipment(deps)
 

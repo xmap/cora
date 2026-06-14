@@ -11,7 +11,7 @@ from tests.contract._mcp_helpers import open_session, parse_sse_data
 
 def _args(**overrides: object) -> dict[str, object]:
     # Default name avoids the 4 SEED_ROLES auto-defined at lifespan
-    # (Imager/Positioner/Controller/Detector); see the REST endpoint
+    # (Detector/Positioner/Controller/Sensor); see the REST endpoint
     # test test_post_roles_with_seed_role_name_returns_409.
     base: dict[str, object] = {
         "name": "Diagnostician",

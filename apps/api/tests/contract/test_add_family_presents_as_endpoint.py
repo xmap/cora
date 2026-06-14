@@ -15,8 +15,8 @@ test_add_asset_family_endpoint.py reaching into `app.state.deps` to
 seed cross-aggregate state.
 
 The Role name is a NON-SEED name ("Diagnostician") so it does not
-collide with the 4 SEED_ROLES (Imager / Positioner / Controller /
-Detector) bootstrap_equipment seeds at lifespan -- those occupy
+collide with the 4 SEED_ROLES (Detector / Positioner / Controller /
+Sensor) bootstrap_equipment seeds at lifespan -- those occupy
 their own uuid5-derived streams and a POST /roles with a seed name
 returns 409.
 """

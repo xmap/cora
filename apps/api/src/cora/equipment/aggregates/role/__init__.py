@@ -11,13 +11,13 @@ from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.role._role_registry import (
     CONTROLLER,
     DETECTOR,
-    IMAGER,
     POSITIONER,
     SEED_ROLE_CONTROLLER_ID,
     SEED_ROLE_DETECTOR_ID,
-    SEED_ROLE_IMAGER_ID,
     SEED_ROLE_POSITIONER_ID,
+    SEED_ROLE_SENSOR_ID,
     SEED_ROLES,
+    SENSOR,
     role_stream_id,
 )
 from cora.equipment.aggregates.role._signal_type import (
@@ -50,15 +50,15 @@ from cora.equipment.aggregates.role.state import (
 __all__ = [
     "CONTROLLER",
     "DETECTOR",
-    "IMAGER",
     "POSITIONER",
     "ROLE_DOCSTRING_MAX_LENGTH",
     "ROLE_NAME_MAX_LENGTH",
     "SEED_ROLES",
     "SEED_ROLE_CONTROLLER_ID",
     "SEED_ROLE_DETECTOR_ID",
-    "SEED_ROLE_IMAGER_ID",
     "SEED_ROLE_POSITIONER_ID",
+    "SEED_ROLE_SENSOR_ID",
+    "SENSOR",
     "SIGNAL_TYPE_MAX_LENGTH",
     "InvalidRoleDocstringError",
     "InvalidRoleNameError",
