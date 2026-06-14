@@ -10,7 +10,7 @@ Each Procedure binds a Method + Practice + Plan to a set of target Assets. See [
 | `first_light` | `Shutter_2BM` + image chain |
 | `dark_baseline` | `Shutter_2BM` + image chain |
 | `flat_baseline` | `Shutter_2BM` + image chain |
-| `resolution_alignment` | `Optique_Peter_focus_Z` + image chain |
+| `resolution_alignment` | `focus` + image chain |
 | `focus_alignment` | `Sample_top_Z` + image chain |
 | `center_alignment` | `Aerotech_ABRS_rotary`, `Sample_top_X` + image chain |
 | `roll_alignment` | `Aerotech_ABRS_rotary`, `Sample_top_Roll` + image chain |
@@ -18,7 +18,7 @@ Each Procedure binds a Method + Practice + Plan to a set of target Assets. See [
 | `alignment_calibration` | `Sample_top_Roll` |
 | `hexapod_reboot` | `Hexapod_2BM` |
 
-Image chain = `Oryx_5MP_camera`, `Scintillator_LuAG`.
+Image chain = `camera`, `scintillator`.
 
 ## Pending
 

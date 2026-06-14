@@ -19,7 +19,7 @@ this scenario fits into.
 
 To ground the `resolution_alignment` Procedure inventory row on
 `docs/deployments/2-bm/procedures.md`, and to register a new Asset
-(`Optique_Peter_focus_Z`) that no prior scenario has touched. Per
+(`focus`) that no prior scenario has touched. Per
 [[project_pilot_docs_design]] no doc page may name an aggregate until
 a scenario test registers it; this file unlocks the focus-Z motor in
 the 2-BM Asset inventory.
@@ -133,7 +133,7 @@ _CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 _CAP_MOTION_CONTROLLER_ID = family_stream_id(FamilyName("MotionController"))
 
 # Devices: the focus motor's controller (Aerotech_2bmbAERO_drive) is
-# registered FIRST so Optique_Peter_focus_Z's controller_id back-
+# registered FIRST so focus's controller_id back-
 # reference targets an already-registered Asset stream. Image chain
 # (camera + scintillator) is passive and carries no controller_id.
 # Aerotech_2bmbAERO_drive is the THIRD MotionController Asset shipped
@@ -168,16 +168,14 @@ _DEVICES = (
         _CAP_MOTION_CONTROLLER_ID,
     ),
     DeviceSpec(
-        "Optique_Peter_focus_Z",
+        "focus",
         _ASSET_FOCUS_Z_ID,
         "LinearStage",
         _CAP_LINEAR_STAGE_ID,
         controller_id=_ASSET_AEROTECH_2BMBAERO_DRIVE_ID,
     ),
-    DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
-    DeviceSpec(
-        "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
-    ),
+    DeviceSpec("camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
 
 
@@ -225,7 +223,7 @@ def _setpoint(
     """Build a focus-Z Setpoint step input. `role` distinguishes
     initial position, search steps, bisection, and final lock."""
     payload: dict[str, Any] = {
-        "channel": "Optique_Peter_focus_Z",
+        "channel": "focus",
         "target_value": target_mm,
         "units": "mm",
         "role": role,

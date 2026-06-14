@@ -36,6 +36,6 @@ Operator tribal knowledge captured at shakedown, first-light, or production time
 | Target | Category | Severity | Text |
 | --- | --- | --- | --- |
 | 2-BM Unit | | | Vibration threshold exceeded after air-handler shutdown |
-| `Oryx_5MP_camera` | | | Detector dark-frame drift after long beam-off periods |
-| `Scintillator_LuAG` | | | Scintillator browning under prolonged white-beam exposure |
+| `camera` | | | Detector dark-frame drift after long beam-off periods |
+| `scintillator` | | | Scintillator browning under prolonged white-beam exposure |
 | Sample-stage Devices | | | Sample-stage backlash after manual handling |

@@ -30,7 +30,7 @@ stage in the 2-BM Asset inventory.
 Both routines optimize image sharpness, but on different motors:
 
   - `resolution_alignment` adjusts the **microscope internal focus**
-    (`Optique_Peter_focus_Z`, lens-to-scintillator distance, small
+    (`focus`, lens-to-scintillator distance, small
     range, sub-micron resolution).
   - `focus_alignment` adjusts the **sample-to-scintillator distance**
     (`Sample_top_Z`, cm-range linear stage, ~10um resolution).
@@ -190,10 +190,8 @@ _DEVICES = (
         _CAP_LINEAR_STAGE_ID,
         controller_id=_ASSET_OMS_VME58_2BMB_DRIVE_ID,
     ),
-    DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
-    DeviceSpec(
-        "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
-    ),
+    DeviceSpec("camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
 
 

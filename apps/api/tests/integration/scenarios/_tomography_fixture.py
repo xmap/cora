@@ -119,8 +119,8 @@ from tests.integration.scenarios._facility_fixture import (
 # scenario; UUIDs remain scenario-supplied per the audit-trail convention.
 ROTARY_NAME = "Aerotech_ABRS_rotary"
 LINEAR_X_NAME = "Sample_top_X"
-CAMERA_NAME = "Oryx_5MP_camera"
-SCINTILLATOR_NAME = "Scintillator_LuAG"
+CAMERA_NAME = "camera"
+SCINTILLATOR_NAME = "scintillator"
 
 ROTARY_CAP_NAME = "RotaryStage"
 LINEAR_X_CAP_NAME = "LinearStage"

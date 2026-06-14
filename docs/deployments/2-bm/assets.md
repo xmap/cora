@@ -23,14 +23,14 @@ The Microscope detector is modelled as an Assembly + Fixture pair over a reusabl
 | `Hexapod_2BM` | `Device` | `Hexapod` | `2-BM` (driven by `Aerotech_Hexapod_drive`) |
 | `Aerotech_2bmbAERO_drive` | `Device` | `MotionController` | `2-BM` |
 | `optical_housing` | `Component` | `OpticalHousing` | `2-BM` (installed into `optics_mount`; parents the Microscope constituents) |
-| `lens_turret` | `Device` | `RotaryStage` (pending) | `optical_housing` (bound into Microscope Fixture) |
-| `objective_0` | `Device` | `Objective` | `optical_housing` (bound into Microscope Fixture) |
-| `objective_1` | `Device` | `Objective` | `optical_housing` (bound into Microscope Fixture) |
-| `objective_2` | `Device` | `Objective` | `optical_housing` (bound into Microscope Fixture) |
-| `lens_select` | `Device` | `PseudoAxis` | `optical_housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret rotation) |
-| `Optique_Peter_focus_Z` | `Device` | `LinearStage` | `optical_housing` (bound into Microscope Fixture; driven by `Aerotech_2bmbAERO_drive`) |
-| `Oryx_5MP_camera` | `Device` | `Camera` | `optical_housing` (bound into Microscope Fixture) |
-| `Scintillator_LuAG` | `Device` | `Scintillator` | `optical_housing` (bound into Microscope Fixture) |
+| `turret` | `Device` | `RotaryStage` (pending) | `optical_housing` (bound into Microscope Fixture) |
+| `objective_10x` | `Device` | `Objective` | `optical_housing` (bound into Microscope Fixture) |
+| `objective_2x` | `Device` | `Objective` | `optical_housing` (bound into Microscope Fixture) |
+| `objective_1.1x` | `Device` | `Objective` | `optical_housing` (bound into Microscope Fixture) |
+| `objective_select` | `Device` | `PseudoAxis` | `optical_housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret rotation) |
+| `focus` | `Device` | `LinearStage` | `optical_housing` (bound into Microscope Fixture; driven by `Aerotech_2bmbAERO_drive`) |
+| `camera` | `Device` | `Camera` | `optical_housing` (bound into Microscope Fixture) |
+| `scintillator` | `Device` | `Scintillator` | `optical_housing` (bound into Microscope Fixture) |
 
 ## Family affordances
 
@@ -66,13 +66,13 @@ Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manu
 | `aerotech_ensemble_hle10_40_a_mxh` | Aerotech | `HLE10-40-A-MXH` | `MotionController` | `Aerotech_Ensemble_drive` |
 | `aerotech_hexapod_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` | `MotionController` | `Aerotech_Hexapod_drive` |
 | `aerotech_2bmbaero_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` | `MotionController` | `Aerotech_2bmbAERO_drive` |
-| `aerotech_pro225sl_1000` | Aerotech | `PRO225SL-1000` | `LinearStage` | `Optique_Peter_focus_Z` |
+| `aerotech_pro225sl_1000` | Aerotech | `PRO225SL-1000` | `LinearStage` | `focus` |
 | `oms_vme58` | Oregon Micro Systems | `VME58` | `MotionController` | `OMS_VME58_2bmb_drive`, `OMS_VME58_2bma_drive` |
 | `kohzu_cyat_070` | Kohzu | `CYAT-070` | `LinearStage` | `Sample_top_X`, `Sample_top_Z` |
 
 Part-number suffix conventions vary by vendor: Aerotech's `HEX300-230HL-E1-PL4-TAS` encodes operationally significant variants (`-E1` incremental encoder, `-PL4` ultra-high-accuracy preload, `-TAS` thermal-actively-stabilized); `ABS250MP-M-AS` follows the same pattern (`-M` mid-precision class, `-AS` air-bearing series); `PRO225SL-1000` carries the `-1000` mm travel suffix natively. v1 stores the full type designation as a single `part_number` string; the catalog convention upgrades to suffix decomposition at the second case where a suffix axis crosses Model boundaries (rule-of-three), or at the first APS imaging stage+drive registration, whichever fires first.
 
-The Aerotech Ensemble HLE10-40-A-MXH (companion drive for `aerotech_abs250mp_m_as`) IS now modelled as a separate Asset (`Aerotech_Ensemble_drive`) with `tier = Device` under 2-BM, with `Aerotech_ABRS_rotary.controller_id` carrying the back-reference. This was the FIRST `MotionController` Asset shipped, anchoring the controller-as-Asset slice on the unambiguously-identified rotary drive per `project_controller_as_asset_stage1_design`. A SECOND `MotionController` Asset (`Aerotech_Hexapod_drive`) now models the drive for `Hexapod_2BM`, with `Hexapod_2BM.controller_id` carrying the back-reference; the 2-BM source page does not name the drive's specific product line (the EPICS interface is "native Aerotech Ensemble" but the box is not identified, nor is rack-separate vs sealed-in integration confirmed), so the Model row uses `unknown-pending-confirmation` for the part number and the per-Asset Settings block carries placeholders that operators replace via `update_asset_settings` once the physical hardware is verified. A THIRD `MotionController` Asset (`Aerotech_2bmbAERO_drive`) models the drive electronics that the `2bmbAERO` EPICS IOC manages on behalf of `Optique_Peter_focus_Z`; the Asset name uses the IOC handle (the most stable operator-facing identifier; the drive's product line is almost certainly Aerotech Ensemble-family but unconfirmed on the source page), and the same `unknown-pending-confirmation` pattern carries the per-unit identity placeholders. A FOURTH `MotionController` Asset (`OMS_VME58_2bmb_drive`) now models the Oregon Micro Systems VME58 motor controller card in the 2-BM b-station IOC crate (`ioc2bmb`), which drives the `2bmb:m1`-`2bmb:m91` motor band including `Sample_top_X` (`2bmb:m18`) and `Sample_top_Z` (`2bmb:m17`); both stage Assets now carry `controller_id` back-references to `OMS_VME58_2bmb_drive`. The remaining 89 driven motors on the 2bmb crate live in [Pending](#pending) until each earns its own Asset registration; the controller Asset is the addressability handle that makes a future "VME-bus glitch took out m1-m91" Caution scope honestly to the bus rather than dispersing across 91 motor Assets. A FIFTH `MotionController` Asset (`OMS_VME58_2bma_drive`) models the sibling OMS VME58 board in the 2-BM a-station IOC crate (`ioc2bma`), which drives the front-end / beam-conditioning motor band (`Mirror`, `DMM`, slits, monitor); none of those driven motors are modelled at v1, so the controller Asset ships in isolation with no current `controller_id` back-references pointing at it. The controller registration still ships because absence-of-tracking on hardware that demonstrably exists (and gets rebooted, replaced, firmware-versioned by 2-BM operators) is exactly the self-justifying-defer that `feedback_intentional_modeling_not_mirroring` exists to forbid. Both OMS-VME58 instances bind to the same `oms_vme58` Model row per the one-Model-per-product-line convention; per-instance identity (serial number, firmware version) lives in the per-Asset Settings block. PARTIAL SHIP today is 5 of 7 controller hardware classes; the remaining 2 (Nanotec ST4118 stepper inside Optique Peter, and the Schunk LPTM 30 inside the camera selector) remain deferred per `project_controller_as_asset_research`; each earns its own Stage-1 call when its own trigger fires.
+The Aerotech Ensemble HLE10-40-A-MXH (companion drive for `aerotech_abs250mp_m_as`) IS now modelled as a separate Asset (`Aerotech_Ensemble_drive`) with `tier = Device` under 2-BM, with `Aerotech_ABRS_rotary.controller_id` carrying the back-reference. This was the FIRST `MotionController` Asset shipped, anchoring the controller-as-Asset slice on the unambiguously-identified rotary drive per `project_controller_as_asset_stage1_design`. A SECOND `MotionController` Asset (`Aerotech_Hexapod_drive`) now models the drive for `Hexapod_2BM`, with `Hexapod_2BM.controller_id` carrying the back-reference; the 2-BM source page does not name the drive's specific product line (the EPICS interface is "native Aerotech Ensemble" but the box is not identified, nor is rack-separate vs sealed-in integration confirmed), so the Model row uses `unknown-pending-confirmation` for the part number and the per-Asset Settings block carries placeholders that operators replace via `update_asset_settings` once the physical hardware is verified. A THIRD `MotionController` Asset (`Aerotech_2bmbAERO_drive`) models the drive electronics that the `2bmbAERO` EPICS IOC manages on behalf of `focus`; the Asset name uses the IOC handle (the most stable operator-facing identifier; the drive's product line is almost certainly Aerotech Ensemble-family but unconfirmed on the source page), and the same `unknown-pending-confirmation` pattern carries the per-unit identity placeholders. A FOURTH `MotionController` Asset (`OMS_VME58_2bmb_drive`) now models the Oregon Micro Systems VME58 motor controller card in the 2-BM b-station IOC crate (`ioc2bmb`), which drives the `2bmb:m1`-`2bmb:m91` motor band including `Sample_top_X` (`2bmb:m18`) and `Sample_top_Z` (`2bmb:m17`); both stage Assets now carry `controller_id` back-references to `OMS_VME58_2bmb_drive`. The remaining 89 driven motors on the 2bmb crate live in [Pending](#pending) until each earns its own Asset registration; the controller Asset is the addressability handle that makes a future "VME-bus glitch took out m1-m91" Caution scope honestly to the bus rather than dispersing across 91 motor Assets. A FIFTH `MotionController` Asset (`OMS_VME58_2bma_drive`) models the sibling OMS VME58 board in the 2-BM a-station IOC crate (`ioc2bma`), which drives the front-end / beam-conditioning motor band (`Mirror`, `DMM`, slits, monitor); none of those driven motors are modelled at v1, so the controller Asset ships in isolation with no current `controller_id` back-references pointing at it. The controller registration still ships because absence-of-tracking on hardware that demonstrably exists (and gets rebooted, replaced, firmware-versioned by 2-BM operators) is exactly the self-justifying-defer that `feedback_intentional_modeling_not_mirroring` exists to forbid. Both OMS-VME58 instances bind to the same `oms_vme58` Model row per the one-Model-per-product-line convention; per-instance identity (serial number, firmware version) lives in the per-Asset Settings block. PARTIAL SHIP today is 5 of 7 controller hardware classes; the remaining 2 (Nanotec ST4118 stepper inside Optique Peter, and the Schunk LPTM 30 inside the camera selector) remain deferred per `project_controller_as_asset_research`; each earns its own Stage-1 call when its own trigger fires.
 
 `Sample_top_Pitch` and `Sample_top_Roll` are PseudoAxis Assets (virtual DoFs over the 2bmHXP hexapod-kinematics solver) and do not bind to a vendor Model. The Model-binding flow (PIDINST) targets physical commissioned hardware; the underlying constituents (the Hexapod_2BM physical axes) carry the Model binding. The remaining four hexapod DoFs (X, Y, Z, Yaw) and the constituent-port wiring from Hexapod_2BM to the virtual DoFs are deferred until the trigger named in `project_pitch_roll_retag`. The Kohzu SA16A-RM goniometer (`Sample_pitch_lam` in the 2-BM source page, possibly the same physical thing as `Sample_top_Pitch` or a third stage) gets its own Model row when the operator-naming question lands.
 
@@ -176,7 +176,7 @@ Placeholder values below are intentional. The controller-as-Asset design ships t
 
 ### `Aerotech_2bmbAERO_drive`
 
-Bound to Model `aerotech_2bmbaero_drive_unknown_pn`. The Aerotech drive electronics that the `2bmbAERO` EPICS IOC manages on behalf of `Optique_Peter_focus_Z`. Third `MotionController` Asset shipped at 2-BM; the back-reference lives on `Optique_Peter_focus_Z.controller_id`.
+Bound to Model `aerotech_2bmbaero_drive_unknown_pn`. The Aerotech drive electronics that the `2bmbAERO` EPICS IOC manages on behalf of `focus`. Third `MotionController` Asset shipped at 2-BM; the back-reference lives on `focus.controller_id`.
 
 Operators address the focus motor via `2bmbAERO:m1` (IOC name + motor channel); the IOC is software (an EPICS process) while the Asset modelled here is the hardware drive box behind it (per OPC UA DI / AAS DigitalNameplate alignment, CORA models field-replaceable, firmware-versioned drive electronics rather than the software process talking to them). The drive's specific product line is not named on the [2-BM source page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html); the Asset name carries the IOC handle (the most stable operator-facing identifier) and settings placeholders cover identity details that operators verify on the physical hardware.
 
@@ -287,14 +287,14 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `load_capacity_horizontal` | `21 kg` |
 | `stage_mass` | `12 kg` |
 
-### `Scintillator_LuAG`
+### `scintillator`
 
 | Setting | Value |
 | --- | --- |
 | `thickness` | `100 um` |
 | `decay_time` | `0.07 us` |
 
-### `Oryx_5MP_camera`
+### `camera`
 
 | Setting | Value |
 | --- | --- |
@@ -303,7 +303,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `pixel_size` | `3.45 um` |
 | `bit_depth` | `12 bit` |
 
-### `objective_0` (10x)
+### `objective_10x` (10x)
 
 | Setting | Value |
 | --- | --- |
@@ -312,7 +312,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `focal_length` | `20 mm` |
 | `working_distance` | `33.5 mm` |
 
-### `objective_1` (2x)
+### `objective_2x` (2x)
 
 | Setting | Value |
 | --- | --- |
@@ -321,7 +321,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `focal_length` | `100 mm` |
 | `working_distance` | `34 mm` |
 
-### `objective_2` (1.1x)
+### `objective_1.1x` (1.1x)
 
 | Setting | Value |
 | --- | --- |
@@ -330,7 +330,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 | `focal_length` | `200 mm` |
 | `working_distance` | `50 mm` |
 
-### `lens_turret`
+### `turret`
 
 `RotaryStage` Family assumed (pending 2-BM operator confirmation; if the turret is a translating slide, the Family flips to `LinearStage` and the signal types switch from `rotation_deg` to `linear_mm`).
 
@@ -345,7 +345,7 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `Aerotech_Hexapod_drive
 
 Each Asset may carry one canonical engineering reference as a `(system, number, revision)` triple per the [Drawing VO](../../architecture/modules/equipment/index.md). The carrier holds the build-to document for the physical specimen; the [Mount drawing](equipment/microscope.md#engineering-drawings) on the slot is a separate document (where the slot lives in the beamline). v1 is single-valued; the Drawing-frozenset promotion and `Model.drawing` / `Fixture.drawing` extensions defer to the rule-of-three trigger.
 
-Assets not listed below have no canonical document cited on the 2-BM source page yet (Aerotech `ABS250MP` datasheet for `Aerotech_ABRS_rotary`, Kohzu `CYAT-070` datasheet for the four `Sample_top_*` stages, an APS shutter drawing for `Shutter_2BM`, and a FLIR Oryx datasheet for `Oryx_5MP_camera`). These populate when the operator confirms the canonical reference.
+Assets not listed below have no canonical document cited on the 2-BM source page yet (Aerotech `ABS250MP` datasheet for `Aerotech_ABRS_rotary`, Kohzu `CYAT-070` datasheet for the four `Sample_top_*` stages, an APS shutter drawing for `Shutter_2BM`, and a FLIR Oryx datasheet for `camera`). These populate when the operator confirms the canonical reference.
 
 ### `Hexapod_2BM`
 
@@ -357,7 +357,7 @@ Assets not listed below have no canonical document cited on the 2-BM source page
 
 Aerotech HEX300-230HL hexapod product datasheet (Hex300-Data-Sheet-D20250203.pdf). The Microscope deployment cites this as the structured reference for the 6-DoF positioner that anchors the sample stack.
 
-### `Optique_Peter_focus_Z`
+### `focus`
 
 | Field | Value |
 | --- | --- |
@@ -367,7 +367,7 @@ Aerotech HEX300-230HL hexapod product datasheet (Hex300-Data-Sheet-D20250203.pdf
 
 Optique Peter MICRX080 microscope manual (MAN-11863-0521-0465-A, 21 May 2021, 53 pages). The shared vendor manual covers every Optique Peter housing constituent (focus stage, lens turret, lens kit, scintillator). Same reference attaches to each Microscope-bound Asset below.
 
-### `lens_turret`
+### `turret`
 
 | Field | Value |
 | --- | --- |
@@ -375,7 +375,7 @@ Optique Peter MICRX080 microscope manual (MAN-11863-0521-0465-A, 21 May 2021, 53
 | `number` | `MAN-11863` |
 | `revision` | `0521-0465-A` |
 
-### `objective_0`
+### `objective_10x`
 
 | Field | Value |
 | --- | --- |
@@ -385,7 +385,7 @@ Optique Peter MICRX080 microscope manual (MAN-11863-0521-0465-A, 21 May 2021, 53
 
 v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO LWD per-magnification datasheet is the eventual upgrade once part numbers are verified (see the [vendor catalog note](equipment/microscope.md#vendor-catalog-models) on the Plan-Apo-NIR three-part-number split).
 
-### `objective_1`
+### `objective_2x`
 
 | Field | Value |
 | --- | --- |
@@ -393,7 +393,7 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 | `number` | `MAN-11863` |
 | `revision` | `0521-0465-A` |
 
-### `objective_2`
+### `objective_1.1x`
 
 | Field | Value |
 | --- | --- |
@@ -401,7 +401,7 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 | `number` | `MAN-11863` |
 | `revision` | `0521-0465-A` |
 
-### `Scintillator_LuAG`
+### `scintillator`
 
 | Field | Value |
 | --- | --- |
