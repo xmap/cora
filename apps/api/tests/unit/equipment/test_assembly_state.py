@@ -25,6 +25,8 @@ from cora.equipment.aggregates.assembly import (
     InvalidSlotNameError,
     SlotCardinality,
     SlotName,
+    SubAssemblyLink,
+    SubAssemblySlotNameConflictError,
     TemplateSlot,
     TemplateWire,
     WireReferencesUnknownSlotError,
@@ -48,8 +50,8 @@ def test_slot_cardinality_has_four_closed_values() -> None:
 
 @pytest.mark.unit
 def test_assembly_name_trims_and_validates_bounded_text() -> None:
-    name = AssemblyName("  MCTOptics  ")
-    assert name.value == "MCTOptics"
+    name = AssemblyName("  Microscope  ")
+    assert name.value == "Microscope"
 
 
 @pytest.mark.unit
@@ -256,3 +258,79 @@ def test_fixture_parameter_overrides_invalid_carries_reason() -> None:
     err = FixtureParameterOverridesInvalidError("exposure_ms must be <= 60000")
     assert err.reason == "exposure_ms must be <= 60000"
     assert "exposure_ms" in str(err)
+
+
+_SUB_HASH = "sha256:" + "c" * 8
+
+
+@pytest.mark.unit
+def test_assembly_accepts_sub_assembly_link_with_distinct_slot_name() -> None:
+    """A sub-assembly link coexists with leaf slots when its slot_name
+    does not collide with any leaf slot."""
+    leaf = TemplateSlot(
+        slot_name=SlotName("camera"),
+        required_family_ids=frozenset({uuid4()}),
+        cardinality=SlotCardinality.EXACTLY_1,
+    )
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"),
+        sub_assembly_id=uuid4(),
+        content_hash=_SUB_HASH,
+    )
+    assembly = Assembly(
+        id=uuid4(),
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=uuid4(),
+        required_slots=frozenset({leaf}),
+        required_sub_assemblies=frozenset({link}),
+    )
+    assert assembly.required_sub_assemblies == frozenset({link})
+
+
+@pytest.mark.unit
+def test_assembly_rejects_sub_assembly_link_colliding_with_leaf_slot() -> None:
+    """A link's slot_name must not collide with a leaf slot_name: both
+    share one named-position namespace for the register_fixture union."""
+    leaf = TemplateSlot(
+        slot_name=SlotName("optics"),
+        required_family_ids=frozenset({uuid4()}),
+        cardinality=SlotCardinality.EXACTLY_1,
+    )
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"),
+        sub_assembly_id=uuid4(),
+        content_hash=_SUB_HASH,
+    )
+    with pytest.raises(SubAssemblySlotNameConflictError) as exc_info:
+        Assembly(
+            id=uuid4(),
+            name=AssemblyName("Microscope"),
+            presents_as_family_id=uuid4(),
+            required_slots=frozenset({leaf}),
+            required_sub_assemblies=frozenset({link}),
+        )
+    assert exc_info.value.slot_name == "optics"
+
+
+@pytest.mark.unit
+def test_assembly_rejects_duplicate_sub_assembly_link_slot_names() -> None:
+    """Two links may not share a slot_name; each names a distinct
+    position in the parent."""
+    link_a = SubAssemblyLink(
+        slot_name=SlotName("optics"),
+        sub_assembly_id=uuid4(),
+        content_hash="sha256:" + "a" * 8,
+    )
+    link_b = SubAssemblyLink(
+        slot_name=SlotName("optics"),
+        sub_assembly_id=uuid4(),
+        content_hash="sha256:" + "b" * 8,
+    )
+    with pytest.raises(SubAssemblySlotNameConflictError) as exc_info:
+        Assembly(
+            id=uuid4(),
+            name=AssemblyName("Microscope"),
+            presents_as_family_id=uuid4(),
+            required_sub_assemblies=frozenset({link_a, link_b}),
+        )
+    assert exc_info.value.slot_name == "optics"

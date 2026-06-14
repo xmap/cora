@@ -4,7 +4,7 @@ Consumed by Layer-3 cross-aggregate consumers via the
 `Kernel.assembly_lookup` port. Wired by 3D's `bind_plan_role`
 handler so the role_kind satisfaction check ORs-in the Assembly
 path on top of the Family disjunction (see [[project-role-aggregate-design]]
-sub-slice 3C/3D for the worked MCTOptics-Assembly example).
+sub-slice 3C/3D for the worked Microscope-Assembly example).
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false

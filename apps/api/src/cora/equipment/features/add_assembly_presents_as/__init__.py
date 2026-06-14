@@ -5,7 +5,7 @@ Module-as-namespace surface:
     from cora.equipment.features import add_assembly_presents_as
 
     cmd = add_assembly_presents_as.AddAssemblyPresentsAs(
-        assembly_id=mctoptics_id, role_id=imager_role_id
+        assembly_id=microscope_id, role_id=imager_role_id
     )
     handler = add_assembly_presents_as.bind(deps)
     await handler(cmd, principal_id=..., correlation_id=...)

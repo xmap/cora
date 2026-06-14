@@ -10,7 +10,7 @@ from cora.api.main import create_app
 from tests.contract._mcp_helpers import open_session, parse_sse_data
 
 
-def _seed_family_with_imager(client: TestClient, app: FastAPI) -> tuple[str, str]:
+def _seed_family_with_detector(client: TestClient, app: FastAPI) -> tuple[str, str]:
     family_resp = client.post(
         "/families",
         json={"name": "Camera", "affordances": ["Imageable"]},
@@ -30,7 +30,7 @@ def _seed_family_with_imager(client: TestClient, app: FastAPI) -> tuple[str, str
     role_id = str(role_resp.json()["role_id"])
     app.state.deps.role_lookup.register(
         role_id=UUID(role_id),
-        name="Imager",
+        name="Detector",
         required_affordances=["Imageable"],
     )
     add_resp = client.post(
@@ -59,7 +59,7 @@ def test_mcp_lists_remove_family_presents_as_tool() -> None:
 def test_mcp_remove_family_presents_as_tool_call_succeeds() -> None:
     app = create_app()
     with TestClient(app) as client:
-        family_id, role_id = _seed_family_with_imager(client, app)
+        family_id, role_id = _seed_family_with_detector(client, app)
         session_headers = open_session(client)
         response = client.post(
             "/mcp",

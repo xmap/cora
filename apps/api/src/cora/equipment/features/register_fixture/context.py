@@ -8,6 +8,12 @@ hands it to the pure decider for invariant enforcement.
 `assembly_state` is `None` when the assembly_id does not resolve
 (decider raises `AssemblyNotFoundError`).
 
+`sub_assembly_states` maps each child Assembly id referenced by the
+top Assembly's `required_sub_assemblies` to its loaded state, or
+`None` when it does not resolve (decider raises
+`SubAssemblyNotFoundForAssemblyError`). The decider expands the union
+of the top + sub leaf slots from these states.
+
 `family_ids_by_asset_id` maps each referenced asset_id to its
 `family_ids` set, or `None` when the asset_id did not resolve.
 A `None` value tells the decider to raise
@@ -49,6 +55,9 @@ class RegisterFixtureContext:
     """Snapshot of Assembly + Asset existence + lifecycle + install checks."""
 
     assembly_state: Assembly | None
+    sub_assembly_states: dict[UUID, Assembly | None] = field(
+        default_factory=dict[UUID, Assembly | None]
+    )
     family_ids_by_asset_id: dict[UUID, frozenset[UUID] | None] = field(
         default_factory=dict[UUID, frozenset[UUID] | None]
     )

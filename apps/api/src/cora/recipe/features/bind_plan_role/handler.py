@@ -25,7 +25,7 @@ the handler additionally:
     via `Kernel.assembly_lookup.lookup` ->
     `assembly_lookup_result` on the context (decider ORs-in
     `role_kind in assembly.presents_as` on the Family disjunction
-    so a composed Assembly like MCTOptics can satisfy the Role
+    so a composed Assembly like Microscope can satisfy the Role
     when no individual Family declares it)
 
 Slice-1 family_id-only RoleRequirements skip all extra loads:

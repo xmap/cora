@@ -33,6 +33,7 @@ from uuid import UUID
 from cora.equipment.aggregates.assembly.state import (
     Assembly,
     AssemblyName,
+    SubAssemblyLink,
     TemplateSlot,
     TemplateWire,
     canonical_assembly_subset,
@@ -58,6 +59,8 @@ def compute_assembly_content_hash(
     required_slots: frozenset[TemplateSlot],
     required_wires: frozenset[TemplateWire],
     parameter_overrides_schema: dict[str, object] | None,
+    *,
+    required_sub_assemblies: frozenset[SubAssemblyLink] = frozenset(),
 ) -> str:
     """Compute SHA-256 hex over an Assembly's canonical content subset.
 
@@ -77,6 +80,7 @@ def compute_assembly_content_hash(
         presents_as_family_id=presents_as_family_id,
         required_slots=required_slots,
         required_wires=required_wires,
+        required_sub_assemblies=required_sub_assemblies,
         parameter_overrides_schema=parameter_overrides_schema,
     )
     return compute_content_hash(ASSEMBLY_PAYLOAD_TYPE, body)

@@ -13,7 +13,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Request, status
 from pydantic import BaseModel, Field
 
-from cora.equipment._bodies import DrawingBody, TemplateSlotBody, TemplateWireBody
+from cora.equipment._bodies import (
+    DrawingBody,
+    SubAssemblyLinkBody,
+    TemplateSlotBody,
+    TemplateWireBody,
+)
 from cora.equipment.aggregates.assembly import ASSEMBLY_NAME_MAX_LENGTH
 from cora.equipment.features.define_assembly.command import DefineAssembly
 from cora.equipment.features.define_assembly.handler import IdempotentHandler
@@ -62,6 +67,17 @@ class DefineAssemblyRequest(BaseModel):
             "Slot-to-slot signal wires inside the Assembly, keyed by "
             "slot_name (NOT Asset UUID). Endpoints must reference "
             "slots declared in required_slots. Wire shape is a list; "
+            "duplicates collapse when the route handler converts to "
+            "the domain frozenset."
+        ),
+    )
+    required_sub_assemblies: list[SubAssemblyLinkBody] = Field(
+        default_factory=list[SubAssemblyLinkBody],
+        description=(
+            "Child Assemblies included as version-pinned links, each "
+            "occupying a named position (slot_name) and pinning the "
+            "child's content_hash, so a blueprint can be composed of "
+            "smaller reusable blueprints. Wire shape is a list; "
             "duplicates collapse when the route handler converts to "
             "the domain frozenset."
         ),
@@ -171,6 +187,9 @@ async def post_assemblies(
             presents_as_family_id=body.presents_as_family_id,
             required_slots=frozenset(slot.to_domain() for slot in body.required_slots),
             required_wires=frozenset(wire.to_domain() for wire in body.required_wires),
+            required_sub_assemblies=frozenset(
+                ref.to_domain() for ref in body.required_sub_assemblies
+            ),
             parameter_overrides_schema=body.parameter_overrides_schema,
             drawing=body.drawing.to_domain() if body.drawing is not None else None,
             version=body.version,

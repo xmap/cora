@@ -25,7 +25,7 @@ def _define_method(client: TestClient, name: str = "Tomography") -> UUID:
     return UUID(response.json()["method_id"])
 
 
-def _create_imager_role(client: TestClient, app: FastAPI) -> UUID:
+def _create_detector_role(client: TestClient, app: FastAPI) -> UUID:
     response = client.post(
         "/roles",
         json={
@@ -44,7 +44,7 @@ def _create_imager_role(client: TestClient, app: FastAPI) -> UUID:
     # contract tests).
     app.state.deps.role_lookup.register(
         role_id=role_id,
-        name="Imager",
+        name="Detector",
         required_affordances=["Imageable"],
     )
     return role_id
@@ -64,7 +64,7 @@ def test_post_returns_201_for_role_kind_when_role_resolves() -> None:
     app = create_app()
     with TestClient(app) as client:
         method_id = _define_method(client)
-        role_id = _create_imager_role(client, app)
+        role_id = _create_detector_role(client, app)
         response = client.post(
             f"/methods/{method_id}/add-required-role",
             json={"requirement": _requirement_body_role_kind(role_id)},

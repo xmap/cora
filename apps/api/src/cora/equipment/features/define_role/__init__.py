@@ -5,7 +5,7 @@ Module-as-namespace surface, symmetric with `define_family`:
     from cora.equipment.features import define_role
 
     cmd = define_role.DefineRole(
-        name="Imager",
+        name="Detector",
         docstring="Acquires 2D image frames on exposure or trigger.",
         required_affordances=frozenset({Affordance.IMAGEABLE}),
         optional_affordances=frozenset({Affordance.BINNABLE}),

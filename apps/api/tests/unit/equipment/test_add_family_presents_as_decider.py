@@ -44,7 +44,7 @@ def _role_lookup(
 ) -> RoleLookupResult:
     return RoleLookupResult(
         id=role_id,
-        name="Imager",
+        name="Detector",
         required_affordances=required,
         optional_affordances=optional,
     )

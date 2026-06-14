@@ -30,7 +30,7 @@ _PRINC = UUID("01900000-0000-7000-8000-000000000099")
 def _defined() -> RoleDefined:
     return RoleDefined(
         role_id=_ROLE_ID,
-        name="Imager",
+        name="Detector",
         docstring="Acquires 2D image frames on exposure or trigger.",
         occurred_at=_NOW,
         required_affordances=frozenset({Affordance.IMAGEABLE}),
@@ -44,7 +44,7 @@ def _defined() -> RoleDefined:
 def test_evolve_role_defined_sets_genesis_fields() -> None:
     state = evolve(None, _defined())
     assert state.id == RoleId(_ROLE_ID)
-    assert state.name == RoleName("Imager")
+    assert state.name == RoleName("Detector")
     assert state.docstring == "Acquires 2D image frames on exposure or trigger."
     assert state.required_affordances == frozenset({Affordance.IMAGEABLE})
     assert state.optional_affordances == frozenset({Affordance.BINNABLE})
@@ -161,7 +161,7 @@ def test_from_stored_tolerates_missing_optional_collection_fields() -> None:
     defaults to an empty collection (mirrors FamilyDefined affordances)."""
     payload = {
         "role_id": str(_ROLE_ID),
-        "name": "Imager",
+        "name": "Detector",
         "docstring": "x",
         "occurred_at": _NOW.isoformat(),
     }
@@ -194,7 +194,7 @@ def test_from_stored_unknown_affordance_value_raises_value_error() -> None:
     constructor mirrors Family's `_load_affordances` posture)."""
     payload = {
         "role_id": str(_ROLE_ID),
-        "name": "Imager",
+        "name": "Detector",
         "docstring": "x",
         "occurred_at": _NOW.isoformat(),
         "required_affordances": ["NotARealAffordance"],

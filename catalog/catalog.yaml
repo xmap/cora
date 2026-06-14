@@ -18,7 +18,7 @@
 # beamline page, not here.
 
 roles:
-  - name: Imager
+  - name: Detector
     docstring: "Acquires 2D image frames on exposure or trigger. Satisfying Assets or composed Assemblies emit Image / Frame signals. Direct-detection Cameras and composed scintillator-relay Assemblies both satisfy this Role; the multi-Family disjunction accepts either path."
     required_affordances: [Imageable]
     optional_affordances: [Binnable, Coolable, Triggerable, Streamable]
@@ -36,8 +36,8 @@ roles:
     optional_affordances: [Reportable, Pulsing]
     produces: [ControlOut]
     consumes: [ControlIn]
-  - name: Detector
-    docstring: "Reports a continuous or discrete measurement on query or trigger. Satisfying Families include ion chambers, photodiodes, thermocouples, and other point-sensor anatomies. Distinct from Imager: a Detector produces a scalar or short-vector Reading, not a 2D frame."
+  - name: Sensor
+    docstring: "Reports a continuous or discrete measurement on query or trigger. Satisfying Families include ion chambers, photodiodes, thermocouples, and other point-sensor anatomies. Distinct from Detector: a Sensor produces a scalar or short-vector Reading, not a 2D frame."
     required_affordances: [Reportable]
     optional_affordances: [Triggerable, Streamable]
     produces: [Reading]
@@ -55,11 +55,13 @@ families:
   - name: TimingController
     note: "Hardware timing-signal generation and distribution (triggers, gates, sync pulses); presents_as Controller, which carries Pulsing. Anchored at 2-BM by softGlueZynq_FPGA. Substrate (FPGA, Zynq) stays out of the name and lives in settings or the bound Model."
   - name: Objective
-    note: "Per-lens identity inside the MCTOptics Assembly."
+    note: "Per-lens identity inside the Microscope Assembly."
   - name: PseudoAxis
-    note: "Virtual-axis Family; the MCTOptics_lens_select Asset carries a LookupTable partition rule decomposing a lens index to turret rotation."
+    note: "Virtual-axis Family; the Objective_Selector Asset carries a LookupTable partition rule decomposing an objective index to turret rotation."
   - name: Imager
-    note: "Presenter Family for detector Assemblies; the 2-BM Optique Peter detector materializes as the MCTOptics Assembly + Fixture."
+    note: "Presenter Family for detector Assemblies; the 2-BM Optique Peter detector materializes as the Microscope Assembly + Fixture."
+  - name: Housing
+    note: "Containment chassis Family; the Housing Asset parents the Microscope constituents and carries the Mount."
   - name: ProbeGeneric
     note: "APS facility-scope template, an abstract detector probe-chain."
   # Pending in code (documented, not yet defined): Goniometer, Monochromator,

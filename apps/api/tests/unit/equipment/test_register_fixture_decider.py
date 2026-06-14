@@ -19,6 +19,10 @@ from cora.equipment.aggregates.assembly import (
     FixtureParameterOverridesInvalidError,
     SlotCardinality,
     SlotName,
+    SubAssemblyContentHashMismatchError,
+    SubAssemblyLink,
+    SubAssemblyNotFoundForAssemblyError,
+    SubAssemblySlotNameConflictError,
     TemplateSlot,
 )
 from cora.equipment.aggregates.asset import AssetLifecycle
@@ -559,3 +563,381 @@ def test_decide_is_pure_same_inputs_yield_same_events() -> None:
         registered_by=_TEST_ACTOR_ID,
     )
     assert events_a == events_b
+
+
+def _link(slot_name: str, sub_id: UUID, *, content_hash: str = "abc123") -> SubAssemblyLink:
+    """A SubAssemblyLink whose pin defaults to the `_assembly` content_hash
+    so the snapshot re-validation passes; override to exercise drift."""
+    return SubAssemblyLink(
+        slot_name=SlotName(slot_name), sub_assembly_id=sub_id, content_hash=content_hash
+    )
+
+
+@pytest.mark.unit
+def test_decide_binds_union_of_top_and_sub_assembly_leaf_slots() -> None:
+    """A parent referencing a sub-assembly binds the union of both
+    blueprints' leaf slots (top 'camera' + sub 'turret')."""
+    parent_id, child_id = uuid4(), uuid4()
+    cam_fam, turret_fam = uuid4(), uuid4()
+    cam_asset, turret_asset = uuid4(), uuid4()
+    parent = Assembly(
+        id=parent_id,
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=uuid4(),
+        required_slots=frozenset({_slot("camera", required_family_ids=frozenset({cam_fam}))}),
+        required_sub_assemblies=frozenset({_link("optics", child_id)}),
+        status=AssemblyStatus.DEFINED,
+        content_hash="parenthash",
+    )
+    child = _assembly(
+        child_id,
+        slots=frozenset({_slot("turret", required_family_ids=frozenset({turret_fam}))}),
+    )
+    context = RegisterFixtureContext(
+        assembly_state=parent,
+        sub_assembly_states={child_id: child},
+        family_ids_by_asset_id={
+            cam_asset: frozenset({cam_fam}),
+            turret_asset: frozenset({turret_fam}),
+        },
+    )
+    command = RegisterFixture(
+        assembly_id=parent_id,
+        slot_asset_bindings=frozenset(
+            {
+                SlotAssetBinding(slot_name="camera", asset_id=cam_asset),
+                SlotAssetBinding(slot_name="turret", asset_id=turret_asset),
+            }
+        ),
+    )
+    events = register_fixture.decide(
+        state=None,
+        command=command,
+        context=context,
+        now=_NOW,
+        new_id=uuid4(),
+        registered_by=_TEST_ACTOR_ID,
+    )
+    assert len(events) == 1
+    assert {b.slot_name for b in events[0].slot_asset_bindings} == {"camera", "turret"}
+
+
+@pytest.mark.unit
+def test_decide_rejects_unresolved_sub_assembly() -> None:
+    parent_id, child_id = uuid4(), uuid4()
+    parent = Assembly(
+        id=parent_id,
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=uuid4(),
+        required_sub_assemblies=frozenset({_link("optics", child_id)}),
+        status=AssemblyStatus.DEFINED,
+        content_hash="h",
+    )
+    context = RegisterFixtureContext(assembly_state=parent, sub_assembly_states={child_id: None})
+    with pytest.raises(SubAssemblyNotFoundForAssemblyError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=RegisterFixture(assembly_id=parent_id),
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_TEST_ACTOR_ID,
+        )
+    assert exc_info.value.sub_assembly_id == child_id
+
+
+@pytest.mark.unit
+def test_decide_rejects_deprecated_sub_assembly() -> None:
+    parent_id, child_id = uuid4(), uuid4()
+    parent = Assembly(
+        id=parent_id,
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=uuid4(),
+        required_sub_assemblies=frozenset({_link("optics", child_id)}),
+        status=AssemblyStatus.DEFINED,
+        content_hash="h",
+    )
+    child = _assembly(child_id, status=AssemblyStatus.DEPRECATED)
+    context = RegisterFixtureContext(assembly_state=parent, sub_assembly_states={child_id: child})
+    with pytest.raises(AssemblyCannotInstantiateError):
+        register_fixture.decide(
+            state=None,
+            command=RegisterFixture(assembly_id=parent_id),
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_TEST_ACTOR_ID,
+        )
+
+
+@pytest.mark.unit
+def test_decide_rejects_cross_blueprint_slot_name_collision() -> None:
+    """A leaf slot_name present in both the top Assembly and a
+    sub-assembly collides in the materialized union."""
+    parent_id, child_id = uuid4(), uuid4()
+    fam = uuid4()
+    parent = Assembly(
+        id=parent_id,
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=uuid4(),
+        required_slots=frozenset({_slot("optic", required_family_ids=frozenset({fam}))}),
+        required_sub_assemblies=frozenset({_link("optics", child_id)}),
+        status=AssemblyStatus.DEFINED,
+        content_hash="h",
+    )
+    child = _assembly(
+        child_id, slots=frozenset({_slot("optic", required_family_ids=frozenset({fam}))})
+    )
+    context = RegisterFixtureContext(assembly_state=parent, sub_assembly_states={child_id: child})
+    with pytest.raises(SubAssemblySlotNameConflictError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=RegisterFixture(assembly_id=parent_id),
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_TEST_ACTOR_ID,
+        )
+    assert exc_info.value.slot_name == "optic"
+
+
+@pytest.mark.unit
+def test_decide_rejects_deeper_sub_assembly_nesting() -> None:
+    """A sub-assembly that itself references sub-assemblies is rejected
+    at fixture time: only one composing level is expanded."""
+    parent_id, child_id, grandchild_id = uuid4(), uuid4(), uuid4()
+    # Pin the parent link to the child's ACTUAL content_hash so the
+    # rejection is driven solely by the depth guard, not by an
+    # incidental content_hash mismatch firing first.
+    parent = Assembly(
+        id=parent_id,
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=uuid4(),
+        required_sub_assemblies=frozenset({_link("optics", child_id, content_hash="childhash")}),
+        status=AssemblyStatus.DEFINED,
+        content_hash="h",
+    )
+    child = Assembly(
+        id=child_id,
+        name=AssemblyName("Optics"),
+        presents_as_family_id=uuid4(),
+        required_sub_assemblies=frozenset({_link("inner", grandchild_id)}),
+        status=AssemblyStatus.DEFINED,
+        content_hash="childhash",
+    )
+    context = RegisterFixtureContext(assembly_state=parent, sub_assembly_states={child_id: child})
+    with pytest.raises(AssemblyCannotInstantiateError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=RegisterFixture(assembly_id=parent_id),
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_TEST_ACTOR_ID,
+        )
+    assert "nested fixture expansion" in str(exc_info.value)
+
+
+def _parent_with_subs(
+    parent_id: UUID,
+    *,
+    links: frozenset[SubAssemblyLink],
+    slots: frozenset[TemplateSlot] = frozenset(),
+) -> Assembly:
+    return Assembly(
+        id=parent_id,
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=uuid4(),
+        required_slots=slots,
+        required_sub_assemblies=links,
+        status=AssemblyStatus.DEFINED,
+        content_hash="parenthash",
+    )
+
+
+@pytest.mark.unit
+def test_decide_rejects_stale_sub_assembly_content_hash_pin() -> None:
+    """A child re-versioned after the parent was authored no longer matches
+    the pinned content_hash: the snapshot guarantee fails loudly."""
+    parent_id, child_id = uuid4(), uuid4()
+    parent = _parent_with_subs(
+        parent_id, links=frozenset({_link("optics", child_id, content_hash="stalepin")})
+    )
+    child = _assembly(child_id, content_hash="abc123")
+    context = RegisterFixtureContext(assembly_state=parent, sub_assembly_states={child_id: child})
+    with pytest.raises(SubAssemblyContentHashMismatchError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=RegisterFixture(assembly_id=parent_id),
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_TEST_ACTOR_ID,
+        )
+    assert exc_info.value.sub_assembly_id == child_id
+    assert exc_info.value.pinned == "stalepin"
+    assert exc_info.value.current == "abc123"
+
+
+@pytest.mark.unit
+def test_decide_rejects_unfilled_sub_assembly_slot() -> None:
+    """An unfilled EXACTLY_1 slot contributed by a sub-assembly fails
+    mapping-incomplete, proving the sub slot joins the cardinality union."""
+    parent_id, child_id = uuid4(), uuid4()
+    parent = _parent_with_subs(parent_id, links=frozenset({_link("optics", child_id)}))
+    child = _assembly(
+        child_id, slots=frozenset({_slot("turret", cardinality=SlotCardinality.EXACTLY_1)})
+    )
+    context = RegisterFixtureContext(assembly_state=parent, sub_assembly_states={child_id: child})
+    with pytest.raises(FixtureMappingIncompleteError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=RegisterFixture(assembly_id=parent_id),
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_TEST_ACTOR_ID,
+        )
+    assert exc_info.value.slot_name == "turret"
+    assert "Exactly1" in exc_info.value.reason
+
+
+@pytest.mark.unit
+def test_decide_rejects_family_mismatch_on_sub_assembly_slot() -> None:
+    """An asset bound to a sub-assembly slot whose family does not match
+    fails family-mismatch, proving the sub slot's family set is used."""
+    parent_id, child_id = uuid4(), uuid4()
+    turret_fam = uuid4()
+    turret_asset = uuid4()
+    parent = _parent_with_subs(parent_id, links=frozenset({_link("optics", child_id)}))
+    child = _assembly(
+        child_id,
+        slots=frozenset({_slot("turret", required_family_ids=frozenset({turret_fam}))}),
+    )
+    context = RegisterFixtureContext(
+        assembly_state=parent,
+        sub_assembly_states={child_id: child},
+        family_ids_by_asset_id={turret_asset: frozenset({uuid4()})},
+    )
+    command = RegisterFixture(
+        assembly_id=parent_id,
+        slot_asset_bindings=frozenset(
+            {SlotAssetBinding(slot_name="turret", asset_id=turret_asset)}
+        ),
+    )
+    with pytest.raises(FixtureAssetFamilyMismatchError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=command,
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_TEST_ACTOR_ID,
+        )
+    assert exc_info.value.slot_name == "turret"
+    assert exc_info.value.asset_id == turret_asset
+
+
+@pytest.mark.unit
+def test_decide_unresolved_sub_assembly_error_carries_sorted_first() -> None:
+    """When multiple sub-assemblies are unresolved, the error names the
+    sorted-first id regardless of frozenset iteration order."""
+    parent_id = uuid4()
+    id_lo = UUID("00000000-0000-0000-0000-0000000000aa")
+    id_hi = UUID("00000000-0000-0000-0000-0000000000bb")
+    parent = _parent_with_subs(
+        parent_id, links=frozenset({_link("optics", id_hi), _link("stage", id_lo)})
+    )
+    context = RegisterFixtureContext(
+        assembly_state=parent, sub_assembly_states={id_hi: None, id_lo: None}
+    )
+    with pytest.raises(SubAssemblyNotFoundForAssemblyError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=RegisterFixture(assembly_id=parent_id),
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_TEST_ACTOR_ID,
+        )
+    assert exc_info.value.sub_assembly_id == id_lo
+
+
+@pytest.mark.unit
+def test_decide_binds_union_across_multiple_sub_assemblies() -> None:
+    """Two referenced sub-assemblies each contribute a leaf slot to the
+    union, and bindings for both materialize one FixtureRegistered."""
+    parent_id, optics_id, stage_id = uuid4(), uuid4(), uuid4()
+    turret_fam, rotary_fam = uuid4(), uuid4()
+    turret_asset, rotary_asset = uuid4(), uuid4()
+    parent = _parent_with_subs(
+        parent_id,
+        links=frozenset({_link("optics", optics_id), _link("stage", stage_id)}),
+    )
+    optics = _assembly(
+        optics_id,
+        slots=frozenset({_slot("turret", required_family_ids=frozenset({turret_fam}))}),
+    )
+    stage = _assembly(
+        stage_id,
+        slots=frozenset({_slot("rotary", required_family_ids=frozenset({rotary_fam}))}),
+    )
+    context = RegisterFixtureContext(
+        assembly_state=parent,
+        sub_assembly_states={optics_id: optics, stage_id: stage},
+        family_ids_by_asset_id={
+            turret_asset: frozenset({turret_fam}),
+            rotary_asset: frozenset({rotary_fam}),
+        },
+    )
+    command = RegisterFixture(
+        assembly_id=parent_id,
+        slot_asset_bindings=frozenset(
+            {
+                SlotAssetBinding(slot_name="turret", asset_id=turret_asset),
+                SlotAssetBinding(slot_name="rotary", asset_id=rotary_asset),
+            }
+        ),
+    )
+    events = register_fixture.decide(
+        state=None,
+        command=command,
+        context=context,
+        now=_NOW,
+        new_id=uuid4(),
+        registered_by=_TEST_ACTOR_ID,
+    )
+    assert len(events) == 1
+    assert {b.slot_name for b in events[0].slot_asset_bindings} == {"turret", "rotary"}
+
+
+@pytest.mark.unit
+def test_decide_rejects_slot_name_collision_between_two_sub_assemblies() -> None:
+    """A leaf slot_name contributed by two different sub-assemblies
+    collides in the shared union namespace."""
+    parent_id, optics_id, stage_id = uuid4(), uuid4(), uuid4()
+    fam = uuid4()
+    parent = _parent_with_subs(
+        parent_id,
+        links=frozenset({_link("optics", optics_id), _link("stage", stage_id)}),
+    )
+    optics = _assembly(
+        optics_id, slots=frozenset({_slot("mount", required_family_ids=frozenset({fam}))})
+    )
+    stage = _assembly(
+        stage_id, slots=frozenset({_slot("mount", required_family_ids=frozenset({fam}))})
+    )
+    context = RegisterFixtureContext(
+        assembly_state=parent,
+        sub_assembly_states={optics_id: optics, stage_id: stage},
+    )
+    with pytest.raises(SubAssemblySlotNameConflictError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=RegisterFixture(assembly_id=parent_id),
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_TEST_ACTOR_ID,
+        )
+    assert exc_info.value.slot_name == "mount"

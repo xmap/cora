@@ -33,7 +33,7 @@ from typing import Any
 from uuid import UUID
 
 from cora.equipment.aggregates._drawing import Drawing
-from cora.equipment.aggregates.assembly import TemplateSlot, TemplateWire
+from cora.equipment.aggregates.assembly import SubAssemblyLink, TemplateSlot, TemplateWire
 
 
 @dataclass(frozen=True)
@@ -44,6 +44,9 @@ class DefineAssembly:
     presents_as_family_id: UUID
     required_slots: frozenset[TemplateSlot] = field(default_factory=frozenset[TemplateSlot])
     required_wires: frozenset[TemplateWire] = field(default_factory=frozenset[TemplateWire])
+    required_sub_assemblies: frozenset[SubAssemblyLink] = field(
+        default_factory=frozenset[SubAssemblyLink]
+    )
     parameter_overrides_schema: dict[str, Any] | None = None
     drawing: Drawing | None = None
     version: str | None = None

@@ -26,7 +26,7 @@ _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
 
 def _basic_command(**overrides: object) -> DefineRole:
     defaults: dict[str, object] = {
-        "name": "Imager",
+        "name": "Detector",
         "docstring": "Acquires 2D image frames on exposure or trigger.",
         "required_affordances": frozenset({Affordance.IMAGEABLE}),
         "optional_affordances": frozenset({Affordance.BINNABLE}),
@@ -49,7 +49,7 @@ def test_decide_emits_role_defined_when_stream_is_empty() -> None:
     assert events == [
         RoleDefined(
             role_id=new_id,
-            name="Imager",
+            name="Detector",
             docstring="Acquires 2D image frames on exposure or trigger.",
             occurred_at=_NOW,
             required_affordances=frozenset({Affordance.IMAGEABLE}),
@@ -65,11 +65,11 @@ def test_decide_trims_name_via_value_object() -> None:
     new_id = uuid4()
     events = define_role.decide(
         state=None,
-        command=_basic_command(name="  Imager  "),
+        command=_basic_command(name="  Detector  "),
         now=_NOW,
         new_id=new_id,
     )
-    assert events[0].name == "Imager"
+    assert events[0].name == "Detector"
 
 
 @pytest.mark.unit
@@ -188,7 +188,7 @@ def test_decide_accepts_empty_required_and_optional_affordances() -> None:
 def test_decide_rejects_existing_state() -> None:
     existing = Role(
         id=RoleId(uuid4()),
-        name=RoleName("Imager"),
+        name=RoleName("Detector"),
         docstring="x",
     )
     with pytest.raises(RoleAlreadyExistsError) as exc_info:

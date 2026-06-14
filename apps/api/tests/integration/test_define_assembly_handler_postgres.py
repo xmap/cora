@@ -49,7 +49,7 @@ async def test_define_assembly_persists_event_to_postgres(
     assert family_id == _FAMILY_ID
 
     assembly_id = await define_assembly.bind(deps)(
-        DefineAssembly(name="MCTOptics", presents_as_family_id=family_id),
+        DefineAssembly(name="Microscope", presents_as_family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -63,7 +63,7 @@ async def test_define_assembly_persists_event_to_postgres(
     assert stored.schema_version == 1
     payload = stored.payload
     assert payload["assembly_id"] == str(_ASSEMBLY_ID)
-    assert payload["name"] == "MCTOptics"
+    assert payload["name"] == "Microscope"
     assert payload["presents_as_family_id"] == str(_FAMILY_ID)
     assert payload["required_slots"] == []
     assert payload["required_wires"] == []

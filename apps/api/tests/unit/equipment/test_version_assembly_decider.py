@@ -17,6 +17,12 @@ from cora.equipment.aggregates.assembly import (
     InvalidParameterOverridesSchemaError,
     SlotCardinality,
     SlotName,
+    SubAssemblyContentHashMismatchError,
+    SubAssemblyCycleError,
+    SubAssemblyLink,
+    SubAssemblyNestingTooDeepError,
+    SubAssemblyNotFoundForAssemblyError,
+    SubAssemblySlotNameConflictError,
     TemplateSlot,
     TemplateWire,
     WireReferencesUnknownSlotError,
@@ -271,3 +277,210 @@ def test_decide_replace_on_version_carries_full_new_slot_set() -> None:
         now=_NOW,
     )
     assert events[0].required_slots == new_slots
+
+
+_SUB_HASH = "sha256:" + "a" * 8
+
+
+@pytest.mark.unit
+def test_decide_emits_versioned_with_required_sub_assemblies() -> None:
+    assembly_id = uuid4()
+    family_id = uuid4()
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
+    )
+    events = version_assembly.decide(
+        state=_state(assembly_id, family_id),
+        command=VersionAssembly(
+            assembly_id=assembly_id,
+            name="Microscope",
+            presents_as_family_id=family_id,
+            required_sub_assemblies=frozenset({link}),
+        ),
+        context=VersionAssemblyContext(missing_family_ids=frozenset()),
+        now=_NOW,
+    )
+    assert events[0].required_sub_assemblies == frozenset({link})
+
+
+@pytest.mark.unit
+def test_decide_rejects_missing_sub_assembly() -> None:
+    assembly_id = uuid4()
+    family_id = uuid4()
+    child = uuid4()
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=child, content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblyNotFoundForAssemblyError) as exc_info:
+        version_assembly.decide(
+            state=_state(assembly_id, family_id),
+            command=VersionAssembly(
+                assembly_id=assembly_id,
+                name="Microscope",
+                presents_as_family_id=family_id,
+                required_sub_assemblies=frozenset({link}),
+            ),
+            context=VersionAssemblyContext(
+                missing_family_ids=frozenset(),
+                sub_assembly_missing_ids=frozenset({child}),
+            ),
+            now=_NOW,
+        )
+    assert exc_info.value.sub_assembly_id == child
+
+
+@pytest.mark.unit
+def test_decide_rejects_sub_assembly_content_hash_mismatch() -> None:
+    assembly_id = uuid4()
+    family_id = uuid4()
+    child = uuid4()
+    current = "sha256:" + "b" * 8
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=child, content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblyContentHashMismatchError) as exc_info:
+        version_assembly.decide(
+            state=_state(assembly_id, family_id),
+            command=VersionAssembly(
+                assembly_id=assembly_id,
+                name="Microscope",
+                presents_as_family_id=family_id,
+                required_sub_assemblies=frozenset({link}),
+            ),
+            context=VersionAssemblyContext(
+                missing_family_ids=frozenset(),
+                sub_assembly_hash_mismatches=frozenset({(child, _SUB_HASH, current)}),
+            ),
+            now=_NOW,
+        )
+    assert exc_info.value.current == current
+
+
+@pytest.mark.unit
+def test_decide_rejects_self_referential_sub_assembly() -> None:
+    assembly_id = uuid4()
+    family_id = uuid4()
+    link = SubAssemblyLink(
+        slot_name=SlotName("self"), sub_assembly_id=assembly_id, content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblyCycleError) as exc_info:
+        version_assembly.decide(
+            state=_state(assembly_id, family_id),
+            command=VersionAssembly(
+                assembly_id=assembly_id,
+                name="Microscope",
+                presents_as_family_id=family_id,
+                required_sub_assemblies=frozenset({link}),
+            ),
+            context=VersionAssemblyContext(missing_family_ids=frozenset()),
+            now=_NOW,
+        )
+    assert exc_info.value.assembly_id == assembly_id
+
+
+@pytest.mark.unit
+def test_decide_rejects_sub_assembly_slot_name_colliding_with_leaf_slot() -> None:
+    assembly_id = uuid4()
+    family_id = uuid4()
+    leaf = _slot("optics", family_id)
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblySlotNameConflictError) as exc_info:
+        version_assembly.decide(
+            state=_state(assembly_id, family_id),
+            command=VersionAssembly(
+                assembly_id=assembly_id,
+                name="Microscope",
+                presents_as_family_id=family_id,
+                required_slots=frozenset({leaf}),
+                required_sub_assemblies=frozenset({link}),
+            ),
+            context=VersionAssemblyContext(missing_family_ids=frozenset()),
+            now=_NOW,
+        )
+    assert exc_info.value.slot_name == "optics"
+
+
+@pytest.mark.unit
+def test_decide_rejects_duplicate_sub_assembly_link_slot_name() -> None:
+    """Two links sharing a slot_name with no colliding leaf slot trip the
+    link-vs-link branch (distinct reason from the leaf-collision branch)."""
+    assembly_id = uuid4()
+    family_id = uuid4()
+    link_a = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
+    )
+    link_b = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblySlotNameConflictError) as exc_info:
+        version_assembly.decide(
+            state=_state(assembly_id, family_id),
+            command=VersionAssembly(
+                assembly_id=assembly_id,
+                name="Microscope",
+                presents_as_family_id=family_id,
+                required_sub_assemblies=frozenset({link_a, link_b}),
+            ),
+            context=VersionAssemblyContext(missing_family_ids=frozenset()),
+            now=_NOW,
+        )
+    assert exc_info.value.slot_name == "optics"
+    assert "duplicate" in exc_info.value.reason
+
+
+@pytest.mark.unit
+def test_decide_rejects_sub_assembly_that_is_itself_a_composite() -> None:
+    """A child that declares its own sub-assemblies is too deep at version
+    time too, identically to define time."""
+    assembly_id = uuid4()
+    family_id = uuid4()
+    child = uuid4()
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=child, content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblyNestingTooDeepError) as exc_info:
+        version_assembly.decide(
+            state=_state(assembly_id, family_id),
+            command=VersionAssembly(
+                assembly_id=assembly_id,
+                name="Microscope",
+                presents_as_family_id=family_id,
+                required_sub_assemblies=frozenset({link}),
+            ),
+            context=VersionAssemblyContext(
+                missing_family_ids=frozenset(),
+                sub_assembly_too_deep_ids=frozenset({child}),
+            ),
+            now=_NOW,
+        )
+    assert exc_info.value.sub_assembly_id == child
+
+
+@pytest.mark.unit
+def test_decide_rejects_leaf_slot_collision_across_composed_blueprints() -> None:
+    """A leaf slot_name present in more than one composed blueprint is
+    rejected at version time, not only at register_fixture."""
+    assembly_id = uuid4()
+    family_id = uuid4()
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblySlotNameConflictError) as exc_info:
+        version_assembly.decide(
+            state=_state(assembly_id, family_id),
+            command=VersionAssembly(
+                assembly_id=assembly_id,
+                name="Microscope",
+                presents_as_family_id=family_id,
+                required_sub_assemblies=frozenset({link}),
+            ),
+            context=VersionAssemblyContext(
+                missing_family_ids=frozenset(),
+                sub_assembly_leaf_collisions=frozenset({"camera"}),
+            ),
+            now=_NOW,
+        )
+    assert exc_info.value.slot_name == "camera"
+    assert "more than one composed blueprint" in exc_info.value.reason

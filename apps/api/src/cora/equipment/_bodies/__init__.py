@@ -23,6 +23,7 @@ from ._fixture_persistent_identifier_body import (
     AssignFixturePersistentIdResponse,
 )
 from ._placement_body import PlacementBody
+from ._sub_assembly_link_body import SubAssemblyLinkBody
 from ._template_slot_body import TemplateSlotBody
 from ._template_wire_body import TemplateWireBody
 
@@ -35,6 +36,7 @@ __all__ = [
     "AssignFixturePersistentIdResponse",
     "DrawingBody",
     "PlacementBody",
+    "SubAssemblyLinkBody",
     "TemplateSlotBody",
     "TemplateWireBody",
 ]

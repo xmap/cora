@@ -244,27 +244,27 @@ sample-environment:
 
 detector:
   enclosure: 2-BM-B
-  intro: Convert the transmitted beam to light and record it (the MCTOptics microscope).
-  cora: Assembly(MCTOptics) + Fixture(mctoptics_at_2bm), presents as an Imager
+  intro: Convert the transmitted beam to light and record it (the Microscope detector, a scintillator-relay-camera assembly).
+  cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (turret, objectives, objective selector, focus) plus camera and scintillator leaf slots, anchored to a Housing. Fixture(microscope_at_2bm) presents as a Detector
   placement: Mount + Frame (2BM_hutch_frame)
   note: >
     A second camera (FLIR Oryx 31 MP, pv 2bmSP2:) appears in the docs, but the CORA
     model is single-camera at 2-BM (camera_select fixed at 0). Add it only if 2-BM
     staff confirm a live second bay.
   devices:
-    - name: MCTOptics_body
-      family: Microscope          # the microscope housing
+    - name: Housing
+      family: Housing      # the microscope housing (containment anchor)
       model: optique_peter_micrx080
       pv: "2bm:MCTOptics:"
       new: true
-    - name: MCTOptics_lens_turret
+    - name: Turret
       family: RotaryStage         # confirm: RotaryStage vs LinearStage (translating slide)
       model: optique_peter_lens_turret_motor
       pv: "2bmb:m1"
       range: 0..360 deg
       confirm: true
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
-    - name: MCTOptics_objective_0
+    - name: Objective_10x
       family: Objective
       magnification: 10.0
       numerical_aperture: 0.28
@@ -272,13 +272,13 @@ detector:
       replaceable: true
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
       calibrations:
-        - name: cal_objective_0_mag
+        - name: cal_objective_10x_mag
           quantity: magnification
           operating_point: { objective_designation: "10x_Mitutoyo", energy: 25 }
           value: 9.83
           source: AssertedSource
           status: Provisional
-    - name: MCTOptics_objective_1
+    - name: Objective_2x
       family: Objective
       magnification: 2.0
       numerical_aperture: 0.055
@@ -286,13 +286,13 @@ detector:
       replaceable: true
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
       calibrations:
-        - name: cal_objective_1_mag
+        - name: cal_objective_2x_mag
           quantity: magnification
           operating_point: { objective_designation: "2x_Mitutoyo", energy: 25 }
           value: 2.0
           source: AssertedSource
           status: Provisional
-    - name: MCTOptics_objective_2
+    - name: Objective_1.1x
       family: Objective
       magnification: 1.1
       numerical_aperture: 0.03
@@ -300,13 +300,13 @@ detector:
       replaceable: true
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
       calibrations:
-        - name: cal_objective_2_mag
+        - name: cal_objective_1.1x_mag
           quantity: magnification
           operating_point: { objective_designation: "1.1x_Mitutoyo", energy: 25 }
           value: 1.10
           source: AssertedSource
           status: Provisional
-    - name: lens_select
+    - name: Objective_Selector
       family: PseudoAxis          # virtual, decomposes a lens index to turret rotation
       pv: "2bm:MCTOptics:LensSelect"
     - name: Focus

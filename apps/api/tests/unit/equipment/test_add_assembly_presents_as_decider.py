@@ -32,7 +32,7 @@ def _assembly(
 ) -> Assembly:
     return Assembly(
         id=assembly_id,
-        name=AssemblyName("MCTOptics"),
+        name=AssemblyName("Microscope"),
         presents_as_family_id=uuid4(),
         presents_as=presents_as,
     )

@@ -128,7 +128,7 @@ def test_post_methods_accepts_needed_assembly_ids() -> None:
         response = client.post(
             "/methods",
             json={
-                "name": "MCTOptics Tomography",
+                "name": "Microscope Tomography",
                 "capability_id": _cap_id,
                 "needed_family_ids": [],
                 "needed_assembly_ids": [asm_id],

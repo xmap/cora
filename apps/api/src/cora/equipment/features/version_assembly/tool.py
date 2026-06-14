@@ -7,7 +7,12 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.equipment._bodies import DrawingBody, TemplateSlotBody, TemplateWireBody
+from cora.equipment._bodies import (
+    DrawingBody,
+    SubAssemblyLinkBody,
+    TemplateSlotBody,
+    TemplateWireBody,
+)
 from cora.equipment.aggregates.assembly import ASSEMBLY_NAME_MAX_LENGTH
 from cora.equipment.features.version_assembly.command import VersionAssembly
 from cora.equipment.features.version_assembly.handler import Handler
@@ -60,6 +65,15 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             list[TemplateWireBody],
             Field(description="Full wire set for this revision."),
         ] = [],  # noqa: B006
+        required_sub_assemblies: Annotated[
+            list[SubAssemblyLinkBody],
+            Field(
+                description=(
+                    "Full sub-assembly-link set for this revision "
+                    "(replace-on-version); each pins a child Assembly's content_hash."
+                ),
+            ),
+        ] = [],  # noqa: B006
         parameter_overrides_schema: Annotated[
             dict[str, Any] | None,
             Field(
@@ -83,6 +97,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                 presents_as_family_id=presents_as_family_id,
                 required_slots=frozenset(s.to_domain() for s in required_slots),
                 required_wires=frozenset(w.to_domain() for w in required_wires),
+                required_sub_assemblies=frozenset(r.to_domain() for r in required_sub_assemblies),
                 parameter_overrides_schema=parameter_overrides_schema,
                 drawing=drawing.to_domain() if drawing is not None else None,
                 version=version,

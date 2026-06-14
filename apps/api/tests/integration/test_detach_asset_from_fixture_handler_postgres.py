@@ -80,7 +80,7 @@ async def test_detach_asset_from_fixture_clears_back_reference_in_postgres(
     )
     assembly_id = await define_assembly.bind(deps)(
         DefineAssembly(
-            name="MCTOptics",
+            name="Microscope",
             presents_as_family_id=family_id,
             required_slots=frozenset(
                 {

@@ -46,8 +46,8 @@ CORA records each controller box's identity (serial, firmware) so it can later a
 | DRIVE-2 | `Blocks-go-live` | Firmware versions for those same five boxes? | `unknown-pending-confirmation` | [Settings](assets.md#settings) |
 | DRIVE-3 | `Nice-to-have` | Are the Aerotech drives network-attached, and if so their IP addresses? | left blank (assumed not needed) | [Settings](assets.md#settings) |
 | DRIVE-4 | `Nice-to-have` | Exact Aerotech model / part number for the hexapod drive and the focus-stage drive? The source page says "native Aerotech Ensemble" but does not name the box. | `unknown-pending-confirmation`; vendor known to be Aerotech | [Vendor catalog](assets.md#vendor-catalog-models) |
-| DRIVE-5 | `Nice-to-have` | Model and serial of the Nanotec ST4118 stepper driving the MCTOptics objective selector? CORA has no record of this controller class yet, so this answer is optional for now; send it when you can. | not yet registered | [Pending](assets.md#pending) |
-| DRIVE-6 | `Nice-to-have` | Model and serial of the Schunk LPTM 30 stepper driving the MCTOptics camera selector? CORA has no record of this controller class yet, so this answer is optional for now; send it when you can. | not yet registered | [Pending](assets.md#pending) |
+| DRIVE-5 | `Nice-to-have` | Model and serial of the Nanotec ST4118 stepper driving the Microscope objective selector? CORA has no record of this controller class yet, so this answer is optional for now; send it when you can. | not yet registered | [Pending](assets.md#pending) |
+| DRIVE-6 | `Nice-to-have` | Model and serial of the Schunk LPTM 30 stepper driving the Microscope camera selector? CORA has no record of this controller class yet, so this answer is optional for now; send it when you can. | not yet registered | [Pending](assets.md#pending) |
 
 ## The hexapod
 
@@ -76,19 +76,19 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 | STAGE-3 | `Nice-to-have` | Full part number and datasheet for the Aerotech ABS250MP-M-AS rotary stage (`Rotary`)? | `Aerotech ABS250MP-M-AS`, no datasheet on file | [Engineering drawings](assets.md#engineering-drawings) |
 | STAGE-4 | `Nice-to-have` | The measured motor-sensitivity constants (K_roll, K_pitch) that link a hexapod tilt to the observed image-centroid shift? Today they are re-derived per alignment rather than stored. | derived in-procedure, not persisted | [Procedures](procedures.md) |
 
-## The MCTOptics detector
+## The Microscope detector
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| DET-1 | `Blocks-build` | Is the lens turret a rotating turret, or a sliding (translating) selector? This sets whether its positions are degrees or millimeters. | rotating (degrees) | [MCTOptics](equipment/mctoptics.md) |
-| DET-2 | `Blocks-build` | Does CORA drive the focus stage directly, or does the detector's own IOC move it behind the scenes? This decides which side owns that control path. | CORA drives it | [MCTOptics](equipment/mctoptics.md) |
-| DET-3 | `Blocks-build` | How are cameras selected: a single fixed bay, or is there a selection stage? | single bay, no selection stage | [MCTOptics](equipment/mctoptics.md) |
-| DET-4 | `Blocks-build` | How does the camera bay move, if at all: fixed, or is there a rotation stage? | fixed, no rotation stage | [MCTOptics](equipment/mctoptics.md) |
-| DET-5 | `Blocks-build` | Is there a second active FLIR Oryx camera bay (`2bmSP2:`), or is 2-BM genuinely single-camera? | single-camera; any second Oryx is offline | [MCTOptics](equipment/mctoptics.md) |
+| DET-1 | `Blocks-build` | Is the lens turret a rotating turret, or a sliding (translating) selector? This sets whether its positions are degrees or millimeters. | rotating (degrees) | [Microscope](equipment/microscope.md) |
+| DET-2 | `Blocks-build` | Does CORA drive the focus stage directly, or does the detector's own IOC move it behind the scenes? This decides which side owns that control path. | CORA drives it | [Microscope](equipment/microscope.md) |
+| DET-3 | `Blocks-build` | How are cameras selected: a single fixed bay, or is there a selection stage? | single bay, no selection stage | [Microscope](equipment/microscope.md) |
+| DET-4 | `Blocks-build` | How does the camera bay move, if at all: fixed, or is there a rotation stage? | fixed, no rotation stage | [Microscope](equipment/microscope.md) |
+| DET-5 | `Blocks-build` | Is there a second active FLIR Oryx camera bay (`2bmSP2:`), or is 2-BM genuinely single-camera? | single-camera; any second Oryx is offline | [Microscope](equipment/microscope.md) |
 | DET-6 | `Nice-to-have` | Who actually makes the lens-turret motor (Optique Peter, or a third-party motor inside the housing), and its part number? | assumed Optique Peter | [Vendor catalog](assets.md#vendor-catalog-models) |
 | DET-7 | `Nice-to-have` | The three distinct Mitutoyo part numbers, one per magnification (10x / 2x / 1.1x)? Today all three share one catalog row. | one `Plan-Apo-NIR` family row | [Vendor catalog](assets.md#vendor-catalog-models) |
 | DET-8 | `Blocks-go-live` | The FLIR Oryx's max frame rate, sensor kind, and readout mode (rolling vs global), plus its part number for the datasheet? CORA needs these camera values and they are currently blank. | only sensor size / pixel / bit-depth recorded | [Settings](assets.md#settings) |
-| DET-9 | `Nice-to-have` | The measured magnification of the 2x Mitutoyo objective at 25 keV? The current 2.0x is nominal, pending re-measurement. | 2.0x nominal (provisional) | [MCTOptics](equipment/mctoptics.md) |
+| DET-9 | `Nice-to-have` | The measured magnification of the 2x Mitutoyo objective at 25 keV? The current 2.0x is nominal, pending re-measurement. | 2.0x nominal (provisional) | [Microscope](equipment/microscope.md) |
 
 ## Timing
 

@@ -20,7 +20,7 @@ What 2-BM physically is, walked source to detector.
 
 - [Layout](beamline.md): the equipment walk source to detector, every device with its calibration and condition, generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
 - [Assets](assets.md): the CORA Asset model view (flat tree by `parent_id`, Family affordances, vendor Models, settings schemas, drawings).
-- [MCTOptics](equipment/mctoptics.md): the Optique Peter detector as an Assembly + Fixture.
+- [Microscope](equipment/microscope.md): the Optique Peter detector as a Microscope Assembly over a reusable Optics sub-assembly, contained in one Housing.
 
 ## Getting ready
 

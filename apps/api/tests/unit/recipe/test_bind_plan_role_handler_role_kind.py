@@ -13,7 +13,7 @@ HANDLER's edge-load behavior:
   - Empty asset.family_ids skips the FamilyLookup batch (no spurious
     asyncio.gather of zero coroutines)
   - Asset.fixture_id triggers the Fixture + AssemblyLookup edge-load
-    (BLOCKER #5 follow-up; closes the MCTOptics-Assembly worked
+    (BLOCKER #5 follow-up; closes the Microscope-Assembly worked
     example in a runtime path)
 """
 
@@ -214,7 +214,7 @@ async def test_handler_role_kind_path_succeeds_when_family_advertises_role() -> 
     role_lookup = InMemoryRoleLookup()
     role_lookup.register(
         role_id=_ROLE_KIND_ID,
-        name="Imager",
+        name="Detector",
         required_affordances=frozenset(),
     )
     family_lookup = InMemoryFamilyLookup()
@@ -277,7 +277,7 @@ async def test_handler_role_kind_path_raises_when_family_satisfaction_fails() ->
     role_lookup = InMemoryRoleLookup()
     role_lookup.register(
         role_id=_ROLE_KIND_ID,
-        name="Imager",
+        name="Detector",
         required_affordances=frozenset(),
     )
     family_lookup = InMemoryFamilyLookup()

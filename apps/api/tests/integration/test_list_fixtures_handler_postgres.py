@@ -51,7 +51,7 @@ async def _seed_fixture(
     db_pool: asyncpg.Pool,
     *,
     asset_name: str = "Cam",
-    assembly_name: str = "MCTOptics",
+    assembly_name: str = "Microscope",
 ) -> tuple[UUID, UUID, UUID]:
     """Returns (family_id, assembly_id, fixture_id).
 

@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
 from cora.equipment.aggregates.assembly import ASSEMBLY_NAME_MAX_LENGTH
+from cora.equipment.aggregates.assembly._content_hash import compute_assembly_content_hash
 
 
 def _define_family(client: TestClient, name: str = "Camera") -> UUID:
@@ -58,7 +59,7 @@ def test_post_assemblies_returns_201_with_slots_and_wires() -> None:
         response = client.post(
             "/assemblies",
             json={
-                "name": "MCTOptics",
+                "name": "Microscope",
                 "presents_as_family_id": str(presents_id),
                 "required_slots": [
                     {
@@ -307,3 +308,98 @@ def test_post_assemblies_response_omits_content_hash() -> None:
         )
     assert response.status_code == 201
     assert response.json().keys() == {"assembly_id"}
+
+
+@pytest.mark.contract
+def test_post_assemblies_returns_201_with_sub_assembly_link() -> None:
+    """A parent Assembly composed of a version-pinned child link defines
+    successfully when the pin matches the child's current content_hash."""
+    with TestClient(create_app()) as client:
+        child_presents = _define_family(client, "OpticPresenter")
+        parent_presents = _define_family(client, "MicroscopePresenter")
+        child_resp = client.post(
+            "/assemblies",
+            json={
+                "name": "Optics",
+                "presents_as_family_id": str(child_presents),
+                "required_slots": [],
+                "required_wires": [],
+            },
+        )
+        assert child_resp.status_code == 201, child_resp.text
+        child_id = child_resp.json()["assembly_id"]
+        child_hash = compute_assembly_content_hash(
+            name="Optics",
+            presents_as_family_id=child_presents,
+            required_slots=frozenset(),
+            required_wires=frozenset(),
+            parameter_overrides_schema=None,
+        )
+        parent_resp = client.post(
+            "/assemblies",
+            json={
+                "name": "Microscope",
+                "presents_as_family_id": str(parent_presents),
+                "required_sub_assemblies": [
+                    {
+                        "slot_name": "optics",
+                        "sub_assembly_id": child_id,
+                        "content_hash": child_hash,
+                    }
+                ],
+            },
+        )
+    assert parent_resp.status_code == 201, parent_resp.text
+    UUID(parent_resp.json()["assembly_id"])
+
+
+@pytest.mark.contract
+def test_post_assemblies_returns_404_for_unknown_sub_assembly() -> None:
+    with TestClient(create_app()) as client:
+        parent_presents = _define_family(client, "MicroscopePresenter")
+        response = client.post(
+            "/assemblies",
+            json={
+                "name": "Microscope",
+                "presents_as_family_id": str(parent_presents),
+                "required_sub_assemblies": [
+                    {
+                        "slot_name": "optics",
+                        "sub_assembly_id": str(uuid4()),
+                        "content_hash": "sha256:" + "a" * 8,
+                    }
+                ],
+            },
+        )
+    assert response.status_code == 404, response.text
+
+
+@pytest.mark.contract
+def test_post_assemblies_returns_409_for_stale_sub_assembly_pin() -> None:
+    with TestClient(create_app()) as client:
+        child_presents = _define_family(client, "OpticPresenter")
+        parent_presents = _define_family(client, "MicroscopePresenter")
+        child_id = client.post(
+            "/assemblies",
+            json={
+                "name": "Optics",
+                "presents_as_family_id": str(child_presents),
+                "required_slots": [],
+                "required_wires": [],
+            },
+        ).json()["assembly_id"]
+        response = client.post(
+            "/assemblies",
+            json={
+                "name": "Microscope",
+                "presents_as_family_id": str(parent_presents),
+                "required_sub_assemblies": [
+                    {
+                        "slot_name": "optics",
+                        "sub_assembly_id": child_id,
+                        "content_hash": "sha256:" + "f" * 8,
+                    }
+                ],
+            },
+        )
+    assert response.status_code == 409, response.text

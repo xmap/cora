@@ -37,7 +37,7 @@ def _define_assembly(client: TestClient, family_id: UUID) -> UUID:
     response = client.post(
         "/assemblies",
         json={
-            "name": "MCTOptics",
+            "name": "Microscope",
             "presents_as_family_id": str(family_id),
             "required_slots": [
                 {

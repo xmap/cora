@@ -93,6 +93,7 @@ nav:
       - The beamline:
         - Layout: deployments/2-bm/beamline.md
         - Assets: deployments/2-bm/assets.md
+        - Microscope: deployments/2-bm/equipment/microscope.md
       - Getting ready:
         - Procedures: deployments/2-bm/procedures.md
         - Supplies: deployments/2-bm/supplies.md

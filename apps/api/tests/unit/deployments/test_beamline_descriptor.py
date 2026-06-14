@@ -159,7 +159,7 @@ def test_drawing_system_mirror_matches_code() -> None:
 def test_drawings_and_calibrations_loaded() -> None:
     descriptor = bd.load(_DESCRIPTOR)
     devices = {d.name: d for _name, group in descriptor.groups for d in group.devices}
-    obj0 = devices["MCTOptics_objective_0"]
+    obj0 = devices["Objective_10x"]
     assert obj0.drawing is not None
     assert obj0.drawing.system == "EDMS"
     assert obj0.calibrations

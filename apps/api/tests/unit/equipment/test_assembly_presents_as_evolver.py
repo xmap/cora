@@ -24,7 +24,7 @@ _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
 def _defined(assembly_id: UUID, family_id: UUID) -> AssemblyDefined:
     return AssemblyDefined(
         assembly_id=assembly_id,
-        name=AssemblyName("MCTOptics"),
+        name=AssemblyName("Microscope"),
         presents_as_family_id=family_id,
         required_slots=frozenset(),
         required_wires=frozenset(),
@@ -84,7 +84,7 @@ def test_presents_as_preserved_across_version() -> None:
             AssemblyPresentsAsAdded(assembly_id=aid, role_id=rid, occurred_at=_NOW),
             AssemblyVersioned(
                 assembly_id=aid,
-                name=AssemblyName("MCTOptics"),
+                name=AssemblyName("Microscope"),
                 presents_as_family_id=fam,
                 required_slots=frozenset(),
                 required_wires=frozenset(),

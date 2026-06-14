@@ -45,8 +45,8 @@ def _build_deps(
     )
 
 
-async def _seed_camera_family_with_imager_role(store: InMemoryEventStore) -> None:
-    """Pre-seed a Camera Family that advertises Imager Role."""
+async def _seed_camera_family_with_detector_role(store: InMemoryEventStore) -> None:
+    """Pre-seed a Camera Family that advertises Detector Role."""
     genesis = FamilyDefined(
         family_id=_FAMILY_ID,
         name="Camera",
@@ -77,7 +77,7 @@ async def _seed_camera_family_with_imager_role(store: InMemoryEventStore) -> Non
 @pytest.mark.unit
 async def test_handler_appends_family_presents_as_removed_event() -> None:
     store = InMemoryEventStore()
-    await _seed_camera_family_with_imager_role(store)
+    await _seed_camera_family_with_detector_role(store)
     deps = _build_deps(event_store=store)
     handler = remove_family_presents_as.bind(deps)
 
@@ -102,7 +102,7 @@ async def test_handler_appends_family_presents_as_removed_event() -> None:
 @pytest.mark.unit
 async def test_handler_raises_unauthorized_on_deny() -> None:
     store = InMemoryEventStore()
-    await _seed_camera_family_with_imager_role(store)
+    await _seed_camera_family_with_detector_role(store)
     deps = _build_deps(event_store=store, deny=True)
     handler = remove_family_presents_as.bind(deps)
 

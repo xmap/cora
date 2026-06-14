@@ -14,6 +14,7 @@ from cora.equipment.aggregates.assembly import (
     AssemblyVersioned,
     SlotCardinality,
     SlotName,
+    SubAssemblyLink,
     TemplateSlot,
     TemplateWire,
     from_stored,
@@ -55,6 +56,18 @@ def _wire(src_slot: str = "trigger_source", tgt_slot: str = "camera") -> Templat
         source_port_name="trigger_out",
         target_slot_name=tgt_slot,
         target_port_name="trigger_in",
+    )
+
+
+def _link(
+    slot_name: str = "optics",
+    child_id: UUID | None = None,
+    content_hash: str = "sha256:abcd1234",
+) -> SubAssemblyLink:
+    return SubAssemblyLink(
+        slot_name=SlotName(slot_name),
+        sub_assembly_id=child_id or uuid4(),
+        content_hash=content_hash,
     )
 
 
@@ -148,11 +161,73 @@ def test_assembly_versioned_round_trip_allows_no_previous_hash() -> None:
 def test_assembly_deprecated_round_trip() -> None:
     original = AssemblyDeprecated(
         assembly_id=uuid4(),
-        reason="superseded by next-generation MCTOptics revision",
+        reason="superseded by next-generation Microscope revision",
         occurred_at=_NOW,
     )
     rebuilt = from_stored(_stored("AssemblyDeprecated", to_payload(original)))
     assert rebuilt == original
+
+
+@pytest.mark.unit
+def test_assembly_defined_round_trip_with_sub_assemblies() -> None:
+    original = AssemblyDefined(
+        assembly_id=uuid4(),
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=uuid4(),
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        drawing=None,
+        version=None,
+        content_hash="e" * 64,
+        occurred_at=_NOW,
+        required_sub_assemblies=frozenset({_link("optics", uuid4(), "sha256:" + "a" * 8)}),
+    )
+    rebuilt = from_stored(_stored("AssemblyDefined", to_payload(original)))
+    assert rebuilt == original
+
+
+@pytest.mark.unit
+def test_assembly_versioned_round_trip_with_sub_assemblies() -> None:
+    original = AssemblyVersioned(
+        assembly_id=uuid4(),
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=uuid4(),
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        drawing=None,
+        version="v2",
+        content_hash="g" * 64,
+        previous_content_hash="e" * 64,
+        occurred_at=_NOW,
+        required_sub_assemblies=frozenset({_link("optics", uuid4(), "sha256:" + "b" * 8)}),
+    )
+    rebuilt = from_stored(_stored("AssemblyVersioned", to_payload(original)))
+    assert rebuilt == original
+
+
+@pytest.mark.unit
+def test_from_stored_defaults_missing_sub_assemblies_to_empty() -> None:
+    """Back-compat: a payload written before the required_sub_assemblies
+    field folds to an empty frozenset (additive-state .get default)."""
+    original = AssemblyDefined(
+        assembly_id=uuid4(),
+        name=AssemblyName("Detector"),
+        presents_as_family_id=uuid4(),
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        drawing=None,
+        version=None,
+        content_hash="f" * 64,
+        occurred_at=_NOW,
+    )
+    payload = to_payload(original)
+    del payload["required_sub_assemblies"]
+    rebuilt = from_stored(_stored("AssemblyDefined", payload))
+    assert isinstance(rebuilt, AssemblyDefined)
+    assert rebuilt.required_sub_assemblies == frozenset()
 
 
 @pytest.mark.unit

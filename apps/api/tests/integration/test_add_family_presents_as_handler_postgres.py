@@ -70,12 +70,12 @@ async def test_add_family_presents_as_persists_event_to_postgres(
         ],
     )
 
-    # Seed the Imager Role into the in-memory RoleLookup adapter.
+    # Seed the Detector Role into the in-memory RoleLookup adapter.
     lookup = deps.role_lookup
     assert hasattr(lookup, "register")
     lookup.register(  # type: ignore[union-attr]
         role_id=_ROLE_ID,
-        name="Imager",
+        name="Detector",
         required_affordances=frozenset({"Imageable"}),
     )
 

@@ -10,7 +10,7 @@ Layer 3 consumers (per [[project-role-aggregate-design]]):
     `load_fixture`), then `AssemblyLookup.lookup(fixture.assembly_id)`,
     so the decider can OR-in the Assembly satisfaction path on top of
     the existing Family disjunction. Without this lookup the
-    MCTOptics-Assembly worked example from the design memo would not
+    Microscope-Assembly worked example from the design memo would not
     actually work (3C's `presents_as` field would have no consumer).
 
 ## Convention

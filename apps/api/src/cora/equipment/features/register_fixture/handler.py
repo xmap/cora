@@ -31,7 +31,7 @@ import asyncio
 from typing import Protocol
 from uuid import UUID
 
-from cora.equipment.aggregates.assembly import load_assembly
+from cora.equipment.aggregates.assembly import Assembly, load_assembly
 from cora.equipment.aggregates.asset import load_asset
 from cora.equipment.aggregates.fixture import event_type_name, to_payload
 from cora.equipment.errors import UnauthorizedError
@@ -173,8 +173,26 @@ def bind(deps: Kernel) -> Handler:
         mount_id_by_asset_id: dict[UUID, UUID | None] | None = (
             dict(zip(asset_ids, mount_ids, strict=True)) if mount_ids is not None else None
         )
+        # The sub-assembly ids are only known after the top Assembly
+        # loads, so they cannot join the concurrent TaskGroup above. Load
+        # each referenced child once (deduped, deterministic order) under
+        # its own TaskGroup, so a failing child load cancels its siblings
+        # instead of leaking them as "task exception never retrieved".
+        sub_assembly_states: dict[UUID, Assembly | None] = {}
+        if assembly_state is not None and assembly_state.required_sub_assemblies:
+            sub_ids = sorted(
+                {link.sub_assembly_id for link in assembly_state.required_sub_assemblies},
+                key=str,
+            )
+            async with asyncio.TaskGroup() as sub_tg:
+                sub_tasks = [
+                    sub_tg.create_task(load_assembly(deps.event_store, sid)) for sid in sub_ids
+                ]
+            sub_assembly_states = dict(zip(sub_ids, (t.result() for t in sub_tasks), strict=True))
+
         context = RegisterFixtureContext(
             assembly_state=assembly_state,
+            sub_assembly_states=sub_assembly_states,
             family_ids_by_asset_id=family_ids_by_asset_id,
             lifecycle_by_asset_id=lifecycle_by_asset_id,
             mount_id_by_asset_id=mount_id_by_asset_id,

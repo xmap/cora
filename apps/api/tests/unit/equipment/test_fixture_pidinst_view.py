@@ -48,7 +48,7 @@ def _component(
 def _view(**overrides: object) -> FixturePidinstView:
     base_kwargs: dict[str, object] = {
         "fixture_id": uuid4(),
-        "name": "MCTOptics fixture",
+        "name": "Microscope fixture",
         "persistent_id": None,
         "owners": (AssetOwner(name=AssetOwnerName(value="Advanced Photon Source")),),
         "manufacturers": (Manufacturer(name="Aerotech"),),
@@ -64,7 +64,7 @@ def test_fixture_pidinst_view_with_all_required_fields_constructs() -> None:
     component = _component(name="Rotary stage")
     view = FixturePidinstView(
         fixture_id=fixture_id,
-        name="MCTOptics fixture",
+        name="Microscope fixture",
         persistent_id=None,
         owners=(AssetOwner(name=AssetOwnerName(value="Advanced Photon Source")),),
         manufacturers=(Manufacturer(name="Aerotech"),),
@@ -72,7 +72,7 @@ def test_fixture_pidinst_view_with_all_required_fields_constructs() -> None:
         publication_year=2026,
     )
     assert view.fixture_id == fixture_id
-    assert view.name == "MCTOptics fixture"
+    assert view.name == "Microscope fixture"
     assert view.persistent_id is None
     assert view.owners == (AssetOwner(name=AssetOwnerName(value="Advanced Photon Source")),)
     assert view.manufacturers == (Manufacturer(name="Aerotech"),)
@@ -99,7 +99,7 @@ def test_fixture_pidinst_view_without_publication_year_raises_type_error() -> No
     with pytest.raises(TypeError):
         FixturePidinstView(  # type: ignore[call-arg]
             fixture_id=uuid4(),
-            name="MCTOptics fixture",
+            name="Microscope fixture",
             persistent_id=None,
             owners=(AssetOwner(name=AssetOwnerName(value="Advanced Photon Source")),),
             manufacturers=(Manufacturer(name="Aerotech"),),

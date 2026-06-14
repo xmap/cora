@@ -4722,6 +4722,14 @@
             "title": "Required Slots",
             "type": "array"
           },
+          "required_sub_assemblies": {
+            "description": "Child Assemblies included as version-pinned links, each occupying a named position (slot_name) and pinning the child's content_hash, so a blueprint can be composed of smaller reusable blueprints. Wire shape is a list; duplicates collapse when the route handler converts to the domain frozenset.",
+            "items": {
+              "$ref": "#/components/schemas/SubAssemblyLinkBody"
+            },
+            "title": "Required Sub Assemblies",
+            "type": "array"
+          },
           "required_wires": {
             "description": "Slot-to-slot signal wires inside the Assembly, keyed by slot_name (NOT Asset UUID). Endpoints must reference slots declared in required_slots. Wire shape is a list; duplicates collapse when the route handler converts to the domain frozenset.",
             "items": {
@@ -13331,6 +13339,37 @@
         "title": "StopRunRequest",
         "type": "object"
       },
+      "SubAssemblyLinkBody": {
+        "description": "Wire format for a SubAssemblyLink value object.",
+        "properties": {
+          "content_hash": {
+            "description": "The child Assembly's content_hash, pinned at authoring time (snapshot). A later child re-version does not change the parent's identity until the parent is re-defined or re-versioned to adopt it.",
+            "minLength": 1,
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "slot_name": {
+            "description": "Named position this sub-assembly occupies in the parent (e.g., 'optics'). Shares the slot-name namespace with required_slots; must not collide with a leaf slot or another link.",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Slot Name",
+            "type": "string"
+          },
+          "sub_assembly_id": {
+            "description": "Id of the child Assembly included at this position.",
+            "format": "uuid",
+            "title": "Sub Assembly Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slot_name",
+          "sub_assembly_id",
+          "content_hash"
+        ],
+        "title": "SubAssemblyLinkBody",
+        "type": "object"
+      },
       "SubjectListResponse": {
         "description": "Page of subjects plus opaque next-page cursor.",
         "properties": {
@@ -14346,6 +14385,14 @@
               "$ref": "#/components/schemas/TemplateSlotBody"
             },
             "title": "Required Slots",
+            "type": "array"
+          },
+          "required_sub_assemblies": {
+            "description": "Full sub-assembly-link set for this revision (replace-on-version). Each pins a child Assembly's content_hash at a named position; a stale pin is rejected so re-adopting a child revision is deliberate.",
+            "items": {
+              "$ref": "#/components/schemas/SubAssemblyLinkBody"
+            },
+            "title": "Required Sub Assemblies",
             "type": "array"
           },
           "required_wires": {

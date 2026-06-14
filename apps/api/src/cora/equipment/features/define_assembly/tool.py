@@ -7,7 +7,12 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.equipment._bodies import DrawingBody, TemplateSlotBody, TemplateWireBody
+from cora.equipment._bodies import (
+    DrawingBody,
+    SubAssemblyLinkBody,
+    TemplateSlotBody,
+    TemplateWireBody,
+)
 from cora.equipment.aggregates.assembly import ASSEMBLY_NAME_MAX_LENGTH
 from cora.equipment.features.define_assembly.command import DefineAssembly
 from cora.equipment.features.define_assembly.handler import IdempotentHandler
@@ -27,8 +32,8 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             "Define a new Assembly composition blueprint. An Assembly "
             "is a content-addressed template that declares the slots "
             "(Family-typed) and signal wires of a reusable cluster of "
-            "Assets (e.g., the MCTOptics detector fixture: microscope "
-            "+ objectives + camera + scintillator, wired together). "
+            "Assets (e.g., the Microscope detector fixture: an Optics "
+            "sub-assembly + camera + scintillator, wired together). "
             "presents_as_family_id is the FamilyId the instantiated "
             "Assembly stands in for at Method.needed_families "
             "satisfaction time. Note: this MCP surface has no "
@@ -59,6 +64,16 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             list[TemplateWireBody],
             Field(description="Slot-to-slot signal wires inside the Assembly."),
         ] = [],  # noqa: B006
+        required_sub_assemblies: Annotated[
+            list[SubAssemblyLinkBody],
+            Field(
+                description=(
+                    "Child Assemblies included as version-pinned links "
+                    "(slot_name + sub_assembly_id + pinned content_hash), so a "
+                    "blueprint can be composed of smaller reusable blueprints."
+                ),
+            ),
+        ] = [],  # noqa: B006
         parameter_overrides_schema: Annotated[
             dict[str, Any] | None,
             Field(
@@ -83,6 +98,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 presents_as_family_id=presents_as_family_id,
                 required_slots=frozenset(s.to_domain() for s in required_slots),
                 required_wires=frozenset(w.to_domain() for w in required_wires),
+                required_sub_assemblies=frozenset(r.to_domain() for r in required_sub_assemblies),
                 parameter_overrides_schema=parameter_overrides_schema,
                 drawing=drawing.to_domain() if drawing is not None else None,
                 version=version,

@@ -1,11 +1,14 @@
 """Assembly aggregate state, value objects, status enum, and domain errors.
 
 An `Assembly` is a content-addressed composition blueprint for a
-reusable cluster of Assets (e.g., the MCTOptics fixture at APS 2-BM:
-microscope + 3 objectives + camera + scintillator, wired together).
+reusable cluster of Assets (e.g., the Microscope fixture at APS 2-BM:
+an Optics sub-assembly + camera + scintillator, wired together).
 Declares `required_slots` (Family-typed, cardinality-annotated,
-optionally pre-Placed) and `required_wires` (slot-keyed 4-tuples).
-Exposes a stable `presents_as_family_id` so other aggregates
+optionally pre-Placed), `required_wires` (slot-keyed 4-tuples), and
+`required_sub_assemblies` (version-pinned links to child Assemblies,
+so a blueprint can be composed of smaller reusable blueprints, not
+only of individual parts). Exposes a stable `presents_as_family_id`
+so other aggregates
 (Method.needed_families, Capability bindings) can treat an
 instantiated Assembly as one typed unit at the same level as a
 single Asset.
@@ -19,8 +22,11 @@ event-store stream keying. `name` is a human-readable AssemblyName
 (non-unique). `content_hash` is the structural fingerprint
 (SHA-256 hex over the canonical subset
 `{name, presents_as_family_id, required_slots, required_wires,
-parameter_overrides_schema}`); two operators independently authoring
-the same Assembly converge on the same hash.
+required_sub_assemblies, parameter_overrides_schema}`); two operators
+independently authoring the same Assembly converge on the same hash.
+Each `required_sub_assemblies` link carries the child's content_hash,
+so the parent fingerprint chains: a change deep in the tree ripples
+upward one deliberate re-version at a time.
 
 ## Slot keying
 
@@ -29,16 +35,29 @@ frozenset[TemplateWire]` BOTH key by `slot_name` (string), NOT by
 Asset UUID. Reason: an Assembly is a template; the Assets it
 references do not exist at template-definition time. Slot-to-asset
 translation happens at `register_fixture` time.
-This inverts the timing of Plan.wires validation, which has access
-to concrete Asset.ports and so enforces direction + signal-type +
-fan-in at write time.
+Plan.wires, by contrast, has concrete Asset.ports and so enforces
+direction + signal-type + fan-in at write time; an Assembly cannot,
+because the ports do not exist yet (see the wire-conformance note
+below).
 
 ## Internal closure
 
 `Assembly.__post_init__` enforces that every `TemplateWire`'s
-endpoints reference a slot present in `required_slots`. This is the
-structural well-formedness check; direction / signal_type / fan-in
-rules live at instantiate time when concrete Assets are bound.
+endpoints reference a slot present in `required_slots`. That is the
+only wire check the spine performs.
+
+## Wire conformance is not checked at materialization (yet)
+
+`register_fixture` expands slots and binds Assets, but it does NOT
+validate wires: direction (OUTPUT -> INPUT), signal-type match, and
+fan-in are checked NOWHERE today, neither at define / version nor at
+register_fixture. A `required_wire` is therefore a declared intent,
+closure-checked against slot names only. Per-port conformance against
+the materialized Asset.ports is a deferred read-side projection (the
+`AssemblyConformanceMismatch` posture, not yet built), the same
+eventual-consistency stance Asset.parent_id and Method.needed_family_ids
+take. Whole-experiment routing that must be enforced lives in
+`Plan.wiring`, keyed by concrete Asset UUIDs.
 
 ## Revision lineage
 
@@ -153,9 +172,11 @@ class InvalidWireSpecError(ValueError):
         both endpoints (mirrors PlanWireSelfLoopError). Self-slot
         with DIFFERENT ports is allowed (PandABox LUT pattern).
 
-    Direction, signal_type, and fan-in are NOT checked here; those
-    fire at `register_fixture` time against materialized
-    Asset.ports.
+    Direction, signal_type, and fan-in are NOT checked here, and (as
+    of today) NOT checked anywhere: register_fixture does not validate
+    wires. Per-port conformance against materialized Asset.ports is a
+    deferred read-side projection (the AssemblyConformanceMismatch
+    posture); enforced routing lives in Plan.wiring.
     """
 
     def __init__(self, reason: str) -> None:
@@ -411,6 +432,109 @@ class AssemblyRolePresentsAsNotPresentError(Exception):
         self.role_id = role_id
 
 
+class InvalidSubAssemblyLinkError(ValueError):
+    """A SubAssemblyLink is structurally malformed.
+
+    Failure mode: `content_hash` is empty or whitespace-only. A link
+    MUST pin the exact version of the child blueprint it references;
+    an empty pin cannot identify a revision. Mapped to HTTP 400 by the
+    BC exception handler.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"Invalid SubAssemblyLink: {reason}")
+        self.reason = reason
+
+
+class SubAssemblySlotNameConflictError(ValueError):
+    """A SubAssemblyLink's slot_name collides with another named
+    position in the same Assembly.
+
+    Every named position in an Assembly (a `required_slots` slot or a
+    `required_sub_assemblies` link) shares one slot-name namespace,
+    because `register_fixture` keys the union of leaf slots by name
+    when it expands a sub-assembly into the parent. A collision is a
+    typo or design mistake internal to the Assembly definition, caught
+    at construction. Mapped to HTTP 400.
+    """
+
+    def __init__(self, slot_name: str, reason: str) -> None:
+        super().__init__(f"SubAssemblyLink slot_name {slot_name!r} conflicts: {reason}")
+        self.slot_name = slot_name
+        self.reason = reason
+
+
+class SubAssemblyNotFoundForAssemblyError(Exception):
+    """A `sub_assembly_id` referenced by a SubAssemblyLink does not
+    resolve to a defined Assembly.
+
+    Handler-side projection check at define_assembly / version_assembly
+    time; mirrors `FamilyNotFoundForAssemblyError`. Maps to 404.
+    """
+
+    def __init__(self, sub_assembly_id: UUID) -> None:
+        super().__init__(f"Sub-assembly {sub_assembly_id} not found")
+        self.sub_assembly_id = sub_assembly_id
+
+
+class SubAssemblyContentHashMismatchError(Exception):
+    """A SubAssemblyLink's pinned `content_hash` does not match the
+    referenced Assembly's current content_hash.
+
+    The link pins the EXACT child revision it was authored against
+    (snapshot semantics): adopting a new child revision is a
+    deliberate re-version of the parent, not silent drift. A stale pin
+    surfaces here at define / version time. Maps to 409.
+    """
+
+    def __init__(self, sub_assembly_id: UUID, *, pinned: str, current: str | None) -> None:
+        super().__init__(
+            f"Sub-assembly {sub_assembly_id} content_hash pin {pinned!r} "
+            f"does not match current {current!r}"
+        )
+        self.sub_assembly_id = sub_assembly_id
+        self.pinned = pinned
+        self.current = current
+
+
+class SubAssemblyCycleError(Exception):
+    """A SubAssemblyLink would make an Assembly reference itself.
+
+    Direct self-reference only for now (`sub_assembly_id` equals the
+    Assembly's own id). Deeper A->B->A cycle detection is deferred
+    until a second composing level lands (rule-of-three); the pilot
+    nests one level (Microscope -> Optics). Maps to 400.
+    """
+
+    def __init__(self, assembly_id: UUID) -> None:
+        super().__init__(f"Assembly {assembly_id} cannot reference itself as a sub-assembly")
+        self.assembly_id = assembly_id
+
+
+class SubAssemblyNestingTooDeepError(ValueError):
+    """A SubAssemblyLink points at a child that is itself a composite.
+
+    One composing level is supported: `register_fixture` expands a
+    parent's sub-assemblies into a single flat union of leaf slots, and
+    refuses any child that declares its own `required_sub_assemblies`.
+    Authoring (`define_assembly` / `version_assembly`) enforces the same
+    limit so that a defined Assembly is always instantiable rather than
+    failing only at the end of the install-then-register choreography.
+    Because a non-leaf child is refused here, an A->B->A indirect cycle
+    is also impossible for the two-node case (B would need its own
+    sub-assembly link back to A, which makes B non-leaf and rejects it).
+    Deeper nesting is deferred until a real case lands (rule-of-three);
+    the pilot nests one level (Microscope -> Optics). Maps to 400.
+    """
+
+    def __init__(self, sub_assembly_id: UUID) -> None:
+        super().__init__(
+            f"Sub-assembly {sub_assembly_id} declares its own sub-assemblies; "
+            "nesting beyond one level is not yet supported"
+        )
+        self.sub_assembly_id = sub_assembly_id
+
+
 @bounded_name(max_length=ASSEMBLY_NAME_MAX_LENGTH, error_class=InvalidAssemblyNameError)
 @dataclass(frozen=True)
 class AssemblyName:
@@ -508,12 +632,16 @@ class TemplateWire:
     Assembly cannot reference Assets that do not exist yet at
     template-definition time.
 
-    Validation rules at instantiation time (NOT here):
+    Per-port conformance rules (deferred, NOT enforced today, neither
+    here nor at register_fixture):
       - source port must have `direction=OUTPUT`
       - target port must have `direction=INPUT`
       - `source_port.signal_type == target_port.signal_type`
       - target port is the destination of at most one Wire (fan-in
         forbidden); fan-out (one source to many targets) is allowed
+    These belong to a future read-side projection
+    (`AssemblyConformanceMismatch`); enforced whole-experiment routing
+    lives in `Plan.wiring`, keyed by concrete Asset UUIDs.
 
     `__post_init__` enforces structural shape only: each of the four
     string fields trims and bounds 1-100 chars, and the degenerate
@@ -558,6 +686,49 @@ class TemplateWire:
 
 
 @dataclass(frozen=True)
+class SubAssemblyLink:
+    """A version-pinned link from a parent Assembly to a child Assembly.
+
+    Lets an Assembly be composed of smaller reusable Assemblies, not
+    only of individual `TemplateSlot` parts. The parent declares: "in
+    the named position `slot_name`, include the Assembly
+    `sub_assembly_id`, pinned at `content_hash`." At `register_fixture`
+    time the child's own leaf slots expand into the parent's slot set
+    (the union), so the materialized Fixture still binds only concrete
+    Assets.
+
+    `slot_name` reuses the `SlotName` VO: a sub-assembly occupies a
+    named position in the parent exactly as a `TemplateSlot` does, and
+    the two share one slot-name namespace (a link's slot_name must not
+    collide with a leaf slot's, enforced at the Assembly level via
+    `SubAssemblySlotNameConflictError`).
+
+    `content_hash` is SNAPSHOT, not live: it pins the exact child
+    revision the parent was authored against. A later child re-version
+    does NOT silently change the parent's identity; adopting it is a
+    deliberate re-version of the parent, and a stale pin is caught at
+    define / version time via `SubAssemblyContentHashMismatchError`.
+    Because the pinned child hash is folded into the parent's own
+    `content_hash`, the structural fingerprint chains: a change deep in
+    the tree ripples upward one deliberate adoption at a time.
+
+    Frozen and fully hashable (all three fields are hashable), so it
+    lives directly in `Assembly.required_sub_assemblies:
+    frozenset[SubAssemblyLink]` without a custom __hash__.
+    """
+
+    slot_name: SlotName
+    sub_assembly_id: UUID
+    content_hash: str
+
+    def __post_init__(self) -> None:
+        if not self.content_hash.strip():
+            raise InvalidSubAssemblyLinkError(
+                f"link in slot {self.slot_name.value!r} must pin a non-empty content_hash"
+            )
+
+
+@dataclass(frozen=True)
 class Assembly:
     """Aggregate root: a reusable composition blueprint.
 
@@ -566,10 +737,12 @@ class Assembly:
     instantiated Assembly looks like to Method.needed_families and
     Plan binding (one Asset-shaped unit).
 
-    `required_slots` and `required_wires` together describe the
-    composition: slots declare what kinds of Assets fill which roles,
-    wires declare how those Assets connect. Both key by slot_name
-    (not by Asset UUID) since Assets do not exist at template time.
+    `required_slots`, `required_wires`, and `required_sub_assemblies`
+    together describe the composition: slots declare what kinds of
+    Assets fill which roles, wires declare how those Assets connect,
+    and sub-assembly links include whole child Assemblies (version-
+    pinned) as named positions. All key by slot_name (not by Asset
+    UUID) since Assets do not exist at template time.
 
     `parameter_overrides_schema` is an optional JSON Schema subset
     declaring the shape of parameter_overrides accepted at
@@ -579,13 +752,17 @@ class Assembly:
     Deprecated. `version` is an operator-curated label. `content_hash`
     is the SHA-256 hex fingerprint of the canonical subset
     `{name, presents_as_family_id, required_slots, required_wires,
-    parameter_overrides_schema}` (excludes id / drawing / version /
-    status, which are not structural identity per the design memo).
+    required_sub_assemblies, parameter_overrides_schema}` (excludes
+    id / drawing / version / status, which are not structural identity
+    per the design memo).
 
     `__post_init__` enforces internal closure: every TemplateWire's
     source_slot_name and target_slot_name MUST appear in
-    `required_slots`. Cross-aggregate references (FamilyId existence,
-    schema validation) live in handler-side projection checks.
+    `required_slots`, and each `required_sub_assemblies` link's
+    slot_name must be unique across the blueprint (no collision with a
+    leaf slot or another link). Cross-aggregate references (FamilyId /
+    sub-assembly existence, content_hash pinning, schema validation)
+    live in handler-side projection checks.
     """
 
     id: UUID
@@ -593,6 +770,9 @@ class Assembly:
     presents_as_family_id: UUID
     required_slots: frozenset[TemplateSlot] = field(default_factory=frozenset[TemplateSlot])
     required_wires: frozenset[TemplateWire] = field(default_factory=frozenset[TemplateWire])
+    required_sub_assemblies: frozenset[SubAssemblyLink] = field(
+        default_factory=frozenset[SubAssemblyLink]
+    )
     parameter_overrides_schema: dict[str, Any] | None = None
     drawing: Drawing | None = None
     status: AssemblyStatus = AssemblyStatus.DEFINED
@@ -604,8 +784,8 @@ class Assembly:
     Parallel mechanism to the scalar `presents_as_family_id`: 3C
     keeps the scalar (per anti-hook #6, one migration cycle), and
     layers `presents_as` alongside for Role-based binding via 3D's
-    bind_plan_role role_kind path. MCTOptics-Assembly seeds
-    `{Imager}` at scenario-fixture time.
+    bind_plan_role role_kind path. Microscope-Assembly seeds
+    `{Detector}` at scenario-fixture time.
 
     NOT included in `content_subset()` -- additive orthogonal-axis
     field, parallel to Family.settings_schema; adding or removing a
@@ -625,13 +805,26 @@ class Assembly:
                 raise WireReferencesUnknownSlotError(wire.source_slot_name)
             if wire.target_slot_name not in slot_names:
                 raise WireReferencesUnknownSlotError(wire.target_slot_name)
+        seen_sub_assembly_names: set[str] = set()
+        for link in self.required_sub_assemblies:
+            link_name = link.slot_name.value
+            if link_name in slot_names:
+                raise SubAssemblySlotNameConflictError(
+                    link_name, reason="already a required_slots slot_name"
+                )
+            if link_name in seen_sub_assembly_names:
+                raise SubAssemblySlotNameConflictError(
+                    link_name, reason="duplicate sub-assembly slot_name"
+                )
+            seen_sub_assembly_names.add(link_name)
 
     def content_subset(self) -> dict[str, object]:
         """Canonical content subset hashed into `content_hash`.
 
         Pins identity per `project_content_addressed_identity_design`:
         `name + presents_as_family_id + required_slots + required_wires +
-        parameter_overrides_schema`. Excluded: `id` (identity, not
+        required_sub_assemblies + parameter_overrides_schema`. Excluded:
+        `id` (identity, not
         content), `status` and `version` (lifecycle, derived in evolver
         from event type and version label), `drawing` (operator-
         curatorial metadata per the design memo's content_hash
@@ -648,6 +841,7 @@ class Assembly:
             presents_as_family_id=self.presents_as_family_id,
             required_slots=self.required_slots,
             required_wires=self.required_wires,
+            required_sub_assemblies=self.required_sub_assemblies,
             parameter_overrides_schema=self.parameter_overrides_schema,
         )
 
@@ -658,6 +852,7 @@ def canonical_assembly_subset(
     presents_as_family_id: UUID,
     required_slots: frozenset[TemplateSlot],
     required_wires: frozenset[TemplateWire],
+    required_sub_assemblies: frozenset[SubAssemblyLink],
     parameter_overrides_schema: dict[str, object] | None,
 ) -> dict[str, object]:
     """Materialize the canonical content subset of an Assembly.
@@ -668,10 +863,11 @@ def canonical_assembly_subset(
     equivalence between the two is pinned in tests.
 
     Slots render as a list of dicts sorted by slot_name; wires render
-    as sorted 4-tuples-of-strings for canonical-sort determinism.
-    UUIDs render as strings. Adding a new identity-bearing field
-    requires editing this one function plus the content_hash
-    differs-test corpus.
+    as sorted 4-tuples-of-strings; sub-assembly links render as dicts
+    (slot_name + sub_assembly_id + child content_hash) sorted by
+    slot_name, for canonical-sort determinism. UUIDs render as
+    strings. Adding a new identity-bearing field requires editing this
+    one function plus the content_hash differs-test corpus.
     """
     name_value = name.value if isinstance(name, AssemblyName) else name
     return {
@@ -702,6 +898,17 @@ def canonical_assembly_subset(
                 wire.target_port_name,
             )
             for wire in required_wires
+        ),
+        "required_sub_assemblies": sorted(
+            (
+                {
+                    "slot_name": link.slot_name.value,
+                    "sub_assembly_id": str(link.sub_assembly_id),
+                    "content_hash": link.content_hash,
+                }
+                for link in required_sub_assemblies
+            ),
+            key=lambda d: str(d["slot_name"]),
         ),
         "parameter_overrides_schema": parameter_overrides_schema,
     }

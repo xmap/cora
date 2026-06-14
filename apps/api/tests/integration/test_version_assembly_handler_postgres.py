@@ -48,7 +48,7 @@ async def test_version_assembly_appends_versioned_event_to_postgres(
         correlation_id=_CORRELATION_ID,
     )
     assembly_id = await define_assembly.bind(deps)(
-        DefineAssembly(name="MCTOptics", presents_as_family_id=family_id),
+        DefineAssembly(name="Microscope", presents_as_family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -56,7 +56,7 @@ async def test_version_assembly_appends_versioned_event_to_postgres(
     await version_assembly.bind(deps)(
         VersionAssembly(
             assembly_id=assembly_id,
-            name="MCTOptics-rev2",
+            name="Microscope-rev2",
             presents_as_family_id=family_id,
             version="v0.2.0",
         ),
@@ -75,7 +75,7 @@ async def test_version_assembly_appends_versioned_event_to_postgres(
 
     versioned_payload = versioned_event.payload
     assert versioned_payload["assembly_id"] == str(assembly_id)
-    assert versioned_payload["name"] == "MCTOptics-rev2"
+    assert versioned_payload["name"] == "Microscope-rev2"
     assert versioned_payload["presents_as_family_id"] == str(family_id)
     assert versioned_payload["version"] == "v0.2.0"
     assert versioned_payload["previous_content_hash"] == defined_event.payload["content_hash"]

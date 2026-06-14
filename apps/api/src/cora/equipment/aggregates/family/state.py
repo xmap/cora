@@ -245,7 +245,7 @@ class Family:
     advertises (Layer 3 sub-slice 3B; see
     [[project-role-aggregate-design]] Lock 4 universal
     `Family.presents_as`). Direct-detection Camera Families advertise
-    `{Imager}`; LinearStage / RotaryStage / Hexapod advertise
+    `{Detector}`; LinearStage / RotaryStage / Hexapod advertise
     `{Positioner}`; the empty-Affordances <Domain>Controller leaves
     advertise `{Controller}`. Added incrementally via
     `add_family_presents_as` (strict-not-idempotent; validates that

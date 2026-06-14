@@ -46,11 +46,11 @@ def _build_deps(
     )
 
 
-async def _seed_mctoptics_assembly(store: InMemoryEventStore) -> None:
-    """Pre-seed a minimal MCTOptics Assembly via direct event append."""
+async def _seed_microscope_assembly(store: InMemoryEventStore) -> None:
+    """Pre-seed a minimal Microscope Assembly via direct event append."""
     event = AssemblyDefined(
         assembly_id=_ASSEMBLY_ID,
-        name=AssemblyName("MCTOptics"),
+        name=AssemblyName("Microscope"),
         presents_as_family_id=_FAMILY_ID,
         required_slots=frozenset(),
         required_wires=frozenset(),
@@ -84,7 +84,7 @@ def _seed_role_lookup(deps: Kernel) -> None:
     assert hasattr(lookup, "register"), "deps.role_lookup must be in-memory"
     lookup.register(  # type: ignore[union-attr]
         role_id=_ROLE_ID,
-        name="Imager",
+        name="Detector",
         required_affordances=frozenset({"Imageable"}),
     )
 
@@ -92,7 +92,7 @@ def _seed_role_lookup(deps: Kernel) -> None:
 @pytest.mark.unit
 async def test_handler_appends_assembly_presents_as_added_event() -> None:
     store = InMemoryEventStore()
-    await _seed_mctoptics_assembly(store)
+    await _seed_microscope_assembly(store)
     deps = _build_deps(event_store=store)
     _seed_role_lookup(deps)
     handler = add_assembly_presents_as.bind(deps)
@@ -118,7 +118,7 @@ async def test_handler_appends_assembly_presents_as_added_event() -> None:
 @pytest.mark.unit
 async def test_handler_raises_unauthorized_on_deny() -> None:
     store = InMemoryEventStore()
-    await _seed_mctoptics_assembly(store)
+    await _seed_microscope_assembly(store)
     deps = _build_deps(event_store=store, deny=True)
     _seed_role_lookup(deps)
     handler = add_assembly_presents_as.bind(deps)
@@ -134,7 +134,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
 @pytest.mark.unit
 async def test_handler_raises_role_not_found_when_lookup_misses() -> None:
     store = InMemoryEventStore()
-    await _seed_mctoptics_assembly(store)
+    await _seed_microscope_assembly(store)
     deps = _build_deps(event_store=store)
     # Skip seeding role lookup -> RoleNotFoundError.
     handler = add_assembly_presents_as.bind(deps)
@@ -165,7 +165,7 @@ async def test_handler_raises_assembly_not_found_when_stream_is_empty() -> None:
 async def test_handler_raises_already_advertised_on_retry() -> None:
     """Strict-not-idempotent: re-adding raises."""
     store = InMemoryEventStore()
-    await _seed_mctoptics_assembly(store)
+    await _seed_microscope_assembly(store)
     deps = _build_deps(event_store=store)
     _seed_role_lookup(deps)
     handler = add_assembly_presents_as.bind(deps)

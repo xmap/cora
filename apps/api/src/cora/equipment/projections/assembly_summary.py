@@ -3,12 +3,13 @@ events into the `proj_equipment_assembly_summary` read model.
 
 Subscribed events (per slice):
   - AssemblyDefined  -> INSERT (status=Defined, version + content_hash
-                                from payload, presents_as=[]).
-                                Shipped with B.0 scaffold.
+                                + required_sub_assemblies from payload,
+                                presents_as=[]). Shipped with B.0 scaffold.
   - AssemblyVersioned -> UPDATE status=Versioned + name +
                                 presents_as_family_id + version +
-                                content_hash. Replace-on-version
-                                semantic mirrors the aggregate state.
+                                content_hash + required_sub_assemblies.
+                                Replace-on-version semantic mirrors the
+                                aggregate state.
   - AssemblyDeprecated -> UPDATE status=Deprecated.
   - AssemblyPresentsAsAdded -> UPDATE
                                 presents_as = (DISTINCT append).
@@ -22,6 +23,7 @@ All branches idempotent. Mirrors FamilySummaryProjection's shape.
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
+import json
 from datetime import datetime
 from uuid import UUID
 
@@ -36,8 +38,8 @@ def _id(payload: dict[str, object]) -> UUID:
 _INSERT_ASSEMBLY_SQL = """
 INSERT INTO proj_equipment_assembly_summary
     (assembly_id, name, presents_as_family_id, status, version,
-     content_hash, created_at, presents_as)
-VALUES ($1, $2, $3, 'Defined', $4, $5, $6, ARRAY[]::UUID[])
+     content_hash, created_at, presents_as, required_sub_assemblies)
+VALUES ($1, $2, $3, 'Defined', $4, $5, $6, ARRAY[]::UUID[], $7::jsonb)
 ON CONFLICT (assembly_id) DO NOTHING
 """
 
@@ -48,6 +50,7 @@ SET status = 'Versioned',
     presents_as_family_id = $3,
     version = $4,
     content_hash = $5,
+    required_sub_assemblies = $6::jsonb,
     updated_at = now()
 WHERE assembly_id = $1
 """
@@ -108,6 +111,7 @@ class AssemblySummaryProjection:
                     payload.get("version"),
                     payload["content_hash"],
                     datetime.fromisoformat(str(payload["occurred_at"])),
+                    json.dumps(payload.get("required_sub_assemblies", [])),
                 )
             case "AssemblyVersioned":
                 payload = event.payload
@@ -118,6 +122,7 @@ class AssemblySummaryProjection:
                     UUID(str(payload["presents_as_family_id"])),
                     payload.get("version"),
                     payload["content_hash"],
+                    json.dumps(payload.get("required_sub_assemblies", [])),
                 )
             case "AssemblyDeprecated":
                 await conn.execute(

@@ -63,6 +63,7 @@ from cora.equipment.aggregates.assembly.state import (
     AssemblyName,
     SlotCardinality,
     SlotName,
+    SubAssemblyLink,
     TemplateSlot,
     TemplateWire,
 )
@@ -115,6 +116,22 @@ def _template_wire_from_payload(payload: dict[str, Any]) -> TemplateWire:
     )
 
 
+def _sub_assembly_link_to_payload(link: SubAssemblyLink) -> dict[str, Any]:
+    return {
+        "slot_name": link.slot_name.value,
+        "sub_assembly_id": str(link.sub_assembly_id),
+        "content_hash": link.content_hash,
+    }
+
+
+def _sub_assembly_link_from_payload(payload: dict[str, Any]) -> SubAssemblyLink:
+    return SubAssemblyLink(
+        slot_name=SlotName(payload["slot_name"]),
+        sub_assembly_id=UUID(payload["sub_assembly_id"]),
+        content_hash=payload["content_hash"],
+    )
+
+
 @dataclass(frozen=True)
 class AssemblyDefined:
     """A new Assembly was defined.
@@ -138,6 +155,7 @@ class AssemblyDefined:
     version: str | None
     content_hash: str
     occurred_at: datetime
+    required_sub_assemblies: frozenset[SubAssemblyLink] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -166,6 +184,7 @@ class AssemblyVersioned:
     content_hash: str
     previous_content_hash: str | None
     occurred_at: datetime
+    required_sub_assemblies: frozenset[SubAssemblyLink] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -243,6 +262,7 @@ def to_payload(event: AssemblyEvent) -> dict[str, Any]:
             presents_as_family_id=presents_as_family_id,
             required_slots=required_slots,
             required_wires=required_wires,
+            required_sub_assemblies=required_sub_assemblies,
             parameter_overrides_schema=parameter_overrides_schema,
             drawing=drawing,
             version=version,
@@ -266,6 +286,10 @@ def to_payload(event: AssemblyEvent) -> dict[str, Any]:
                         d["target_port_name"],
                     ),
                 ),
+                "required_sub_assemblies": sorted(
+                    (_sub_assembly_link_to_payload(link) for link in required_sub_assemblies),
+                    key=lambda d: d["slot_name"],
+                ),
                 "parameter_overrides_schema": parameter_overrides_schema,
                 "drawing": (drawing_to_payload(drawing) if drawing is not None else None),
                 "version": version,
@@ -278,6 +302,7 @@ def to_payload(event: AssemblyEvent) -> dict[str, Any]:
             presents_as_family_id=presents_as_family_id,
             required_slots=required_slots,
             required_wires=required_wires,
+            required_sub_assemblies=required_sub_assemblies,
             parameter_overrides_schema=parameter_overrides_schema,
             drawing=drawing,
             version=version,
@@ -301,6 +326,10 @@ def to_payload(event: AssemblyEvent) -> dict[str, Any]:
                         d["target_slot_name"],
                         d["target_port_name"],
                     ),
+                ),
+                "required_sub_assemblies": sorted(
+                    (_sub_assembly_link_to_payload(link) for link in required_sub_assemblies),
+                    key=lambda d: d["slot_name"],
                 ),
                 "parameter_overrides_schema": parameter_overrides_schema,
                 "drawing": (drawing_to_payload(drawing) if drawing is not None else None),
@@ -371,6 +400,10 @@ def from_stored(stored: StoredEvent) -> AssemblyEvent:
                     version=payload.get("version"),
                     content_hash=payload["content_hash"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    required_sub_assemblies=frozenset(
+                        _sub_assembly_link_from_payload(link)
+                        for link in payload.get("required_sub_assemblies", [])
+                    ),
                 )
 
             return deserialize_or_raise("AssemblyDefined", _build_defined)
@@ -396,6 +429,10 @@ def from_stored(stored: StoredEvent) -> AssemblyEvent:
                     content_hash=payload["content_hash"],
                     previous_content_hash=payload.get("previous_content_hash"),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    required_sub_assemblies=frozenset(
+                        _sub_assembly_link_from_payload(link)
+                        for link in payload.get("required_sub_assemblies", [])
+                    ),
                 )
 
             return deserialize_or_raise("AssemblyVersioned", _build_versioned)

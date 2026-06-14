@@ -36,7 +36,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         name="define_role",
         description=(
             "Define a new global Role contract: the functional binding "
-            "shape (Imager, Positioner, Controller, Detector, etc.) that "
+            "shape (Detector, Positioner, Controller, Sensor, etc.) that "
             "a Method's RoleRequirement can target without pinning a "
             "specific Family. Roles are lightweight contracts: required "
             "and optional Affordances + produces/consumes SignalTypes + "

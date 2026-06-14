@@ -41,7 +41,7 @@ async def test_add_assembly_presents_as_persists_event_to_postgres(
     # define_assembly handler).
     genesis = AssemblyDefined(
         assembly_id=_ASSEMBLY_ID,
-        name=AssemblyName("MCTOptics"),
+        name=AssemblyName("Microscope"),
         presents_as_family_id=_FAMILY_ID,
         required_slots=frozenset(),
         required_wires=frozenset(),
@@ -74,7 +74,7 @@ async def test_add_assembly_presents_as_persists_event_to_postgres(
     assert hasattr(lookup, "register")
     lookup.register(  # type: ignore[union-attr]
         role_id=_ROLE_ID,
-        name="Imager",
+        name="Detector",
         required_affordances=frozenset({"Imageable"}),
     )
 

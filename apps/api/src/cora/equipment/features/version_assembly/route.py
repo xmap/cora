@@ -16,7 +16,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.equipment._bodies import DrawingBody, TemplateSlotBody, TemplateWireBody
+from cora.equipment._bodies import (
+    DrawingBody,
+    SubAssemblyLinkBody,
+    TemplateSlotBody,
+    TemplateWireBody,
+)
 from cora.equipment.aggregates.assembly import ASSEMBLY_NAME_MAX_LENGTH
 from cora.equipment.features.version_assembly.command import VersionAssembly
 from cora.equipment.features.version_assembly.handler import Handler
@@ -60,6 +65,15 @@ class VersionAssemblyRequest(BaseModel):
         description=(
             "Full wire set for this revision (replace-on-version). "
             "Endpoints must reference slots declared in required_slots."
+        ),
+    )
+    required_sub_assemblies: list[SubAssemblyLinkBody] = Field(
+        default_factory=list[SubAssemblyLinkBody],
+        description=(
+            "Full sub-assembly-link set for this revision "
+            "(replace-on-version). Each pins a child Assembly's "
+            "content_hash at a named position; a stale pin is rejected "
+            "so re-adopting a child revision is deliberate."
         ),
     )
     parameter_overrides_schema: dict[str, Any] | None = Field(
@@ -151,6 +165,9 @@ async def post_assembly_version(
             presents_as_family_id=body.presents_as_family_id,
             required_slots=frozenset(slot.to_domain() for slot in body.required_slots),
             required_wires=frozenset(wire.to_domain() for wire in body.required_wires),
+            required_sub_assemblies=frozenset(
+                ref.to_domain() for ref in body.required_sub_assemblies
+            ),
             parameter_overrides_schema=body.parameter_overrides_schema,
             drawing=body.drawing.to_domain() if body.drawing is not None else None,
             version=body.version,

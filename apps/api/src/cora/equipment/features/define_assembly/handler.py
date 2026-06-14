@@ -21,7 +21,11 @@ in family/read.py.
 from typing import Protocol
 from uuid import UUID
 
-from cora.equipment.aggregates.assembly import event_type_name, to_payload
+from cora.equipment.aggregates.assembly import (
+    event_type_name,
+    resolve_sub_assembly_pins,
+    to_payload,
+)
 from cora.equipment.aggregates.family import find_missing_families_per_id
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.define_assembly.command import DefineAssembly
@@ -123,7 +127,18 @@ def bind(deps: Kernel) -> Handler:
 
         family_ids = _referenced_family_ids(command)
         missing = await find_missing_families_per_id(deps.event_store, family_ids)
-        context = DefineAssemblyContext(missing_family_ids=missing)
+        sub_resolution = await resolve_sub_assembly_pins(
+            deps.event_store,
+            command.required_sub_assemblies,
+            parent_slot_names=frozenset(slot.slot_name.value for slot in command.required_slots),
+        )
+        context = DefineAssemblyContext(
+            missing_family_ids=missing,
+            sub_assembly_missing_ids=sub_resolution.missing_ids,
+            sub_assembly_hash_mismatches=sub_resolution.hash_mismatches,
+            sub_assembly_too_deep_ids=sub_resolution.too_deep_ids,
+            sub_assembly_leaf_collisions=sub_resolution.leaf_slot_collisions,
+        )
 
         domain_events = decide(
             state=None,

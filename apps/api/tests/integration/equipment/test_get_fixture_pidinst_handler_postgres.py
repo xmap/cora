@@ -248,7 +248,7 @@ async def _seed_assembly_one_slot(
     *,
     family_id: UUID,
     cardinality: SlotCardinality,
-    name: str = "MCTOptics",
+    name: str = "Microscope",
 ) -> UUID:
     assembly_id = uuid4()
     define_event_id = uuid4()

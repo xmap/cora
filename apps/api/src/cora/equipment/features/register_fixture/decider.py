@@ -64,6 +64,9 @@ from cora.equipment.aggregates.assembly import (
     FixtureMappingIncompleteError,
     FixtureParameterOverridesInvalidError,
     SlotCardinality,
+    SubAssemblyContentHashMismatchError,
+    SubAssemblyNotFoundForAssemblyError,
+    SubAssemblySlotNameConflictError,
     TemplateSlot,
 )
 from cora.equipment.aggregates.asset import AssetLifecycle
@@ -131,6 +134,20 @@ def decide(
         carrying the target assembly_id.
       - context.assembly_state.status must not be Deprecated
         -> AssemblyCannotInstantiateError carrying the current status.
+      - Every required_sub_assemblies child must resolve
+        -> SubAssemblyNotFoundForAssemblyError (sorted-first missing).
+        A referenced sub-assembly that is Deprecated, or that itself
+        references sub-assemblies (deeper nesting, not yet supported at
+        fixture time) -> AssemblyCannotInstantiateError.
+      - Each child's current content_hash must still match the hash the
+        parent pinned in its SubAssemblyLink (snapshot semantics: a child
+        re-version after the parent was authored must not silently change
+        what the Fixture materializes)
+        -> SubAssemblyContentHashMismatchError carrying pinned + current.
+      - No leaf slot_name may appear in more than one composed blueprint
+        (the top Assembly and its sub-assemblies share one slot-name
+        namespace in the materialized union)
+        -> SubAssemblySlotNameConflictError.
       - Every referenced asset_id must resolve to a registered Asset
         -> FixtureAssetNotFoundError carrying the sorted-first missing
         id for deterministic error responses.
@@ -156,6 +173,20 @@ def decide(
         parameter_overrides_schema (STRICT posture: non-empty overrides
         on a schema-less Assembly rejects)
         -> FixtureParameterOverridesInvalidError.
+
+    A referenced sub-assembly contributes ONLY its leaf slots to the
+    materialized binding union. Its own required_wires,
+    parameter_overrides_schema, and presents_as_family_id are NOT honored
+    at the parent Fixture; they are meaningful only when that child is
+    registered as a Fixture in its own right.
+
+    Wires (the top Assembly's and any sub-assembly's required_wires) are
+    not validated at fixture time. In fact wire direction, signal-type,
+    and fan-in are enforced NOWHERE today: define / version closure-check
+    only that endpoints name declared slots. Per-port conformance against
+    materialized Asset.ports is a deferred read-side projection (the
+    AssemblyConformanceMismatch posture); enforced whole-experiment
+    routing lives in Plan.wiring, keyed by concrete Asset UUIDs.
     """
     if state is not None:
         raise FixtureAlreadyExistsError(state.id)
@@ -170,6 +201,44 @@ def decide(
             f"current status is {assembly.status.value}; expected one of "
             f"{AssemblyStatus.DEFINED.value}, {AssemblyStatus.VERSIONED.value}",
         )
+
+    # Expand the union of leaf slots the bindings fill: the top
+    # Assembly's required_slots plus the leaf slots of every referenced
+    # sub-assembly. Only one composing level is expanded here; a
+    # sub-assembly that itself references sub-assemblies is rejected
+    # rather than expanded recursively.
+    slots_by_name: dict[str, TemplateSlot] = {
+        slot.slot_name.value: slot for slot in assembly.required_slots
+    }
+    for link in sorted(assembly.required_sub_assemblies, key=lambda lk: str(lk.sub_assembly_id)):
+        sub = context.sub_assembly_states.get(link.sub_assembly_id)
+        if sub is None:
+            raise SubAssemblyNotFoundForAssemblyError(link.sub_assembly_id)
+        if sub.status is AssemblyStatus.DEPRECATED:
+            raise AssemblyCannotInstantiateError(
+                sub.id,
+                f"sub-assembly current status is {sub.status.value}; expected one of "
+                f"{AssemblyStatus.DEFINED.value}, {AssemblyStatus.VERSIONED.value}",
+            )
+        if sub.required_sub_assemblies:
+            raise AssemblyCannotInstantiateError(
+                sub.id,
+                "nested fixture expansion beyond one sub-assembly level is not yet supported",
+            )
+        if sub.content_hash != link.content_hash:
+            raise SubAssemblyContentHashMismatchError(
+                link.sub_assembly_id,
+                pinned=link.content_hash,
+                current=sub.content_hash,
+            )
+        for sub_slot in sorted(sub.required_slots, key=lambda s: s.slot_name.value):
+            name = sub_slot.slot_name.value
+            if name in slots_by_name:
+                raise SubAssemblySlotNameConflictError(
+                    name,
+                    reason="slot_name appears in more than one composed blueprint",
+                )
+            slots_by_name[name] = sub_slot
 
     missing_asset_ids = sorted(
         (
@@ -220,7 +289,6 @@ def decide(
         if orphan_asset_ids:
             raise FixtureAssetNotInstalledError(orphan_asset_ids[0])
 
-    slots_by_name = {slot.slot_name.value: slot for slot in assembly.required_slots}
     binding_counts: Counter[str] = Counter(
         binding.slot_name for binding in command.slot_asset_bindings
     )

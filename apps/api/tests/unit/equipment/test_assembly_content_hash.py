@@ -18,6 +18,7 @@ from cora.equipment.aggregates.assembly import (
     AssemblyName,
     SlotCardinality,
     SlotName,
+    SubAssemblyLink,
     TemplateSlot,
     TemplateWire,
 )
@@ -43,6 +44,110 @@ def _wire(src_slot: str, tgt_slot: str) -> TemplateWire:
         target_slot_name=tgt_slot,
         target_port_name="trigger_in",
     )
+
+
+def _link(slot_name: str, child_id: UUID, content_hash: str) -> SubAssemblyLink:
+    return SubAssemblyLink(
+        slot_name=SlotName(slot_name),
+        sub_assembly_id=child_id,
+        content_hash=content_hash,
+    )
+
+
+@pytest.mark.unit
+def test_content_hash_differs_when_sub_assembly_added() -> None:
+    """Folding a sub-assembly link into the blueprint changes the
+    parent content_hash (the one-way-door fold)."""
+    fam = uuid4()
+    base = compute_assembly_content_hash(
+        name="Microscope",
+        presents_as_family_id=fam,
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+    )
+    with_link = compute_assembly_content_hash(
+        name="Microscope",
+        presents_as_family_id=fam,
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        required_sub_assemblies=frozenset({_link("optics", uuid4(), "sha256:" + "a" * 8)}),
+    )
+    assert base != with_link
+
+
+@pytest.mark.unit
+def test_content_hash_chains_when_pinned_child_hash_differs() -> None:
+    """Re-pinning the child to a new content_hash changes the parent
+    content_hash: the structural fingerprint chains up the tree."""
+    fam = uuid4()
+    child = uuid4()
+    h_a = compute_assembly_content_hash(
+        name="Microscope",
+        presents_as_family_id=fam,
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        required_sub_assemblies=frozenset({_link("optics", child, "sha256:" + "a" * 8)}),
+    )
+    h_b = compute_assembly_content_hash(
+        name="Microscope",
+        presents_as_family_id=fam,
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        required_sub_assemblies=frozenset({_link("optics", child, "sha256:" + "b" * 8)}),
+    )
+    assert h_a != h_b
+
+
+@pytest.mark.unit
+def test_content_hash_deterministic_across_sub_assembly_set_order() -> None:
+    """Two links in either construction order yield the same hash
+    (the canonical materializer sorts by slot_name)."""
+    fam = uuid4()
+    link1 = _link("optics", uuid4(), "sha256:" + "a" * 8)
+    link2 = _link("readout", uuid4(), "sha256:" + "b" * 8)
+    h1 = compute_assembly_content_hash(
+        name="Microscope",
+        presents_as_family_id=fam,
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        required_sub_assemblies=frozenset({link1, link2}),
+    )
+    h2 = compute_assembly_content_hash(
+        name="Microscope",
+        presents_as_family_id=fam,
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        required_sub_assemblies=frozenset({link2, link1}),
+    )
+    assert h1 == h2
+
+
+@pytest.mark.unit
+def test_content_hash_round_trip_with_sub_assemblies() -> None:
+    """Raw-args path equals the state path when sub-assembly links are present."""
+    fam = uuid4()
+    link = _link("optics", uuid4(), "sha256:" + "a" * 8)
+    args_hash = compute_assembly_content_hash(
+        name="Microscope",
+        presents_as_family_id=fam,
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+        required_sub_assemblies=frozenset({link}),
+    )
+    state = Assembly(
+        id=uuid4(),
+        name=AssemblyName("Microscope"),
+        presents_as_family_id=fam,
+        required_sub_assemblies=frozenset({link}),
+    )
+    assert compute_assembly_content_hash_from_state(state) == args_hash
 
 
 @pytest.mark.unit
@@ -470,7 +575,7 @@ def test_two_assemblies_same_intent_across_facilities_share_hash() -> None:
 
     def _hash_authored_from_names() -> str:
         return compute_assembly_content_hash(
-            name="MCTOptics",
+            name="Microscope",
             presents_as_family_id=family_stream_id(FamilyName("Imager")),
             required_slots=frozenset(
                 {
@@ -491,14 +596,14 @@ def test_two_assemblies_same_intent_across_facilities_share_hash() -> None:
 def test_different_family_names_yield_distinct_hashes() -> None:
     presenter = family_stream_id(FamilyName("Imager"))
     h_camera = compute_assembly_content_hash(
-        name="MCTOptics",
+        name="Microscope",
         presents_as_family_id=presenter,
         required_slots=frozenset({_slot("sensor", family_stream_id(FamilyName("Camera")))}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     h_objective = compute_assembly_content_hash(
-        name="MCTOptics",
+        name="Microscope",
         presents_as_family_id=presenter,
         required_slots=frozenset({_slot("sensor", family_stream_id(FamilyName("Objective")))}),
         required_wires=frozenset(),

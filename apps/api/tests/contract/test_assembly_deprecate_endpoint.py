@@ -26,7 +26,7 @@ def _define_assembly(
     client: TestClient,
     family_id: UUID,
     *,
-    name: str = "MCTOptics",
+    name: str = "Microscope",
 ) -> UUID:
     response = client.post(
         "/assemblies",
@@ -45,7 +45,7 @@ def _version_assembly(client: TestClient, assembly_id: UUID, family_id: UUID) ->
     response = client.post(
         f"/assemblies/{assembly_id}/versions",
         json={
-            "name": "MCTOptics",
+            "name": "Microscope",
             "presents_as_family_id": str(family_id),
             "required_slots": [],
             "required_wires": [],
@@ -145,7 +145,7 @@ def test_post_assembly_deprecate_blocks_subsequent_version() -> None:
         version_response = client.post(
             f"/assemblies/{assembly_id}/versions",
             json={
-                "name": "MCTOptics",
+                "name": "Microscope",
                 "presents_as_family_id": str(family_id),
                 "required_slots": [],
                 "required_wires": [],

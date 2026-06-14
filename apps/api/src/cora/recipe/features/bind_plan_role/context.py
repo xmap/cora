@@ -26,7 +26,7 @@ in play (decider does not consult).
 candidate Asset carries `fixture_id` (the Asset is part of a
 materialized Assembly). The decider ORs-in
 `role_kind in assembly.presents_as` on top of the Family
-disjunction so a composed Assembly (e.g. MCTOptics) can satisfy
+disjunction so a composed Assembly (e.g. Microscope) can satisfy
 the Role even when no individual Family in `asset.family_ids`
 declares it. None when the Asset is not in a Fixture or when
 the Fixture / Assembly projection lookup misses (the Family path

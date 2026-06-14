@@ -9,9 +9,9 @@ single Asset.
 
 Content-addressed: `content_hash` is the SHA-256 hex fingerprint of
 the canonical subset {name, presents_as_family_id, required_slots,
-required_wires, parameter_overrides_schema}. Two operators
-independently authoring the same Assembly converge on the same
-content_hash.
+required_wires, required_sub_assemblies, parameter_overrides_schema}.
+Two operators independently authoring the same Assembly converge on
+the same content_hash.
 
 Lifecycle: `Defined | Versioned | Deprecated`. Multiple
 AssemblyVersioned events per stream (append-only revisions).
@@ -34,7 +34,11 @@ from cora.equipment.aggregates.assembly.events import (
     to_payload,
 )
 from cora.equipment.aggregates.assembly.evolver import evolve, fold
-from cora.equipment.aggregates.assembly.read import load_assembly
+from cora.equipment.aggregates.assembly.read import (
+    SubAssemblyResolution,
+    load_assembly,
+    resolve_sub_assembly_pins,
+)
 from cora.equipment.aggregates.assembly.state import (
     ASSEMBLY_NAME_MAX_LENGTH,
     SLOT_NAME_MAX_LENGTH,
@@ -60,10 +64,17 @@ from cora.equipment.aggregates.assembly.state import (
     InvalidParameterOverridesSchemaError,
     InvalidSlotCardinalityError,
     InvalidSlotNameError,
+    InvalidSubAssemblyLinkError,
     InvalidTemplateSlotError,
     InvalidWireSpecError,
     SlotCardinality,
     SlotName,
+    SubAssemblyContentHashMismatchError,
+    SubAssemblyCycleError,
+    SubAssemblyLink,
+    SubAssemblyNestingTooDeepError,
+    SubAssemblyNotFoundForAssemblyError,
+    SubAssemblySlotNameConflictError,
     TemplateSlot,
     TemplateWire,
     WireReferencesUnknownSlotError,
@@ -100,10 +111,18 @@ __all__ = [
     "InvalidParameterOverridesSchemaError",
     "InvalidSlotCardinalityError",
     "InvalidSlotNameError",
+    "InvalidSubAssemblyLinkError",
     "InvalidTemplateSlotError",
     "InvalidWireSpecError",
     "SlotCardinality",
     "SlotName",
+    "SubAssemblyContentHashMismatchError",
+    "SubAssemblyCycleError",
+    "SubAssemblyLink",
+    "SubAssemblyNestingTooDeepError",
+    "SubAssemblyNotFoundForAssemblyError",
+    "SubAssemblyResolution",
+    "SubAssemblySlotNameConflictError",
     "TemplateSlot",
     "TemplateWire",
     "WireReferencesUnknownSlotError",
@@ -112,5 +131,6 @@ __all__ = [
     "fold",
     "from_stored",
     "load_assembly",
+    "resolve_sub_assembly_pins",
     "to_payload",
 ]

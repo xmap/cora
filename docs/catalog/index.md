@@ -30,13 +30,13 @@ The kinds below are not five separate lists; they are one chain, sliced per kind
 
 ## Roles
 
-The four Roles (`Imager`, `Positioner`, `Controller`, `Detector`) ship as a closed-core seed registry. A fifth candidate, `Conditioner` (attenuators / shutters / mirrors), was deferred: no affordance is universally required across those Families, so the required-set would be vacuous. A rule-of-three trigger gates a future definition.
+The four Roles (`Detector`, `Positioner`, `Controller`, `Sensor`) ship as a closed-core seed registry. A fifth candidate, `Conditioner` (attenuators / shutters / mirrors), was deferred: no affordance is universally required across those Families, so the required-set would be vacuous. A rule-of-three trigger gates a future definition.
 
 Every `RoleId` is `uuid5(_ROLE_NAMESPACE, name.lower())` with `_ROLE_NAMESPACE = uuid5(NAMESPACE_DNS, 'cora.role')`. Deterministic ids make a Method authored at APS 2-BM bind against the same Role uuid when shipped to MAX IV or DLS. A `define_role` with a seed Role's name collides on the same stream and returns 409.
 
 ## Families: settings over subtypes
 
-Some apparent new families are settings axes, not family axes. A high-framerate camera lands as a `Camera` Asset with extended settings (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not a `HighSpeedCamera` family, mirroring the `Mirror` precedent (multilayer is a settings field, not a subtype). `TimingController` is the defined Family for trigger / gate / sync-pulse hardware (the second `<Domain>Controller` family after `MotionController`, anchored at 2-BM by the softGlueZynq FPGA); `OpticalRelay` is the future composing-family name for scintillator-objective-camera relays once the MCTOptics composition splits its composing family from its `Imager` presenter.
+Some apparent new families are settings axes, not family axes. A high-framerate camera lands as a `Camera` Asset with extended settings (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not a `HighSpeedCamera` family, mirroring the `Mirror` precedent (multilayer is a settings field, not a subtype). `TimingController` is the defined Family for trigger / gate / sync-pulse hardware (the second `<Domain>Controller` family after `MotionController`, anchored at 2-BM by the softGlueZynq FPGA); `OpticalRelay` is the future composing-family name for scintillator-objective-camera relays once the Microscope composition splits its composing family from its `Imager` presenter.
 
 ## Source of truth
 

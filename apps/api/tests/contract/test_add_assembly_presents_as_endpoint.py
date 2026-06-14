@@ -7,7 +7,7 @@ Assembly or Role not found; 409 on strict-not-idempotent.
 
 In `app_env=test` the projection worker does not run, so a POST
 to /roles writes the event but does NOT populate the in-memory
-RoleLookup. The `_create_imager_role` helper therefore both POSTs
+RoleLookup. The `_create_detector_role` helper therefore both POSTs
 the role AND seeds the in-memory adapter directly via
 `app.state.deps.role_lookup.register(...)`. Same pattern as
 test_add_family_presents_as_endpoint.py.
@@ -35,7 +35,7 @@ def _define_assembly(
     client: TestClient,
     family_id: UUID,
     *,
-    name: str = "MCTOptics",
+    name: str = "Microscope",
 ) -> UUID:
     response = client.post(
         "/assemblies",
@@ -50,7 +50,7 @@ def _define_assembly(
     return UUID(response.json()["assembly_id"])
 
 
-def _create_imager_role(client: TestClient, app: FastAPI) -> UUID:
+def _create_detector_role(client: TestClient, app: FastAPI) -> UUID:
     response = client.post(
         "/roles",
         json={
@@ -66,7 +66,7 @@ def _create_imager_role(client: TestClient, app: FastAPI) -> UUID:
     role_id = UUID(response.json()["role_id"])
     app.state.deps.role_lookup.register(
         role_id=role_id,
-        name="Imager",
+        name="Detector",
         required_affordances=["Imageable"],
     )
     return role_id
@@ -78,7 +78,7 @@ def test_post_add_presents_as_returns_204_on_success() -> None:
     with TestClient(app) as client:
         family_id = _define_family(client)
         assembly_id = _define_assembly(client, family_id)
-        role_id = _create_imager_role(client, app)
+        role_id = _create_detector_role(client, app)
         response = client.post(
             f"/assemblies/{assembly_id}/add-presents-as",
             json={"role_id": str(role_id)},
@@ -90,7 +90,7 @@ def test_post_add_presents_as_returns_204_on_success() -> None:
 def test_post_add_presents_as_returns_404_for_missing_assembly() -> None:
     app = create_app()
     with TestClient(app) as client:
-        role_id = _create_imager_role(client, app)
+        role_id = _create_detector_role(client, app)
         response = client.post(
             "/assemblies/00000000-0000-0000-0000-000000000999/add-presents-as",
             json={"role_id": str(role_id)},
@@ -117,7 +117,7 @@ def test_post_add_presents_as_returns_409_on_strict_not_idempotent_retry() -> No
     with TestClient(app) as client:
         family_id = _define_family(client)
         assembly_id = _define_assembly(client, family_id)
-        role_id = _create_imager_role(client, app)
+        role_id = _create_detector_role(client, app)
         body = {"role_id": str(role_id)}
         first = client.post(f"/assemblies/{assembly_id}/add-presents-as", json=body)
         second = client.post(f"/assemblies/{assembly_id}/add-presents-as", json=body)
