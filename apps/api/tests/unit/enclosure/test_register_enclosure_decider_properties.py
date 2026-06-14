@@ -5,7 +5,7 @@ Universal claims across generated inputs:
 
   - state=None + valid command emits a single EnclosureRegistered with
     the injected enclosure_id / now / registered_by and the command's
-    name / containing_asset_id.
+    name / facility_code.
   - state=Enclosure always raises EnclosureAlreadyExistsError,
     regardless of command shape.
   - Pure: same (state, command, now, new_id, registered_by) returns

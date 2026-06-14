@@ -541,10 +541,12 @@ class RunRequiresPermittedEnclosureError(Exception):
     """A referencing Enclosure is not currently Permitted-and-Active.
 
     Cross-BC gate: `start_run` derives the set of referencing
-    Enclosures by walking `EnclosureLookup.find_for_assets` against
-    the Run's `scoped_asset_ids`. Per L-pre-1 (always-derive-from-
-    Asset-chain), Methods do NOT declare an explicit needed-enclosure
-    list; the chain IS the declaration. This error fires when EVERY
+    Enclosures by collecting each scoped Asset's (and ancestor's)
+    `located_in_enclosure_id` across the Run's `scoped_asset_ids` and
+    loading them via `EnclosureLookup.find_by_ids`. Per L-pre-1
+    (always-derive-from-Asset-chain), Methods do NOT declare an explicit
+    needed-enclosure list; the located-in chain IS the declaration. This
+    error fires when EVERY
     referencing Enclosure is in `permit_status != "Permitted"` OR
     `lifecycle != "Active"` (the "universally not permitted" branch
     of the two-error pair). When at least one row passes and at

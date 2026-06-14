@@ -1,27 +1,33 @@
-"""Enclosure permit on an ANCESTOR Asset gates Run.start at APS 2-BM.
+"""Located-in Enclosure on an ANCESTOR Asset gates Run.start at APS 2-BM.
 
 cluster: Staging
 archetype: gate
 bc_primary: Enclosure
 bc_touches: Enclosure, Run, Recipe, Equipment, Subject
 
-The end-to-end payoff of the chain walk (Slice 5). Where
-test_2bm_enclosure_preflight binds the Enclosure DIRECTLY to the
-Plan's Asset, this scenario binds it to that Asset's PARENT: the Plan
-binds only a Device, and the Enclosure sits on the beamline Unit above
-it. Only the parent_id ancestor walk (AssetLookup.ancestors_of, read by
+The end-to-end payoff of the located-in inheritance walk (Slice 5).
+Where test_2bm_enclosure_preflight puts the located-in pointer DIRECTLY
+on the Plan's Asset, this scenario puts it on that Asset's ANCESTOR: the
+Plan binds only a Device with no located-in Enclosure of its own, and
+the Device's parent beamline Unit declares `located_in_enclosure_id`.
+Only the parent_id ancestor walk (AssetLookup.ancestors_of, read by
 start_run against the real proj_equipment_asset_summary) brings the
-Unit into scope so the gate sees the Enclosure.
+Unit's row into scope so the gate collects its located-in Enclosure and
+checks the permit.
 
   - test_chain_walk_gates_run_via_ancestor_enclosure: with the walk on
     (PostgresAssetLookup), the Unit's Unknown Enclosure REFUSES the Run;
     walking it to Permitted lets the Run start.
   - test_without_walk_ancestor_enclosure_silently_passes: the load-
-    bearing control. With the walk off (empty asset_lookup), the very
-    same parent-bound Unknown Enclosure is never brought into scope, so
-    the Run silently starts. The contrast is the proof that L-pre-1
-    ("derive scope from the Asset chain") is load-bearing only because
-    of the walk.
+    bearing control. With the walk off (empty asset_lookup), the
+    ancestor Unit's row is never brought into scope, so its located-in
+    Enclosure is never collected and the Run silently starts. The
+    contrast is the proof that L-pre-1 ("derive scope from the Asset
+    chain") is load-bearing only because of the walk.
+  - test_decommissioned_ancestor_with_active_notpermitted_enclosure_still_refuses:
+    a Decommissioned ancestor's located-in pointer is still collected
+    (the walk does not filter ancestors by lifecycle), so its
+    still-Active NotPermitted Enclosure still REFUSES.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -74,6 +80,7 @@ _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-00000000e001")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-00000000e002")
 _CAPABILITY_ID = UUID("01900000-0000-7000-8000-000000c0e6f1")
 _MONITOR_SOURCE_ID = MonitorSourceId(UUID("01900000-0000-7000-8000-00000000e003"))
+_FACILITY_CODE = "cora"
 
 
 async def _drain_enclosure(db_pool: asyncpg.Pool) -> None:
@@ -84,12 +91,29 @@ async def _drain_enclosure(db_pool: asyncpg.Pool) -> None:
     await drain_projections(db_pool, registry, deadline_seconds=2.0)
 
 
+async def _seed_enclosure(db_pool: asyncpg.Pool) -> UUID:
+    """Register an Enclosure anchored to the seeded `cora` Facility and drain
+    its projection so PostgresEnclosureLookup.find_by_ids can resolve it."""
+    deps = build_postgres_deps(db_pool, now=_T0, ids=[uuid4() for _ in range(3)])
+    suffix = uuid4().hex[:8]
+    eid = await register_enclosure.bind(deps)(
+        RegisterEnclosure(name=f"2-BM-beamline-hutch-{suffix}", facility_code=_FACILITY_CODE),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain_enclosure(db_pool)
+    return eid
+
+
 async def _seed_chain(
-    db_pool: asyncpg.Pool, *, walk: bool
+    db_pool: asyncpg.Pool, *, walk: bool, ancestor_enclosure_id: UUID
 ) -> tuple[Kernel, UUID, UUID, UUID, UUID]:
     """Seed a 2-BM Unit + a Device UNDER it, a Plan binding the Device, and
-    the rest of the Run chain. Drains the equipment projection so the
-    Device -> Unit parent_id edge is visible to the walk.
+    the rest of the Run chain. The Unit carries `located_in_enclosure_id`
+    pointing at `ancestor_enclosure_id`; the Device carries none of its own
+    and inherits the Unit's via the parent_id walk. Drains the equipment
+    projection so the Device -> Unit parent_id edge and the Unit's located-in
+    pointer are visible to the walk.
 
     `walk=True` wires the real PostgresAssetLookup so start_run climbs the
     chain; `walk=False` leaves the empty default so the walk is inert (the
@@ -108,7 +132,11 @@ async def _seed_chain(
     )
     unit_id = await register_asset.bind(deps)(
         RegisterAsset(
-            name="2-BM beamline", tier=AssetTier.UNIT, parent_id=None, facility_code="cora"
+            name="2-BM beamline",
+            tier=AssetTier.UNIT,
+            parent_id=None,
+            facility_code=_FACILITY_CODE,
+            located_in_enclosure_id=ancestor_enclosure_id,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -162,20 +190,6 @@ async def _seed_chain(
     return deps, plan_id, subject_id, unit_id, device_id
 
 
-async def _seed_enclosure(db_pool: asyncpg.Pool, *, containing_asset_id: UUID) -> UUID:
-    deps = build_postgres_deps(db_pool, now=_T0, ids=[uuid4() for _ in range(3)])
-    suffix = uuid4().hex[:8]
-    eid = await register_enclosure.bind(deps)(
-        RegisterEnclosure(
-            name=f"2-BM-beamline-hutch-{suffix}", containing_asset_id=containing_asset_id
-        ),
-        principal_id=_PRINCIPAL_ID,
-        correlation_id=_CORRELATION_ID,
-    )
-    await _drain_enclosure(db_pool)
-    return eid
-
-
 async def _observe(
     db_pool: asyncpg.Pool, *, enclosure_id: UUID, new_status: EnclosurePermitStatus, now: datetime
 ) -> None:
@@ -197,11 +211,14 @@ async def _observe(
 
 @pytest.mark.integration
 async def test_chain_walk_gates_run_via_ancestor_enclosure(db_pool: asyncpg.Pool) -> None:
-    """Plan binds the Device; the Unknown Enclosure sits on its parent Unit.
-    The walk brings the Unit into scope -> REFUSED. Walk to Permitted -> the
-    Run starts."""
-    deps, plan_id, subject_id, unit_id, _device_id = await _seed_chain(db_pool, walk=True)
-    enclosure_id = await _seed_enclosure(db_pool, containing_asset_id=unit_id)
+    """Plan binds the Device; the Unknown Enclosure is the located-in zone of
+    its parent Unit. The walk brings the Unit's row into scope so its
+    located-in pointer is collected -> REFUSED. Walk the Enclosure to
+    Permitted -> the Run starts."""
+    enclosure_id = await _seed_enclosure(db_pool)
+    deps, plan_id, subject_id, _unit_id, _device_id = await _seed_chain(
+        db_pool, walk=True, ancestor_enclosure_id=enclosure_id
+    )
 
     with pytest.raises(RunRequiresPermittedEnclosureError) as exc_info:
         await start_run.bind(deps)(
@@ -226,11 +243,14 @@ async def test_chain_walk_gates_run_via_ancestor_enclosure(db_pool: asyncpg.Pool
 
 @pytest.mark.integration
 async def test_without_walk_ancestor_enclosure_silently_passes(db_pool: asyncpg.Pool) -> None:
-    """Load-bearing control: same parent-bound Unknown Enclosure, but the
-    walk is off (empty asset_lookup). The Unit is never brought into scope,
-    so the Run silently starts -- the exact gap the walk closes."""
-    deps, plan_id, subject_id, unit_id, _device_id = await _seed_chain(db_pool, walk=False)
-    await _seed_enclosure(db_pool, containing_asset_id=unit_id)
+    """Load-bearing control: same ancestor-located Unknown Enclosure, but the
+    walk is off (empty asset_lookup). The Unit's row is never brought into
+    scope, so its located-in pointer is never collected and the Run silently
+    starts -- the exact gap the walk closes."""
+    enclosure_id = await _seed_enclosure(db_pool)
+    deps, plan_id, subject_id, _unit_id, _device_id = await _seed_chain(
+        db_pool, walk=False, ancestor_enclosure_id=enclosure_id
+    )
 
     run_id = await start_run.bind(deps)(
         StartRun(name="Silent pass without walk", plan_id=plan_id, subject_id=subject_id),
@@ -245,14 +265,17 @@ async def test_decommissioned_ancestor_with_active_notpermitted_enclosure_still_
     db_pool: asyncpg.Pool,
 ) -> None:
     """Safety regression: a Decommissioned ANCESTOR must NOT suppress its own
-    still-Active NotPermitted Enclosure. The Unit is decommissioned but its
-    interlock Enclosure stays Active + NotPermitted (decommission_asset has
-    no Enclosure cascade). The walk must still bring the retired Unit into
-    scope so the gate sees the live NotPermitted Enclosure and REFUSES the
-    Run. Filtering Decommissioned ancestors out of the widening would
-    silently admit the Run into an un-permitted hutch."""
-    deps, plan_id, subject_id, unit_id, _device_id = await _seed_chain(db_pool, walk=True)
-    enclosure_id = await _seed_enclosure(db_pool, containing_asset_id=unit_id)
+    still-Active NotPermitted located-in Enclosure. The Unit declares the
+    located-in pointer and is then decommissioned, but its Enclosure stays
+    Active + NotPermitted (decommission_asset has no Enclosure cascade). The
+    walk must still bring the retired Unit's row into scope so its located-in
+    pointer is collected and the gate sees the live NotPermitted Enclosure
+    and REFUSES the Run. Filtering Decommissioned ancestors out of the walk
+    would silently admit the Run into an un-permitted hutch."""
+    enclosure_id = await _seed_enclosure(db_pool)
+    deps, plan_id, subject_id, unit_id, _device_id = await _seed_chain(
+        db_pool, walk=True, ancestor_enclosure_id=enclosure_id
+    )
     await _observe(
         db_pool,
         enclosure_id=enclosure_id,
@@ -260,7 +283,7 @@ async def test_decommissioned_ancestor_with_active_notpermitted_enclosure_still_
         now=_T1,
     )
 
-    # Retire the containing Unit. Its Enclosure is untouched (Active + NotPermitted).
+    # Retire the located-in Unit. Its Enclosure is untouched (Active + NotPermitted).
     await decommission_asset.bind(deps)(
         DecommissionAsset(asset_id=unit_id),
         principal_id=_PRINCIPAL_ID,

@@ -262,7 +262,7 @@ def bind(deps: Kernel) -> Handler:
         # source of truth for whether a physical interlock is live. Each
         # downstream gate owns its own lifecycle semantics on the widened
         # scope. For the safety-critical Enclosure gate that source of
-        # truth is the ENCLOSURE's own lifecycle: `find_for_assets`
+        # truth is the ENCLOSURE's own lifecycle: `find_by_ids`
         # returns only Active Enclosures and the decider fails any
         # non-(Permitted-and-Active) row, so a retired Enclosure is
         # dropped at the right layer while an Active+NotPermitted
@@ -298,16 +298,25 @@ def bind(deps: Kernel) -> Handler:
         )
 
         # cross-BC enclosure pre-flight gate per
-        # [[project_enclosure_stage1_design]]: derive the set of
-        # referencing Enclosures from `scoped_asset_ids` via
-        # `EnclosureLookup.find_for_assets`. Per L-pre-1 (always-
-        # derive-from-Asset-chain), the Method does NOT declare an
-        # explicit needed-enclosure list; the chain IS the declaration.
-        # Empty result is Permit-by-default (no Enclosure binds any
-        # bound Asset). The decider partitions each row on
+        # [[project_enclosure_stage1_design]]: each Asset in the widened
+        # scope declares the Enclosure (access-gated volume) it is located
+        # in via `located_in_enclosure_id`; the chain walk above carries
+        # that pointer for the Plan-bound Assets and every ancestor, so a
+        # Device inherits the zone of a functional-Component ancestor.
+        # Collect the distinct located-in Enclosures and fetch their permit
+        # status by id. Per L-pre-1 (always-derive-from-Asset-chain), the
+        # Method does NOT declare an explicit needed-enclosure list; the
+        # located-in chain IS the declaration. Empty set is Permit-by-
+        # default (no Asset in scope is located in any Enclosure). The
+        # decider partitions each row on
         # `permit_status == "Permitted" AND lifecycle == "Active"`.
+        located_in_enclosure_ids = frozenset(
+            row.located_in_enclosure_id
+            for row in ancestor_rows
+            if row.located_in_enclosure_id is not None
+        )
         referencing_enclosures = tuple(
-            await deps.enclosure_lookup.find_for_assets(asset_ids=scoped_asset_ids)
+            await deps.enclosure_lookup.find_by_ids(enclosure_ids=located_in_enclosure_ids)
         )
 
         # cross-BC caution snapshot: query the Caution

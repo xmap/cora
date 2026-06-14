@@ -573,10 +573,12 @@ class ProcedureRequiresPermittedEnclosureError(Exception):
     """A referencing Enclosure is not currently Permitted-and-Active.
 
     Cross-BC gate: `start_procedure` derives the set of referencing
-    Enclosures by walking `EnclosureLookup.find_for_assets` against
-    the Procedure's `target_asset_ids`. Per L-pre-1 (always-derive-
-    from-Asset-chain), the Procedure does NOT declare an explicit
-    needed-enclosure list; the Asset chain IS the declaration. This
+    Enclosures by collecting each target Asset's (and ancestor's)
+    `located_in_enclosure_id` across the Procedure's `target_asset_ids`
+    and loading them via `EnclosureLookup.find_by_ids`. Per L-pre-1
+    (always-derive-from-Asset-chain), the Procedure does NOT declare an
+    explicit needed-enclosure list; the located-in chain IS the
+    declaration. This
     error fires when EVERY referencing Enclosure is in
     `permit_status != "Permitted"` OR `lifecycle != "Active"` (the
     universally-not-permitted branch). When at least one row passes

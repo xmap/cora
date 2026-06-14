@@ -10940,14 +10940,16 @@
         "additionalProperties": false,
         "description": "Body for `POST /enclosures`.",
         "properties": {
-          "containing_asset_id": {
-            "description": "Opaque cross-BC pointer to the Asset that physically contains this Enclosure (the hutch's beamline, the cabinet's instrument). Cross-aggregate existence is not checked at the decider; the address tuple (containing_asset_id, name) is unique while lifecycle=Active.",
-            "format": "uuid",
-            "title": "Containing Asset Id",
+          "facility_code": {
+            "description": "Cross-deployment Facility slug for the Site / Area this Enclosure sits within (for example 'aps', 'maxiv'). Lowercase ASCII alphanumeric plus dash, 1-32 chars. The handler resolves the slug via the Federation BC's FacilityLookup port; unknown codes raise HTTP 404. The address tuple (facility_code, name) is unique while lifecycle=Active.",
+            "maxLength": 32,
+            "minLength": 1,
+            "pattern": "^[a-z0-9-]{1,32}$",
+            "title": "Facility Code",
             "type": "string"
           },
           "name": {
-            "description": "Operator-readable display name for this Enclosure instance (for example '2-BM-A hutch', 'sample-prep cabinet'). Uniqueness within a containing Asset (while Active) is enforced by the projection-tier UNIQUE INDEX.",
+            "description": "Operator-readable display name for this Enclosure instance (for example '2-BM-A hutch', 'sample-prep cabinet'). Uniqueness within a containing Facility (while Active) is enforced by the projection-tier UNIQUE INDEX.",
             "maxLength": 200,
             "minLength": 1,
             "title": "Name",
@@ -10956,7 +10958,7 @@
         },
         "required": [
           "name",
-          "containing_asset_id"
+          "facility_code"
         ],
         "title": "RegisterEnclosureRequest",
         "type": "object"
@@ -27114,6 +27116,16 @@
             },
             "description": "Authorize port denied the command."
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The supplied facility_code does not resolve to a known Federation Facility."
+          },
           "409": {
             "content": {
               "application/json": {
@@ -27122,7 +27134,7 @@
                 }
               }
             },
-            "description": "The address tuple (containing_asset_id, name) collides with an Active Enclosure already registered against the same containing Asset."
+            "description": "The address tuple (facility_code, name) collides with an Active Enclosure already registered within the same containing Facility."
           },
           "422": {
             "description": "Request body failed schema validation (missing field, invalid UUID, length out of bounds), OR Idempotency-Key was reused with a different request body."
@@ -27222,7 +27234,7 @@
                 }
               }
             },
-            "description": "Enclosure is already Decommissioned (decommission_enclosure is strict-not-idempotent; Decommissioned is terminal). The address tuple (containing_asset_id, name) is freed for re-registration once the projection arm advances."
+            "description": "Enclosure is already Decommissioned (decommission_enclosure is strict-not-idempotent; Decommissioned is terminal). The address tuple (facility_code, name) is freed for re-registration once the projection arm advances."
           },
           "422": {
             "description": "Request body failed schema validation (missing reason, empty reason, or reason exceeds 500 chars), OR the path enclosure_id is not a well-formed UUID."

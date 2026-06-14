@@ -143,20 +143,20 @@ def bind(deps: Kernel) -> Handler:
             assets[asset_id] = asset
 
         # cross-BC Enclosure pre-flight gate per
-        # [[project_enclosure_stage1_design]]: derive the set of
-        # referencing Enclosures from `target_asset_ids` AND each
-        # Asset's `controller_id` back-reference via
-        # `EnclosureLookup.find_for_assets`. Mirrors Run's scope
-        # expansion (handler.py controller_id widening per commit
-        # 76bcdf856) so a Procedure targeting a stage whose controller
-        # has its own Enclosure binding honors that gate too. Per
-        # L-pre-1 (always-derive-from-Asset-chain), the Procedure does
-        # NOT declare an explicit needed-enclosure list; the chain IS
-        # the declaration. Empty result is Permit-by-default. The
-        # decider partitions each row on `permit_status == "Permitted"
-        # AND lifecycle == "Active"`. Facility-envelope Procedures
-        # (empty target_asset_ids) pass with an empty scope and the
-        # gate trivially passes.
+        # [[project_enclosure_stage1_design]]: each Asset in scope declares
+        # the Enclosure (access-gated volume) it is located in via
+        # `located_in_enclosure_id`; the gate collects those across the
+        # widened scope and fetches their permit status by id. Scope is
+        # `target_asset_ids` AND each Asset's `controller_id` back-
+        # reference, mirroring Run's scope expansion so a Procedure
+        # targeting a stage whose controller sits in its own Enclosure
+        # honors that gate too. Per L-pre-1 (always-derive-from-Asset-
+        # chain), the Procedure does NOT declare an explicit needed-
+        # enclosure list; the located-in chain IS the declaration. Empty
+        # set is Permit-by-default. The decider partitions each row on
+        # `permit_status == "Permitted" AND lifecycle == "Active"`.
+        # Facility-envelope Procedures (empty target_asset_ids) pass with
+        # an empty scope and the gate trivially passes.
         scoped_asset_ids: frozenset[UUID] = state.target_asset_ids | frozenset(
             asset.controller_id for asset in assets.values() if asset.controller_id is not None
         )
@@ -173,7 +173,7 @@ def bind(deps: Kernel) -> Handler:
         # containing Asset's lifecycle is the wrong source of truth for
         # whether a physical interlock is live. The Enclosure gate's
         # source of truth is the ENCLOSURE's own lifecycle
-        # (`find_for_assets` returns only Active Enclosures; the decider
+        # (`find_by_ids` returns only Active Enclosures; the decider
         # fails any non-(Permitted-and-Active) row), so a retired
         # Enclosure is dropped at the right layer while an
         # Active+NotPermitted Enclosure on a Decommissioned ancestor Asset
@@ -191,8 +191,13 @@ def bind(deps: Kernel) -> Handler:
         ancestor_rows = await deps.asset_lookup.ancestors_of(scoped_asset_ids)
         scoped_asset_ids = scoped_asset_ids | frozenset(row.id for row in ancestor_rows)
 
+        located_in_enclosure_ids = frozenset(
+            row.located_in_enclosure_id
+            for row in ancestor_rows
+            if row.located_in_enclosure_id is not None
+        )
         referencing_enclosures = tuple(
-            await deps.enclosure_lookup.find_for_assets(asset_ids=scoped_asset_ids)
+            await deps.enclosure_lookup.find_by_ids(enclosure_ids=located_in_enclosure_ids)
         )
 
         # cross-BC Supply preflight per
