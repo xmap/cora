@@ -46,8 +46,8 @@ practices:
   - {name: 2BM_mosaic_practice, method: mosaic_tomography}
   - {name: 2BM_continuous_rotation_practice, method: continuous_rotation_tomography}
   - {name: 2BM_multi_energy_practice, method: tomography}
-  - {name: Per-objective focus variant, method: focus_alignment, pending: true, note: "Mitutoyo 1.1x / 5x / 10x objectives"}
-  - {name: Per-objective resolution variant, method: resolution_alignment, pending: true, note: "Mitutoyo 1.1x / 5x / 10x objectives"}
+  - {name: Per-objective focus variant, method: focus_alignment, pending: true, note: "Mitutoyo 1.1x / 2x / 10x objectives"}
+  - {name: Per-objective resolution variant, method: resolution_alignment, pending: true, note: "Mitutoyo 1.1x / 2x / 10x objectives"}
   - {name: 2BM_energy_calibration_practice, method: energy_calibration, pending: true}
   - {name: 2BM_ioc_restart_practice, method: ioc_restart, pending: true}
   - {name: 2BM_vibration_baseline_practice, method: vibration_baseline, pending: true}

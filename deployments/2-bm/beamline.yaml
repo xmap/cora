@@ -192,18 +192,20 @@ sample-environment:
       family: Hexapod
       model: aerotech_hexgen_hex300_230hl   # Aerotech HEX300-230HL
       pv: "2bmHXP:"
+      # Operator EPICS channels per axis (item_020). The unit has six DoF; today
+      # only four are exposed as operator channels. Z (m3) and Yaw (m6) exist on
+      # the hexapod but are not wired as operator channels in 2-BM's current EPICS.
+      axis_channels: { X: "2bmHXP:m1", Y: "2bmHXP:m2", Pitch: "2bmHXP:m4", Roll: "2bmHXP:m5" }
       controller: HexapodDrive
       replaceable: true
       travel: "x 55 mm, y 60 mm, z 25 mm, a 15 deg, b 15 deg, c 30 deg"
-      confirm: true
       drawing: { system: EDMS, number: Hex300-Data-Sheet, revision: D20250203 }
     - name: LaminographyPitch
-      family: LinearStage         # Kohzu SA16A goniometer, laminography pitch
+      family: RotaryStage         # Kohzu SA16A-RM goniometer (laminography tilt); a SEPARATE stage, not the hexapod pitch axis (item_020)
       model: kohzu_sa16a
       pv: "2bmb:m49"
       range: 0..20 deg
       new: true
-      confirm: true
     - name: Wedge
       family: Wedge
       passive: true
@@ -221,7 +223,6 @@ sample-environment:
       max_speed: 720 deg/s
       encoder_resolution: 0.0001 deg
       interchangeable_with: ["ABRS-150MP (fast tomo)", "ABS2000 (spindle)"]
-      confirm: true
     - name: SampleTop_X
       family: LinearStage
       model: kohzu_cyat_070
@@ -249,9 +250,12 @@ detector:
   cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (turret, objectives, objective selector, focus) plus camera and scintillator leaf slots, anchored to a Housing. Fixture(microscope_at_2bm) presents as a Detector
   placement: Mount + Frame (2BM_hutch_frame)
   note: >
-    A second camera (FLIR Oryx 31 MP, pv 2bmSP2:) appears in the docs, but the CORA
-    model is single-camera at 2-BM (camera_select fixed at 0). Add it only if 2-BM
-    staff confirm a live second bay.
+    Two cameras are installed (item_020): the FLIR Oryx 5 MP (Camera, pv 2bmSP1:)
+    and a FLIR Oryx 31 MP (Camera_HighRes, pv 2bmSP2:), selected by the Camera_Selector
+    (a Schunk LPTM 30 translation stage with folding mirrors, pv 2bmb:m5). The
+    second camera, the selector, and the per-camera rotation motors (2bmb:m7/m8)
+    are recorded here as real devices; registering them as CORA Assets is a
+    follow-on slice (so they carry new: true today).
   devices:
     - name: Housing
       family: Housing      # the microscope housing (containment anchor)
@@ -259,11 +263,11 @@ detector:
       pv: "2bm:MCTOptics:"
       new: true
     - name: Turret
-      family: RotaryStage         # confirm: RotaryStage vs LinearStage (translating slide)
-      model: optique_peter_lens_turret_motor
-      pv: "2bmb:m1"
-      range: 0..360 deg
-      confirm: true
+      family: LinearStage         # sliding ball-screw objective selector (item_020), not a rotating turret
+      model: nanotec_st4118m1404_b  # motor is a Nanotec stepper (item_020), not Optique Peter; ball-screw 2 mm/rev
+      pv: "2bmb:m1"               # on the ioc2bmb OMS VME58 crate (SampleStageDrive)
+      controller: SampleStageDrive
+      range: -60.030..58.64 mm     # selector positions in mm
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
     - name: Objective_10x
       family: Objective
@@ -308,10 +312,10 @@ detector:
           source: AssertedSource
           status: Provisional
     - name: Objective_Selector
-      family: PseudoAxis          # virtual, decomposes a lens index to turret rotation
+      family: PseudoAxis          # virtual, decomposes a lens index to a turret position (mm) on the sliding selector
       pv: "2bm:MCTOptics:LensSelect"
     - name: Focus
-      family: LinearStage         # the single shared focus stage; per-lens offsets in software
+      family: LinearStage         # shared focus Z-rail; per-lens fine focus is on 2bmb:m2/m3/m4 (LENS0/1/2_FOCUS, item_020), offsets in software
       model: aerotech_pro225sl_1000
       pv: "2bmbAERO:m1"
       controller: FocusDrive
@@ -334,14 +338,26 @@ detector:
           source: AssertedSource
           status: Provisional
     - name: Camera
-      family: Camera
+      family: Camera              # camera 0 (the modeled camera)
       model: flir_oryx_orx_10g_51s5m_c
       pv: "2bmSP1:"
       sensor: 2448 x 2048 pixel
       pixel_size: 3.45 um
       bit_depth: 12 bit
       replaceable: true
-      confirm: true
+      confirm: "max frame rate, sensor kind, readout mode (rolling vs global) still blank (DET-8)"
+    - name: Camera_HighRes
+      family: Camera             # camera 1 (item_020): FLIR Oryx 31 MP; role-name provisional; CORA Asset build deferred
+      pv: "2bmSP2:"
+      new: true
+      confirm: "FLIR Oryx 31 MP; sensor/pixel/bit-depth/frame-rate not yet recorded"
+    - name: Camera_Selector
+      family: LinearStage        # Schunk LPTM 30 translation stage + folding mirrors, selects camera 0/1 (item_020)
+      model: schunk_lptm_30
+      pv: "2bmb:m5"              # on the ioc2bmb OMS VME58 crate (SampleStageDrive)
+      controller: SampleStageDrive
+      new: true
+      confirm: "Schunk LPTM 30; positions Pos.0=20, Pos.1=15"
     - name: DetectorWindow
       family: Window
       passive: true
