@@ -13,10 +13,10 @@ Each Procedure binds a Method + Practice + Plan to a set of target Assets. See [
 | `resolution_alignment` | `Optique_Peter_focus_Z` + image chain |
 | `focus_alignment` | `Sample_top_Z` + image chain |
 | `center_alignment` | `Aerotech_ABRS_rotary`, `Sample_top_X` + image chain |
-| `roll_alignment` | `Aerotech_ABRS_rotary`, `Sample_top_Roll` + image chain |
-| `pitch_alignment` | `Aerotech_ABRS_rotary`, `Sample_top_Pitch` + image chain |
-| `alignment_calibration` | `Sample_top_Roll` |
-| `hexapod_reboot` | `Hexapod_2BM` |
+| `roll_alignment` | `Aerotech_ABRS_rotary`, `Hexapod_Roll` + image chain |
+| `pitch_alignment` | `Aerotech_ABRS_rotary`, `Hexapod_Pitch` + image chain |
+| `alignment_calibration` | `Hexapod_Roll` |
+| `hexapod_reboot` | `Hexapod` |
 
 Image chain = `Oryx_5MP_camera`, `Scintillator_LuAG`.
 

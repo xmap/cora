@@ -30,6 +30,29 @@ Cross-entity links between externally published entities use the publishing syst
 - Do not block aggregate creation on external mint. A network failure on the mint side should never prevent a Subject from being registered or a Run from starting.
 - Do not embed the scheme in the value (`"doi:10.1234/abc"`). Carry the namespace separately so the value stays opaque to the namespace.
 
+## Asset instance names
+
+The human `name` on a registered instance (most visibly an Asset) is an intentional label for the thing's role in the experiment, not a place to encode where it lives or who made it. The name is free-form: it is not a uniqueness key, and it never derives the aggregate id (that comes from `IdGenerator`). So it costs nothing to rename and nothing to choose well, which is exactly why it should carry meaning rather than borrowed identifiers.
+
+- **Name the role, in CORA vocabulary.** `Hexapod`, not `Aerotech_HEX300`; `Hexapod_Yaw`, not `2bmHXP:m6`. What the device IS or DOES, in words that travel across facilities.
+- **One word; qualify only on a real collision.** A single hexapod at a beamline is just `Hexapod`. Add a qualifier when a second instance actually exists (`SampleHexapod` / `DetectorHexapod`), not before. Same defer-until-the-second-instance discipline that the single-word rule applies to domain types.
+- **Deployment is not part of the name.** `facility_code` plus the Unit parent already carry "this is the 2-BM one." `Hexapod`, not `Hexapod_2BM`.
+
+The borrowed identifiers each have a home that survives a vendor swap; keep the name out of their job:
+
+| Tempting to put in the name | Borrowed-identity example | Home instead |
+| --- | --- | --- |
+| Deployment / beamline | `Hexapod_2BM` | `facility_code` + Unit parent |
+| Vendor / part number | `Aerotech_ABRS_rotary` | bound `Model` (PIDINST Manufacturer + Model) |
+| EPICS PV / channel | `OMS_VME58_2bmb_drive` | `alternate_identifiers` (kind `EPICS_PV`) |
+| IOC handle / serial / firmware | `Aerotech_2bmbAERO_drive` | `settings` (`serial_number`, `firmware_version`) |
+
+**Anti-patterns:**
+
+- Do not mirror the EPICS PV, IOC name, or vendor catalog string into the name because "that is what operators type." Those identifiers have homes that survive a vendor swap; the name should survive it too.
+- Do not pre-qualify against a hypothetical second instance. The qualifier is cheap to add when the collision is real, because names are not keys.
+- Do not encode the deployment in the name to make it globally unique. Names are not unique keys; `facility_code` scopes them.
+
 ## Units of measurement
 
 Numeric fields whose meaning depends on a unit carry the unit as a three-field annotation on the declaring JSON Schema, not in the field name. The annotation is `{system, code, label?}`.

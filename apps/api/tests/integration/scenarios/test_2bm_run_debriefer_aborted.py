@@ -179,7 +179,7 @@ _DEVICES = (
     DeviceSpec(
         "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
     ),
-    DeviceSpec("Hexapod_2BM", _ASSET_HEXAPOD_ID, "Hexapod", _CAP_HEXAPOD_ID),
+    DeviceSpec("Hexapod", _ASSET_HEXAPOD_ID, "Hexapod", _CAP_HEXAPOD_ID),
 )
 
 _BEAMTIME = BeamtimeSpec(

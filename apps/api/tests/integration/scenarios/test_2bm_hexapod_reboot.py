@@ -33,7 +33,7 @@ hexapod is verified enabled again, RestoreAsset fires.
 The scenario also unlocks four firsts in CORA's 2-BM doc tree:
 
   1. New Family `Hexapod` joins the cross-facility catalog.
-  2. New Device `Hexapod_2BM` joins the 2-BM Asset inventory.
+  2. New Device `Hexapod` joins the 2-BM Asset inventory.
   3. New Procedure kind `hexapod_reboot` joins the 2-BM Procedure
      list (first maintenance-phase routine).
   4. New Caution about cold-start lockups joins the 2-BM operator
@@ -198,7 +198,7 @@ _DEVICES = (
         _CAP_MOTION_CONTROLLER_ID,
     ),
     DeviceSpec(
-        "Hexapod_2BM",
+        "Hexapod",
         _ASSET_HEXAPOD_ID,
         "Hexapod",
         _CAP_HEXAPOD_ID,

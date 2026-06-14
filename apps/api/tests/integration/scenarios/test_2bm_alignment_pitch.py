@@ -6,8 +6,8 @@ bc_primary: Operation
 bc_touches: Equipment, Operation, Recipe
 
 Scenario test for the `pitch` step of the rotation-axis alignment
-chain. Drives the `Sample_top_Pitch` tilt motor (orthogonal to
-`Sample_top_Roll`) to remove the rotation axis's out-of-plane tilt
+chain. Drives the `Hexapod_Pitch` tilt motor (orthogonal to
+`Hexapod_Roll`) to remove the rotation axis's out-of-plane tilt
 toward/away from the camera. Measured via image-sharpness delta
 between 0° and 180° projections of a fiducial sphere: a pitch tilt
 moves the sphere closer to / further from the scintillator across
@@ -21,7 +21,7 @@ taxonomy this scenario fits into.
 
 To ground the `pitch_alignment` Procedure inventory row on
 `docs/deployments/2-bm/procedures.md`, register a new Asset
-(`Sample_top_Pitch`), and complete the five-routine alignment chain
+(`Hexapod_Pitch`), and complete the five-routine alignment chain
 in code. After this scenario, the chain's full inventory is
 exercised end-to-end.
 
@@ -53,7 +53,7 @@ Iterative tilt correction on sharpness delta:
   4. Compute `delta_sharpness = sharpness_at_0 - sharpness_at_180`.
      A non-zero delta means the sphere moved closer to / further
      from the scintillator between the two rotations: pitch is off.
-  5. If `|delta_sharpness| > tolerance`: adjust Sample_top_Pitch by
+  5. If `|delta_sharpness| > tolerance`: adjust Hexapod_Pitch by
      a small angle proportional to -delta_sharpness, goto 2.
   6. Else: lock the calibrated pitch value.
 
@@ -64,8 +64,8 @@ steps are milliradians.
 ## Asset stack (rotary + pitch-tilt + detector chain)
 
   - Aerotech ABRS rotary stage (the rotation axis)
-  - Sample_top_Pitch tilt motor (the pitch correction; orthogonal
-    to Sample_top_Roll)
+  - Hexapod_Pitch tilt motor (the pitch correction; orthogonal
+    to Hexapod_Roll)
   - FLIR Oryx 5MP camera (the alignment-frame detector)
   - LuAG scintillator (visible-light conversion)
 
@@ -153,7 +153,7 @@ _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000358501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000358a01")
 
 # Capabilities (4: rotary + pseudo-axis pitch + camera + scintillator).
-# Sample_top_Pitch is a PseudoAxis (virtual DoF over an underlying solver),
+# Hexapod_Pitch is a PseudoAxis (virtual DoF over an underlying solver),
 # not a LinearStage. See project_pitch_roll_retag memo for the partial-fix
 # rationale; the remaining four hexapod DoFs are deferred until trigger.
 _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
@@ -183,7 +183,7 @@ _DEVICES = (
     DeviceSpec(
         "Aerotech_ABRS_rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID
     ),
-    DeviceSpec("Sample_top_Pitch", _ASSET_SAMPLE_TOP_PITCH_ID, "PseudoAxis", _CAP_PSEUDO_AXIS_ID),
+    DeviceSpec("Hexapod_Pitch", _ASSET_SAMPLE_TOP_PITCH_ID, "PseudoAxis", _CAP_PSEUDO_AXIS_ID),
     DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec(
         "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
@@ -204,7 +204,7 @@ def _id_queue() -> list[UUID]:
         e(),
         e(),
         e(),
-        # update_asset_partition_rule for Sample_top_Pitch (PseudoAxis): event_id only
+        # update_asset_partition_rule for Hexapod_Pitch (PseudoAxis): event_id only
         e(),
         # define_method: method_id, event_id
         _METHOD_PITCH_ID,
@@ -337,10 +337,10 @@ async def test_pitch_alignment_plays_out_end_to_end(
             correlation_id=_CORRELATION_ID,
         )
 
-    # ----- Equipment BC: set partition_rule on the Sample_top_Pitch PseudoAxis -----
+    # ----- Equipment BC: set partition_rule on the Hexapod_Pitch PseudoAxis -----
     #
     # SolverReference points at the 2bmHXP hexapod-kinematics solver. The
-    # constituent topology (Hexapod_2BM physical axes feeding the virtual
+    # constituent topology (Hexapod physical axes feeding the virtual
     # Pitch DoF) is not wired here: the runtime evaluator
     # eval_solver_reference is NotImplemented, and these alignment
     # scenarios use no Plan wires, so the data-substrate retag only needs
@@ -473,7 +473,7 @@ async def test_pitch_alignment_plays_out_end_to_end(
             evidence={"iteration": 1, "delta_sharpness": 0.11, "lever_arm_mm": 75.0},
         ),
         _setpoint(
-            channel="Sample_top_Pitch",
+            channel="Hexapod_Pitch",
             target_value=-0.0008,
             units="deg",
             role="adjust",
@@ -509,7 +509,7 @@ async def test_pitch_alignment_plays_out_end_to_end(
     )
     finalize = (
         _setpoint(
-            channel="Sample_top_Pitch",
+            channel="Hexapod_Pitch",
             target_value=-0.0008,
             units="deg",
             role="lock_at_calibrated",
@@ -548,7 +548,7 @@ async def test_pitch_alignment_plays_out_end_to_end(
 
     # ----- Assert: each target Asset reached Active lifecycle -----
     #
-    # Sample_top_Pitch carries an extra AssetPartitionRuleUpdated event
+    # Hexapod_Pitch carries an extra AssetPartitionRuleUpdated event
     # from the SolverReference rule set above; the other 3 Assets have
     # the canonical 3-event sequence.
 

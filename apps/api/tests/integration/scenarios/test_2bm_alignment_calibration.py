@@ -52,14 +52,14 @@ The full `auto.py` also calibrates `K_cam` (camera-rotation
 sensitivity), but the 2-BM imaging chain in this corpus does not
 yet register a camera-rotation motor; that calibration step
 lands when the camera-rotation Device is added. This scenario
-covers K_roll + K_pitch on the existing Sample_top_Roll /
-Sample_top_Pitch motors.
+covers K_roll + K_pitch on the existing Hexapod_Roll /
+Hexapod_Pitch motors.
 
 ## Asset stack (rotation axis + tilt motors + image chain)
 
 Subset of the alignment chain's Asset stack: Aerotech rotary (for
-the rotation measurement at 0° / 180°), Sample_top_Roll +
-Sample_top_Pitch (the motors being calibrated), Oryx camera +
+the rotation measurement at 0° / 180°), Hexapod_Roll +
+Hexapod_Pitch (the motors being calibrated), Oryx camera +
 LuAG scintillator (the centroid-detection chain). Sample_top_Z
 is NOT used (calibration runs at a fixed Y_ref height; depth
 tuning is the `focus` step's concern).
@@ -146,7 +146,7 @@ _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000410a01")
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000410501")
 
 # Capabilities (rotary + pseudo-axis (tilt motors) + camera + scintillator).
-# Sample_top_Roll is a PseudoAxis (virtual DoF over an underlying solver),
+# Hexapod_Roll is a PseudoAxis (virtual DoF over an underlying solver),
 # not a LinearStage. See project_pitch_roll_retag memo for the partial-fix
 # rationale; the remaining four hexapod DoFs are deferred until trigger.
 _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
@@ -175,7 +175,7 @@ _DEVICES = (
     DeviceSpec(
         "Aerotech_ABRS_rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID
     ),
-    DeviceSpec("Sample_top_Roll", _ASSET_SAMPLE_TOP_ROLL_ID, "PseudoAxis", _CAP_PSEUDO_AXIS_ID),
+    DeviceSpec("Hexapod_Roll", _ASSET_SAMPLE_TOP_ROLL_ID, "PseudoAxis", _CAP_PSEUDO_AXIS_ID),
     DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec(
         "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
@@ -196,7 +196,7 @@ def _id_queue() -> list[UUID]:
         e(),
         e(),
         e(),
-        # update_asset_partition_rule for Sample_top_Roll (PseudoAxis): event_id only
+        # update_asset_partition_rule for Hexapod_Roll (PseudoAxis): event_id only
         e(),
         # define_method: method_id, event_id
         _METHOD_CALIB_ID,
@@ -315,7 +315,7 @@ async def test_alignment_calibration_plays_out_end_to_end(
             correlation_id=_CORRELATION_ID,
         )
 
-    # ----- Equipment BC: set partition_rule on the Sample_top_Roll PseudoAxis -----
+    # ----- Equipment BC: set partition_rule on the Hexapod_Roll PseudoAxis -----
     #
     # SolverReference points at the 2bmHXP hexapod-kinematics solver. The
     # constituent topology is not wired here (no Plan wires in this
@@ -425,7 +425,7 @@ async def test_alignment_calibration_plays_out_end_to_end(
             entries=(
                 # K_roll calibration triplet
                 _setpoint(
-                    channel="Sample_top_Roll",
+                    channel="Hexapod_Roll",
                     target_value=0.0,
                     units="deg",
                     role="calibration_baseline",
@@ -434,12 +434,12 @@ async def test_alignment_calibration_plays_out_end_to_end(
                 ),
                 _action(
                     action_name="measure_rotation",
-                    motor="Sample_top_Roll",
+                    motor="Hexapod_Roll",
                     sampled_at=t,
                     expects=["shift_x"],
                 ),
                 _check(
-                    channel="Sample_top_Roll.shift_x",
+                    channel="Hexapod_Roll.shift_x",
                     passed=True,
                     source="centroid_detection",
                     actual=baseline_shift_x_px,
@@ -447,7 +447,7 @@ async def test_alignment_calibration_plays_out_end_to_end(
                     sampled_at=t,
                 ),
                 _setpoint(
-                    channel="Sample_top_Roll",
+                    channel="Hexapod_Roll",
                     target_value=delta_roll_deg,
                     units="deg",
                     role="calibration_bump",
@@ -456,12 +456,12 @@ async def test_alignment_calibration_plays_out_end_to_end(
                 ),
                 _action(
                     action_name="measure_rotation",
-                    motor="Sample_top_Roll",
+                    motor="Hexapod_Roll",
                     sampled_at=t,
                     expects=["shift_x"],
                 ),
                 _check(
-                    channel="Sample_top_Roll.shift_x",
+                    channel="Hexapod_Roll.shift_x",
                     passed=True,
                     source="centroid_detection",
                     actual=bumped_shift_x_px,
@@ -473,7 +473,7 @@ async def test_alignment_calibration_plays_out_end_to_end(
                     delta_px=bumped_shift_x_px - baseline_shift_x_px,
                 ),
                 _setpoint(
-                    channel="Sample_top_Roll",
+                    channel="Hexapod_Roll",
                     target_value=0.0,
                     units="deg",
                     role="calibration_restore",

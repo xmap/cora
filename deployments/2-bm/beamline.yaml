@@ -178,7 +178,7 @@ sample-environment:
       pv: { y: "2bmb:m24", z: "2bmb:m20", upstream_x: "2bmb:m21", downstream_x: "2bmb:m22" }
       new: true
       confirm: true
-    - name: Hexapod_2BM
+    - name: Hexapod
       family: Hexapod
       model: aerotech_hexgen_hex300_230hl   # Aerotech HEX300-230HL
       pv: "2bmHXP:"
@@ -227,9 +227,9 @@ sample-environment:
       range: -10..10 mm
       max_speed: 1 mm/s
       encoder_resolution: 0.0005 mm
-    - name: Sample_top_Roll
+    - name: Hexapod_Roll
       family: PseudoAxis          # virtual DoF over the hexapod kinematics
-    - name: Sample_top_Pitch
+    - name: Hexapod_Pitch
       family: PseudoAxis
 
 detector:

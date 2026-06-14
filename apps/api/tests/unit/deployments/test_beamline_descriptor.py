@@ -130,7 +130,7 @@ def test_drawings_and_calibrations_loaded() -> None:
     assert obj0.drawing.system == "EDMS"
     assert obj0.calibrations
     assert obj0.calibrations[0].quantity == "magnification"
-    assert devices["Hexapod_2BM"].drawing is not None
+    assert devices["Hexapod"].drawing is not None
 
 
 def test_malformed_descriptor_raises(tmp_path: Path) -> None:

@@ -6,7 +6,7 @@ bc_primary: Operation
 bc_touches: Equipment, Operation, Recipe
 
 Scenario test for the `roll` step of the rotation-axis alignment
-chain. Drives the `Sample_top_Roll` tilt motor (under the rotation
+chain. Drives the `Hexapod_Roll` tilt motor (under the rotation
 stage) to make the rotation axis perpendicular to the camera Y axis,
 so that a fiducial sphere mounted on the rotation axis traces a
 horizontal line at the same Y across all rotation angles. Comes
@@ -20,7 +20,7 @@ taxonomy this scenario fits into.
 
 To ground the `roll_alignment` Procedure inventory row on
 `docs/deployments/2-bm/procedures.md`, and to register a new Asset
-(`Sample_top_Roll`) that no prior scenario has touched. Per
+(`Hexapod_Roll`) that no prior scenario has touched. Per
 [[project_pilot_docs_design]] no doc page may name an aggregate until
 a scenario test registers it; this file unlocks the roll-tilt motor
 in the 2-BM Asset inventory.
@@ -33,7 +33,7 @@ sphere, but adjust different motors against different image axes:
   - `center_alignment` adjusts `Sample_top_X` to make the sphere
     centroid X coincide at 0° and 180° (the rotation axis runs
     through the sample's lateral midline).
-  - `roll_alignment` adjusts `Sample_top_Roll` to make the sphere
+  - `roll_alignment` adjusts `Hexapod_Roll` to make the sphere
     centroid Y coincide at 0° and 180° (the rotation axis is
     vertical, perpendicular to the camera Y axis).
 
@@ -51,10 +51,10 @@ Iterative tilt correction:
   2. Rotate to 0°, acquire, note sphere centroid Y.
   3. Rotate to 180°, acquire, note sphere centroid Y.
   4. Compute Y delta = (centroid_at_180 - centroid_at_0).
-  5. If |delta_y| > tolerance: adjust Sample_top_Roll by a small
+  5. If |delta_y| > tolerance: adjust Hexapod_Roll by a small
      angle proportional to -delta_y / (2 * lever_arm), goto 2.
   6. Else: write the calibrated roll value to the
-     `Sample_top_Roll` PV. Done.
+     `Hexapod_Roll` PV. Done.
 
 Typical convergence: 2 iterations starting from a few-pixel Y delta.
 Roll moves are small-angle (milliradians or arc-seconds); the motor's
@@ -63,7 +63,7 @@ absolute position carries the calibration after the routine completes.
 ## Asset stack (rotary + roll-tilt + detector chain)
 
   - Aerotech ABRS rotary stage (the rotation axis)
-  - Sample_top_Roll tilt motor (the roll correction; a goniometer or
+  - Hexapod_Roll tilt motor (the roll correction; a goniometer or
     wedge stage beneath the sample-top)
   - FLIR Oryx 5MP camera (the alignment-frame detector)
   - LuAG scintillator (visible-light conversion)
@@ -82,7 +82,7 @@ this routine does not manipulate them. They participate in the
     multi-fiducial target. Whether the Subject BC should model
     fiducial geometry is a watch item.
   - **Lever-arm calibration is operator tribal knowledge.** The
-    Sample_top_Roll motor's angular step does not map directly to
+    Hexapod_Roll motor's angular step does not map directly to
     pixels; the conversion depends on sample mount geometry and
     must be calibrated separately. The scenario captures the
     conversion as a `lever_arm_mm` evidence key but does not enforce
@@ -151,7 +151,7 @@ _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000357501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000357a01")
 
 # Capabilities (4: rotary + pseudo-axis roll + camera + scintillator).
-# Sample_top_Roll is a PseudoAxis (virtual DoF over an underlying solver),
+# Hexapod_Roll is a PseudoAxis (virtual DoF over an underlying solver),
 # not a LinearStage. See project_pitch_roll_retag memo for the partial-fix
 # rationale; the remaining four hexapod DoFs are deferred until trigger.
 _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
@@ -181,7 +181,7 @@ _DEVICES = (
     DeviceSpec(
         "Aerotech_ABRS_rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID
     ),
-    DeviceSpec("Sample_top_Roll", _ASSET_SAMPLE_TOP_ROLL_ID, "PseudoAxis", _CAP_PSEUDO_AXIS_ID),
+    DeviceSpec("Hexapod_Roll", _ASSET_SAMPLE_TOP_ROLL_ID, "PseudoAxis", _CAP_PSEUDO_AXIS_ID),
     DeviceSpec("Oryx_5MP_camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec(
         "Scintillator_LuAG", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID
@@ -202,7 +202,7 @@ def _id_queue() -> list[UUID]:
         e(),
         e(),
         e(),
-        # update_asset_partition_rule for Sample_top_Roll (PseudoAxis): event_id only
+        # update_asset_partition_rule for Hexapod_Roll (PseudoAxis): event_id only
         e(),
         # define_method: method_id, event_id
         _METHOD_ROLL_ID,
@@ -334,7 +334,7 @@ async def test_roll_alignment_plays_out_end_to_end(
             correlation_id=_CORRELATION_ID,
         )
 
-    # ----- Equipment BC: set partition_rule on the Sample_top_Roll PseudoAxis -----
+    # ----- Equipment BC: set partition_rule on the Hexapod_Roll PseudoAxis -----
     #
     # SolverReference points at the 2bmHXP hexapod-kinematics solver. The
     # constituent topology is not wired here (no Plan wires in this
@@ -466,7 +466,7 @@ async def test_roll_alignment_plays_out_end_to_end(
             evidence={"iteration": 1, "delta_y_px": 3.0, "lever_arm_mm": 75.0},
         ),
         _setpoint(
-            channel="Sample_top_Roll",
+            channel="Hexapod_Roll",
             target_value=-0.0011,
             units="deg",
             role="adjust",
@@ -501,7 +501,7 @@ async def test_roll_alignment_plays_out_end_to_end(
     )
     finalize = (
         _setpoint(
-            channel="Sample_top_Roll",
+            channel="Hexapod_Roll",
             target_value=-0.0011,
             units="deg",
             role="lock_at_calibrated",
@@ -540,7 +540,7 @@ async def test_roll_alignment_plays_out_end_to_end(
 
     # ----- Assert: each target Asset reached Active lifecycle -----
     #
-    # Sample_top_Roll carries an extra AssetPartitionRuleUpdated event
+    # Hexapod_Roll carries an extra AssetPartitionRuleUpdated event
     # from the SolverReference rule set above; the other 3 Assets have
     # the canonical 3-event sequence.
 
