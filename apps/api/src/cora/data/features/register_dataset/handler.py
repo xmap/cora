@@ -6,15 +6,22 @@ gate-review Q2 lock B, this is the canonical pattern for
 cross-aggregate validation in CORA, mirroring `RunStartContext`
 (documented in CONTRIBUTING.md).
 
-## Pre-load order (Run? → Subject? → each derived_from?)
+## Pre-load order (Run? → Procedure? → Subject? → each derived_from?)
 
   1. If `command.producing_run_id is not None`:
      `load_run(producing_run_id)` → if None,
-     `ProducingRunNotFoundError` (Data-BC error → 409)
-  2. If `command.subject_id is not None`:
+     `ProducingRunNotFoundError` (Data-BC error → 404)
+  2. If `command.producing_procedure_id is not None`:
+     `load_procedure(producing_procedure_id)` → if None,
+     `ProducingProcedureNotFoundError` (Data-BC error → 404).
+     Unlike the other refs, the decider reads one field off the
+     loaded Procedure (`actuation_kind`) to derive
+     `producing_actuation_kind` server-side, the same way it derives
+     `producing_run_end_state` from the loaded Run.
+  3. If `command.subject_id is not None`:
      `load_subject(subject_id)` → if None,
-     `LinkedSubjectNotFoundError` (Data-BC error → 409)
-  3. For each id in `command.derived_from`:
+     `LinkedSubjectNotFoundError` (Data-BC error → 404)
+  4. For each id in `command.derived_from`:
      `load_dataset(id)` → collect missing ids, raise
      `DerivedFromDatasetsNotFoundError(missing)` if any
 
@@ -23,10 +30,13 @@ but not the bottleneck at MVP scale.
 
 ## Cross-track surface
 
-This is the first Data BC handler that crosses tracks: Run (Track
-A) and Subject (Independent) are both consulted at registration
-time. The pattern locked here will inform every future "X is
-about Y" or "X was produced by Y" relationship.
+Data crosses into three sibling BCs' `aggregates.*` read surfaces
+here: Run (Track A), Procedure (Operation BC) and Subject
+(Independent). The Procedure read is the third Data→upstream load
+(after Run + Subject); this is the established eventual-consistency
+pre-load pattern, not a new port (no shared `Lookup` port until a
+read-side query needs one). The actuation kind crosses as a raw
+string snapshot, so no Operation BC type leaks into the Data domain.
 """
 
 from typing import Protocol
@@ -36,6 +46,7 @@ from cora.data.aggregates.dataset import (
     Dataset,
     DerivedFromDatasetsNotFoundError,
     LinkedSubjectNotFoundError,
+    ProducingProcedureNotFoundError,
     ProducingRunNotFoundError,
     event_type_name,
     load_dataset,
@@ -50,6 +61,7 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.operation.aggregates.procedure import load_procedure
 from cora.run.aggregates.run import load_run
 from cora.shared.identity import ActorId
 from cora.subject.aggregates.subject import load_subject
@@ -144,6 +156,14 @@ def bind(deps: Kernel) -> Handler:
             if producing_run is None:
                 raise ProducingRunNotFoundError(command.producing_run_id)
 
+        producing_procedure = None
+        if command.producing_procedure_id is not None:
+            producing_procedure = await load_procedure(
+                deps.event_store, command.producing_procedure_id
+            )
+            if producing_procedure is None:
+                raise ProducingProcedureNotFoundError(command.producing_procedure_id)
+
         subject = None
         if command.subject_id is not None:
             subject = await load_subject(deps.event_store, command.subject_id)
@@ -163,6 +183,7 @@ def bind(deps: Kernel) -> Handler:
 
         context = DatasetRegistrationContext(
             producing_run=producing_run,
+            producing_procedure=producing_procedure,
             subject=subject,
             derived_from=derived_from_loaded,
         )

@@ -86,6 +86,7 @@ from cora.data.aggregates.dataset import (
     InvalidPromotionReasonError,
     InvalidUsedCalibrationsError,
     LinkedSubjectNotFoundError,
+    ProducingProcedureNotFoundError,
     ProducingRunNotFoundError,
 )
 from cora.data.aggregates.distribution import (
@@ -328,6 +329,7 @@ def register_data_routes(app: FastAPI) -> None:
         # family now routes through _handle_not_found instead of the
         # old _handle_cross_agg_conflict (renamed _handle_lineage_state_conflict).
         ProducingRunNotFoundError,
+        ProducingProcedureNotFoundError,
         LinkedSubjectNotFoundError,
         DerivedFromDatasetsNotFoundError,
         # Acquisition cross-aggregate not-found (producing Asset / Run).

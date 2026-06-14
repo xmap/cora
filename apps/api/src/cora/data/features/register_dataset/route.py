@@ -123,6 +123,17 @@ class RegisterDatasetRequest(BaseModel):
             "externally-sourced or pre-existing data."
         ),
     )
+    producing_procedure_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Optional id of the conducted Procedure that produced this "
+            "Dataset. The server derives the actuation-kind provenance from "
+            "this Procedure (was the data driven against real hardware or a "
+            "simulator) and uses it to gate promotion to Production. An opaque "
+            "reference only: the kind itself is never a caller input. None for "
+            "externally-sourced data or Runs not driven by a conducted Procedure."
+        ),
+    )
     subject_id: UUID | None = Field(
         default=None,
         description=(
@@ -205,7 +216,8 @@ _ = DATASET_CONFORMS_TO_ENTRY_MAX_LENGTH  # docstring reference
             "model": ErrorResponse,
             "description": (
                 "Cross-aggregate reference does not exist: producing_run_id, "
-                "subject_id, or one or more derived_from ids."
+                "producing_procedure_id, subject_id, or one or more "
+                "derived_from ids."
             ),
         },
         status.HTTP_409_CONFLICT: {
@@ -252,6 +264,7 @@ async def post_datasets(
             media_type=body.encoding.media_type,
             conforms_to=frozenset(body.encoding.conforms_to),
             producing_run_id=body.producing_run_id,
+            producing_procedure_id=body.producing_procedure_id,
             subject_id=body.subject_id,
             derived_from=frozenset(body.derived_from),
             used_calibration_ids=frozenset(body.used_calibration_ids),

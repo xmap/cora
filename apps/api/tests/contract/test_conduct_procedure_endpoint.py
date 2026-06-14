@@ -63,6 +63,9 @@ def test_post_conduct_empty_steps_returns_200_succeeded_for_running_procedure() 
     assert payload["completed_count"] == 0
     assert payload["succeeded"] is True
     assert payload["failure"] is None
+    # actuation_kind is surfaced on the response; None here because the
+    # default in-memory deployment has no routing table to declare simulated-ness.
+    assert payload["actuation_kind"] is None
     _ = pid  # unused; included only to exercise the _register_and_start helper shape
 
 

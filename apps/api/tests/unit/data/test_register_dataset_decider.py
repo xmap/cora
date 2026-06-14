@@ -29,6 +29,7 @@ from cora.data.aggregates.dataset import (
     InvalidDerivedFromError,
     InvalidUsedCalibrationsError,
     LinkedSubjectNotFoundError,
+    ProducingProcedureNotFoundError,
     ProducingRunNotFoundError,
 )
 from cora.data.features import register_dataset
@@ -36,6 +37,7 @@ from cora.data.features.register_dataset import (
     DatasetRegistrationContext,
     RegisterDataset,
 )
+from cora.operation.aggregates.procedure import Procedure, ProcedureName, ProcedureStatus
 from cora.run.aggregates.run import Run, RunName, RunStatus
 from cora.shared.identity import ActorId
 from cora.subject.aggregates.subject import Subject, SubjectName
@@ -80,6 +82,20 @@ def _fake_run() -> Run:
         plan_id=uuid4(),
         subject_id=uuid4(),
         status=RunStatus.RUNNING,
+    )
+
+
+def _fake_procedure(
+    *,
+    actuation_kind: str | None = None,
+    status: ProcedureStatus = ProcedureStatus.COMPLETED,
+) -> Procedure:
+    return Procedure(
+        id=uuid4(),
+        name=ProcedureName("seed-procedure"),
+        kind="alignment",
+        status=status,
+        actuation_kind=actuation_kind,
     )
 
 
@@ -627,28 +643,31 @@ def test_decide_does_not_compare_used_calibration_ids_against_producing_run() ->
     assert events[0].used_calibration_ids == (cal_dataset_only,)
 
 
-# ---------- actuation kind capture ----------
+# ---------- actuation kind derivation (from the producing Procedure) ----------
 
 
 @pytest.mark.unit
-def test_decide_captures_actuation_kind_into_event() -> None:
-    """The orchestrator-supplied actuation_kind is snapshotted verbatim
-    onto DatasetRegistered (the promote gate reads it later)."""
+def test_decide_derives_actuation_kind_from_producing_procedure() -> None:
+    """The kind is DERIVED server-side from the loaded Procedure's terminal
+    state and snapshotted onto DatasetRegistered (the promote gate reads it
+    later). It is never a caller input."""
+    procedure = _fake_procedure(actuation_kind="Simulated")
     events = register_dataset.decide(
         state=None,
-        command=_good_command(actuation_kind="Simulated"),
-        context=DatasetRegistrationContext(),
+        command=_good_command(producing_procedure_id=procedure.id),
+        context=DatasetRegistrationContext(producing_procedure=procedure),
         now=_NOW,
         new_id=uuid4(),
         registered_by=_REGISTERED_BY,
     )
     assert events[0].producing_actuation_kind == "Simulated"
+    assert events[0].producing_procedure_id == procedure.id
 
 
 @pytest.mark.unit
-def test_decide_defaults_actuation_kind_to_none() -> None:
-    """A registration with no actuation_kind (external upload) records None,
-    leaving the promote gate inactive."""
+def test_decide_defaults_actuation_kind_to_none_without_producing_procedure() -> None:
+    """A registration with no producing Procedure (external upload) records
+    None for both the procedure ref and the kind, leaving the gate inactive."""
     events = register_dataset.decide(
         state=None,
         command=_good_command(),
@@ -657,4 +676,40 @@ def test_decide_defaults_actuation_kind_to_none() -> None:
         new_id=uuid4(),
         registered_by=_REGISTERED_BY,
     )
+    assert events[0].producing_procedure_id is None
     assert events[0].producing_actuation_kind is None
+
+
+@pytest.mark.unit
+def test_decide_derives_none_kind_from_non_terminal_procedure() -> None:
+    """A Dataset naming a still-Running Procedure (in-situ registration mid-
+    conduct) derives None (no terminal kind recorded yet); the gate stays
+    inactive for this slice."""
+    procedure = _fake_procedure(actuation_kind=None, status=ProcedureStatus.RUNNING)
+    events = register_dataset.decide(
+        state=None,
+        command=_good_command(producing_procedure_id=procedure.id),
+        context=DatasetRegistrationContext(producing_procedure=procedure),
+        now=_NOW,
+        new_id=uuid4(),
+        registered_by=_REGISTERED_BY,
+    )
+    assert events[0].producing_procedure_id == procedure.id
+    assert events[0].producing_actuation_kind is None
+
+
+@pytest.mark.unit
+def test_decide_raises_when_producing_procedure_set_but_context_missing() -> None:
+    """Decider-level statement of the handler's contract: a set
+    producing_procedure_id with no loaded Procedure raises (mirrors the
+    producing_run guard)."""
+    procedure_id = uuid4()
+    with pytest.raises(ProducingProcedureNotFoundError):
+        register_dataset.decide(
+            state=None,
+            command=_good_command(producing_procedure_id=procedure_id),
+            context=DatasetRegistrationContext(producing_procedure=None),
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_REGISTERED_BY,
+        )

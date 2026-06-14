@@ -10694,6 +10694,19 @@
             "title": "Name",
             "type": "string"
           },
+          "producing_procedure_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional id of the conducted Procedure that produced this Dataset. The server derives the actuation-kind provenance from this Procedure (was the data driven against real hardware or a simulator) and uses it to gate promotion to Production. An opaque reference only: the kind itself is never a caller input. None for externally-sourced data or Runs not driven by a conducted Procedure.",
+            "title": "Producing Procedure Id"
+          },
           "producing_run_id": {
             "anyOf": [
               {
@@ -25556,7 +25569,7 @@
                 }
               }
             },
-            "description": "Cross-aggregate reference does not exist: producing_run_id, subject_id, or one or more derived_from ids."
+            "description": "Cross-aggregate reference does not exist: producing_run_id, producing_procedure_id, subject_id, or one or more derived_from ids."
           },
           "409": {
             "content": {
