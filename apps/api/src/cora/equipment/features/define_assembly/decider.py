@@ -43,6 +43,7 @@ from cora.equipment.aggregates.assembly import (
     InvalidParameterOverridesSchemaError,
     SubAssemblyContentHashMismatchError,
     SubAssemblyCycleError,
+    SubAssemblyNestingTooDeepError,
     SubAssemblyNotFoundForAssemblyError,
     SubAssemblySlotNameConflictError,
     WireReferencesUnknownSlotError,
@@ -81,11 +82,19 @@ def decide(
         -> SubAssemblyCycleError.
       - Every required_sub_assemblies child must resolve to a defined Assembly
         -> SubAssemblyNotFoundForAssemblyError (sorted-first missing).
+      - No required_sub_assemblies child may itself declare sub-assemblies
+        (one composing level is supported, and register_fixture refuses a
+        deeper child, so authoring rejects it too: a defined Assembly stays
+        instantiable) -> SubAssemblyNestingTooDeepError (sorted-first).
       - Each required_sub_assemblies link's pinned content_hash must match the
         child's current content_hash -> SubAssemblyContentHashMismatchError
         (sorted-first drift).
       - No required_sub_assemblies link slot_name may collide with a leaf slot
         or another link -> SubAssemblySlotNameConflictError.
+      - No leaf slot_name may appear in more than one composed blueprint
+        once the parent's leaf slots and each child's leaf slots merge into
+        the flat namespace register_fixture materializes
+        -> SubAssemblySlotNameConflictError (sorted-first collision).
     """
     if state is not None:
         raise AssemblyAlreadyExistsError(state.id)
@@ -99,6 +108,9 @@ def decide(
     if context.missing_sub_assembly_ids:
         first_missing_sub = next(iter(sorted(context.missing_sub_assembly_ids, key=str)))
         raise SubAssemblyNotFoundForAssemblyError(first_missing_sub)
+    if context.sub_assembly_too_deep_ids:
+        first_too_deep = next(iter(sorted(context.sub_assembly_too_deep_ids, key=str)))
+        raise SubAssemblyNestingTooDeepError(first_too_deep)
     if context.sub_assembly_hash_mismatches:
         sub_id, pinned, current = next(
             iter(sorted(context.sub_assembly_hash_mismatches, key=lambda m: str(m[0])))
@@ -136,6 +148,19 @@ def decide(
                 link_name, reason="duplicate sub-assembly slot_name"
             )
         seen_sub_assembly_names.add(link_name)
+
+    # Cross-blueprint leaf-name collision: register_fixture merges the
+    # parent's own leaf slots and every (leaf) child's leaf slots into
+    # one flat namespace. Detect a clash here, where the operator can
+    # still rename, rather than only at the end of the install-then-
+    # register choreography. Computed in resolve_sub_assembly_pins
+    # (it holds the loaded children); the decider just raises.
+    if context.sub_assembly_leaf_collisions:
+        first_collision = next(iter(sorted(context.sub_assembly_leaf_collisions)))
+        raise SubAssemblySlotNameConflictError(
+            first_collision,
+            reason="slot_name appears in more than one composed blueprint",
+        )
 
     if command.parameter_overrides_schema is not None:
         validate_schema_declaration(

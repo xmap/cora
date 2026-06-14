@@ -706,11 +706,14 @@ def test_decide_rejects_deeper_sub_assembly_nesting() -> None:
     """A sub-assembly that itself references sub-assemblies is rejected
     at fixture time: only one composing level is expanded."""
     parent_id, child_id, grandchild_id = uuid4(), uuid4(), uuid4()
+    # Pin the parent link to the child's ACTUAL content_hash so the
+    # rejection is driven solely by the depth guard, not by an
+    # incidental content_hash mismatch firing first.
     parent = Assembly(
         id=parent_id,
         name=AssemblyName("Microscope"),
         presents_as_family_id=uuid4(),
-        required_sub_assemblies=frozenset({_link("optics", child_id)}),
+        required_sub_assemblies=frozenset({_link("optics", child_id, content_hash="childhash")}),
         status=AssemblyStatus.DEFINED,
         content_hash="h",
     )
@@ -720,7 +723,7 @@ def test_decide_rejects_deeper_sub_assembly_nesting() -> None:
         presents_as_family_id=uuid4(),
         required_sub_assemblies=frozenset({_link("inner", grandchild_id)}),
         status=AssemblyStatus.DEFINED,
-        content_hash="h",
+        content_hash="childhash",
     )
     context = RegisterFixtureContext(assembly_state=parent, sub_assembly_states={child_id: child})
     with pytest.raises(AssemblyCannotInstantiateError) as exc_info:
