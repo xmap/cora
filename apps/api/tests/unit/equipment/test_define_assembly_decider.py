@@ -19,6 +19,7 @@ from cora.equipment.aggregates.assembly import (
     SubAssemblyContentHashMismatchError,
     SubAssemblyCycleError,
     SubAssemblyLink,
+    SubAssemblyNestingTooDeepError,
     SubAssemblyNotFoundForAssemblyError,
     SubAssemblySlotNameConflictError,
     TemplateSlot,
@@ -307,7 +308,7 @@ def test_decide_rejects_missing_sub_assembly() -> None:
             ),
             context=DefineAssemblyContext(
                 missing_family_ids=frozenset(),
-                missing_sub_assembly_ids=frozenset({child}),
+                sub_assembly_missing_ids=frozenset({child}),
             ),
             now=_NOW,
             new_id=uuid4(),
@@ -384,3 +385,81 @@ def test_decide_rejects_sub_assembly_slot_name_colliding_with_leaf_slot() -> Non
             new_id=uuid4(),
         )
     assert exc_info.value.slot_name == "optics"
+
+
+@pytest.mark.unit
+def test_decide_rejects_duplicate_sub_assembly_link_slot_name() -> None:
+    """Two links sharing a slot_name with no colliding leaf slot trip the
+    link-vs-link branch (distinct reason from the leaf-collision branch)."""
+    link_a = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
+    )
+    link_b = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblySlotNameConflictError) as exc_info:
+        define_assembly.decide(
+            state=None,
+            command=DefineAssembly(
+                name="Microscope",
+                presents_as_family_id=uuid4(),
+                required_sub_assemblies=frozenset({link_a, link_b}),
+            ),
+            context=DefineAssemblyContext(missing_family_ids=frozenset()),
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.slot_name == "optics"
+    assert "duplicate" in exc_info.value.reason
+
+
+@pytest.mark.unit
+def test_decide_rejects_sub_assembly_that_is_itself_a_composite() -> None:
+    """A child that declares its own sub-assemblies is too deep: authoring
+    rejects it so a defined Assembly stays instantiable at register_fixture."""
+    child = uuid4()
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=child, content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblyNestingTooDeepError) as exc_info:
+        define_assembly.decide(
+            state=None,
+            command=DefineAssembly(
+                name="Microscope",
+                presents_as_family_id=uuid4(),
+                required_sub_assemblies=frozenset({link}),
+            ),
+            context=DefineAssemblyContext(
+                missing_family_ids=frozenset(),
+                sub_assembly_too_deep_ids=frozenset({child}),
+            ),
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.sub_assembly_id == child
+
+
+@pytest.mark.unit
+def test_decide_rejects_leaf_slot_collision_across_composed_blueprints() -> None:
+    """A leaf slot_name present in more than one composed blueprint is
+    rejected at authoring time, not only at register_fixture."""
+    link = SubAssemblyLink(
+        slot_name=SlotName("optics"), sub_assembly_id=uuid4(), content_hash=_SUB_HASH
+    )
+    with pytest.raises(SubAssemblySlotNameConflictError) as exc_info:
+        define_assembly.decide(
+            state=None,
+            command=DefineAssembly(
+                name="Microscope",
+                presents_as_family_id=uuid4(),
+                required_sub_assemblies=frozenset({link}),
+            ),
+            context=DefineAssemblyContext(
+                missing_family_ids=frozenset(),
+                sub_assembly_leaf_collisions=frozenset({"camera"}),
+            ),
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.slot_name == "camera"
+    assert "more than one composed blueprint" in exc_info.value.reason

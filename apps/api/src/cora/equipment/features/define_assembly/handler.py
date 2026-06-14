@@ -127,13 +127,17 @@ def bind(deps: Kernel) -> Handler:
 
         family_ids = _referenced_family_ids(command)
         missing = await find_missing_families_per_id(deps.event_store, family_ids)
-        missing_subs, sub_mismatches = await resolve_sub_assembly_pins(
-            deps.event_store, command.required_sub_assemblies
+        sub_resolution = await resolve_sub_assembly_pins(
+            deps.event_store,
+            command.required_sub_assemblies,
+            parent_slot_names=frozenset(slot.slot_name.value for slot in command.required_slots),
         )
         context = DefineAssemblyContext(
             missing_family_ids=missing,
-            missing_sub_assembly_ids=missing_subs,
-            sub_assembly_hash_mismatches=sub_mismatches,
+            sub_assembly_missing_ids=sub_resolution.missing_ids,
+            sub_assembly_hash_mismatches=sub_resolution.hash_mismatches,
+            sub_assembly_too_deep_ids=sub_resolution.too_deep_ids,
+            sub_assembly_leaf_collisions=sub_resolution.leaf_slot_collisions,
         )
 
         domain_events = decide(

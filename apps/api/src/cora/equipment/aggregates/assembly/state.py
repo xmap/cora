@@ -35,16 +35,29 @@ frozenset[TemplateWire]` BOTH key by `slot_name` (string), NOT by
 Asset UUID. Reason: an Assembly is a template; the Assets it
 references do not exist at template-definition time. Slot-to-asset
 translation happens at `register_fixture` time.
-This inverts the timing of Plan.wires validation, which has access
-to concrete Asset.ports and so enforces direction + signal-type +
-fan-in at write time.
+Plan.wires, by contrast, has concrete Asset.ports and so enforces
+direction + signal-type + fan-in at write time; an Assembly cannot,
+because the ports do not exist yet (see the wire-conformance note
+below).
 
 ## Internal closure
 
 `Assembly.__post_init__` enforces that every `TemplateWire`'s
-endpoints reference a slot present in `required_slots`. This is the
-structural well-formedness check; direction / signal_type / fan-in
-rules live at instantiate time when concrete Assets are bound.
+endpoints reference a slot present in `required_slots`. That is the
+only wire check the spine performs.
+
+## Wire conformance is not checked at materialization (yet)
+
+`register_fixture` expands slots and binds Assets, but it does NOT
+validate wires: direction (OUTPUT -> INPUT), signal-type match, and
+fan-in are checked NOWHERE today, neither at define / version nor at
+register_fixture. A `required_wire` is therefore a declared intent,
+closure-checked against slot names only. Per-port conformance against
+the materialized Asset.ports is a deferred read-side projection (the
+`AssemblyConformanceMismatch` posture, not yet built), the same
+eventual-consistency stance Asset.parent_id and Method.needed_family_ids
+take. Whole-experiment routing that must be enforced lives in
+`Plan.wiring`, keyed by concrete Asset UUIDs.
 
 ## Revision lineage
 
@@ -159,9 +172,11 @@ class InvalidWireSpecError(ValueError):
         both endpoints (mirrors PlanWireSelfLoopError). Self-slot
         with DIFFERENT ports is allowed (PandABox LUT pattern).
 
-    Direction, signal_type, and fan-in are NOT checked here; those
-    fire at `register_fixture` time against materialized
-    Asset.ports.
+    Direction, signal_type, and fan-in are NOT checked here, and (as
+    of today) NOT checked anywhere: register_fixture does not validate
+    wires. Per-port conformance against materialized Asset.ports is a
+    deferred read-side projection (the AssemblyConformanceMismatch
+    posture); enforced routing lives in Plan.wiring.
     """
 
     def __init__(self, reason: str) -> None:
@@ -496,6 +511,30 @@ class SubAssemblyCycleError(Exception):
         self.assembly_id = assembly_id
 
 
+class SubAssemblyNestingTooDeepError(ValueError):
+    """A SubAssemblyLink points at a child that is itself a composite.
+
+    One composing level is supported: `register_fixture` expands a
+    parent's sub-assemblies into a single flat union of leaf slots, and
+    refuses any child that declares its own `required_sub_assemblies`.
+    Authoring (`define_assembly` / `version_assembly`) enforces the same
+    limit so that a defined Assembly is always instantiable rather than
+    failing only at the end of the install-then-register choreography.
+    Because a non-leaf child is refused here, an A->B->A indirect cycle
+    is also impossible for the two-node case (B would need its own
+    sub-assembly link back to A, which makes B non-leaf and rejects it).
+    Deeper nesting is deferred until a real case lands (rule-of-three);
+    the pilot nests one level (Microscope -> Optics). Maps to 400.
+    """
+
+    def __init__(self, sub_assembly_id: UUID) -> None:
+        super().__init__(
+            f"Sub-assembly {sub_assembly_id} declares its own sub-assemblies; "
+            "nesting beyond one level is not yet supported"
+        )
+        self.sub_assembly_id = sub_assembly_id
+
+
 @bounded_name(max_length=ASSEMBLY_NAME_MAX_LENGTH, error_class=InvalidAssemblyNameError)
 @dataclass(frozen=True)
 class AssemblyName:
@@ -593,12 +632,16 @@ class TemplateWire:
     Assembly cannot reference Assets that do not exist yet at
     template-definition time.
 
-    Validation rules at instantiation time (NOT here):
+    Per-port conformance rules (deferred, NOT enforced today, neither
+    here nor at register_fixture):
       - source port must have `direction=OUTPUT`
       - target port must have `direction=INPUT`
       - `source_port.signal_type == target_port.signal_type`
       - target port is the destination of at most one Wire (fan-in
         forbidden); fan-out (one source to many targets) is allowed
+    These belong to a future read-side projection
+    (`AssemblyConformanceMismatch`); enforced whole-experiment routing
+    lives in `Plan.wiring`, keyed by concrete Asset UUIDs.
 
     `__post_init__` enforces structural shape only: each of the four
     string fields trims and bounds 1-100 chars, and the degenerate
@@ -780,7 +823,8 @@ class Assembly:
 
         Pins identity per `project_content_addressed_identity_design`:
         `name + presents_as_family_id + required_slots + required_wires +
-        parameter_overrides_schema`. Excluded: `id` (identity, not
+        required_sub_assemblies + parameter_overrides_schema`. Excluded:
+        `id` (identity, not
         content), `status` and `version` (lifecycle, derived in evolver
         from event type and version label), `drawing` (operator-
         curatorial metadata per the design memo's content_hash
