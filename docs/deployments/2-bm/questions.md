@@ -9,7 +9,7 @@ Below are the facts we need you to confirm or correct about 2-BM hardware. Most 
 **How to reply:** open a short issue at [github.com/xmap/cora/issues](https://github.com/xmap/cora/issues), one per answer or several together. Quote the item ID and write the answer in plain text, for example:
 
 > HXP-1: m1 = X, m2 = Y, m3 = Z, m4 = Roll, m5 = Pitch, m6 = Yaw
-> DET-1: sliding selector, positions in millimeters
+> DET-1: sliding objective selector, positions in millimeters
 
 You do not need to edit this file or know where it lives. If you do not use GitHub, just send the same thing (the item ID and your answer) to whoever shared this page with you.
 
@@ -19,7 +19,7 @@ You do not need to edit this file or know where it lives. If you do not use GitH
 
 ## How this page works
 
-CORA keeps a structured description of each device: its axes, its identity, and how the parts connect. Some of your answers just fill in a value, like a serial number. Others change the structure itself, like whether the lens selector rotates or slides. We mark the second kind `Blocks-build`.
+CORA keeps a structured description of each device: its axes, its identity, and how the parts connect. Some of your answers just fill in a value, like a serial number. Others change the structure itself, like whether the objective selector rotates or slides. We mark the second kind `Blocks-build`.
 
 Where we do not have your answer yet, CORA fills in a clearly-marked temporary guess so the description work can continue. We never use a guessed value to move or control any hardware. The one exception to "a guess is fine for now" is a `Blocks-build` item: if it is still open when we finalize the description it affects, that is a hard stop, and we have to wait for your answer before we can proceed.
 
@@ -80,7 +80,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| DET-1 | `Blocks-build` | Is the lens turret a rotating turret, or a sliding (translating) selector? This sets whether its positions are degrees or millimeters. | rotating (degrees) | [Microscope](equipment/microscope.md) |
+| DET-1 | `Blocks-build` | Is the lens turret a rotating turret, or a sliding (translating) objective selector? This sets whether its positions are degrees or millimeters. | rotating (degrees) | [Microscope](equipment/microscope.md) |
 | DET-2 | `Blocks-build` | Does CORA drive the focus stage directly, or does the detector's own IOC move it behind the scenes? This decides which side owns that control path. | CORA drives it | [Microscope](equipment/microscope.md) |
 | DET-3 | `Blocks-build` | How are cameras selected: a single fixed bay, or is there a selection stage? | single bay, no selection stage | [Microscope](equipment/microscope.md) |
 | DET-4 | `Blocks-build` | How does the camera bay move, if at all: fixed, or is there a rotation stage? | fixed, no rotation stage | [Microscope](equipment/microscope.md) |

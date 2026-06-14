@@ -43,6 +43,19 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
                                           2 ->   2.3006 deg  (1.1x in beam))
 ```
 
+The composition axis as a rendered graph (Assembly to sub-Assembly to Fixture):
+
+```mermaid
+flowchart TD
+  MIC["Assembly: Microscope (presents_as Detector)"]
+  OPT["Assembly: Optics (content-hash pinned)"]
+  FIX(["Fixture: microscope_at_2bm"])
+  MIC -- "sub-assembly: optics @hash" --> OPT
+  MIC -. "leaf slots: camera, scintillator" .-> FIX
+  OPT -. "slots: turret, objectives 1+, objective_selector, focus" .-> FIX
+  FIX == "8 Assets across 6 slot names" ==> AS["Camera, Scintillator, Turret,<br/>Objective_10x, Objective_2x, Objective_1.1x,<br/>Objective_Selector, Focus"]
+```
+
 `Microscope` is the name of the top Assembly (the blueprint) and, with `microscope_at_2bm`, of the Fixture (the materialization at 2-BM). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical container. None of the three is an operator-facing Asset row in its own right except the housing: the conceptual Microscope-the-thing IS the Assembly plus Fixture pair, the reusable optics cluster IS the Optics sub-assembly, and the physical chassis IS the `Housing` Asset that parents the eight functional constituents.
 
 ## Two axes: composition and containment

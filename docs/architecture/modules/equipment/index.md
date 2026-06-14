@@ -107,6 +107,22 @@ Three mechanisms express "this is made of that", on three different layers, and 
 - **Blueprint reuse** lives on `Assembly.required_sub_assemblies`: a parent blueprint can include a whole child blueprint (version-pinned) as a named position, so an `Optics` blueprint is authored once and reused across microscopes. One composing level is supported today: a child that itself declares sub-assemblies is rejected at `define_assembly` / `version_assembly` time (the same limit `register_fixture` enforces), so a defined Assembly is always instantiable. Because a non-leaf child is refused, an A-includes-B-includes-A indirect cycle is also impossible for the two-node case. Deeper nesting is deferred until a real case appears.
 - **Materialization** lives on `Fixture.slot_asset_bindings`: a flat set of `(slot_name, asset_id)` pairs. At `register_fixture` the parent blueprint's leaf slots and every child blueprint's leaf slots expand into ONE flat namespace, so the Fixture binds only concrete leaf Assets. Leaf slot names must therefore be unique across a composition; a clash is rejected at authoring time rather than at the end of the install-then-register choreography.
 
+The three axes at a glance:
+
+```mermaid
+flowchart LR
+  subgraph BP["Blueprint reuse: Assembly.required_sub_assemblies"]
+    A["Assembly"] -- "@content_hash" --> C["child Assembly"]
+  end
+  subgraph MAT["Materialization: Fixture.slot_asset_bindings"]
+    F(["Fixture"]) -- "flat (slot_name, asset_id)" --> L["leaf Assets"]
+  end
+  subgraph CON["Physical containment: Asset.parent_id"]
+    P["parent Asset"] --> Ch["child Asset"]
+  end
+  A == "register_fixture (leaf slots flatten to one namespace)" ==> F
+```
+
 The materialization stays flat on purpose. Everything that points at equipment (a `Calibration`, a `Plan.wiring` entry, a `Caution`, a Trust Zone) wants the real leaf Asset directly; the PIDINST owners and manufacturers record is the honest union over those leaves; and the physical "inside what" fact is already carried by `Asset.parent_id`. A nested-Fixture tree would duplicate that fact and complicate every reader.
 
 The split between the type side and the instance side is deliberate. `Assembly` (a composite blueprint) earns its own materialization aggregate, `Fixture`, because a materialization carries state of its own: the slot bindings, the parameter overrides, and the content-hash snapshot. `Model` (a single-device catalog entry) does NOT get a separate instance aggregate, because a model-realization carries no state beyond a pointer: an Asset simply sets `model_id`. For the same reason `Model` does not compose; a catalog row is atomic. A composite vendor product, a bundle SKU whose sub-SKUs operators reference as a unit, would be modeled as an Assembly, not as a `Model` of sub-Models. A future `Model.sub_models` tier that flattened at the Asset tier (symmetric with `Assembly.sub_assemblies`) is deferred behind a rule-of-three trigger.
@@ -138,7 +154,7 @@ A useful cross-check on Family naming and gap detection: the function-and-anatom
 |--------------|-----------------------------------------------|----------------------------------------------------|-----------------------------------------|--------------------------|
 | **Defining** | -                                             | Mask, Slit, Collimator, Baffle                     | -                                       | Slits-with-Filters       |
 | **Modifying**| Mirror, Monochromator, Filter, Window         | Foil                                               | -                                       | DMM                      |
-| **Sensing**  | Camera, Scintillator, Objective               | -                                                  | -                                       | OpticalRelay (presenter: Imager) |
+| **Sensing**  | Camera, Scintillator, Objective               | -                                                  | -                                       | Microscope (presents_as Detector) |
 | **Positioning** | -                                          | LinearStage, RotaryStage, Hexapod, Blade, PseudoAxis | -                                     | SampleStack              |
 | **Terminating** | -                                          | BeamStop                                           | Shutter                                 | -                        |
 | **Controlling** | -                                          | -                                                  | MotionController, TimingController, `<Domain>Controller` siblings | - |
@@ -953,7 +969,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "name": "Microscope",
+      "name": "ScanChain",
       "presents_as_family_id": "ffff0000-0000-0000-0000-000000000001",
       "required_slots": [
         {
@@ -991,7 +1007,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
     mcp.call_tool(
         "define_assembly",
         {
-            "name": "Microscope",
+            "name": "ScanChain",
             "presents_as_family_id": "ffff0000-0000-0000-0000-000000000001",
             "required_slots": [
                 {"slot_name": "rotary_stage", "required_family_ids": ["aaaa1111-1111-1111-1111-111111111111"], "cardinality": "Exactly1"},
