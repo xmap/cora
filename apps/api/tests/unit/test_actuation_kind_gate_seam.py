@@ -154,3 +154,13 @@ def test_physical_origin_dataset_promotes_end_to_end() -> None:
     events = _register_then_promote(ActuationKind.PHYSICAL.value)
     assert len(events) == 1
     assert isinstance(events[0], DatasetPromoted)
+
+
+@pytest.mark.unit
+def test_procedure_named_but_none_kind_is_non_promotable_end_to_end() -> None:
+    """A terminal producing Procedure that recorded no kind (no routing table /
+    cancelled / truncated) yields a Dataset whose provenance is unproven:
+    register -> fold -> promote refuses it (item-6 None-tightening). This is the
+    leak the activation+item-6 closes."""
+    with pytest.raises(DatasetCannotPromoteError):
+        _register_then_promote(None)

@@ -78,6 +78,7 @@ def _dataset(
     status: DatasetStatus = DatasetStatus.REGISTERED,
     intent: Intent = Intent.TRIAL,
     producing_run_id: UUID | None = None,
+    producing_procedure_id: UUID | None = None,
     producing_run_end_state: str | None = None,
     producing_actuation_kind: str | None = None,
     derived_from: frozenset[UUID] = frozenset(),
@@ -90,6 +91,7 @@ def _dataset(
         byte_size=0,
         encoding=DatasetEncoding(media_type="application/x-hdf5"),
         producing_run_id=producing_run_id,
+        producing_procedure_id=producing_procedure_id,
         derived_from=derived_from,
         status=status,
         producing_run_end_state=producing_run_end_state,
@@ -271,6 +273,50 @@ def test_decide_simulator_origin_always_rejects(
             promoted_by=ActorId(actor),
         )
     assert kind in exc.value.reason
+
+
+@pytest.mark.unit
+@given(
+    dataset_id=st.uuids(),
+    procedure_id=st.uuids(),
+    has_run=st.booleans(),
+    reason=_reasons(),
+    now=aware_datetimes(),
+    actor=st.uuids(),
+)
+def test_decide_unprovable_procedure_provenance_always_rejects(
+    dataset_id: UUID,
+    procedure_id: UUID,
+    has_run: bool,
+    reason: str,
+    now: datetime,
+    actor: UUID,
+) -> None:
+    """The item-6 leak-closer: a Dataset that NAMES a producing Procedure whose
+    actuation kind is None has unproven provenance and never promotes, even when
+    every other precondition is satisfied. Pairs with the simulator-origin
+    property: between them, only Physical (or a no-procedure None) promotes.
+    intent pinned to Trial so guard 7, not an earlier guard, does the rejecting.
+    """
+    state = _dataset(
+        dataset_id=dataset_id,
+        status=DatasetStatus.REGISTERED,
+        intent=Intent.TRIAL,
+        producing_run_id=actor if has_run else None,
+        producing_run_end_state="Completed" if has_run else None,
+        producing_procedure_id=procedure_id,
+        producing_actuation_kind=None,
+        derived_from=frozenset(),
+    )
+    with pytest.raises(DatasetCannotPromoteError) as exc:
+        promote_dataset.decide(
+            state=state,
+            command=_command(dataset_id=dataset_id, reason=reason),
+            context=_context(),
+            now=now,
+            promoted_by=ActorId(actor),
+        )
+    assert str(procedure_id) in exc.value.reason
 
 
 @pytest.mark.unit

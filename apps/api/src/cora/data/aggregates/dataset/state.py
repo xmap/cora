@@ -381,6 +381,31 @@ class ProducingProcedureNotFoundError(Exception):
         self.procedure_id = procedure_id
 
 
+class ProducingProcedureNotTerminalError(Exception):
+    """Attempted to register a Dataset against a non-terminal producing Procedure.
+
+    The actuation kind is snapshotted from the producing Procedure's
+    terminal state at registration (capture, don't recompute). A
+    still-Defined / Running Procedure has no final kind yet, so its
+    snapshot would be a stale None even after the conduct later resolves
+    to Physical -- which the promote-time unprovable-provenance guard
+    would then wrongly block. Requiring the Procedure to be terminal at
+    registration keeps "producing_procedure_id set + kind None" an
+    unambiguous "unprovable" signal. Cross-aggregate state conflict;
+    mapped to HTTP 409.
+    """
+
+    def __init__(self, procedure_id: UUID, *, current_status: str) -> None:
+        super().__init__(
+            f"Cannot register Dataset: producing_procedure_id {procedure_id} is "
+            f"{current_status!r}; a producing Procedure must be terminal "
+            "(Completed / Aborted / Truncated) at registration so its actuation "
+            "kind is final"
+        )
+        self.procedure_id = procedure_id
+        self.current_status = current_status
+
+
 class LinkedSubjectNotFoundError(Exception):
     """Attempted to register a Dataset against a Subject that doesn't exist.
 

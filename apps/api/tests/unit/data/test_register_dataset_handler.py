@@ -16,6 +16,7 @@ from cora.data.aggregates.dataset import (
     DerivedFromDatasetsNotFoundError,
     LinkedSubjectNotFoundError,
     ProducingProcedureNotFoundError,
+    ProducingProcedureNotTerminalError,
     ProducingRunNotFoundError,
 )
 from cora.data.aggregates.dataset.events import (
@@ -121,6 +122,36 @@ async def _seed_procedure(
         ProcedureCompleted(
             procedure_id=procedure_id, occurred_at=_NOW, actuation_kind=actuation_kind
         ),
+    ]
+    new_events = [
+        to_new_event(
+            event_type=procedure_event_type_name(e),
+            payload=procedure_to_payload(e),
+            occurred_at=_NOW,
+            event_id=uuid4(),
+            command_name="seed",
+            correlation_id=_CORRELATION_ID,
+            principal_id=uuid4(),
+        )
+        for e in events
+    ]
+    await store.append(
+        stream_type="Procedure", stream_id=procedure_id, expected_version=0, events=new_events
+    )
+
+
+async def _seed_running_procedure(store: InMemoryEventStore, procedure_id: UUID) -> None:
+    """Append Registered + Started (no terminal) so the Procedure is Running."""
+    events = [
+        ProcedureRegistered(
+            procedure_id=procedure_id,
+            name="seed-procedure",
+            kind="alignment",
+            target_asset_ids=(),
+            parent_run_id=None,
+            occurred_at=_NOW,
+        ),
+        ProcedureStarted(procedure_id=procedure_id, occurred_at=_NOW),
     ]
     new_events = [
         to_new_event(
@@ -305,6 +336,24 @@ async def test_handler_raises_producing_procedure_not_found_when_missing() -> No
             correlation_id=_CORRELATION_ID,
         )
     assert exc_info.value.procedure_id == missing_procedure
+
+
+@pytest.mark.unit
+async def test_handler_rejects_non_terminal_producing_procedure() -> None:
+    """A still-Running producing Procedure is rejected at registration (its
+    actuation kind is not final yet); item-6 option A."""
+    store = InMemoryEventStore()
+    procedure_id = uuid4()
+    await _seed_running_procedure(store, procedure_id)
+    deps = build_deps(ids=[_DATASET_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
+    with pytest.raises(ProducingProcedureNotTerminalError) as exc_info:
+        await register_dataset.bind(deps)(
+            _good_command(producing_procedure_id=procedure_id),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.procedure_id == procedure_id
+    assert exc_info.value.current_status == "Running"
 
 
 @pytest.mark.unit

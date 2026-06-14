@@ -47,6 +47,7 @@ from cora.data.features.register_dataset import bind as bind_register_dataset
 from cora.infrastructure.event_envelope import to_new_event
 from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
+from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.aggregates.procedure import (
     PostgresActivityStore,
     ProcedureRegistered,
@@ -225,6 +226,58 @@ async def test_physical_route_conduct_yields_promotable_dataset(
     )
     dataset_events, _ = await deps.event_store.load("Dataset", dataset_id)
     assert [e.event_type for e in dataset_events] == ["DatasetRegistered", "DatasetPromoted"]
+
+
+@pytest.mark.integration
+async def test_no_routing_table_conduct_yields_non_promotable_dataset(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """item-6 leak-closer, end to end: a conduct against a bare control port
+    with NO routing table observes no kind (None). The Procedure still
+    completes (terminal), so registration is allowed, but the Dataset's
+    provenance is unproven -> promote refuses it. No soft IOC needed: this is
+    the opt-out / unprovable path, not a real-adapter path."""
+    procedure_id = UUID("01900000-0000-7000-8000-0000020d0400")
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(50)])
+    await _seed_defined_procedure(deps.event_store, procedure_id)
+
+    bare = InMemoryControlPort()  # no ControlPortRegistry -> no route_is_simulated
+    bare.simulate_connect("dev:motor")
+    conductor = _conductor(deps, db_pool, bare)
+    result = await conductor.conduct(
+        procedure_id=procedure_id,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        steps=(SetpointStep(address="dev:motor", value=1.0),),
+    )
+    assert result.succeeded is True
+    assert result.actuation_kind is None
+
+    procedure = await load_procedure(deps.event_store, procedure_id)
+    assert procedure is not None
+    assert procedure.status.is_terminal
+    assert procedure.actuation_kind is None
+
+    dataset_id = await bind_register_dataset(deps)(
+        RegisterDataset(
+            name="unprovable recon",
+            uri="file:///data/unprovable/recon.h5",
+            checksum_algorithm="sha256",
+            checksum_value=_GOOD_SHA256,
+            byte_size=1024,
+            media_type="application/x-hdf5",
+            producing_procedure_id=procedure_id,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    with pytest.raises(DatasetCannotPromoteError) as exc_info:
+        await bind_promote_dataset(deps)(
+            PromoteDataset(dataset_id=dataset_id, reason="attempting to publish unprovable data"),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert "unproven" in exc_info.value.reason
 
 
 @pytest.mark.integration

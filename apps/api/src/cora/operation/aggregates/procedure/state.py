@@ -220,6 +220,21 @@ class ProcedureStatus(StrEnum):
     ABORTED = "Aborted"
     TRUNCATED = "Truncated"
 
+    @property
+    def is_terminal(self) -> bool:
+        """True for the closed-set terminal states (Completed / Aborted /
+        Truncated), False for Defined / Running.
+
+        The FSM owns this truth so consumers (for example the Data BC's
+        register_dataset, which requires a producing Procedure to be terminal
+        before snapshotting its actuation kind) don't hard-code the terminal
+        set and drift when a state is added."""
+        return self in (
+            ProcedureStatus.COMPLETED,
+            ProcedureStatus.ABORTED,
+            ProcedureStatus.TRUNCATED,
+        )
+
 
 class InvalidProcedureNameError(ValueError):
     """The supplied procedure name is empty, whitespace-only, or too long."""

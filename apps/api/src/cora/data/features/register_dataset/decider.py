@@ -56,6 +56,7 @@ from cora.data.aggregates.dataset import (
     DerivedFromDatasetsNotFoundError,
     LinkedSubjectNotFoundError,
     ProducingProcedureNotFoundError,
+    ProducingProcedureNotTerminalError,
     ProducingRunNotFoundError,
     validate_byte_size,
     validate_derived_from,
@@ -97,7 +98,8 @@ def decide(
       - When producing_run_id is set, the Run must exist
         -> ProducingRunNotFoundError
       - When producing_procedure_id is set, the Procedure must exist
-        -> ProducingProcedureNotFoundError (its terminal actuation_kind
+        -> ProducingProcedureNotFoundError, and must be terminal
+        -> ProducingProcedureNotTerminalError (its terminal actuation_kind
         is derived into producing_actuation_kind, the promote-gate carrier)
       - When subject_id is set, the Subject must exist
         -> LinkedSubjectNotFoundError
@@ -139,6 +141,19 @@ def decide(
         raise ProducingRunNotFoundError(command.producing_run_id)
     if command.producing_procedure_id is not None and context.producing_procedure is None:
         raise ProducingProcedureNotFoundError(command.producing_procedure_id)
+    # The producing Procedure must be terminal so its actuation kind is final
+    # at snapshot time (option A of the item-6 None-tightening; see
+    # [[project_actuation_kind_stage1_design]]). A still-Running Procedure has
+    # no resolved kind, and a stale-None snapshot would later be wrongly
+    # blocked at promote.
+    if (
+        context.producing_procedure is not None
+        and not context.producing_procedure.status.is_terminal
+    ):
+        raise ProducingProcedureNotTerminalError(
+            context.producing_procedure.id,
+            current_status=context.producing_procedure.status.value,
+        )
     if command.subject_id is not None and context.subject is None:
         raise LinkedSubjectNotFoundError(command.subject_id)
     missing_derived = sorted(

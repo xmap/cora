@@ -30,6 +30,7 @@ from cora.data.aggregates.dataset import (
     InvalidUsedCalibrationsError,
     LinkedSubjectNotFoundError,
     ProducingProcedureNotFoundError,
+    ProducingProcedureNotTerminalError,
     ProducingRunNotFoundError,
 )
 from cora.data.features import register_dataset
@@ -681,11 +682,35 @@ def test_decide_defaults_actuation_kind_to_none_without_producing_procedure() ->
 
 
 @pytest.mark.unit
-def test_decide_derives_none_kind_from_non_terminal_procedure() -> None:
-    """A Dataset naming a still-Running Procedure (in-situ registration mid-
-    conduct) derives None (no terminal kind recorded yet); the gate stays
-    inactive for this slice."""
-    procedure = _fake_procedure(actuation_kind=None, status=ProcedureStatus.RUNNING)
+@pytest.mark.parametrize("status", [ProcedureStatus.DEFINED, ProcedureStatus.RUNNING])
+def test_decide_rejects_non_terminal_producing_procedure(status: ProcedureStatus) -> None:
+    """Registering against a non-terminal producing Procedure is rejected: its
+    actuation kind isn't final yet, so the snapshot would be a stale None
+    (item-6 option A). Only terminal Procedures may be named."""
+    procedure = _fake_procedure(actuation_kind=None, status=status)
+    with pytest.raises(ProducingProcedureNotTerminalError) as exc:
+        register_dataset.decide(
+            state=None,
+            command=_good_command(producing_procedure_id=procedure.id),
+            context=DatasetRegistrationContext(producing_procedure=procedure),
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_REGISTERED_BY,
+        )
+    assert exc.value.current_status == status.value
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "status", [ProcedureStatus.COMPLETED, ProcedureStatus.ABORTED, ProcedureStatus.TRUNCATED]
+)
+def test_decide_derives_none_kind_from_terminal_procedure_that_recorded_none(
+    status: ProcedureStatus,
+) -> None:
+    """A terminal Procedure that recorded no kind (no routing table / cancelled
+    / truncated) derives None at register -- allowed here; the promote gate
+    blocks it later as unproven provenance."""
+    procedure = _fake_procedure(actuation_kind=None, status=status)
     events = register_dataset.decide(
         state=None,
         command=_good_command(producing_procedure_id=procedure.id),
