@@ -33,6 +33,7 @@ from cora.enclosure.aggregates.enclosure import (
 )
 from cora.enclosure.features import decommission_enclosure
 from cora.enclosure.features.decommission_enclosure import DecommissionEnclosure
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes, printable_ascii_text
 
@@ -42,11 +43,11 @@ if TYPE_CHECKING:
 
 _REGISTERED_AT = datetime(2026, 6, 8, 12, 0, 0, tzinfo=UTC)
 _REASON = printable_ascii_text(min_size=1, max_size=200)
+_FACILITY_CODE = FacilityCode("aps")
 
 
 def _enclosure(
     enclosure_id: UUID,
-    containing_asset_id: UUID,
     actor_id: UUID,
     *,
     lifecycle: EnclosureLifecycle,
@@ -54,7 +55,7 @@ def _enclosure(
     return Enclosure(
         id=EnclosureId(enclosure_id),
         name=EnclosureName("2-BM Hutch A"),
-        containing_asset_id=containing_asset_id,
+        facility_code=_FACILITY_CODE,
         permit_status=EnclosurePermitStatus.UNKNOWN,
         lifecycle=lifecycle,
         registered_at=_REGISTERED_AT,
@@ -95,14 +96,12 @@ def test_decommission_enclosure_on_none_state_always_raises_not_found(
 @pytest.mark.unit
 @given(
     enclosure_id=st.uuids(),
-    containing_asset_id=st.uuids(),
     reason=_REASON,
     now=aware_datetimes(),
     actor_id=st.uuids(),
 )
 def test_decommission_enclosure_on_decommissioned_state_always_raises_cannot(
     enclosure_id: UUID,
-    containing_asset_id: UUID,
     reason: str,
     now: datetime,
     actor_id: UUID,
@@ -110,7 +109,6 @@ def test_decommission_enclosure_on_decommissioned_state_always_raises_cannot(
     """state.lifecycle=Decommissioned -> EnclosureCannotDecommissionError, always."""
     state = _enclosure(
         enclosure_id,
-        containing_asset_id,
         actor_id,
         lifecycle=EnclosureLifecycle.DECOMMISSIONED,
     )
@@ -131,14 +129,12 @@ def test_decommission_enclosure_on_decommissioned_state_always_raises_cannot(
 @pytest.mark.unit
 @given(
     enclosure_id=st.uuids(),
-    containing_asset_id=st.uuids(),
     reason=_REASON,
     now=aware_datetimes(),
     actor_id=st.uuids(),
 )
 def test_decommission_enclosure_on_active_state_emits_single_event(
     enclosure_id: UUID,
-    containing_asset_id: UUID,
     reason: str,
     now: datetime,
     actor_id: UUID,
@@ -146,7 +142,6 @@ def test_decommission_enclosure_on_active_state_emits_single_event(
     """state.lifecycle=Active -> single EnclosureDecommissioned with injected fields."""
     state = _enclosure(
         enclosure_id,
-        containing_asset_id,
         actor_id,
         lifecycle=EnclosureLifecycle.ACTIVE,
     )
@@ -171,14 +166,12 @@ def test_decommission_enclosure_on_active_state_emits_single_event(
 @pytest.mark.unit
 @given(
     enclosure_id=st.uuids(),
-    containing_asset_id=st.uuids(),
     reason=_REASON,
     now=aware_datetimes(),
     actor_id=st.uuids(),
 )
 def test_decommission_enclosure_is_pure_same_input_same_output(
     enclosure_id: UUID,
-    containing_asset_id: UUID,
     reason: str,
     now: datetime,
     actor_id: UUID,
@@ -186,7 +179,6 @@ def test_decommission_enclosure_is_pure_same_input_same_output(
     """Two calls with identical args return identical events."""
     state = _enclosure(
         enclosure_id,
-        containing_asset_id,
         actor_id,
         lifecycle=EnclosureLifecycle.ACTIVE,
     )

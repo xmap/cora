@@ -132,6 +132,62 @@ async def test_asset_registered_inserts_with_commissioned_lifecycle_and_parent()
 
 
 @pytest.mark.unit
+async def test_asset_registered_with_located_in_enclosure_id_writes_column() -> None:
+    """AssetRegistered carrying located_in_enclosure_id in the payload
+    parses to a UUID and binds it into the located_in_enclosure_id
+    column (the new column, positional arg 14, after facility_code)."""
+    proj = AssetSummaryProjection()
+    conn = AsyncMock()
+    enclosure_id = uuid4()
+    event = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(_ASSET_ID),
+            "name": "rotary-in-hutch-A",
+            "tier": "Device",
+            "parent_id": str(_PARENT_ID),
+            "occurred_at": _NOW.isoformat(),
+            "commissioned_by": str(_TEST_ACTOR_ID),
+            "located_in_enclosure_id": str(enclosure_id),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "located_in_enclosure_id" in sql
+    assert args.args[14] == enclosure_id
+
+
+@pytest.mark.unit
+async def test_asset_registered_without_located_in_enclosure_id_leaves_column_null() -> None:
+    """Legacy / unbound AssetRegistered events omit the
+    located_in_enclosure_id payload key; the column folds to NULL via
+    payload.get('located_in_enclosure_id')."""
+    proj = AssetSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "AssetRegistered",
+        {
+            "asset_id": str(_ASSET_ID),
+            "name": "unbound-asset",
+            "tier": "Device",
+            "parent_id": str(_PARENT_ID),
+            "occurred_at": _NOW.isoformat(),
+            "commissioned_by": str(_TEST_ACTOR_ID),
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[14] is None
+
+
+@pytest.mark.unit
 async def test_asset_registered_with_drawing_backfills_three_columns() -> None:
     proj = AssetSummaryProjection()
     conn = AsyncMock()

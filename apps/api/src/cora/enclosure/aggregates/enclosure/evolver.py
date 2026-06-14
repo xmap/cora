@@ -61,7 +61,7 @@ def evolve(state: Enclosure | None, event: EnclosureEvent) -> Enclosure:
         case EnclosureRegistered(
             enclosure_id=enclosure_id,
             name=name,
-            containing_asset_id=containing_asset_id,
+            facility_code=facility_code,
             registered_by=registered_by,
             occurred_at=occurred_at,
         ):
@@ -69,7 +69,7 @@ def evolve(state: Enclosure | None, event: EnclosureEvent) -> Enclosure:
             return Enclosure(
                 id=EnclosureId(enclosure_id),
                 name=EnclosureName(name),
-                containing_asset_id=containing_asset_id,
+                facility_code=facility_code,
                 permit_status=EnclosurePermitStatus.UNKNOWN,
                 lifecycle=EnclosureLifecycle.ACTIVE,
                 registered_at=occurred_at,
@@ -82,7 +82,7 @@ def evolve(state: Enclosure | None, event: EnclosureEvent) -> Enclosure:
             return Enclosure(
                 id=prior.id,
                 name=prior.name,
-                containing_asset_id=prior.containing_asset_id,
+                facility_code=prior.facility_code,
                 permit_status=EnclosurePermitStatus(to_status),
                 lifecycle=prior.lifecycle,
                 registered_at=prior.registered_at,
@@ -98,7 +98,7 @@ def evolve(state: Enclosure | None, event: EnclosureEvent) -> Enclosure:
             return Enclosure(
                 id=prior.id,
                 name=prior.name,
-                containing_asset_id=prior.containing_asset_id,
+                facility_code=prior.facility_code,
                 permit_status=prior.permit_status,
                 lifecycle=EnclosureLifecycle.DECOMMISSIONED,
                 registered_at=prior.registered_at,

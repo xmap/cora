@@ -38,4 +38,10 @@ def decide(
         raise ProcedureNotFoundError(command.procedure_id)
     if state.status not in _COMPLETABLE_STATUSES:
         raise ProcedureCannotCompleteError(state.id, current_status=state.status)
-    return [ProcedureCompleted(procedure_id=state.id, occurred_at=now)]
+    return [
+        ProcedureCompleted(
+            procedure_id=state.id,
+            actuation_kind=command.actuation_kind,
+            occurred_at=now,
+        )
+    ]

@@ -6,35 +6,37 @@ The Devices that hang off 2-BM. The 2-BM Asset itself is a root Asset with `tier
 
 The Microscope detector is modelled as an Assembly + Fixture pair over a reusable Optics sub-assembly, with the constituents contained in one `Housing` Asset. The constituent Assets appear in the inventory below; the composition, containment, and wiring story lives on the dedicated [Microscope deployment](equipment/microscope.md) page.
 
+Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A` or the experiment hutch `2-BM-B`, declared per Device via `located_in_enclosure_id`. The Located-in column below records where each Device sits; the two hutches and the pre-flight gate they drive are on the [Enclosures](enclosures.md) page. The hutches are Enclosures, not Assets, so they do not appear as inventory rows.
+
 ## Inventory
 
-| Asset | Tier | Family | Parent |
-| --- | --- | --- | --- |
-| `Shutter` | `Device` | `Shutter` | `2-BM` |
-| `RotaryDrive` | `Device` | `MotionController` | `2-BM` |
-| `Rotary` | `Device` | `RotaryStage` | `2-BM` (driven by `RotaryDrive`) |
-| `SampleStageDrive` | `Device` | `MotionController` | `2-BM` |
-| `FrontEndDrive` | `Device` | `MotionController` | `2-BM` (front-end / beam-conditioning band; no modelled driven stages at v1) |
-| `Sample_top_X` | `Device` | `LinearStage` | `2-BM` (driven by `SampleStageDrive`) |
-| `Sample_top_Z` | `Device` | `LinearStage` | `2-BM` (driven by `SampleStageDrive`) |
-| `HexapodDrive` | `Device` | `MotionController` | `2-BM` |
-| `Hexapod` | `Device` | `Hexapod` | `2-BM` (driven by `HexapodDrive`) |
-| `Hexapod_X` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along X) |
-| `Hexapod_Y` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along Y) |
-| `Hexapod_Z` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along Z) |
-| `Hexapod_Roll` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation A about X) |
-| `Hexapod_Pitch` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation B about Y) |
-| `Hexapod_Yaw` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation C about Z) |
-| `FocusDrive` | `Device` | `MotionController` | `2-BM` |
-| `Housing` | `Component` | `Housing` | `2-BM` (installed into a Mount; parents the Microscope constituents) |
-| `Turret` | `Device` | `RotaryStage` (pending) | `Housing` (bound into Microscope Fixture) |
-| `Objective_10x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) |
-| `Objective_2x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) |
-| `Objective_1.1x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) |
-| `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret rotation) |
-| `Focus` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `FocusDrive`) |
-| `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) |
-| `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) |
+| Asset | Tier | Family | Parent | Located in |
+| --- | --- | --- | --- | --- |
+| `Shutter` | `Device` | `Shutter` | `2-BM` | `2-BM-B` |
+| `RotaryDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `Rotary` | `Device` | `RotaryStage` | `2-BM` (driven by `RotaryDrive`) | `2-BM-B` |
+| `SampleStageDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `FrontEndDrive` | `Device` | `MotionController` | `2-BM` (front-end / beam-conditioning band; no modelled driven stages at v1) | `2-BM-A` |
+| `Sample_top_X` | `Device` | `LinearStage` | `2-BM` (driven by `SampleStageDrive`) | `2-BM-B` |
+| `Sample_top_Z` | `Device` | `LinearStage` | `2-BM` (driven by `SampleStageDrive`) | `2-BM-B` |
+| `HexapodDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `Hexapod` | `Device` | `Hexapod` | `2-BM` (driven by `HexapodDrive`) | `2-BM-B` |
+| `Hexapod_X` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along X) | `2-BM-B` |
+| `Hexapod_Y` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along Y) | `2-BM-B` |
+| `Hexapod_Z` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along Z) | `2-BM-B` |
+| `Hexapod_Roll` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation A about X) | `2-BM-B` |
+| `Hexapod_Pitch` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation B about Y) | `2-BM-B` |
+| `Hexapod_Yaw` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation C about Z) | `2-BM-B` |
+| `FocusDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `Housing` | `Component` | `Housing` | `2-BM` (installed into a Mount; parents the Microscope constituents) | `2-BM-B` |
+| `Turret` | `Device` | `RotaryStage` (pending) | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `Objective_10x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `Objective_2x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `Objective_1.1x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret rotation) | `2-BM-B` |
+| `Focus` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `FocusDrive`) | `2-BM-B` |
+| `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 
 ## Family affordances
 

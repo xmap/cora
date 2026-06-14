@@ -28,7 +28,7 @@ Setup before a scan.
 
 - [Procedures](procedures.md): alignment, calibration, and recovery routines (Operation BC).
 - [Supplies](supplies.md): the resources a run needs available (beam, cooling, vacuum).
-- [Enclosures](enclosures.md): the hutch permit that gates runs and procedures, covering every device through the pre-flight chain walk (Enclosure BC).
+- [Enclosures](enclosures.md): two hutch permits, optics hutch `2-BM-A` and experiment hutch `2-BM-B`, each gating its hutch's devices through the located-in pre-flight chain walk (Enclosure BC).
 - Clearances: the safety forms that must be Active to start, issued at the [APS Site](../aps/index.md#the-safety-envelope).
 
 ## Running a measurement

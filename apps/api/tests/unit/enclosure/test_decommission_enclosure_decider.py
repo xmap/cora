@@ -24,13 +24,14 @@ from cora.enclosure.aggregates.enclosure import (
 )
 from cora.enclosure.features import decommission_enclosure
 from cora.enclosure.features.decommission_enclosure import DecommissionEnclosure
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _NOW = datetime(2026, 7, 1, 9, 30, 0, tzinfo=UTC)
 _REGISTERED_AT = datetime(2026, 6, 8, 12, 0, 0, tzinfo=UTC)
 _ENCLOSURE_ID = EnclosureId(UUID("01900000-0000-7000-8000-0000000ec102"))
-_CONTAINING_ASSET_ID = UUID("01900000-0000-7000-8000-0000000ec150")
+_FACILITY_CODE = FacilityCode("aps")
 _PRINCIPAL_ID = ActorId(UUID("01900000-0000-7000-8000-0000000ec101"))
 _REGISTERED_BY = ActorId(UUID("01900000-0000-7000-8000-0000000ec199"))
 
@@ -51,7 +52,7 @@ def _active_enclosure(
     return Enclosure(
         id=_ENCLOSURE_ID,
         name=EnclosureName("Hutch B"),
-        containing_asset_id=_CONTAINING_ASSET_ID,
+        facility_code=_FACILITY_CODE,
         permit_status=permit_status,
         lifecycle=EnclosureLifecycle.ACTIVE,
         registered_at=_REGISTERED_AT,
@@ -68,7 +69,7 @@ def _decommissioned_enclosure(
     return Enclosure(
         id=_ENCLOSURE_ID,
         name=EnclosureName("Hutch B"),
-        containing_asset_id=_CONTAINING_ASSET_ID,
+        facility_code=_FACILITY_CODE,
         permit_status=permit_status,
         lifecycle=EnclosureLifecycle.DECOMMISSIONED,
         registered_at=_REGISTERED_AT,

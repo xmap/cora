@@ -86,6 +86,8 @@ from cora.data.aggregates.dataset import (
     InvalidPromotionReasonError,
     InvalidUsedCalibrationsError,
     LinkedSubjectNotFoundError,
+    ProducingProcedureNotFoundError,
+    ProducingProcedureNotTerminalError,
     ProducingRunNotFoundError,
 )
 from cora.data.aggregates.distribution import (
@@ -328,6 +330,7 @@ def register_data_routes(app: FastAPI) -> None:
         # family now routes through _handle_not_found instead of the
         # old _handle_cross_agg_conflict (renamed _handle_lineage_state_conflict).
         ProducingRunNotFoundError,
+        ProducingProcedureNotFoundError,
         LinkedSubjectNotFoundError,
         DerivedFromDatasetsNotFoundError,
         # Acquisition cross-aggregate not-found (producing Asset / Run).
@@ -353,7 +356,12 @@ def register_data_routes(app: FastAPI) -> None:
         app.add_exception_handler(already_exists_cls, _handle_already_exists)
     for cannot_record_cls in (AcquisitionCannotRecordWithoutCapturingError,):
         app.add_exception_handler(cannot_record_cls, _handle_cannot_transition)
-    for lineage_state_cls in (DerivedFromDatasetsDiscardedError,):
+    for lineage_state_cls in (
+        DerivedFromDatasetsDiscardedError,
+        # Registration-time cross-aggregate state conflict: the referenced
+        # producing Procedure is not terminal (its actuation kind isn't final).
+        ProducingProcedureNotTerminalError,
+    ):
         app.add_exception_handler(lineage_state_cls, _handle_lineage_state_conflict)
     for cannot_transition_cls in (
         DatasetCannotDiscardError,

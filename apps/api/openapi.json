@@ -3660,8 +3660,19 @@
         "type": "object"
       },
       "ConductProcedureResponse": {
-        "description": "Response body for the conduct_procedure slice.\n\n`succeeded` is the canonical pass/fail bit; `failure` is non-null\niff `succeeded` is False. `completed_count` is informational\n(the number of steps that ran successfully before halt, if any).",
+        "description": "Response body for the conduct_procedure slice.\n\n`succeeded` is the canonical pass/fail bit; `failure` is non-null\niff `succeeded` is False. `completed_count` is informational\n(the number of steps that ran successfully before halt, if any).\n\n`actuation_kind` is the raw `ActuationKind` value (Physical /\nSimulated / Hybrid) the Conductor observed, or None when nothing\ninstrumented was actuated. Read-only operator visibility; the gate\nthat consumes it reads the value server-side off the Procedure\nstream, never back from this response.",
         "properties": {
+          "actuation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actuation Kind"
+          },
           "completed_count": {
             "title": "Completed Count",
             "type": "integer"
@@ -10691,6 +10702,19 @@
             "title": "Name",
             "type": "string"
           },
+          "producing_procedure_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional id of the conducted Procedure that produced this Dataset. The server derives the actuation-kind provenance from this Procedure (was the data driven against real hardware or a simulator) and uses it to gate promotion to Production. An opaque reference only: the kind itself is never a caller input. None for externally-sourced data or Runs not driven by a conducted Procedure.",
+            "title": "Producing Procedure Id"
+          },
           "producing_run_id": {
             "anyOf": [
               {
@@ -11098,14 +11122,16 @@
         "additionalProperties": false,
         "description": "Body for `POST /enclosures`.",
         "properties": {
-          "containing_asset_id": {
-            "description": "Opaque cross-BC pointer to the Asset that physically contains this Enclosure (the hutch's beamline, the cabinet's instrument). Cross-aggregate existence is not checked at the decider; the address tuple (containing_asset_id, name) is unique while lifecycle=Active.",
-            "format": "uuid",
-            "title": "Containing Asset Id",
+          "facility_code": {
+            "description": "Cross-deployment Facility slug for the Site / Area this Enclosure sits within (for example 'aps', 'maxiv'). Lowercase ASCII alphanumeric plus dash, 1-32 chars. The handler resolves the slug via the Federation BC's FacilityLookup port; unknown codes raise HTTP 404. The address tuple (facility_code, name) is unique while lifecycle=Active.",
+            "maxLength": 32,
+            "minLength": 1,
+            "pattern": "^[a-z0-9-]{1,32}$",
+            "title": "Facility Code",
             "type": "string"
           },
           "name": {
-            "description": "Operator-readable display name for this Enclosure instance (for example '2-BM-A hutch', 'sample-prep cabinet'). Uniqueness within a containing Asset (while Active) is enforced by the projection-tier UNIQUE INDEX.",
+            "description": "Operator-readable display name for this Enclosure instance (for example '2-BM-A hutch', 'sample-prep cabinet'). Uniqueness within a containing Facility (while Active) is enforced by the projection-tier UNIQUE INDEX.",
             "maxLength": 200,
             "minLength": 1,
             "title": "Name",
@@ -11114,7 +11140,7 @@
         },
         "required": [
           "name",
-          "containing_asset_id"
+          "facility_code"
         ],
         "title": "RegisterEnclosureRequest",
         "type": "object"
@@ -25592,7 +25618,7 @@
                 }
               }
             },
-            "description": "Cross-aggregate reference does not exist: producing_run_id, subject_id, or one or more derived_from ids."
+            "description": "Cross-aggregate reference does not exist: producing_run_id, producing_procedure_id, subject_id, or one or more derived_from ids."
           },
           "409": {
             "content": {
@@ -27353,6 +27379,16 @@
             },
             "description": "Authorize port denied the command."
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The supplied facility_code does not resolve to a known Federation Facility."
+          },
           "409": {
             "content": {
               "application/json": {
@@ -27361,7 +27397,7 @@
                 }
               }
             },
-            "description": "The address tuple (containing_asset_id, name) collides with an Active Enclosure already registered against the same containing Asset."
+            "description": "The address tuple (facility_code, name) collides with an Active Enclosure already registered within the same containing Facility."
           },
           "422": {
             "description": "Request body failed schema validation (missing field, invalid UUID, length out of bounds), OR Idempotency-Key was reused with a different request body."
@@ -27461,7 +27497,7 @@
                 }
               }
             },
-            "description": "Enclosure is already Decommissioned (decommission_enclosure is strict-not-idempotent; Decommissioned is terminal). The address tuple (containing_asset_id, name) is freed for re-registration once the projection arm advances."
+            "description": "Enclosure is already Decommissioned (decommission_enclosure is strict-not-idempotent; Decommissioned is terminal). The address tuple (facility_code, name) is freed for re-registration once the projection arm advances."
           },
           "422": {
             "description": "Request body failed schema validation (missing reason, empty reason, or reason exceeds 500 chars), OR the path enclosure_id is not a well-formed UUID."

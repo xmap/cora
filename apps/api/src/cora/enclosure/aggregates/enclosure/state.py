@@ -1,13 +1,16 @@
 """Enclosure aggregate state, enums, value objects, and domain errors.
 
-An `Enclosure` is a beamline hutch, an experimental cabinet, or any
-operator-visible containment volume whose access is gated by an
+An `Enclosure` models the access / interlock-permit state of an
+interlock-gated volume: a beamline hutch, an experimental cabinet, or
+any operator-visible containment volume whose entry is gated by an
 interlock chain (PSS / EPS / radiation interlock). Per
 [[project_enclosure_stage1_design]] the aggregate observes the
 external interlock as a one-axis `permit_status` (PERMITTED /
 NOT_PERMITTED / UNKNOWN) without modeling the interlock chain or
 severity scalars; the spine never authorizes shutter open / motion
-start from this status (D6.L2 observation-axis-only anti-lock).
+start from this status (D6.L2 observation-axis-only anti-lock). The
+primary question this aggregate answers is access: "may a person enter
+this volume right now, and what is the audited permit history?"
 
 Two-tier identity per [[project_enclosure_stage1_design]]:
 
@@ -17,10 +20,14 @@ Two-tier identity per [[project_enclosure_stage1_design]]:
     label; uniqueness is enforced at the projection-tier UNIQUE INDEX
     (aggregates cannot enforce cross-stream invariants without DCB).
 
-`containing_asset_id` is a bare `UUID` cross-BC opaque pointer to the
-Asset that physically contains the Enclosure (the hutch's beamline,
-the cabinet's instrument). Cross-aggregate existence checks land in
-later sub-slices via a handler-layer port; the decider stays pure.
+`facility_code` is the containing geography: the Federation `Facility`
+(Site / Area) the enclosure physically sits within, a space-contained-
+in-a-larger-space relation. It is a `FacilityCode` value object keyed
+on the cross-deployment convergent slug (the same VO `Asset.facility_code`
+uses), NOT an equipment pointer: the enclosure is located inside an
+area, it is not "contained by a device". The handler resolves the slug
+via `FacilityLookup.lookup_by_code` and the decider rejects unknown
+slugs with `EnclosureFacilityNotFoundError`; the aggregate stays pure.
 
 Two-axis FSM per locked design:
 
@@ -45,7 +52,7 @@ payload-side VOs like `EnclosureReason`).
 
 Explicit NON-fields per the locked design L-state-7: NO `settings`, NO `schema`,
 NO `persistent_id`, NO `alternate_identifiers`, NO `kind` enum, NO
-`facility_code`, NO `upstream_enclosure_id`, NO `permit_observation_envelope`
+`upstream_enclosure_id`, NO `permit_observation_envelope`
 (envelope is projection-only). Severity scalars (`severity`, `risk_level`,
 `criticality`, `sil_level`, `hazard_level`, `signal_word`,
 `vendor_status_code`) are banned by the D9-L1 fitness test.
@@ -54,10 +61,10 @@ NO `persistent_id`, NO `alternate_identifiers`, NO `kind` enum, NO
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from uuid import UUID
 
 from cora.enclosure.aggregates._value_types import EnclosureId
 from cora.shared.bounded_text import bounded_name
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 
 ENCLOSURE_NAME_MAX_LENGTH = 200
@@ -162,6 +169,37 @@ class EnclosureNotFoundError(Exception):
         self.enclosure_id = enclosure_id
 
 
+class EnclosureFacilityNotFoundError(Exception):
+    """`register_enclosure` referenced a Facility code with no projection row.
+
+    Cross-BC binding: every Enclosure sits within exactly one containing
+    Facility (the Site / Area it physically occupies), keyed on the
+    cross-deployment convergent slug at Federation BC's two-tier
+    identity. The handler resolves `command.facility_code` via
+    `FacilityLookup.lookup_by_code` before threading the result into the
+    decider; a `None` result means no Facility with that code is visible
+    in `proj_federation_facility_summary` and the registration is
+    rejected with HTTP 404. Operator remedies: register the Facility
+    first via `POST /federation/facilities`, or correct the typo on the
+    Enclosure registration. Mirrors the `AssetFacilityNotFoundError` /
+    `SupplyFacilityNotFoundError` precedent.
+
+    Status filter mirrors the Asset / Supply precedent: every Facility
+    status (Active, Decommissioned) is a valid containing geography; the
+    decider does NOT partition on Facility status.
+
+    Cross-BC eventual consistency: if `register_enclosure` is called
+    immediately after `register_facility`, the Federation projection may
+    not have caught up yet and the lookup returns `None`. The handler
+    surfaces this same 404; operator remedies are identical (retry after
+    the projection bookmark advances).
+    """
+
+    def __init__(self, facility_code: str) -> None:
+        super().__init__(f"Facility {facility_code!r} not found for enclosure registration")
+        self.facility_code = facility_code
+
+
 class EnclosureCannotDecommissionError(Exception):
     """Decommission was attempted on an already-decommissioned Enclosure.
 
@@ -200,21 +238,26 @@ class EnclosureCannotObserveWhileDecommissionedError(Exception):
 
 @dataclass(frozen=True)
 class Enclosure:
-    """Aggregate root: an interlock-gated containment volume.
+    """Aggregate root: the access / interlock-permit state of an
+    interlock-gated volume.
 
     Slim aggregate per [[project_fold_cost_principles]]: identity +
-    containing-Asset pointer + two-axis status (operational permit +
-    structural lifecycle) + fold-symmetric attribution pairs.
-    Per-transition audit metadata (reasons, triggers, monitor_ref)
-    lives in the event stream itself; the projection denormalizes the
-    latest values for query-time access.
+    containing-geography anchor (`facility_code`) + two-axis status
+    (operational permit + structural lifecycle) + fold-symmetric
+    attribution pairs. Per-transition audit metadata (reasons,
+    triggers, monitor_ref) lives in the event stream itself; the
+    projection denormalizes the latest values for query-time access.
 
     `id` is the stable opaque handle. `name` is the operator-readable
     label; the projection enforces cross-stream uniqueness via UNIQUE
     INDEX (the aggregate cannot enforce cross-stream invariants without
-    DCB). `containing_asset_id` is a bare cross-BC opaque pointer; the
-    decider stays pure and cross-aggregate existence checks land at the
-    handler layer via a port (later sub-slices).
+    DCB). `facility_code` is the containing geography: the Federation
+    `Facility` (Site / Area) the enclosure physically sits within, a
+    space-contained-in-a-larger-space relation (NOT an equipment
+    pointer). It is keyed on the cross-deployment convergent slug
+    (`FacilityCode`), mirroring `Asset.facility_code`; the handler
+    resolves it via `FacilityLookup.lookup_by_code` and the decider
+    rejects unknown slugs with `EnclosureFacilityNotFoundError`.
 
     No dataclass-level defaults: the genesis evolver constructs the
     aggregate with `permit_status=EnclosurePermitStatus.UNKNOWN` and
@@ -236,7 +279,7 @@ class Enclosure:
 
     id: EnclosureId
     name: EnclosureName
-    containing_asset_id: UUID
+    facility_code: FacilityCode
     permit_status: EnclosurePermitStatus
     lifecycle: EnclosureLifecycle
     registered_at: datetime

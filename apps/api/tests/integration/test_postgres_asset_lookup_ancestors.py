@@ -37,6 +37,7 @@ async def _register_asset(
     parent_id: UUID | None,
     name: str = "synthetic-asset",
     tier: str = "Device",
+    located_in_enclosure_id: UUID | None = None,
 ) -> None:
     """Append a synthetic AssetRegistered with the given parent edge + drain."""
     store = PostgresEventStore(pool)
@@ -48,6 +49,8 @@ async def _register_asset(
         "occurred_at": _NOW.isoformat(),
         "commissioned_by": str(_PRINCIPAL_ID),
     }
+    if located_in_enclosure_id is not None:
+        payload["located_in_enclosure_id"] = str(located_in_enclosure_id)
     await store.append(
         "Asset",
         asset_id,
@@ -223,6 +226,65 @@ async def test_ancestors_of_hydrates_each_closure_row_not_just_ids(
         ("stage", "Component", "Commissioned", frozenset()),
         ("camera", "Device", "Commissioned", frozenset()),
     }
+
+
+@pytest.mark.integration
+async def test_lookup_returns_located_in_enclosure_id(db_pool: asyncpg.Pool) -> None:
+    # The single-id lookup must surface the operational enclosure-zone
+    # pointer written at registration so the enclosure pre-flight gate
+    # reads it in one hop.
+    asset_id, enclosure_id = uuid4(), uuid4()
+    await _register_asset(
+        db_pool,
+        asset_id=asset_id,
+        parent_id=None,
+        tier="Unit",
+        located_in_enclosure_id=enclosure_id,
+    )
+
+    lookup = PostgresAssetLookup(db_pool)
+    result = await lookup.lookup(asset_id)
+    assert result is not None
+    assert result.located_in_enclosure_id == enclosure_id
+
+
+@pytest.mark.integration
+async def test_lookup_without_enclosure_yields_none(db_pool: asyncpg.Pool) -> None:
+    asset_id = uuid4()
+    await _register_asset(db_pool, asset_id=asset_id, parent_id=None, tier="Unit")
+
+    lookup = PostgresAssetLookup(db_pool)
+    result = await lookup.lookup(asset_id)
+    assert result is not None
+    assert result.located_in_enclosure_id is None
+
+
+@pytest.mark.integration
+async def test_ancestors_of_rows_carry_located_in_enclosure_id(db_pool: asyncpg.Pool) -> None:
+    # Each closure row re-joins the summary table, so each must surface
+    # its own located_in_enclosure_id; the recursive walk must not drop
+    # the column in the GROUP BY fan-in.
+    root, device = uuid4(), uuid4()
+    root_enclosure, device_enclosure = uuid4(), uuid4()
+    await _register_asset(
+        db_pool,
+        asset_id=root,
+        parent_id=None,
+        tier="Unit",
+        located_in_enclosure_id=root_enclosure,
+    )
+    await _register_asset(
+        db_pool,
+        asset_id=device,
+        parent_id=root,
+        tier="Device",
+        located_in_enclosure_id=device_enclosure,
+    )
+
+    lookup = PostgresAssetLookup(db_pool)
+    rows = _by_id(await lookup.ancestors_of(frozenset({device})))
+    assert rows[device].located_in_enclosure_id == device_enclosure  # type: ignore[attr-defined]
+    assert rows[root].located_in_enclosure_id == root_enclosure  # type: ignore[attr-defined]
 
 
 @pytest.mark.integration

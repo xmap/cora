@@ -58,6 +58,9 @@ async def test_handler_appends_procedure_completed_event() -> None:
     assert events[2].payload == {
         "procedure_id": str(_PROCEDURE_ID),
         "occurred_at": _NOW.isoformat(),
+        # None when the complete is issued outside a conduct (this handler
+        # path); the Conductor supplies a real kind on its complete calls.
+        "actuation_kind": None,
     }
 
 

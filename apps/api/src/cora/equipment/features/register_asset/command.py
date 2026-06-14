@@ -52,6 +52,17 @@ controller Asset exists (mirrors `parent_id`, `model_id`,
 `fixture_id`). The handler does not load any external stream on
 this field's behalf.
 
+`located_in_enclosure_id` is `UUID | None`, an optional bare
+cross-BC opaque pointer to the Enclosure (the operational
+access-gated volume) this Asset physically sits in. It is the
+device's OPERATIONAL where (distinct from `facility_code`, its
+INSTITUTIONAL where). Set ONCE at registration (Lock A precedent
+from `controller_id`); rebind path is decommission + re-register.
+Eventual-consistency: the decider does NOT verify the referenced
+Enclosure exists (mirrors `controller_id`); the handler loads no
+external stream on this field's behalf. Kept a bare `UUID` so the
+Equipment BC takes on no module dependency on the Enclosure BC.
+
 `facility_code` is `str | None`, optional cross-BC reference to
 the Federation Facility that owns this Asset, keyed on the
 cross-deployment convergent slug (`FacilityCode`) per
@@ -108,4 +119,13 @@ class RegisterAsset:
     # pairing is enforced by the AssetOwner VO.
     owners: frozenset[AssetOwner] = field(default_factory=frozenset[AssetOwner])
     controller_id: UUID | None = None
+    # Optional bare cross-BC opaque pointer to the Enclosure (the
+    # operational access-gated volume) this Asset is located in. Set
+    # ONCE at registration per the Lock A precedent (mirrors
+    # controller_id); rebind path is decommission + re-register.
+    # Eventual-consistency: the decider does NOT verify the referenced
+    # Enclosure exists, and the handler loads no external stream on this
+    # field's behalf. Kept a bare UUID so the Equipment BC takes on no
+    # module dependency on the Enclosure BC.
+    located_in_enclosure_id: UUID | None = None
     facility_code: str | None = None

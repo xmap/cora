@@ -86,6 +86,21 @@ def test_procedure_status_values_locked() -> None:
     }
 
 
+@pytest.mark.unit
+def test_procedure_status_is_terminal_partitions_the_fsm() -> None:
+    """is_terminal is True exactly for the terminal states. Pinned so a new
+    state must consciously classify itself (consumers like register_dataset's
+    terminal-producing-Procedure guard rely on this)."""
+    terminal = {s for s in ProcedureStatus if s.is_terminal}
+    assert terminal == {
+        ProcedureStatus.COMPLETED,
+        ProcedureStatus.ABORTED,
+        ProcedureStatus.TRUNCATED,
+    }
+    assert not ProcedureStatus.DEFINED.is_terminal
+    assert not ProcedureStatus.RUNNING.is_terminal
+
+
 # ---------- Error class shapes ----------
 
 

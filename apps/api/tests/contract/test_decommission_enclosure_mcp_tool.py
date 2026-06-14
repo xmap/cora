@@ -1,6 +1,6 @@
 """Contract tests for the `decommission_enclosure` MCP tool."""
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,7 +20,7 @@ def _register_enclosure_via_tool(client: TestClient, headers: dict[str, str]) ->
                 "name": "register_enclosure",
                 "arguments": {
                     "name": "2-BM Hutch A",
-                    "containing_asset_id": str(uuid4()),
+                    "facility_code": "cora",
                 },
             },
         },

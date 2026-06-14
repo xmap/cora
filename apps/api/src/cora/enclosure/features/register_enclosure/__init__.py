@@ -7,7 +7,7 @@ command slices:
 
     cmd = register_enclosure.RegisterEnclosure(
         name="...",
-        containing_asset_id=...,
+        facility_code="...",
     )
     handler = register_enclosure.bind(deps)
     enclosure_id = await handler(cmd, principal_id=..., correlation_id=...)

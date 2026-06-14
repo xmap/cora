@@ -34,6 +34,7 @@ from cora.data.aggregates.dataset.evolver import fold
 from cora.data.features import promote_dataset, register_dataset
 from cora.data.features.promote_dataset import DatasetPromotionContext, PromoteDataset
 from cora.data.features.register_dataset import DatasetRegistrationContext, RegisterDataset
+from cora.operation.aggregates.procedure import Procedure, ProcedureName, ProcedureStatus
 from cora.operation.ports.control_port import ActuationKind
 from cora.run.aggregates.run import Run, RunName, RunStatus
 from cora.shared.identity import ActorId
@@ -80,11 +81,26 @@ def _completed_run() -> Run:
     )
 
 
+def _completed_procedure(actuation_kind: str | None) -> Procedure:
+    """A terminal Procedure carrying the conduct-observed actuation kind, as
+    the Conductor would have recorded it on ProcedureCompleted."""
+    return Procedure(
+        id=uuid4(),
+        name=ProcedureName("seed-procedure"),
+        kind="alignment",
+        status=ProcedureStatus.COMPLETED,
+        actuation_kind=actuation_kind,
+    )
+
+
 def _register_then_promote(actuation_kind: str | None) -> list[DatasetPromoted]:
-    """Register a Dataset carrying `actuation_kind` from a Completed Run,
-    fold to state, then attempt promotion. Returns the promote events or
+    """Register a Dataset whose producing Procedure observed `actuation_kind`
+    (against a Completed Run so the Run-must-be-Completed guard passes), fold
+    to state, then attempt promotion. The kind is DERIVED server-side from the
+    loaded Procedure (never a caller input). Returns the promote events or
     raises whatever the promote decider raises."""
     run = _completed_run()
+    procedure = _completed_procedure(actuation_kind)
     registered = register_dataset.decide(
         state=None,
         command=RegisterDataset(
@@ -95,14 +111,14 @@ def _register_then_promote(actuation_kind: str | None) -> list[DatasetPromoted]:
             byte_size=1024,
             media_type="application/x-hdf5",
             producing_run_id=run.id,
-            actuation_kind=actuation_kind,
+            producing_procedure_id=procedure.id,
         ),
-        context=DatasetRegistrationContext(producing_run=run),
+        context=DatasetRegistrationContext(producing_run=run, producing_procedure=procedure),
         now=_NOW,
         new_id=uuid4(),
         registered_by=_ACTOR,
     )
-    # The orchestrator-supplied kind is snapshotted onto the event verbatim.
+    # The kind derived from the producing Procedure is snapshotted onto the event.
     assert registered[0].producing_actuation_kind == actuation_kind
     dataset = fold(registered)
     assert dataset is not None
@@ -138,3 +154,13 @@ def test_physical_origin_dataset_promotes_end_to_end() -> None:
     events = _register_then_promote(ActuationKind.PHYSICAL.value)
     assert len(events) == 1
     assert isinstance(events[0], DatasetPromoted)
+
+
+@pytest.mark.unit
+def test_procedure_named_but_none_kind_is_non_promotable_end_to_end() -> None:
+    """A terminal producing Procedure that recorded no kind (no routing table /
+    cancelled / truncated) yields a Dataset whose provenance is unproven:
+    register -> fold -> promote refuses it (item-6 None-tightening). This is the
+    leak the activation+item-6 closes."""
+    with pytest.raises(DatasetCannotPromoteError):
+        _register_then_promote(None)

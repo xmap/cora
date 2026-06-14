@@ -254,10 +254,12 @@ def decide(
     # cross-BC Enclosure gate per [[project_enclosure_stage1_design]]:
     # every referencing Enclosure row must be `permit_status ==
     # "Permitted"` AND `lifecycle == "Active"`. Per L-pre-1 (always-
-    # derive-from-Asset-chain), the scope set is derived in the
-    # handler via `EnclosureLookup.find_for_assets`; this decider
-    # treats an empty `context.referencing_enclosures` as Permit-by-
-    # default (no Enclosure binds any scoped Asset). When any row
+    # derive-from-Asset-chain), the scope set is derived in the handler
+    # by collecting each scoped Asset's (and ancestor's)
+    # `located_in_enclosure_id` and loading them via
+    # `EnclosureLookup.find_by_ids`; this decider treats an empty
+    # `context.referencing_enclosures` as Permit-by-default (no scoped
+    # Asset is located in any Enclosure). When any row
     # fails, the decider raises with `enclosure_status_summary`
     # carrying the `(enclosure_id, "permit_status|lifecycle")` tuple
     # for every failing Enclosure so the 409 names each blocker.

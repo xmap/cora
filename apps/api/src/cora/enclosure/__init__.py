@@ -5,10 +5,10 @@ Owns observed-permit state for physical enclosures in CORA:
   - `Enclosure` aggregate: a physical enclosure (hutch, cabinet,
     interlocked room) whose permit-to-occupy or permit-to-operate
     is observed via external monitor. Multiple instances at runtime,
-    one per enclosed volume that gates downstream work. The
-    enclosure as physical structure stays as an `Asset` (referenced
-    via `containing_asset_id`); the permit observation axis is
-    `Enclosure`.
+    one per enclosed volume that gates downstream work. The enclosure
+    is anchored to the containing geography it sits within (the
+    Federation `Facility` Site / Area, referenced via `facility_code`);
+    the permit observation axis is `Enclosure`.
 
 Observation-axis-only BC. CORA does NOT issue, grant, revoke, or
 arbitrate permits; an external interlock system is the source of

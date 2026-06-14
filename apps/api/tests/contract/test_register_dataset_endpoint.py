@@ -164,6 +164,39 @@ def test_post_datasets_returns_404_when_producing_run_id_does_not_exist() -> Non
 
 
 @pytest.mark.contract
+def test_post_datasets_returns_404_when_producing_procedure_id_does_not_exist() -> None:
+    missing_id = str(uuid4())
+    with TestClient(create_app()) as client:
+        response = client.post("/datasets", json=_good_body(producing_procedure_id=missing_id))
+    assert response.status_code == 404
+    assert "producing_procedure_id" in response.json()["detail"]
+
+
+@pytest.mark.contract
+def test_post_datasets_returns_409_when_producing_procedure_is_not_terminal() -> None:
+    """A freshly registered Procedure is Defined (non-terminal); registering a
+    Dataset against it is a 409 state conflict (its actuation kind isn't final).
+    item-6 option A."""
+    with TestClient(create_app()) as client:
+        procedure_id = client.post(
+            "/procedures", json={"name": "fresh proc", "kind": "bakeout"}
+        ).json()["procedure_id"]
+        response = client.post("/datasets", json=_good_body(producing_procedure_id=procedure_id))
+    assert response.status_code == 409
+    assert "terminal" in response.json()["detail"]
+
+
+@pytest.mark.contract
+def test_post_datasets_rejects_actuation_kind_as_free_input_with_422() -> None:
+    """Trust posture: actuation_kind is server-derived from the producing
+    Procedure, NEVER a caller input. The request model forbids it, so a caller
+    trying to self-declare Physical to bypass the gate is rejected at the edge."""
+    with TestClient(create_app()) as client:
+        response = client.post("/datasets", json=_good_body(actuation_kind="Physical"))
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
 def test_post_datasets_returns_404_when_subject_id_does_not_exist() -> None:
     missing_id = str(uuid4())
     with TestClient(create_app()) as client:

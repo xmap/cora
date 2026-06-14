@@ -129,3 +129,47 @@ async def test_ancestors_of_chain_at_cap_succeeds() -> None:
         parent = ids[i + 1] if i + 1 < len(ids) else None
         lookup.register(asset_id, name=f"n{i}", tier="Device", parent_id=parent)
     assert _ids(await lookup.ancestors_of(frozenset({ids[0]}))) == set(ids)
+
+
+@pytest.mark.unit
+async def test_lookup_returns_located_in_enclosure_id() -> None:
+    """The snapshot row carries the operational enclosure-zone pointer
+    so the enclosure pre-flight gate can read it in one hop."""
+    lookup = InMemoryAssetLookup()
+    asset_id, enclosure_id = uuid4(), uuid4()
+    lookup.register(asset_id, name="rotary", tier="Device", located_in_enclosure_id=enclosure_id)
+    result = await lookup.lookup(asset_id)
+    assert result is not None
+    assert result.located_in_enclosure_id == enclosure_id
+
+
+@pytest.mark.unit
+async def test_lookup_without_enclosure_yields_none_located_in_enclosure_id() -> None:
+    lookup = InMemoryAssetLookup()
+    asset_id = uuid4()
+    lookup.register(asset_id, name="rotary", tier="Device")
+    result = await lookup.lookup(asset_id)
+    assert result is not None
+    assert result.located_in_enclosure_id is None
+
+
+@pytest.mark.unit
+async def test_ancestors_of_rows_carry_located_in_enclosure_id() -> None:
+    """Each closure row returns the snapshot's located_in_enclosure_id,
+    so the gate can inspect every ancestor's operational zone."""
+    lookup = InMemoryAssetLookup()
+    root, device = uuid4(), uuid4()
+    root_enclosure, device_enclosure = uuid4(), uuid4()
+    lookup.register(
+        root, name="2-BM", tier="Unit", parent_id=None, located_in_enclosure_id=root_enclosure
+    )
+    lookup.register(
+        device,
+        name="rotary",
+        tier="Device",
+        parent_id=root,
+        located_in_enclosure_id=device_enclosure,
+    )
+    rows = {r.id: r for r in await lookup.ancestors_of(frozenset({device}))}
+    assert rows[device].located_in_enclosure_id == device_enclosure
+    assert rows[root].located_in_enclosure_id == root_enclosure

@@ -163,12 +163,19 @@ class ConductProcedureResponse(BaseModel):
     `succeeded` is the canonical pass/fail bit; `failure` is non-null
     iff `succeeded` is False. `completed_count` is informational
     (the number of steps that ran successfully before halt, if any).
+
+    `actuation_kind` is the raw `ActuationKind` value (Physical /
+    Simulated / Hybrid) the Conductor observed, or None when nothing
+    instrumented was actuated. Read-only operator visibility; the gate
+    that consumes it reads the value server-side off the Procedure
+    stream, never back from this response.
     """
 
     procedure_id: UUID
     completed_count: int
     succeeded: bool
     failure: _ConductorFailureResponse | None = None
+    actuation_kind: str | None = None
 
 
 def criterion_from_wire(
@@ -234,6 +241,7 @@ def result_to_wire(result: ConductProcedureResult) -> ConductProcedureResponse:
         completed_count=result.completed_count,
         succeeded=result.succeeded,
         failure=_failure_to_wire(result.failure) if result.failure is not None else None,
+        actuation_kind=result.actuation_kind,
     )
 
 

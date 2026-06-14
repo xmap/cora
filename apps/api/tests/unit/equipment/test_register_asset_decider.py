@@ -314,6 +314,48 @@ def test_decide_defaults_controller_id_to_none_when_omitted() -> None:
 
 
 @pytest.mark.unit
+def test_decide_propagates_located_in_enclosure_id_to_emitted_event() -> None:
+    """Happy path: an optional located_in_enclosure_id supplied on the
+    command rides the AssetRegistered event verbatim. The decider does
+    NOT load the Enclosure snapshot (eventual-consistency) and applies
+    no validation, mirroring the controller_id / parent_id precedents."""
+    located_in_enclosure_id = uuid4()
+    events = register_asset.decide(
+        state=None,
+        command=RegisterAsset(
+            name="Aerotech_ABRS_rotary",
+            tier=AssetTier.DEVICE,
+            parent_id=uuid4(),
+            located_in_enclosure_id=located_in_enclosure_id,
+        ),
+        now=_NOW,
+        new_id=uuid4(),
+        commissioned_by=_TEST_ACTOR_ID,
+        facility_lookup_result=None,
+    )
+    assert events[0].located_in_enclosure_id == located_in_enclosure_id
+
+
+@pytest.mark.unit
+def test_decide_defaults_located_in_enclosure_id_to_none_when_omitted() -> None:
+    """Assets registered without an enclosure default to
+    located_in_enclosure_id=None (the additive-default case)."""
+    events = register_asset.decide(
+        state=None,
+        command=RegisterAsset(
+            name="Sample_top_X",
+            tier=AssetTier.DEVICE,
+            parent_id=uuid4(),
+        ),
+        now=_NOW,
+        new_id=uuid4(),
+        commissioned_by=_TEST_ACTOR_ID,
+        facility_lookup_result=None,
+    )
+    assert events[0].located_in_enclosure_id is None
+
+
+@pytest.mark.unit
 def test_decide_passes_alternate_identifiers_through_to_emitted_event() -> None:
     """Happy path: a non-empty `alternate_identifiers` set on the
     command rides the AssetRegistered event verbatim. The decider does

@@ -180,6 +180,19 @@ class AssetRegistered:
     rather than serialized as JSON null) to mirror the `drawing` /
     `model_id` precedents.
 
+    `located_in_enclosure_id` is an optional bare cross-BC opaque
+    pointer to the Enclosure (the operational access-gated volume)
+    this Asset is located in (its OPERATIONAL where, distinct from
+    `facility_code`, its INSTITUTIONAL where). Set at registration per
+    the Lock A precedent (mirrors `controller_id`); rebind path is
+    decommission + re-register. Defaults to None so legacy
+    AssetRegistered streams without the field fold cleanly via the
+    additive-payload pattern; `to_payload` uses the omit-when-None
+    convention (key absent rather than serialized as JSON null) to
+    mirror the `controller_id` / `model_id` precedents. Kept a bare
+    `UUID` so the Equipment BC takes on no module dependency on the
+    Enclosure BC.
+
     `facility_code` is an optional cross-BC reference to the
     Federation Facility that owns this Asset, keyed on the
     cross-deployment convergent slug (`FacilityCode`) per
@@ -215,6 +228,7 @@ class AssetRegistered:
     )
     owners: frozenset[AssetOwner] = field(default_factory=frozenset[AssetOwner])
     controller_id: UUID | None = None
+    located_in_enclosure_id: UUID | None = None
     facility_code: FacilityCode | None = None
 
 
@@ -702,6 +716,7 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
             alternate_identifiers=alternate_identifiers,
             owners=owners,
             controller_id=controller_id,
+            located_in_enclosure_id=located_in_enclosure_id,
             facility_code=facility_code,
         ):
             payload: dict[str, Any] = {
@@ -728,6 +743,14 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
                 # cannot observe a JSON null where the key was
                 # previously absent.
                 payload["controller_id"] = str(controller_id)
+            if located_in_enclosure_id is not None:
+                # Omit-when-None mirroring the controller_id / model_id
+                # precedent: legacy AssetRegistered streams (pre-
+                # enclosure-location slice) had no `located_in_enclosure_id`
+                # key; preserve that wire shape so existing readers
+                # cannot observe a JSON null where the key was previously
+                # absent. Bare opaque UUID string on disk.
+                payload["located_in_enclosure_id"] = str(located_in_enclosure_id)
             if facility_code is not None:
                 # Omit-when-None mirroring the controller_id / model_id
                 # precedent (and the Supply facility_code precedent on
@@ -1000,6 +1023,12 @@ def from_stored(stored: StoredEvent) -> AssetEvent:
                 model_id = UUID(raw_model_id) if raw_model_id is not None else None
                 raw_controller_id = payload.get("controller_id")
                 controller_id = UUID(raw_controller_id) if raw_controller_id is not None else None
+                raw_located_in_enclosure_id = payload.get("located_in_enclosure_id")
+                located_in_enclosure_id = (
+                    UUID(raw_located_in_enclosure_id)
+                    if raw_located_in_enclosure_id is not None
+                    else None
+                )
                 raw_facility_code = payload.get("facility_code")
                 facility_code = (
                     FacilityCode(raw_facility_code) if raw_facility_code is not None else None
@@ -1026,6 +1055,7 @@ def from_stored(stored: StoredEvent) -> AssetEvent:
                     alternate_identifiers=alternate_identifiers,
                     owners=owners,
                     controller_id=controller_id,
+                    located_in_enclosure_id=located_in_enclosure_id,
                     facility_code=facility_code,
                 )
 

@@ -39,9 +39,17 @@ class ConductProcedureResult:
     completed_count + optional failure) so the wire response stays
     decoupled from the in-process Conductor type and the
     application-layer slice owns its return-type contract.
+
+    `actuation_kind` is the raw `ActuationKind` value (Physical /
+    Simulated / Hybrid) the Conductor observed across the conduct, or
+    None when nothing instrumented was actuated (no routing table, or
+    no control-port write). Surfaced for operator visibility; the same
+    value is the one the Conductor records on the Procedure terminal
+    event, where the Data BC reads it back to gate promotion.
     """
 
     procedure_id: UUID
     completed_count: int
     succeeded: bool
     failure: ConductorFailure | None = None
+    actuation_kind: str | None = None

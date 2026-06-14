@@ -1,9 +1,9 @@
 """In-memory `EnclosureLookup` adapter for unit tests and the `test` app environment.
 
 Mirrors the production adapter contract: same `lookup` and
-`find_for_assets` operations, same None-on-missing /
+`find_by_ids` operations, same None-on-missing /
 empty-list-on-no-match semantics, same Decommissioned-exclusion
-posture on `find_for_assets`. A `threading.Lock` guards the dict so
+posture on `find_by_ids`. A `threading.Lock` guards the dict so
 concurrent tasks see consistent state.
 
 Not durable across process restarts and not safe for production
@@ -37,7 +37,6 @@ class InMemoryEnclosureLookup:
         self,
         enclosure_id: UUID,
         name: str,
-        containing_asset_id: UUID,
         permit_status: str = "Permitted",
         lifecycle: str = "Active",
         observed_at: str | None = None,
@@ -57,7 +56,6 @@ class InMemoryEnclosureLookup:
             self._records[enclosure_id] = EnclosureLookupResult(
                 enclosure_id=enclosure_id,
                 name=name,
-                containing_asset_id=containing_asset_id,
                 permit_status=permit_status,
                 lifecycle=lifecycle,
                 observed_at=observed_at,
@@ -69,14 +67,14 @@ class InMemoryEnclosureLookup:
         with self._lock:
             return self._records.get(enclosure_id)
 
-    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
-        if not asset_ids:
+    async def find_by_ids(self, *, enclosure_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
+        if not enclosure_ids:
             return []
         with self._lock:
             return [
                 reference
-                for reference in self._records.values()
-                if reference.containing_asset_id in asset_ids and reference.lifecycle == "Active"
+                for eid, reference in self._records.items()
+                if eid in enclosure_ids and reference.lifecycle == "Active"
             ]
 
 

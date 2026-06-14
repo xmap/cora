@@ -271,7 +271,17 @@ def test_to_payload_serializes_procedure_completed() -> None:
     assert to_payload(event) == {
         "procedure_id": str(procedure_id),
         "occurred_at": _NOW.isoformat(),
+        "actuation_kind": None,
     }
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_procedure_completed_with_actuation_kind() -> None:
+    procedure_id = UUID("01900000-0000-7000-8000-00000000b012")
+    event = ProcedureCompleted(
+        procedure_id=procedure_id, occurred_at=_NOW, actuation_kind="Simulated"
+    )
+    assert to_payload(event)["actuation_kind"] == "Simulated"
 
 
 @pytest.mark.unit
@@ -282,7 +292,17 @@ def test_to_payload_serializes_procedure_aborted() -> None:
         "procedure_id": str(procedure_id),
         "reason": "quench",
         "occurred_at": _NOW.isoformat(),
+        "actuation_kind": None,
     }
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_procedure_aborted_with_actuation_kind() -> None:
+    procedure_id = UUID("01900000-0000-7000-8000-00000000b013")
+    event = ProcedureAborted(
+        procedure_id=procedure_id, reason="quench", occurred_at=_NOW, actuation_kind="Hybrid"
+    )
+    assert to_payload(event)["actuation_kind"] == "Hybrid"
 
 
 @pytest.mark.unit
@@ -311,6 +331,34 @@ def test_from_stored_rebuilds_procedure_completed() -> None:
 
 
 @pytest.mark.unit
+def test_from_stored_procedure_completed_legacy_payload_folds_actuation_kind_to_none() -> None:
+    """Pre-activation ProcedureCompleted payloads omit actuation_kind; they
+    must fold to None, not raise."""
+    stored = _stored(
+        "ProcedureCompleted",
+        {"procedure_id": str(uuid4()), "occurred_at": _NOW.isoformat()},
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, ProcedureCompleted)
+    assert rebuilt.actuation_kind is None
+
+
+@pytest.mark.unit
+def test_from_stored_procedure_completed_reads_actuation_kind() -> None:
+    stored = _stored(
+        "ProcedureCompleted",
+        {
+            "procedure_id": str(uuid4()),
+            "occurred_at": _NOW.isoformat(),
+            "actuation_kind": "Simulated",
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, ProcedureCompleted)
+    assert rebuilt.actuation_kind == "Simulated"
+
+
+@pytest.mark.unit
 def test_from_stored_rebuilds_procedure_aborted() -> None:
     procedure_id = uuid4()
     stored = _stored(
@@ -325,6 +373,23 @@ def test_from_stored_rebuilds_procedure_aborted() -> None:
     assert isinstance(rebuilt, ProcedureAborted)
     assert rebuilt.procedure_id == procedure_id
     assert rebuilt.reason == "vacuum loss"
+    assert rebuilt.actuation_kind is None
+
+
+@pytest.mark.unit
+def test_from_stored_procedure_aborted_reads_actuation_kind() -> None:
+    stored = _stored(
+        "ProcedureAborted",
+        {
+            "procedure_id": str(uuid4()),
+            "reason": "vacuum loss",
+            "occurred_at": _NOW.isoformat(),
+            "actuation_kind": "Hybrid",
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, ProcedureAborted)
+    assert rebuilt.actuation_kind == "Hybrid"
 
 
 @pytest.mark.unit

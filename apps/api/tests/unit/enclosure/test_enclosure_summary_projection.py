@@ -21,7 +21,7 @@ _TEST_ACTOR_ID = ActorId(UUID("00000000-0000-0000-0000-000000000001"))
 _TEST_MONITOR_SOURCE_ID = MonitorSourceId(UUID("00000000-0000-0000-0000-000000000002"))
 
 _ENCLOSURE_ID = uuid4()
-_CONTAINING_ASSET_ID = uuid4()
+_FACILITY_CODE = "aps"
 _EVENT_ID = uuid4()
 _CORRELATION_ID = uuid4()
 _NOW = datetime(2026, 6, 9, 12, 0, 0, tzinfo=UTC)
@@ -32,7 +32,7 @@ def _conn_with_savepoint() -> AsyncMock:
 
     The projection's `EnclosureRegistered` arm wraps its INSERT in
     `async with conn.transaction(): ...` so the
-    `(containing_asset_id, name) WHERE lifecycle='Active'` partial
+    `(facility_code, name) WHERE lifecycle='Active'` partial
     UNIQUE constraint on `proj_enclosure_summary` rolls back only the
     inner SAVEPOINT (not the worker's outer batch txn). The unit test
     mock needs to satisfy that protocol shape.
@@ -105,7 +105,7 @@ async def test_enclosure_registered_inserts_with_unknown_permit_and_active_lifec
         {
             "enclosure_id": str(_ENCLOSURE_ID),
             "name": "2-BM Hutch A",
-            "containing_asset_id": str(_CONTAINING_ASSET_ID),
+            "facility_code": _FACILITY_CODE,
             "registered_by": str(_TEST_ACTOR_ID),
             "occurred_at": _NOW.isoformat(),
         },
@@ -124,26 +124,26 @@ async def test_enclosure_registered_inserts_with_unknown_permit_and_active_lifec
     assert "'Active'" in sql
     assert args.args[1] == _ENCLOSURE_ID
     assert args.args[2] == "2-BM Hutch A"
-    assert args.args[3] == _CONTAINING_ASSET_ID
+    assert args.args[3] == _FACILITY_CODE
     assert args.args[4] == _NOW
     assert args.args[5] == _TEST_ACTOR_ID
 
 
 @pytest.mark.unit
 async def test_enclosure_registered_swallows_unique_violation_and_logs_warn() -> None:
-    """Cross-stream duplicate on (containing_asset_id, name) raises
+    """Cross-stream duplicate on (facility_code, name) raises
     UniqueViolation inside the SAVEPOINT; the projection catches it,
     logs, and returns cleanly so the worker's outer batch txn can keep
     advancing."""
     proj = EnclosureSummaryProjection()
     conn = _conn_with_savepoint()
-    conn.execute.side_effect = asyncpg.UniqueViolationError("duplicate (containing_asset_id, name)")
+    conn.execute.side_effect = asyncpg.UniqueViolationError("duplicate (facility_code, name)")
     event = _stored(
         "EnclosureRegistered",
         {
             "enclosure_id": str(_ENCLOSURE_ID),
             "name": "2-BM Hutch A",
-            "containing_asset_id": str(_CONTAINING_ASSET_ID),
+            "facility_code": _FACILITY_CODE,
             "registered_by": str(_TEST_ACTOR_ID),
             "occurred_at": _NOW.isoformat(),
         },

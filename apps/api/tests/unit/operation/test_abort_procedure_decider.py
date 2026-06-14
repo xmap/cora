@@ -54,6 +54,21 @@ def test_decide_emits_procedure_aborted_when_running() -> None:
     assert events[0].procedure_id == proc.id
     assert events[0].reason == "vacuum loss"
     assert events[0].occurred_at == _NOW
+    assert events[0].actuation_kind is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("kind", ["Physical", "Simulated", "Hybrid"])
+def test_decide_snapshots_actuation_kind_onto_aborted_event(kind: str) -> None:
+    """A Dataset off an aborted conduct still carries honest provenance: the
+    decider snapshots the Conductor-supplied kind onto ProcedureAborted."""
+    proc = _procedure()
+    events = abort_procedure.decide(
+        state=proc,
+        command=AbortProcedure(procedure_id=proc.id, reason="vacuum loss", actuation_kind=kind),
+        now=_NOW,
+    )
+    assert events[0].actuation_kind == kind
 
 
 @pytest.mark.unit

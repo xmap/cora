@@ -45,7 +45,6 @@ def _enclosure_ref(
     return EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="<test enclosure>",
-        containing_asset_id=uuid4(),
         permit_status=permit_status,
         lifecycle=lifecycle,
         observed_at=None,

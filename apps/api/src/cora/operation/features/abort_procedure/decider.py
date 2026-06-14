@@ -48,6 +48,7 @@ def decide(
         ProcedureAborted(
             procedure_id=state.id,
             reason=reason.value,
+            actuation_kind=command.actuation_kind,
             occurred_at=now,
         )
     ]

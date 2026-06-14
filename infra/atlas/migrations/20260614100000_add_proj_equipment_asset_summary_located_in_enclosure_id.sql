@@ -1,0 +1,37 @@
+-- Add the Asset.located_in_enclosure_id cross-BC pointer column to the
+-- equipment asset projection, mirroring the
+-- `add_proj_equipment_asset_summary_facility_code` migration.
+--
+-- `located_in_enclosure_id` is a bare cross-BC opaque pointer to the
+-- Enclosure (the operational access-gated volume) this Asset is located
+-- in. It is the device's OPERATIONAL where (where it physically sits and
+-- whose access-control envelope governs it), distinct from
+-- `facility_code`, its INSTITUTIONAL where (which Federation Facility
+-- owns it). The column is nullable because the field is OPTIONAL day-one
+-- (additive forward-compat: legacy rows registered before this slice stay
+-- NULL).
+--
+-- ## Column shape
+--
+-- UUID NULL: the pointer round-trips opaque. No foreign key (the
+-- Enclosure aggregate lives in a different BC, and eventual-consistency
+-- is the explicit stance: the decider does not verify the referenced
+-- Enclosure exists). The aggregate keeps the pointer a bare UUID so the
+-- Equipment BC takes on no module dependency on the Enclosure BC.
+--
+-- ## No index day-one
+--
+-- NO index: there is no per-enclosure list filter or pre-flight lookup
+-- consuming this column yet. The pre-flight gate that reads it walks the
+-- Asset ancestor closure via the AssetLookup port (which returns this
+-- field on each snapshot row), not via a column predicate. Add a partial
+-- index in a later slice if a `?located_in_enclosure_id=` query parameter
+-- or a reverse lookup lands.
+--
+-- ## Forward-only
+--
+-- Pure ADD COLUMN; greenfield-friendly; no backfill (legacy rows stay
+-- NULL, the additive-state default).
+
+ALTER TABLE proj_equipment_asset_summary
+    ADD COLUMN located_in_enclosure_id UUID;

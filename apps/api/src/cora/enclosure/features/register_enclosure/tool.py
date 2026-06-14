@@ -19,6 +19,7 @@ from cora.enclosure.features.register_enclosure.handler import IdempotentHandler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+from cora.shared.facility_code import FACILITY_CODE_MAX_LENGTH
 
 
 class RegisterEnclosureOutput(BaseModel):
@@ -49,19 +50,24 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 description="Operator-readable display name for this Enclosure instance.",
             ),
         ],
-        containing_asset_id: Annotated[
-            UUID,
+        facility_code: Annotated[
+            str,
             Field(
+                min_length=1,
+                max_length=FACILITY_CODE_MAX_LENGTH,
+                pattern=r"^[a-z0-9-]{1,32}$",
                 description=(
-                    "Id of the Asset (typically a beamline or area asset) that "
-                    "physically contains this enclosure."
+                    "Cross-deployment Facility slug for the Site / Area this "
+                    "enclosure sits within (for example 'aps', 'maxiv'). "
+                    "Lowercase ASCII alphanumeric plus dash, 1-32 chars. "
+                    "Unknown codes raise HTTP 404."
                 ),
             ),
         ],
     ) -> RegisterEnclosureOutput:
         handler = get_handler()
         enclosure_id = await handler(
-            RegisterEnclosure(name=name, containing_asset_id=containing_asset_id),
+            RegisterEnclosure(name=name, facility_code=facility_code),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),
             surface_id=get_mcp_surface_id(),

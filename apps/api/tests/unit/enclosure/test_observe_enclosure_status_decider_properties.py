@@ -46,6 +46,7 @@ from cora.enclosure.aggregates.enclosure import (
 )
 from cora.enclosure.features import observe_enclosure_status
 from cora.enclosure.features.observe_enclosure_status import ObserveEnclosureStatus
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId, MonitorSourceId
 from tests._strategies import aware_datetimes, printable_ascii_text
 
@@ -58,6 +59,7 @@ _PERMIT_STATUS = st.sampled_from(list(EnclosurePermitStatus))
 _LIFECYCLE = st.sampled_from(list(EnclosureLifecycle))
 
 _FIXED_REGISTERED_AT = datetime(2026, 1, 1, tzinfo=UTC)
+_FACILITY_CODE = FacilityCode("aps")
 
 
 def _monitor_ref() -> MonitorRef:
@@ -67,7 +69,6 @@ def _monitor_ref() -> MonitorRef:
 def _state(
     *,
     enclosure_id: UUID,
-    containing_asset_id: UUID,
     registered_by: UUID,
     permit_status: EnclosurePermitStatus,
     lifecycle: EnclosureLifecycle = EnclosureLifecycle.ACTIVE,
@@ -81,7 +82,7 @@ def _state(
     return Enclosure(
         id=EnclosureId(enclosure_id),
         name=EnclosureName("2-BM Hutch A"),
-        containing_asset_id=containing_asset_id,
+        facility_code=_FACILITY_CODE,
         permit_status=permit_status,
         lifecycle=lifecycle,
         registered_at=_FIXED_REGISTERED_AT,
@@ -142,7 +143,6 @@ def test_observe_with_none_state_always_raises_not_found(
 @pytest.mark.unit
 @given(
     enclosure_id=st.uuids(),
-    containing_asset_id=st.uuids(),
     registered_by=st.uuids(),
     source_permit=_PERMIT_STATUS,
     target_permit=_PERMIT_STATUS,
@@ -153,7 +153,6 @@ def test_observe_with_none_state_always_raises_not_found(
 )
 def test_observe_decommissioned_lifecycle_always_raises_cannot_observe(
     enclosure_id: UUID,
-    containing_asset_id: UUID,
     registered_by: UUID,
     source_permit: EnclosurePermitStatus,
     target_permit: EnclosurePermitStatus,
@@ -165,7 +164,6 @@ def test_observe_decommissioned_lifecycle_always_raises_cannot_observe(
     """Decommissioned lifecycle rejects every observation regardless of target."""
     state = _state(
         enclosure_id=enclosure_id,
-        containing_asset_id=containing_asset_id,
         registered_by=registered_by,
         permit_status=source_permit,
         lifecycle=EnclosureLifecycle.DECOMMISSIONED,
@@ -189,7 +187,6 @@ def test_observe_decommissioned_lifecycle_always_raises_cannot_observe(
 @pytest.mark.unit
 @given(
     enclosure_id=st.uuids(),
-    containing_asset_id=st.uuids(),
     registered_by=st.uuids(),
     source_permit=_PERMIT_STATUS,
     target_permit=_PERMIT_STATUS,
@@ -200,7 +197,6 @@ def test_observe_decommissioned_lifecycle_always_raises_cannot_observe(
 )
 def test_observe_with_operator_trigger_always_raises_not_permitted(
     enclosure_id: UUID,
-    containing_asset_id: UUID,
     registered_by: UUID,
     source_permit: EnclosurePermitStatus,
     target_permit: EnclosurePermitStatus,
@@ -212,7 +208,6 @@ def test_observe_with_operator_trigger_always_raises_not_permitted(
     """Operator-trigger observation always rejects (D6.L2 backdoor closure)."""
     state = _state(
         enclosure_id=enclosure_id,
-        containing_asset_id=containing_asset_id,
         registered_by=registered_by,
         permit_status=source_permit,
     )
@@ -234,7 +229,6 @@ def test_observe_with_operator_trigger_always_raises_not_permitted(
 @pytest.mark.unit
 @given(
     enclosure_id=st.uuids(),
-    containing_asset_id=st.uuids(),
     registered_by=st.uuids(),
     permit_status=_PERMIT_STATUS,
     monitor_source_uuid=st.uuids(),
@@ -244,7 +238,6 @@ def test_observe_with_operator_trigger_always_raises_not_permitted(
 )
 def test_observe_identical_status_returns_empty_event_list(
     enclosure_id: UUID,
-    containing_asset_id: UUID,
     registered_by: UUID,
     permit_status: EnclosurePermitStatus,
     monitor_source_uuid: UUID,
@@ -255,7 +248,6 @@ def test_observe_identical_status_returns_empty_event_list(
     """L-EV-2 status-change-only: identical-status observation is a no-op."""
     state = _state(
         enclosure_id=enclosure_id,
-        containing_asset_id=containing_asset_id,
         registered_by=registered_by,
         permit_status=permit_status,
     )
@@ -277,7 +269,6 @@ def test_observe_identical_status_returns_empty_event_list(
 @given(
     state_enclosure_id=st.uuids(),
     command_enclosure_id=st.uuids(),
-    containing_asset_id=st.uuids(),
     registered_by=st.uuids(),
     source_permit=_PERMIT_STATUS,
     target_permit=_PERMIT_STATUS,
@@ -289,7 +280,6 @@ def test_observe_identical_status_returns_empty_event_list(
 def test_observe_status_change_emits_single_event_with_state_id(
     state_enclosure_id: UUID,
     command_enclosure_id: UUID,
-    containing_asset_id: UUID,
     registered_by: UUID,
     source_permit: EnclosurePermitStatus,
     target_permit: EnclosurePermitStatus,
@@ -302,7 +292,6 @@ def test_observe_status_change_emits_single_event_with_state_id(
     assume(source_permit is not target_permit)
     state = _state(
         enclosure_id=state_enclosure_id,
-        containing_asset_id=containing_asset_id,
         registered_by=registered_by,
         permit_status=source_permit,
     )
@@ -334,7 +323,6 @@ def test_observe_status_change_emits_single_event_with_state_id(
 @pytest.mark.unit
 @given(
     enclosure_id=st.uuids(),
-    containing_asset_id=st.uuids(),
     registered_by=st.uuids(),
     source_permit=_PERMIT_STATUS,
     target_permit=_PERMIT_STATUS,
@@ -345,7 +333,6 @@ def test_observe_status_change_emits_single_event_with_state_id(
 )
 def test_observe_is_pure_same_input_same_output(
     enclosure_id: UUID,
-    containing_asset_id: UUID,
     registered_by: UUID,
     source_permit: EnclosurePermitStatus,
     target_permit: EnclosurePermitStatus,
@@ -358,7 +345,6 @@ def test_observe_is_pure_same_input_same_output(
     assume(source_permit is not target_permit)
     state = _state(
         enclosure_id=enclosure_id,
-        containing_asset_id=containing_asset_id,
         registered_by=registered_by,
         permit_status=source_permit,
     )

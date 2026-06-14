@@ -18,10 +18,10 @@ precedent as the rest of the codebase.
 Dataset field through from prior state. Constructing
 `Dataset(id=..., name=..., uri=..., checksum=..., byte_size=...,
 encoding=..., status=...)` without explicitly passing the optional
-cross-aggregate refs (`producing_run_id`, `subject_id`,
-`derived_from`) AND the additive fields (`producing_run_end_state`,
-`producing_actuation_kind`, `intent`, `used_calibration_ids`) would
-silently WIPE them to defaults.
+cross-aggregate refs (`producing_run_id`, `producing_procedure_id`,
+`subject_id`, `derived_from`) AND the additive fields
+(`producing_run_end_state`, `producing_actuation_kind`, `intent`,
+`used_calibration_ids`) would silently WIPE them to defaults.
 Aligned to explicit construction post-domain-audit to match the
 documented pattern in Asset/Plan/Method/Practice/Family/Subject/Run
 evolvers. The `used_calibration_ids` AsShot citation set is IMMUTABLE
@@ -71,6 +71,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
             media_type=media_type,
             conforms_to=conforms_to,
             producing_run_id=producing_run_id,
+            producing_procedure_id=producing_procedure_id,
             subject_id=subject_id,
             derived_from=derived_from,
             producing_run_end_state=producing_run_end_state,
@@ -93,6 +94,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
                     conforms_to=conforms_to,
                 ),
                 producing_run_id=producing_run_id,
+                producing_procedure_id=producing_procedure_id,
                 subject_id=subject_id,
                 derived_from=derived_from,
                 status=DatasetStatus.REGISTERED,
@@ -116,6 +118,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
                 byte_size=prior.byte_size,
                 encoding=prior.encoding,
                 producing_run_id=prior.producing_run_id,
+                producing_procedure_id=prior.producing_procedure_id,
                 subject_id=prior.subject_id,
                 derived_from=prior.derived_from,
                 status=DatasetStatus.DISCARDED,
@@ -137,6 +140,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
                 byte_size=prior.byte_size,
                 encoding=prior.encoding,
                 producing_run_id=prior.producing_run_id,
+                producing_procedure_id=prior.producing_procedure_id,
                 subject_id=prior.subject_id,
                 derived_from=prior.derived_from,
                 # Status preserved (intent is orthogonal to lifecycle).
@@ -158,6 +162,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
                 byte_size=prior.byte_size,
                 encoding=prior.encoding,
                 producing_run_id=prior.producing_run_id,
+                producing_procedure_id=prior.producing_procedure_id,
                 subject_id=prior.subject_id,
                 derived_from=prior.derived_from,
                 # Status preserved (intent is orthogonal to lifecycle).

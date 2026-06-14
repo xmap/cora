@@ -362,6 +362,50 @@ class ProducingRunNotFoundError(Exception):
         self.run_id = run_id
 
 
+class ProducingProcedureNotFoundError(Exception):
+    """Attempted to register a Dataset against a Procedure that doesn't exist.
+
+    Cross-aggregate validation at registration: when
+    `producing_procedure_id` is set, the handler pre-loads the
+    Procedure (Operation BC) and confirms its stream is non-empty.
+    No status check (mirrors ProducingRunNotFoundError): the decider
+    derives `producing_actuation_kind` from whatever terminal state
+    the Procedure holds (None while non-terminal). Mapped to HTTP 404
+    via the locked <X>NotFoundError -> 404 taxonomy.
+    """
+
+    def __init__(self, procedure_id: UUID) -> None:
+        super().__init__(
+            f"Cannot register Dataset: producing_procedure_id {procedure_id} does not exist"
+        )
+        self.procedure_id = procedure_id
+
+
+class ProducingProcedureNotTerminalError(Exception):
+    """Attempted to register a Dataset against a non-terminal producing Procedure.
+
+    The actuation kind is snapshotted from the producing Procedure's
+    terminal state at registration (capture, don't recompute). A
+    still-Defined / Running Procedure has no final kind yet, so its
+    snapshot would be a stale None even after the conduct later resolves
+    to Physical -- which the promote-time unprovable-provenance guard
+    would then wrongly block. Requiring the Procedure to be terminal at
+    registration keeps "producing_procedure_id set + kind None" an
+    unambiguous "unprovable" signal. Cross-aggregate state conflict;
+    mapped to HTTP 409.
+    """
+
+    def __init__(self, procedure_id: UUID, *, current_status: str) -> None:
+        super().__init__(
+            f"Cannot register Dataset: producing_procedure_id {procedure_id} is "
+            f"{current_status!r}; a producing Procedure must be terminal "
+            "(Completed / Aborted / Truncated) at registration so its actuation "
+            "kind is final"
+        )
+        self.procedure_id = procedure_id
+        self.current_status = current_status
+
+
 class LinkedSubjectNotFoundError(Exception):
     """Attempted to register a Dataset against a Subject that doesn't exist.
 
@@ -898,6 +942,11 @@ class Dataset:
     byte_size: int
     encoding: DatasetEncoding
     producing_run_id: UUID | None = None
+    # The conducted Procedure that produced this Dataset; the lineage edge the
+    # actuation kind was derived from at registration. None for non-conducted
+    # / external Datasets. Eventual-consistency ref (loaded at register time,
+    # not re-verified at fold). Additive-state default None.
+    producing_procedure_id: UUID | None = None
     subject_id: UUID | None = None
     derived_from: frozenset[UUID] = field(default_factory=frozenset[UUID])
     status: DatasetStatus = DatasetStatus.REGISTERED

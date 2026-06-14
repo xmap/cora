@@ -22,7 +22,7 @@ loop pattern:
 
   - 400 (validation): InvalidEnclosureName, InvalidEnclosureReason,
     InvalidMonitorRef, MonitorTriggerNotPermitted
-  - 404 (not-found): EnclosureNotFound
+  - 404 (not-found): EnclosureNotFound, EnclosureFacilityNotFound
   - 409 (state-transition guards): EnclosureCannotDecommission,
     EnclosureCannotObserveWhileDecommissioned
   - 409 (defensive guard for AlreadyExists): EnclosureAlreadyExists
@@ -54,6 +54,7 @@ from cora.enclosure.aggregates.enclosure import (
     EnclosureAlreadyExistsError,
     EnclosureCannotDecommissionError,
     EnclosureCannotObserveWhileDecommissionedError,
+    EnclosureFacilityNotFoundError,
     EnclosureNotFoundError,
     InvalidEnclosureNameError,
     MonitorTriggerNotPermittedError,
@@ -141,7 +142,7 @@ def register_enclosure_routes(app: FastAPI) -> None:
         MonitorTriggerNotPermittedError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
-    for not_found_cls in (EnclosureNotFoundError,):
+    for not_found_cls in (EnclosureNotFoundError, EnclosureFacilityNotFoundError):
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for already_exists_cls in (EnclosureAlreadyExistsError,):
         app.add_exception_handler(already_exists_cls, _handle_already_exists)

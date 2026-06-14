@@ -844,7 +844,7 @@ class _FakeLifecycleHandler:
 
 
 def _conductor_full_lifecycle(
-    port: InMemoryControlPort,
+    port: ControlPort,
     appender: _FakeAppendStep,
     *,
     start: _FakeLifecycleHandler,
@@ -1593,3 +1593,84 @@ async def test_actuation_kind_is_simulated_when_setpoint_write_fails_on_simulate
     )
     assert result.succeeded is False
     assert result.actuation_kind is ActuationKind.SIMULATED
+
+
+# --- the bridge: conduct() threads the observed kind onto the terminal command ---
+
+
+@pytest.mark.unit
+async def test_conduct_threads_simulated_kind_into_complete_command() -> None:
+    """The activation bridge: a successful conduct over a simulated route
+    passes the observed ActuationKind value onto CompleteProcedure, where the
+    decider records it on ProcedureCompleted for the Data BC to read back."""
+    inner = InMemoryControlPort()
+    inner.simulate_connect("sim:rot:val")
+    registry = ControlPortRegistry()
+    registry.register("sim:", inner, is_simulated=True)
+    appender = _FakeAppendStep()
+    start = _FakeLifecycleHandler()
+    complete = _FakeLifecycleHandler()
+    abort = _FakeLifecycleHandler()
+    conductor = _conductor_full_lifecycle(
+        registry, appender, start=start, complete=complete, abort=abort, ids=[uuid4()]
+    )
+    result = await conductor.conduct(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="sim:rot:val", value=1.0),),
+    )
+    assert result.succeeded is True
+    assert len(complete.calls) == 1
+    assert complete.calls[0].command.actuation_kind == "Simulated"
+    assert abort.calls == []
+
+
+@pytest.mark.unit
+async def test_conduct_threads_kind_into_abort_command_on_execute_failure() -> None:
+    """A conduct that fails mid-execute over a simulated route still carries the
+    observed kind onto AbortProcedure (honest provenance for aborted-conduct
+    data; routes attempted before the failing step taint it)."""
+    inner = InMemoryControlPort()  # never connected -> the write fails
+    registry = ControlPortRegistry()
+    registry.register("sim:", inner, is_simulated=True)
+    appender = _FakeAppendStep()
+    start = _FakeLifecycleHandler()
+    complete = _FakeLifecycleHandler()
+    abort = _FakeLifecycleHandler()
+    conductor = _conductor_full_lifecycle(
+        registry, appender, start=start, complete=complete, abort=abort, ids=[uuid4()]
+    )
+    result = await conductor.conduct(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="sim:m1", value=1.0),),
+    )
+    assert result.succeeded is False
+    assert len(abort.calls) == 1
+    assert abort.calls[0].command.actuation_kind == "Simulated"
+    assert complete.calls == []
+
+
+@pytest.mark.unit
+async def test_conduct_threads_none_kind_into_complete_for_bare_port() -> None:
+    """An opt-out deployment (bare port, no routing table) observes no kind, so
+    CompleteProcedure carries None and the downstream gate stays inactive."""
+    port = InMemoryControlPort()
+    port.simulate_connect("2bma:rot:val")
+    appender = _FakeAppendStep()
+    start = _FakeLifecycleHandler()
+    complete = _FakeLifecycleHandler()
+    abort = _FakeLifecycleHandler()
+    conductor = _conductor_full_lifecycle(
+        port, appender, start=start, complete=complete, abort=abort, ids=[uuid4()]
+    )
+    result = await conductor.conduct(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="2bma:rot:val", value=1.0),),
+    )
+    assert result.succeeded is True
+    assert complete.calls[0].command.actuation_kind is None

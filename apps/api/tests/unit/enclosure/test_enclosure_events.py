@@ -19,10 +19,11 @@ from cora.enclosure.aggregates.enclosure.events import (
     _check_trigger_pairing,  # pyright: ignore[reportPrivateUsage]
 )
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId, MonitorSourceId
 
 _ENCLOSURE_ID = EnclosureId(UUID("01900000-0000-7000-8000-00000000e0c1"))
-_CONTAINING_ASSET_ID = UUID("01900000-0000-7000-8000-00000000a55e")
+_FACILITY_CODE = FacilityCode("aps")
 _ACTOR_ID = ActorId(UUID("01900000-0000-7000-8000-00000000ac01"))
 _MONITOR_SOURCE_ID = MonitorSourceId(UUID("01900000-0000-7000-8000-00000000d0c5"))
 _OCCURRED_AT = datetime(2026, 6, 8, 12, 0, 0, tzinfo=UTC)
@@ -55,7 +56,7 @@ def test_event_type_name_is_class_name() -> None:
     registered = EnclosureRegistered(
         enclosure_id=_ENCLOSURE_ID,
         name="Hutch A",
-        containing_asset_id=_CONTAINING_ASSET_ID,
+        facility_code=_FACILITY_CODE,
         registered_by=_ACTOR_ID,
         occurred_at=_OCCURRED_AT,
     )
@@ -89,7 +90,7 @@ def test_enclosure_registered_round_trips() -> None:
     event = EnclosureRegistered(
         enclosure_id=_ENCLOSURE_ID,
         name="Hutch A",
-        containing_asset_id=_CONTAINING_ASSET_ID,
+        facility_code=_FACILITY_CODE,
         registered_by=_ACTOR_ID,
         occurred_at=_OCCURRED_AT,
     )
@@ -219,7 +220,7 @@ def test_from_stored_enclosure_registered_missing_key_raises_malformed() -> None
     """A payload missing a required key surfaces as 'Malformed Enclosure...'."""
     bad_payload: dict[str, Any] = {
         "enclosure_id": str(_ENCLOSURE_ID),
-        # missing name, containing_asset_id, registered_by, occurred_at
+        # missing name, facility_code, registered_by, occurred_at
     }
     with pytest.raises(ValueError, match="Malformed EnclosureRegistered payload"):
         from_stored(_stored("EnclosureRegistered", bad_payload))
@@ -231,7 +232,7 @@ def test_from_stored_enclosure_registered_wrong_type_field_raises_malformed() ->
     bad_payload: dict[str, Any] = {
         "enclosure_id": "not-a-uuid",
         "name": "Hutch A",
-        "containing_asset_id": str(_CONTAINING_ASSET_ID),
+        "facility_code": str(_FACILITY_CODE),
         "registered_by": str(_ACTOR_ID),
         "occurred_at": _OCCURRED_AT.isoformat(),
     }

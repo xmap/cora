@@ -44,6 +44,7 @@ from cora.enclosure.features.observe_enclosure_status import (
     ObserveEnclosureStatus,
     decide,
 )
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId, MonitorSourceId
 
 _NOW = datetime(2026, 6, 9, 12, 0, 0, tzinfo=UTC)
@@ -51,7 +52,7 @@ _MONITOR_REF = MonitorRef(source_kind="EpicsPv", source_id="S35:pss_chain_state"
 _MONITOR_SOURCE_ID = MonitorSourceId(uuid4())
 _REGISTERED_AT = datetime(2026, 6, 1, 9, 0, 0, tzinfo=UTC)
 _REGISTERED_BY = ActorId(UUID("01900000-0000-7000-8000-0000000ec199"))
-_CONTAINING_ASSET_ID = UUID("01900000-0000-7000-8000-0000000ec103")
+_FACILITY_CODE = FacilityCode("aps")
 
 
 def _state(
@@ -62,7 +63,7 @@ def _state(
     return Enclosure(
         id=EnclosureId(uuid4()),
         name=EnclosureName("2-BM-A Hutch"),
-        containing_asset_id=_CONTAINING_ASSET_ID,
+        facility_code=_FACILITY_CODE,
         permit_status=permit_status,
         lifecycle=lifecycle,
         registered_at=_REGISTERED_AT,

@@ -307,15 +307,24 @@ async def test_handler_propagates_causation_id() -> None:
 _TARGET_ASSET_ID = UUID("01900000-0000-7000-8000-0000000c0b11")
 _LIVE_ANCESTOR_ID = UUID("01900000-0000-7000-8000-0000000c0c01")
 _DEAD_ANCESTOR_ID = UUID("01900000-0000-7000-8000-0000000c0c02")
+_TARGET_ENCLOSURE_ID = UUID("01900000-0000-7000-8000-0000000c0e00")
+_LIVE_ANCESTOR_ENCLOSURE_ID = UUID("01900000-0000-7000-8000-0000000c0e01")
+_DEAD_ANCESTOR_ENCLOSURE_ID = UUID("01900000-0000-7000-8000-0000000c0e02")
 
 
-def _result(asset_id: UUID, lifecycle: str, tier: str = "Unit") -> AssetLookupResult:
+def _result(
+    asset_id: UUID,
+    lifecycle: str,
+    tier: str = "Unit",
+    located_in_enclosure_id: UUID | None = None,
+) -> AssetLookupResult:
     return AssetLookupResult(
         id=asset_id,
         name=f"asset-{asset_id}",
         tier=tier,
         lifecycle=lifecycle,
         family_affordances=frozenset(),
+        located_in_enclosure_id=located_in_enclosure_id,
     )
 
 
@@ -348,7 +357,7 @@ class _RaisingAssetLookup:
 
 
 class _RecordingEnclosureLookup:
-    """Captures the asset_ids find_for_assets is called with."""
+    """Captures the enclosure_ids find_by_ids is called with."""
 
     def __init__(self) -> None:
         self.captured: frozenset[UUID] | None = None
@@ -357,18 +366,19 @@ class _RecordingEnclosureLookup:
         del enclosure_id
         return None
 
-    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
-        self.captured = asset_ids
+    async def find_by_ids(self, *, enclosure_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
+        self.captured = enclosure_ids
         return []
 
 
 @pytest.mark.unit
 async def test_procedure_widened_scope_includes_every_ancestor_regardless_of_lifecycle() -> None:
-    """start_procedure mirrors start_run: the ancestor closure widens the
-    Enclosure scope, including a Decommissioned ancestor. The Enclosure's
-    own lifecycle (applied downstream) decides whether it blocks; filtering
-    Decommissioned ancestors here would suppress an Active+NotPermitted
-    Enclosure on a retired ancestor and admit into an un-permitted hutch."""
+    """start_procedure mirrors start_run: the ancestor closure collects each
+    ancestor's `located_in_enclosure_id` into the gate's id-set, including a
+    Decommissioned ancestor's. The Enclosure's own lifecycle (applied
+    downstream) decides whether it blocks; filtering Decommissioned ancestors
+    here would suppress an Active+NotPermitted Enclosure on a retired ancestor
+    and admit into an un-permitted hutch."""
     store = InMemoryEventStore()
     await _seed_asset(store, _TARGET_ASSET_ID)
     await _seed_procedure(store, target_asset_ids=(_TARGET_ASSET_ID,))
@@ -376,9 +386,22 @@ async def test_procedure_widened_scope_includes_every_ancestor_regardless_of_lif
     asset_lookup = _StubAssetLookup(
         frozenset(
             {
-                _result(_TARGET_ASSET_ID, lifecycle="Active", tier="Device"),
-                _result(_LIVE_ANCESTOR_ID, lifecycle="Active"),
-                _result(_DEAD_ANCESTOR_ID, lifecycle="Decommissioned"),
+                _result(
+                    _TARGET_ASSET_ID,
+                    lifecycle="Active",
+                    tier="Device",
+                    located_in_enclosure_id=_TARGET_ENCLOSURE_ID,
+                ),
+                _result(
+                    _LIVE_ANCESTOR_ID,
+                    lifecycle="Active",
+                    located_in_enclosure_id=_LIVE_ANCESTOR_ENCLOSURE_ID,
+                ),
+                _result(
+                    _DEAD_ANCESTOR_ID,
+                    lifecycle="Decommissioned",
+                    located_in_enclosure_id=_DEAD_ANCESTOR_ENCLOSURE_ID,
+                ),
             }
         )
     )
@@ -396,9 +419,9 @@ async def test_procedure_widened_scope_includes_every_ancestor_regardless_of_lif
     )
 
     assert recorder.captured is not None
-    assert _LIVE_ANCESTOR_ID in recorder.captured
-    assert _TARGET_ASSET_ID in recorder.captured
-    assert _DEAD_ANCESTOR_ID in recorder.captured
+    assert _TARGET_ENCLOSURE_ID in recorder.captured
+    assert _LIVE_ANCESTOR_ENCLOSURE_ID in recorder.captured
+    assert _DEAD_ANCESTOR_ENCLOSURE_ID in recorder.captured
 
 
 @pytest.mark.unit
@@ -421,7 +444,7 @@ async def test_procedure_empty_ancestor_walk_leaves_scope_unwidened() -> None:
         correlation_id=_CORRELATION_ID,
     )
 
-    assert recorder.captured == frozenset({_TARGET_ASSET_ID})
+    assert recorder.captured == frozenset()
 
 
 @pytest.mark.unit

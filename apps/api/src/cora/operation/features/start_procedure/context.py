@@ -70,16 +70,19 @@ class ProcedureStartContext:
         default_factory=lambda: cast("Mapping[str, tuple[SupplyLookupResult, ...]]", {})
     )
     referencing_enclosures: tuple[EnclosureLookupResult, ...] = ()
-    """Every Active Enclosure whose `containing_asset_id` traces to any
-    of the Procedure's `target_asset_ids`. Loaded by the handler via
-    `deps.enclosure_lookup.find_for_assets(asset_ids=target_asset_ids)`.
+    """Every Active Enclosure that any of the Procedure's target Assets
+    (or their ancestors) declares as its `located_in_enclosure_id`. The
+    handler walks the Asset ancestor closure
+    (`deps.asset_lookup.ancestors_of`), collects the distinct
+    `located_in_enclosure_id` across those rows, and loads their permit
+    status via `deps.enclosure_lookup.find_by_ids(enclosure_ids=...)`.
 
     Empty tuple is Permit-by-default per the EnclosureLookup port
-    docstring: an Asset that no Enclosure contains has no enclosure-
+    docstring: an Asset located in no Enclosure has no enclosure-
     permit gate, AND facility-envelope Procedures with empty
     `target_asset_ids` trivially pass. The decider partitions each
     row on `permit_status == "Permitted" AND lifecycle == "Active"`;
     failing rows raise the appropriate cross-BC enclosure error per
     [[project_enclosure_stage1_design]] L-pre-1 (always-derive-from-
     Asset-chain). Procedure does NOT carry a `needed_enclosure_permits`
-    field; the chain IS the declaration."""
+    field; the located-in chain IS the declaration."""

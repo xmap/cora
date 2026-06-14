@@ -148,6 +148,9 @@ depends_on = [
     "cora.data.aggregates",
     "cora.run.aggregates",
     "cora.subject.aggregates",
+    # register_dataset loads the producing Procedure (Operation BC) to
+    # derive the actuation-kind provenance server-side (ActuationKind gate).
+    "cora.operation.aggregates",
 ]
 
 # Decision BC depends on its own aggregates plus Access aggregate

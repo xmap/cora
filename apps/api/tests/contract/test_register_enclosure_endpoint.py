@@ -1,9 +1,12 @@
 """Contract tests for `POST /enclosures`.
 
 Covers create-style basics (request schema, response shape, status
-codes), the Pydantic min/max length on name (-> 422), the domain-VO
-validation when whitespace-only slips past Pydantic (-> 400), and the
-AlreadyExists defensive guard (-> 409 via dependency_overrides).
+codes), the Pydantic min/max length on name (-> 422), the FacilityCode
+regex on `facility_code` (-> 422), the cross-BC facility-not-found path
+(-> 404), the domain-VO validation when whitespace-only slips past
+Pydantic (-> 400), and the AlreadyExists defensive guard (-> 409 via
+dependency_overrides). The default app seeds a `cora` Facility at
+lifespan; the not-found contract uses an unseeded slug.
 """
 
 from uuid import UUID, uuid4
@@ -28,7 +31,7 @@ def test_post_enclosures_returns_201_with_enclosure_id() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/enclosures",
-            json={"name": "2-BM Hutch A", "containing_asset_id": str(uuid4())},
+            json={"name": "2-BM Hutch A", "facility_code": "cora"},
         )
     assert response.status_code == 201
     body = response.json()
@@ -41,7 +44,7 @@ def test_post_enclosures_trims_whitespace_in_name() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/enclosures",
-            json={"name": "  2-BM Hutch A  ", "containing_asset_id": str(uuid4())},
+            json={"name": "  2-BM Hutch A  ", "facility_code": "cora"},
         )
     assert response.status_code == 201
 
@@ -58,7 +61,7 @@ def test_post_enclosures_rejects_missing_name_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/enclosures",
-            json={"containing_asset_id": str(uuid4())},
+            json={"facility_code": "cora"},
         )
     assert response.status_code == 422
 
@@ -68,7 +71,7 @@ def test_post_enclosures_rejects_empty_name_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/enclosures",
-            json={"name": "", "containing_asset_id": str(uuid4())},
+            json={"name": "", "facility_code": "cora"},
         )
     assert response.status_code == 422
 
@@ -80,20 +83,48 @@ def test_post_enclosures_rejects_too_long_name_with_422() -> None:
             "/enclosures",
             json={
                 "name": "a" * (ENCLOSURE_NAME_MAX_LENGTH + 1),
-                "containing_asset_id": str(uuid4()),
+                "facility_code": "cora",
             },
         )
     assert response.status_code == 422
 
 
 @pytest.mark.contract
-def test_post_enclosures_rejects_non_uuid_containing_asset_id_with_422() -> None:
+def test_post_enclosures_rejects_missing_facility_code_with_422() -> None:
+    """facility_code is required at the API boundary."""
+    with TestClient(create_app()) as client:
+        response = client.post("/enclosures", json={"name": "2-BM Hutch A"})
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize(
+    "bad_code",
+    ["APS", "_underscore", "with space", "a" * 33, ""],
+)
+def test_post_enclosures_rejects_malformed_facility_code_with_422(bad_code: str) -> None:
+    """FacilityCode regex (lowercase ASCII alphanumeric + dash, 1-32 chars)
+    enforced at the Pydantic boundary. Uppercase, underscores, spaces,
+    over-length, and empty all reject before reaching the handler."""
     with TestClient(create_app()) as client:
         response = client.post(
             "/enclosures",
-            json={"name": "2-BM Hutch A", "containing_asset_id": "not-a-uuid"},
+            json={"name": "2-BM Hutch A", "facility_code": bad_code},
         )
     assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_enclosures_returns_404_when_facility_code_unseeded() -> None:
+    """Cross-BC binding: an unknown but well-formed slug surfaces as
+    EnclosureFacilityNotFoundError -> 404."""
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/enclosures",
+            json={"name": "2-BM Hutch A", "facility_code": "unseeded"},
+        )
+    assert response.status_code == 404
+    assert "unseeded" in response.json()["detail"]
 
 
 @pytest.mark.contract
@@ -102,7 +133,7 @@ def test_post_enclosures_rejects_whitespace_only_name_with_400() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/enclosures",
-            json={"name": "   ", "containing_asset_id": str(uuid4())},
+            json={"name": "   ", "facility_code": "cora"},
         )
     assert response.status_code == 400
     assert "Enclosure name" in response.json()["detail"]
@@ -122,7 +153,7 @@ def test_post_enclosures_returns_409_when_handler_raises_already_exists() -> Non
     with TestClient(app) as client:
         response = client.post(
             "/enclosures",
-            json={"name": "2-BM Hutch A", "containing_asset_id": str(uuid4())},
+            json={"name": "2-BM Hutch A", "facility_code": "cora"},
         )
     assert response.status_code == 409
 
@@ -139,7 +170,7 @@ def test_post_enclosures_returns_403_when_authorize_denies() -> None:
     with TestClient(app) as client:
         response = client.post(
             "/enclosures",
-            json={"name": "2-BM Hutch A", "containing_asset_id": str(uuid4())},
+            json={"name": "2-BM Hutch A", "facility_code": "cora"},
         )
     assert response.status_code == 403
     assert response.json()["detail"] == "denied for test"

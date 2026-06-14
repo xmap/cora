@@ -52,7 +52,8 @@ mutated incrementally by `AssetFamilyAdded` /
 `drawing` AND `model_id` AND `alternate_identifiers` AND `owners`
 AND `fixture_id` AND `partition_rule` AND `commissioned_at` AND
 `decommissioned_at` AND `persistent_id` AND `controller_id` AND
-`facility_code` AND `tier` through from prior state. The genesis
+`located_in_enclosure_id` AND `facility_code` AND `tier` through
+from prior state. The genesis
 arm reconstructs `tier` from the AssetRegistered payload via
 `AssetTier(tier)`; transition arms inherit it (tier never changes
 post-genesis, but the explicit thread keeps the field-list
@@ -73,7 +74,10 @@ registration per the model-binding design memo (Lock A) and never
 changes post-genesis, but transition arms still must carry it
 forward like any other Asset field. `controller_id` shares that
 set-once shape per [[project-controller-as-asset-stage1-design]];
-rebind path is decommission + re-register. `fixture_id` toggles
+rebind path is decommission + re-register. `located_in_enclosure_id`
+shares that set-once shape (bare opaque cross-BC pointer to the
+Enclosure this Asset is located in); rebind path is decommission +
+re-register. `fixture_id` toggles
 None <-> Some(fixture_id) via AssetAttachedToFixture /
 AssetDetachedFromFixture; every other transition arm preserves it.
 Pinned by
@@ -155,6 +159,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
             alternate_identifiers=alternate_identifiers,
             owners=owners,
             controller_id=controller_id,
+            located_in_enclosure_id=located_in_enclosure_id,
             facility_code=facility_code,
         ):
             _ = state  # AssetRegistered is the genesis event; prior state ignored
@@ -170,6 +175,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 owners=owners,
                 fixture_id=None,
                 controller_id=controller_id,
+                located_in_enclosure_id=located_in_enclosure_id,
                 facility_code=facility_code,
                 # Asset enters Commissioned at genesis; AssetRegistered
                 # IS the commissioning event per L2 of the persistent-id
@@ -213,6 +219,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -242,6 +249,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -273,6 +281,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -299,6 +308,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -325,6 +335,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -356,6 +367,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -388,6 +400,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -419,6 +432,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -445,6 +459,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -471,6 +486,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -504,6 +520,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -539,6 +556,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -580,6 +598,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -614,6 +633,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -647,6 +667,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -676,6 +697,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -708,6 +730,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -749,6 +772,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                     value=value,
                 ),
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -782,6 +806,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -812,6 +837,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -843,6 +869,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=prior.facility_code,
                 tier=prior.tier,
             )
@@ -875,6 +902,7 @@ def evolve(state: Asset | None, event: AssetEvent) -> Asset:
                 decommissioned_by=prior.decommissioned_by,
                 persistent_id=prior.persistent_id,
                 controller_id=prior.controller_id,
+                located_in_enclosure_id=prior.located_in_enclosure_id,
                 facility_code=facility_code,
                 tier=prior.tier,
             )

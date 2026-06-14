@@ -1,21 +1,31 @@
 """Contract tests for the cross-BC Enclosure pre-flight gate on
 POST /procedures/{procedure_id}/start.
 
-Pins the wire-level behavior of the cross-BC Enclosure pre-flight gate
+Pins the wire-level behavior of the located-in Enclosure pre-flight gate
 on the Procedure side. Mirrors test_start_run_enclosure_preflight.py
 exactly:
   - 204 happy path (facility-envelope procedure, empty
     target_asset_ids) -- Permit-by-default per L-pre-1.
-  - 204 happy path (procedure with target_asset_ids whose Enclosure
-    binding is Active+Permitted).
-  - 409 NotPermitted: the Enclosure binding the target Asset is
+  - 204 happy path (procedure whose target Asset is located in an
+    Active+Permitted Enclosure).
+  - 409 NotPermitted: the Enclosure the target Asset is located in is
     permit_status="NotPermitted" -> ProcedureRequiresPermittedEnclosureError.
   - 409 Unknown: same shape with permit_status="Unknown".
   - 409 Decommissioned: the row reaching the decider has
     lifecycle="Decommissioned" -> defensive fail.
-  - 409 CoverageMismatch: two target Assets, two bindings, one
-    Permitted+Active and one NotPermitted+Active -> mixed-status
+  - 409 CoverageMismatch: two target Assets located in two Enclosures,
+    one Permitted+Active and one NotPermitted+Active -> mixed-status
     failure surfaces ProcedureEnclosureCoverageMismatchError.
+
+The new mental model: an Asset declares the Enclosure it sits in via
+`located_in_enclosure_id`, surfaced on the AssetLookup projection row.
+The Procedure handler walks the target Asset ancestor closure
+(`ancestors_of`), collects each row's `located_in_enclosure_id`, and
+fetches those Enclosures by id (`find_by_ids`). A Device inherits the
+located-in Enclosure of a parent Unit/Component. Tests seed the
+`InMemoryAssetLookup` with the located-in pointer (the test app's
+default asset_lookup is empty) and the `InMemoryEnclosureLookup` with
+the matching enclosure row.
 
 The 409 cases assert discriminating substrings drawn verbatim from
 operation/aggregates/procedure/state.py error messages so the Requires
@@ -49,22 +59,12 @@ def _register_procedure(client: TestClient, *, target_asset_ids: list[UUID] | No
     return UUID(response.json()["procedure_id"])
 
 
-def _install_enclosure_lookup(app: FastAPI, lookup) -> None:  # type: ignore[no-untyped-def]
-    """Swap the kernel's enclosure_lookup; re-wire the Operation handlers
-    so they pick up the new deps."""
-    from cora.operation import wire_operation
-
-    new_deps = dataclasses.replace(app.state.deps, enclosure_lookup=lookup)
-    app.state.deps = new_deps
-    app.state.operation = wire_operation(new_deps)
-
-
 def _install_lookups(app: FastAPI, *, asset_lookup=None, enclosure_lookup=None) -> None:  # type: ignore[no-untyped-def]
     """Swap asset_lookup and/or enclosure_lookup in one replace + re-wire.
 
-    Mirrors the start_run chain-walk tests: the test app's asset_lookup is
-    an empty InMemoryAssetLookup, so the ancestor walk needs a seeded one
-    to have a child -> parent edge to climb.
+    The test app's asset_lookup is an empty InMemoryAssetLookup, so the
+    ancestor walk needs a seeded one carrying the located-in pointer the
+    gate reads.
     """
     from cora.operation import wire_operation
 
@@ -78,37 +78,64 @@ def _install_lookups(app: FastAPI, *, asset_lookup=None, enclosure_lookup=None) 
     app.state.operation = wire_operation(new_deps)
 
 
-def _seed_child_parent_asset_lookup(asset_id: UUID) -> tuple[InMemoryAssetLookup, UUID]:
-    """Seed an InMemoryAssetLookup with `asset_id` as a Device under a Unit parent.
+def _seed_located_in_asset_lookup(asset_id: UUID, enclosure_id: UUID) -> InMemoryAssetLookup:
+    """Seed an AssetLookup so the target Asset is located in `enclosure_id`.
 
-    Returns the lookup + the parent id (the Enclosure's containing_asset_id).
-    In production the same edge lives in proj_equipment_asset_summary.
+    The target Asset is registered as a root Unit (no parent) carrying
+    the located-in pointer directly. In production the same field lives
+    in proj_equipment_asset_summary.
+    """
+    lookup = InMemoryAssetLookup()
+    lookup.register(
+        asset_id,
+        name="target-asset",
+        tier="Unit",
+        parent_id=None,
+        located_in_enclosure_id=enclosure_id,
+    )
+    return lookup
+
+
+def _seed_child_parent_asset_lookup(asset_id: UUID, enclosure_id: UUID) -> InMemoryAssetLookup:
+    """Seed an AssetLookup with `asset_id` as a Device under a Unit parent.
+
+    The Unit parent carries the located-in pointer; the child Device has
+    none of its own and inherits the parent's via the ancestor walk. In
+    production the same edges live in proj_equipment_asset_summary.
     """
     parent_id = uuid4()
     lookup = InMemoryAssetLookup()
     lookup.register(asset_id, name="child-device", tier="Device", parent_id=parent_id)
-    lookup.register(parent_id, name="beamline-unit", tier="Unit", parent_id=None)
-    return lookup, parent_id
+    lookup.register(
+        parent_id,
+        name="beamline-unit",
+        tier="Unit",
+        parent_id=None,
+        located_in_enclosure_id=enclosure_id,
+    )
+    return lookup
 
 
 @pytest.mark.contract
 def test_post_start_procedure_returns_409_when_ancestor_enclosure_is_not_permitted() -> None:
-    """Chain walk: an Enclosure bound to the target Asset's PARENT (not the
-    Asset itself) blocks the Procedure -- the Procedure-side mirror of the
-    Run gate, closing the same silent-pass gap on the Procedure path."""
+    """Inheritance walk: the target Device has no located-in Enclosure of its
+    own; its Unit PARENT is located in a NotPermitted Enclosure. The ancestor
+    walk collects the parent's located-in pointer and blocks the Procedure --
+    the Procedure-side mirror of the Run gate, closing the same silent-pass
+    gap on the Procedure path."""
     app = create_app()
     with TestClient(app) as client:
         asset_id = UUID(register_active_asset(client))
         pid = _register_procedure(client, target_asset_ids=[asset_id])
-        asset_lookup, parent_id = _seed_child_parent_asset_lookup(asset_id)
+        enclosure_id = uuid4()
         enclosure_lookup = InMemoryEnclosureLookup()
         enclosure_lookup.register(
-            enclosure_id=uuid4(),
+            enclosure_id=enclosure_id,
             name="Beamline-Hutch",
-            containing_asset_id=parent_id,
             permit_status="NotPermitted",
             lifecycle="Active",
         )
+        asset_lookup = _seed_child_parent_asset_lookup(asset_id, enclosure_id)
         _install_lookups(app, asset_lookup=asset_lookup, enclosure_lookup=enclosure_lookup)
         response = client.post(f"/procedures/{pid}/start")
     assert response.status_code == 409, response.text
@@ -118,21 +145,21 @@ def test_post_start_procedure_returns_409_when_ancestor_enclosure_is_not_permitt
 
 @pytest.mark.contract
 def test_post_start_procedure_returns_204_when_ancestor_enclosure_is_permitted() -> None:
-    """Chain walk, paired happy path: the same ancestor Enclosure, Permitted
-    + Active, admits the Procedure."""
+    """Inheritance walk, paired happy path: the same ancestor's located-in
+    Enclosure, Permitted + Active, admits the Procedure."""
     app = create_app()
     with TestClient(app) as client:
         asset_id = UUID(register_active_asset(client))
         pid = _register_procedure(client, target_asset_ids=[asset_id])
-        asset_lookup, parent_id = _seed_child_parent_asset_lookup(asset_id)
+        enclosure_id = uuid4()
         enclosure_lookup = InMemoryEnclosureLookup()
         enclosure_lookup.register(
-            enclosure_id=uuid4(),
+            enclosure_id=enclosure_id,
             name="Beamline-Hutch",
-            containing_asset_id=parent_id,
             permit_status="Permitted",
             lifecycle="Active",
         )
+        asset_lookup = _seed_child_parent_asset_lookup(asset_id, enclosure_id)
         _install_lookups(app, asset_lookup=asset_lookup, enclosure_lookup=enclosure_lookup)
         response = client.post(f"/procedures/{pid}/start")
     assert response.status_code == 204, response.text
@@ -141,23 +168,23 @@ def test_post_start_procedure_returns_204_when_ancestor_enclosure_is_permitted()
 @pytest.mark.contract
 def test_post_start_procedure_ancestor_enclosure_silently_passes_without_the_walk() -> None:
     """Load-bearing proof on the Procedure path: with asset_lookup left EMPTY
-    (no chain to climb), the same parent-bound NotPermitted Enclosure does
-    NOT gate the Procedure (204). The contrast with the 409 test proves the
-    walk is what makes L-pre-1 load-bearing for Procedures too."""
+    (no chain to climb), the same parent's NotPermitted located-in Enclosure
+    does NOT gate the Procedure (204). The contrast with the 409 test proves
+    the walk is what makes L-pre-1 load-bearing for Procedures too."""
     app = create_app()
     with TestClient(app) as client:
         asset_id = UUID(register_active_asset(client))
         pid = _register_procedure(client, target_asset_ids=[asset_id])
-        _, parent_id = _seed_child_parent_asset_lookup(asset_id)
+        enclosure_id = uuid4()
         enclosure_lookup = InMemoryEnclosureLookup()
         enclosure_lookup.register(
-            enclosure_id=uuid4(),
+            enclosure_id=enclosure_id,
             name="Beamline-Hutch",
-            containing_asset_id=parent_id,
             permit_status="NotPermitted",
             lifecycle="Active",
         )
-        # asset_lookup NOT installed -> empty default -> walk widens nothing.
+        # asset_lookup NOT installed -> empty default -> walk collects no
+        # located-in pointer, so the gate's id-set is empty.
         _install_lookups(app, enclosure_lookup=enclosure_lookup)
         response = client.post(f"/procedures/{pid}/start")
     assert response.status_code == 204, response.text
@@ -177,20 +204,21 @@ def test_post_start_procedure_returns_204_for_facility_envelope_procedure() -> N
 
 @pytest.mark.contract
 def test_post_start_procedure_returns_204_when_binding_enclosure_is_permitted() -> None:
-    """Active+Permitted binding: the gate accepts the row."""
+    """Active+Permitted located-in Enclosure: the gate accepts the row."""
     app = create_app()
     with TestClient(app) as client:
         asset_id = UUID(register_active_asset(client))
         pid = _register_procedure(client, target_asset_ids=[asset_id])
-        lookup = InMemoryEnclosureLookup()
-        lookup.register(
-            enclosure_id=uuid4(),
+        enclosure_id = uuid4()
+        enclosure_lookup = InMemoryEnclosureLookup()
+        enclosure_lookup.register(
+            enclosure_id=enclosure_id,
             name="A-Hutch",
-            containing_asset_id=asset_id,
             permit_status="Permitted",
             lifecycle="Active",
         )
-        _install_enclosure_lookup(app, lookup)
+        asset_lookup = _seed_located_in_asset_lookup(asset_id, enclosure_id)
+        _install_lookups(app, asset_lookup=asset_lookup, enclosure_lookup=enclosure_lookup)
         response = client.post(f"/procedures/{pid}/start")
     assert response.status_code == 204, response.text
 
@@ -200,21 +228,22 @@ def test_post_start_procedure_returns_204_when_binding_enclosure_is_permitted() 
 def test_post_start_procedure_returns_409_when_binding_enclosure_is_not_permitted(
     permit_status: str,
 ) -> None:
-    """A non-Permitted binding raises 409
+    """A non-Permitted located-in Enclosure raises 409
     ProcedureRequiresPermittedEnclosureError."""
     app = create_app()
     with TestClient(app) as client:
         asset_id = UUID(register_active_asset(client))
         pid = _register_procedure(client, target_asset_ids=[asset_id])
-        lookup = InMemoryEnclosureLookup()
-        lookup.register(
-            enclosure_id=uuid4(),
+        enclosure_id = uuid4()
+        enclosure_lookup = InMemoryEnclosureLookup()
+        enclosure_lookup.register(
+            enclosure_id=enclosure_id,
             name="A-Hutch",
-            containing_asset_id=asset_id,
             permit_status=permit_status,
             lifecycle="Active",
         )
-        _install_enclosure_lookup(app, lookup)
+        asset_lookup = _seed_located_in_asset_lookup(asset_id, enclosure_id)
+        _install_lookups(app, asset_lookup=asset_lookup, enclosure_lookup=enclosure_lookup)
         response = client.post(f"/procedures/{pid}/start")
     assert response.status_code == 409, response.text
     detail = response.json()["detail"]
@@ -228,6 +257,8 @@ def test_post_start_procedure_returns_409_when_binding_enclosure_is_decommission
     with TestClient(app) as client:
         asset_id = UUID(register_active_asset(client))
         pid = _register_procedure(client, target_asset_ids=[asset_id])
+        enclosure_id = uuid4()
+        asset_lookup = _seed_located_in_asset_lookup(asset_id, enclosure_id)
 
         # As in the start_run test: the in-memory adapter filters
         # Decommissioned at the read layer, so we hand-roll an adapter
@@ -236,9 +267,8 @@ def test_post_start_procedure_returns_409_when_binding_enclosure_is_decommission
         from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 
         tombstoned = EnclosureLookupResult(
-            enclosure_id=uuid4(),
+            enclosure_id=enclosure_id,
             name="A-Hutch",
-            containing_asset_id=asset_id,
             permit_status="Permitted",
             lifecycle="Decommissioned",
             observed_at=None,
@@ -250,13 +280,13 @@ def test_post_start_procedure_returns_409_when_binding_enclosure_is_decommission
             async def lookup(self, enclosure_id):  # type: ignore[no-untyped-def]
                 return None
 
-            async def find_for_assets(
-                self, *, asset_ids: frozenset[UUID]
+            async def find_by_ids(
+                self, *, enclosure_ids: frozenset[UUID]
             ) -> list[EnclosureLookupResult]:
-                del asset_ids
+                del enclosure_ids
                 return [tombstoned]
 
-        _install_enclosure_lookup(app, _AlwaysReturnLookup())
+        _install_lookups(app, asset_lookup=asset_lookup, enclosure_lookup=_AlwaysReturnLookup())
         response = client.post(f"/procedures/{pid}/start")
     assert response.status_code == 409, response.text
     detail = response.json()["detail"]
@@ -265,33 +295,50 @@ def test_post_start_procedure_returns_409_when_binding_enclosure_is_decommission
 
 @pytest.mark.contract
 def test_post_start_procedure_returns_409_for_mixed_status_bindings() -> None:
-    """Mixed-status bindings raise 409 ProcedureEnclosureCoverageMismatchError.
+    """Mixed-status located-in Enclosures raise 409
+    ProcedureEnclosureCoverageMismatchError.
 
-    Two target Assets, each bound by its own Enclosure: one Permitted+Active,
-    one NotPermitted+Active. The decider's CoverageMismatch branch fires
-    because some referencing rows pass and some fail.
+    Two target Assets, each located in its own Enclosure: one
+    Permitted+Active, one NotPermitted+Active. The decider's
+    CoverageMismatch branch fires because some referencing rows pass and
+    some fail.
     """
     app = create_app()
     with TestClient(app) as client:
         passing_asset_id = UUID(register_active_asset(client))
         failing_asset_id = UUID(register_active_asset(client))
         pid = _register_procedure(client, target_asset_ids=[passing_asset_id, failing_asset_id])
-        lookup = InMemoryEnclosureLookup()
-        lookup.register(
-            enclosure_id=uuid4(),
+        pass_enclosure_id = uuid4()
+        fail_enclosure_id = uuid4()
+        enclosure_lookup = InMemoryEnclosureLookup()
+        enclosure_lookup.register(
+            enclosure_id=pass_enclosure_id,
             name="A-Hutch",
-            containing_asset_id=passing_asset_id,
             permit_status="Permitted",
             lifecycle="Active",
         )
-        lookup.register(
-            enclosure_id=uuid4(),
+        enclosure_lookup.register(
+            enclosure_id=fail_enclosure_id,
             name="B-Hutch",
-            containing_asset_id=failing_asset_id,
             permit_status="NotPermitted",
             lifecycle="Active",
         )
-        _install_enclosure_lookup(app, lookup)
+        asset_lookup = InMemoryAssetLookup()
+        asset_lookup.register(
+            passing_asset_id,
+            name="passing-asset",
+            tier="Unit",
+            parent_id=None,
+            located_in_enclosure_id=pass_enclosure_id,
+        )
+        asset_lookup.register(
+            failing_asset_id,
+            name="failing-asset",
+            tier="Unit",
+            parent_id=None,
+            located_in_enclosure_id=fail_enclosure_id,
+        )
+        _install_lookups(app, asset_lookup=asset_lookup, enclosure_lookup=enclosure_lookup)
         response = client.post(f"/procedures/{pid}/start")
     assert response.status_code == 409, response.text
     detail = response.json()["detail"]

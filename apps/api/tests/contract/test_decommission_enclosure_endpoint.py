@@ -23,7 +23,7 @@ from cora.shared.text_bounds import REASON_MAX_LENGTH
 def _register_enclosure(client: TestClient) -> UUID:
     response = client.post(
         "/enclosures",
-        json={"name": "2-BM Hutch A", "containing_asset_id": str(uuid4())},
+        json={"name": "2-BM Hutch A", "facility_code": "cora"},
     )
     assert response.status_code == 201
     return UUID(response.json()["enclosure_id"])

@@ -20,6 +20,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.facility_code import FACILITY_CODE_MAX_LENGTH
 
 
 class RegisterEnclosureRequest(BaseModel):
@@ -32,18 +33,23 @@ class RegisterEnclosureRequest(BaseModel):
         description=(
             "Operator-readable display name for this Enclosure instance "
             "(for example '2-BM-A hutch', 'sample-prep cabinet'). "
-            "Uniqueness within a containing Asset (while Active) is "
+            "Uniqueness within a containing Facility (while Active) is "
             "enforced by the projection-tier UNIQUE INDEX."
         ),
     )
-    containing_asset_id: UUID = Field(
+    facility_code: str = Field(
         ...,
+        min_length=1,
+        max_length=FACILITY_CODE_MAX_LENGTH,
+        pattern=r"^[a-z0-9-]{1,32}$",
         description=(
-            "Opaque cross-BC pointer to the Asset that physically "
-            "contains this Enclosure (the hutch's beamline, the "
-            "cabinet's instrument). Cross-aggregate existence is not "
-            "checked at the decider; the address tuple "
-            "(containing_asset_id, name) is unique while lifecycle=Active."
+            "Cross-deployment Facility slug for the Site / Area this "
+            "Enclosure sits within (for example 'aps', 'maxiv'). "
+            "Lowercase ASCII alphanumeric plus dash, 1-32 chars. The "
+            "handler resolves the slug via the Federation BC's "
+            "FacilityLookup port; unknown codes raise HTTP 404. The "
+            "address tuple (facility_code, name) is unique while "
+            "lifecycle=Active."
         ),
     )
 
@@ -81,12 +87,18 @@ router = APIRouter(tags=["enclosure"])
             "model": ErrorResponse,
             "description": "Authorize port denied the command.",
         },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "The supplied facility_code does not resolve to a known Federation Facility."
+            ),
+        },
         status.HTTP_409_CONFLICT: {
             "model": ErrorResponse,
             "description": (
-                "The address tuple (containing_asset_id, name) collides "
-                "with an Active Enclosure already registered against the "
-                "same containing Asset."
+                "The address tuple (facility_code, name) collides with an "
+                "Active Enclosure already registered within the same "
+                "containing Facility."
             ),
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
@@ -120,7 +132,7 @@ async def post_enclosures(
     enclosure_id = await handler(
         RegisterEnclosure(
             name=body.name,
-            containing_asset_id=body.containing_asset_id,
+            facility_code=body.facility_code,
         ),
         principal_id=principal_id,
         correlation_id=cid,

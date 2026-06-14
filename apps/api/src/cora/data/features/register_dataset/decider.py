@@ -55,6 +55,8 @@ from cora.data.aggregates.dataset import (
     DerivedFromDatasetsDiscardedError,
     DerivedFromDatasetsNotFoundError,
     LinkedSubjectNotFoundError,
+    ProducingProcedureNotFoundError,
+    ProducingProcedureNotTerminalError,
     ProducingRunNotFoundError,
     validate_byte_size,
     validate_derived_from,
@@ -95,6 +97,10 @@ def decide(
         -> InvalidUsedCalibrationsError (via validate_used_calibration_ids)
       - When producing_run_id is set, the Run must exist
         -> ProducingRunNotFoundError
+      - When producing_procedure_id is set, the Procedure must exist
+        -> ProducingProcedureNotFoundError, and must be terminal
+        -> ProducingProcedureNotTerminalError (its terminal actuation_kind
+        is derived into producing_actuation_kind, the promote-gate carrier)
       - When subject_id is set, the Subject must exist
         -> LinkedSubjectNotFoundError
       - All derived_from Datasets must exist
@@ -133,6 +139,21 @@ def decide(
     # the decider-level statement of the contract.
     if command.producing_run_id is not None and context.producing_run is None:
         raise ProducingRunNotFoundError(command.producing_run_id)
+    if command.producing_procedure_id is not None and context.producing_procedure is None:
+        raise ProducingProcedureNotFoundError(command.producing_procedure_id)
+    # The producing Procedure must be terminal so its actuation kind is final
+    # at snapshot time (option A of the item-6 None-tightening; see
+    # [[project_actuation_kind_stage1_design]]). A still-Running Procedure has
+    # no resolved kind, and a stale-None snapshot would later be wrongly
+    # blocked at promote.
+    if (
+        context.producing_procedure is not None
+        and not context.producing_procedure.status.is_terminal
+    ):
+        raise ProducingProcedureNotTerminalError(
+            context.producing_procedure.id,
+            current_status=context.producing_procedure.status.value,
+        )
     if command.subject_id is not None and context.subject is None:
         raise LinkedSubjectNotFoundError(command.subject_id)
     missing_derived = sorted(
@@ -168,6 +189,19 @@ def decide(
         context.producing_run.status.value if context.producing_run is not None else None
     )
 
+    # derive the actuation-kind provenance from the producing Procedure's
+    # terminal state (per non-determinism principle: capture, don't recompute;
+    # mirrors producing_run_end_state). The Conductor recorded the observed
+    # kind on the Procedure terminal event; here it is snapshotted onto the
+    # Dataset, where promote_dataset's guard blocks Simulated / Hybrid. None
+    # when no producing Procedure (external / non-conducted Datasets) or when
+    # the conduct observed nothing. Server-derived, never caller-asserted.
+    producing_actuation_kind: str | None = (
+        context.producing_procedure.actuation_kind
+        if context.producing_procedure is not None
+        else None
+    )
+
     return [
         DatasetRegistered(
             dataset_id=new_id,
@@ -179,15 +213,16 @@ def decide(
             media_type=encoding.media_type,
             conforms_to=encoding.conforms_to,
             producing_run_id=command.producing_run_id,
+            producing_procedure_id=command.producing_procedure_id,
             subject_id=command.subject_id,
             derived_from=derived_from,
             occurred_at=now,
             registered_by=registered_by,
             producing_run_end_state=producing_run_end_state,
-            # raw ActuationKind value the orchestrator captured from the
-            # producing conduct (None for non-conducted registrations); the
-            # promote gate blocks Simulated / Hybrid.
-            producing_actuation_kind=command.actuation_kind,
+            # raw ActuationKind value derived server-side from the producing
+            # Procedure (None for non-conducted registrations); the promote
+            # gate blocks Simulated / Hybrid.
+            producing_actuation_kind=producing_actuation_kind,
             # intent defaults to "Trial" on the dataclass; promotion is a
             # separate explicit slice (promote_dataset).
             # sort before emit so the event-payload bytes are

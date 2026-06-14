@@ -37,12 +37,22 @@ beamline:
   z_span_confirm: true
 
 enclosures:
-  # Today the hutches exist only as a Frame (2BM_hutch_frame). Registering them as
-  # Enclosures is a future "build a box" step, not done yet.
+  # The two hutches are Enclosures: access-gated volumes whose personnel-safety
+  # permit gates beam-on work. Each sits within the APS Site (facility_code: aps),
+  # a space inside a larger space, not an equipment pointer. Each device group
+  # below names the Enclosure its devices are located in via `enclosure:`.
+  # The per-hutch search-and-secure permit signal is an operator-confirm item:
+  # only the shutter PVs (FES, SBS) are known today, not the permit PV.
   - name: 2-BM-A
     role: optics-hutch
+    facility_code: aps
+    permit_signal:
+      confirm: "per-hutch PSS search-and-secure permit PV; ask 2-BM staff"
   - name: 2-BM-B
     role: experiment-hutch
+    facility_code: aps
+    permit_signal:
+      confirm: "per-hutch PSS search-and-secure permit PV; ask 2-BM staff"
 
 # ===========================================================================
 # The beam path: source -> detector
@@ -121,12 +131,14 @@ conditioning-optics:
       note: insertable, pink-beam operation bypasses it
 
 beam-defining-and-safety:
-  enclosure: 2-BM-A / 2-BM-B boundary
+  enclosure: 2-BM-B
   intro: Admit the beam to the experiment hutch and reshape it.
   note: >
     The P6-50 stack sits physically AFTER the optics above (z 33343), but it is
     grouped here by function (safety), not by strict z-order. That exception is
-    deliberate and called out rather than silently reordered.
+    deliberate and called out rather than silently reordered. The P6-50 stack,
+    including the SBS shutter, is assigned to 2-BM-B: it is the safety stack that
+    gates the experiment hutch, so its devices are located_in 2-BM-B.
   devices:
     - name: P6-50_safety_stack
       family: SafetyStack
@@ -156,7 +168,6 @@ beam-defining-and-safety:
           new: true
     - name: B_station_slits
       family: Slit
-      enclosure: 2-BM-B
       pv: { y_top: "2bma:m9", y_bot: "2bma:m10", x: ["2bma:m11", "2bma:m12"] }
       z_mm: 50500
       new: true
@@ -164,7 +175,6 @@ beam-defining-and-safety:
       note: vertical pair tracks the per-energy beam position, reuses the A-side class
     - name: beam_position_flag
       family: Diagnostic
-      enclosure: 2-BM-B
       new: true
       confirm: true
       note: mono-mode only, held out of beam in pink mode

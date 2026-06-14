@@ -1,11 +1,10 @@
 """EnclosureLookup port: cross-BC query for Enclosure BC's enclosure projection.
 
 Used by other BCs to ask "is this enclosure permitted?" before
-admitting an Asset / Run / Procedure into a controlled area. The
-port is shaped around the CONSUMER's need (permit + lifecycle
-partitioning at the decider boundary + asset-binding fan-out) and
-Enclosure BC provides the Postgres adapter reading
-`proj_enclosure_summary`.
+admitting a Run / Procedure into a controlled area. The port is
+shaped around the CONSUMER's need (permit + lifecycle partitioning at
+the decider boundary + id-set fan-in) and Enclosure BC provides the
+Postgres adapter reading `proj_enclosure_summary`.
 
 ## Convention
 
@@ -22,9 +21,9 @@ per the existing pattern (`Authorize`, `ClearanceLookup`,
 
 The port carries two arms because the two consumer shapes are
 distinct: `lookup(enclosure_id)` for the id-keyed single-row read,
-and `find_for_assets(asset_ids=)` for the set-returning Supply /
-Clearance family (gather every enclosure contained by any of these
-Assets, fan out to per-asset partitioning at the decider).
+and `find_by_ids(enclosure_ids=)` for the set-returning family (fetch
+the permit status of a known set of enclosure ids and fan out to
+per-enclosure partitioning at the decider).
 
 ## Modern DDD alignment
 
@@ -33,9 +32,8 @@ command time should go through a port that the consumer shapes,
 with the implementor providing the adapter. The replicated read
 model (`proj_enclosure_summary`) is the modern recommendation over
 synchronous replay of the Enclosure aggregate, because the
-projection is already a denormalized cross-stream view + already
-covers the asset-binding fan-out via its `containing_asset_id`
-column.
+projection is already a denormalized cross-stream view keyed on
+`enclosure_id`.
 
 ## Two orthogonal status axes
 
@@ -76,7 +74,7 @@ class EnclosureLookupResult:
 
     Carries the minimal columns consumer deciders need to partition
     on enclosure permit + lifecycle before commit. Loaded by the
-    handler via `EnclosureLookup.lookup` / `find_for_assets` and
+    handler via `EnclosureLookup.lookup` / `find_by_ids` and
     handed to the decider in the slice's context object (mirrors
     `FacilityLookupResult` shape).
 
@@ -84,10 +82,6 @@ class EnclosureLookupResult:
     strings (matches the projection's `TEXT` columns); the decider
     partitions on `permit_status == "Permitted"` and
     `lifecycle == "Active"`.
-
-    `containing_asset_id` is the cross-BC opaque pointer to the
-    Asset that physically contains the Enclosure. Carried as a bare
-    `UUID` per the port's `depends_on = []` tach contract.
 
     `observed_at` / `source_kind` / `source_id` are optional
     epistemic provenance fields populated by
@@ -97,7 +91,6 @@ class EnclosureLookupResult:
 
     enclosure_id: UUID
     name: str
-    containing_asset_id: UUID
     permit_status: str
     lifecycle: str
     observed_at: str | None
@@ -106,7 +99,7 @@ class EnclosureLookupResult:
 
 
 class EnclosureLookup(Protocol):
-    """Cross-BC port: query Enclosure's projection by id or by asset binding."""
+    """Cross-BC port: query Enclosure's projection by id or by id-set."""
 
     async def lookup(self, enclosure_id: UUID) -> EnclosureLookupResult | None:
         """Return the projection row for `enclosure_id`, or None if not found.
@@ -125,22 +118,22 @@ class EnclosureLookup(Protocol):
         """
         ...
 
-    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
-        """Return every Active enclosure whose `containing_asset_id` is in `asset_ids`.
+    async def find_by_ids(self, *, enclosure_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
+        """Return every Active enclosure whose `enclosure_id` is in `enclosure_ids`.
 
-        Used by consumer deciders that hold a set of Asset ids (a Run's
-        equipment, a Procedure's targets) and need to know which
-        enclosures gate those Assets. Empty input returns `[]`; an
-        Asset that contains no enclosure contributes zero rows (the
-        decider treats absence as "no enclosure restricts this Asset",
-        per Permit-by-default posture).
+        Used by consumer deciders that hold a known set of enclosure
+        ids and need their current permit status in one round trip.
+        Empty input returns `[]`; an id with no projection row (or a
+        Decommissioned one) contributes zero rows (the decider treats
+        absence as "no enclosure restricts this", per Permit-by-default
+        posture).
 
         Decommissioned enclosures are excluded by the adapter: a
         tombstoned enclosure does not gate runs. Permitted /
         NotPermitted / Unknown all flow through; the decider
         partitions each row on `permit_status` to distinguish
-        "no enclosure binds this Asset" from "enclosure binds it but
-        is currently NotPermitted".
+        "this enclosure does not restrict" from "enclosure is currently
+        NotPermitted".
         """
         ...
 
@@ -160,14 +153,11 @@ class AlwaysPermittedEnclosureLookup:
     `permit_status="Permitted"` and `lifecycle="Active"` for any
     UUID so consumer deciders running against a kernel without the
     Enclosure BC wired see the same permitted-by-default behavior
-    they had before the BC existed. `containing_asset_id` is set to
-    the queried `enclosure_id` (deterministic, harmless: the stub
-    holds no real binding state, and `find_for_assets` is empty so
-    the synthetic self-binding is never observed).
+    they had before the BC existed.
 
-    `find_for_assets` returns the empty list because no Asset has any
-    enclosure binding in the absence of seeded data; the decider's
-    "no rows means no restriction" branch fires.
+    `find_by_ids` returns the empty list because the stub holds no
+    seeded rows; the decider's "no rows means no restriction" branch
+    fires.
 
     Production deployments wire `PostgresEnclosureLookup` via
     `enclosure_lookup_factory` to replace this stub.
@@ -177,7 +167,6 @@ class AlwaysPermittedEnclosureLookup:
         return EnclosureLookupResult(
             enclosure_id=enclosure_id,
             name="",
-            containing_asset_id=enclosure_id,
             permit_status="Permitted",
             lifecycle="Active",
             observed_at=None,
@@ -185,7 +174,7 @@ class AlwaysPermittedEnclosureLookup:
             source_id=None,
         )
 
-    async def find_for_assets(self, *, asset_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
+    async def find_by_ids(self, *, enclosure_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         return []
 
 

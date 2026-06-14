@@ -220,6 +220,21 @@ class ProcedureStatus(StrEnum):
     ABORTED = "Aborted"
     TRUNCATED = "Truncated"
 
+    @property
+    def is_terminal(self) -> bool:
+        """True for the closed-set terminal states (Completed / Aborted /
+        Truncated), False for Defined / Running.
+
+        The FSM owns this truth so consumers (for example the Data BC's
+        register_dataset, which requires a producing Procedure to be terminal
+        before snapshotting its actuation kind) don't hard-code the terminal
+        set and drift when a state is added."""
+        return self in (
+            ProcedureStatus.COMPLETED,
+            ProcedureStatus.ABORTED,
+            ProcedureStatus.TRUNCATED,
+        )
+
 
 class InvalidProcedureNameError(ValueError):
     """The supplied procedure name is empty, whitespace-only, or too long."""
@@ -573,10 +588,12 @@ class ProcedureRequiresPermittedEnclosureError(Exception):
     """A referencing Enclosure is not currently Permitted-and-Active.
 
     Cross-BC gate: `start_procedure` derives the set of referencing
-    Enclosures by walking `EnclosureLookup.find_for_assets` against
-    the Procedure's `target_asset_ids`. Per L-pre-1 (always-derive-
-    from-Asset-chain), the Procedure does NOT declare an explicit
-    needed-enclosure list; the Asset chain IS the declaration. This
+    Enclosures by collecting each target Asset's (and ancestor's)
+    `located_in_enclosure_id` across the Procedure's `target_asset_ids`
+    and loading them via `EnclosureLookup.find_by_ids`. Per L-pre-1
+    (always-derive-from-Asset-chain), the Procedure does NOT declare an
+    explicit needed-enclosure list; the located-in chain IS the
+    declaration. This
     error fires when EVERY referencing Enclosure is in
     `permit_status != "Permitted"` OR `lifecycle != "Active"` (the
     universally-not-permitted branch). When at least one row passes
@@ -1165,3 +1182,17 @@ class Procedure:
     at register time (>= 1 when set); declaration-only, never an FSM
     state. Additive-state default None: legacy + uncapped Procedures fold
     cleanly."""
+    actuation_kind: str | None = field(default=None)
+    """The raw `ActuationKind` value (Physical / Simulated / Hybrid) the
+    Conductor observed during the conduct that drove this Procedure to a
+    terminal state, or None.
+
+    Set by the `ProcedureCompleted` / `ProcedureAborted` terminal arms
+    from the event's `actuation_kind`; None while Defined / Running and
+    for completes/aborts issued outside a conduct. This is the gate
+    carrier: `register_dataset` reads it off a loaded producing Procedure
+    and snapshots it onto the Dataset, where `promote_dataset` blocks
+    Simulated / Hybrid origins. The Operation BC owns the `ActuationKind`
+    enum; state stores the raw string (cross-BC string-snapshot seam,
+    mirroring how the Data BC stores it). Additive-state default None:
+    legacy + pre-activation streams fold cleanly."""

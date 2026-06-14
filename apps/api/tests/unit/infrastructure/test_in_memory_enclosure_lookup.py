@@ -5,10 +5,9 @@ the in-memory adapter:
   - `register()` installs an enclosure summary keyed by id.
   - `lookup()` returns the seeded `EnclosureLookupResult`.
   - `lookup()` returns `None` for an unknown id.
-  - `find_for_assets()` returns every reference whose
-    `containing_asset_id` matches one of the requested asset_ids,
-    excluding Decommissioned (per the production adapter's
-    `lifecycle = 'Active'` partial-index posture).
+  - `find_by_ids()` returns every reference whose `enclosure_id` is in
+    the requested set, excluding Decommissioned (per the production
+    adapter's `lifecycle = 'Active'` partial-index posture).
   - The ctor-side `seed=` mapping is an alternative bulk-seed path.
   - The adapter satisfies the `EnclosureLookup` Protocol shape.
 
@@ -35,11 +34,9 @@ from cora.infrastructure.ports import (
 async def test_register_then_lookup_returns_seeded_result() -> None:
     lookup = InMemoryEnclosureLookup()
     eid = uuid4()
-    aid = uuid4()
     lookup.register(
         enclosure_id=eid,
         name="2-BM-A Hutch",
-        containing_asset_id=aid,
         permit_status="Permitted",
         lifecycle="Active",
         observed_at="2026-06-09T12:00:00+00:00",
@@ -50,7 +47,6 @@ async def test_register_then_lookup_returns_seeded_result() -> None:
     assert result is not None
     assert result.enclosure_id == eid
     assert result.name == "2-BM-A Hutch"
-    assert result.containing_asset_id == aid
     assert result.permit_status == "Permitted"
     assert result.lifecycle == "Active"
     assert result.observed_at == "2026-06-09T12:00:00+00:00"
@@ -61,11 +57,7 @@ async def test_register_then_lookup_returns_seeded_result() -> None:
 @pytest.mark.unit
 async def test_lookup_unknown_id_returns_none() -> None:
     lookup = InMemoryEnclosureLookup()
-    lookup.register(
-        enclosure_id=uuid4(),
-        name="2-BM-A Hutch",
-        containing_asset_id=uuid4(),
-    )
+    lookup.register(enclosure_id=uuid4(), name="2-BM-A Hutch")
     assert await lookup.lookup(uuid4()) is None
 
 
@@ -79,14 +71,10 @@ async def test_lookup_on_empty_adapter_returns_none() -> None:
 async def test_register_overwrites_existing_record() -> None:
     lookup = InMemoryEnclosureLookup()
     eid = uuid4()
-    aid = uuid4()
-    lookup.register(
-        enclosure_id=eid, name="2-BM-A Hutch", containing_asset_id=aid, permit_status="Unknown"
-    )
+    lookup.register(enclosure_id=eid, name="2-BM-A Hutch", permit_status="Unknown")
     lookup.register(
         enclosure_id=eid,
         name="2-BM-A Hutch",
-        containing_asset_id=aid,
         permit_status="Permitted",
         observed_at="2026-06-09T12:30:00+00:00",
     )
@@ -99,12 +87,10 @@ async def test_register_overwrites_existing_record() -> None:
 @pytest.mark.unit
 async def test_ctor_seed_mapping_populates_records() -> None:
     eid_a, eid_b = uuid4(), uuid4()
-    aid_a, aid_b = uuid4(), uuid4()
     seed = {
         eid_a: EnclosureLookupResult(
             enclosure_id=eid_a,
             name="A",
-            containing_asset_id=aid_a,
             permit_status="Permitted",
             lifecycle="Active",
             observed_at=None,
@@ -114,7 +100,6 @@ async def test_ctor_seed_mapping_populates_records() -> None:
         eid_b: EnclosureLookupResult(
             enclosure_id=eid_b,
             name="B",
-            containing_asset_id=aid_b,
             permit_status="NotPermitted",
             lifecycle="Active",
             observed_at=None,
@@ -134,10 +119,8 @@ async def test_returns_enclosures_in_every_permit_status() -> None:
     lookup = InMemoryEnclosureLookup()
     np = uuid4()
     uk = uuid4()
-    lookup.register(
-        enclosure_id=np, name="A", containing_asset_id=uuid4(), permit_status="NotPermitted"
-    )
-    lookup.register(enclosure_id=uk, name="B", containing_asset_id=uuid4(), permit_status="Unknown")
+    lookup.register(enclosure_id=np, name="A", permit_status="NotPermitted")
+    lookup.register(enclosure_id=uk, name="B", permit_status="Unknown")
     nq = await lookup.lookup(np)
     uq = await lookup.lookup(uk)
     assert nq is not None and nq.permit_status == "NotPermitted"
@@ -145,77 +128,62 @@ async def test_returns_enclosures_in_every_permit_status() -> None:
 
 
 @pytest.mark.unit
-async def test_find_for_assets_returns_matching_bindings() -> None:
+async def test_find_by_ids_returns_matching_enclosures() -> None:
     lookup = InMemoryEnclosureLookup()
     eid_a, eid_b = uuid4(), uuid4()
-    aid_a, aid_b = uuid4(), uuid4()
-    lookup.register(
-        enclosure_id=eid_a, name="A", containing_asset_id=aid_a, permit_status="Permitted"
-    )
-    lookup.register(
-        enclosure_id=eid_b, name="B", containing_asset_id=aid_b, permit_status="NotPermitted"
-    )
-    results = await lookup.find_for_assets(asset_ids=frozenset({aid_a}))
+    lookup.register(enclosure_id=eid_a, name="A", permit_status="Permitted")
+    lookup.register(enclosure_id=eid_b, name="B", permit_status="NotPermitted")
+    results = await lookup.find_by_ids(enclosure_ids=frozenset({eid_a}))
     assert len(results) == 1
     assert results[0].enclosure_id == eid_a
     assert results[0].permit_status == "Permitted"
 
 
 @pytest.mark.unit
-async def test_find_for_assets_skips_non_matching_assets() -> None:
+async def test_find_by_ids_skips_non_matching_ids() -> None:
     lookup = InMemoryEnclosureLookup()
-    lookup.register(
-        enclosure_id=uuid4(), name="A", containing_asset_id=uuid4(), permit_status="Permitted"
-    )
-    assert await lookup.find_for_assets(asset_ids=frozenset({uuid4()})) == []
+    lookup.register(enclosure_id=uuid4(), name="A", permit_status="Permitted")
+    assert await lookup.find_by_ids(enclosure_ids=frozenset({uuid4()})) == []
 
 
 @pytest.mark.unit
-async def test_find_for_assets_empty_input_returns_empty_list() -> None:
+async def test_find_by_ids_empty_input_returns_empty_list() -> None:
     lookup = InMemoryEnclosureLookup()
-    lookup.register(
-        enclosure_id=uuid4(), name="A", containing_asset_id=uuid4(), permit_status="Permitted"
-    )
-    assert await lookup.find_for_assets(asset_ids=frozenset()) == []
+    lookup.register(enclosure_id=uuid4(), name="A", permit_status="Permitted")
+    assert await lookup.find_by_ids(enclosure_ids=frozenset()) == []
 
 
 @pytest.mark.unit
-async def test_find_for_assets_returns_multiple_for_single_asset() -> None:
+async def test_find_by_ids_returns_multiple_for_a_set() -> None:
     lookup = InMemoryEnclosureLookup()
     eid_a, eid_b = uuid4(), uuid4()
-    aid = uuid4()
-    lookup.register(
-        enclosure_id=eid_a, name="A", containing_asset_id=aid, permit_status="Permitted"
-    )
-    lookup.register(enclosure_id=eid_b, name="B", containing_asset_id=aid, permit_status="Unknown")
-    results = await lookup.find_for_assets(asset_ids=frozenset({aid}))
+    lookup.register(enclosure_id=eid_a, name="A", permit_status="Permitted")
+    lookup.register(enclosure_id=eid_b, name="B", permit_status="Unknown")
+    results = await lookup.find_by_ids(enclosure_ids=frozenset({eid_a, eid_b}))
     returned = {r.enclosure_id for r in results}
     assert returned == {eid_a, eid_b}
 
 
 @pytest.mark.unit
-async def test_find_for_assets_excludes_decommissioned() -> None:
+async def test_find_by_ids_excludes_decommissioned() -> None:
     """Tombstoned rows must not gate runs; matches PostgresEnclosureLookup
     `lifecycle = 'Active'` partial-index filter."""
     lookup = InMemoryEnclosureLookup()
     eid_active = uuid4()
     eid_tomb = uuid4()
-    aid = uuid4()
     lookup.register(
         enclosure_id=eid_active,
         name="live",
-        containing_asset_id=aid,
         permit_status="Permitted",
         lifecycle="Active",
     )
     lookup.register(
         enclosure_id=eid_tomb,
         name="dead",
-        containing_asset_id=aid,
         permit_status="Permitted",
         lifecycle="Decommissioned",
     )
-    results = await lookup.find_for_assets(asset_ids=frozenset({aid}))
+    results = await lookup.find_by_ids(enclosure_ids=frozenset({eid_active, eid_tomb}))
     returned = {r.enclosure_id for r in results}
     assert eid_active in returned
     assert eid_tomb not in returned

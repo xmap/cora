@@ -82,6 +82,40 @@ def test_descriptor_loads_and_validates() -> None:
     assert descriptor.resources is not None
 
 
+def test_enclosures_carry_facility_code_and_confirm_note() -> None:
+    descriptor = bd.load(_DESCRIPTOR)
+    enclosures = {e.name: e for e in descriptor.enclosures}
+    assert {"2-BM-A", "2-BM-B"} <= set(enclosures)
+    for name in ("2-BM-A", "2-BM-B"):
+        assert enclosures[name].facility_code == "aps"
+        # the per-hutch permit PV is an operator-confirm item, carried as a note
+        assert isinstance(enclosures[name].permit_signal, dict)
+        assert enclosures[name].permit_signal["confirm"]
+
+
+def test_unknown_enclosure_ref_raises(tmp_path: Path) -> None:
+    bad = tmp_path / "bad_enclosure_ref.yaml"
+    bad.write_text(
+        "beamline:\n  name: T\n"
+        "enclosures:\n  - name: hutch-a\n    facility_code: aps\n"
+        "front-end:\n  enclosure: not-declared\n  devices: []\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(bd.DescriptorError):
+        bd.load(bad)
+
+
+def test_renders_enclosures_table_facility_and_permit_columns() -> None:
+    markdown = _render_with_catalog()
+    assert "## Enclosures" in markdown
+    assert "| Enclosure | Role | Facility | Permit signal |" in markdown
+    # each hutch row carries its containing-Facility slug and the confirm note
+    assert "`2-BM-A`" in markdown
+    assert "`2-BM-B`" in markdown
+    assert "`aps`" in markdown
+    assert "confirm: per-hutch PSS search-and-secure permit PV" in markdown
+
+
 def test_renders_one_h2_per_group_and_no_em_dash() -> None:
     descriptor = bd.load(_DESCRIPTOR)
     markdown = _render_with_catalog()

@@ -46,12 +46,10 @@ def _enclosure_ref(
     *,
     permit_status: str = "Permitted",
     lifecycle: str = "Active",
-    containing_asset_id: UUID | None = None,
 ) -> EnclosureLookupResult:
     return EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="<test enclosure>",
-        containing_asset_id=containing_asset_id if containing_asset_id is not None else uuid4(),
         permit_status=permit_status,
         lifecycle=lifecycle,
         observed_at=None,

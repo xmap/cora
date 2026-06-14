@@ -95,7 +95,7 @@ router = APIRouter(tags=["enclosure"])
                 "Enclosure is already Decommissioned "
                 "(decommission_enclosure is strict-not-idempotent; "
                 "Decommissioned is terminal). The address tuple "
-                "(containing_asset_id, name) is freed for "
+                "(facility_code, name) is freed for "
                 "re-registration once the projection arm advances."
             ),
         },
