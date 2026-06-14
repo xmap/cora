@@ -203,10 +203,19 @@ class ProcedureCompleted:
     consumers needing post-completion read state should fold the
     Procedure stream (short and bounded for terminal-by-design
     Lifecycle Aggregates).
+
+    `actuation_kind` is the raw `ActuationKind` value (Physical /
+    Simulated / Hybrid) the Conductor observed during this conduct, or
+    None when nothing instrumented was actuated (no routing table, no
+    control-port write) or the complete was issued outside a conduct.
+    Additive payload field: legacy streams fold via
+    `payload.get("actuation_kind")` -> None. This is the gate carrier
+    the Data BC reads back at Dataset registration.
     """
 
     procedure_id: UUID
     occurred_at: datetime
+    actuation_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -297,6 +306,12 @@ class ProcedureAborted:
     shape; same future-additive structured-taxonomy posture parked
     at `InvalidProcedureAbortReasonError`.
 
+    `actuation_kind` is the raw `ActuationKind` value the Conductor
+    observed before the abort (routes attempted before the failing step
+    still taint it), or None. Additive payload field: legacy streams
+    fold via `payload.get("actuation_kind")` -> None. Carries honest
+    provenance for a Dataset produced by an aborted conduct.
+
     Single-source guard at the decider (Running only). Held/Resumed
     deferred to 10c-c per pilot need; if Held lands, the abort source
     set widens to `Running | Held` to match Run BC's precedent.
@@ -305,6 +320,7 @@ class ProcedureAborted:
     procedure_id: UUID
     reason: str
     occurred_at: datetime
+    actuation_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -426,16 +442,29 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "procedure_id": str(procedure_id),
                 "occurred_at": occurred_at.isoformat(),
             }
-        case ProcedureCompleted(procedure_id=procedure_id, occurred_at=occurred_at):
+        case ProcedureCompleted(
+            procedure_id=procedure_id,
+            occurred_at=occurred_at,
+            actuation_kind=actuation_kind,
+        ):
             return {
                 "procedure_id": str(procedure_id),
                 "occurred_at": occurred_at.isoformat(),
+                # Raw ActuationKind value or None. Pre-activation streams
+                # fold via `.get("actuation_kind")` -> None in from_stored.
+                "actuation_kind": actuation_kind,
             }
-        case ProcedureAborted(procedure_id=procedure_id, reason=reason, occurred_at=occurred_at):
+        case ProcedureAborted(
+            procedure_id=procedure_id,
+            reason=reason,
+            occurred_at=occurred_at,
+            actuation_kind=actuation_kind,
+        ):
             return {
                 "procedure_id": str(procedure_id),
                 "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
+                "actuation_kind": actuation_kind,
             }
         case ProcedureTruncated(
             procedure_id=procedure_id,
@@ -584,6 +613,8 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                 lambda: ProcedureCompleted(
                     procedure_id=UUID(payload["procedure_id"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    # Additive: pre-activation streams omit the key -> None.
+                    actuation_kind=payload.get("actuation_kind"),
                 ),
             )
         case "ProcedureAborted":
@@ -593,6 +624,7 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     procedure_id=UUID(payload["procedure_id"]),
                     reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    actuation_kind=payload.get("actuation_kind"),
                 ),
             )
         case "ProcedureTruncated":

@@ -60,6 +60,8 @@ async def test_handler_appends_procedure_aborted_event_with_trimmed_reason() -> 
         "procedure_id": str(_PROCEDURE_ID),
         "reason": "vacuum loss",
         "occurred_at": _NOW.isoformat(),
+        # None when aborted outside a conduct (this handler path).
+        "actuation_kind": None,
     }
 
 

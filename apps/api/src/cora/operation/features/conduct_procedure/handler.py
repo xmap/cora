@@ -200,6 +200,9 @@ def bind(
             completed_count=result.completed_count,
             succeeded=result.succeeded,
             failure=result.failure,
+            actuation_kind=(
+                result.actuation_kind.value if result.actuation_kind is not None else None
+            ),
         )
 
     return handler

@@ -1165,3 +1165,17 @@ class Procedure:
     at register time (>= 1 when set); declaration-only, never an FSM
     state. Additive-state default None: legacy + uncapped Procedures fold
     cleanly."""
+    actuation_kind: str | None = field(default=None)
+    """The raw `ActuationKind` value (Physical / Simulated / Hybrid) the
+    Conductor observed during the conduct that drove this Procedure to a
+    terminal state, or None.
+
+    Set by the `ProcedureCompleted` / `ProcedureAborted` terminal arms
+    from the event's `actuation_kind`; None while Defined / Running and
+    for completes/aborts issued outside a conduct. This is the gate
+    carrier: `register_dataset` reads it off a loaded producing Procedure
+    and snapshots it onto the Dataset, where `promote_dataset` blocks
+    Simulated / Hybrid origins. The Operation BC owns the `ActuationKind`
+    enum; state stores the raw string (cross-BC string-snapshot seam,
+    mirroring how the Data BC stores it). Additive-state default None:
+    legacy + pre-activation streams fold cleanly."""

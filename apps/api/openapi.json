@@ -3660,8 +3660,19 @@
         "type": "object"
       },
       "ConductProcedureResponse": {
-        "description": "Response body for the conduct_procedure slice.\n\n`succeeded` is the canonical pass/fail bit; `failure` is non-null\niff `succeeded` is False. `completed_count` is informational\n(the number of steps that ran successfully before halt, if any).",
+        "description": "Response body for the conduct_procedure slice.\n\n`succeeded` is the canonical pass/fail bit; `failure` is non-null\niff `succeeded` is False. `completed_count` is informational\n(the number of steps that ran successfully before halt, if any).\n\n`actuation_kind` is the raw `ActuationKind` value (Physical /\nSimulated / Hybrid) the Conductor observed, or None when nothing\ninstrumented was actuated. Read-only operator visibility; the gate\nthat consumes it reads the value server-side off the Procedure\nstream, never back from this response.",
         "properties": {
+          "actuation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actuation Kind"
+          },
           "completed_count": {
             "title": "Completed Count",
             "type": "integer"

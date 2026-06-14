@@ -1,5 +1,6 @@
 """Procedure evolver tests (10c-a genesis arm + 10c-b transition arms)."""
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -237,6 +238,84 @@ def test_evolve_procedure_aborted_preserves_all_fields() -> None:
     assert state.name == prior.name
     assert state.kind == prior.kind
     assert state.target_asset_ids == frozenset({asset})
+
+
+@pytest.mark.unit
+def test_evolve_procedure_completed_sets_actuation_kind_from_event() -> None:
+    """The Completed terminal arm is the one transition arm that SETS
+    actuation_kind: it folds the conduct-observed kind from the event onto
+    state (the gate carrier register_dataset reads back)."""
+    prior = _defined()
+    started = evolve(prior, ProcedureStarted(procedure_id=prior.id, occurred_at=_NOW))
+    state = evolve(
+        started,
+        ProcedureCompleted(procedure_id=prior.id, occurred_at=_NOW, actuation_kind="Simulated"),
+    )
+    assert state.actuation_kind == "Simulated"
+
+
+@pytest.mark.unit
+def test_evolve_procedure_aborted_sets_actuation_kind_from_event() -> None:
+    prior = _defined()
+    started = evolve(prior, ProcedureStarted(procedure_id=prior.id, occurred_at=_NOW))
+    state = evolve(
+        started,
+        ProcedureAborted(
+            procedure_id=prior.id, reason="quench", occurred_at=_NOW, actuation_kind="Hybrid"
+        ),
+    )
+    assert state.actuation_kind == "Hybrid"
+
+
+@pytest.mark.unit
+def test_evolve_non_terminal_arms_preserve_actuation_kind() -> None:
+    """Carry-through invariant: a non-terminal arm must not wipe a prior
+    actuation_kind. Pinned directly by mutating a Running state's kind and
+    folding an orthogonal (logbook-open) event over it."""
+    prior = _defined()
+    started = evolve(prior, ProcedureStarted(procedure_id=prior.id, occurred_at=_NOW))
+    # Simulate a state that already carries a kind (defensive: the field must
+    # survive every arm even if a future event sets it pre-terminal).
+    tainted = replace(started, actuation_kind="Simulated")
+    after_open = evolve(
+        tainted,
+        ProcedureActivitiesLogbookOpened(
+            procedure_id=prior.id,
+            logbook_id=uuid4(),
+            kind="activity",
+            schema=STEPS_LOGBOOK_SCHEMA,
+            occurred_at=_NOW,
+        ),
+    )
+    assert after_open.actuation_kind == "Simulated"
+
+
+@pytest.mark.unit
+def test_fold_iterating_conduct_lands_actuation_kind_on_completed() -> None:
+    """End-to-end fold: an iterating conduct (start + iteration boundary pair)
+    that completes Simulated lands the kind on terminal state, unaffected by
+    the intervening iteration arms."""
+    pid = uuid4()
+    events: list[ProcedureEvent] = [
+        ProcedureRegistered(
+            procedure_id=pid,
+            name="alignment sweep",
+            kind="alignment",
+            target_asset_ids=(),
+            parent_run_id=None,
+            occurred_at=_NOW,
+        ),
+        ProcedureStarted(procedure_id=pid, occurred_at=_NOW),
+        ProcedureIterationStarted(procedure_id=pid, iteration_index=1, occurred_at=_NOW),
+        ProcedureIterationEnded(
+            procedure_id=pid, iteration_index=1, converged=True, reason=None, occurred_at=_NOW
+        ),
+        ProcedureCompleted(procedure_id=pid, occurred_at=_NOW, actuation_kind="Simulated"),
+    ]
+    state = fold(events)
+    assert state is not None
+    assert state.status is ProcedureStatus.COMPLETED
+    assert state.actuation_kind == "Simulated"
 
 
 @pytest.mark.unit

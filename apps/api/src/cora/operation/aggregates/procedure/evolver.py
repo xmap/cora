@@ -27,12 +27,18 @@ already sorted in `to_payload` for persistence determinism.
 **Critical invariant**: every transition arm MUST carry `id`, `name`,
 `kind`, `target_asset_ids`, `parent_run_id`, `activity_logbook_id`,
 `capability_id`, `recipe_id`, `current_iteration_index`,
-`iteration_count`, `consecutive_unconverged_iterations`, AND
-`max_consecutive_unconverged_iterations` through from prior state.
-Constructing `Procedure(id=..., name=..., status=...)` without
-explicitly passing the additive fields would silently WIPE them to
-defaults (empty frozenset / None / 0). Pinned by the per-transition
-preserve-fields tests. Same lesson as Run BC's evolver docstring.
+`iteration_count`, `consecutive_unconverged_iterations`,
+`max_consecutive_unconverged_iterations`, AND `actuation_kind` through
+from prior state. Constructing `Procedure(id=..., name=...,
+status=...)` without explicitly passing the additive fields would
+silently WIPE them to defaults (empty frozenset / None / 0). Pinned by
+the per-transition preserve-fields tests. Same lesson as Run BC's
+evolver docstring.
+
+`actuation_kind` is the one transition-set field: the `ProcedureCompleted`
+/ `ProcedureAborted` arms set it from the EVENT (the Conductor's observed
+kind for this conduct), every other arm carries `prior.actuation_kind`
+(None until a terminal conduct event lands).
 
 The iteration boundary pair folds onto the iteration denorm without
 touching `status`: `ProcedureIterationStarted` bumps `iteration_count`
@@ -122,8 +128,9 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                actuation_kind=prior.actuation_kind,
             )
-        case ProcedureCompleted():
+        case ProcedureCompleted(actuation_kind=actuation_kind):
             prior = require_state(state, "ProcedureCompleted")
             return Procedure(
                 id=prior.id,
@@ -141,8 +148,10 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                # Terminal-set from the conduct's observed kind.
+                actuation_kind=actuation_kind,
             )
-        case ProcedureAborted():
+        case ProcedureAborted(actuation_kind=actuation_kind):
             prior = require_state(state, "ProcedureAborted")
             return Procedure(
                 id=prior.id,
@@ -160,6 +169,8 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                # Terminal-set: routes attempted before the failing step taint it.
+                actuation_kind=actuation_kind,
             )
         case ProcedureTruncated():
             prior = require_state(state, "ProcedureTruncated")
@@ -179,6 +190,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                actuation_kind=prior.actuation_kind,
             )
         case ProcedureActivitiesLogbookOpened(logbook_id=logbook_id):
             # Lazy open-on-first-write: preserve all
@@ -202,6 +214,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                actuation_kind=prior.actuation_kind,
             )
         case RecipeExpansionRecorded():
             # Provenance-only event: leaves Procedure state unchanged.
@@ -234,6 +247,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                actuation_kind=prior.actuation_kind,
             )
         case ProcedureIterationEnded(converged=converged):
             # The open iteration closed: clear the open-index marker and
@@ -260,6 +274,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                actuation_kind=prior.actuation_kind,
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

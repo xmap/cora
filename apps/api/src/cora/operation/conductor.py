@@ -664,6 +664,11 @@ class Conductor:
             # still sees the cancellation - this keeps signals + shutdown
             # behaving normally.
             with contextlib.suppress(Exception):
+                # No ConductorResult is available on cancellation (execute()
+                # raised before returning), so the observed actuation kind is
+                # unrecoverable here: abort records None. Conservative residual
+                # documented in the activation design; a Dataset off a
+                # cancelled conduct carries no proven kind.
                 await self._abort_procedure(
                     AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
                     **envelope_kwargs,
@@ -672,7 +677,19 @@ class Conductor:
         if result.succeeded:
             try:
                 await self._complete_procedure(
-                    CompleteProcedure(procedure_id=procedure_id), **envelope_kwargs
+                    CompleteProcedure(
+                        procedure_id=procedure_id,
+                        # The bridge: the observed kind rides the terminal
+                        # event the Conductor already issues, where the Data
+                        # BC reads it back at Dataset registration. Raw
+                        # ActuationKind value or None (no instrumented actuation).
+                        actuation_kind=(
+                            result.actuation_kind.value
+                            if result.actuation_kind is not None
+                            else None
+                        ),
+                    ),
+                    **envelope_kwargs,
                 )
             except _LIFECYCLE_RERAISE:
                 raise
@@ -697,7 +714,15 @@ class Conductor:
         reason = _derive_abort_reason(failure)
         with contextlib.suppress(Exception):
             await self._abort_procedure(
-                AbortProcedure(procedure_id=procedure_id, reason=reason),
+                AbortProcedure(
+                    procedure_id=procedure_id,
+                    reason=reason,
+                    # Honest provenance for a Dataset off an aborted conduct:
+                    # routes attempted before the failing step still taint it.
+                    actuation_kind=(
+                        result.actuation_kind.value if result.actuation_kind is not None else None
+                    ),
+                ),
                 **envelope_kwargs,
             )
         return result
