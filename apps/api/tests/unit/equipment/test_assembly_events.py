@@ -161,7 +161,7 @@ def test_assembly_versioned_round_trip_allows_no_previous_hash() -> None:
 def test_assembly_deprecated_round_trip() -> None:
     original = AssemblyDeprecated(
         assembly_id=uuid4(),
-        reason="superseded by next-generation MCTOptics revision",
+        reason="superseded by next-generation Microscope revision",
         occurred_at=_NOW,
     )
     rebuilt = from_stored(_stored("AssemblyDeprecated", to_payload(original)))

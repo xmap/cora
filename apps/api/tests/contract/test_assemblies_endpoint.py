@@ -59,7 +59,7 @@ def test_post_assemblies_returns_201_with_slots_and_wires() -> None:
         response = client.post(
             "/assemblies",
             json={
-                "name": "MCTOptics",
+                "name": "Microscope",
                 "presents_as_family_id": str(presents_id),
                 "required_slots": [
                     {

@@ -75,7 +75,7 @@ def _register_asset(client: TestClient, family_id: str, *, name: str = "Camera-1
     return asset_id
 
 
-def _define_assembly(client: TestClient, family_id: str, *, name: str = "MCTOptics") -> str:
+def _define_assembly(client: TestClient, family_id: str, *, name: str = "Microscope") -> str:
     body = {
         "name": name,
         "presents_as_family_id": family_id,

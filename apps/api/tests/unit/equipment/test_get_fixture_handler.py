@@ -64,7 +64,7 @@ async def _seed_fixture(deps: Kernel) -> UUID:
     )
     assembly_id = await define_assembly.bind(deps)(
         DefineAssembly(
-            name="MCTOptics",
+            name="Microscope",
             presents_as_family_id=family_id,
             required_slots=frozenset(
                 {

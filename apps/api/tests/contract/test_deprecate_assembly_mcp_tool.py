@@ -37,7 +37,7 @@ def _define_assembly_via_tool(
     headers: dict[str, str],
     family_id: UUID,
     *,
-    name: str = "MCTOptics",
+    name: str = "Microscope",
 ) -> UUID:
     response = client.post(
         "/mcp",

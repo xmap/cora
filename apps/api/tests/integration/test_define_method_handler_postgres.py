@@ -125,7 +125,7 @@ async def test_define_method_persists_needed_assembly_ids_to_postgres(
 
     await define_method.bind(deps)(
         DefineMethod(
-            name="MCTOptics Tomography",
+            name="Microscope Tomography",
             capability_id=capability_id,
             needed_family_ids=frozenset(),
             needed_assembly_ids=frozenset({asm2, asm1}),  # unsorted input

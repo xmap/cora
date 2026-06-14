@@ -64,7 +64,7 @@ async def test_assembly_defined_inserts_with_defined_status() -> None:
         "AssemblyDefined",
         {
             "assembly_id": str(_ASSEMBLY_ID),
-            "name": "MCTOptics",
+            "name": "Microscope",
             "presents_as_family_id": str(_FAMILY_ID),
             "required_slots": [],
             "required_wires": [],
@@ -81,7 +81,7 @@ async def test_assembly_defined_inserts_with_defined_status() -> None:
     # Positional args after the SQL string: assembly_id, name,
     # presents_as_family_id, version, content_hash, created_at.
     assert args.args[1] == _ASSEMBLY_ID
-    assert args.args[2] == "MCTOptics"
+    assert args.args[2] == "Microscope"
     assert args.args[3] == _FAMILY_ID
     assert args.args[4] == "v0.1.0"
     assert args.args[5] == "a" * 64
@@ -96,7 +96,7 @@ async def test_assembly_defined_handles_null_version() -> None:
         "AssemblyDefined",
         {
             "assembly_id": str(_ASSEMBLY_ID),
-            "name": "MCTOptics",
+            "name": "Microscope",
             "presents_as_family_id": str(_FAMILY_ID),
             "required_slots": [],
             "required_wires": [],
@@ -122,7 +122,7 @@ async def test_assembly_versioned_updates_status_name_family_version_hash() -> N
         "AssemblyVersioned",
         {
             "assembly_id": str(_ASSEMBLY_ID),
-            "name": "MCTOptics-rev2",
+            "name": "Microscope-rev2",
             "presents_as_family_id": str(new_family_id),
             "required_slots": [],
             "required_wires": [],
@@ -140,7 +140,7 @@ async def test_assembly_versioned_updates_status_name_family_version_hash() -> N
     # Positional args after the SQL: assembly_id, name,
     # presents_as_family_id, version, content_hash.
     assert args.args[1] == _ASSEMBLY_ID
-    assert args.args[2] == "MCTOptics-rev2"
+    assert args.args[2] == "Microscope-rev2"
     assert args.args[3] == new_family_id
     assert args.args[4] == "v0.2.0"
     assert args.args[5] == "c" * 64
@@ -186,7 +186,7 @@ async def test_assembly_defined_seeds_empty_presents_as() -> None:
         "AssemblyDefined",
         {
             "assembly_id": str(_ASSEMBLY_ID),
-            "name": "MCTOptics",
+            "name": "Microscope",
             "presents_as_family_id": str(_FAMILY_ID),
             "version": None,
             "content_hash": "abc",

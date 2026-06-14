@@ -91,7 +91,7 @@ def _define_assembly_via_tool(
             "params": {
                 "name": "define_assembly",
                 "arguments": {
-                    "name": "MCTOptics",
+                    "name": "Microscope",
                     "presents_as_family_id": str(family_id),
                     "required_slots": [
                         {

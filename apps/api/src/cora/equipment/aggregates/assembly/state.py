@@ -1,8 +1,8 @@
 """Assembly aggregate state, value objects, status enum, and domain errors.
 
 An `Assembly` is a content-addressed composition blueprint for a
-reusable cluster of Assets (e.g., the MCTOptics fixture at APS 2-BM:
-microscope + 3 objectives + camera + scintillator, wired together).
+reusable cluster of Assets (e.g., the Microscope fixture at APS 2-BM:
+an Optics sub-assembly + camera + scintillator, wired together).
 Declares `required_slots` (Family-typed, cardinality-annotated,
 optionally pre-Placed), `required_wires` (slot-keyed 4-tuples), and
 `required_sub_assemblies` (version-pinned links to child Assemblies,
@@ -741,7 +741,7 @@ class Assembly:
     Parallel mechanism to the scalar `presents_as_family_id`: 3C
     keeps the scalar (per anti-hook #6, one migration cycle), and
     layers `presents_as` alongside for Role-based binding via 3D's
-    bind_plan_role role_kind path. MCTOptics-Assembly seeds
+    bind_plan_role role_kind path. Microscope-Assembly seeds
     `{Detector}` at scenario-fixture time.
 
     NOT included in `content_subset()` -- additive orthogonal-axis

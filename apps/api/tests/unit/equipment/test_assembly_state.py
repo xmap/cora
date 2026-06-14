@@ -50,8 +50,8 @@ def test_slot_cardinality_has_four_closed_values() -> None:
 
 @pytest.mark.unit
 def test_assembly_name_trims_and_validates_bounded_text() -> None:
-    name = AssemblyName("  MCTOptics  ")
-    assert name.value == "MCTOptics"
+    name = AssemblyName("  Microscope  ")
+    assert name.value == "Microscope"
 
 
 @pytest.mark.unit

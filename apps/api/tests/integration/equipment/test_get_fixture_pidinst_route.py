@@ -207,7 +207,7 @@ async def _seed_asset(
 
 
 async def _seed_assembly_one_slot(
-    db_pool: asyncpg.Pool, *, family_id: UUID, name: str = "MCTOptics"
+    db_pool: asyncpg.Pool, *, family_id: UUID, name: str = "Microscope"
 ) -> UUID:
     assembly_id = uuid4()
     define_event_id = uuid4()

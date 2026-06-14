@@ -36,7 +36,7 @@ def _register_asset(client: TestClient, family_id: UUID, *, name: str = "Cam-1")
 
 
 def _define_assembly_with_one_camera_slot(
-    client: TestClient, family_id: UUID, *, name: str = "MCTOptics"
+    client: TestClient, family_id: UUID, *, name: str = "Microscope"
 ) -> UUID:
     body = {
         "name": name,
@@ -165,8 +165,8 @@ def test_post_detach_then_reattach_to_different_fixture() -> None:
         family_id = _define_family(client)
         asset_id = _register_asset(client, family_id)
         # Register two distinct Assemblies + Fixtures both binding this Asset.
-        assembly_a = _define_assembly_with_one_camera_slot(client, family_id, name="MCTOptics-A")
-        assembly_b = _define_assembly_with_one_camera_slot(client, family_id, name="MCTOptics-B")
+        assembly_a = _define_assembly_with_one_camera_slot(client, family_id, name="Microscope-A")
+        assembly_b = _define_assembly_with_one_camera_slot(client, family_id, name="Microscope-B")
         fixture_a = _register_fixture(client, assembly_a, asset_id)
         fixture_b = _register_fixture(client, assembly_b, asset_id)
         _attach(client, asset_id, fixture_a)

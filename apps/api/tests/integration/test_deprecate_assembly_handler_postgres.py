@@ -54,7 +54,7 @@ async def test_deprecate_assembly_appends_deprecated_event_to_postgres(
         correlation_id=_CORRELATION_ID,
     )
     assembly_id = await define_assembly.bind(deps)(
-        DefineAssembly(name="MCTOptics", presents_as_family_id=family_id),
+        DefineAssembly(name="Microscope", presents_as_family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -113,14 +113,14 @@ async def test_deprecate_assembly_persists_through_versioned_arm(
         correlation_id=_CORRELATION_ID,
     )
     assembly_id = await define_assembly.bind(deps)(
-        DefineAssembly(name="MCTOptics", presents_as_family_id=family_id),
+        DefineAssembly(name="Microscope", presents_as_family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     await version_assembly.bind(deps)(
         VersionAssembly(
             assembly_id=assembly_id,
-            name="MCTOptics",
+            name="Microscope",
             presents_as_family_id=family_id,
             version="v1",
         ),

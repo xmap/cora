@@ -208,7 +208,7 @@ class Kernel:
     When the candidate Asset carries `fixture_id`, the handler
     loads the Fixture, then `AssemblyLookup.lookup(fixture.assembly_id)`,
     and the decider ORs-in `role_kind in assembly.presents_as` on
-    top of the Family disjunction (closes the MCTOptics-Assembly
+    top of the Family disjunction (closes the Microscope-Assembly
     worked example from the design memo). Equipment BC ships
     `PostgresAssemblyLookup` as the production adapter (reads
     `proj_equipment_assembly_summary` with the 3C presents_as

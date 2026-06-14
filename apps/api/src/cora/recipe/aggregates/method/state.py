@@ -639,7 +639,7 @@ class Method:
     ] = field(default_factory=frozenset[str])
     # needed_assembly_ids references Assembly aggregates (Equipment BC)
     # by UUID. Declares "this Method needs a specific composition
-    # blueprint" (e.g., the MCTOptics microscope fixture), not just N
+    # blueprint" (e.g., the Microscope fixture), not just N
     # independent Assets of the Families in needed_family_ids. Plan
     # binding consults this set at bind time: each id in
     # Method.needed_assembly_ids must be materialized as a Fixture among

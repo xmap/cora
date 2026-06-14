@@ -115,7 +115,7 @@ def _define_assembly(client: TestClient, family_id: str, slot_name: str = "camer
     response = client.post(
         "/assemblies",
         json={
-            "name": "MCTOptics",
+            "name": "Microscope",
             "presents_as_family_id": family_id,
             "required_slots": [
                 {

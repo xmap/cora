@@ -18,7 +18,7 @@ def _seed_assembly_with_role(client: TestClient, app: FastAPI) -> tuple[UUID, UU
     asm_resp = client.post(
         "/assemblies",
         json={
-            "name": "MCTOptics",
+            "name": "Microscope",
             "presents_as_family_id": str(family_id),
             "required_slots": [],
             "required_wires": [],
@@ -83,7 +83,7 @@ def test_post_remove_presents_as_returns_409_when_role_not_advertised() -> None:
         asm_resp = client.post(
             "/assemblies",
             json={
-                "name": "MCTOptics",
+                "name": "Microscope",
                 "presents_as_family_id": str(family_id),
                 "required_slots": [],
                 "required_wires": [],

@@ -13,7 +13,7 @@ HANDLER's edge-load behavior:
   - Empty asset.family_ids skips the FamilyLookup batch (no spurious
     asyncio.gather of zero coroutines)
   - Asset.fixture_id triggers the Fixture + AssemblyLookup edge-load
-    (BLOCKER #5 follow-up; closes the MCTOptics-Assembly worked
+    (BLOCKER #5 follow-up; closes the Microscope-Assembly worked
     example in a runtime path)
 """
 

@@ -74,7 +74,7 @@ def _define_assembly(client: TestClient, headers: dict[str, str], family_id: UUI
             "params": {
                 "name": "define_assembly",
                 "arguments": {
-                    "name": "MCTOptics",
+                    "name": "Microscope",
                     "presents_as_family_id": str(family_id),
                     "required_slots": [
                         {

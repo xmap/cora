@@ -2,7 +2,7 @@
 
 *The Optique Peter detector deployment: a Microscope Assembly over a reusable Optics sub-assembly, materialized as one Fixture binding eight Assets, all contained in one OpticalHousing, with four Calibrations.*
 
-The Microscope detector sits about 55 m from the source in the 2-BM hutch. It is the operator-facing imaging system: a vendor housing that carries three swappable microscope objectives on a turret, a linear focus stage, a single Oryx scientific camera, and a LuAG scintillator. The whole unit is controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC's process name, not the CORA model name). This page explains how CORA models it.
+The Microscope detector sits about 55 m from the source in the 2-BM hutch. It is the operator-facing imaging system: a vendor housing that carries three swappable microscope objectives on a turret, a linear focus stage, a single Oryx scientific camera, and a LuAG scintillator. The whole unit is controlled by the [BCDA-APS Microscope IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (Microscope is the IOC's process name, not the CORA model name). This page explains how CORA models it.
 
 ## The model in one picture
 
@@ -209,4 +209,4 @@ A few model questions this deployment surfaces but does not pin down:
 - [2-BM Enclosures](../enclosures.md) for the hutch permit that gates Runs and Procedures binding these Assets: an Enclosure on the `2-BM` Unit covers every Device here through the pre-flight chain walk
 - [Equipment module](../../../architecture/modules/equipment/index.md) for the aggregate shapes (Family, Model, Asset, Mount, Frame, Assembly, Fixture)
 
-The deployment scenario test at `apps/api/tests/integration/scenarios/test_2bm_mctoptics_setup.py` currently exercises an earlier shape of this deployment; it will be rewritten to match the Microscope + Optics + OpticalHousing model described here.
+The deployment scenario test at `apps/api/tests/integration/scenarios/test_2bm_microscope_setup.py` exercises the Microscope + Optics + OpticalHousing model described here, end-to-end against Postgres.

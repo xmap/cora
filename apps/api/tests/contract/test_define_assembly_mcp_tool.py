@@ -123,7 +123,7 @@ def test_mcp_define_assembly_tool_succeeds_with_slot_and_wire() -> None:
                 "params": {
                     "name": "define_assembly",
                     "arguments": {
-                        "name": "MCTOptics",
+                        "name": "Microscope",
                         "presents_as_family_id": str(presents_id),
                         "required_slots": [
                             {

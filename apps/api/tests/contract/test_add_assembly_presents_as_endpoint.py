@@ -35,7 +35,7 @@ def _define_assembly(
     client: TestClient,
     family_id: UUID,
     *,
-    name: str = "MCTOptics",
+    name: str = "Microscope",
 ) -> UUID:
     response = client.post(
         "/assemblies",

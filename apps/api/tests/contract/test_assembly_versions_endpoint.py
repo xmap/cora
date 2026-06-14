@@ -28,7 +28,7 @@ def _define_assembly(
     client: TestClient,
     family_id: UUID,
     *,
-    name: str = "MCTOptics",
+    name: str = "Microscope",
 ) -> UUID:
     response = client.post(
         "/assemblies",
@@ -51,7 +51,7 @@ def test_post_assembly_version_returns_204_for_minimal_revision() -> None:
         response = client.post(
             f"/assemblies/{assembly_id}/versions",
             json={
-                "name": "MCTOptics-rev2",
+                "name": "Microscope-rev2",
                 "presents_as_family_id": str(family_id),
                 "required_slots": [],
                 "required_wires": [],
@@ -69,7 +69,7 @@ def test_post_assembly_version_allows_multiple_revisions_on_same_stream() -> Non
             response = client.post(
                 f"/assemblies/{assembly_id}/versions",
                 json={
-                    "name": "MCTOptics",
+                    "name": "Microscope",
                     "presents_as_family_id": str(family_id),
                     "required_slots": [],
                     "required_wires": [],
@@ -87,7 +87,7 @@ def test_post_assembly_version_allows_re_attestation_with_identical_body() -> No
         family_id = _define_family(client)
         assembly_id = _define_assembly(client, family_id)
         body: dict[str, object] = {
-            "name": "MCTOptics",
+            "name": "Microscope",
             "presents_as_family_id": str(family_id),
             "required_slots": [],
             "required_wires": [],

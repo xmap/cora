@@ -49,7 +49,7 @@ def _build_deps(
 async def _seed_assembly_with_role(store: InMemoryEventStore) -> None:
     genesis = AssemblyDefined(
         assembly_id=_ASSEMBLY_ID,
-        name=AssemblyName("MCTOptics"),
+        name=AssemblyName("Microscope"),
         presents_as_family_id=_FAMILY_ID,
         required_slots=frozenset(),
         required_wires=frozenset(),
@@ -139,7 +139,7 @@ async def test_handler_raises_not_present_strict_not_idempotent() -> None:
     store = InMemoryEventStore()
     genesis = AssemblyDefined(
         assembly_id=_ASSEMBLY_ID,
-        name=AssemblyName("MCTOptics"),
+        name=AssemblyName("Microscope"),
         presents_as_family_id=_FAMILY_ID,
         required_slots=frozenset(),
         required_wires=frozenset(),

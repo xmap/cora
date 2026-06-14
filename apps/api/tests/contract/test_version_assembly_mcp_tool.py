@@ -37,7 +37,7 @@ def _define_assembly_via_tool(
     headers: dict[str, str],
     family_id: UUID,
     *,
-    name: str = "MCTOptics",
+    name: str = "Microscope",
 ) -> UUID:
     response = client.post(
         "/mcp",
@@ -92,7 +92,7 @@ def test_mcp_version_assembly_tool_succeeds_for_defined_assembly() -> None:
                     "name": "version_assembly",
                     "arguments": {
                         "assembly_id": str(assembly_id),
-                        "name": "MCTOptics",
+                        "name": "Microscope",
                         "presents_as_family_id": str(family_id),
                         "required_slots": [],
                         "required_wires": [],
@@ -153,7 +153,7 @@ def test_mcp_version_assembly_tool_succeeds_on_versioned_state() -> None:
                         "name": "version_assembly",
                         "arguments": {
                             "assembly_id": str(assembly_id),
-                            "name": "MCTOptics",
+                            "name": "Microscope",
                             "presents_as_family_id": str(family_id),
                             "required_slots": [],
                             "required_wires": [],

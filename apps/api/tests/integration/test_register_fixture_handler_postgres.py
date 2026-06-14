@@ -88,7 +88,7 @@ async def test_register_fixture_appends_genesis_event_to_postgres(
     )
     assembly_id = await define_assembly.bind(deps)(
         DefineAssembly(
-            name="MCTOptics",
+            name="Microscope",
             presents_as_family_id=family_id,
             required_slots=frozenset(
                 {

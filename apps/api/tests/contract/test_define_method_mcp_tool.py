@@ -106,7 +106,7 @@ def test_mcp_define_method_tool_accepts_needed_assembly_ids() -> None:
                 "params": {
                     "name": "define_method",
                     "arguments": {
-                        "name": "MCTOptics Tomography",
+                        "name": "Microscope Tomography",
                         "capability_id": cap_id,
                         "needed_family_ids": [],
                         "needed_assembly_ids": [asm_id],

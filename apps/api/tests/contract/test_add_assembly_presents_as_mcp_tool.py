@@ -19,7 +19,7 @@ def _seed(client: TestClient, app: FastAPI) -> tuple[UUID, UUID]:
     asm_resp = client.post(
         "/assemblies",
         json={
-            "name": "MCTOptics",
+            "name": "Microscope",
             "presents_as_family_id": str(family_id),
             "required_slots": [],
             "required_wires": [],

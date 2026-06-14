@@ -286,7 +286,7 @@ def test_decide_role_kind_path_raises_when_family_lookup_misses() -> None:
 def _assembly_lookup(assembly_id: UUID, *, presents_as: frozenset[UUID]) -> AssemblyLookupResult:
     return AssemblyLookupResult(
         id=assembly_id,
-        name="MCTOptics",
+        name="Microscope",
         status="Defined",
         presents_as=presents_as,
     )
@@ -294,7 +294,7 @@ def _assembly_lookup(assembly_id: UUID, *, presents_as: frozenset[UUID]) -> Asse
 
 @pytest.mark.unit
 def test_decide_role_kind_path_succeeds_via_assembly_when_no_family_satisfies() -> None:
-    """MCTOptics worked example: Asset has Family that does NOT advertise the
+    """Microscope worked example: Asset has Family that does NOT advertise the
     Role, but the Asset is part of an Assembly that DOES advertise it."""
     aid = uuid4()
     mid = uuid4()

@@ -37,7 +37,7 @@ def _register_asset(client: TestClient, family_id: UUID, *, name: str = "Camera-
 
 
 def _define_assembly_with_one_camera_slot(
-    client: TestClient, family_id: UUID, *, name: str = "MCTOptics"
+    client: TestClient, family_id: UUID, *, name: str = "Microscope"
 ) -> UUID:
     body = {
         "name": name,
