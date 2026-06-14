@@ -66,20 +66,20 @@ front-end:
       family: Beam              # Supply(kind=beam); accelerator-side, provenance only
       new: true
       note: bending magnet, recorded as a Supply, not an Asset
-    - name: FE_exit_mask
+    - name: Mask
       family: Mask
       passive: true
       water_cooled: true
       z_mm: 24020
       new: true
       confirm: true
-    - name: Be_windows
+    - name: FrontEndWindow
       family: Window
       passive: true
       replaceable: true
       new: true
       confirm: "count and thickness"
-    - name: A_shutter
+    - name: FrontEndShutter
       family: Shutter
       pv: "S02BM-PSS:FES"
       new: true
@@ -96,21 +96,21 @@ conditioning-optics:
   enclosure: 2-BM-A
   intro: Shape the beam and pick its energy.
   devices:
-    - name: L3_slits
+    - name: ConditioningSlit
       family: Slit
       pv: { x_in: "2bma:m14", x_out: "2bma:m13", y_top: "2bma:m15", y_bot: "2bma:m16" }
       white_beam: true
       water_cooled: true
       new: true
       confirm: true
-    - name: L3_filter_changer
+    - name: Filter
       family: Filter
       pv: { upstream_paddle: "2bma:m17", downstream_paddle: "2bma:m18" }
       foils: ["1 mm C", "150 um Al", "600 um Al", "1 mm Al"]
       new: true
       confirm: true
       note: only the downstream paddle is currently operational
-    - name: Y3-30_mirror
+    - name: Mirror
       family: Mirror
       pv: { downstream_y: "2bma:m2", upstream_y: "2bma:m5", stripe_select: "2bma:m3" }
       controller: FrontEndDrive
@@ -121,7 +121,7 @@ conditioning-optics:
       stripes: ["5 nm Pt", "W/Si x50 (b)", "W/Si x50 (c)", "W/Si x50 (d)"]  # recoatable
       new: true
       confirm: true
-    - name: DMM_monochromator
+    - name: Monochromator
       family: Monochromator
       pv: { crystal2_z: "2bma:m8" }   # plus m25-m32 for alignment
       material: Si multilayer
@@ -140,40 +140,42 @@ beam-defining-and-safety:
     including the SBS shutter, is assigned to 2-BM-B: it is the safety stack that
     gates the experiment hutch, so its devices are located_in 2-BM-B.
   devices:
-    - name: P6-50_safety_stack
+    - name: SafetyStack
       family: SafetyStack
       z_mm: 33343
       new: true
       confirm: true
       constituents:
-        - name: Shutter        # the B-station safety shutter (SBS); CORA-modeled
+        - name: Shutter        # B-station safety shutter (SBS); CORA-modeled. Bare name kept per
+                               # qualify-only-on-a-real-collision: the front-end FES (FrontEndShutter)
+                               # is not modeled yet. Re-qualify to StationShutter when it is.
           family: Shutter
           pv: "S02BM-PSS:SBS"
           material: "W 21 mm"
           aperture_mm: [60.0, 44.5]
           replaceable: true
           confirm: true
-        - name: white_beam_stop
+        - name: BeamStop
           family: BeamStop
           passive: true
           water_cooled: true
           new: true
-        - name: W_collimator
+        - name: Collimator
           family: Collimator
           passive: true
           new: true
-        - name: SS_baffle
+        - name: Baffle
           family: Baffle
           passive: true
           new: true
-    - name: B_station_slits
+    - name: SampleSlit
       family: Slit
       pv: { y_top: "2bma:m9", y_bot: "2bma:m10", x: ["2bma:m11", "2bma:m12"] }
       z_mm: 50500
       new: true
       confirm: true
       note: vertical pair tracks the per-energy beam position, reuses the A-side class
-    - name: beam_position_flag
+    - name: BeamPositionMonitor
       family: Diagnostic
       new: true
       confirm: true
@@ -183,7 +185,7 @@ sample-environment:
   enclosure: 2-BM-B
   intro: Hold and rotate the sample. Listed bottom to top (the kinematic stack).
   devices:
-    - name: sample_optical_table
+    - name: OpticalTable
       family: OpticalTable
       pv: { y: "2bmb:m24", z: "2bmb:m20", upstream_x: "2bmb:m21", downstream_x: "2bmb:m22" }
       new: true
@@ -197,17 +199,18 @@ sample-environment:
       travel: "x 55 mm, y 60 mm, z 25 mm, a 15 deg, b 15 deg, c 30 deg"
       confirm: true
       drawing: { system: EDMS, number: Hex300-Data-Sheet, revision: D20250203 }
-    - name: Sample_pitch_lam
+    - name: LaminographyPitch
       family: LinearStage         # Kohzu SA16A goniometer, laminography pitch
       model: kohzu_sa16a
       pv: "2bmb:m49"
       range: 0..20 deg
       new: true
       confirm: true
-    - name: fixed_wedge_-10deg
+    - name: Wedge
       family: Wedge
       passive: true
       replaceable: true
+      angle: -10 deg            # carried as a spec; was encoded in the old name, lands in settings at modeling
       new: true
     - name: Rotary
       family: RotaryStage         # the rotation axis (theta)
@@ -221,7 +224,7 @@ sample-environment:
       encoder_resolution: 0.0001 deg
       interchangeable_with: ["ABRS-150MP (fast tomo)", "ABS2000 (spindle)"]
       confirm: true
-    - name: Sample_top_X
+    - name: SampleTop_X
       family: LinearStage
       model: kohzu_cyat_070
       pv: "2bmb:m18"
@@ -229,7 +232,7 @@ sample-environment:
       range: -10..10 mm
       max_speed: 1 mm/s
       encoder_resolution: 0.0005 mm
-    - name: Sample_top_Z
+    - name: SampleTop_Z
       family: LinearStage
       model: kohzu_cyat_070
       pv: "2bmb:m17"
@@ -341,7 +344,7 @@ detector:
       bit_depth: 12 bit
       replaceable: true
       confirm: true
-    - name: vitreous_carbon_window
+    - name: DetectorWindow
       family: Window
       passive: true
       replaceable: true
@@ -383,9 +386,9 @@ controls:
       model: oms_vme58
       protocol: OMS_VME
       axis_count: 91
-      note: a-station crate (ioc2bma), drives the front-end and optics band
+      note: "a-station crate (ioc2bma); drives the front-end + optics band and also the B-station SampleSlit (2bma:m9-m12). Named for its primary band; the full driven set spans both hutches and lives in the EPICS channel map, not the name."
   triggering:
-    - name: softGlueZynq_FPGA
+    - name: Timing
       family: TimingController
       pv: "2bmbMZ1:SG:"
       path: "PSO -> MUX2-1 -> GateDly1 -> camera Line2"

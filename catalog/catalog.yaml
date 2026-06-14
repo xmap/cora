@@ -53,7 +53,7 @@ families:
   - name: Hexapod
   - name: MotionController
   - name: TimingController
-    note: "Hardware timing-signal generation and distribution (triggers, gates, sync pulses); presents_as Controller, which carries Pulsing. Anchored at 2-BM by softGlueZynq_FPGA. Substrate (FPGA, Zynq) stays out of the name and lives in settings or the bound Model."
+    note: "Hardware timing-signal generation and distribution (triggers, gates, sync pulses); presents_as Controller, which carries Pulsing. Anchored at 2-BM by Timing (the softGlueZynq Zynq FPGA box). Substrate (softGlue, FPGA, Zynq) stays out of the name and lives in settings or the bound Model."
   - name: Objective
     note: "Per-lens identity inside the Microscope Assembly."
   - name: PseudoAxis

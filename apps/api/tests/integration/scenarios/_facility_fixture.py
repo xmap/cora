@@ -65,7 +65,7 @@ declares as constants.
 ```python
 _DEVICES = (
     DeviceSpec("Rotary", _ASSET_ROTARY_ID, "RotaryStage", _CAP_ROTARY_ID),
-    DeviceSpec("Sample_top_X",         _ASSET_LINEAR_ID, "LinearStage", _CAP_LINEAR_ID),
+    DeviceSpec("SampleTop_X",         _ASSET_LINEAR_ID, "LinearStage", _CAP_LINEAR_ID),
 )
 _PRINCIPAL_ID = operator_for(__file__)
 

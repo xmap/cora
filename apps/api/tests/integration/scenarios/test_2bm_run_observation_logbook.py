@@ -370,7 +370,7 @@ async def test_run_observation_logbook_lazy_open_and_polymorphic_procedures(
         ),
         ObservationInput(
             event_id=_BASELINE_MOTOR_X_ID,
-            channel_name="Sample_top_X",
+            channel_name="SampleTop_X",
             value=12.345,
             sampled_at=pre_scan_at,
             sampling_procedure="baseline",

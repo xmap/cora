@@ -301,7 +301,7 @@ def test_decide_defaults_controller_id_to_none_when_omitted() -> None:
     events = register_asset.decide(
         state=None,
         command=RegisterAsset(
-            name="Sample_top_X",
+            name="SampleTop_X",
             tier=AssetTier.DEVICE,
             parent_id=uuid4(),
         ),
@@ -343,7 +343,7 @@ def test_decide_defaults_located_in_enclosure_id_to_none_when_omitted() -> None:
     events = register_asset.decide(
         state=None,
         command=RegisterAsset(
-            name="Sample_top_X",
+            name="SampleTop_X",
             tier=AssetTier.DEVICE,
             parent_id=uuid4(),
         ),

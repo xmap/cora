@@ -71,8 +71,8 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| STAGE-1 | `Blocks-build` | Is `Sample_pitch_lam` (the Kohzu SA16A-RM goniometer in the source page) the SAME physical thing as the hexapod's Pitch axis, or a SEPARATE stage mounted on the hexapod? Your answer decides whether CORA describes one device or two. | treated as the hexapod's Pitch axis | [Hexapod DoF model](assets.md#hexapod-dof-model) |
-| STAGE-2 | `Nice-to-have` | Full part number and datasheet for the Kohzu CYAT-070 alignment stages (`Sample_top_X` / `Sample_top_Z`)? | `Kohzu CYAT-070`, no datasheet on file | [Engineering drawings](assets.md#engineering-drawings) |
+| STAGE-1 | `Blocks-build` | Is `LaminographyPitch` (the Kohzu SA16A-RM goniometer in the source page) the SAME physical thing as the hexapod's Pitch axis, or a SEPARATE stage mounted on the hexapod? Your answer decides whether CORA describes one device or two. | treated as the hexapod's Pitch axis | [Hexapod DoF model](assets.md#hexapod-dof-model) |
+| STAGE-2 | `Nice-to-have` | Full part number and datasheet for the Kohzu CYAT-070 alignment stages (`SampleTop_X` / `SampleTop_Z`)? | `Kohzu CYAT-070`, no datasheet on file | [Engineering drawings](assets.md#engineering-drawings) |
 | STAGE-3 | `Nice-to-have` | Full part number and datasheet for the Aerotech ABS250MP-M-AS rotary stage (`Rotary`)? | `Aerotech ABS250MP-M-AS`, no datasheet on file | [Engineering drawings](assets.md#engineering-drawings) |
 | STAGE-4 | `Nice-to-have` | The measured motor-sensitivity constants (K_roll, K_pitch) that link a hexapod tilt to the observed image-centroid shift? Today they are re-derived per alignment rather than stored. | derived in-procedure, not persisted | [Procedures](procedures.md) |
 
