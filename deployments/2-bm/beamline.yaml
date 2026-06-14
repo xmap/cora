@@ -234,27 +234,27 @@ sample-environment:
 
 detector:
   enclosure: 2-BM-B
-  intro: Convert the transmitted beam to light and record it (the MCTOptics microscope).
-  cora: Assembly(MCTOptics) + Fixture(mctoptics_at_2bm), presents as an Imager
+  intro: Convert the transmitted beam to light and record it (the Microscope detector, a scintillator-relay-camera assembly).
+  cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (lens turret, objectives, lens select, focus) plus camera and scintillator leaf slots, anchored to an OpticalHousing. Fixture(microscope_at_2bm) presents as a Detector
   placement: Mount + Frame (2BM_hutch_frame)
   note: >
     A second camera (FLIR Oryx 31 MP, pv 2bmSP2:) appears in the docs, but the CORA
     model is single-camera at 2-BM (camera_select fixed at 0). Add it only if 2-BM
     staff confirm a live second bay.
   devices:
-    - name: MCTOptics_body
-      family: Microscope          # the microscope housing
+    - name: optical_housing
+      family: OpticalHousing      # the microscope optical housing (containment anchor)
       model: optique_peter_micrx080
       pv: "2bm:MCTOptics:"
       new: true
-    - name: MCTOptics_lens_turret
+    - name: lens_turret
       family: RotaryStage         # confirm: RotaryStage vs LinearStage (translating slide)
       model: optique_peter_lens_turret_motor
       pv: "2bmb:m1"
       range: 0..360 deg
       confirm: true
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
-    - name: MCTOptics_objective_0
+    - name: objective_0
       family: Objective
       magnification: 10.0
       numerical_aperture: 0.28
@@ -268,7 +268,7 @@ detector:
           value: 9.83
           source: AssertedSource
           status: Provisional
-    - name: MCTOptics_objective_1
+    - name: objective_1
       family: Objective
       magnification: 2.0
       numerical_aperture: 0.055
@@ -282,7 +282,7 @@ detector:
           value: 2.0
           source: AssertedSource
           status: Provisional
-    - name: MCTOptics_objective_2
+    - name: objective_2
       family: Objective
       magnification: 1.1
       numerical_aperture: 0.03
