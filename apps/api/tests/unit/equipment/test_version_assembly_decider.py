@@ -322,7 +322,7 @@ def test_decide_rejects_missing_sub_assembly() -> None:
             ),
             context=VersionAssemblyContext(
                 missing_family_ids=frozenset(),
-                missing_sub_assembly_ids=frozenset({child}),
+                sub_assembly_missing_ids=frozenset({child}),
             ),
             now=_NOW,
         )

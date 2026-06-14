@@ -16,7 +16,7 @@ that no shipped error currently uses.
 The same handler also resolves each `required_sub_assemblies` link via
 `resolve_sub_assembly_pins`, which returns a `SubAssemblyResolution`
 whose four classifications map one-to-one onto the context fields
-below: `missing_sub_assembly_ids` (child does not resolve),
+below: `sub_assembly_missing_ids` (child does not resolve),
 `sub_assembly_hash_mismatches` (`(sub_assembly_id, pinned, current)`
 for a drifted pin), `sub_assembly_too_deep_ids` (child is itself a
 composite, so the parent would be un-instantiable), and
@@ -34,7 +34,7 @@ class DefineAssemblyContext:
     """Snapshot of FamilyId + sub-assembly existence/pin/depth/collision checks."""
 
     missing_family_ids: frozenset[UUID]
-    missing_sub_assembly_ids: frozenset[UUID] = frozenset()
+    sub_assembly_missing_ids: frozenset[UUID] = frozenset()
     sub_assembly_hash_mismatches: frozenset[tuple[UUID, str, str | None]] = frozenset()
     sub_assembly_too_deep_ids: frozenset[UUID] = frozenset()
     sub_assembly_leaf_collisions: frozenset[str] = frozenset()

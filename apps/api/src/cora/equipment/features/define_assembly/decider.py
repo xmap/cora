@@ -105,8 +105,8 @@ def decide(
     for ref in command.required_sub_assemblies:
         if ref.sub_assembly_id == new_id:
             raise SubAssemblyCycleError(new_id)
-    if context.missing_sub_assembly_ids:
-        first_missing_sub = next(iter(sorted(context.missing_sub_assembly_ids, key=str)))
+    if context.sub_assembly_missing_ids:
+        first_missing_sub = next(iter(sorted(context.sub_assembly_missing_ids, key=str)))
         raise SubAssemblyNotFoundForAssemblyError(first_missing_sub)
     if context.sub_assembly_too_deep_ids:
         first_too_deep = next(iter(sorted(context.sub_assembly_too_deep_ids, key=str)))
