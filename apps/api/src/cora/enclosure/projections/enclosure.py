@@ -26,10 +26,10 @@ D10-L1 no Bypassed state). `EnclosureDecommissioned` does NOT clear
 permit_status: the last-known observation stays on the row as audit
 for post-mortem review.
 
-## Address-tuple uniqueness on (containing_asset_id, name)
+## Address-tuple uniqueness on (facility_code, name)
 
 The migration's `proj_enclosure_summary_address_uq` UNIQUE INDEX on
-`(containing_asset_id, name)` is PARTIAL on `WHERE lifecycle =
+`(facility_code, name)` is PARTIAL on `WHERE lifecycle =
 'Active'`: Decommissioned rows do not count toward uniqueness, so an
 operator who decommissions a mistaken Enclosure can re-register at
 the same address with a fresh enclosure_id. Mirrors the Supply
@@ -46,7 +46,7 @@ bookmark advances. Without the SAVEPOINT, asyncpg raises
 InFailedSQLTransactionError on the next SQL.
 
 When two operators concurrently register enclosures at the same
-(containing_asset_id, name) address, the second `EnclosureRegistered`
+(facility_code, name) address, the second `EnclosureRegistered`
 event may land in the event store (no decider gate beyond per-stream
 optimistic concurrency) but its projection INSERT raises
 `asyncpg.UniqueViolationError`. Day-one operational handling: catch
@@ -91,7 +91,7 @@ _log = get_logger(__name__)
 
 _INSERT_ENCLOSURE_SQL = """
 INSERT INTO proj_enclosure_summary
-    (enclosure_id, name, containing_asset_id,
+    (enclosure_id, name, facility_code,
      lifecycle, permit_status,
      registered_at, registered_by,
      last_observed_at, last_observed_reason, last_trigger,
@@ -171,7 +171,7 @@ class EnclosureSummaryProjection:
                         _INSERT_ENCLOSURE_SQL,
                         UUID(payload["enclosure_id"]),
                         payload["name"],
-                        UUID(payload["containing_asset_id"]),
+                        payload["facility_code"],
                         datetime.fromisoformat(payload["occurred_at"]),
                         UUID(payload["registered_by"]),
                     )
@@ -179,7 +179,7 @@ class EnclosureSummaryProjection:
                 _log.warning(
                     "enclosure_summary_projection.duplicate_address_skipped",
                     enclosure_id=payload["enclosure_id"],
-                    containing_asset_id=payload["containing_asset_id"],
+                    facility_code=payload["facility_code"],
                     name=payload["name"],
                     event_id=str(event.event_id),
                 )

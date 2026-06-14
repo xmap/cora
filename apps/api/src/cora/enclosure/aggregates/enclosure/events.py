@@ -6,7 +6,11 @@ persistence-envelope construction (`NewEvent`) lives at
 `cora.infrastructure.event_envelope.to_new_event`.
 
 `EnclosureRegistered` is the genesis (-> Unknown permit-status, Active
-lifecycle). `EnclosurePermitObserved` is the sole permit-axis
+lifecycle). It carries the containing-geography anchor `facility_code`
+(the Federation Facility the enclosure sits within) as a bare-str disk
+payload re-wrapped to the typed `FacilityCode` VO by `from_stored`,
+mirroring the Supply / Asset facility-code wire convention.
+`EnclosurePermitObserved` is the sole permit-axis
 transition (any -> any across the closed `Permitted | NotPermitted |
 Unknown` state set). `EnclosureDecommissioned` is the lifecycle-
 terminal transition (Active -> Decommissioned). Permit-status is
@@ -54,6 +58,7 @@ from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId, MonitorSourceId
 
 
@@ -99,7 +104,7 @@ def _check_trigger_pairing(
 
 @dataclass(frozen=True)
 class EnclosureRegistered:
-    """A new enclosure was registered against its containing Asset.
+    """A new enclosure was registered within its containing Facility.
 
     Permit-status is implicit (`Unknown`) and lifecycle is implicit
     (`Active`); the evolver sets both. Per the universal initial-
@@ -116,11 +121,17 @@ class EnclosureRegistered:
     `name` travels in the genesis payload as a primitive string; the
     evolver re-wraps to the `EnclosureName` VO. Same precedent as
     `SupplyName` / `FacilityName` in payloads.
+
+    `facility_code` is the containing geography (the Site / Area the
+    enclosure sits within); it carries the typed `FacilityCode` VO in
+    memory and serializes to a bare `str` on the wire via
+    `facility_code.value`, mirroring the Supply / Asset facility-code
+    convention. `from_stored` re-wraps with `FacilityCode(...)`.
     """
 
     enclosure_id: UUID
     name: str
-    containing_asset_id: UUID
+    facility_code: FacilityCode
     registered_by: ActorId
     occurred_at: datetime
 
@@ -212,14 +223,14 @@ def to_payload(event: EnclosureEvent) -> dict[str, Any]:
         case EnclosureRegistered(
             enclosure_id=enclosure_id,
             name=name,
-            containing_asset_id=containing_asset_id,
+            facility_code=facility_code,
             registered_by=registered_by,
             occurred_at=occurred_at,
         ):
             return {
                 "enclosure_id": str(enclosure_id),
                 "name": name,
-                "containing_asset_id": str(containing_asset_id),
+                "facility_code": facility_code.value,
                 "registered_by": str(registered_by),
                 "occurred_at": occurred_at.isoformat(),
             }
@@ -276,7 +287,7 @@ def from_stored(stored: StoredEvent) -> EnclosureEvent:
                 lambda: EnclosureRegistered(
                     enclosure_id=UUID(payload["enclosure_id"]),
                     name=payload["name"],
-                    containing_asset_id=UUID(payload["containing_asset_id"]),
+                    facility_code=FacilityCode(payload["facility_code"]),
                     registered_by=ActorId(UUID(payload["registered_by"])),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),

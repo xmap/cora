@@ -24,11 +24,12 @@ from cora.enclosure.aggregates.enclosure import (
     InvalidEnclosureNameError,
     InvalidEnclosureReasonError,
 )
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _ENCLOSURE_ID = EnclosureId(UUID("01900000-0000-7000-8000-00000000e001"))
-_CONTAINING_ASSET_ID = UUID("01900000-0000-7000-8000-00000000a501")
+_FACILITY_CODE = FacilityCode("aps")
 _ACTOR_ID = ActorId(UUID("01900000-0000-7000-8000-00000000ac01"))
 _NOW = datetime(2026, 6, 9, 12, 0, 0, tzinfo=UTC)
 
@@ -138,7 +139,7 @@ def _enclosure(
     return Enclosure(
         id=_ENCLOSURE_ID,
         name=EnclosureName("2-BM Hutch A"),
-        containing_asset_id=_CONTAINING_ASSET_ID,
+        facility_code=_FACILITY_CODE,
         permit_status=permit_status,
         lifecycle=lifecycle,
         registered_at=_NOW,
@@ -186,11 +187,12 @@ def test_enclosure_terminal_attribution_pair_populates_together() -> None:
 
 
 @pytest.mark.unit
-def test_enclosure_containing_asset_id_is_bare_uuid() -> None:
-    """Cross-BC pointer stays a bare UUID; no Enclosure-local NewType wraps it."""
+def test_enclosure_facility_code_is_facility_code_vo() -> None:
+    """Containing geography is the typed FacilityCode VO, mirroring Asset.facility_code."""
     enclosure = _enclosure()
-    assert isinstance(enclosure.containing_asset_id, UUID)
-    assert enclosure.containing_asset_id == _CONTAINING_ASSET_ID
+    assert isinstance(enclosure.facility_code, FacilityCode)
+    assert enclosure.facility_code == _FACILITY_CODE
+    assert enclosure.facility_code.value == "aps"
 
 
 @pytest.mark.unit

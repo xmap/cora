@@ -14,14 +14,25 @@ genesis-event payload shape in `cora.enclosure.aggregates.enclosure`.
 ## Validation
 
   - State must be None (genesis-only) -> `EnclosureAlreadyExistsError`
+  - `facility_lookup_result` must be non-None
+    -> `EnclosureFacilityNotFoundError`
   - `name` is wrapped via `EnclosureName(...)` which validates 1-200
     chars in `__post_init__` -> `InvalidEnclosureNameError`.
 
-`containing_asset_id` is a bare cross-BC opaque `UUID` pointer. Per
-the locked design the decider stays pure: cross-aggregate existence
-checks (AssetLookup) are deferred to the handler layer pending walk-
-cost evidence, and are not added here to preserve the
-`cora.infrastructure.ports` no-cross-BC-dependency invariant.
+## Facility binding
+
+`command.facility_code` is the cross-deployment convergent slug for the
+containing Facility (the Site / Area the enclosure sits within). The
+handler resolves it via `FacilityLookup.lookup_by_code` and threads the
+resulting `FacilityLookupResult | None` into the decider. LOAD lives in
+the handler; REJECTION lives in the decider: a `None` result means no
+Facility with that code is visible in the Federation projection and the
+registration is rejected with `EnclosureFacilityNotFoundError`
+(HTTP 404). The lookup-result's `.code` field is folded onto the event
+so the event's `facility_code` reflects the projection's canonical typed
+VO, not a command-echo (mirrors the Asset / Supply handler/decider
+split). The decider does NOT partition on Facility status: every status
+(Active, Decommissioned) is a valid containing geography.
 
 Initial permit-status is implicit `Unknown` and initial lifecycle is
 implicit `Active`; the evolver seeds both from the genesis event
@@ -29,7 +40,7 @@ type. Per the universal industrial + cloud-native consensus on
 registration-time defaults (Tango UNKNOWN, EPICS UDF, Azure Resource
 Health Unknown, k8s Pending).
 
-Cross-stream uniqueness of the `(containing_asset_id, name)` address
+Cross-stream uniqueness of the `(facility_code, name)` address
 tuple is NOT enforced here: the decider cannot see other Enclosure
 streams without DCB. The projection's partial UNIQUE INDEX (active
 rows only) is the cross-stream guard; this decider's pre-state-None
@@ -42,11 +53,13 @@ from datetime import datetime
 from cora.enclosure.aggregates.enclosure import (
     Enclosure,
     EnclosureAlreadyExistsError,
+    EnclosureFacilityNotFoundError,
     EnclosureId,
     EnclosureName,
     EnclosureRegistered,
 )
 from cora.enclosure.features.register_enclosure.command import RegisterEnclosure
+from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
 from cora.shared.identity import ActorId
 
 
@@ -57,12 +70,15 @@ def decide(
     now: datetime,
     new_id: EnclosureId,
     registered_by: ActorId,
+    facility_lookup_result: FacilityLookupResult | None,
 ) -> list[EnclosureRegistered]:
     """Decide the events produced by registering a new Enclosure.
 
     Invariants:
       - State must be None (genesis-only)
         -> EnclosureAlreadyExistsError
+      - facility_lookup_result must be non-None
+        -> EnclosureFacilityNotFoundError
       - Name must be valid -> InvalidEnclosureNameError
         (via EnclosureName VO)
 
@@ -70,9 +86,17 @@ def decide(
     always operator-driven; no Monitor or Auto counterpart). Folded
     onto the event payload as the fold-symmetric genesis attribution
     per [[project_fold_symmetry_design]].
+
+    `facility_lookup_result.code` is the canonical Facility slug
+    threaded onto the event payload, replacing direct echo of
+    `command.facility_code` so the cross-BC convergent identity is the
+    single source of truth for the wire value.
     """
     if state is not None:
         raise EnclosureAlreadyExistsError(state.id)
+
+    if facility_lookup_result is None:
+        raise EnclosureFacilityNotFoundError(command.facility_code)
 
     name = EnclosureName(command.name)
 
@@ -80,7 +104,7 @@ def decide(
         EnclosureRegistered(
             enclosure_id=new_id,
             name=name.value,
-            containing_asset_id=command.containing_asset_id,
+            facility_code=facility_lookup_result.code,
             registered_by=registered_by,
             occurred_at=now,
         )

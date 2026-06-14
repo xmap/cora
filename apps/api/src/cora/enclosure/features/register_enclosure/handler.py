@@ -14,14 +14,19 @@ Idempotency-wrappable per the create-style convention; the
 command (None for HTTP / MCP root calls; sagas / process managers
 pass the upstream event's id).
 
-Cross-aggregate existence checks for `containing_asset_id` are NOT
-performed at this layer. The decider stays pure and the handler does
-not call `AssetLookup.exists()`; preserving the
-`cora.infrastructure.ports depends_on=[]` boundary and avoiding a
-premature handler dependency surface. The projection's PARTIAL UNIQUE
-INDEX on `(containing_asset_id, name) WHERE lifecycle='Active'`
-surfaces address collisions; aggregate-id collisions are essentially
-impossible with UUIDv7 (same posture as `register_supply`).
+When `command.facility_code` is supplied the handler resolves the
+slug via the cross-BC `FacilityLookup.lookup_by_code` port BEFORE
+invoking the decider and threads the resulting
+`FacilityLookupResult | None` into `decide(...)`. LOAD lives in the
+handler; REJECTION lives in the decider (the decider raises
+`EnclosureFacilityNotFoundError`, mapped to HTTP 404 by the BC's
+exception handler tuple, when the result is None). Mirrors the
+`register_supply` / `register_asset` handler shape exactly.
+
+The projection's PARTIAL UNIQUE INDEX on `(facility_code, name) WHERE
+lifecycle='Active'` surfaces address collisions; aggregate-id
+collisions are essentially impossible with UUIDv7 (same posture as
+`register_supply`).
 """
 
 from typing import Protocol
@@ -40,6 +45,7 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 
 _STREAM_TYPE = "Enclosure"
@@ -119,6 +125,13 @@ def bind(deps: Kernel) -> Handler:
             )
             raise UnauthorizedError(decision.reason)
 
+        facility_lookup_result = await deps.facility_lookup.lookup_by_code(
+            FacilityCode(command.facility_code)
+        )
+        # facility_lookup_result is None -> decider raises
+        # EnclosureFacilityNotFoundError (HTTP 404). The handler only
+        # loads the lookup row; the decider owns the rejection.
+
         new_id = EnclosureId(deps.id_generator.new_id())
         now = deps.clock.now()
 
@@ -128,6 +141,7 @@ def bind(deps: Kernel) -> Handler:
             now=now,
             new_id=new_id,
             registered_by=ActorId(principal_id),
+            facility_lookup_result=facility_lookup_result,
         )
 
         new_events = [

@@ -17,10 +17,11 @@ from cora.enclosure.aggregates.enclosure import (
     evolve,
     fold,
 )
+from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId, MonitorSourceId
 
 _ENCLOSURE_ID = EnclosureId(UUID("01900000-0000-7000-8000-00000000e001"))
-_CONTAINING_ASSET_ID = UUID("01900000-0000-7000-8000-00000000a001")
+_FACILITY_CODE = FacilityCode("aps")
 _ACTOR_ID = ActorId(UUID("01900000-0000-7000-8000-00000000ac01"))
 _MONITOR_SOURCE_ID = MonitorSourceId(UUID("01900000-0000-7000-8000-000000000c01"))
 _REGISTERED_AT = datetime(2026, 6, 8, 12, 0, 0, tzinfo=UTC)
@@ -32,7 +33,7 @@ def _genesis() -> EnclosureRegistered:
     return EnclosureRegistered(
         enclosure_id=_ENCLOSURE_ID,
         name="2-BM Hutch A",
-        containing_asset_id=_CONTAINING_ASSET_ID,
+        facility_code=_FACILITY_CODE,
         registered_by=_ACTOR_ID,
         occurred_at=_REGISTERED_AT,
     )
@@ -47,7 +48,7 @@ def test_fold_genesis_lands_active_with_unknown_permit() -> None:
     assert state == Enclosure(
         id=_ENCLOSURE_ID,
         name=EnclosureName("2-BM Hutch A"),
-        containing_asset_id=_CONTAINING_ASSET_ID,
+        facility_code=_FACILITY_CODE,
         permit_status=EnclosurePermitStatus.UNKNOWN,
         lifecycle=EnclosureLifecycle.ACTIVE,
         registered_at=_REGISTERED_AT,
@@ -84,7 +85,7 @@ def test_fold_genesis_then_permit_observed_transitions_permit_status_preserves_o
     # Every other field preserved: envelope is NOT folded to state.
     assert state.id == _ENCLOSURE_ID
     assert state.name == EnclosureName("2-BM Hutch A")
-    assert state.containing_asset_id == _CONTAINING_ASSET_ID
+    assert state.facility_code == _FACILITY_CODE
     assert state.lifecycle is EnclosureLifecycle.ACTIVE
     assert state.registered_at == _REGISTERED_AT
     assert state.registered_by == _ACTOR_ID
@@ -127,7 +128,7 @@ def test_fold_decommission_transitions_lifecycle_and_preserves_permit_status() -
     # Identity + address preserved.
     assert state.id == _ENCLOSURE_ID
     assert state.name == EnclosureName("2-BM Hutch A")
-    assert state.containing_asset_id == _CONTAINING_ASSET_ID
+    assert state.facility_code == _FACILITY_CODE
     assert state.registered_at == _REGISTERED_AT
     assert state.registered_by == _ACTOR_ID
 
@@ -160,7 +161,7 @@ def test_evolve_permit_observed_to_unknown_preserves_other_fields() -> None:
     assert state.permit_status is EnclosurePermitStatus.UNKNOWN
     assert state.id == _ENCLOSURE_ID
     assert state.name == EnclosureName("2-BM Hutch A")
-    assert state.containing_asset_id == _CONTAINING_ASSET_ID
+    assert state.facility_code == _FACILITY_CODE
     assert state.lifecycle is EnclosureLifecycle.ACTIVE
     assert state.registered_at == _REGISTERED_AT
     assert state.registered_by == _ACTOR_ID

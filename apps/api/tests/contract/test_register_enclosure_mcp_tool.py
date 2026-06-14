@@ -1,6 +1,6 @@
 """Contract tests for the `register_enclosure` MCP tool."""
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
@@ -38,7 +38,7 @@ def test_mcp_register_enclosure_tool_returns_structured_enclosure_id() -> None:
                     "name": "register_enclosure",
                     "arguments": {
                         "name": "2-BM Hutch A",
-                        "containing_asset_id": str(uuid4()),
+                        "facility_code": "cora",
                     },
                 },
             },
@@ -69,7 +69,7 @@ def test_mcp_register_enclosure_tool_returns_iserror_on_whitespace_name() -> Non
                     "name": "register_enclosure",
                     "arguments": {
                         "name": "   ",
-                        "containing_asset_id": str(uuid4()),
+                        "facility_code": "cora",
                     },
                 },
             },

@@ -3,7 +3,7 @@
 Pins the `EnclosureLookupResult` dataclass contract that cross-BC
 consumers rely on plus the `AlwaysPermittedEnclosureLookup` test-
 default returning a synthetic Active+Permitted row from `lookup(...)`
-and `[]` from `find_for_assets(...)`. The stub exists so tests not
+and `[]` from `find_by_ids(...)`. The stub exists so tests not
 exercising the Enclosure surface do not need to seed projection
 rows; the inline-stub shape mirrors `AlwaysEmptyCapabilityLookup` /
 `AlwaysQuietCautionLookup` / `AllSatisfiedSupplyLookup`. All
@@ -34,13 +34,11 @@ from cora.infrastructure.ports.enclosure_lookup import (
 
 
 @pytest.mark.unit
-def test_enclosure_reference_carries_all_eight_fields() -> None:
+def test_enclosure_reference_carries_all_seven_fields() -> None:
     eid = uuid4()
-    aid = uuid4()
     ref = EnclosureLookupResult(
         enclosure_id=eid,
         name="Station A Hutch",
-        containing_asset_id=aid,
         permit_status="Permitted",
         lifecycle="Active",
         observed_at="2026-06-09T12:00:00Z",
@@ -49,7 +47,6 @@ def test_enclosure_reference_carries_all_eight_fields() -> None:
     )
     assert ref.enclosure_id == eid
     assert ref.name == "Station A Hutch"
-    assert ref.containing_asset_id == aid
     assert ref.permit_status == "Permitted"
     assert ref.lifecycle == "Active"
     assert ref.observed_at == "2026-06-09T12:00:00Z"
@@ -62,7 +59,6 @@ def test_enclosure_reference_allows_optional_observation_fields_to_be_none() -> 
     ref = EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="Station A Hutch",
-        containing_asset_id=uuid4(),
         permit_status="Unknown",
         lifecycle="Active",
         observed_at=None,
@@ -79,7 +75,6 @@ def test_enclosure_reference_is_frozen() -> None:
     ref = EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="Station A Hutch",
-        containing_asset_id=uuid4(),
         permit_status="Permitted",
         lifecycle="Active",
         observed_at=None,
@@ -98,7 +93,6 @@ def test_enclosure_reference_status_and_lifecycle_are_str() -> None:
     ref = EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="Station A Hutch",
-        containing_asset_id=uuid4(),
         permit_status="Permitted",
         lifecycle="Active",
         observed_at=None,
@@ -133,10 +127,10 @@ async def test_always_permitted_enclosure_lookup_echoes_distinct_ids() -> None:
 
 
 @pytest.mark.unit
-async def test_always_permitted_enclosure_lookup_find_for_assets_returns_empty_list() -> None:
+async def test_always_permitted_enclosure_lookup_find_by_ids_returns_empty_list() -> None:
     lookup: EnclosureLookup = AlwaysPermittedEnclosureLookup()
-    assert await lookup.find_for_assets(asset_ids=frozenset()) == []
-    assert await lookup.find_for_assets(asset_ids=frozenset({uuid4(), uuid4()})) == []
+    assert await lookup.find_by_ids(enclosure_ids=frozenset()) == []
+    assert await lookup.find_by_ids(enclosure_ids=frozenset({uuid4(), uuid4()})) == []
 
 
 @pytest.mark.unit

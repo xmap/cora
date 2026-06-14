@@ -3,7 +3,7 @@
 - `PostgresEnclosureLookup` implementing
   `cora.infrastructure.ports.EnclosureLookup` (consumed by other BCs
   asking whether an enclosure is currently permitted, and by
-  asset-binding queries via `find_for_assets`).
+  id-set permit queries via `find_by_ids`).
 """
 
 from cora.enclosure.adapters.postgres_enclosure_lookup import PostgresEnclosureLookup
