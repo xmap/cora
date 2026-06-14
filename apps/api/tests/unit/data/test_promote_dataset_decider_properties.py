@@ -228,7 +228,6 @@ def test_decide_clean_promotable_emits_one_promoted_event(
 @given(
     dataset_id=st.uuids(),
     kind=st.sampled_from(_SIMULATOR_TAINTED),
-    intent=st.sampled_from(_ANY_INTENT),
     has_run=st.booleans(),
     reason=_reasons(),
     now=aware_datetimes(),
@@ -237,35 +236,33 @@ def test_decide_clean_promotable_emits_one_promoted_event(
 def test_decide_simulator_origin_always_rejects(
     dataset_id: UUID,
     kind: str,
-    intent: Intent,
     has_run: bool,
     reason: str,
     now: datetime,
     actor: UUID,
 ) -> None:
     """The one-way gate: a Simulated / Hybrid producing_actuation_kind never
-    promotes, even when every other promotion precondition is satisfied
-    (Registered, Trial, producing Run Completed, empty lineage).
+    promotes, even when every other promotion precondition is satisfied.
 
     This is the single most load-bearing claim of the slice: rehearsal /
-    simulator-origin data is structurally non-promotable to Production. The
-    intent + has_run axes vary to show the kind guard is not masked by, nor
-    dependent on, the earlier guards in any reachable-clean configuration.
+    simulator-origin data is structurally non-promotable to Production.
+    intent is pinned to Trial so the actuation guard (guard 6), not the
+    earlier intent guard, is necessarily the one that rejects; the
+    assertion checks the exact error and that the kind names itself in the
+    reason, so a regression dropping guard 6 fails here rather than being
+    absorbed by an earlier guard. has_run varies to show the gate holds
+    both with a Completed producing Run and with none.
     """
-    # Build an otherwise-clean Trial Dataset so the kind guard is the only
-    # thing that can reject. For non-Trial intents the earlier guard fires
-    # first (still a rejection): either way decide must raise. `actor` is
-    # reused as an arbitrary producing_run_id (any UUID works here).
     state = _dataset(
         dataset_id=dataset_id,
         status=DatasetStatus.REGISTERED,
-        intent=intent,
+        intent=Intent.TRIAL,
         producing_run_id=actor if has_run else None,
         producing_run_end_state="Completed" if has_run else None,
         producing_actuation_kind=kind,
         derived_from=frozenset(),
     )
-    with pytest.raises((DatasetCannotPromoteError, DatasetAlreadyPromotedError)):
+    with pytest.raises(DatasetCannotPromoteError) as exc:
         promote_dataset.decide(
             state=state,
             command=_command(dataset_id=dataset_id, reason=reason),
@@ -273,6 +270,7 @@ def test_decide_simulator_origin_always_rejects(
             now=now,
             promoted_by=ActorId(actor),
         )
+    assert kind in exc.value.reason
 
 
 @pytest.mark.unit

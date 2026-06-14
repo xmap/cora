@@ -53,6 +53,23 @@ def test_operation_actuation_kind_values_match_data_gate_constants() -> None:
     assert ActuationKind.HYBRID.value == ACTUATION_KIND_HYBRID
 
 
+@pytest.mark.unit
+def test_every_actuation_kind_is_classified_by_the_data_gate() -> None:
+    """Every ActuationKind member must be either blocked or explicitly
+    allowed by the Data gate. The promote guard is exact-membership, so a
+    future enum member added without a matching block constant would
+    silently become promotable. This forces a conscious classify-it
+    decision when the enum grows."""
+    blocked = {ACTUATION_KIND_SIMULATED, ACTUATION_KIND_HYBRID}
+    allowed = {ACTUATION_KIND_PHYSICAL}
+    for kind in ActuationKind:
+        assert kind.value in blocked | allowed, (
+            f"ActuationKind.{kind.name} is neither blocked nor allowed by the "
+            "Data promote gate; classify it (add to promote_dataset guard 6, or "
+            "to the allowed set with rationale) before shipping the new kind"
+        )
+
+
 def _completed_run() -> Run:
     return Run(
         id=uuid4(),

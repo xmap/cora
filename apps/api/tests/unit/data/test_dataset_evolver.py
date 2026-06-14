@@ -549,3 +549,64 @@ def test_promote_preserves_used_calibration_ids_asshot_invariant() -> None:
     assert state is not None
     assert state.intent is Intent.PRODUCTION
     assert state.used_calibration_ids == frozenset({cal_a})
+
+
+# ---------- producing_actuation_kind carry-through ----------
+
+
+def _registered_with_kind(kind: str) -> DatasetRegistered:
+    return DatasetRegistered(
+        dataset_id=uuid4(),
+        name="D",
+        uri="s3://b/k",
+        checksum_algorithm="sha256",
+        checksum_value=_GOOD_SHA256,
+        byte_size=0,
+        media_type="application/x-hdf5",
+        conforms_to=frozenset(),
+        producing_run_id=None,
+        subject_id=None,
+        derived_from=frozenset(),
+        occurred_at=_NOW,
+        registered_by=_REGISTERED_BY,
+        producing_actuation_kind=kind,
+    )
+
+
+@pytest.mark.unit
+def test_evolve_discarded_preserves_producing_actuation_kind() -> None:
+    """Carry-through invariant: DatasetDiscarded must not wipe the actuation
+    kind (every transition arm preserves it, like producing_run_end_state)."""
+    register = _registered_with_kind("Simulated")
+    discarded = DatasetDiscarded(
+        dataset_id=register.dataset_id,
+        reason="bytes purged",
+        occurred_at=_NOW,
+        discarded_by=_DISCARDED_BY,
+    )
+    state = fold([register, discarded])
+    assert state is not None
+    assert state.producing_actuation_kind == "Simulated"
+
+
+@pytest.mark.unit
+def test_evolve_promoted_then_demoted_preserves_producing_actuation_kind() -> None:
+    """Carry-through across the promote + demote arms. A Physical-origin
+    Dataset is used so promotion is legitimate; the kind must survive both."""
+    register = _registered_with_kind("Physical")
+    promoted = DatasetPromoted(
+        dataset_id=register.dataset_id,
+        reason="passed review",
+        occurred_at=_NOW,
+        promoted_by=_PROMOTED_BY,
+    )
+    demoted = DatasetDemoted(
+        dataset_id=register.dataset_id,
+        reason="calibration error",
+        occurred_at=_NOW,
+        demoted_by=_DEMOTED_BY,
+    )
+    state = fold([register, promoted, demoted])
+    assert state is not None
+    assert state.intent is Intent.RETRACTED
+    assert state.producing_actuation_kind == "Physical"

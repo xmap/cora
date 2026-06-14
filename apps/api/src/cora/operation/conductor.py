@@ -403,7 +403,12 @@ class ConductorResult:
     snapshots: `Physical` / `Simulated` / `Hybrid` when the conduct
     touched a routing table that declares simulated routes, else
     `None` (no routing table to consult, e.g. an opt-out in-memory
-    deployment) which leaves the promotion gate inactive.
+    deployment) which leaves the promotion gate inactive. It reflects
+    routes ATTEMPTED, not only successfully actuated: a dispatch that
+    resolves a simulated route and then raises still taints the conduct
+    (any simulator touch is disqualifying), so the failure-path result
+    still reports the kind. Do not "fix" the observe-before-dispatch
+    ordering in `_ActuationObserver` without revisiting this contract.
     """
 
     procedure_id: UUID

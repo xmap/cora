@@ -1544,3 +1544,52 @@ async def test_actuation_kind_is_none_when_no_step_touches_control_port() -> Non
         steps=(),
     )
     assert result.actuation_kind is None
+
+
+@pytest.mark.unit
+async def test_actuation_kind_is_simulated_when_action_body_drives_simulated_route() -> None:
+    """Action-body IO routes through the same observer seam: an action that
+    writes to a simulated route taints the conduct Simulated."""
+    inner = InMemoryControlPort()
+    inner.simulate_connect("sim:m1")
+    control = ControlPortRegistry()
+    control.register("sim:", inner, is_simulated=True)
+
+    async def drive(ctx: ActionContext) -> Mapping[str, Any]:
+        await ctx.control_port.write("sim:m1", 1.0)
+        return {}
+
+    appender = _FakeAppendStep()
+    conductor = _conductor(
+        control,
+        appender,
+        ids=[uuid4()],
+        registry=InMemoryActionRegistry({"drive": drive}),
+    )
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(ActionStep(name="drive", params={}),),
+    )
+    assert result.succeeded is True
+    assert result.actuation_kind is ActuationKind.SIMULATED
+
+
+@pytest.mark.unit
+async def test_actuation_kind_is_simulated_when_setpoint_write_fails_on_simulated_route() -> None:
+    """A write that resolves a simulated route and then fails still taints the
+    conduct: the kind reflects routes attempted, not only succeeded."""
+    inner = InMemoryControlPort()  # never connected -> write raises
+    control = ControlPortRegistry()
+    control.register("sim:", inner, is_simulated=True)
+    appender = _FakeAppendStep()
+    conductor = _conductor(control, appender, ids=[uuid4()])
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="sim:m1", value=1.0),),
+    )
+    assert result.succeeded is False
+    assert result.actuation_kind is ActuationKind.SIMULATED

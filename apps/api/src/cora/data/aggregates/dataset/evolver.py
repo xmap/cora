@@ -20,7 +20,8 @@ Dataset field through from prior state. Constructing
 encoding=..., status=...)` without explicitly passing the optional
 cross-aggregate refs (`producing_run_id`, `subject_id`,
 `derived_from`) AND the additive fields (`producing_run_end_state`,
-`intent`, `used_calibration_ids`) would silently WIPE them to defaults.
+`producing_actuation_kind`, `intent`, `used_calibration_ids`) would
+silently WIPE them to defaults.
 Aligned to explicit construction post-domain-audit to match the
 documented pattern in Asset/Plan/Method/Practice/Family/Subject/Run
 evolvers. The `used_calibration_ids` AsShot citation set is IMMUTABLE
