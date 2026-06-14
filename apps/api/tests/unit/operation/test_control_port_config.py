@@ -97,3 +97,37 @@ async def test_build_control_port_returned_registry_supports_aclose() -> None:
     port = build_control_port([ControlPortRoute(prefix="x:", substrate="in_memory")])
     assert isinstance(port, ControlPortRegistry)
     await port.aclose()  # no-op for InMemoryControlPort; should not raise
+
+
+@pytest.mark.unit
+def test_control_port_route_is_simulated_defaults_false() -> None:
+    assert ControlPortRoute(prefix="2bma:", substrate="epics_ca").is_simulated is False
+
+
+@pytest.mark.unit
+def test_build_control_port_threads_is_simulated_flag_to_registry() -> None:
+    """A soft-IOC deployment tags its CA route simulated; the flag survives wiring.
+
+    The transport is the production `epics_ca` adapter (a soft IOC speaks
+    real Channel Access), so only the declared `is_simulated` flag tells
+    the gate this route is a simulator.
+    """
+    port = build_control_port(
+        [ControlPortRoute(prefix="2bma:", substrate="epics_ca", is_simulated=True)]
+    )
+    assert isinstance(port, ControlPortRegistry)
+    assert port.route_is_simulated("2bma:rot:val") is True
+
+
+@pytest.mark.unit
+def test_build_control_port_mixed_simulated_and_physical_routes() -> None:
+    """A simulated sub-band carved out of an otherwise physical crate."""
+    port = build_control_port(
+        [
+            ControlPortRoute(prefix="2bma:sim:", substrate="in_memory", is_simulated=True),
+            ControlPortRoute(prefix="2bma:", substrate="epics_ca", is_simulated=False),
+        ]
+    )
+    assert isinstance(port, ControlPortRegistry)
+    assert port.route_is_simulated("2bma:sim:rot") is True
+    assert port.route_is_simulated("2bma:rot:val") is False

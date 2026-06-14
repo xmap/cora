@@ -57,7 +57,11 @@ def build_control_port(routes: Sequence[ControlPortRoute]) -> ControlPort:
         return InMemoryControlPort()
     registry = ControlPortRegistry()
     for route in routes:
-        registry.register(route.prefix, _build_substrate(route.substrate))
+        registry.register(
+            route.prefix,
+            _build_substrate(route.substrate),
+            is_simulated=route.is_simulated,
+        )
     return registry
 
 

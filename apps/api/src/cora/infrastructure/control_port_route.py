@@ -47,11 +47,24 @@ class ControlPortRoute(BaseModel):
 
     `prefix` is the address-string prefix the registry uses for
     longest-prefix-match dispatch. `substrate` selects which adapter
-    class the factory will construct for this route.
+    class the factory will construct for this route. `is_simulated`
+    declares that addresses on this route drive a simulator rather
+    than real hardware, even when the transport substrate is a real
+    one (a soft IOC speaks real Channel Access). It is a declared
+    deployment fact, never inferred from `substrate`, and feeds the
+    Dataset provenance gate that blocks promoting simulator-origin
+    data to Production.
     """
 
     prefix: str = Field(..., min_length=1)
     substrate: Substrate
+    is_simulated: bool = Field(
+        default=False,
+        description=(
+            "True when this route drives a simulator (e.g. a soft IOC) rather "
+            "than real hardware. Declared per deployment, not inferred from substrate."
+        ),
+    )
 
     model_config = {"extra": "forbid"}
 
