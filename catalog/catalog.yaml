@@ -68,7 +68,11 @@ families:
     note: "Beam-defining aperture Family (four independently-driven blades forming a horizontal/vertical aperture). 2-BM: ConditioningSlit (A-station L3-20) and SampleSlit (B-station)."
   - name: Mirror
     note: "Beam-steering grazing-incidence mirror optic Family. 2-BM: the Y3-30 mirror (distinct from its MirrorTable support, which is Family Table)."
-  # Pending in code (documented, not yet defined): Goniometer, Monochromator;
+  - name: Monochromator
+    note: "Energy-selecting optic Family; at 2-BM the double-multilayer monochromator (DMM). The energy-change IOC drives its Bragg arms + M2 vertical offset per energy; inserting it picks the beam energy, pink-beam operation bypasses it."
+  - name: Filter
+    note: "Discrete absorber-foil changer Family; at 2-BM the C / Al foil paddles that attenuate and condition the white beam (only the downstream paddle is currently operational)."
+  # Pending in code (documented, not yet defined): Goniometer;
   # future: OpticalRelay.
 
 capabilities:
