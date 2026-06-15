@@ -201,6 +201,10 @@ models:
     manufacturer: { name: "Optique Peter" }
     part_number: "TripleObj-MCT-turret"
     declared_families: [RotaryStage]
+  - name: optique_peter_micrx080
+    manufacturer: { name: "Optique Peter" }
+    part_number: "MICRX080"
+    declared_families: [Housing]
   - name: mitutoyo_plan_apo
     manufacturer: { name: Mitutoyo }
     part_number: "Plan-Apo-NIR"
