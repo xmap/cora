@@ -197,8 +197,11 @@ sample-environment:
       travel: "x 55 mm, y 60 mm, z 25 mm, a 15 deg, b 15 deg, c 30 deg"
       confirm: true
       drawing: { system: EDMS, number: Hex300-Data-Sheet, revision: D20250203 }
+    # Kohzu goniometer/swivel. Staff item_020 confirms it is a SEPARATE stage (not the hexapod pitch),
+    # and it is PERMANENTLY installed (tomo vs lamino is a tilt setpoint, not an insert/remove).
+    # Working model SA16A-RM (operator); sources also list SA16A-RS / SA07A-R2L, confirm (questions STAGE-6).
     - name: LaminographyPitch
-      family: LinearStage         # Kohzu SA16A goniometer, laminography pitch
+      family: LinearStage         # mechanically a tilt; family revisit (TiltStage) at modeling
       model: kohzu_sa16a
       pv: "2bmb:m49"
       range: 0..20 deg
@@ -220,7 +223,10 @@ sample-environment:
       range: -360..360 deg
       max_speed: 720 deg/s
       encoder_resolution: 0.0001 deg
-      interchangeable_with: ["ABRS-150MP (fast tomo)", "ABS2000 (spindle)"]
+      # Rotary kit per 2-BM staff source (pre-APSU ops/item_100 "Rotary Stages"). ABS250MP-M-AS is the
+      # currently-installed 2-BM-B rotary (manual/item_020). Mode/station labels ("fast tomo"/"mona tomo"/
+      # "spindle") and whether the swap is a live loadout variant conflict pre vs post APSU; confirm (questions STAGE-5).
+      interchangeable_with: ["ABRS-150MP-M-AS", "ABS2000-1000AS-RU"]
       confirm: true
     - name: SampleTop_X
       family: LinearStage
