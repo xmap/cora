@@ -63,7 +63,7 @@ front-end:
   intro: Where the beam enters and first gets gated.
   devices:
     - name: source
-      family: Beam              # Supply(kind=beam); accelerator-side, provenance only
+      family: Beam              # Supply(kind=PhotonBeam); accelerator-side, provenance only
       new: true
       note: bending magnet, recorded as a Supply, not an Asset
     - name: Mask
@@ -86,7 +86,7 @@ front-end:
       confirm: true
       note: front-end safety shutter, gated by the personnel safety system
     - name: vacuum_isolation
-      family: Vacuum             # Supply(kind=vacuum) observation, not a separate asset
+      family: Vacuum             # Supply(kind=Vacuum) observation, not a separate asset
       pv: { BIV: "2bm:BIV", gate_valves: [GV1, GV2, GV3] }
       new: true
       confirm: true
@@ -462,14 +462,14 @@ resources:
     Continuously-available resources (the Supply BC) and the field-swappable parts
     inventory. Both described once here and referenced from the walk above.
   supplies:
-    - kind: beam
-    - kind: cooling_water         # observed via Flow1-Flow8 BLEPS channels
-    - kind: vacuum                # observed via IP1-7, IG1-8, VS1-7, GV1-3
-    - kind: power
-    - kind: compute
-    - kind: cryogen               # 2-BM detector LN2 dewar
-    - kind: gas                   # pending: sample-environment gas mix
-    - kind: pneumatic             # pending: compressed air supply
+    - kind: PhotonBeam
+    - kind: CoolingWater          # observed via Flow1-Flow8 BLEPS channels
+    - kind: Vacuum                # observed via IP1-7, IG1-8, VS1-7, GV1-3
+    - kind: Power
+    - kind: ComputePool
+    - kind: LiquidNitrogen        # 2-BM detector LN2 dewar
+    - kind: ProcessGas            # pending: sample-environment gas mix
+    - kind: CompressedAir         # pending: compressed-air supply (kind newly coined; not yet attested in code)
   replaceable_parts:
     # One selector, since CORA has no single asset-revision concept:
     #   recoatable surface  -> Consumable affordance, no separate asset
