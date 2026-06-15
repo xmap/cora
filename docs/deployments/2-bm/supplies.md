@@ -6,11 +6,11 @@ A Supply is a continuously-available resource whose availability is tracked at f
 
 | Supply | Scope | Kind |
 | --- | --- | --- |
-| `2-BM detector LN2 dewar` | `Beamline` | `cryogen` |
+| `2-BM detector LN2 dewar` | `Beamline` | `LiquidNitrogen` |
 
 ## Pending
 
 | Supply | Scope | Kind |
 | --- | --- | --- |
-| Sample-environment gas mix | `Beamline` | `gas` |
-| Compressed air supply | `Beamline` | `pneumatic` |
+| Sample-environment gas mix | `Beamline` | `ProcessGas` |
+| Compressed air supply | `Beamline` | `CompressedAir` |
