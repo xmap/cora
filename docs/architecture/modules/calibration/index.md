@@ -24,6 +24,7 @@ Out of scope
 - **Calibration sets / bundles.** Grouping several calibrations into a named bundle that gets pinned together is deferred. Today's pin is per `calibration_id`.
 - **Cross-aggregate supersession.** A revision may only supersede a prior revision on the same calibration. Re-baselining an operating point starts a new Calibration.
 - **Cross-BC existence checks on source ids.** `MeasuredSource.procedure_id`, `ComputedSource.dataset_id`, and `AssertedSource.actor_id` are bare references; the write path does not verify the target exists at the time the revision is appended.
+- **Automatic alignment-to-calibration bridge.** When an alignment or characterization Procedure completes, the revision it produced is appended by the caller (an explicit `append_calibration_revision` with `MeasuredSource(procedure_id)`). A `ProcedureCompleted` subscriber or agent that drafts the Provisional revision automatically is deferred until pilot toil or accuracy demands it; a human verifying it into `Verified` stays in the loop either way.
 - **Per-revision projection.** A `proj_calibration_revisions` read model is deferred. Single-aggregate revision reads go through `GET /calibrations/{id}`, which folds the aggregate's event stream.
 
 </div>

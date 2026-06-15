@@ -3,7 +3,7 @@
 cluster: Commissioning
 archetype: routine
 bc_primary: Operation
-bc_touches: Equipment, Operation, Recipe
+bc_touches: Equipment, Operation, Recipe, Calibration
 
 Scenario test for the rotation-axis "center" alignment routine at 2-BM
 micro-CT, as performed by operators today at mechanically-similar 2-BM
@@ -93,6 +93,22 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
+from cora.calibration._projections import register_calibration_projections
+from cora.calibration.aggregates.calibration import (
+    CalibrationStatus,
+    MeasuredSource,
+)
+from cora.calibration.features.append_calibration_revision import (
+    AppendCalibrationRevision,
+)
+from cora.calibration.features.append_calibration_revision import (
+    bind as bind_append_calibration_revision,
+)
+from cora.calibration.features.define_calibration import DefineCalibration
+from cora.calibration.features.define_calibration import (
+    bind as bind_define_calibration,
+)
+from cora.calibration.quantities import CalibrationQuantity
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.update_asset_settings import (
     UpdateAssetSettings,
@@ -207,6 +223,10 @@ _PROCEDURE_ID = UUID("01900000-0000-7000-8000-000000035e01")
 # Steps logbook + open envelope
 _STEPS_LOGBOOK_ID = UUID("01900000-0000-7000-8000-000000035f01")
 _STEPS_OPEN_EVENT_ID = UUID("01900000-0000-7000-8000-000000035f02")
+
+# Calibration the alignment produces (define mints calibration_id; append mints revision_id)
+_CALIBRATION_ID = UUID("01900000-0000-7000-8000-000000036001")
+_CALIBRATION_REVISION_ID = UUID("01900000-0000-7000-8000-000000036002")
 
 
 _DEVICES = (
@@ -424,6 +444,12 @@ def _id_queue() -> list[UUID]:
         e(),
         # complete_procedure: event_id
         e(),
+        # define_calibration: calibration_id, event_id
+        _CALIBRATION_ID,
+        e(),
+        # append_calibration_revision: revision_id, event_id
+        _CALIBRATION_REVISION_ID,
+        e(),
     ]
 
 
@@ -508,6 +534,7 @@ def _check(
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_operation_projections(registry)
+    register_calibration_projections(registry)
     await drain_projections(db_pool, registry, deadline_seconds=2.0)
 
 
@@ -809,6 +836,50 @@ async def test_center_alignment_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
+    # ----- Emit the rotation-center Calibration the alignment produced -----
+    #
+    # The alignment Procedure is the ACT; the Calibration BC stores the RESULT.
+    # The caller bridges them: after the procedure completes, define the
+    # rotation_center Calibration for the rotary stage and append a Provisional
+    # revision sourced from this Procedure (MeasuredSource). This is the
+    # human/caller-driven path; an automatic ProcedureCompleted agent that drafts
+    # the revision is a deferred tier (see the Calibration module Out-of-scope).
+
+    calibration_id = await bind_define_calibration(deps)(
+        DefineCalibration(
+            target_id=_ASSET_AEROTECH_ABRS_ID,
+            quantity=CalibrationQuantity.ROTATION_CENTER,
+            operating_point={"energy": 25.0, "optics_config": "5x"},
+            description="Rotation centre from the 2-BM center-alignment routine.",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert calibration_id == _CALIBRATION_ID
+    revision_id = await bind_append_calibration_revision(deps)(
+        AppendCalibrationRevision(
+            calibration_id=calibration_id,
+            value={"center": 1024.5, "uncertainty": 0.5},
+            status=CalibrationStatus.PROVISIONAL,
+            source=MeasuredSource(procedure_id=_PROCEDURE_ID),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert revision_id == _CALIBRATION_REVISION_ID
+
+    # The Calibration stream proves the act -> result link: the appended revision
+    # cites this alignment Procedure as its MeasuredSource, Provisional until blessed.
+    calibration_events, _ = await deps.event_store.load("Calibration", _CALIBRATION_ID)
+    assert [e.event_type for e in calibration_events] == [
+        "CalibrationDefined",
+        "CalibrationRevisionAppended",
+    ]
+    appended = calibration_events[1].payload
+    assert appended["status"] == "Provisional"
+    assert appended["source_procedure_id"] == str(_PROCEDURE_ID)
+    assert appended["value"] == {"center": 1024.5, "uncertainty": 0.5}
+
     # ----- Assert the Procedure stream tells the right lifecycle story -----
 
     procedure_events, procedure_version = await deps.event_store.load("Procedure", _PROCEDURE_ID)
@@ -874,6 +945,17 @@ async def test_center_alignment_plays_out_end_to_end(
     # ----- Drain the projection and assert the read-side record is operator-correct -----
 
     await _drain(db_pool)
+
+    # The Calibration read-side renders the measured source for the rotation centre.
+    async with db_pool.acquire() as conn:
+        cal_row = await conn.fetchrow(
+            "SELECT latest_revision_status, latest_revision_source_kind "
+            "FROM proj_calibration_summary WHERE calibration_id = $1",
+            _CALIBRATION_ID,
+        )
+    assert cal_row is not None
+    assert cal_row["latest_revision_status"] == "Provisional"
+    assert cal_row["latest_revision_source_kind"] == "measured"
 
     page = await bind_list(deps)(
         ListProcedures(kind="center_alignment"),

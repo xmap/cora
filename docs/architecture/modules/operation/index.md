@@ -19,6 +19,7 @@ Out of scope
 - **Verifying as a first-class FSM state.** Per-step Check happens inside Running synchronously; the standards corpus does not bless a separate Verifying state.
 - **Per-kind payload validation at the API.** The step `payload` body is `dict[str, Any]` today; per-kind Pydantic models land once pilot vocabulary settles.
 - **Asset-existence verification at register time.** `target_asset_ids` is taken at face value; existence and decommission-state gating runs at start-procedure time.
+- **Procedure declares its output quantity.** A Procedure does not declare which Calibration quantity it yields (an alignment producing `rotation_center`, a characterization producing `detector_pixel_size`). The human bridging an alignment to a Calibration knows this implicitly; an automatic `ProcedureCompleted` agent would need it declared. Deferred until that agent is built.
 
 </div>
 

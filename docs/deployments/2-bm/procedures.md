@@ -20,6 +20,8 @@ Each Procedure binds a Method + Practice + Plan to a set of target Assets. See [
 
 Image chain = `Camera`, `Scintillator`.
 
+When `center_alignment` converges, the operator records the result as a `rotation_center` [Calibration](../../architecture/modules/calibration/index.md) on the rotary stage, appended with a `MeasuredSource` citing the Procedure. The alignment is the act; the Calibration stores the value.
+
 ## Pending
 
 | Procedure | Target Assets |
