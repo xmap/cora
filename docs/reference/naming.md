@@ -37,7 +37,7 @@ The grammar is the tell. `Camera`, `Scintillator`, `Hexapod`, `Housing` are thin
 
 ### Family (anatomy)
 
-- **PascalCase, singular, a thing-noun.** `Camera`, not `Cameras`, not `Imager`.
+- **PascalCase, singular, a thing-noun.** `Camera`, not `Cameras`, not `Detector` (an agent-noun, which names a Role).
 - **Anatomical, not vendor / substrate / deployment / content.** A `Family` names what the device IS, device-agnostic across facilities. Vendor identity lives on the bound `Model`; substrate (FPGA, VME card) lives in `settings`; deployment context never enters the name. This is why `TriggerFPGA` became `TimingController` and `OpticalHousing` became `Housing` ("Optical" named the contents, not the chassis's own nature).
 - **Noun LAST (R3).** A qualifier precedes the family noun: `RotaryStage`, `LinearStage`, `MotionController`. Single-word is preferred; a compound is justified only when the qualifier names the device's own intrinsic nature (how it moves, what signal it generates), not its contents or the assembly it serves.
 - **`<Domain>Controller`** for any separately-modelled, field-replaceable control-electronics box (`MotionController`, `TimingController`); the driven device carries a `controller_id` back-reference.
@@ -72,8 +72,8 @@ Because the name is the key for `Family` and `Role`, the derivation canonicalize
 
 ## Deprecations and smells
 
-- **Presenter Families.** A `Family` that exists only as a `presents_as_family_id` target, with no instances of its own (for example `Imager`), is a transitional shim from before Roles existed. The forward path is a `Role` plus `presents_as: frozenset[RoleId]`. Binding a `Method` to a real, instanced `Family` (`needed_family_ids = {Camera}`) stays valid; only the instance-less contract proxy is the anti-pattern.
-- **A bare agent-noun Family.** `Imager`, or a bare `Controller` Family: agent-nouns name functions (Roles), not device classes. Qualify it (`MotionController`) or move it to a `Role`.
+- **Presenter Families.** A `Family` that exists only as a presenter target, with no instances of its own, is a transitional shim from before Roles existed. The forward path is a `Role` plus `presents_as: frozenset[RoleId]`. The last presenter-Family shim has been retired: `Imager` was removed from the catalog, and detector Assemblies now present the `Detector` Role via `presents_as`. Binding a `Method` to a real, instanced `Family` (`needed_family_ids = {Camera}`) stays valid; only the instance-less contract proxy is the anti-pattern.
+- **A bare agent-noun Family.** A bare `Controller` Family, or any agent-noun used as a Family name: agent-nouns name functions (Roles), not device classes. Qualify it (`MotionController`) or move it to a `Role`. (`Imager`, now retired, was an example of this smell.)
 - **A Model `name` treated as identity.** It is a label. Identity is `(manufacturer, part_number)`.
 
 ## See also

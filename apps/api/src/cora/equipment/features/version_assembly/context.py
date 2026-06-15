@@ -27,9 +27,10 @@ from uuid import UUID
 
 @dataclass(frozen=True)
 class VersionAssemblyContext:
-    """Snapshot of FamilyId + sub-assembly existence/pin/depth/collision checks."""
+    """Snapshot of Role + FamilyId + sub-assembly existence/pin/depth/collision checks."""
 
     missing_family_ids: frozenset[UUID]
+    missing_role_ids: frozenset[UUID] = frozenset()
     sub_assembly_missing_ids: frozenset[UUID] = frozenset()
     sub_assembly_hash_mismatches: frozenset[tuple[UUID, str, str | None]] = frozenset()
     sub_assembly_too_deep_ids: frozenset[UUID] = frozenset()

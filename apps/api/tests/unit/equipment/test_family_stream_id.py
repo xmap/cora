@@ -72,4 +72,4 @@ def test_role_stream_id_is_nfc_normalized() -> None:
 def test_family_stream_id_does_not_alias_role_stream_id() -> None:
     """Cross-aggregate safety: a Family and a Role with the same name
     must derive to distinct stream ids (distinct namespace sentinels)."""
-    assert family_stream_id(FamilyName("Imager")) != role_stream_id(RoleName("Imager"))
+    assert family_stream_id(FamilyName("Detector")) != role_stream_id(RoleName("Detector"))

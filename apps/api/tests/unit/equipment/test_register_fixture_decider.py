@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyCannotInstantiateError,
@@ -67,7 +68,7 @@ def _assembly(
     return Assembly(
         id=assembly_id,
         name=AssemblyName("Detector Fixture"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=slots,
         parameter_overrides_schema=parameter_overrides_schema,  # type: ignore[arg-type]
         status=status,
@@ -583,7 +584,7 @@ def test_decide_binds_union_of_top_and_sub_assembly_leaf_slots() -> None:
     parent = Assembly(
         id=parent_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset({_slot("camera", required_family_ids=frozenset({cam_fam}))}),
         required_sub_assemblies=frozenset({_link("optics", child_id)}),
         status=AssemblyStatus.DEFINED,
@@ -628,7 +629,7 @@ def test_decide_rejects_unresolved_sub_assembly() -> None:
     parent = Assembly(
         id=parent_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_sub_assemblies=frozenset({_link("optics", child_id)}),
         status=AssemblyStatus.DEFINED,
         content_hash="h",
@@ -652,7 +653,7 @@ def test_decide_rejects_deprecated_sub_assembly() -> None:
     parent = Assembly(
         id=parent_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_sub_assemblies=frozenset({_link("optics", child_id)}),
         status=AssemblyStatus.DEFINED,
         content_hash="h",
@@ -679,7 +680,7 @@ def test_decide_rejects_cross_blueprint_slot_name_collision() -> None:
     parent = Assembly(
         id=parent_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset({_slot("optic", required_family_ids=frozenset({fam}))}),
         required_sub_assemblies=frozenset({_link("optics", child_id)}),
         status=AssemblyStatus.DEFINED,
@@ -712,7 +713,7 @@ def test_decide_rejects_deeper_sub_assembly_nesting() -> None:
     parent = Assembly(
         id=parent_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_sub_assemblies=frozenset({_link("optics", child_id, content_hash="childhash")}),
         status=AssemblyStatus.DEFINED,
         content_hash="h",
@@ -720,7 +721,7 @@ def test_decide_rejects_deeper_sub_assembly_nesting() -> None:
     child = Assembly(
         id=child_id,
         name=AssemblyName("Optics"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_sub_assemblies=frozenset({_link("inner", grandchild_id)}),
         status=AssemblyStatus.DEFINED,
         content_hash="childhash",
@@ -747,7 +748,7 @@ def _parent_with_subs(
     return Assembly(
         id=parent_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=slots,
         required_sub_assemblies=links,
         status=AssemblyStatus.DEFINED,

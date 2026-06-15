@@ -9,33 +9,9 @@ from cora.api.main import create_app
 from tests.contract._mcp_helpers import open_session, parse_sse_data
 
 
-def _define_family_via_tool(
-    client: TestClient,
-    headers: dict[str, str],
-    name: str = "Detector",
-) -> UUID:
-    response = client.post(
-        "/mcp",
-        json={
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "define_family",
-                "arguments": {"name": name, "affordances": []},
-            },
-        },
-        headers=headers,
-    )
-    assert response.status_code == 200
-    body = parse_sse_data(response.text)
-    return UUID(body["result"]["structuredContent"]["family_id"])
-
-
 def _define_assembly_via_tool(
     client: TestClient,
     headers: dict[str, str],
-    family_id: UUID,
     *,
     name: str = "Microscope",
 ) -> UUID:
@@ -49,7 +25,6 @@ def _define_assembly_via_tool(
                 "name": "define_assembly",
                 "arguments": {
                     "name": name,
-                    "presents_as_family_id": str(family_id),
                     "required_slots": [],
                     "required_wires": [],
                 },
@@ -80,8 +55,7 @@ def test_mcp_lists_version_assembly_tool() -> None:
 def test_mcp_version_assembly_tool_succeeds_for_defined_assembly() -> None:
     with TestClient(create_app()) as client:
         headers = open_session(client)
-        family_id = _define_family_via_tool(client, headers)
-        assembly_id = _define_assembly_via_tool(client, headers, family_id)
+        assembly_id = _define_assembly_via_tool(client, headers)
         response = client.post(
             "/mcp",
             json={
@@ -93,7 +67,6 @@ def test_mcp_version_assembly_tool_succeeds_for_defined_assembly() -> None:
                     "arguments": {
                         "assembly_id": str(assembly_id),
                         "name": "Microscope",
-                        "presents_as_family_id": str(family_id),
                         "required_slots": [],
                         "required_wires": [],
                         "version": "v0.2.0",
@@ -110,7 +83,6 @@ def test_mcp_version_assembly_tool_succeeds_for_defined_assembly() -> None:
 def test_mcp_version_assembly_tool_returns_iserror_for_unknown_assembly() -> None:
     with TestClient(create_app()) as client:
         headers = open_session(client)
-        family_id = _define_family_via_tool(client, headers)
         response = client.post(
             "/mcp",
             json={
@@ -122,7 +94,6 @@ def test_mcp_version_assembly_tool_returns_iserror_for_unknown_assembly() -> Non
                     "arguments": {
                         "assembly_id": str(uuid4()),
                         "name": "X",
-                        "presents_as_family_id": str(family_id),
                         "required_slots": [],
                         "required_wires": [],
                     },
@@ -140,8 +111,7 @@ def test_mcp_version_assembly_tool_succeeds_on_versioned_state() -> None:
     """Multi-source FSM: Versioned -> Versioned is accepted."""
     with TestClient(create_app()) as client:
         headers = open_session(client)
-        family_id = _define_family_via_tool(client, headers)
-        assembly_id = _define_assembly_via_tool(client, headers, family_id)
+        assembly_id = _define_assembly_via_tool(client, headers)
         for tag in ("v1", "v2"):
             response = client.post(
                 "/mcp",
@@ -154,7 +124,6 @@ def test_mcp_version_assembly_tool_succeeds_on_versioned_state() -> None:
                         "arguments": {
                             "assembly_id": str(assembly_id),
                             "name": "Microscope",
-                            "presents_as_family_id": str(family_id),
                             "required_slots": [],
                             "required_wires": [],
                             "version": tag,

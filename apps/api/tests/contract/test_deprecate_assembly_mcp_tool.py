@@ -49,7 +49,6 @@ def _define_assembly_via_tool(
                 "name": "define_assembly",
                 "arguments": {
                     "name": name,
-                    "presents_as_family_id": str(family_id),
                     "required_slots": [],
                     "required_wires": [],
                 },

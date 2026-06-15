@@ -58,8 +58,6 @@ families:
     note: "Per-lens identity inside the Microscope Assembly."
   - name: PseudoAxis
     note: "Virtual-axis Family; the Objective_Selector Asset carries a LookupTable partition rule decomposing an objective index to turret rotation."
-  - name: Imager
-    note: "Presenter Family for detector Assemblies; the 2-BM Optique Peter detector materializes as the Microscope Assembly + Fixture."
   - name: Housing
     note: "Containment chassis Family; the Housing Asset parents the Microscope constituents and carries the Mount."
   - name: GenericProbe

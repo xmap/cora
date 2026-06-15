@@ -30,7 +30,7 @@ Out of scope
 | `Asset` | `id: UUID` | `id`, `name`, `tier`, `parent_id?`, `lifecycle`, `condition`, `family_ids: frozenset[UUID]`, `settings: dict`, `ports: frozenset[AssetPort]`, `model_id?`, `owners: frozenset[AssetOwner]`, `alternate_identifiers: frozenset[AlternateIdentifier]`, `fixture_id?`, `drawing?`, `commissioned_at?`, `decommissioned_at?`, `controller_id?`, `facility_code?` | yes (4-state lifecycle, 3-state condition) |
 | `Frame` | `id: UUID` | `id`, `name`, `parent_id?`, `placement: Placement?`, `supersedes: FrameRevisionLink?`, `status` | yes (2-state) |
 | `Mount` | `id: UUID` | `id`, `slot_code`, `parent_id?`, `placement: Placement`, `drawing?`, `installed_asset_id?`, `status` | yes (2-state) |
-| `Assembly` | `id: UUID` | `id`, `name`, `presents_as_family_id: UUID`, `presents_as: frozenset[RoleId]`, `required_slots: frozenset[TemplateSlot]`, `required_sub_assemblies: frozenset[SubAssemblyLink]`, `required_wires: frozenset[TemplateWire]`, `parameter_overrides_schema: dict?`, `drawing?`, `status: AssemblyStatus`, `version: str?`, `content_hash: str?` | yes (3-state) |
+| `Assembly` | `id: UUID` | `id`, `name`, `presents_as: frozenset[RoleId]`, `required_slots: frozenset[TemplateSlot]`, `required_sub_assemblies: frozenset[SubAssemblyLink]`, `required_wires: frozenset[TemplateWire]`, `parameter_overrides_schema: dict?`, `drawing?`, `status: AssemblyStatus`, `version: str?`, `content_hash: str?` | yes (3-state) |
 | `Fixture` | `id: UUID` | `id`, `assembly_id`, `assembly_content_hash`, `surface_id`, `slot_asset_bindings: frozenset[SlotAssetBinding]`, `parameter_overrides: dict`, `persistent_id?`, `registered_at` | no (genesis + set-once persistent-id assign) |
 | `Role` | `id: RoleId` | `id`, `name: RoleName`, `docstring: str`, `required_affordances: frozenset[Affordance]`, `optional_affordances: frozenset[Affordance]`, `produces: frozenset[SignalType]`, `consumes: frozenset[SignalType]` | no (terminal at genesis; status implicit `Defined`) |
 
@@ -97,7 +97,7 @@ Addressability wins ties: if any other module references the sub-component by id
 
 `AssetOwner` and `AlternateIdentifier` are sortable VOs whose ordering follows the field that uniquely keys them (`owner_name` for owners, `(kind, value)` for alternate identifiers). Both feed the PIDINST serializer (`to_pidinst_record` at the module root) that maps Asset state into the external PIDINST record shape, which the `get_asset_pidinst` slice exposes at `GET /assets/{asset_id}/pidinst`. The PIDINST property numbers are: 5 for owners, 13 for alternate identifiers.
 
-`Assembly.content_hash` is a SHA-256 over the canonical serialization of the structural content (`name`, `presents_as_family_id`, `required_slots`, `required_wires`, `required_sub_assemblies`, `parameter_overrides_schema`); engineering metadata (drawing, version label) is intentionally excluded so two Assemblies with the same structural intent share a hash even when sourced from different facilities. A pinned child's `content_hash` is folded into the parent's, so a structural change deep in a composition ripples up one deliberate re-pin at a time. This cross-facility convergence holds because the Family ids the hash folds in (`presents_as_family_id` and each slot's `required_family_ids`) are themselves deterministic: `family_stream_id` derives a Family id as `uuid5` over the lowercased name, so two facilities that define the same-named Family arrive at the same id and therefore the same hash. (Until Family ids were made deterministic, the hash silently did NOT converge, the random per-facility Family ids broke it even though the canonical serialization was identical.) `Fixture.assembly_content_hash` snapshots that hash at registration time, decoupling the materialization from any later Assembly revision.
+`Assembly.content_hash` is a SHA-256 over the canonical serialization of the structural content (`name`, `presents_as`, `required_slots`, `required_wires`, `required_sub_assemblies`, `parameter_overrides_schema`); engineering metadata (drawing, version label) is intentionally excluded so two Assemblies with the same structural intent share a hash even when sourced from different facilities. A pinned child's `content_hash` is folded into the parent's, so a structural change deep in a composition ripples up one deliberate re-pin at a time. This cross-facility convergence holds because both the ids the hash folds in are deterministic: the Role ids in `presents_as` (the Role-contract set) come from `role_stream_id`, and each slot's `required_family_ids` come from `family_stream_id`, each deriving its id as `uuid5` over the lowercased name. So two facilities that define the same-named Role and the same-named Family arrive at the same ids and therefore the same hash. (Until these ids were made deterministic, the hash silently did NOT converge, the random per-facility ids broke it even though the canonical serialization was identical.) `Fixture.assembly_content_hash` snapshots that hash at registration time, decoupling the materialization from any later Assembly revision.
 
 ## Composition axes
 
@@ -298,7 +298,7 @@ stateDiagram-v2
 : Install sets `Mount.installed_asset_id` and fails if the Mount is already occupied, the Asset does not exist, the Asset is Decommissioned, or the Asset is already installed in any other active Mount. Uninstall clears the slot and fails if the Mount is already empty.
 
 `define_assembly` / `version_assembly`
-: `presents_as_family_id` references a Family that exists in the Equipment module (verified at decide time via a cross-aggregate load). Every `TemplateWire.source_slot` and `TemplateWire.target_slot` matches a `TemplateSlot.slot_name` declared on the same Assembly. The decider captures the canonical `content_hash` from the new structural content; re-versioning with identical content yields the same hash by design.
+: the presented Role ids in `presents_as` are verified against the Role registry at the handler edge (an unknown id raises Role not found), and each slot's `required_family_ids` are verified as Families that exist in the Equipment module (via a cross-aggregate load). Every `TemplateWire.source_slot` and `TemplateWire.target_slot` matches a `TemplateSlot.slot_name` declared on the same Assembly. The decider captures the canonical `content_hash` from the new structural content; re-versioning with identical content yields the same hash by design.
 
 `register_fixture`
 : Every required slot in the Assembly is covered by exactly one `SlotAssetBinding` whose `asset_id` references an Asset whose `family_ids` includes the slot's required Family. When the Assembly references sub-assemblies, the validated slot set is the union of the Assembly's own leaf slots and each referenced sub-assembly's leaf slots (one composing level deep); a slot name that appears in both is rejected as a collision, and each `SubAssemblyLink`'s pinned `content_hash` is re-checked against the child Assembly's current hash. The Assembly is in `Defined` or `Versioned` (not `Deprecated`). Every bound Asset must not be `Decommissioned` (a terminal lifecycle disallows attachment) and must currently be installed in some Mount (so the choreography is `install_asset` -> `register_fixture`, never the reverse). The Fixture's `surface_id` is read from the caller's authenticated Trust Surface; the Fixture is bound to that Surface for authorization scoping.
@@ -379,7 +379,7 @@ The <!-- arch:count kind=aggregate bc=equipment spell=true -->eight<!-- /arch:co
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
-| `AssemblyDefined` | `assembly_id`, `name`, `presents_as_family_id`, `required_slots`, `required_sub_assemblies`, `required_wires`, `parameter_overrides_schema?`, `drawing?`, `content_hash`, `occurred_at` | `define_assembly` succeeds (genesis) |
+| `AssemblyDefined` | `assembly_id`, `name`, `presents_as`, `required_slots`, `required_sub_assemblies`, `required_wires`, `parameter_overrides_schema?`, `drawing?`, `content_hash`, `occurred_at` | `define_assembly` succeeds (genesis) |
 | `AssemblyVersioned` | `assembly_id`, `version_tag`, `required_slots`, `required_sub_assemblies`, `required_wires`, `parameter_overrides_schema?`, `drawing?`, `content_hash`, `occurred_at` | `version_assembly` succeeds; payload carries the replacement structural content |
 | `AssemblyDeprecated` | `assembly_id`, `occurred_at` | `deprecate_assembly` succeeds |
 | `AssemblyPresentsAsAdded` | `assembly_id`, `role_id`, `occurred_at` | `add_assembly_presents_as` succeeds; the Assembly advertises one additional Role contract |
@@ -468,7 +468,7 @@ _Generated from the code at build time._
 : `MountAlreadyExists` (register only), `MountNotFound`, `MountCannotUpdate` (Decommissioned), `MountAlreadyOccupied` (install only), `MountIsEmpty` (uninstall only), `MountHasAssetInstalled` (decommission only), `MountHasActiveChildren` (decommission only), `MountCannotDecommission` (Decommissioned), `AssetNotFoundForMount` (install only), `AssetNotInstallable` (install only, Asset is Decommissioned), `AssetAlreadyInstalledElsewhere` (install only, Asset is in another active Mount), `Unauthorized`
 
 `DefineAssembly` / `VersionAssembly` / `DeprecateAssembly`
-: `AssemblyAlreadyExists` (define only), `AssemblyNotFound`, `AssemblyCannotVersion` / `AssemblyCannotDeprecate`, `FamilyNotFoundForAssembly` (define / version, when `presents_as_family_id` or a slot's `required_family_ids` references a missing Family), `WireReferencesUnknownSlot` (define / version, when a TemplateWire endpoint cites a slot the same Assembly does not declare), `Unauthorized`
+: `AssemblyAlreadyExists` (define only), `AssemblyNotFound`, `AssemblyCannotVersion` / `AssemblyCannotDeprecate`, `FamilyNotFoundForAssembly` (define / version, when a slot's `required_family_ids` references a missing Family), Role not found (define / version / amend, when an id in `presents_as` references a missing Role), `WireReferencesUnknownSlot` (define / version, when a TemplateWire endpoint cites a slot the same Assembly does not declare), `Unauthorized`
 
 `AddAssemblyPresentsAs` / `RemoveAssemblyPresentsAs`
 : `AssemblyNotFound`, `RoleNotFound` (add only, the `role_id` does not resolve via `RoleLookup`), `AssemblyRolePresentsAsAlready` (add only) / `AssemblyRolePresentsAsNotPresent` (remove only), `Unauthorized`. No affordance-superset check at the template tier: Assembly affordances derive from the constituent Family union at `register_fixture` time.
@@ -760,7 +760,6 @@ The Mount summary backs Mount queries and the `installed_asset_id` lookup. The s
 CREATE TABLE proj_equipment_assembly_summary (
     assembly_id            UUID        PRIMARY KEY,
     name                   TEXT        NOT NULL,
-    presents_as_family_id  UUID        NOT NULL,
     status                 TEXT        NOT NULL CHECK (
         status IN ('Defined', 'Versioned', 'Deprecated')
     ),
@@ -777,12 +776,9 @@ CREATE INDEX proj_equipment_assembly_summary_keyset_idx
 CREATE INDEX proj_equipment_assembly_summary_content_hash_idx
     ON proj_equipment_assembly_summary (content_hash)
     WHERE content_hash IS NOT NULL;
-
-CREATE INDEX proj_equipment_assembly_summary_presents_as_family_id_idx
-    ON proj_equipment_assembly_summary (presents_as_family_id);
 ```
 
-The Assembly summary is the read-side anchor for content-hash and `presents_as_family_id` lookups. The content-hash index supports federation dedup queries (find the Assembly that materializes the same canonical content); the family-id index supports `Method.needed_family_ids` satisfaction lookups when an Assembly presents through a given Family. The `presents_as` array carries the Role ids the Assembly advertises, parallel to the scalar `presents_as_family_id` (retained for one migration cycle); it is mutated by `add_assembly_presents_as` (append) and `remove_assembly_presents_as` (remove) and backs the Role-based binding path. Read slices on Assembly itself (`get_assembly`, `list_assemblies`) are deferred today; operators consume Assembly state indirectly through `get_fixture` and `list_fixtures`, which carry the `assembly_id` and the frozen `assembly_content_hash` for each materialization.
+The Assembly summary is the read-side anchor for content-hash and `presents_as` lookups. The content-hash index supports federation dedup queries (find the Assembly that materializes the same canonical content). The `presents_as UUID[]` column is the sole presents_as storage: it carries the Role ids the Assembly advertises (folded into `content_hash` at define and version), and is amended by `add_assembly_presents_as` (append) and `remove_assembly_presents_as` (remove). It backs the Role-based binding path. Read slices on Assembly itself (`get_assembly`, `list_assemblies`) are deferred today; operators consume Assembly state indirectly through `get_fixture` and `list_fixtures`, which carry the `assembly_id` and the frozen `assembly_content_hash` for each materialization.
 
 ```sql title="proj_equipment_role_summary"
 CREATE TABLE proj_equipment_role_summary (
@@ -858,7 +854,7 @@ The Fixture summary backs `GET /fixtures` plus filters by `assembly_id`, `surfac
 
 The Asset hierarchy answers "where does this belong structurally"; Trust Zones answer "what security policy applies"; Frame / Mount answers "where is it physically installed". The three classifications are orthogonal: an Asset has all three, and zones, frames, and the structural parent tree all span Sites independently.
 
-The `Method.needed_assembly_ids` reference is eventual-consistency: Recipe does not verify Assembly existence at `define_method` time. Mismatch surfaces at Plan binding. The binding rule is: for each id in `Method.needed_assembly_ids`, the Plan's bound Asset set must contain a `Fixture` whose `assembly_id` equals that id, and that Fixture's `slot_asset_bindings` must reference Assets that are themselves in the Plan's bound Asset set. `Assembly.presents_as_family_id` provides the Family-typed unit that Recipe's Capability affordance-cover check binds against, so Method.needed_family_ids satisfaction and Method.needed_assembly_ids satisfaction compose without double-counting.
+The `Method.needed_assembly_ids` reference is eventual-consistency: Recipe does not verify Assembly existence at `define_method` time. Mismatch surfaces at Plan binding. The binding rule is: for each id in `Method.needed_assembly_ids`, the Plan's bound Asset set must contain a `Fixture` whose `assembly_id` equals that id, and that Fixture's `slot_asset_bindings` must reference Assets that are themselves in the Plan's bound Asset set. `Assembly.presents_as` provides the Role contracts Recipe's Capability affordance-cover check binds against, so Method.needed_family_ids satisfaction and Method.needed_assembly_ids satisfaction compose without double-counting.
 
 Two attachment paths exist for binding Assets to a Fixture. `register_fixture` writes the Fixture stream and persists the slot map there; it does NOT mutate the Asset streams. Each bound Asset's `fixture_id` back-reference is set separately through `attach_asset_to_fixture` on the Asset stream. The two-step shape keeps the Fixture's authorization Surface independent of the per-Asset write surfaces and lets the operator stage attachments rather than commit them atomically with the materialization.
 
@@ -970,7 +966,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
 
     {
       "name": "ScanChain",
-      "presents_as_family_id": "ffff0000-0000-0000-0000-000000000001",
+      "presents_as": ["ffff0000-0000-0000-0000-000000000001"],
       "required_slots": [
         {
           "slot_name": "rotary_stage",
@@ -999,7 +995,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
     }
     ```
 
-    Returns `201 Created` with the newly-assigned `assembly_id`. The Assembly starts in `Defined`; the decider computes the canonical `content_hash` from the structural content (slots, wires, schema) and pins it in the genesis event. Two Assemblies with identical structural intent across facilities share the same content_hash because their `presents_as_family_id` and slot `required_family_ids` are deterministic Family ids, which feeds the Federation dedup query.
+    Returns `201 Created` with the newly-assigned `assembly_id`. The Assembly starts in `Defined`; the decider computes the canonical `content_hash` from the structural content (slots, wires, schema) and pins it in the genesis event. Two Assemblies with identical structural intent across facilities share the same content_hash because their `presents_as` Role ids and slot `required_family_ids` are deterministic name-derived ids, which feeds the Federation dedup query.
 
 === "MCP"
 
@@ -1008,7 +1004,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
         "define_assembly",
         {
             "name": "ScanChain",
-            "presents_as_family_id": "ffff0000-0000-0000-0000-000000000001",
+            "presents_as": ["ffff0000-0000-0000-0000-000000000001"],
             "required_slots": [
                 {"slot_name": "rotary_stage", "required_family_ids": ["aaaa1111-1111-1111-1111-111111111111"], "cardinality": "Exactly1"},
                 {"slot_name": "camera",       "required_family_ids": ["bbbb2222-2222-2222-2222-222222222222"], "cardinality": "Exactly1"},

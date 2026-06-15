@@ -6,7 +6,7 @@ Subscribed events (per slice):
                                 + required_sub_assemblies from payload,
                                 presents_as=[]). Shipped with B.0 scaffold.
   - AssemblyVersioned -> UPDATE status=Versioned + name +
-                                presents_as_family_id + version +
+                                presents_as + version +
                                 content_hash + required_sub_assemblies.
                                 Replace-on-version semantic mirrors the
                                 aggregate state.
@@ -37,9 +37,9 @@ def _id(payload: dict[str, object]) -> UUID:
 
 _INSERT_ASSEMBLY_SQL = """
 INSERT INTO proj_equipment_assembly_summary
-    (assembly_id, name, presents_as_family_id, status, version,
+    (assembly_id, name, status, version,
      content_hash, created_at, presents_as, required_sub_assemblies)
-VALUES ($1, $2, $3, 'Defined', $4, $5, $6, ARRAY[]::UUID[], $7::jsonb)
+VALUES ($1, $2, 'Defined', $3, $4, $5, $6::UUID[], $7::jsonb)
 ON CONFLICT (assembly_id) DO NOTHING
 """
 
@@ -47,9 +47,9 @@ _UPDATE_VERSIONED_SQL = """
 UPDATE proj_equipment_assembly_summary
 SET status = 'Versioned',
     name = $2,
-    presents_as_family_id = $3,
-    version = $4,
-    content_hash = $5,
+    version = $3,
+    content_hash = $4,
+    presents_as = $5::UUID[],
     required_sub_assemblies = $6::jsonb,
     updated_at = now()
 WHERE assembly_id = $1
@@ -107,10 +107,10 @@ class AssemblySummaryProjection:
                     _INSERT_ASSEMBLY_SQL,
                     _id(payload),
                     payload["name"],
-                    UUID(str(payload["presents_as_family_id"])),
                     payload.get("version"),
                     payload["content_hash"],
                     datetime.fromisoformat(str(payload["occurred_at"])),
+                    [UUID(str(r)) for r in payload["presents_as"]],
                     json.dumps(payload.get("required_sub_assemblies", [])),
                 )
             case "AssemblyVersioned":
@@ -119,9 +119,9 @@ class AssemblySummaryProjection:
                     _UPDATE_VERSIONED_SQL,
                     _id(payload),
                     payload["name"],
-                    UUID(str(payload["presents_as_family_id"])),
                     payload.get("version"),
                     payload["content_hash"],
+                    [UUID(str(r)) for r in payload["presents_as"]],
                     json.dumps(payload.get("required_sub_assemblies", [])),
                 )
             case "AssemblyDeprecated":

@@ -52,12 +52,11 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `Hexapod` | `Posable`, `Homeable`, `Limitable` |
 | `Scintillator` | `Consumable` |
 | `Camera` | `Imageable`, `Binnable`, `Triggerable`, `Streamable`, `Recording` |
-| `Imager` | (empty; this Family exists as the `presents_as_family_id` target for detector Assemblies, including the Microscope; was `ImagingDetector` before the role-aggregate-design rename) |
 | `Housing` | (empty; the containment chassis Family carried by the `Housing` Asset that parents the Microscope constituents; no command surface) |
 | `Objective` | (pending: empty at initial registration) |
 | `PseudoAxis` | (empty; partition rules live on `Asset.partition_rule`, not as affordances) |
 
-`Scintillator` is the lone Pattern-C consumer at v1 (passive optical screen; tracked via `Consumable` lifecycle, no command surface). `Imager` and `PseudoAxis` are presenter / facet Families: they carry no affordances, but Methods bind against them via `needed_family_ids` (for `Imager` the Assembly's `presents_as_family_id` is the satisfaction handle; for `PseudoAxis` the Family membership is the gate that lets an Asset carry a `partition_rule`).
+`Scintillator` is the lone Pattern-C consumer at v1 (passive optical screen; tracked via `Consumable` lifecycle, no command surface). `PseudoAxis` is a facet Family: it carries no affordances, but Methods bind against it via `needed_family_ids`, and the Family membership is the gate that lets an Asset carry a `partition_rule`. Detector Assemblies, including the Microscope, advertise the `Detector` Role through the Assembly's `presents_as` set rather than through a presenter Family.
 
 `MotionController` is the first separately-modelled drive-electronics Family. v1 ships empty affordances by design: the meaningful state on a controller is configuration (firmware version, IP address, axis count, protocol) and identity (serial number), captured in `settings` and `alternate_identifiers`. Command-tier affordances (firmware-update, reboot, sync-output toggling) are deferred until an operator-side Procedure demands them, at which point they grow on the existing add-only affordance amendment path.
 
@@ -118,7 +117,7 @@ The six `Hexapod_*` DoF facets are PseudoAxis Assets (virtual DoFs over the `2bm
 
 ## Family settings schemas
 
-NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: the 2-BM detector classes (the active FLIR Oryx and the decommissioned PCO Dimax) differ along settings axes (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not Family axes, so the high-framerate variant stays a `Camera` rather than a separate Family. `Imager` and `PseudoAxis` carry no settings schema (they are presenter / facet Families).
+NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: the 2-BM detector classes (the active FLIR Oryx and the decommissioned PCO Dimax) differ along settings axes (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not Family axes, so the high-framerate variant stays a `Camera` rather than a separate Family. `PseudoAxis` carries no settings schema (it is a facet Family).
 
 ### `Objective`
 
