@@ -11,14 +11,15 @@ end-to-end against Postgres:
   - a reusable, content-hashed **Optics** sub-assembly (turret + 3
     objectives + objective_selector + focus),
   - a top **Microscope** Assembly that references Optics by a
-    version-pinned sub-assembly link and adds camera + scintillator
-    leaf slots, presenting as the Detector Role via the Imager
-    presenter Family,
-  - one **Fixture** (microscope_at_2bm) that binds 8 concrete Assets across
-    the union of leaf slots (the Microscope's 2 plus the Optics
-    sub-assembly's 4; the three objectives share one OneOrMore slot),
+    version-pinned sub-assembly link and adds the camera (OneOrMore),
+    scintillator, camera_selector, and camera_fold leaf slots,
+    presenting as the Detector Role via the Imager presenter Family,
+  - one **Fixture** (microscope_at_2bm) that binds 11 concrete Assets across
+    the union of leaf slots (the Microscope's 4 plus the Optics
+    sub-assembly's 4; the three objectives and the two cameras each share
+    a OneOrMore slot),
   - one **Housing** Asset (Family Housing) that physically
-    contains all 8 constituents (Asset.parent_id) and carries the Mount.
+    contains all 11 constituents (Asset.parent_id) and carries the Mount.
 
 This is the Assembly + Fixture conversion that the flat-composition
 predecessor of this scenario deferred. It is the first scenario to
@@ -149,6 +150,8 @@ _CAP_HOUSING_ID = family_stream_id(FamilyName("Housing"))
 # Facility-install Device asset ids (scenario-supplied; the leaf detector
 # parts that pre-exist under 2-BM before the microscope is composed).
 _ASSET_CAMERA_ID = UUID("01900000-0000-7000-8000-000000420a11")
+_ASSET_CAMERA_HIGHRES_ID = UUID("01900000-0000-7000-8000-000000420a12")
+_ASSET_CAMERA_FOLD_ID = UUID("01900000-0000-7000-8000-000000420a13")
 _ASSET_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000420a21")
 _ASSET_FOCUS_ID = UUID("01900000-0000-7000-8000-000000420a31")
 
@@ -159,8 +162,10 @@ _DRAFT = "https://json-schema.org/draft/2020-12/schema"
 
 _DEVICES = (
     DeviceSpec("Camera", _ASSET_CAMERA_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Camera_HighRes", _ASSET_CAMERA_HIGHRES_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
     DeviceSpec("Focus", _ASSET_FOCUS_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
+    DeviceSpec("Camera_Fold", _ASSET_CAMERA_FOLD_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
 )
 
 
@@ -276,6 +281,22 @@ _SETTINGS_CAMERA: dict[str, Any] = {
     "pixel_size": 3.45,
     "bit_depth": 12,
 }
+# The 31 MP Oryx (camera 1). Sensor dims from the staff pre-APS-U detection
+# page; frame rate / readout mode not on the current page (DET-8).
+_SETTINGS_CAMERA_HIGHRES: dict[str, Any] = {
+    "sensor_width": 6464,
+    "sensor_height": 4852,
+    "pixel_size": 3.45,
+    "bit_depth": 12,
+}
+# The Schunk LPTM 30 folding-mirror selector stage (camera_fold). Positions
+# Pos.0=20 mm (5 MP) / Pos.1=15 mm (31 MP); 0.5 mm pitch, max 2.5 mm/s.
+_SETTINGS_CAMERA_FOLD: dict[str, Any] = {
+    "min_position": 0.0,
+    "max_position": 30.0,
+    "max_speed": 2.5,
+    "encoder_resolution": 0.001,
+}
 _SETTINGS_SCINTILLATOR: dict[str, Any] = {"thickness": 100.0, "decay_time": 0.07}
 _SETTINGS_FOCUS: dict[str, Any] = {
     "min_position": -5.0,
@@ -347,8 +368,10 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         )
     for asset_id, settings in (
         (_ASSET_CAMERA_ID, _SETTINGS_CAMERA),
+        (_ASSET_CAMERA_HIGHRES_ID, _SETTINGS_CAMERA_HIGHRES),
         (_ASSET_SCINTILLATOR_ID, _SETTINGS_SCINTILLATOR),
         (_ASSET_FOCUS_ID, _SETTINGS_FOCUS),
+        (_ASSET_CAMERA_FOLD_ID, _SETTINGS_CAMERA_FOLD),
     ):
         await bind_update_asset_settings(deps)(
             UpdateAssetSettings(asset_id=asset_id, settings_patch=settings),
@@ -412,15 +435,19 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     assert optics is not None
     assert optics.content_hash is not None
 
-    # ----- Microscope assembly (sub-assembly link + camera/scintillator) -----
+    # ----- Microscope assembly (sub-assembly link + camera OneOrMore +
+    #       scintillator + the camera-select path: camera_selector PseudoAxis
+    #       picks which of the two cameras sees the beam by driving camera_fold) -----
     microscope_id = await bind_define_assembly(deps)(
         DefineAssembly(
             name="Microscope",
             presents_as_family_id=_CAP_IMAGER_ID,
             required_slots=frozenset(
                 {
-                    _slot("camera", _CAP_CAMERA_ID),
+                    _slot("camera", _CAP_CAMERA_ID, SlotCardinality.ONE_OR_MORE),
                     _slot("scintillator", _CAP_SCINTILLATOR_ID),
+                    _slot("camera_selector", _CAP_PSEUDO_AXIS_ID),
+                    _slot("camera_fold", _CAP_LINEAR_STAGE_ID),
                 }
             ),
             required_sub_assemblies=frozenset(
@@ -480,8 +507,27 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
                 correlation_id=_CORRELATION_ID,
             )
 
+    # ----- Camera-select path: the Camera_Selector PseudoAxis (Housing child,
+    #       mirrors objective_selector; drives the Camera_Fold stage) -----
+    camera_selector_id = await bind_register_asset(deps)(
+        RegisterAsset(name="Camera_Selector", tier=AssetTier.DEVICE, parent_id=housing_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_add_asset_family(deps)(
+        AddAssetFamily(asset_id=camera_selector_id, family_id=_CAP_PSEUDO_AXIS_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
     # ----- Re-parent the facility leaf Assets under the housing -----
-    for asset_id in (_ASSET_CAMERA_ID, _ASSET_SCINTILLATOR_ID, _ASSET_FOCUS_ID):
+    for asset_id in (
+        _ASSET_CAMERA_ID,
+        _ASSET_CAMERA_HIGHRES_ID,
+        _ASSET_SCINTILLATOR_ID,
+        _ASSET_FOCUS_ID,
+        _ASSET_CAMERA_FOLD_ID,
+    ):
         await bind_relocate_asset(deps)(
             RelocateAsset(
                 asset_id=asset_id,
@@ -501,7 +547,10 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     # all bind the single OneOrMore `objectives` slot, so that name repeats.
     bound: list[tuple[str, UUID]] = [
         ("camera", _ASSET_CAMERA_ID),
+        ("camera", _ASSET_CAMERA_HIGHRES_ID),
         ("scintillator", _ASSET_SCINTILLATOR_ID),
+        ("camera_selector", camera_selector_id),
+        ("camera_fold", _ASSET_CAMERA_FOLD_ID),
         ("turret", optics_assets["turret"]),
         ("objectives", optics_assets["objective_10x"]),
         ("objectives", optics_assets["objective_2x"]),
@@ -514,7 +563,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
             db_pool, now=_NOW, asset_id=asset_id, slot_code=f"microscope_{slot_name}_{i}"
         )
 
-    # ----- Register the Microscope Fixture (binds the 8-slot union) -----
+    # ----- Register the Microscope Fixture (8 slot names, 11 bindings) -----
     fixture_id = await bind_register_fixture(deps)(
         RegisterFixture(
             assembly_id=microscope_id,
@@ -624,6 +673,25 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         correlation_id=_CORRELATION_ID,
     )
 
+    # ----- LookupTable partition rule on camera_selector (index -> Camera_Fold mm) -----
+    # Mirrors objective_selector: index 0/1 decomposes to a Camera_Fold position.
+    # Same placeholder calibration revision (the index-to-mm table is a
+    # CalibrationQuantity the closed catalog does not carry yet).
+    await bind_update_asset_partition_rule(deps)(
+        UpdateAssetPartitionRule(
+            asset_id=camera_selector_id,
+            partition_rule=LookupTable(
+                calibration_revision_id=rev_ids[0],
+                invertible=False,
+                readback_aggregator_kind=ReadbackAggregatorKind.IDENTITY,
+                unit_in="index",
+                unit_out="mm",
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
     # ----- Minimal Recipe ladder (Plan binds asset_ids, no wires) -----
     await seed_capability_postgres(
         deps.event_store,
@@ -670,31 +738,34 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     assert [e.event_type for e in optics_events] == ["AssemblyDefined"]
     assert len(optics_events[0].payload["required_slots"]) == 4
 
-    # Microscope stream: AssemblyDefined with the sub-assembly link + 2 leaves.
+    # Microscope stream: AssemblyDefined with the sub-assembly link + 4 leaves
+    # (camera [OneOrMore], scintillator, camera_selector, camera_fold).
     micro_events, _ = await deps.event_store.load("Assembly", microscope_id)
     assert [e.event_type for e in micro_events] == ["AssemblyDefined"]
     micro_payload = micro_events[0].payload
-    assert len(micro_payload["required_slots"]) == 2
+    assert len(micro_payload["required_slots"]) == 4
     assert len(micro_payload["required_sub_assemblies"]) == 1
     assert micro_payload["required_sub_assemblies"][0]["sub_assembly_id"] == str(optics_id)
     assert micro_payload["required_sub_assemblies"][0]["content_hash"] == optics.content_hash
 
-    # Fixture stream: FixtureRegistered binding 8 Assets across 6 slot names
-    # (the `objectives` OneOrMore slot carries 3 of the 8 bindings).
+    # Fixture stream: FixtureRegistered binding 11 Assets across 8 slot names
+    # (the `objectives` OneOrMore slot carries 3 bindings, `camera` carries 2).
     fixture_events, _ = await deps.event_store.load("Fixture", fixture_id)
     assert [e.event_type for e in fixture_events] == ["FixtureRegistered"]
     bindings = fixture_events[0].payload["slot_asset_bindings"]
-    assert len(bindings) == 8
+    assert len(bindings) == 11
     bound_slot_names = {b["slot_name"] for b in bindings}
     assert bound_slot_names == {slot for slot, _ in bound}
     assert sum(1 for b in bindings if b["slot_name"] == "objectives") == 3
+    assert sum(1 for b in bindings if b["slot_name"] == "camera") == 2
 
     # Containment: every constituent's parent is the housing; the housing's
     # parent is the 2-BM Unit. Each bound Asset carries AssetAttachedToFixture.
     housing_events, _ = await deps.event_store.load("Asset", housing_id)
     assert housing_events[0].payload["parent_id"] == str(_2BM_UNIT_ID)
-    # the 5 optics-cluster Assets are children of the housing (containment).
-    for name, asset_id in optics_assets.items():
+    # the 5 optics-cluster Assets + the camera_selector are children of the
+    # housing (containment).
+    for name, asset_id in (*optics_assets.items(), ("camera_selector", camera_selector_id)):
         events, _ = await deps.event_store.load("Asset", asset_id)
         assert events[0].payload["parent_id"] == str(housing_id), f"{name}: expected housing parent"
     for slot_name, asset_id in bound:
@@ -702,14 +773,18 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         types = [e.event_type for e in events]
         assert "AssetAttachedToFixture" in types, f"{slot_name}: expected fixture attach"
         # the relocated facility Assets carry AssetRelocated under the housing
-        if slot_name in ("camera", "scintillator", "focus"):
+        if slot_name in ("camera", "scintillator", "focus", "camera_fold"):
             assert "AssetRelocated" in types, f"{slot_name}: expected re-parent"
 
-    # objective_selector carries the partition rule + no settings.
-    sel_events, _ = await deps.event_store.load("Asset", optics_assets["objective_selector"])
-    sel_types = [e.event_type for e in sel_events]
-    assert "AssetPartitionRuleUpdated" in sel_types
-    assert "AssetSettingsUpdated" not in sel_types
+    # objective_selector + camera_selector carry a partition rule + no settings.
+    for name, sel_id in (
+        ("objective_selector", optics_assets["objective_selector"]),
+        ("camera_selector", camera_selector_id),
+    ):
+        sel_events, _ = await deps.event_store.load("Asset", sel_id)
+        sel_types = [e.event_type for e in sel_events]
+        assert "AssetPartitionRuleUpdated" in sel_types, f"{name}: expected partition rule"
+        assert "AssetSettingsUpdated" not in sel_types, f"{name}: unexpected settings"
 
     # 4 Calibrations, one revision each.
     for cal_id in cal_ids:
