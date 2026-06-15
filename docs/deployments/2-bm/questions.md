@@ -132,6 +132,16 @@ CORA records where each dataset's bytes live and how they move between storage l
 | DATA-6 | `Blocks-go-live` | Is there one canonical "home" storage location that a beamtime's data always goes to first, that everything else derives from? | assumed a single default archive (Sojourner) | [Supplies](supplies.md) |
 | DATA-7 | `Nice-to-have` | Do raw and reconstructed data share the same location and lifecycle, or are they handled differently (different tiers, retention, or transfer paths)? | assumed same location, parallel `<experiment>` and `<experiment>_rec` folders | [Datasets](datasets.md) |
 
+## Proposals, users and scheduling
+
+CORA will later read proposal and user information from the APS scheduling system (the same `beam-api` / DMagic data the beamline already uses), so it can label each run with its proposal and notify the right people. None of these block today's work; they help us get the design right before we build it. Confirmer: the beamline scientist, except SCHED-3 (APS User Office / data-management contact).
+
+| ID | Priority | Question | CORA assumes | Resolves |
+| --- | --- | --- | --- | --- |
+| SCHED-1 | `Nice-to-have` | Once a user group is on-site for their beamtime, does APS ever move their scheduled time window (earlier or later) before they start, or do time changes only happen before they arrive? | time changes happen only before arrival | [2-BM index](index.md) |
+| SCHED-2 | `Nice-to-have` | Is the beamline staff contact (local contact) for a beamtime listed among that experiment's users in the scheduling system, or tracked separately as a beamline-side assignment? | listed as one of the beamtime's people | [2-BM index](index.md) |
+| SCHED-3 | `Nice-to-have` | Are APS badge numbers ever reused or reassigned to a different person over time, and should CORA treat a badge number as personal data it must be able to delete on request? Confirmer: APS User Office / data-management contact. | badge stable per person; treated as deletable personal data | [2-BM index](index.md) |
+
 ## Not on this page
 
 Hardware CORA has deliberately not described yet (the mirror, the wider sample-stage motor band, IOC-hosted devices, past high-speed cameras) lives in [assets.md Pending](assets.md#pending) and [Decommissioned](assets.md#decommissioned-provenance-only). Those raise their own questions here only once CORA starts describing them.
