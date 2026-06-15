@@ -5,9 +5,12 @@ The decider:
   - Raises AssetCannotUpdatePartitionRuleError if the Asset's
     lifecycle is Decommissioned (immutable once retired)
   - Trusts that the PartitionRule shape has already passed
-    Pydantic validation at the route boundary; shape-level
-    invariants (NaN/Inf guards, monotonicity checks, etc.) are
-    validated during VO construction and do not re-run here
+    Pydantic validation at the route boundary; finite-value
+    invariants (NaN/Inf guards) are validated during VO
+    construction. A LookupTable's invertible=True monotonicity is
+    NOT machine-checked (the calibration revision is not loaded
+    here); it is a caller assertion, see LookupTable in
+    `_partition_rule.py`
   - Self-reference and nesting checks are currently structural no-ops
     at the decider tier (current PartitionRule shapes do NOT carry
     constituent_asset_ids directly; they are inferred from Asset.ports

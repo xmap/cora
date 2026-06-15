@@ -275,10 +275,13 @@ class LookupTable:
     pixel scale at revision R reproduces against revision R even if a
     later revision changed the calibration.
 
-    `invertible=True` requires the underlying table to be monotonic
-    along its independent axis (validated at the slice decider when
-    the rule is set, by loading the calibration revision). If
-    monotonic-check at decide time fails, the slice rejects.
+    `invertible=True` asserts the underlying table is monotonic along
+    its independent axis. This is the caller's assertion: it is NOT
+    machine-checked at decide time (the slice does not load the
+    calibration revision), so a non-monotonic table set with
+    invertible=True is accepted as-is. A decide-time monotonic guard
+    is deferred (it would require loading cross-aggregate calibration
+    data in the handler).
 
     If `invertible=False`, `readback_aggregator_kind` must be supplied
     so the virtual-axis readback can be reconstructed from constituent
