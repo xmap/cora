@@ -7,6 +7,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyCannotInstantiateError,
@@ -51,7 +52,7 @@ def _assembly(
     return Assembly(
         id=assembly_id,
         name=AssemblyName("X"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=slots,
         status=status,
         content_hash="a" * 64,

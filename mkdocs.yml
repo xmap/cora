@@ -129,6 +129,7 @@ nav:
     - Affordances: reference/affordances.md
     - Patterns: reference/patterns.md
     - Conventions: reference/conventions.md
+    - Naming: reference/naming.md
     - Runtime: reference/runtime.md
     - Glossary: reference/glossary.md
     - Contributing: reference/contributing.md

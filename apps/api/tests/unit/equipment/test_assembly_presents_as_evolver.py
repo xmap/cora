@@ -21,11 +21,11 @@ from cora.equipment.aggregates.assembly import (
 _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
 
 
-def _defined(assembly_id: UUID, family_id: UUID) -> AssemblyDefined:
+def _defined(assembly_id: UUID) -> AssemblyDefined:
     return AssemblyDefined(
         assembly_id=assembly_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset(),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -39,7 +39,7 @@ def _defined(assembly_id: UUID, family_id: UUID) -> AssemblyDefined:
 @pytest.mark.unit
 def test_assembly_genesis_starts_with_empty_presents_as() -> None:
     aid = uuid4()
-    state = evolve(None, _defined(aid, uuid4()))
+    state = evolve(None, _defined(aid))
     assert state.presents_as == frozenset()
 
 
@@ -49,7 +49,7 @@ def test_presents_as_added_appends_role_id() -> None:
     rid = uuid4()
     state = fold(
         [
-            _defined(aid, uuid4()),
+            _defined(aid),
             AssemblyPresentsAsAdded(assembly_id=aid, role_id=rid, occurred_at=_NOW),
         ]
     )
@@ -63,7 +63,7 @@ def test_presents_as_removed_drops_role_id() -> None:
     rid = uuid4()
     state = fold(
         [
-            _defined(aid, uuid4()),
+            _defined(aid),
             AssemblyPresentsAsAdded(assembly_id=aid, role_id=rid, occurred_at=_NOW),
             AssemblyPresentsAsRemoved(assembly_id=aid, role_id=rid, occurred_at=_NOW),
         ]
@@ -73,19 +73,22 @@ def test_presents_as_removed_drops_role_id() -> None:
 
 
 @pytest.mark.unit
-def test_presents_as_preserved_across_version() -> None:
-    """A new version replaces structural fields but presents_as is preserved."""
+def test_presents_as_replaced_on_version() -> None:
+    """A new version REPLACES presents_as wholesale with the version
+    event's set: a role added before the version that is absent from the
+    new set is dropped (symmetric with the other replace-on-version
+    structural fields)."""
     aid = uuid4()
-    rid = uuid4()
-    fam = uuid4()
+    rid_old = uuid4()
+    rid_new = uuid4()
     state = fold(
         [
-            _defined(aid, fam),
-            AssemblyPresentsAsAdded(assembly_id=aid, role_id=rid, occurred_at=_NOW),
+            _defined(aid),
+            AssemblyPresentsAsAdded(assembly_id=aid, role_id=rid_old, occurred_at=_NOW),
             AssemblyVersioned(
                 assembly_id=aid,
                 name=AssemblyName("Microscope"),
-                presents_as_family_id=fam,
+                presents_as=frozenset({RoleId(rid_new)}),
                 required_slots=frozenset(),
                 required_wires=frozenset(),
                 parameter_overrides_schema=None,
@@ -99,7 +102,8 @@ def test_presents_as_preserved_across_version() -> None:
     )
     assert state is not None
     assert state.status is AssemblyStatus.VERSIONED
-    assert RoleId(rid) in state.presents_as
+    assert state.presents_as == frozenset({RoleId(rid_new)})
+    assert RoleId(rid_old) not in state.presents_as
 
 
 @pytest.mark.unit
@@ -108,7 +112,7 @@ def test_presents_as_preserved_across_deprecation() -> None:
     rid = uuid4()
     state = fold(
         [
-            _defined(aid, uuid4()),
+            _defined(aid),
             AssemblyPresentsAsAdded(assembly_id=aid, role_id=rid, occurred_at=_NOW),
             AssemblyDeprecated(assembly_id=aid, reason="retired", occurred_at=_NOW),
         ]
@@ -125,7 +129,7 @@ def test_multiple_roles_co_accumulate() -> None:
     rid_b = uuid4()
     state = fold(
         [
-            _defined(aid, uuid4()),
+            _defined(aid),
             AssemblyPresentsAsAdded(assembly_id=aid, role_id=rid_a, occurred_at=_NOW),
             AssemblyPresentsAsAdded(assembly_id=aid, role_id=rid_b, occurred_at=_NOW),
         ]
@@ -135,16 +139,19 @@ def test_multiple_roles_co_accumulate() -> None:
 
 
 @pytest.mark.unit
-def test_presents_as_not_in_content_subset() -> None:
-    """3C: presents_as is orthogonal-axis additive; NOT part of content_hash."""
+def test_presents_as_in_content_subset() -> None:
+    """presents_as is folded into the content_hash subset: it replaced the
+    legacy presents_as_family_id scalar in the structural fingerprint, so
+    the live set (including incremental add/remove amendments) appears in
+    content_subset."""
     aid = uuid4()
     rid = uuid4()
     state = fold(
         [
-            _defined(aid, uuid4()),
+            _defined(aid),
             AssemblyPresentsAsAdded(assembly_id=aid, role_id=rid, occurred_at=_NOW),
         ]
     )
     assert state is not None
     subset = state.content_subset()
-    assert "presents_as" not in subset
+    assert subset["presents_as"] == [str(rid)]

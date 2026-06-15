@@ -26,7 +26,7 @@ Recipe ladder mid-test); pre-baked Methods would erase that surface.
 
 ## Why hard-code the four canonical Devices
 
-The Aerotech rotary + Sample_top_X linear stage + Oryx 5MP camera +
+The Aerotech rotary + SampleTop_X linear stage + Oryx 5MP camera +
 LuAG scintillator are the standard 2-BM micro-CT imaging chain. Every
 tomography-flavour scenario uses exactly these four, with the same
 Device names and the same Family kinds. Hard-coding the names +
@@ -118,7 +118,7 @@ from tests.integration.scenarios._facility_fixture import (
 # fixture-owned because they describe the physical apparatus, not the
 # scenario; UUIDs remain scenario-supplied per the audit-trail convention.
 ROTARY_NAME = "Rotary"
-LINEAR_X_NAME = "Sample_top_X"
+LINEAR_X_NAME = "SampleTop_X"
 CAMERA_NAME = "Camera"
 SCINTILLATOR_NAME = "Scintillator"
 

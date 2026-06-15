@@ -709,3 +709,78 @@ body::before {
   color: #9CA3AF;
   background-color: rgba(156, 163, 175, 0.12);
 }
+
+/* File-explorer tree (.dtree): a vertical, indented hierarchy with drawn
+   connector lines, as a stylish replacement for a monospace ASCII tree.
+   Lines use Material color vars so dark (slate) mode inverts automatically. */
+
+.dtree {
+  font-size: 0.78rem;
+  line-height: 1.7;
+  margin: 0.6rem 0 1rem;
+}
+
+.dtree ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.dtree li {
+  position: relative;
+  padding-left: 1.1rem;
+}
+
+/* vertical rail: stacked across siblings it forms one continuous line */
+.dtree li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--md-default-fg-color--lighter);
+}
+
+/* horizontal elbow into the row */
+.dtree li::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.85em;
+  width: 0.8rem;
+  border-top: 1px solid var(--md-default-fg-color--lighter);
+}
+
+/* last child: stop the rail at the elbow so it reads as an L corner */
+.dtree li:last-child::before {
+  bottom: auto;
+  height: 0.85em;
+}
+
+/* the single root carries no incoming connector */
+.dtree > ul {
+  padding-left: 0;
+}
+
+.dtree > ul > li {
+  padding-left: 0;
+}
+
+.dtree > ul > li::before,
+.dtree > ul > li::after {
+  display: none;
+}
+
+.dtree .node {
+  color: var(--md-typeset-color);
+  font-weight: 600;
+}
+
+.dtree .meta {
+  color: var(--md-default-fg-color--light);
+}
+
+.dtree .rel {
+  color: var(--md-default-fg-color--light);
+  font-style: italic;
+}

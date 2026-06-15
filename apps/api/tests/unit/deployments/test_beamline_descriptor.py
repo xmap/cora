@@ -126,10 +126,10 @@ def test_renders_one_h2_per_group_and_no_em_dash() -> None:
     assert "## Controls" in markdown
     assert "## Resources" in markdown
     # a known CORA-modeled device and a promoted marker tag both render
-    assert "`Sample_top_X`" in markdown
+    assert "`SampleTop_X`" in markdown
     assert "`new`" in markdown
     # the P6-50 nested constituents render as their own sub-table
-    assert "**P6-50_safety_stack constituents**" in markdown
+    assert "**SafetyStack constituents**" in markdown
     # a family present in the Catalog links up; a pending one renders plain (no fake link)
     assert "[`RotaryStage`](../../catalog/families.md)" in markdown
     assert "`Mask`" in markdown
@@ -146,10 +146,10 @@ def test_markers_promoted_from_comments_to_fields() -> None:
     descriptor = bd.load(_DESCRIPTOR)
     devices = {d.name: d for _name, group in descriptor.groups for d in group.devices}
     assert devices["source"].new is True
-    assert bool(devices["FE_exit_mask"].confirm) is True
+    assert bool(devices["Mask"].confirm) is True
     # a solid CORA-modeled device carries neither marker
-    assert devices["Sample_top_X"].new is False
-    assert devices["Sample_top_X"].confirm is False
+    assert devices["SampleTop_X"].new is False
+    assert devices["SampleTop_X"].confirm is False
 
 
 def test_drawing_system_mirror_matches_code() -> None:

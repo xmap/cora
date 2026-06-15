@@ -644,8 +644,8 @@ class Method:
     # binding consults this set at bind time: each id in
     # Method.needed_assembly_ids must be materialized as a Fixture among
     # the Plan's Assets, where Fixture.assembly_id matches. Affordance-cover (Capability) check is
-    # unchanged because Assembly.presents_as_family_id provides the
-    # Family-typed unit the Capability binds against. Defaults to empty
+    # unchanged because Assembly.presents_as provides the Role contracts
+    # the Capability binds against. Defaults to empty
     # frozenset (additive-state pattern; legacy MethodDefined-only
     # streams fold cleanly via payload.get default). See
     # [[project-assembly-aggregate-design]] Locks section for the cross-BC

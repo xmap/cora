@@ -7,7 +7,7 @@ bc_touches: Equipment, Operation, Recipe
 
 Scenario test for the `focus` step of the rotation-axis alignment
 chain. Adjusts the sample-to-scintillator distance via the
-`Sample_top_Z` linear stage until the image's depth-of-focus peaks
+`SampleTop_Z` linear stage until the image's depth-of-focus peaks
 for the mounted sample. Comes second in the five-routine chain
 (`resolution -> focus -> center -> roll -> pitch`); resolution
 must converge first so the microscope optics are at peak sharpness
@@ -20,7 +20,7 @@ taxonomy this scenario fits into.
 
 To ground the `focus_alignment` Procedure inventory row on
 `docs/deployments/2-bm/procedures.md`, and to register a new Asset
-(`Sample_top_Z`) that no prior scenario has touched. Per
+(`SampleTop_Z`) that no prior scenario has touched. Per
 [[project_pilot_docs_design]] no doc page may name an aggregate until
 a scenario test registers it; this file unlocks the Z-axis sample
 stage in the 2-BM Asset inventory.
@@ -33,7 +33,7 @@ Both routines optimize image sharpness, but on different motors:
     (`Focus`, lens-to-scintillator distance, small
     range, sub-micron resolution).
   - `focus_alignment` adjusts the **sample-to-scintillator distance**
-    (`Sample_top_Z`, cm-range linear stage, ~10um resolution).
+    (`SampleTop_Z`, cm-range linear stage, ~10um resolution).
     Affects magnification + depth-of-focus together.
 
 In the operator chain order, resolution runs first to fix the
@@ -47,7 +47,7 @@ to resolution alignment but on a different motor with a wider
 step size:
 
   1. Mount the sample (or focus phantom) on the kinematic tip.
-  2. Set `Sample_top_Z` to nominal position, acquire, measure
+  2. Set `SampleTop_Z` to nominal position, acquire, measure
      sharpness.
   3. Step Z by +/-0.5mm, acquire, measure. Bracket the peak.
   4. Bisect within the bracket, acquire, measure.
@@ -59,7 +59,7 @@ the sample-Z range is wider and the sharpness curve broader.
 
 ## Asset stack (Z motor + detector chain)
 
-  - Sample_top_Z linear stage (the sample-to-scintillator distance
+  - SampleTop_Z linear stage (the sample-to-scintillator distance
     motor; cm range, ~10um resolution)
   - FLIR Oryx 5MP camera (the alignment-frame detector)
   - LuAG scintillator (visible-light conversion)
@@ -81,7 +81,7 @@ upstream `resolution` routine respectively.
     Check `direction` payload keys; that convention is retired as the
     source of iteration truth.)
   - **Magnification couples with focus on this axis.** Moving
-    Sample_top_Z changes both depth-of-focus AND projection
+    SampleTop_Z changes both depth-of-focus AND projection
     magnification. The sharpness Check captures the focus quality,
     but the corresponding magnification shift is implicit in the
     sample-Z value and must be accounted for in downstream
@@ -164,8 +164,8 @@ _CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 _CAP_MOTION_CONTROLLER_OMS_2BMB_ID = family_stream_id(FamilyName("MotionController"))
 
 # Devices (sample-Z motor + image chain + the OMS-VME58 drive electronics
-# behind Sample_top_Z; the OMS-VME58 in the 2-BM b-station IOC crate
-# `ioc2bmb` drives Sample_top_Z on channel `2bmb:m17`; this is the fourth
+# behind SampleTop_Z; the OMS-VME58 in the 2-BM b-station IOC crate
+# `ioc2bmb` drives SampleTop_Z on channel `2bmb:m17`; this is the fourth
 # MotionController Asset shipped at 2-BM per
 # [[project-controller-as-asset-stage1-design]]. Image chain Assets
 # (camera + scintillator) carry no controller_id; their drivers are
@@ -189,7 +189,7 @@ _STEPS_OPEN_EVENT_ID = UUID("01900000-0000-7000-8000-000000356f12")
 
 _DEVICES = (
     # Controller comes first: register_asset for the OMS-VME58 must land
-    # before Sample_top_Z's register_asset (which carries
+    # before SampleTop_Z's register_asset (which carries
     # `controller_id=_ASSET_OMS_VME58_2BMB_DRIVE_ID`). Decider does not
     # validate the reference exists (eventual-consistency stance from
     # the rotary anchor), but dependency-order registration matches
@@ -201,7 +201,7 @@ _DEVICES = (
         _CAP_MOTION_CONTROLLER_OMS_2BMB_ID,
     ),
     DeviceSpec(
-        "Sample_top_Z",
+        "SampleTop_Z",
         _ASSET_SAMPLE_TOP_Z_ID,
         "LinearStage",
         _CAP_LINEAR_STAGE_ID,
@@ -270,9 +270,9 @@ def _setpoint(
     sampled_at: datetime,
     note: str | None = None,
 ) -> ActivityInput:
-    """Build a Sample_top_Z Setpoint step input."""
+    """Build a SampleTop_Z Setpoint step input."""
     payload: dict[str, Any] = {
-        "channel": "Sample_top_Z",
+        "channel": "SampleTop_Z",
         "target_value": target_mm,
         "units": "mm",
         "role": role,
@@ -350,7 +350,7 @@ def _postgres_step_store(db_pool: asyncpg.Pool):
 async def test_focus_alignment_plays_out_end_to_end(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """Seed facility + 3 Assets (Sample_top_Z + image chain), run an
+    """Seed facility + 3 Assets (SampleTop_Z + image chain), run an
     iterative depth-of-focus search on a focus phantom, assert the
     auditable record carries 4 iterations bracketing the peak plus
     one final lock setpoint at the converged Z position."""
@@ -435,7 +435,7 @@ async def test_focus_alignment_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Procedure step entries: 4-iteration peak-bracket search on Sample_top_Z -----
+    # ----- Procedure step entries: 4-iteration peak-bracket search on SampleTop_Z -----
     #
     # Wider step than resolution_alignment (0.5mm vs 50um) because the
     # sample-Z motor range is centimeters and the sharpness curve is
@@ -577,7 +577,7 @@ async def test_focus_alignment_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # Finalize (post-convergence, outside the iteration loop): lock Sample_top_Z
+    # Finalize (post-convergence, outside the iteration loop): lock SampleTop_Z
     # at the peak position for the downstream science scan.
     count_final = await bind_append_step(deps, step_store=step_store)(
         AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=finalize),
@@ -638,9 +638,9 @@ async def test_focus_alignment_plays_out_end_to_end(
     # back-reference of its own. Omit-when-None wire shape.
     assert "controller_id" not in controller_events[0].payload
 
-    # ----- Assert: Sample_top_Z's AssetRegistered payload carries controller_id -----
+    # ----- Assert: SampleTop_Z's AssetRegistered payload carries controller_id -----
 
-    # Sample_top_Z is driven by the OMS-VME58 in `ioc2bmb` on channel
+    # SampleTop_Z is driven by the OMS-VME58 in `ioc2bmb` on channel
     # `2bmb:m17`; the controller_id back-reference is the addressability
     # handle that lets controller-scoped Cautions (e.g. a VME-bus glitch
     # on the OMS box) surface against Plans that target the stage only,

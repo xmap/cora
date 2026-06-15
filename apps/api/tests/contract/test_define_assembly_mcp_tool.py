@@ -54,7 +54,6 @@ def test_mcp_lists_define_assembly_tool() -> None:
 def test_mcp_define_assembly_tool_succeeds_for_minimal_args() -> None:
     with TestClient(create_app()) as client:
         headers = open_session(client)
-        family_id = _define_family_via_tool(client, headers)
         response = client.post(
             "/mcp",
             json={
@@ -65,7 +64,6 @@ def test_mcp_define_assembly_tool_succeeds_for_minimal_args() -> None:
                     "name": "define_assembly",
                     "arguments": {
                         "name": "Detector",
-                        "presents_as_family_id": str(family_id),
                         "required_slots": [],
                         "required_wires": [],
                     },
@@ -80,8 +78,8 @@ def test_mcp_define_assembly_tool_succeeds_for_minimal_args() -> None:
 
 
 @pytest.mark.contract
-def test_mcp_define_assembly_tool_returns_iserror_for_unknown_family() -> None:
-    """FamilyNotFoundForAssemblyError propagates -> FastMCP wraps as isError."""
+def test_mcp_define_assembly_tool_returns_iserror_for_unknown_role() -> None:
+    """RoleNotFoundError propagates -> FastMCP wraps as isError."""
     with TestClient(create_app()) as client:
         headers = open_session(client)
         response = client.post(
@@ -94,7 +92,7 @@ def test_mcp_define_assembly_tool_returns_iserror_for_unknown_family() -> None:
                     "name": "define_assembly",
                     "arguments": {
                         "name": "Detector",
-                        "presents_as_family_id": str(uuid4()),
+                        "presents_as": [str(uuid4())],
                         "required_slots": [],
                         "required_wires": [],
                     },
@@ -111,7 +109,6 @@ def test_mcp_define_assembly_tool_returns_iserror_for_unknown_family() -> None:
 def test_mcp_define_assembly_tool_succeeds_with_slot_and_wire() -> None:
     with TestClient(create_app()) as client:
         headers = open_session(client)
-        presents_id = _define_family_via_tool(client, headers, "Detector")
         camera_family = _define_family_via_tool(client, headers, "Camera")
         trigger_family = _define_family_via_tool(client, headers, "TriggerSource")
         response = client.post(
@@ -124,7 +121,6 @@ def test_mcp_define_assembly_tool_succeeds_with_slot_and_wire() -> None:
                     "name": "define_assembly",
                     "arguments": {
                         "name": "Microscope",
-                        "presents_as_family_id": str(presents_id),
                         "required_slots": [
                             {
                                 "slot_name": "camera",

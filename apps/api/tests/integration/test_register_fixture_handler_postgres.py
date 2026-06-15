@@ -89,7 +89,7 @@ async def test_register_fixture_appends_genesis_event_to_postgres(
     assembly_id = await define_assembly.bind(deps)(
         DefineAssembly(
             name="Microscope",
-            presents_as_family_id=family_id,
+            presents_as=frozenset(),
             required_slots=frozenset(
                 {
                     TemplateSlot(
@@ -182,7 +182,7 @@ async def test_register_fixture_rejects_decommissioned_asset_with_not_attachable
     assembly_id = await define_assembly.bind(deps)(
         DefineAssembly(
             name="RetiredRig",
-            presents_as_family_id=family_id,
+            presents_as=frozenset(),
             required_slots=frozenset(
                 {
                     TemplateSlot(
@@ -245,7 +245,7 @@ async def test_register_fixture_rejects_orphan_asset_with_not_installed_error(
     assembly_id = await define_assembly.bind(deps)(
         DefineAssembly(
             name="OrphanRig",
-            presents_as_family_id=family_id,
+            presents_as=frozenset(),
             required_slots=frozenset(
                 {
                     TemplateSlot(

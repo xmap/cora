@@ -62,7 +62,7 @@ keeper), different event shape (RunAdjusted vs no adjustment).
 
 ## Asset stack (full imaging chain)
 
-Same as O-3: rotary + linear (Sample_top_X) + camera + scintillator.
+Same as O-3: rotary + linear (SampleTop_X) + camera + scintillator.
 
 ## What this scenario surfaces (gap-finding intent)
 

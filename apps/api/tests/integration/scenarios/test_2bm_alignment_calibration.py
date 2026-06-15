@@ -60,7 +60,7 @@ Hexapod_Pitch motors.
 Subset of the alignment chain's Asset stack: Aerotech rotary (for
 the rotation measurement at 0° / 180°), Hexapod_Roll +
 Hexapod_Pitch (the motors being calibrated), Oryx camera +
-LuAG scintillator (the centroid-detection chain). Sample_top_Z
+LuAG scintillator (the centroid-detection chain). SampleTop_Z
 is NOT used (calibration runs at a fixed Y_ref height; depth
 tuning is the `focus` step's concern).
 

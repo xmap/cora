@@ -30,7 +30,7 @@ in the 2-BM Asset inventory.
 Both routines use the same 0°/180° measurement scheme on a fiducial
 sphere, but adjust different motors against different image axes:
 
-  - `center_alignment` adjusts `Sample_top_X` to make the sphere
+  - `center_alignment` adjusts `SampleTop_X` to make the sphere
     centroid X coincide at 0° and 180° (the rotation axis runs
     through the sample's lateral midline).
   - `roll_alignment` adjusts `Hexapod_Roll` to make the sphere

@@ -36,7 +36,7 @@ Every `RoleId` is `uuid5(_ROLE_NAMESPACE, name.lower())` with `_ROLE_NAMESPACE =
 
 ## Families: settings over subtypes
 
-Some apparent new families are settings axes, not family axes. A high-framerate camera lands as a `Camera` Asset with extended settings (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not a `HighSpeedCamera` family, mirroring the `Mirror` precedent (multilayer is a settings field, not a subtype). `TimingController` is the defined Family for trigger / gate / sync-pulse hardware (the second `<Domain>Controller` family after `MotionController`, anchored at 2-BM by the softGlueZynq FPGA); `OpticalRelay` is the future composing-family name for scintillator-objective-camera relays once the Microscope composition splits its composing family from its `Imager` presenter.
+Some apparent new families are settings axes, not family axes. A high-framerate camera lands as a `Camera` Asset with extended settings (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not a `HighSpeedCamera` family, mirroring the `Mirror` precedent (multilayer is a settings field, not a subtype). `TimingController` is the defined Family for trigger / gate / sync-pulse hardware (the second `<Domain>Controller` family after `MotionController`, anchored at 2-BM by the softGlueZynq FPGA); `OpticalRelay` is the future composing-family name for scintillator-objective-camera relays once the Microscope composition splits out its composing family; the Microscope Assembly itself now presents the `Detector` Role via `presents_as` (the former `Imager` presenter Family has been retired).
 
 ## Source of truth
 

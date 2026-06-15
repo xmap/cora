@@ -6,7 +6,7 @@ bc_primary: Operation
 bc_touches: Caution, Equipment, Operation, Recipe
 
 Scenario test for the shakedown rhythm: the 2 motorized Devices at
-2-BM (Aerotech ABRS rotary + Sample_top_X linear) are activated and
+2-BM (Aerotech ABRS rotary + SampleTop_X linear) are activated and
 homed without beam. One motor (Aerotech) misses its index pulse on
 the first attempt, gets re-homed successfully, and earns a Caution
 for the operator playbook.
@@ -143,9 +143,9 @@ _CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
 # (commit 4a0c7ac62), driving Rotary. SampleStageDrive
 # is the fourth MotionController Asset shipped: the Oregon Micro Systems
 # VME58 motor controller in the 2-BM b-station IOC crate (`ioc2bmb`),
-# which drives the Kohzu m1-m91 motor band including Sample_top_X
-# (2bmb:m18) and Sample_top_Z (2bmb:m17). Only Sample_top_X is in this
-# scenario's inventory; Sample_top_Z's back-reference is set in the
+# which drives the Kohzu m1-m91 motor band including SampleTop_X
+# (2bmb:m18) and SampleTop_Z (2bmb:m17). Only SampleTop_X is in this
+# scenario's inventory; SampleTop_Z's back-reference is set in the
 # focus-alignment scenario.
 # FrontEndDrive is the fifth MotionController Asset shipped:
 # the sibling OMS-VME58 board in the 2-BM a-station IOC crate
@@ -217,7 +217,7 @@ _DEVICES = (
         controller_id=_ASSET_AEROTECH_ENSEMBLE_ID,
     ),
     DeviceSpec(
-        "Sample_top_X",
+        "SampleTop_X",
         _ASSET_SAMPLE_TOP_X_ID,
         "LinearStage",
         _CAP_LINEAR_STAGE_ID,
@@ -414,7 +414,7 @@ async def test_motor_homing_plays_out_end_to_end(
 
     await bind_register_procedure(deps)(
         RegisterProcedure(
-            name="2-BM cold-start motor homing (Aerotech + Sample_top_X)",
+            name="2-BM cold-start motor homing (Aerotech + SampleTop_X)",
             kind="motor_homing",
             target_asset_ids=frozenset({_ASSET_AEROTECH_ABRS_ID, _ASSET_SAMPLE_TOP_X_ID}),
         ),
@@ -517,14 +517,14 @@ async def test_motor_homing_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Procedure step entries: Sample_top_X (succeeds first try) -----
+    # ----- Procedure step entries: SampleTop_X (succeeds first try) -----
 
     await bind_append_step(deps, step_store=_postgres_step_store(db_pool))(
         AppendProcedureActivities(
             procedure_id=_PROCEDURE_ID,
             entries=(
                 _setpoint(
-                    channel="Sample_top_X",
+                    channel="SampleTop_X",
                     target_value="HOME",
                     units="cmd",
                     role="home_command",
@@ -532,11 +532,11 @@ async def test_motor_homing_plays_out_end_to_end(
                 ),
                 _action(
                     action_name="home_motor",
-                    motor="Sample_top_X",
+                    motor="SampleTop_X",
                     sampled_at=t,
                 ),
                 _check(
-                    channel="Sample_top_X.home_limit_switch",
+                    channel="SampleTop_X.home_limit_switch",
                     passed=True,
                     source="limit_switch",
                     expected="asserted",
@@ -649,7 +649,7 @@ async def test_motor_homing_plays_out_end_to_end(
     rotary_registered_payload = aerotech_events[0].payload
     assert UUID(rotary_registered_payload["controller_id"]) == _ASSET_AEROTECH_ENSEMBLE_ID
 
-    # ----- Assert: Sample_top_X carries the simpler happy-path arc -----
+    # ----- Assert: SampleTop_X carries the simpler happy-path arc -----
 
     sample_events, _ = await deps.event_store.load("Asset", _ASSET_SAMPLE_TOP_X_ID)
     sample_event_types = [e.event_type for e in sample_events]
@@ -658,7 +658,7 @@ async def test_motor_homing_plays_out_end_to_end(
         "AssetFamilyAdded",
         "AssetActivated",
     ]
-    # Sample_top_X is driven by the OMS-VME58 in the b-station IOC crate
+    # SampleTop_X is driven by the OMS-VME58 in the b-station IOC crate
     # (`ioc2bmb`, channel `2bmb:m18`); the controller_id back-reference
     # is the addressability handle that lets controller-scoped Cautions
     # (e.g. a VME-bus glitch on the OMS box) surface against Plans that
@@ -697,7 +697,7 @@ async def test_motor_homing_plays_out_end_to_end(
         "check",  # Aerotech retry (succeeded)
         "setpoint",
         "action",
-        "check",  # Sample_top_X (succeeded first try)
+        "check",  # SampleTop_X (succeeded first try)
     ]
 
     # ----- Assert: Caution registered against Aerotech -----

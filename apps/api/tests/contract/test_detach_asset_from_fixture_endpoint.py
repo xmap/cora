@@ -40,7 +40,6 @@ def _define_assembly_with_one_camera_slot(
 ) -> UUID:
     body = {
         "name": name,
-        "presents_as_family_id": str(family_id),
         "required_slots": [
             {
                 "slot_name": "camera",

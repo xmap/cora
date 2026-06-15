@@ -6,12 +6,10 @@ DefineAssembly carries, plus the target assembly_id), NOT a diff.
 The decider replaces structure wholesale; the evolver folds the
 new snapshot into state.
 
-`presents_as_family_id` is mutable across versions because a
-re-architected Assembly may stand in for a different Family
-(e.g., DCM-revisited may move from `Monochromator` to a wider
-`BeamConditioning` Family). The handler re-checks Family existence
-for every referenced FamilyId (presents_as_family_id + every slot's
-required_family_ids).
+`presents_as` is replaced on version: a re-architected Assembly may
+advertise a different set of Role contracts. The handler re-checks
+that every RoleId in `presents_as` resolves to a defined Role, and
+that every slot's required_family_ids resolves to a defined Family.
 
 Multi-source FSM transition: Defined -> Versioned AND
 Versioned -> Versioned are both valid; only Deprecated rejects.
@@ -36,7 +34,7 @@ class VersionAssembly:
 
     assembly_id: UUID
     name: str
-    presents_as_family_id: UUID
+    presents_as: frozenset[UUID] = field(default_factory=frozenset[UUID])
     required_slots: frozenset[TemplateSlot] = field(default_factory=frozenset[TemplateSlot])
     required_wires: frozenset[TemplateWire] = field(default_factory=frozenset[TemplateWire])
     required_sub_assemblies: frozenset[SubAssemblyLink] = field(

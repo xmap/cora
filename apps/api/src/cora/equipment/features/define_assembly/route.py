@@ -43,11 +43,11 @@ class DefineAssemblyRequest(BaseModel):
             "fingerprint."
         ),
     )
-    presents_as_family_id: UUID = Field(
-        ...,
+    presents_as: list[UUID] = Field(
+        default_factory=list[UUID],
         description=(
-            "FamilyId the instantiated Assembly stands in for at the "
-            "Method.needed_families satisfaction boundary."
+            "Global Role contract ids this Assembly advertises; what a "
+            "Method role binding targets at the satisfaction boundary."
         ),
     )
     required_slots: list[TemplateSlotBody] = Field(
@@ -141,9 +141,9 @@ router = APIRouter(tags=["equipment"])
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
             "description": (
-                "A referenced FamilyId (presents_as_family_id or any "
-                "slot's required_family_ids member) does not resolve to "
-                "a defined Family."
+                "A referenced RoleId in presents_as does not resolve to "
+                "a defined Role, or a slot's required_family_ids member "
+                "does not resolve to a defined Family."
             ),
         },
         status.HTTP_409_CONFLICT: {
@@ -184,7 +184,7 @@ async def post_assemblies(
     assembly_id = await handler(
         DefineAssembly(
             name=body.name,
-            presents_as_family_id=body.presents_as_family_id,
+            presents_as=frozenset(body.presents_as),
             required_slots=frozenset(slot.to_domain() for slot in body.required_slots),
             required_wires=frozenset(wire.to_domain() for wire in body.required_wires),
             required_sub_assemblies=frozenset(

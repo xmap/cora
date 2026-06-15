@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyName,
@@ -27,6 +28,7 @@ from cora.equipment.aggregates.assembly._content_hash import (
     compute_assembly_content_hash_from_state,
 )
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
+from cora.equipment.aggregates.role import SEED_ROLE_DETECTOR_ID
 
 
 def _slot(name: str, family_id: UUID) -> TemplateSlot:
@@ -61,14 +63,14 @@ def test_content_hash_differs_when_sub_assembly_added() -> None:
     fam = uuid4()
     base = compute_assembly_content_hash(
         name="Microscope",
-        presents_as_family_id=fam,
+        presents_as=frozenset({RoleId(fam)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     with_link = compute_assembly_content_hash(
         name="Microscope",
-        presents_as_family_id=fam,
+        presents_as=frozenset({RoleId(fam)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -85,7 +87,7 @@ def test_content_hash_chains_when_pinned_child_hash_differs() -> None:
     child = uuid4()
     h_a = compute_assembly_content_hash(
         name="Microscope",
-        presents_as_family_id=fam,
+        presents_as=frozenset({RoleId(fam)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -93,7 +95,7 @@ def test_content_hash_chains_when_pinned_child_hash_differs() -> None:
     )
     h_b = compute_assembly_content_hash(
         name="Microscope",
-        presents_as_family_id=fam,
+        presents_as=frozenset({RoleId(fam)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -111,7 +113,7 @@ def test_content_hash_deterministic_across_sub_assembly_set_order() -> None:
     link2 = _link("readout", uuid4(), "sha256:" + "b" * 8)
     h1 = compute_assembly_content_hash(
         name="Microscope",
-        presents_as_family_id=fam,
+        presents_as=frozenset({RoleId(fam)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -119,7 +121,7 @@ def test_content_hash_deterministic_across_sub_assembly_set_order() -> None:
     )
     h2 = compute_assembly_content_hash(
         name="Microscope",
-        presents_as_family_id=fam,
+        presents_as=frozenset({RoleId(fam)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -135,7 +137,7 @@ def test_content_hash_round_trip_with_sub_assemblies() -> None:
     link = _link("optics", uuid4(), "sha256:" + "a" * 8)
     args_hash = compute_assembly_content_hash(
         name="Microscope",
-        presents_as_family_id=fam,
+        presents_as=frozenset({RoleId(fam)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -144,7 +146,7 @@ def test_content_hash_round_trip_with_sub_assemblies() -> None:
     state = Assembly(
         id=uuid4(),
         name=AssemblyName("Microscope"),
-        presents_as_family_id=fam,
+        presents_as=frozenset({RoleId(fam)}),
         required_sub_assemblies=frozenset({link}),
     )
     assert compute_assembly_content_hash_from_state(state) == args_hash
@@ -154,7 +156,7 @@ def test_content_hash_round_trip_with_sub_assemblies() -> None:
 def test_content_hash_is_sha256_hex_64_chars() -> None:
     h = compute_assembly_content_hash(
         name="Empty",
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -172,14 +174,14 @@ def test_content_hash_is_deterministic_for_same_input() -> None:
     wires = frozenset({_wire("trigger_source", "camera")})
     h1 = compute_assembly_content_hash(
         name=name,
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=slots,
         required_wires=wires,
         parameter_overrides_schema={"type": "object"},
     )
     h2 = compute_assembly_content_hash(
         name=name,
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=slots,
         required_wires=wires,
         parameter_overrides_schema={"type": "object"},
@@ -192,14 +194,14 @@ def test_content_hash_differs_when_name_differs() -> None:
     family_id = uuid4()
     h1 = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     h2 = compute_assembly_content_hash(
         name="DetectorV2",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -208,22 +210,30 @@ def test_content_hash_differs_when_name_differs() -> None:
 
 
 @pytest.mark.unit
-def test_content_hash_differs_when_presents_as_family_id_differs() -> None:
+def test_content_hash_differs_when_presents_as_differs() -> None:
     h1 = compute_assembly_content_hash(
         name="X",
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     h2 = compute_assembly_content_hash(
         name="X",
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
+        required_slots=frozenset(),
+        required_wires=frozenset(),
+        parameter_overrides_schema=None,
+    )
+    h_empty = compute_assembly_content_hash(
+        name="X",
+        presents_as=frozenset(),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     assert h1 != h2
+    assert h1 != h_empty
 
 
 @pytest.mark.unit
@@ -232,14 +242,14 @@ def test_content_hash_differs_when_slot_added() -> None:
     slot_family = uuid4()
     h_empty = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     h_with_slot = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({_slot("camera", slot_family)}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -269,14 +279,14 @@ def test_content_hash_is_insensitive_to_slot_iteration_order() -> None:
     )
     h1 = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=slots_one,
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     h2 = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=slots_two,
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -291,14 +301,14 @@ def test_content_hash_differs_when_wire_added() -> None:
     slots = frozenset({_slot("camera", sf_a), _slot("trigger_source", sf_b)})
     h_no_wires = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=slots,
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     h_with_wire = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=slots,
         required_wires=frozenset({_wire("trigger_source", "camera")}),
         parameter_overrides_schema=None,
@@ -311,21 +321,21 @@ def test_content_hash_differs_when_parameter_overrides_schema_differs() -> None:
     family_id = uuid4()
     h_none = compute_assembly_content_hash(
         name="X",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     h_simple = compute_assembly_content_hash(
         name="X",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema={"type": "object"},
     )
     h_richer = compute_assembly_content_hash(
         name="X",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema={"type": "object", "additionalProperties": False},
@@ -351,14 +361,14 @@ def test_content_hash_differs_when_slot_cardinality_differs() -> None:
     )
     h_a = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({slot_exactly_1}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     h_b = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({slot_zero_or_one}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -384,14 +394,14 @@ def test_content_hash_differs_when_default_settings_differs() -> None:
     )
     h_a = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({slot_low}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     h_b = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({slot_high}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -429,14 +439,14 @@ def test_content_hash_is_insensitive_to_wire_iteration_order() -> None:
     )
     h1 = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=slots,
         required_wires=wires_one,
         parameter_overrides_schema=None,
     )
     h2 = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=slots,
         required_wires=wires_two,
         parameter_overrides_schema=None,
@@ -487,7 +497,7 @@ def test_content_hash_round_trip_via_state_with_default_placement() -> None:
     slots = frozenset({slot_with_placement})
     h_from_args = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=slots,
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -495,7 +505,7 @@ def test_content_hash_round_trip_via_state_with_default_placement() -> None:
     state = Assembly(
         id=uuid4(),
         name=AssemblyName("Detector"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=slots,
         required_wires=frozenset(),
     )
@@ -521,7 +531,7 @@ def test_content_hash_round_trip_via_state() -> None:
 
     h_from_args = compute_assembly_content_hash(
         name="Detector",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=full_slots,
         required_wires=wires,
         parameter_overrides_schema={"type": "object"},
@@ -529,7 +539,7 @@ def test_content_hash_round_trip_via_state() -> None:
     state = Assembly(
         id=uuid4(),
         name=AssemblyName("Detector"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=full_slots,
         required_wires=wires,
         parameter_overrides_schema={"type": "object"},
@@ -548,14 +558,14 @@ def test_content_hash_ignores_drawing_per_design_lock() -> None:
     state_no_drawing = Assembly(
         id=uuid4(),
         name=AssemblyName("X"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
     )
     state_with_drawing = Assembly(
         id=uuid4(),
         name=AssemblyName("X"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         drawing=Drawing(system=DrawingSystem.ICMS, number="P4105", revision="A"),
@@ -568,15 +578,16 @@ def test_content_hash_ignores_drawing_per_design_lock() -> None:
 @pytest.mark.unit
 def test_two_assemblies_same_intent_across_facilities_share_hash() -> None:
     """The headline cross-facility guarantee: two facilities that author
-    the same Assembly intent from the same Family NAMES converge on one
-    content_hash. This holds only because Family ids are deterministic
-    (uuid5 over the name); with random per-facility Family ids the slot
-    and presenter ids would differ and the hashes would diverge."""
+    the same Assembly intent from the same Family and Role NAMES converge
+    on one content_hash. This holds only because Family and Role ids are
+    deterministic (uuid5 over the name); with random per-facility ids the
+    slot Family ids and presented Role ids would differ and the hashes
+    would diverge."""
 
     def _hash_authored_from_names() -> str:
         return compute_assembly_content_hash(
             name="Microscope",
-            presents_as_family_id=family_stream_id(FamilyName("Imager")),
+            presents_as=frozenset({SEED_ROLE_DETECTOR_ID}),
             required_slots=frozenset(
                 {
                     _slot("camera", family_stream_id(FamilyName("Camera"))),
@@ -594,17 +605,17 @@ def test_two_assemblies_same_intent_across_facilities_share_hash() -> None:
 
 @pytest.mark.unit
 def test_different_family_names_yield_distinct_hashes() -> None:
-    presenter = family_stream_id(FamilyName("Imager"))
+    presenter = SEED_ROLE_DETECTOR_ID
     h_camera = compute_assembly_content_hash(
         name="Microscope",
-        presents_as_family_id=presenter,
+        presents_as=frozenset({RoleId(presenter)}),
         required_slots=frozenset({_slot("sensor", family_stream_id(FamilyName("Camera")))}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
     )
     h_objective = compute_assembly_content_hash(
         name="Microscope",
-        presents_as_family_id=presenter,
+        presents_as=frozenset({RoleId(presenter)}),
         required_slots=frozenset({_slot("sensor", family_stream_id(FamilyName("Objective")))}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -621,7 +632,7 @@ def test_content_hash_ignores_version_per_design_lock() -> None:
     state_v1 = Assembly(
         id=uuid4(),
         name=AssemblyName("X"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         version="v1",
@@ -629,7 +640,7 @@ def test_content_hash_ignores_version_per_design_lock() -> None:
     state_v2 = Assembly(
         id=uuid4(),
         name=AssemblyName("X"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         version="v2",

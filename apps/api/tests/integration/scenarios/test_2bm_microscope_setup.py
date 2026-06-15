@@ -12,8 +12,7 @@ end-to-end against Postgres:
     objectives + objective_selector + focus),
   - a top **Microscope** Assembly that references Optics by a
     version-pinned sub-assembly link and adds camera + scintillator
-    leaf slots, presenting as the Detector Role via the Imager
-    presenter Family,
+    leaf slots, presenting as the Detector Role via presents_as,
   - one **Fixture** (microscope_at_2bm) that binds 8 concrete Assets across
     the union of leaf slots (the Microscope's 2 plus the Optics
     sub-assembly's 4; the three objectives share one OneOrMore slot),
@@ -85,6 +84,7 @@ from cora.equipment.aggregates.assembly import (
 from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.aggregates.fixture import SlotAssetBinding
+from cora.equipment.aggregates.role import SEED_ROLE_DETECTOR_ID
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.add_asset_family import bind as bind_add_asset_family
 from cora.equipment.features.attach_asset_to_fixture import AttachAssetToFixture
@@ -109,6 +109,7 @@ from cora.equipment.features.update_family_settings_schema import UpdateFamilySe
 from cora.equipment.features.update_family_settings_schema import (
     bind as bind_update_family_settings_schema,
 )
+from cora.infrastructure.adapters.in_memory_role_lookup import InMemoryRoleLookup
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_plan import DefinePlan
@@ -141,7 +142,6 @@ _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000420a01")
 _CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
 _CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 _CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
-_CAP_IMAGER_ID = family_stream_id(FamilyName("Imager"))
 _CAP_OBJECTIVE_ID = family_stream_id(FamilyName("Objective"))
 _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
@@ -339,7 +339,9 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     8 attaches, partition rule, 4 Calibrations, and a Method/Practice/Plan.
     Assert the Assembly/Fixture event streams, the containment tree, the
     fixture_id back-references, and the Calibrations."""
-    deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
+    role_lookup = InMemoryRoleLookup()
+    role_lookup.register(SEED_ROLE_DETECTOR_ID, "Detector")
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue(), role_lookup=role_lookup)
     actor = ActorId(_PRINCIPAL_ID)
 
     # ----- Facility install (APS -> 2-BM + camera/scintillator/focus) -----
@@ -373,9 +375,9 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
             correlation_id=_CORRELATION_ID,
         )
 
-    # ----- NEW Families (Imager presenter, Objective, RotaryStage,
-    #       PseudoAxis, Housing) + schemas -----
-    for name in ("Imager", "Objective", "RotaryStage", "PseudoAxis", "Housing"):
+    # ----- NEW Families (Objective, RotaryStage, PseudoAxis, Housing)
+    #       + schemas -----
+    for name in ("Objective", "RotaryStage", "PseudoAxis", "Housing"):
         await bind_define_family(deps)(
             DefineFamily(name=name, affordances=frozenset()),
             principal_id=_PRINCIPAL_ID,
@@ -405,7 +407,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     optics_id = await bind_define_assembly(deps)(
         DefineAssembly(
             name="Optics",
-            presents_as_family_id=_CAP_IMAGER_ID,
+            presents_as=frozenset(),
             required_slots=frozenset(
                 {
                     _slot("turret", _CAP_ROTARY_STAGE_ID),
@@ -432,7 +434,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     microscope_id = await bind_define_assembly(deps)(
         DefineAssembly(
             name="Microscope",
-            presents_as_family_id=_CAP_IMAGER_ID,
+            presents_as=frozenset({SEED_ROLE_DETECTOR_ID}),
             required_slots=frozenset(
                 {
                     _slot("camera", _CAP_CAMERA_ID),
@@ -651,7 +653,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         DefineMethod(
             capability_id=_CAPABILITY_RECIPE_ID,
             name="microscope_image_acquisition",
-            # The imaging (Detector / Imager) capability comes from the
+            # The imaging (Detector Role) capability comes from the
             # Microscope Assembly's presents_as, declared via
             # needed_assembly_ids; needed_family_ids names the asset-level
             # parts the bound constituents directly provide.
@@ -685,6 +687,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     optics_events, _ = await deps.event_store.load("Assembly", optics_id)
     assert [e.event_type for e in optics_events] == ["AssemblyDefined"]
     assert len(optics_events[0].payload["required_slots"]) == 4
+    assert optics_events[0].payload["presents_as"] == []
 
     # Microscope stream: AssemblyDefined with the sub-assembly link + 2 leaves.
     micro_events, _ = await deps.event_store.load("Assembly", microscope_id)
@@ -694,6 +697,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     assert len(micro_payload["required_sub_assemblies"]) == 1
     assert micro_payload["required_sub_assemblies"][0]["sub_assembly_id"] == str(optics_id)
     assert micro_payload["required_sub_assemblies"][0]["content_hash"] == optics.content_hash
+    assert micro_payload["presents_as"] == [str(SEED_ROLE_DETECTOR_ID)]
 
     # Fixture stream: FixtureRegistered binding 8 Assets across 6 slot names
     # (the `objectives` OneOrMore slot carries 3 of the 8 bindings).

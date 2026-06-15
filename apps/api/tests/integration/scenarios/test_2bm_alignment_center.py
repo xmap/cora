@@ -28,7 +28,7 @@ A "rotation-axis alignment" is iterative:
   2. Rotate to 0°, acquire alignment image, note sphere centroid x.
   3. Rotate to 180°, acquire alignment image, note sphere centroid x.
   4. Compute offset = (centroid_at_180 - centroid_at_0) / 2.
-  5. If |offset| > tolerance: adjust Sample_top_X by -offset, goto 2.
+  5. If |offset| > tolerance: adjust SampleTop_X by -offset, goto 2.
   6. Else: write the calibrated rotation-axis pixel position to the
      `RotationCenter` PV. Done.
 
@@ -45,7 +45,7 @@ the operator made + the evidence they cite.
 Four target Assets cover the load-bearing instruments:
 
   - Aerotech ABRS rotary stage (the rotation axis)
-  - Sample_top_X linear stage (the X-correction motor; a Kohzu CYAT-070)
+  - SampleTop_X linear stage (the X-correction motor; a Kohzu CYAT-070)
   - FLIR Oryx 5MP camera (the alignment-frame detector)
   - LuAG scintillator (converts X-rays to visible for the camera)
 
@@ -74,7 +74,7 @@ companion) for the gaps documented in domain terms. The most consequential surfa
     is a watch item.
   - **Two-namesake-motor problem** (Tomo@0deg vs Tomo@180deg, same
     physical Asset, two semantic roles): we use the canonical
-    `Sample_top_X` name with a `role` payload key on the Setpoint;
+    `SampleTop_X` name with a `role` payload key on the Setpoint;
     whether AssetPort needs context-dependent identity is a watch
     item.
   - **No discrete success boolean exists in PVs**: the final Check is
@@ -211,7 +211,7 @@ _STEPS_OPEN_EVENT_ID = UUID("01900000-0000-7000-8000-000000035f02")
 
 _DEVICES = (
     DeviceSpec("Rotary", _ASSET_AEROTECH_ABRS_ID, "RotaryStage", _CAP_ROTARY_STAGE_ID),
-    DeviceSpec("Sample_top_X", _ASSET_SAMPLE_TOP_X_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
+    DeviceSpec("SampleTop_X", _ASSET_SAMPLE_TOP_X_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
     DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
@@ -438,7 +438,7 @@ def _setpoint(
 ) -> ActivityInput:
     """Build a Setpoint step input. `role` carries context-dependent
     semantics (for example, Tomo@0deg vs Tomo@180deg for the same physical
-    Sample_top_X motor). `note` is operator's free-text per-step audit."""
+    SampleTop_X motor). `note` is operator's free-text per-step audit."""
     payload: dict[str, Any] = {
         "channel": channel,
         "target_value": target_value,
@@ -680,7 +680,7 @@ async def test_center_alignment_plays_out_end_to_end(
         # Correction: offset_px / 2 = 3.5 px. Pixel size ~1 um per px (typical 5x lens),
         # so correction is ~3.5 um in motor units. Operator chooses the sign by convention.
         _setpoint(
-            channel="Sample_top_X",
+            channel="SampleTop_X",
             target_value=-3.5,
             units="um",
             role="Tomo@180deg",

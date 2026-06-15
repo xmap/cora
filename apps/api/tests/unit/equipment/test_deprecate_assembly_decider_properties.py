@@ -9,6 +9,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyCannotDeprecateError,
@@ -32,7 +33,7 @@ def _state(assembly_id: UUID, status: AssemblyStatus) -> Assembly:
     return Assembly(
         id=assembly_id,
         name=AssemblyName("X"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         status=status,
     )
 

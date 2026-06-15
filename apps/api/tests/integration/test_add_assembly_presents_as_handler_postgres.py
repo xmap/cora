@@ -19,7 +19,6 @@ from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
 _ASSEMBLY_ID = UUID("01900000-0000-7000-8000-00000084fb01")
-_FAMILY_ID = UUID("01900000-0000-7000-8000-00000084fb02")
 _ROLE_ID = UUID("01900000-0000-7000-8000-00000084fb03")
 _SEED_GENESIS_EVENT_ID = UUID("01900000-0000-7000-8000-00000084fa00")
 _ADD_EVENT_ID = UUID("01900000-0000-7000-8000-00000084fb04")
@@ -42,7 +41,7 @@ async def test_add_assembly_presents_as_persists_event_to_postgres(
     genesis = AssemblyDefined(
         assembly_id=_ASSEMBLY_ID,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=_FAMILY_ID,
+        presents_as=frozenset(),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,

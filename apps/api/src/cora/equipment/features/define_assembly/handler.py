@@ -4,9 +4,9 @@ Longhand create-style handler (cannot use a factory because it
 loads N cross-aggregate references BEFORE calling the decider):
 
   1. Authz check (Deny -> UnauthorizedError).
-  2. Load Family aggregate for `presents_as_family_id` + every
-     FamilyId across the slot set's required_family_ids; collect the
-     missing ones into context.
+  2. Edge-load each Role in `presents_as` via RoleLookup, and load the
+     Family aggregate for every FamilyId across the slot set's
+     required_family_ids; collect the missing ones into context.
   3. Call pure decider with state=None + context + command +
      now + new_id.
   4. Wrap emitted events and append to the Assembly stream
@@ -75,11 +75,10 @@ class IdempotentHandler(Protocol):
 def _referenced_family_ids(command: DefineAssembly) -> frozenset[UUID]:
     """Collect every FamilyId the Assembly references at define time.
 
-    Union of `presents_as_family_id` and every slot's required_family_ids.
-    Returned as a frozenset so handler loads are de-duplicated when
-    multiple slots share a Family.
+    Every slot's required_family_ids. Returned as a frozenset so
+    handler loads are de-duplicated when multiple slots share a Family.
     """
-    ids: set[UUID] = {command.presents_as_family_id}
+    ids: set[UUID] = set()
     for slot in command.required_slots:
         ids.update(slot.required_family_ids)
     return frozenset(ids)
@@ -127,6 +126,10 @@ def bind(deps: Kernel) -> Handler:
 
         family_ids = _referenced_family_ids(command)
         missing = await find_missing_families_per_id(deps.event_store, family_ids)
+        missing_roles: set[UUID] = set()
+        for role_id in command.presents_as:
+            if await deps.role_lookup.lookup(role_id) is None:
+                missing_roles.add(role_id)
         sub_resolution = await resolve_sub_assembly_pins(
             deps.event_store,
             command.required_sub_assemblies,
@@ -134,6 +137,7 @@ def bind(deps: Kernel) -> Handler:
         )
         context = DefineAssemblyContext(
             missing_family_ids=missing,
+            missing_role_ids=frozenset(missing_roles),
             sub_assembly_missing_ids=sub_resolution.missing_ids,
             sub_assembly_hash_mismatches=sub_resolution.hash_mismatches,
             sub_assembly_too_deep_ids=sub_resolution.too_deep_ids,

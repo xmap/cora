@@ -2,13 +2,13 @@
 
 An `Assembly` declares `required_slots` (Family-typed, cardinality-
 annotated, optionally pre-Placed) and `required_wires` (slot-keyed
-4-tuples), and exposes a stable `presents_as_family_id` so other
-aggregates (Method.needed_families, Capability bindings) can treat
-an instantiated Assembly as one typed unit at the same level as a
+4-tuples), and exposes `presents_as` (a set of global Role contract
+ids) so other aggregates (Method role requirements) can match an
+instantiated Assembly against a Role contract at the same level as a
 single Asset.
 
 Content-addressed: `content_hash` is the SHA-256 hex fingerprint of
-the canonical subset {name, presents_as_family_id, required_slots,
+the canonical subset {name, presents_as, required_slots,
 required_wires, required_sub_assemblies, parameter_overrides_schema}.
 Two operators independently authoring the same Assembly converge on
 the same content_hash.

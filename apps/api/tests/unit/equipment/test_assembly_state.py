@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     ASSEMBLY_NAME_MAX_LENGTH,
     SLOT_NAME_MAX_LENGTH,
@@ -92,7 +93,7 @@ def test_assembly_empty_closure_passes() -> None:
     assembly = Assembly(
         id=uuid4(),
         name=AssemblyName("EmptyTemplate"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
     )
     assert assembly.required_slots == frozenset()
     assert assembly.required_wires == frozenset()
@@ -122,7 +123,7 @@ def test_assembly_closure_accepts_wire_referencing_declared_slot() -> None:
     assembly = Assembly(
         id=uuid4(),
         name=AssemblyName("Detector"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset({slot, slot2}),
         required_wires=frozenset({wire}),
     )
@@ -146,7 +147,7 @@ def test_assembly_closure_rejects_wire_referencing_unknown_source_slot() -> None
         Assembly(
             id=uuid4(),
             name=AssemblyName("Broken"),
-            presents_as_family_id=uuid4(),
+            presents_as=frozenset({RoleId(uuid4())}),
             required_slots=frozenset({slot}),
             required_wires=frozenset({wire}),
         )
@@ -170,7 +171,7 @@ def test_assembly_closure_rejects_wire_referencing_unknown_target_slot() -> None
         Assembly(
             id=uuid4(),
             name=AssemblyName("Broken"),
-            presents_as_family_id=uuid4(),
+            presents_as=frozenset({RoleId(uuid4())}),
             required_slots=frozenset({slot}),
             required_wires=frozenset({wire}),
         )
@@ -280,7 +281,7 @@ def test_assembly_accepts_sub_assembly_link_with_distinct_slot_name() -> None:
     assembly = Assembly(
         id=uuid4(),
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset({leaf}),
         required_sub_assemblies=frozenset({link}),
     )
@@ -305,7 +306,7 @@ def test_assembly_rejects_sub_assembly_link_colliding_with_leaf_slot() -> None:
         Assembly(
             id=uuid4(),
             name=AssemblyName("Microscope"),
-            presents_as_family_id=uuid4(),
+            presents_as=frozenset({RoleId(uuid4())}),
             required_slots=frozenset({leaf}),
             required_sub_assemblies=frozenset({link}),
         )
@@ -330,7 +331,7 @@ def test_assembly_rejects_duplicate_sub_assembly_link_slot_names() -> None:
         Assembly(
             id=uuid4(),
             name=AssemblyName("Microscope"),
-            presents_as_family_id=uuid4(),
+            presents_as=frozenset({RoleId(uuid4())}),
             required_sub_assemblies=frozenset({link_a, link_b}),
         )
     assert exc_info.value.slot_name == "optics"
