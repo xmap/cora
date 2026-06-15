@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_3ed54d4a44e639de___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-15 05:09 +0000
+            created at 2026-06-15 08:19 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -116,7 +116,7 @@
     <p class="run run2"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">            <span class="str">"Publish a new revision snapshot of an existing Assembly. "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">            <span class="str">"Replace-on-version: the args carry the FULL canonical "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">            <span class="str">"structural subset (slots, wires, schema, drawing, version "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">            <span class="str">"label, presents_as_family_id), NOT a diff. Multi-source "</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">            <span class="str">"label, presents_as), NOT a diff. Multi-source "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">            <span class="str">"FSM: Defined and Versioned both accept new revisions; "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">            <span class="str">"Deprecated rejects (operators must fork via define_assembly "</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">            <span class="str">"with a fresh id). Re-attesting the same content produces "</span>&nbsp;</span><span class="r"></span></p>
@@ -137,10 +137,10 @@
     <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">                <span class="nam">description</span><span class="op">=</span><span class="str">"Display name for this revision."</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">            <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">        <span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">        <span class="nam">presents_as_family_id</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">            <span class="nam">UUID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">            <span class="nam">Field</span><span class="op">(</span><span class="nam">description</span><span class="op">=</span><span class="str">"FamilyId the instantiated Assembly stands in for."</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">        <span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">        <span class="nam">presents_as</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">            <span class="nam">list</span><span class="op">[</span><span class="nam">UUID</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">            <span class="nam">Field</span><span class="op">(</span><span class="nam">description</span><span class="op">=</span><span class="str">"Global Role contract ids this revision advertises."</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">        <span class="op">]</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span><span class="op">,</span>  <span class="com"># noqa: B006</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">        <span class="nam">required_slots</span><span class="op">:</span> <span class="nam">Annotated</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">            <span class="nam">list</span><span class="op">[</span><span class="nam">TemplateSlotBody</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">            <span class="nam">Field</span><span class="op">(</span><span class="nam">description</span><span class="op">=</span><span class="str">"Full slot set for this revision."</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -178,7 +178,7 @@
     <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">            <span class="nam">VersionAssembly</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">                <span class="nam">assembly_id</span><span class="op">=</span><span class="nam">assembly_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">                <span class="nam">name</span><span class="op">=</span><span class="nam">name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">                <span class="nam">presents_as_family_id</span><span class="op">=</span><span class="nam">presents_as_family_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">                <span class="nam">presents_as</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">presents_as</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">                <span class="nam">required_slots</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">s</span><span class="op">.</span><span class="nam">to_domain</span><span class="op">(</span><span class="op">)</span> <span class="key">for</span> <span class="nam">s</span> <span class="key">in</span> <span class="nam">required_slots</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">                <span class="nam">required_wires</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">w</span><span class="op">.</span><span class="nam">to_domain</span><span class="op">(</span><span class="op">)</span> <span class="key">for</span> <span class="nam">w</span> <span class="key">in</span> <span class="nam">required_wires</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">                <span class="nam">required_sub_assemblies</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="nam">r</span><span class="op">.</span><span class="nam">to_domain</span><span class="op">(</span><span class="op">)</span> <span class="key">for</span> <span class="nam">r</span> <span class="key">in</span> <span class="nam">required_sub_assemblies</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -200,7 +200,7 @@
             <a class="nav" href="z_3ed54d4a44e639de___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-15 05:09 +0000
+            created at 2026-06-15 08:19 +0000
         </p>
     </div>
 </footer>
