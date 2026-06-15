@@ -56,6 +56,7 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `Housing` | (empty; the containment chassis Family carried by the `Housing` Asset that parents the Microscope constituents; no command surface) |
 | `Objective` | (pending: empty at initial registration) |
 | `PseudoAxis` | (empty; partition rules live on `Asset.partition_rule`, not as affordances) |
+| `Table` | `Translatable`, `Rotatable` (provisional superset for the hutch support tables: the sample table is translation-only, the detector table adds tilt axes; the per-table axis set is a settings difference, not a Family split, see [Family settings schemas](#table)). Carries-other-equipment is `parent_id` placement, not an affordance; there is no Supporting affordance. Assets are [Pending](#pending) until seeded. |
 
 `Scintillator` is the lone Pattern-C consumer at v1 (passive optical screen; tracked via `Consumable` lifecycle, no command surface). `Imager` and `PseudoAxis` are presenter / facet Families: they carry no affordances, but Methods bind against them via `needed_family_ids` (for `Imager` the Assembly's `presents_as_family_id` is the satisfaction handle; for `PseudoAxis` the Family membership is the gate that lets an Asset carry a `partition_rule`).
 
@@ -196,6 +197,16 @@ Intrinsic detector properties, made explicit at 2-BM because a second detector c
 | `max_framerate_hz` | number > 0 | Hz | Full-frame maximum frame rate; the axis that distinguishes a high-speed PCO Dimax from a general-purpose Oryx without a separate Family. |
 | `sensor_kind` | closed enum: `CMOS \| sCMOS \| CCD \| EMCCD` | | Sensor architecture. Four known values; add-only enum. |
 | `readout_mode` | closed enum: `RollingShutter \| GlobalShutter` | | Shutter / readout architecture; governs motion-blur behaviour under triggered fly-scans. |
+
+### `Table`
+
+The support/positioning table Family (the hutch optical tables; staff name it in the [2-BM components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html)). One Family spans three 2-BM tables that differ only along a settings axis (the motor/axis layout), not a Family axis, so it is one `Table` Family rather than a split: `SampleTable` (four direct translation motors, no combined record), `DetectorTable` (six virtual axes on record `2bmb:table3`, computed from six support motors in an SRI 3-Y / 2-X / 1-Z geometry), and the unused `MirrorTable` (`Dma:table1`). The Family carries motion affordances for the axes a given table drives; the carries-other-equipment relationship is `Asset.parent_id` placement, not an affordance. Draft schema pending registration; the EPICS handles (the virtual record and per-axis or support-motor PVs) live in each Asset's `alternate_identifiers`, not in the schema.
+
+| Setting | Type | Notes |
+| --- | --- | --- |
+| `axis_layout` | closed enum: `translation_xyz \| virtual_pose` | The families-settings-over-subtypes discriminator: which motor/axis layout this table presents. `translation_xyz` = the sample table's direct motors; `virtual_pose` = a composite record exposing translation + tilt virtual axes (the detector and mirror tables; the specific record goes in `virtual_record`). Add-only enum. |
+| `virtual_record` | string, optional | The composite EPICS record when the table exposes one (`2bmb:table3`, `Dma:table1`); absent for the sample table, which addresses its four motors directly. |
+| `geometry` | string, optional | Support-point layout when the axes are computed from support motors (for example, SRI 3 Y-supports / 2 X-supports / 1 Z-support). |
 
 ## Settings
 
@@ -453,6 +464,8 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 
 Devices that physically exist at 2-BM but are not yet registered as CORA Assets; each carries `new: true` in the 2-BM descriptor (`deployments/2-bm/beamline.yaml`). The first five rows are the front-end / beam-conditioning motor band driven by `FrontEndDrive` (they hold `2bma:m` channels in the descriptor): that controller ships modelled while none of its driven stages do. `BeamPositionMonitor` is a sixth unmodelled front-end device but a diagnostic, not a motor: the descriptor records no PV or controller for it.
 
+Three `Table`-Family support tables also sit here pending registration: `SampleTable` (the four-motor translation table on the Vibraplane base that carries the hexapod stack), `DetectorTable` (the six-virtual-axis `2bmb:table3` table under the Optique Peter stage and microscope), and `MirrorTable` (`Dma:table1`, present but not used operationally). They differ by axis layout, not Family, so they share one `Table` Family ([Family settings schemas](#table)). Whether to describe all three, and whether the axis layout is a settings difference or a Family split, is tracked as `STAGE-5` and `STAGE-6` in [Open questions](questions.md).
+
 | Asset | Family |
 | --- | --- |
 | `Mirror` | `Mirror` |
@@ -462,6 +475,9 @@ Devices that physically exist at 2-BM but are not yet registered as CORA Assets;
 | `Filter` | `Filter` |
 | `BeamPositionMonitor` | `Diagnostic` |
 | `Timing` | `TimingController` |
+| `SampleTable` | `Table` |
+| `DetectorTable` | `Table` |
+| `MirrorTable` | `Table` |
 | Broader sample-stage motors | `LinearStage` + tilt motors |
 | IOC-hosted EPICS Devices | |
 

@@ -15,7 +15,7 @@ You do not need to edit this file or know where it lives. If you do not use GitH
 
 **If you are not the beamline scientist:** a few rows name a different contact. Safety and interlocks: **PSS-1**. Facility utilities (gas, compressed air): **SUP-1**, **SUP-2**. If a row is really a controls/EPICS, network, or engineering question rather than yours, just route it to the right person or tell us who that is.
 
-**Where to start:** the six `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `STAGE-1`, `DET-1`, `DET-2`, `DET-3`, `DET-4`, `DET-5`. If you only have five minutes, do these first. After that, `Blocks-go-live` items (including the safety item `PSS-1`) matter before CORA ever controls or observes hardware.
+**Where to start:** the `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `STAGE-1`, `STAGE-5`, `STAGE-6`, `DET-1` through `DET-5`, and `DET-10`. If you only have five minutes, do these first. After that, `Blocks-go-live` items (including the safety item `PSS-1`) matter before CORA ever controls or observes hardware.
 
 ## How this page works
 
@@ -75,6 +75,8 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 | STAGE-2 | `Nice-to-have` | Full part number and datasheet for the Kohzu CYAT-070 alignment stages (`SampleTop_X` / `SampleTop_Z`)? | `Kohzu CYAT-070`, no datasheet on file | [Engineering drawings](assets.md#engineering-drawings) |
 | STAGE-3 | `Nice-to-have` | Full part number and datasheet for the Aerotech ABS250MP-M-AS rotary stage (`Rotary`)? | `Aerotech ABS250MP-M-AS`, no datasheet on file | [Engineering drawings](assets.md#engineering-drawings) |
 | STAGE-4 | `Nice-to-have` | The measured motor-sensitivity constants (K_roll, K_pitch) that link a hexapod tilt to the observed image-centroid shift? Today they are re-derived per alignment rather than stored. | derived in-procedure, not persisted | [Procedures](procedures.md) |
+| STAGE-5 | `Blocks-build` | We are adding a description for the optical tables (the heavy support tables the equipment sits on). How many should CORA describe: just the sample table (the four motors `2bmb:m24` Y, `2bmb:m20` Z, `2bmb:m21` upstream-X, `2bmb:m22` downstream-X under the hexapod), or also the detector optical table (six axes on record `2bmb:table3`: three linear X/Y/Z plus three tilts) and the mirror optical table (record `Dma:table1`)? Your answer decides whether CORA describes one table or three. | one table (the sample table; four motors addressed directly, no combined record) | [Inventory](assets.md#inventory) |
+| STAGE-6 | `Blocks-build` | For those tables: the sample table is plain motion (four motors, no combined record), while the detector table is six axes including tilts (roll/pitch/yaw) on a combined `table3` record. Should CORA treat them as one kind of device where the axis list is just a per-table detail, or are they different enough to be separate kinds? (You raised this as "two tables with a different degree of freedom".) | one kind of device; the axis list is a per-table detail, not a separate kind | [Family settings schemas](assets.md#family-settings-schemas) |
 
 ## The Microscope detector
 
@@ -89,6 +91,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 | DET-7 | `Nice-to-have` | The three distinct Mitutoyo part numbers, one per magnification (10x / 2x / 1.1x)? Today all three share one catalog row. | one `Plan-Apo-NIR` family row | [Vendor catalog](assets.md#vendor-catalog-models) |
 | DET-8 | `Blocks-go-live` | The FLIR Oryx's max frame rate, sensor kind, and readout mode (rolling vs global), plus its part number for the datasheet? CORA needs these camera values and they are currently blank. | only sensor size / pixel / bit-depth recorded | [Settings](assets.md#settings) |
 | DET-9 | `Nice-to-have` | The measured magnification of the 2x Mitutoyo objective at 25 keV? The current 2.0x is nominal, pending re-measurement. | 2.0x nominal (provisional) | [Microscope](equipment/microscope.md) |
+| DET-10 | `Blocks-build` | The Aerotech PRO225SL-1000 stage on `2bmbAERO:m1`: CORA currently describes it as the microscope focus stage (`Focus`). The components page calls it the detector Z stage, the sample-to-detector throw (propagation distance). Is that one stage or two, and which job does `2bmbAERO:m1` do? This decides what the detector Z-rail alignment procedure targets. | one stage, described as the microscope focus (`Focus`) | [Microscope](equipment/microscope.md) |
 
 ## Timing
 
@@ -104,6 +107,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 | BEAM-2 | `Nice-to-have` | How many front-end Be windows are in the stack, and what is their total thickness? | windows exist; count and thickness unconfirmed | [Pending](assets.md#pending) |
 | BEAM-3 | `Nice-to-have` | The canonical APS drawing reference for the B-station safety shutter (`StationShutter`)? | shutter modelled; no drawing on file | [Engineering drawings](assets.md#engineering-drawings) |
 | BEAM-4 | `Nice-to-have` | Is the beamline layout drawing `ICMS A342-RT1000` Rev 02 (May 2026) still the current revision? | assumed current | [2-BM index](index.md) |
+| BEAM-5 | `Blocks-go-live` | We propose two names for the front-end slits: `ConditioningSlit` for the A-station L3 four-blade slit (`2bma:m13`-`m16`), and `SampleSlit` for the B-station slit (`2bma:m9`-`m12`). Do those names match how you refer to them, and is the four-blade aperture (H size and centre, V size and centre) structure right? If you have them: the A-station position along the beam, and the slit-position tolerances. | names `ConditioningSlit` and `SampleSlit`, both four-blade slits; B-station at z = 50500 mm | [Pending](assets.md#pending) |
 
 ## Safety interlocks
 
