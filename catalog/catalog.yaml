@@ -62,8 +62,14 @@ families:
     note: "Containment chassis Family; the Housing Asset parents the Microscope constituents and carries the Mount."
   - name: GenericProbe
     note: "APS facility-scope template, an abstract detector probe-chain."
-  # Pending in code (documented, not yet defined): Goniometer, Monochromator,
-  # Slit, Mirror; future: OpticalRelay.
+  - name: Table
+    note: "Support/positioning table Family (the hutch optical tables). One Family spans the 4-DOF sample table (pure translation), the 6-DOF detector table (six virtual axes on record 2bmb:table3), and the unused mirror table; the axis set is a per-Asset settings difference, not a Family split. 'Optical' is deliberately not in the name (it would name the contents, not the table's own nature; the OpticalHousing -> Housing precedent). Instances qualify at the Asset layer: SampleTable / DetectorTable / MirrorTable."
+  - name: Slit
+    note: "Beam-defining aperture Family (four independently-driven blades forming a horizontal/vertical aperture). 2-BM: ConditioningSlit (A-station L3-20) and SampleSlit (B-station)."
+  - name: Mirror
+    note: "Beam-steering grazing-incidence mirror optic Family. 2-BM: the Y3-30 mirror (distinct from its MirrorTable support, which is Family Table)."
+  # Pending in code (documented, not yet defined): Goniometer, Monochromator;
+  # future: OpticalRelay.
 
 capabilities:
   - code: cora.capability.tomography

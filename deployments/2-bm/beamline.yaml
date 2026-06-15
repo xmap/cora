@@ -99,10 +99,12 @@ conditioning-optics:
     - name: ConditioningSlit
       family: Slit
       pv: { x_in: "2bma:m14", x_out: "2bma:m13", y_top: "2bma:m15", y_bot: "2bma:m16" }
+      z_mm: 25225
       white_beam: true
       water_cooled: true
       new: true
       confirm: true
+      note: L3-20 four-blade slit; virtual aperture records 2bma:Slit1Hsize/Hcenter/Vsize/Vcenter
     - name: Filter
       family: Filter
       pv: { upstream_paddle: "2bma:m17", downstream_paddle: "2bma:m18" }
@@ -121,6 +123,14 @@ conditioning-optics:
       stripes: ["5 nm Pt", "W/Si x50 (b)", "W/Si x50 (c)", "W/Si x50 (d)"]  # recoatable
       new: true
       confirm: true
+    - name: MirrorTable
+      family: Table
+      pv: "Dma:table1"
+      support_motors: [M0X, M0Y, M1Y, M2X, M2Y, "Z (along beam)"]
+      geometry: "SRI support table (table_full IOC); virtual record Dma:table1"
+      new: true
+      confirm: true
+      note: present but not used operationally; carries the Y3-30 mirror; underlying EPICS PVs for the support motors are TBD
     - name: Monochromator
       family: Monochromator
       pv: { crystal2_z: "2bma:m8" }   # plus m25-m32 for alignment
@@ -183,11 +193,12 @@ sample-environment:
   enclosure: 2-BM-B
   intro: Hold and rotate the sample. Listed bottom to top (the kinematic stack).
   devices:
-    - name: OpticalTable
-      family: OpticalTable
+    - name: SampleTable
+      family: Table
       pv: { y: "2bmb:m24", z: "2bmb:m20", upstream_x: "2bmb:m21", downstream_x: "2bmb:m22" }
       new: true
       confirm: true
+      note: pure translation, four motors addressed directly with no combined table.db virtual record; only Y is moved routinely; sits on a Vibraplane isolation base and carries the hexapod stack
     - name: Hexapod
       family: Hexapod
       model: aerotech_hex300   # Aerotech HEX300-230HL
@@ -259,6 +270,14 @@ detector:
     model is single-camera at 2-BM (camera_select fixed at 0). Add it only if 2-BM
     staff confirm a live second bay.
   devices:
+    - name: DetectorTable
+      family: Table
+      pv: { x: "2bmb:table3.X", y: "2bmb:table3.Y", z: "2bmb:table3.Z", ax: "2bmb:table3.AX", ay: "2bmb:table3.AY", az: "2bmb:table3.AZ" }
+      support_motors: { M0X: "2bmb:m13", M0Y: "2bmb:m14", M1Y: "2bmb:m12", M2X: "2bmb:m10", M2Y: "2bmb:m9", M2Z: "2bmb:m11" }
+      geometry: "SRI: 3 Y-supports, 2 X-supports, 1 Z-support; six virtual axes (three linear X/Y/Z, three angular AX/AY/AZ) computed from six support motors via virtual record 2bmb:table3"
+      new: true
+      confirm: true
+      note: carries the Optique Peter Z stage and the microscope; the detector Z-rail alignment procedure drives the angular axes table3.AX and table3.AY (the source legend and the procedure text disagree on which angular axis is roll vs pitch vs yaw, so the roll/pitch/yaw mapping is left unasserted, confirm)
     - name: Housing
       family: Housing      # the microscope housing (containment anchor)
       model: optique_peter_micrx080
@@ -322,6 +341,8 @@ detector:
       pv: "2bmbAERO:m1"
       controller: FocusDrive
       travel: 1000 mm
+      confirm: true
+      note: the 2bm-docs components page calls 2bmbAERO:m1 the detector Z stage (PropagationDistance, the sample-to-detector throw); CORA models it as the microscope focus stage pending confirmation (DET-10)
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
     - name: Scintillator
       family: Scintillator
