@@ -8,15 +8,15 @@ resolution-markers = [
 
 [[package]]
 name = "aioca"
-version = "1.8.1"
+version = "2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "epicscorelibs" },
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b8/a3/abbb3180c518d35eeecea346bfdf04726366c2bdbf4eab44f2f62fc17248/aioca-1.8.1.tar.gz", hash = "sha256:463e2298cb22e00f8ca9fe6ce7bb6b80edb9225cc62e645590a70f3e05d91487", size = 58825, upload-time = "2024-11-01T15:59:28.653Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/56/fc/0d09d80af3bb7bedd474313daea7541914b157ae17f3bcebd10ac148432f/aioca-2.1.tar.gz", hash = "sha256:094b815fa26c0fec705ecaf9c1814883b3cf3b5ea973baeb669959661391b5bc", size = 233509, upload-time = "2026-05-06T16:28:57.802Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5b/08/185c3b29b0698328b202e6c965c23187e2e29ead78cb468aab0a09ee97fc/aioca-1.8.1-py3-none-any.whl", hash = "sha256:b856b68c4722387bc88917c10f71f87b7e74d95a28581187b6577682a6c68909", size = 26538, upload-time = "2024-11-01T15:59:27.438Z" },
+    { url = "https://files.pythonhosted.org/packages/51/89/da0f32b679b8769dd472eb2927308d328bf75c296629fd9f95135afacd0a/aioca-2.1-py3-none-any.whl", hash = "sha256:df0f062b81a4846d3e5705f0bfaf7bee9f876009302cf3b06ada93d6f5153b6f", size = 26480, upload-time = "2026-05-06T16:28:56.622Z" },
 ]
 
 [[package]]
@@ -364,7 +364,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aioca", specifier = ">=1.8,<2" },
+    { name = "aioca", specifier = ">=2.1,<3" },
     { name = "anthropic", specifier = ">=0.109.1,<1" },
     { name = "asyncpg", specifier = ">=0.31.0,<0.32" },
     { name = "cryptography", specifier = ">=48.0.1,<49" },

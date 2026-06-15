@@ -61,7 +61,7 @@ dependencies = [
     # Stage-1d's `EpicsPvaControlPort` covers PVA via p4p). Single exception
     # class `CANothing(name, errorcode)` discriminated by ECA code at the
     # adapter ACL.
-    "aioca>=1.8,<2",
+    "aioca>=2.1,<3",
     # p4p (Stage-1d of the control-port arc): production asyncio EPICS
     # pvAccess client. Built on the pvxs C++ library (EPICS Base official).
     # Used by `EpicsPvaControlPort` at `cora/operation/adapters/`. Carries
