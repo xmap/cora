@@ -43,7 +43,7 @@ Beamline operations frequently include calibration runs that have
 no Subject:
   - Dark-field: detector measures background noise (no beam, no sample)
   - Flat-field: detector measures beam profile (beam, no sample)
-  - Energy calibration: standard reference samples (different from
+  - Energy characterization: standard reference samples (different from
     user Subject)
 
 These produce data consumed by the analysis pipeline for actual

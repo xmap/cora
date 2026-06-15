@@ -105,7 +105,7 @@ Watch-only (not adopted as a glossary term, see [Deferred](../stack/deferred.md)
 
 *Calibration BC, AsShot anchor, pinned vs used.*
 
-- **Calibration.** *(Calibration BC)* Aggregate carrying empirically-measured system constants (motor sensitivities, beam profiles, encoder offsets). Distinct from `operation/calibration` ceremonies — Operation runs the ceremony, Calibration stores the resulting values.
+- **Calibration.** *(Calibration BC)* Aggregate carrying empirically-measured system constants (motor sensitivities, beam profiles, encoder offsets). Distinct from the Operation BC's alignment and characterization Procedures: Operation runs the act, Calibration stores the resulting values.
 - **AsShot anchor.** Snapshot of which Calibrations were in force at a given moment. `Run.pinned_calibration_ids` captures the Calibrations pinned at `start_run`; `Dataset.used_calibration_ids` captures which of those the resulting Dataset actually consumed. The pair separates "what was available" from "what was used," which the analysis chain needs for provenance.
 
 ## Supply

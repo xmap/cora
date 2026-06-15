@@ -29,7 +29,7 @@ Out of scope
 | `Run` | `id: UUID` | `name`, `plan_id`, `subject_id?`, `raid?`, `status`, `override_parameters`, `effective_parameters`, `trigger_source?`, `observation_logbook_id?`, `external_refs`, `campaign_id?`, `last_adjusted_at?`, `adjustment_count`, `pinned_calibration_ids` | yes |
 | `Observation` (sub-aggregate VO on `Run`) | `event_id: UUID` (per row) | `channel_name`, `value`, `units?`, `sampling_procedure`, `sampled_at`, `occurred_at`, `recorded_at` | no |
 
-`Run.subject_id` is optional because some execution shapes have no Subject: dark-field acquisition, flat-field acquisition, energy calibration with a standard reference. These share the full Run lifecycle with sample Runs; only the Subject binding differs.
+`Run.subject_id` is optional because some execution shapes have no Subject: dark-field acquisition, flat-field acquisition, energy characterization with a standard reference. These share the full Run lifecycle with sample Runs; only the Subject binding differs.
 
 `Run.raid` carries an optional Research Activity Identifier (ISO 23527), enabling cross-facility project attribution.
 
