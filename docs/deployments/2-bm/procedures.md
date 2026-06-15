@@ -15,7 +15,7 @@ Each Procedure binds a Method + Practice + Plan to a set of target Assets. See [
 | `center_alignment` | `Rotary`, `SampleTop_X` + image chain |
 | `roll_alignment` | `Rotary`, `Hexapod_Roll` + image chain |
 | `pitch_alignment` | `Rotary`, `Hexapod_Pitch` + image chain |
-| `alignment_calibration` | `Hexapod_Roll` |
+| `sensitivity_characterization` | `Hexapod_Roll`, `Hexapod_Pitch` |
 | `hexapod_reboot` | `Hexapod` |
 
 Image chain = `Camera`, `Scintillator`.
@@ -24,8 +24,8 @@ Image chain = `Camera`, `Scintillator`.
 
 | Procedure | Target Assets |
 | --- | --- |
-| `alignment_auto_chain` | alignment Assets (calibration + Step1..4) |
-| `energy_calibration` | channel-cut crystal + DMM |
+| `alignment_auto_chain` | alignment Assets (characterization + Step1..4) |
+| `energy_characterization` | channel-cut crystal + DMM |
 | `ioc_restart` | EPICS IOC-hosted Assets |
 | `vibration_baseline` | high-speed camera |
 | `mirror_recoat_return` | `Mirror` |

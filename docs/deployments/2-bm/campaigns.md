@@ -17,7 +17,7 @@ A Campaign composes Runs under a coordinated study, proposal-scoped and techniqu
 
 | Campaign | Intent | Runs |
 | --- | --- | --- |
-| Alignment-chain orchestration | `Coordination` | alignment + calibration + Step-1 re-run |
+| Alignment-chain orchestration | `Coordination` | alignment + characterization + Step-1 re-run |
 | In-situ / operando study | `Coordination` | |
 | Energy sweep (N-point) | `Sweep` | |
 | Block-design experiment | `Block` | |

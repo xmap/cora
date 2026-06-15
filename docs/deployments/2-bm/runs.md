@@ -26,5 +26,5 @@ A Run is the operator-started execution of a Plan, typically against a Subject (
 | --- | --- | --- |
 | Operator-decision `Aborted` Run | | |
 | Alignment-chain composed Runs | | alignment-chain Coordinated Campaign |
-| Energy-calibration Run | | |
+| Energy-characterization Run | | |
 | Vibration-baseline Run | | |

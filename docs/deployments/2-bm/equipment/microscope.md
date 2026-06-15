@@ -155,7 +155,7 @@ Four Calibrations downstream of this deployment, shown against their device on t
 - Three `magnification` revisions, one per objective (9.83x / ~2x / 1.10x effective, derived from measured pixel size divided by sensor pitch; the 2x figure is nominal, pending re-measurement)
 - One `effective_thickness` revision on the LuAG scintillator (100 micrometers)
 
-All initial revisions are `AssertedSource` (operator-attested from vendor datasheets) with status `Provisional`. They get superseded by `MeasuredSource` revisions when the corresponding calibration Procedure runs.
+All initial revisions are `AssertedSource` (operator-attested from vendor datasheets) with status `Provisional`. They get superseded by `MeasuredSource` revisions when the corresponding characterization Procedure runs.
 
 ## Engineering drawings
 

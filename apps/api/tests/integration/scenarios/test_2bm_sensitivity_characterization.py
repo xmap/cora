@@ -1,12 +1,12 @@
-"""Alignment calibration at APS 2-BM.
+"""Tilt-sensitivity characterization at APS 2-BM.
 
 cluster: Commissioning
 archetype: routine
 bc_primary: Operation
 bc_touches: Equipment, Operation, Recipe
 
-Scenario test for the calibration pre-step of the rotation-axis
-alignment chain: with a calibration sphere in place, the operator
+Scenario test for the sensitivity-characterization pre-step of the
+rotation-axis alignment chain: with a calibration sphere in place, the operator
 bumps roll and pitch motors by known deltas, measures sphere
 centroid shifts, and computes the motor sensitivities (`K_roll`,
 `K_pitch`) that the iterative alignment chain (resolution / focus
@@ -50,7 +50,7 @@ For each axis (roll then pitch):
 
 The full `auto.py` also calibrates `K_cam` (camera-rotation
 sensitivity), but the 2-BM imaging chain in this corpus does not
-yet register a camera-rotation motor; that calibration step
+yet register a camera-rotation motor; that characterization step
 lands when the camera-rotation Device is added. This scenario
 covers K_roll + K_pitch on the existing Hexapod_Roll /
 Hexapod_Pitch motors.
@@ -61,7 +61,7 @@ Subset of the alignment chain's Asset stack: Aerotech rotary (for
 the rotation measurement at 0° / 180°), Hexapod_Roll +
 Hexapod_Pitch (the motors being calibrated), Oryx camera +
 LuAG scintillator (the centroid-detection chain). SampleTop_Z
-is NOT used (calibration runs at a fixed Y_ref height; depth
+is NOT used (characterization runs at a fixed Y_ref height; depth
 tuning is the `focus` step's concern).
 
 ## What this scenario surfaces (gap-finding intent)
@@ -139,7 +139,7 @@ _NOW = datetime(2026, 5, 17, 15, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000410bb")
 
-# Facility hierarchy. Scenario tag: 410 (commissioning / alignment calibration).
+# Facility hierarchy. Scenario tag: 410 (commissioning / sensitivity characterization).
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000410a01")
 
 # Practice site_id: an opaque practice-site UUID (NOT an Asset tier).
@@ -280,11 +280,11 @@ def _postgres_step_store(db_pool: asyncpg.Pool):
 
 
 @pytest.mark.integration
-async def test_alignment_calibration_plays_out_end_to_end(
+async def test_sensitivity_characterization_plays_out_end_to_end(
     db_pool: asyncpg.Pool,
 ) -> None:
     """Seed imaging chain + tilt motors, run the K_roll + K_pitch
-    calibration ceremony: bump each tilt motor by a known delta,
+    characterization: bump each tilt motor by a known delta,
     capture sphere centroid shift, restore motor, compute the
     sensitivity constant. Final Setpoints record the computed K
     values that downstream alignment Plans consume."""
@@ -341,14 +341,14 @@ async def test_alignment_calibration_plays_out_end_to_end(
     await seed_capability_postgres(
         deps.event_store,
         _CAPABILITY_ID,
-        code="cora.capability.calibration",
-        name="Calibration",
+        code="cora.capability.characterization",
+        name="Characterization",
     )
 
     await bind_define_method(deps)(
         DefineMethod(
             capability_id=_CAPABILITY_ID,
-            name="alignment_calibration",
+            name="sensitivity_characterization",
             needed_family_ids=frozenset(
                 {
                     _CAP_ROTARY_STAGE_ID,
@@ -363,7 +363,7 @@ async def test_alignment_calibration_plays_out_end_to_end(
     )
     await bind_define_practice(deps)(
         DefinePractice(
-            name="2BM_alignment_calibration_practice",
+            name="2BM_sensitivity_characterization_practice",
             method_id=_METHOD_CALIB_ID,
             site_id=_APS_SITE_ID,
         ),
@@ -372,7 +372,7 @@ async def test_alignment_calibration_plays_out_end_to_end(
     )
     await bind_define_plan(deps)(
         DefinePlan(
-            name="2BM_alignment_calibration_plan",
+            name="2BM_sensitivity_characterization_plan",
             practice_id=_PRACTICE_CALIB_ID,
             asset_ids=frozenset(
                 {
@@ -391,8 +391,8 @@ async def test_alignment_calibration_plays_out_end_to_end(
 
     await bind_register_procedure(deps)(
         RegisterProcedure(
-            name="2-BM alignment calibration (K_roll)",
-            kind="alignment_calibration",
+            name="2-BM tilt-sensitivity characterization (K_roll, K_pitch)",
+            kind="sensitivity_characterization",
             target_asset_ids=frozenset({_ASSET_SAMPLE_TOP_ROLL_ID}),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -404,10 +404,10 @@ async def test_alignment_calibration_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Procedure step entries: K_roll calibration -----
+    # ----- Procedure step entries: K_roll characterization -----
 
     t = _NOW
-    # Real numbers from a typical 2-BM calibration session:
+    # Real numbers from a typical 2-BM characterization session:
     # delta_roll = 0.1 deg (small bump); resulting shift_x delta = 0.42 px.
     # K_roll = 0.42 / 0.1 = 4.2 px/deg.
     delta_roll_deg = 0.1
@@ -419,7 +419,7 @@ async def test_alignment_calibration_plays_out_end_to_end(
         AppendProcedureActivities(
             procedure_id=_PROCEDURE_ID,
             entries=(
-                # K_roll calibration triplet
+                # K_roll characterization triplet
                 _setpoint(
                     channel="Hexapod_Roll",
                     target_value=0.0,
@@ -513,7 +513,7 @@ async def test_alignment_calibration_plays_out_end_to_end(
         "ProcedureCompleted",
     ]
 
-    # ----- Assert: 8 step entries (K_roll calibration: 4 setpoints + 2 actions + 2 checks) -----
+    # ----- Assert: 8 step entries (4 setpoints + 2 actions + 2 checks) -----
 
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(

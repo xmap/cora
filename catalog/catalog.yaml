@@ -78,9 +78,9 @@ capabilities:
     name: Alignment
     description: "Iterative tuning toward a target metric; each Method is a step in the rotation-axis alignment chain."
     executor_shapes: [Method]
-  - code: cora.capability.calibration
-    name: Calibration
-    description: "Empirical measurement of system constants; alignment consumes what calibration measures."
+  - code: cora.capability.characterization
+    name: Characterization
+    description: "Empirical measurement of system constants; alignment consumes what characterization measures."
     executor_shapes: [Method]
   - code: cora.capability.maintenance
     name: Maintenance
@@ -133,8 +133,8 @@ methods:
     capability: cora.capability.tomography
     purpose: "The canonical imaging routine; a Run producing an H5 projection-stack Dataset from operator exposure, projections, and angle-range."
     needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
-  - name: alignment_calibration
-    capability: cora.capability.calibration
+  - name: sensitivity_characterization
+    capability: cora.capability.characterization
     purpose: "Pre-step measuring motor-sensitivity constants empirically (bump an axis by a known delta, observe centroid shift, K = shift/bump)."
     needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
   - name: streaming_tomography
