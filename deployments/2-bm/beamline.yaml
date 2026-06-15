@@ -99,16 +99,14 @@ conditioning-optics:
     - name: ConditioningSlit
       family: Slit
       pv: { x_in: "2bma:m14", x_out: "2bma:m13", y_top: "2bma:m15", y_bot: "2bma:m16" }
+      controller: FrontEndDrive
       white_beam: true
       water_cooled: true
-      new: true
-      confirm: true
     - name: Filter
       family: Filter
       pv: { upstream_paddle: "2bma:m17", downstream_paddle: "2bma:m18" }
+      controller: FrontEndDrive
       foils: ["1 mm C", "150 um Al", "600 um Al", "1 mm Al"]
-      new: true
-      confirm: true
       note: only the downstream paddle is currently operational
     - name: Mirror
       family: Mirror
@@ -119,15 +117,12 @@ conditioning-optics:
       water_cooled: true
       replaceable: true          # APS-U spare exists
       stripes: ["5 nm Pt", "W/Si x50 (b)", "W/Si x50 (c)", "W/Si x50 (d)"]  # recoatable
-      new: true
-      confirm: true
     - name: Monochromator
       family: Monochromator
       pv: { crystal2_z: "2bma:m8" }   # plus m25-m32 for alignment
+      controller: FrontEndDrive
       material: Si multilayer
       crystal_z_mm: [29335, 29934]
-      new: true
-      confirm: true
       note: insertable, pink-beam operation bypasses it
 
 beam-defining-and-safety:
@@ -169,9 +164,8 @@ beam-defining-and-safety:
     - name: SampleSlit
       family: Slit
       pv: { y_top: "2bma:m9", y_bot: "2bma:m10", x: ["2bma:m11", "2bma:m12"] }
+      controller: FrontEndDrive
       z_mm: 50500
-      new: true
-      confirm: true
       note: vertical pair tracks the per-energy beam position, reuses the A-side class
     - name: BeamPositionMonitor
       family: Diagnostic

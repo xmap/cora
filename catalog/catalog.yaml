@@ -64,10 +64,17 @@ families:
     note: "Containment chassis Family; the Housing Asset parents the Microscope constituents and carries the Mount."
   - name: OpticalTable
     note: "Multi-axis optical positioning table. At 2-BM the DetectorTable (virtual record 2bmb:table3) surfaces corrective DoFs (pitch, yaw, centering) as PseudoAxis sub-modules over an IOC solver, mirroring the Hexapod DoF model."
+  - name: Mirror
+    note: "Reflective beam-conditioning optic (vertical-deflecting at 2-BM, the Y3-30 silicon mirror with selectable coating stripes). The energy change moves it."
+  - name: Monochromator
+    note: "Energy-selecting optic; at 2-BM the double-multilayer monochromator (DMM). Inserting it picks the beam energy; pink-beam operation bypasses it."
+  - name: Slit
+    note: "Aperture-defining four-blade assembly (APS L3-20 at 2-BM). The ConditioningSlit (white beam) and SampleSlit (per-energy beam tracking) instances share it."
+  - name: Filter
+    note: "Discrete absorber-foil changer (C / Al paddles at 2-BM) that attenuates and conditions the white beam."
   - name: ProbeGeneric
     note: "APS facility-scope template, an abstract detector probe-chain."
-  # Pending in code (documented, not yet defined): Goniometer, Monochromator,
-  # Slit, Mirror; future: OpticalRelay.
+  # Pending in code (documented, not yet defined): Goniometer; future: OpticalRelay.
 
 capabilities:
   - code: cora.capability.tomography
