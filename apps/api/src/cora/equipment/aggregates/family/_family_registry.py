@@ -3,9 +3,9 @@
 A Family is cross-facility vocabulary: a `Camera` defined at APS 2-BM
 and a `Camera` defined at MAX IV name the same device class. For
 `Assembly.content_hash` to converge across facilities (it serializes
-`presents_as_family_id` and each slot's `required_family_ids`), the
-underlying Family ids must be derived from the name, not minted at
-random per facility. This mirrors `role_stream_id` (see
+each slot's `required_family_ids`), the underlying Family ids must be
+derived from the name, not minted at random per facility. This mirrors
+`role_stream_id` (see
 `aggregates/role/_role_registry.py`).
 
 The namespace UUID is derived from `uuid5(NAMESPACE_DNS, 'cora.family')`

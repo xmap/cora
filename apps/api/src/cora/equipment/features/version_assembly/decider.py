@@ -13,6 +13,7 @@ re-confirmation is captured in the audit log. Pinned by
 
 from datetime import datetime
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyCannotVersionError,
@@ -30,6 +31,7 @@ from cora.equipment.aggregates.assembly import (
     WireReferencesUnknownSlotError,
 )
 from cora.equipment.aggregates.assembly._content_hash import compute_assembly_content_hash
+from cora.equipment.aggregates.role import RoleNotFoundError
 from cora.equipment.features.version_assembly.command import VersionAssembly
 from cora.equipment.features.version_assembly.context import VersionAssemblyContext
 from cora.shared.json_schema_validation import validate_schema_declaration
@@ -59,6 +61,9 @@ def decide(
       - context.missing_family_ids must be empty
         -> FamilyNotFoundForAssemblyError carrying the sorted-first
         missing FamilyId for deterministic responses.
+      - context.missing_role_ids must be empty
+        -> RoleNotFoundError carrying the sorted-first missing RoleId
+        for deterministic responses.
       - command.name must be valid -> InvalidAssemblyNameError
         (via AssemblyName VO).
       - Every wire endpoint must reference a slot in required_slots
@@ -94,6 +99,9 @@ def decide(
     if context.missing_family_ids:
         first_missing = next(iter(sorted(context.missing_family_ids, key=str)))
         raise FamilyNotFoundForAssemblyError(first_missing)
+    if context.missing_role_ids:
+        first_missing_role = next(iter(sorted(context.missing_role_ids, key=str)))
+        raise RoleNotFoundError(first_missing_role)
 
     for ref in command.required_sub_assemblies:
         if ref.sub_assembly_id == state.id:
@@ -158,9 +166,10 @@ def decide(
             error_class=InvalidParameterOverridesSchemaError,
         )
 
+    presents_as = frozenset(RoleId(r) for r in command.presents_as)
     content_hash = compute_assembly_content_hash(
         name=name,
-        presents_as_family_id=command.presents_as_family_id,
+        presents_as=presents_as,
         required_slots=command.required_slots,
         required_wires=command.required_wires,
         parameter_overrides_schema=command.parameter_overrides_schema,
@@ -171,7 +180,7 @@ def decide(
         AssemblyVersioned(
             assembly_id=state.id,
             name=name,
-            presents_as_family_id=command.presents_as_family_id,
+            presents_as=presents_as,
             required_slots=command.required_slots,
             required_wires=command.required_wires,
             required_sub_assemblies=command.required_sub_assemblies,

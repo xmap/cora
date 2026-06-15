@@ -3,8 +3,8 @@
 Covers replace-on-version semantics, multi-source FSM (Defined and
 Versioned both accept revisions), Deprecated rejection (deferred to
 the deprecate_assembly slice landing; until then no Deprecated state
-is reachable), AssemblyNotFound 404, and FamilyNotFound 404 on a
-re-pointed presents_as_family_id.
+is reachable), AssemblyNotFound 404, and RoleNotFound 404 on a
+re-pointed presents_as Role.
 """
 
 from uuid import UUID, uuid4
@@ -26,7 +26,6 @@ def _define_family(client: TestClient, name: str = "Detector") -> UUID:
 
 def _define_assembly(
     client: TestClient,
-    family_id: UUID,
     *,
     name: str = "Microscope",
 ) -> UUID:
@@ -34,7 +33,6 @@ def _define_assembly(
         "/assemblies",
         json={
             "name": name,
-            "presents_as_family_id": str(family_id),
             "required_slots": [],
             "required_wires": [],
         },
@@ -46,13 +44,11 @@ def _define_assembly(
 @pytest.mark.contract
 def test_post_assembly_version_returns_204_for_minimal_revision() -> None:
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         response = client.post(
             f"/assemblies/{assembly_id}/versions",
             json={
                 "name": "Microscope-rev2",
-                "presents_as_family_id": str(family_id),
                 "required_slots": [],
                 "required_wires": [],
             },
@@ -63,14 +59,12 @@ def test_post_assembly_version_returns_204_for_minimal_revision() -> None:
 @pytest.mark.contract
 def test_post_assembly_version_allows_multiple_revisions_on_same_stream() -> None:
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         for tag in ("v1", "v2", "v3"):
             response = client.post(
                 f"/assemblies/{assembly_id}/versions",
                 json={
                     "name": "Microscope",
-                    "presents_as_family_id": str(family_id),
                     "required_slots": [],
                     "required_wires": [],
                     "version": tag,
@@ -84,11 +78,9 @@ def test_post_assembly_version_allows_re_attestation_with_identical_body() -> No
     """Re-attestation: posting the same body twice succeeds. Each call
     emits a fresh event capturing the audit moment."""
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         body: dict[str, object] = {
             "name": "Microscope",
-            "presents_as_family_id": str(family_id),
             "required_slots": [],
             "required_wires": [],
             "version": "v1.0.0",
@@ -102,12 +94,10 @@ def test_post_assembly_version_allows_re_attestation_with_identical_body() -> No
 @pytest.mark.contract
 def test_post_assembly_version_returns_404_for_unknown_assembly() -> None:
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
         response = client.post(
             f"/assemblies/{uuid4()}/versions",
             json={
                 "name": "X",
-                "presents_as_family_id": str(family_id),
                 "required_slots": [],
                 "required_wires": [],
             },
@@ -116,33 +106,31 @@ def test_post_assembly_version_returns_404_for_unknown_assembly() -> None:
 
 
 @pytest.mark.contract
-def test_post_assembly_version_returns_404_for_unknown_presents_as_family_id() -> None:
+def test_post_assembly_version_returns_404_for_unknown_presents_as_role() -> None:
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         response = client.post(
             f"/assemblies/{assembly_id}/versions",
             json={
                 "name": "X",
-                "presents_as_family_id": str(uuid4()),
+                "presents_as": [str(uuid4())],
                 "required_slots": [],
                 "required_wires": [],
             },
         )
     assert response.status_code == 404, response.text
+    assert "Role" in response.json()["detail"]
 
 
 @pytest.mark.contract
 def test_post_assembly_version_returns_400_when_wire_references_unknown_slot() -> None:
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         camera_family = _define_family(client, "Camera")
         response = client.post(
             f"/assemblies/{assembly_id}/versions",
             json={
                 "name": "X",
-                "presents_as_family_id": str(family_id),
                 "required_slots": [
                     {
                         "slot_name": "camera",
@@ -167,13 +155,11 @@ def test_post_assembly_version_returns_400_when_wire_references_unknown_slot() -
 @pytest.mark.contract
 def test_post_assembly_version_returns_400_for_invalid_parameter_overrides_schema() -> None:
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         response = client.post(
             f"/assemblies/{assembly_id}/versions",
             json={
                 "name": "X",
-                "presents_as_family_id": str(family_id),
                 "required_slots": [],
                 "required_wires": [],
                 "parameter_overrides_schema": {"oneOf": [{"type": "object"}]},
@@ -185,11 +171,10 @@ def test_post_assembly_version_returns_400_for_invalid_parameter_overrides_schem
 @pytest.mark.contract
 def test_post_assembly_version_returns_422_for_missing_name() -> None:
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         response = client.post(
             f"/assemblies/{assembly_id}/versions",
-            json={"presents_as_family_id": str(family_id)},
+            json={"presents_as": []},
         )
     assert response.status_code == 422
 
@@ -198,15 +183,13 @@ def test_post_assembly_version_returns_422_for_missing_name() -> None:
 def test_post_assembly_version_replaces_structural_fields() -> None:
     """Replace-on-version: new slot set wholesale replaces the old."""
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         camera_family = _define_family(client, "Camera")
         scintillator_family = _define_family(client, "Scintillator")
         response = client.post(
             f"/assemblies/{assembly_id}/versions",
             json={
                 "name": "Detector",
-                "presents_as_family_id": str(family_id),
                 "required_slots": [
                     {
                         "slot_name": "camera",

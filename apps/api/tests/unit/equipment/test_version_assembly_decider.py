@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyCannotVersionError,
@@ -12,7 +13,6 @@ from cora.equipment.aggregates.assembly import (
     AssemblyNotFoundError,
     AssemblyStatus,
     AssemblyVersioned,
-    FamilyNotFoundForAssemblyError,
     InvalidAssemblyNameError,
     InvalidParameterOverridesSchemaError,
     SlotCardinality,
@@ -27,6 +27,7 @@ from cora.equipment.aggregates.assembly import (
     TemplateWire,
     WireReferencesUnknownSlotError,
 )
+from cora.equipment.aggregates.role import RoleNotFoundError
 from cora.equipment.features import version_assembly
 from cora.equipment.features.version_assembly import (
     VersionAssembly,
@@ -54,7 +55,7 @@ def _state(
     return Assembly(
         id=assembly_id,  # type: ignore[arg-type]
         name=AssemblyName("Initial"),
-        presents_as_family_id=family_id,  # type: ignore[arg-type]
+        presents_as=frozenset({RoleId(family_id)}),  # type: ignore[arg-type]
         status=status,
         content_hash=content_hash,
     )
@@ -70,7 +71,7 @@ def test_decide_emits_assembly_versioned_from_defined_state() -> None:
         command=VersionAssembly(
             assembly_id=assembly_id,
             name="Detector",
-            presents_as_family_id=family_id,
+            presents_as=frozenset({RoleId(family_id)}),
             version="v0.2.0",
         ),
         context=VersionAssemblyContext(missing_family_ids=frozenset()),
@@ -102,7 +103,7 @@ def test_decide_emits_assembly_versioned_from_versioned_state() -> None:
         command=VersionAssembly(
             assembly_id=assembly_id,
             name="Detector",
-            presents_as_family_id=family_id,
+            presents_as=frozenset({RoleId(family_id)}),
             version="v0.3.0",
         ),
         context=VersionAssemblyContext(missing_family_ids=frozenset()),
@@ -121,7 +122,7 @@ def test_decide_rejects_none_state_with_assembly_not_found() -> None:
             command=VersionAssembly(
                 assembly_id=target_id,
                 name="X",
-                presents_as_family_id=uuid4(),
+                presents_as=frozenset({RoleId(uuid4())}),
             ),
             context=VersionAssemblyContext(missing_family_ids=frozenset()),
             now=_NOW,
@@ -140,7 +141,7 @@ def test_decide_rejects_deprecated_state_with_cannot_version() -> None:
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="X",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
             ),
             context=VersionAssemblyContext(missing_family_ids=frozenset()),
             now=_NOW,
@@ -150,23 +151,26 @@ def test_decide_rejects_deprecated_state_with_cannot_version() -> None:
 
 
 @pytest.mark.unit
-def test_decide_rejects_missing_family_with_family_not_found() -> None:
+def test_decide_rejects_missing_presents_as_role_with_role_not_found() -> None:
     assembly_id = uuid4()
     family_id = uuid4()
     state = _state(assembly_id, family_id)
-    missing_family = uuid4()
-    with pytest.raises(FamilyNotFoundForAssemblyError) as exc_info:
+    missing_role = uuid4()
+    with pytest.raises(RoleNotFoundError) as exc_info:
         version_assembly.decide(
             state=state,
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="X",
-                presents_as_family_id=missing_family,
+                presents_as=frozenset({RoleId(missing_role)}),
             ),
-            context=VersionAssemblyContext(missing_family_ids=frozenset({missing_family})),
+            context=VersionAssemblyContext(
+                missing_family_ids=frozenset(),
+                missing_role_ids=frozenset({missing_role}),
+            ),
             now=_NOW,
         )
-    assert exc_info.value.family_id == missing_family
+    assert exc_info.value.role_id == missing_role
 
 
 @pytest.mark.unit
@@ -180,7 +184,7 @@ def test_decide_rejects_invalid_name_via_vo() -> None:
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="   ",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
             ),
             context=VersionAssemblyContext(missing_family_ids=frozenset()),
             now=_NOW,
@@ -205,7 +209,7 @@ def test_decide_rejects_wire_referencing_unknown_slot() -> None:
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="X",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 required_slots=frozenset({camera_slot}),
                 required_wires=frozenset({wire}),
             ),
@@ -226,7 +230,7 @@ def test_decide_rejects_invalid_parameter_overrides_schema() -> None:
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="X",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 parameter_overrides_schema={"oneOf": [{"type": "object"}]},
             ),
             context=VersionAssemblyContext(missing_family_ids=frozenset()),
@@ -245,7 +249,7 @@ def test_decide_allows_re_attestation_with_same_content() -> None:
     command = VersionAssembly(
         assembly_id=assembly_id,
         name="Stable",
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         version="v1.0.0",
     )
     context = VersionAssemblyContext(missing_family_ids=frozenset())
@@ -270,7 +274,7 @@ def test_decide_replace_on_version_carries_full_new_slot_set() -> None:
         command=VersionAssembly(
             assembly_id=assembly_id,
             name="Detector",
-            presents_as_family_id=family_id,
+            presents_as=frozenset({RoleId(family_id)}),
             required_slots=new_slots,
         ),
         context=VersionAssemblyContext(missing_family_ids=frozenset()),
@@ -294,7 +298,7 @@ def test_decide_emits_versioned_with_required_sub_assemblies() -> None:
         command=VersionAssembly(
             assembly_id=assembly_id,
             name="Microscope",
-            presents_as_family_id=family_id,
+            presents_as=frozenset({RoleId(family_id)}),
             required_sub_assemblies=frozenset({link}),
         ),
         context=VersionAssemblyContext(missing_family_ids=frozenset()),
@@ -317,7 +321,7 @@ def test_decide_rejects_missing_sub_assembly() -> None:
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="Microscope",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 required_sub_assemblies=frozenset({link}),
             ),
             context=VersionAssemblyContext(
@@ -344,7 +348,7 @@ def test_decide_rejects_sub_assembly_content_hash_mismatch() -> None:
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="Microscope",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 required_sub_assemblies=frozenset({link}),
             ),
             context=VersionAssemblyContext(
@@ -369,7 +373,7 @@ def test_decide_rejects_self_referential_sub_assembly() -> None:
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="Microscope",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 required_sub_assemblies=frozenset({link}),
             ),
             context=VersionAssemblyContext(missing_family_ids=frozenset()),
@@ -392,7 +396,7 @@ def test_decide_rejects_sub_assembly_slot_name_colliding_with_leaf_slot() -> Non
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="Microscope",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 required_slots=frozenset({leaf}),
                 required_sub_assemblies=frozenset({link}),
             ),
@@ -420,7 +424,7 @@ def test_decide_rejects_duplicate_sub_assembly_link_slot_name() -> None:
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="Microscope",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 required_sub_assemblies=frozenset({link_a, link_b}),
             ),
             context=VersionAssemblyContext(missing_family_ids=frozenset()),
@@ -446,7 +450,7 @@ def test_decide_rejects_sub_assembly_that_is_itself_a_composite() -> None:
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="Microscope",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 required_sub_assemblies=frozenset({link}),
             ),
             context=VersionAssemblyContext(
@@ -473,7 +477,7 @@ def test_decide_rejects_leaf_slot_collision_across_composed_blueprints() -> None
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name="Microscope",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 required_sub_assemblies=frozenset({link}),
             ),
             context=VersionAssemblyContext(

@@ -48,13 +48,13 @@ async def test_deprecate_assembly_appends_deprecated_event_to_postgres(
         ],
     )
 
-    family_id = await define_family.bind(deps)(
+    await define_family.bind(deps)(
         DefineFamily(name="Detector", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     assembly_id = await define_assembly.bind(deps)(
-        DefineAssembly(name="Microscope", presents_as_family_id=family_id),
+        DefineAssembly(name="Microscope", presents_as=frozenset()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -107,13 +107,13 @@ async def test_deprecate_assembly_persists_through_versioned_arm(
         ],
     )
 
-    family_id = await define_family.bind(deps)(
+    await define_family.bind(deps)(
         DefineFamily(name="Detector", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     assembly_id = await define_assembly.bind(deps)(
-        DefineAssembly(name="Microscope", presents_as_family_id=family_id),
+        DefineAssembly(name="Microscope", presents_as=frozenset()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -121,7 +121,7 @@ async def test_deprecate_assembly_persists_through_versioned_arm(
         VersionAssembly(
             assembly_id=assembly_id,
             name="Microscope",
-            presents_as_family_id=family_id,
+            presents_as=frozenset(),
             version="v1",
         ),
         principal_id=_PRINCIPAL_ID,

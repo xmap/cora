@@ -22,7 +22,7 @@ from cora.equipment.aggregates.assembly._content_hash import compute_assembly_co
 
 
 def _define_family(client: TestClient, name: str = "Camera") -> UUID:
-    """Define a Family and return its id. Used to seed presents_as_family_id."""
+    """Define a Family and return its id. Used for slot required_family_ids."""
     response = client.post(
         "/families",
         json={"name": name, "affordances": []},
@@ -34,12 +34,10 @@ def _define_family(client: TestClient, name: str = "Camera") -> UUID:
 @pytest.mark.contract
 def test_post_assemblies_returns_201_with_assembly_id_for_minimal_body() -> None:
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
         response = client.post(
             "/assemblies",
             json={
                 "name": "Detector",
-                "presents_as_family_id": str(family_id),
                 "required_slots": [],
                 "required_wires": [],
             },
@@ -53,14 +51,12 @@ def test_post_assemblies_returns_201_with_assembly_id_for_minimal_body() -> None
 @pytest.mark.contract
 def test_post_assemblies_returns_201_with_slots_and_wires() -> None:
     with TestClient(create_app()) as client:
-        presents_id = _define_family(client, "Detector")
         camera_family = _define_family(client, "Camera")
         trigger_family = _define_family(client, "TriggerSource")
         response = client.post(
             "/assemblies",
             json={
                 "name": "Microscope",
-                "presents_as_family_id": str(presents_id),
                 "required_slots": [
                     {
                         "slot_name": "camera",
@@ -87,30 +83,28 @@ def test_post_assemblies_returns_201_with_slots_and_wires() -> None:
 
 
 @pytest.mark.contract
-def test_post_assemblies_returns_404_for_unknown_presents_as_family_id() -> None:
+def test_post_assemblies_returns_404_for_unknown_presents_as_role() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/assemblies",
             json={
                 "name": "Detector",
-                "presents_as_family_id": str(uuid4()),
+                "presents_as": [str(uuid4())],
                 "required_slots": [],
                 "required_wires": [],
             },
         )
     assert response.status_code == 404, response.text
-    assert "Family" in response.json()["detail"]
+    assert "Role" in response.json()["detail"]
 
 
 @pytest.mark.contract
 def test_post_assemblies_returns_404_when_slot_required_family_missing() -> None:
     with TestClient(create_app()) as client:
-        presents_id = _define_family(client, "Detector")
         response = client.post(
             "/assemblies",
             json={
                 "name": "Detector",
-                "presents_as_family_id": str(presents_id),
                 "required_slots": [
                     {
                         "slot_name": "camera",
@@ -127,12 +121,10 @@ def test_post_assemblies_returns_404_when_slot_required_family_missing() -> None
 @pytest.mark.contract
 def test_post_assemblies_returns_400_for_invalid_parameter_overrides_schema() -> None:
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
         response = client.post(
             "/assemblies",
             json={
                 "name": "Detector",
-                "presents_as_family_id": str(family_id),
                 "required_slots": [],
                 "required_wires": [],
                 "parameter_overrides_schema": {"oneOf": [{"type": "object"}]},
@@ -145,13 +137,11 @@ def test_post_assemblies_returns_400_for_invalid_parameter_overrides_schema() ->
 @pytest.mark.contract
 def test_post_assemblies_returns_400_when_wire_references_unknown_slot() -> None:
     with TestClient(create_app()) as client:
-        presents_id = _define_family(client, "Detector")
         camera_family = _define_family(client, "Camera")
         response = client.post(
             "/assemblies",
             json={
                 "name": "Detector",
-                "presents_as_family_id": str(presents_id),
                 "required_slots": [
                     {
                         "slot_name": "camera",
@@ -176,13 +166,11 @@ def test_post_assemblies_returns_400_when_wire_references_unknown_slot() -> None
 @pytest.mark.contract
 def test_post_assemblies_returns_400_for_degenerate_full_self_loop_wire() -> None:
     with TestClient(create_app()) as client:
-        presents_id = _define_family(client, "Detector")
         lut_family = _define_family(client, "Lut")
         response = client.post(
             "/assemblies",
             json={
                 "name": "X",
-                "presents_as_family_id": str(presents_id),
                 "required_slots": [
                     {
                         "slot_name": "lut",
@@ -209,7 +197,7 @@ def test_post_assemblies_returns_422_for_missing_name() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/assemblies",
-            json={"presents_as_family_id": str(uuid4())},
+            json={"presents_as": [str(uuid4())]},
         )
     assert response.status_code == 422
 
@@ -221,7 +209,6 @@ def test_post_assemblies_returns_422_for_name_too_long() -> None:
             "/assemblies",
             json={
                 "name": "x" * (ASSEMBLY_NAME_MAX_LENGTH + 1),
-                "presents_as_family_id": str(uuid4()),
             },
         )
     assert response.status_code == 422
@@ -235,7 +222,6 @@ def test_post_assemblies_returns_422_for_unknown_cardinality() -> None:
             "/assemblies",
             json={
                 "name": "X",
-                "presents_as_family_id": str(family_id),
                 "required_slots": [
                     {
                         "slot_name": "camera",
@@ -252,12 +238,10 @@ def test_post_assemblies_returns_422_for_unknown_cardinality() -> None:
 @pytest.mark.contract
 def test_post_assemblies_returns_422_for_empty_required_family_ids() -> None:
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
         response = client.post(
             "/assemblies",
             json={
                 "name": "X",
-                "presents_as_family_id": str(family_id),
                 "required_slots": [
                     {
                         "slot_name": "orphan",
@@ -275,10 +259,8 @@ def test_post_assemblies_returns_422_for_empty_required_family_ids() -> None:
 def test_post_assemblies_idempotency_key_returns_same_assembly_id() -> None:
     """Idempotency-Key replay returns the original assembly_id."""
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
         body: dict[str, object] = {
             "name": "Idempotent",
-            "presents_as_family_id": str(family_id),
             "required_slots": [],
             "required_wires": [],
         }
@@ -296,12 +278,10 @@ def test_post_assemblies_response_omits_content_hash() -> None:
     is on the event payload and surfaces via list_assemblies / get_assembly
     when those slices ship."""
     with TestClient(create_app()) as client:
-        family_id = _define_family(client)
         response = client.post(
             "/assemblies",
             json={
                 "name": "X",
-                "presents_as_family_id": str(family_id),
                 "required_slots": [],
                 "required_wires": [],
             },
@@ -315,13 +295,10 @@ def test_post_assemblies_returns_201_with_sub_assembly_link() -> None:
     """A parent Assembly composed of a version-pinned child link defines
     successfully when the pin matches the child's current content_hash."""
     with TestClient(create_app()) as client:
-        child_presents = _define_family(client, "OpticPresenter")
-        parent_presents = _define_family(client, "MicroscopePresenter")
         child_resp = client.post(
             "/assemblies",
             json={
                 "name": "Optics",
-                "presents_as_family_id": str(child_presents),
                 "required_slots": [],
                 "required_wires": [],
             },
@@ -330,7 +307,7 @@ def test_post_assemblies_returns_201_with_sub_assembly_link() -> None:
         child_id = child_resp.json()["assembly_id"]
         child_hash = compute_assembly_content_hash(
             name="Optics",
-            presents_as_family_id=child_presents,
+            presents_as=frozenset(),
             required_slots=frozenset(),
             required_wires=frozenset(),
             parameter_overrides_schema=None,
@@ -339,7 +316,6 @@ def test_post_assemblies_returns_201_with_sub_assembly_link() -> None:
             "/assemblies",
             json={
                 "name": "Microscope",
-                "presents_as_family_id": str(parent_presents),
                 "required_sub_assemblies": [
                     {
                         "slot_name": "optics",
@@ -356,12 +332,10 @@ def test_post_assemblies_returns_201_with_sub_assembly_link() -> None:
 @pytest.mark.contract
 def test_post_assemblies_returns_404_for_unknown_sub_assembly() -> None:
     with TestClient(create_app()) as client:
-        parent_presents = _define_family(client, "MicroscopePresenter")
         response = client.post(
             "/assemblies",
             json={
                 "name": "Microscope",
-                "presents_as_family_id": str(parent_presents),
                 "required_sub_assemblies": [
                     {
                         "slot_name": "optics",
@@ -377,13 +351,10 @@ def test_post_assemblies_returns_404_for_unknown_sub_assembly() -> None:
 @pytest.mark.contract
 def test_post_assemblies_returns_409_for_stale_sub_assembly_pin() -> None:
     with TestClient(create_app()) as client:
-        child_presents = _define_family(client, "OpticPresenter")
-        parent_presents = _define_family(client, "MicroscopePresenter")
         child_id = client.post(
             "/assemblies",
             json={
                 "name": "Optics",
-                "presents_as_family_id": str(child_presents),
                 "required_slots": [],
                 "required_wires": [],
             },
@@ -392,7 +363,6 @@ def test_post_assemblies_returns_409_for_stale_sub_assembly_pin() -> None:
             "/assemblies",
             json={
                 "name": "Microscope",
-                "presents_as_family_id": str(parent_presents),
                 "required_sub_assemblies": [
                     {
                         "slot_name": "optics",

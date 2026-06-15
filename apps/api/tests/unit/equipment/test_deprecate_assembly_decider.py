@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyCannotDeprecateError,
@@ -27,7 +28,7 @@ def _state(
     return Assembly(
         id=assembly_id,  # type: ignore[arg-type]
         name=AssemblyName("Existing"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         status=status,
     )
 

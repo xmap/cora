@@ -59,6 +59,7 @@ from cora.equipment.aggregates._placement import (
     placement_from_payload,
     placement_to_payload,
 )
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly.state import (
     AssemblyName,
     SlotCardinality,
@@ -137,7 +138,7 @@ class AssemblyDefined:
     """A new Assembly was defined.
 
     Genesis event. Carries the full canonical structural subset
-    (name, presents_as_family_id, required_slots, required_wires,
+    (name, presents_as, required_slots, required_wires,
     parameter_overrides_schema) plus the computed content_hash and
     the operator-curatorial fields (drawing, version).
 
@@ -147,7 +148,7 @@ class AssemblyDefined:
 
     assembly_id: UUID
     name: AssemblyName
-    presents_as_family_id: UUID
+    presents_as: frozenset[RoleId]
     required_slots: frozenset[TemplateSlot]
     required_wires: frozenset[TemplateWire]
     parameter_overrides_schema: dict[str, Any] | None
@@ -175,7 +176,7 @@ class AssemblyVersioned:
 
     assembly_id: UUID
     name: AssemblyName
-    presents_as_family_id: UUID
+    presents_as: frozenset[RoleId]
     required_slots: frozenset[TemplateSlot]
     required_wires: frozenset[TemplateWire]
     parameter_overrides_schema: dict[str, Any] | None
@@ -259,7 +260,7 @@ def to_payload(event: AssemblyEvent) -> dict[str, Any]:
         case AssemblyDefined(
             assembly_id=assembly_id,
             name=name,
-            presents_as_family_id=presents_as_family_id,
+            presents_as=presents_as,
             required_slots=required_slots,
             required_wires=required_wires,
             required_sub_assemblies=required_sub_assemblies,
@@ -272,7 +273,7 @@ def to_payload(event: AssemblyEvent) -> dict[str, Any]:
             return {
                 "assembly_id": str(assembly_id),
                 "name": name.value,
-                "presents_as_family_id": str(presents_as_family_id),
+                "presents_as": sorted(str(r) for r in presents_as),
                 "required_slots": sorted(
                     (_template_slot_to_payload(s) for s in required_slots),
                     key=lambda d: d["slot_name"],
@@ -299,7 +300,7 @@ def to_payload(event: AssemblyEvent) -> dict[str, Any]:
         case AssemblyVersioned(
             assembly_id=assembly_id,
             name=name,
-            presents_as_family_id=presents_as_family_id,
+            presents_as=presents_as,
             required_slots=required_slots,
             required_wires=required_wires,
             required_sub_assemblies=required_sub_assemblies,
@@ -313,7 +314,7 @@ def to_payload(event: AssemblyEvent) -> dict[str, Any]:
             return {
                 "assembly_id": str(assembly_id),
                 "name": name.value,
-                "presents_as_family_id": str(presents_as_family_id),
+                "presents_as": sorted(str(r) for r in presents_as),
                 "required_slots": sorted(
                     (_template_slot_to_payload(s) for s in required_slots),
                     key=lambda d: d["slot_name"],
@@ -386,7 +387,7 @@ def from_stored(stored: StoredEvent) -> AssemblyEvent:
                 return AssemblyDefined(
                     assembly_id=UUID(payload["assembly_id"]),
                     name=AssemblyName(payload["name"]),
-                    presents_as_family_id=UUID(payload["presents_as_family_id"]),
+                    presents_as=frozenset(RoleId(UUID(r)) for r in payload["presents_as"]),
                     required_slots=frozenset(
                         _template_slot_from_payload(s) for s in payload["required_slots"]
                     ),
@@ -414,7 +415,7 @@ def from_stored(stored: StoredEvent) -> AssemblyEvent:
                 return AssemblyVersioned(
                     assembly_id=UUID(payload["assembly_id"]),
                     name=AssemblyName(payload["name"]),
-                    presents_as_family_id=UUID(payload["presents_as_family_id"]),
+                    presents_as=frozenset(RoleId(UUID(r)) for r in payload["presents_as"]),
                     required_slots=frozenset(
                         _template_slot_from_payload(s) for s in payload["required_slots"]
                     ),

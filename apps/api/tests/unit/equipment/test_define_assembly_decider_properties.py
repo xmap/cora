@@ -25,6 +25,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     ASSEMBLY_NAME_MAX_LENGTH,
     Assembly,
@@ -51,7 +52,7 @@ def _assembly(assembly_id: UUID, family_id: UUID) -> Assembly:
     return Assembly(
         id=assembly_id,
         name=AssemblyName("Existing"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         status=AssemblyStatus.DEFINED,
     )
 
@@ -69,7 +70,7 @@ def test_decide_genesis_emits_assembly_defined_carrying_injected_fields(
     family_id = uuid4()
     events = define_assembly.decide(
         state=None,
-        command=DefineAssembly(name=name, presents_as_family_id=family_id),
+        command=DefineAssembly(name=name, presents_as=frozenset({RoleId(family_id)})),
         context=DefineAssemblyContext(missing_family_ids=frozenset()),
         now=now,
         new_id=new_id,
@@ -78,7 +79,7 @@ def test_decide_genesis_emits_assembly_defined_carrying_injected_fields(
     event = events[0]
     assert isinstance(event, AssemblyDefined)
     assert event.assembly_id == new_id
-    assert event.presents_as_family_id == family_id
+    assert event.presents_as == frozenset({family_id})
     assert event.occurred_at == now
     assert event.name == AssemblyName(name)
     assert len(event.content_hash) == 64
@@ -99,7 +100,7 @@ def test_decide_non_none_state_always_raises_already_exists(
     with pytest.raises(AssemblyAlreadyExistsError) as exc_info:
         define_assembly.decide(
             state=state,
-            command=DefineAssembly(name=name, presents_as_family_id=family_id),
+            command=DefineAssembly(name=name, presents_as=frozenset({RoleId(family_id)})),
             context=DefineAssemblyContext(missing_family_ids=frozenset()),
             now=now,
             new_id=uuid4(),
@@ -122,7 +123,7 @@ def test_decide_with_missing_families_always_raises_family_not_found(
     with pytest.raises(FamilyNotFoundForAssemblyError) as exc_info:
         define_assembly.decide(
             state=None,
-            command=DefineAssembly(name=name, presents_as_family_id=uuid4()),
+            command=DefineAssembly(name=name, presents_as=frozenset({RoleId(uuid4())})),
             context=DefineAssemblyContext(missing_family_ids=missing),
             now=now,
             new_id=uuid4(),
@@ -142,7 +143,7 @@ def test_decide_is_pure_same_inputs_yield_same_events(
 ) -> None:
     new_id = uuid4()
     family_id = uuid4()
-    command = DefineAssembly(name=name, presents_as_family_id=family_id)
+    command = DefineAssembly(name=name, presents_as=frozenset({RoleId(family_id)}))
     context = DefineAssemblyContext(missing_family_ids=frozenset())
     events_a = define_assembly.decide(
         state=None,

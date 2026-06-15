@@ -34,9 +34,9 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             "(Family-typed) and signal wires of a reusable cluster of "
             "Assets (e.g., the Microscope detector fixture: an Optics "
             "sub-assembly + camera + scintillator, wired together). "
-            "presents_as_family_id is the FamilyId the instantiated "
-            "Assembly stands in for at Method.needed_families "
-            "satisfaction time. Note: this MCP surface has no "
+            "presents_as is the set of global Role contract ids the "
+            "instantiated Assembly advertises for Method role-requirement "
+            "satisfaction. Note: this MCP surface has no "
             "idempotency-key equivalent of the REST Idempotency-Key "
             "header; retries of a failed or lost call may create "
             "duplicate Assemblies."
@@ -52,10 +52,10 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 description="Human-readable display name.",
             ),
         ],
-        presents_as_family_id: Annotated[
-            UUID,
-            Field(description="FamilyId the instantiated Assembly stands in for."),
-        ],
+        presents_as: Annotated[
+            list[UUID],
+            Field(description="Global Role contract ids this Assembly advertises."),
+        ] = [],  # noqa: B006
         required_slots: Annotated[
             list[TemplateSlotBody],
             Field(description="Slots that compose this Assembly."),
@@ -95,7 +95,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         assembly_id = await handler(
             DefineAssembly(
                 name=name,
-                presents_as_family_id=presents_as_family_id,
+                presents_as=frozenset(presents_as),
                 required_slots=frozenset(s.to_domain() for s in required_slots),
                 required_wires=frozenset(w.to_domain() for w in required_wires),
                 required_sub_assemblies=frozenset(r.to_domain() for r in required_sub_assemblies),

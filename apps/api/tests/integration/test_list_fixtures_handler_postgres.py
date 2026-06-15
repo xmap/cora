@@ -79,7 +79,7 @@ async def _seed_fixture(
     assembly_id = await bind_define_assembly(deps)(
         DefineAssembly(
             name=assembly_name,
-            presents_as_family_id=family_id,
+            presents_as=frozenset(),
             required_slots=frozenset(
                 {
                     TemplateSlot(

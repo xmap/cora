@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.equipment.aggregates._drawing import Drawing, DrawingSystem
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     AssemblyDefined,
     AssemblyDeprecated,
@@ -81,7 +82,7 @@ def test_assembly_defined_to_payload_then_from_stored_round_trip() -> None:
     original = AssemblyDefined(
         assembly_id=assembly_id,
         name=AssemblyName("Detector"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset({slot1, slot2}),
         required_wires=frozenset({wire}),
         parameter_overrides_schema={"type": "object"},
@@ -101,7 +102,7 @@ def test_assembly_defined_round_trip_with_no_drawing_no_version_no_schema() -> N
     original = AssemblyDefined(
         assembly_id=uuid4(),
         name=AssemblyName("Empty"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -120,7 +121,7 @@ def test_assembly_versioned_round_trip_carries_previous_hash() -> None:
     original = AssemblyVersioned(
         assembly_id=uuid4(),
         name=AssemblyName("Detector"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset({_slot()}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -143,7 +144,7 @@ def test_assembly_versioned_round_trip_allows_no_previous_hash() -> None:
     original = AssemblyVersioned(
         assembly_id=uuid4(),
         name=AssemblyName("Detector"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -173,7 +174,7 @@ def test_assembly_defined_round_trip_with_sub_assemblies() -> None:
     original = AssemblyDefined(
         assembly_id=uuid4(),
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -192,7 +193,7 @@ def test_assembly_versioned_round_trip_with_sub_assemblies() -> None:
     original = AssemblyVersioned(
         assembly_id=uuid4(),
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -214,7 +215,7 @@ def test_from_stored_defaults_missing_sub_assemblies_to_empty() -> None:
     original = AssemblyDefined(
         assembly_id=uuid4(),
         name=AssemblyName("Detector"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,

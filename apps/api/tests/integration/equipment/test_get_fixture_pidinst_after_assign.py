@@ -217,7 +217,7 @@ async def _seed_assembly_one_slot(
     return await define_assembly.bind(deps)(
         DefineAssembly(
             name=name,
-            presents_as_family_id=family_id,
+            presents_as=frozenset(),
             required_slots=frozenset(
                 {
                     TemplateSlot(

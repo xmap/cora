@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 
 from cora.equipment.aggregates._drawing import Drawing, DrawingSystem
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyDefined,
@@ -40,7 +41,7 @@ def test_evolve_genesis_sets_defined_status() -> None:
     event = AssemblyDefined(
         assembly_id=assembly_id,
         name=AssemblyName("Detector"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({slot}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -51,7 +52,7 @@ def test_evolve_genesis_sets_defined_status() -> None:
     )
     state = evolve(None, event)
     assert state.id == assembly_id
-    assert state.presents_as_family_id == family_id
+    assert state.presents_as == frozenset({family_id})
     assert state.status == AssemblyStatus.DEFINED
     assert state.required_slots == frozenset({slot})
     assert state.version == "v0.1.0"
@@ -71,7 +72,7 @@ def test_evolve_carries_sub_assemblies_through_genesis_and_lifecycle() -> None:
     defined = AssemblyDefined(
         assembly_id=assembly_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -111,7 +112,7 @@ def test_evolve_versioned_replaces_sub_assemblies() -> None:
     defined = AssemblyDefined(
         assembly_id=assembly_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=fam,
+        presents_as=frozenset({RoleId(fam)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -124,7 +125,7 @@ def test_evolve_versioned_replaces_sub_assemblies() -> None:
     versioned = AssemblyVersioned(
         assembly_id=assembly_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=fam,
+        presents_as=frozenset({RoleId(fam)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -149,7 +150,7 @@ def test_evolve_versioned_replaces_structural_fields_and_status() -> None:
     defined = AssemblyDefined(
         assembly_id=assembly_id,
         name=AssemblyName("Detector"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({initial_slot}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -161,7 +162,7 @@ def test_evolve_versioned_replaces_structural_fields_and_status() -> None:
     versioned = AssemblyVersioned(
         assembly_id=assembly_id,
         name=AssemblyName("Detector"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({initial_slot, new_slot}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -189,7 +190,7 @@ def test_evolve_versioned_multiple_revisions_replace_each_time() -> None:
     defined = AssemblyDefined(
         assembly_id=assembly_id,
         name=AssemblyName("Detector"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({_slot("camera")}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -201,7 +202,7 @@ def test_evolve_versioned_multiple_revisions_replace_each_time() -> None:
     v2 = AssemblyVersioned(
         assembly_id=assembly_id,
         name=AssemblyName("Detector"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({_slot("camera")}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -214,7 +215,7 @@ def test_evolve_versioned_multiple_revisions_replace_each_time() -> None:
     v3 = AssemblyVersioned(
         assembly_id=assembly_id,
         name=AssemblyName("Detector"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({_slot("camera")}),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -239,7 +240,7 @@ def test_evolve_deprecated_preserves_structural_fields_and_sets_status() -> None
     defined = AssemblyDefined(
         assembly_id=assembly_id,
         name=AssemblyName("Detector"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         required_slots=frozenset({slot}),
         required_wires=frozenset(),
         parameter_overrides_schema={"type": "object"},
@@ -268,7 +269,7 @@ def test_evolve_non_genesis_against_empty_state_raises() -> None:
     versioned = AssemblyVersioned(
         assembly_id=uuid4(),
         name=AssemblyName("X"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,
@@ -295,7 +296,7 @@ def test_fold_preserves_immutable_id_across_lifecycle() -> None:
         AssemblyDefined(
             assembly_id=assembly_id,
             name=AssemblyName("X"),
-            presents_as_family_id=family_id,
+            presents_as=frozenset({RoleId(family_id)}),
             required_slots=frozenset(),
             required_wires=frozenset(),
             parameter_overrides_schema=None,
@@ -307,7 +308,7 @@ def test_fold_preserves_immutable_id_across_lifecycle() -> None:
         AssemblyVersioned(
             assembly_id=assembly_id,
             name=AssemblyName("X"),
-            presents_as_family_id=family_id,
+            presents_as=frozenset({RoleId(family_id)}),
             required_slots=frozenset(),
             required_wires=frozenset(),
             parameter_overrides_schema=None,
@@ -322,4 +323,4 @@ def test_fold_preserves_immutable_id_across_lifecycle() -> None:
     final = fold(events)
     assert isinstance(final, Assembly)
     assert final.id == assembly_id
-    assert final.presents_as_family_id == family_id
+    assert final.presents_as == frozenset({family_id})

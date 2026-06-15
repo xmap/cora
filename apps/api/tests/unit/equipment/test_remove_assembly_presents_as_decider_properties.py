@@ -38,12 +38,9 @@ def _assembly(
     *,
     presents_as: frozenset[RoleId] = frozenset(),
 ) -> Assembly:
-    from uuid import uuid4
-
     return Assembly(
         id=assembly_id,
         name=AssemblyName("X"),
-        presents_as_family_id=uuid4(),
         presents_as=presents_as,
     )
 

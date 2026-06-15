@@ -5,7 +5,7 @@ snapshot of an existing Assembly.
 
 Replace-on-version per the design memo: the body carries the FULL
 canonical structural subset (slots, wires, schema, drawing, version
-label, presents_as_family_id), NOT a diff. The route reuses the
+label, presents_as), NOT a diff. The route reuses the
 shared TemplateSlotBody / TemplateWireBody / DrawingBody wire
 shapes and the same list-to-frozenset conversion as define_assembly.
 """
@@ -44,12 +44,11 @@ class VersionAssemblyRequest(BaseModel):
             "Display name for this revision snapshot. May change across revisions; non-unique."
         ),
     )
-    presents_as_family_id: UUID = Field(
-        ...,
+    presents_as: list[UUID] = Field(
+        default_factory=list[UUID],
         description=(
-            "FamilyId the instantiated Assembly stands in for. May "
-            "change across revisions (e.g., DCM-revisited may move "
-            "from Monochromator to a wider BeamConditioning Family)."
+            "Global Role contract ids this revision advertises; replaced "
+            "wholesale on version. What a Method role binding targets."
         ),
     )
     required_slots: list[TemplateSlotBody] = Field(
@@ -128,9 +127,9 @@ router = APIRouter(tags=["equipment"])
             "model": ErrorResponse,
             "description": (
                 "Assembly with the given assembly_id does not exist, "
-                "OR a referenced FamilyId (presents_as_family_id or "
-                "any slot's required_family_ids member) does not resolve "
-                "to a defined Family."
+                "OR a referenced RoleId in presents_as does not resolve "
+                "to a defined Role, OR a slot's required_family_ids "
+                "member does not resolve to a defined Family."
             ),
         },
         status.HTTP_409_CONFLICT: {
@@ -162,7 +161,7 @@ async def post_assembly_version(
         VersionAssembly(
             assembly_id=assembly_id,
             name=body.name,
-            presents_as_family_id=body.presents_as_family_id,
+            presents_as=frozenset(body.presents_as),
             required_slots=frozenset(slot.to_domain() for slot in body.required_slots),
             required_wires=frozenset(wire.to_domain() for wire in body.required_wires),
             required_sub_assemblies=frozenset(

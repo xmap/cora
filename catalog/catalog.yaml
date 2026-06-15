@@ -58,8 +58,6 @@ families:
     note: "Per-lens identity inside the Microscope Assembly."
   - name: PseudoAxis
     note: "Virtual-axis Family; the Objective_Selector Asset carries a LookupTable partition rule decomposing an objective index to turret rotation."
-  - name: Imager
-    note: "Presenter Family for detector Assemblies; the 2-BM Optique Peter detector materializes as the Microscope Assembly + Fixture."
   - name: Housing
     note: "Containment chassis Family; the Housing Asset parents the Microscope constituents and carries the Mount."
   - name: GenericProbe
@@ -169,6 +167,14 @@ models:
     manufacturer: { name: Aerotech }
     part_number: "ABS250MP-M-AS"
     declared_families: [RotaryStage]
+  - name: aerotech_abrs150mp
+    manufacturer: { name: Aerotech }
+    part_number: "ABRS-150MP-M-AS"
+    declared_families: [RotaryStage]
+  - name: aerotech_abs2000
+    manufacturer: { name: Aerotech }
+    part_number: "ABS2000-1000AS-RU"
+    declared_families: [RotaryStage]
   - name: aerotech_ensemble
     manufacturer: { name: Aerotech }
     part_number: "HLE10-40-A-MXH"
@@ -192,6 +198,10 @@ models:
   - name: kohzu_cyat070
     manufacturer: { name: Kohzu }
     part_number: "CYAT-070"
+    declared_families: [LinearStage]
+  - name: kohzu_sa16a
+    manufacturer: { name: Kohzu }
+    part_number: "SA16A-RM"   # operator working value; confirm (questions STAGE-6): sources also list SA16A-RS / SA07A-R2L
     declared_families: [LinearStage]
   - name: optique_peter_lens_turret_motor
     manufacturer: { name: "Optique Peter" }

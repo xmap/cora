@@ -9,11 +9,10 @@ same shape as define_assembly):
      state, and reuse the same call's `current_version` for the
      optimistic-concurrency append (matches decommission_mount's
      single-load shape).
-  3. Load Family aggregate for `presents_as_family_id` + every
-     FamilyId across the slot set's required_family_ids
-     (de-duplicated via frozenset). The per-id lookup strategy and
-     its concurrency are owned by `find_missing_families_per_id`
-     in family/read.py. Build context with missing_family_ids.
+  3. Edge-load each Role in `presents_as` via RoleLookup, and load the
+     Family aggregate for every FamilyId across the slot set's
+     required_family_ids (de-duplicated via frozenset). Build context
+     with missing_role_ids + missing_family_ids.
   4. Call pure decider with state + context + command + now.
   5. Wrap emitted events and append to the Assembly stream at the
      captured version.
@@ -63,11 +62,10 @@ class Handler(Protocol):
 def _referenced_family_ids(command: VersionAssembly) -> frozenset[UUID]:
     """Collect every FamilyId the new version references.
 
-    Union of `presents_as_family_id` and every slot's required_family_ids.
-    Returned as a frozenset so handler loads are de-duplicated when
-    multiple slots share a Family.
+    Every slot's required_family_ids. Returned as a frozenset so
+    handler loads are de-duplicated when multiple slots share a Family.
     """
-    ids: set[UUID] = {command.presents_as_family_id}
+    ids: set[UUID] = set()
     for slot in command.required_slots:
         ids.update(slot.required_family_ids)
     return frozenset(ids)
@@ -117,6 +115,10 @@ def bind(deps: Kernel) -> Handler:
 
         family_ids = _referenced_family_ids(command)
         missing = await find_missing_families_per_id(deps.event_store, family_ids)
+        missing_roles: set[UUID] = set()
+        for role_id in command.presents_as:
+            if await deps.role_lookup.lookup(role_id) is None:
+                missing_roles.add(role_id)
         sub_resolution = await resolve_sub_assembly_pins(
             deps.event_store,
             command.required_sub_assemblies,
@@ -124,6 +126,7 @@ def bind(deps: Kernel) -> Handler:
         )
         context = VersionAssemblyContext(
             missing_family_ids=missing,
+            missing_role_ids=frozenset(missing_roles),
             sub_assembly_missing_ids=sub_resolution.missing_ids,
             sub_assembly_hash_mismatches=sub_resolution.hash_mismatches,
             sub_assembly_too_deep_ids=sub_resolution.too_deep_ids,
