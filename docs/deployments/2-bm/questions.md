@@ -15,7 +15,7 @@ You do not need to edit this file or know where it lives. If you do not use GitH
 
 **If you are not the beamline scientist:** a few rows name a different contact. Safety and interlocks: **PSS-1**. Facility utilities (gas, compressed air): **SUP-1**, **SUP-2**. If a row is really a controls/EPICS, network, or engineering question rather than yours, just route it to the right person or tell us who that is.
 
-**Where to start:** the six `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `STAGE-1`, `DET-1`, `DET-2`, `DET-3`, `DET-4`, `DET-5`. If you only have five minutes, do these first. After that, `Blocks-go-live` items (including the safety item `PSS-1`) matter before CORA ever controls or observes hardware.
+**Where to start:** the five `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `DET-1`, `DET-2`, `DET-3`, `DET-4`, `DET-5`. If you only have five minutes, do these first. After that, `Blocks-go-live` items (including the safety item `PSS-1`) matter before CORA ever controls or observes hardware.
 
 ## How this page works
 
@@ -71,7 +71,6 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| STAGE-1 | `Blocks-build` | Is `LaminographyPitch` (the Kohzu SA16A-RM goniometer in the source page) the SAME physical thing as the hexapod's Pitch axis, or a SEPARATE stage mounted on the hexapod? Your answer decides whether CORA describes one device or two. | treated as the hexapod's Pitch axis | [Hexapod DoF model](assets.md#hexapod-dof-model) |
 | STAGE-2 | `Nice-to-have` | Full part number and datasheet for the Kohzu CYAT-070 alignment stages (`SampleTop_X` / `SampleTop_Z`)? | `Kohzu CYAT-070`, no datasheet on file | [Engineering drawings](assets.md#engineering-drawings) |
 | STAGE-3 | `Nice-to-have` | Full part number and datasheet for the Aerotech ABS250MP-M-AS rotary stage (`Rotary`)? | `Aerotech ABS250MP-M-AS`, no datasheet on file | [Engineering drawings](assets.md#engineering-drawings) |
 | STAGE-4 | `Nice-to-have` | The measured motor-sensitivity constants (K_roll, K_pitch) that link a hexapod tilt to the observed image-centroid shift? Today they are re-derived per alignment rather than stored. | derived in-procedure, not persisted | [Procedures](procedures.md) |

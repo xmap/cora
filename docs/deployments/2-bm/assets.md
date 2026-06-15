@@ -6,6 +6,8 @@ The Devices that hang off 2-BM. The 2-BM Asset itself is a root Asset with `tier
 
 The Microscope detector is modelled as an Assembly + Fixture pair over a reusable Optics sub-assembly, with the constituents contained in one `Housing` Asset. The constituent Assets appear in the inventory below; the composition, containment, and wiring story lives on the dedicated [Microscope deployment](equipment/microscope.md) page.
 
+The sample positioning stack is modelled as a `SampleTower` Assembly + Fixture presenting as the `Positioner` Role, with the stages held in a literal-deep containment chain (each stage parents the one above). The constituent Assets appear in the inventory below; the composition, the containment chain, and the experiment-vs-loadout boundary live on the dedicated [Sample tower deployment](equipment/sample_tower.md) page.
+
 Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A` or the experiment hutch `2-BM-B`, declared per Device via `located_in_enclosure_id`. The Located-in column below records where each Device sits; the two hutches and the pre-flight gate they drive are on the [Enclosures](enclosures.md) page. The hutches are Enclosures, not Assets, so they do not appear as inventory rows.
 
 ## Inventory
@@ -14,13 +16,15 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | --- | --- | --- | --- | --- |
 | `StationShutter` | `Device` | `Shutter` | `2-BM` | `2-BM-B` |
 | `RotaryDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
-| `Rotary` | `Device` | `RotaryStage` | `2-BM` (driven by `RotaryDrive`) | `2-BM-B` |
+| `SampleTable` | `Device` | `Table` | `2-BM` (sample-tower base; SampleTower Fixture) | `2-BM-B` |
+| `Rotary` | `Device` | `RotaryStage` | `LaminographyPitch` (driven by `RotaryDrive`; SampleTower Fixture) | `2-BM-B` |
 | `SampleStageDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `FrontEndDrive` | `Device` | `MotionController` | `2-BM` (front-end / beam-conditioning band; no modelled driven stages at v1) | `2-BM-A` |
-| `SampleTop_X` | `Device` | `LinearStage` | `2-BM` (driven by `SampleStageDrive`) | `2-BM-B` |
-| `SampleTop_Z` | `Device` | `LinearStage` | `2-BM` (driven by `SampleStageDrive`) | `2-BM-B` |
+| `SampleTop_X` | `Device` | `LinearStage` | `Rotary` (driven by `SampleStageDrive`; SampleTower Fixture) | `2-BM-B` |
+| `SampleTop_Z` | `Device` | `LinearStage` | `SampleTop_X` (driven by `SampleStageDrive`; SampleTower Fixture) | `2-BM-B` |
 | `HexapodDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
-| `Hexapod` | `Device` | `Hexapod` | `2-BM` (driven by `HexapodDrive`) | `2-BM-B` |
+| `Hexapod` | `Device` | `Hexapod` | `SampleTable` (driven by `HexapodDrive`; SampleTower Fixture) | `2-BM-B` |
+| `LaminographyPitch` | `Device` | `TiltStage` | `Hexapod` (driven by `SampleStageDrive`, `2bmb:m49`; SampleTower Fixture) | `2-BM-B` |
 | `Hexapod_X` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along X) | `2-BM-B` |
 | `Hexapod_Y` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along Y) | `2-BM-B` |
 | `Hexapod_Z` | `Device` | `PseudoAxis` | `Hexapod` (DoF; translation along Z) | `2-BM-B` |
@@ -50,13 +54,15 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `RotaryStage` | `Rotatable`, `Homeable`, `Limitable`, `Following`, `Marking` |
 | `LinearStage` | `Translatable`, `Homeable`, `Limitable`, `Following` |
 | `Hexapod` | `Posable`, `Homeable`, `Limitable` |
+| `TiltStage` | `Rotatable`, `Homeable`, `Limitable` |
+| `Table` | `Translatable`, `Homeable`, `Limitable` |
 | `Scintillator` | `Consumable` |
 | `Camera` | `Imageable`, `Binnable`, `Triggerable`, `Streamable`, `Recording` |
 | `Housing` | (empty; the containment chassis Family carried by the `Housing` Asset that parents the Microscope constituents; no command surface) |
 | `Objective` | (pending: empty at initial registration) |
 | `PseudoAxis` | (empty; partition rules live on `Asset.partition_rule`, not as affordances) |
 
-`Scintillator` is the lone Pattern-C consumer at v1 (passive optical screen; tracked via `Consumable` lifecycle, no command surface). `PseudoAxis` is a facet Family: it carries no affordances, but Methods bind against it via `needed_family_ids`, and the Family membership is the gate that lets an Asset carry a `partition_rule`. Detector Assemblies, including the Microscope, advertise the `Detector` Role through the Assembly's `presents_as` set rather than through a presenter Family.
+`Scintillator` is the lone Pattern-C consumer at v1 (passive optical screen; tracked via `Consumable` lifecycle, no command surface). `PseudoAxis` is a facet Family: it carries no affordances, but Methods bind against it via `needed_family_ids`, and the Family membership is the gate that lets an Asset carry a `partition_rule`. Detector Assemblies, including the Microscope, advertise the `Detector` Role through the Assembly's `presents_as` set rather than through a presenter Family; the `SampleTower` Assembly likewise advertises the `Positioner` Role. `TiltStage` is the Kohzu laminography goniometer (a rotational, limited-range stage, so not `LinearStage`, and not `RotaryStage` whose `Following`/`Marking` PSO affordances a tilt does not carry). `Table` is the shared optical-table Family carried here by the sample optical table; its full design across the sample, detector, and mirror tables is the optical-table alignment work.
 
 `MotionController` is the first separately-modelled drive-electronics Family. v1 ships empty affordances by design: the meaningful state on a controller is configuration (firmware version, IP address, axis count, protocol) and identity (serial number), captured in `settings` and `alternate_identifiers`. Command-tier affordances (firmware-update, reboot, sync-output toggling) are deferred until an operator-side Procedure demands them, at which point they grow on the existing add-only affordance amendment path.
 
@@ -461,7 +467,7 @@ Devices that physically exist at 2-BM but are not yet registered as CORA Assets;
 | `Filter` | `Filter` |
 | `BeamPositionMonitor` | `Diagnostic` |
 | `Timing` | `TimingController` |
-| Broader sample-stage motors | `LinearStage` + tilt motors |
+| Broader sample-stage motors (beyond the modelled `SampleTower` stack; the fixed laminography wedge is a passive part, not an Asset) | `LinearStage` |
 | IOC-hosted EPICS Devices | |
 
 `TimingController` here is the catalog-aligned Family, replacing the earlier `TriggerFPGA` placeholder. Substrate ("FPGA") is not a Family axis: the softGlueZynq is a `TimingController` whose identity + gateware version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
