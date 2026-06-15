@@ -45,7 +45,7 @@ dependencies = [
     # retains the cp313 manylinux + macosx_arm64 wheels and stable
     # RS256 / ES256 / Ed25519 paths that pyjwt and the existing
     # `cora.infrastructure.signing` Ed25519 verify codepath exercise.
-    "cryptography>=48.0.1,<49",
+    "cryptography>=49.0.0,<50",
     # PyJWT (Phase C Iter A): the one library dependency for the edge-auth
     # JWT path, used by `JwtTokenVerifier` for `Authorization: Bearer <JWT>`
     # signature verification + JWKS rotation. `[crypto]` extra pulls in
