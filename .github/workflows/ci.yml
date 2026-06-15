@@ -225,7 +225,7 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Download all coverage data
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: apps/api/_covdata
           pattern: covdata-*

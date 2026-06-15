@@ -6,6 +6,8 @@ The Devices that hang off 2-BM. The 2-BM Asset itself is a root Asset with `tier
 
 The Microscope detector is modelled as an Assembly + Fixture pair over a reusable Optics sub-assembly, with the constituents contained in one `Housing` Asset. The constituent Assets appear in the inventory below; the composition, containment, and wiring story lives on the dedicated [Microscope deployment](equipment/microscope.md) page.
 
+The sample positioning stack is modelled as a `SampleTower` Assembly + Fixture presenting as the `Positioner` Role, with the stages held in a literal-deep containment chain (each stage parents the one above). The composition, the containment chain, and the experiment-vs-loadout boundary (tomography, laminography, and mosaic are all Recipe Methods/Plans over one Fixture) live on the dedicated [Sample tower deployment](equipment/sample_tower.md) page.
+
 Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A` or the experiment hutch `2-BM-B`, declared per Device via `located_in_enclosure_id`. The Located-in column below records where each Device sits; the two hutches and the pre-flight gate they drive are on the [Enclosures](enclosures.md) page. The hutches are Enclosures, not Assets, so they do not appear as inventory rows.
 
 ## Inventory
@@ -29,11 +31,11 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `Hexapod_Yaw` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation C about Z) | `2-BM-B` |
 | `FocusDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `Housing` | `Component` | `Housing` | `2-BM` (installed into a Mount; parents the Microscope constituents) | `2-BM-B` |
-| `Turret` | `Device` | `RotaryStage` (pending) | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `Turret` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; sliding ball-screw objective selector) | `2-BM-B` |
 | `Objective_10x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_2x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_1.1x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
-| `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret rotation) | `2-BM-B` |
+| `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret position in mm) | `2-BM-B` |
 | `Focus` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `FocusDrive`) | `2-BM-B` |
 | `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
@@ -50,13 +52,15 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `RotaryStage` | `Rotatable`, `Homeable`, `Limitable`, `Following`, `Marking` |
 | `LinearStage` | `Translatable`, `Homeable`, `Limitable`, `Following` |
 | `Hexapod` | `Posable`, `Homeable`, `Limitable` |
+| `TiltStage` | `Rotatable`, `Homeable`, `Limitable` |
 | `Scintillator` | `Consumable` |
 | `Camera` | `Imageable`, `Binnable`, `Triggerable`, `Streamable`, `Recording` |
 | `Housing` | (empty; the containment chassis Family carried by the `Housing` Asset that parents the Microscope constituents; no command surface) |
 | `Objective` | (pending: empty at initial registration) |
 | `PseudoAxis` | (empty; partition rules live on `Asset.partition_rule`, not as affordances) |
+| `Table` | `Translatable`, `Rotatable` (provisional superset for the hutch support tables: the sample table is translation-only, the detector table adds tilt axes; the per-table axis set is a settings difference, not a Family split, see [Family settings schemas](#table)). Carries-other-equipment is `parent_id` placement, not an affordance; there is no Supporting affordance. Assets are [Pending](#pending) until seeded. |
 
-`Scintillator` is the lone Pattern-C consumer at v1 (passive optical screen; tracked via `Consumable` lifecycle, no command surface). `PseudoAxis` is a facet Family: it carries no affordances, but Methods bind against it via `needed_family_ids`, and the Family membership is the gate that lets an Asset carry a `partition_rule`. Detector Assemblies, including the Microscope, advertise the `Detector` Role through the Assembly's `presents_as` set rather than through a presenter Family.
+`Scintillator` is the lone Pattern-C consumer at v1 (passive optical screen; tracked via `Consumable` lifecycle, no command surface). `PseudoAxis` is a facet Family: it carries no affordances, but Methods bind against it via `needed_family_ids`, and the Family membership is the gate that lets an Asset carry a `partition_rule`. Detector Assemblies, including the Microscope, advertise the `Detector` Role through the Assembly's `presents_as` set rather than through a presenter Family; the `SampleTower` Assembly likewise advertises the `Positioner` Role. `TiltStage` is the Kohzu laminography goniometer (a rotational, limited-range stage, so not `LinearStage`, and not `RotaryStage` whose `Following`/`Marking` PSO affordances a tilt does not carry).
 
 `MotionController` is the first separately-modelled drive-electronics Family. v1 ships empty affordances by design: the meaningful state on a controller is configuration (firmware version, IP address, axis count, protocol) and identity (serial number), captured in `settings` and `alternate_identifiers`. Command-tier affordances (firmware-update, reboot, sync-output toggling) are deferred until an operator-side Procedure demands them, at which point they grow on the existing add-only affordance amendment path.
 
@@ -73,7 +77,7 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `Hexapod_Pitch` | rotation | about Y | B (`travel_b`) |
 | `Hexapod_Yaw` | rotation | about Z | C (`travel_c`) |
 
-The A/B/C labels are the schema's own (`travel_a` = about X, etc.). The EPICS channel map (`2bmHXP:m1`-`2bmHXP:m6`) will live in each facet's `alternate_identifiers` once an operator confirms it; the 2-BM source page names two rotational channels (`2bmHXP:m4`, `2bmHXP:m5`) but the full six-channel-to-axis mapping is unverified, so it is not asserted here (tracked as `HXP-1` in [Open questions](questions.md)).
+The A/B/C labels are the schema's own (`travel_a` = about X, etc.). The EPICS channel map is confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html): `2bmHXP:m1` = X, `2bmHXP:m2` = Y, `2bmHXP:m4` = Pitch, `2bmHXP:m5` = Roll, recorded in each facet's `alternate_identifiers`. Z and Yaw exist on the physical hexapod but are not exposed as operator channels in 2-BM's current EPICS (there is no `m3`/`m6` operator handle), so those two facets carry no EPICS channel today. CORA still models all six DoF: the unexposed pair is a deployment-configuration limit, not a property of the device.
 
 ### Constituent-port wiring
 
@@ -111,7 +115,7 @@ A Model id is deterministic: `model_stream_id` derives it as `uuid5` over the ca
 
 Part-number suffix conventions vary by vendor: Aerotech's `HEX300-230HL-E1-PL4-TAS` encodes operationally significant variants (`-E1` incremental encoder, `-PL4` ultra-high-accuracy preload, `-TAS` thermal-actively-stabilized); `ABS250MP-M-AS` follows the same pattern (`-M` mid-precision class, `-AS` air-bearing series); `PRO225SL-1000` carries the `-1000` mm travel suffix natively. v1 stores the full type designation as a single `part_number` string; the catalog convention upgrades to suffix decomposition at the second case where a suffix axis crosses Model boundaries (rule-of-three), or at the first APS imaging stage+drive registration, whichever fires first.
 
-All five `MotionController` Assets are named for the function they serve (the device or station they drive); the vendor identity lives on the bound `Model` and the EPICS / IOC handle in `alternate_identifiers`, per the [Asset instance names](../../reference/conventions.md#asset-instance-names) convention. The Aerotech Ensemble HLE10-40-A-MXH (companion drive for `aerotech_abs250mp`) IS now modelled as a separate Asset (`RotaryDrive`) with `tier = Device` under 2-BM, with `Rotary.controller_id` carrying the back-reference. This was the FIRST `MotionController` Asset shipped, anchoring the controller-as-Asset slice on the unambiguously-identified rotary drive per `project_controller_as_asset_stage1_design`. A SECOND `MotionController` Asset (`HexapodDrive`) now models the drive for `Hexapod`, with `Hexapod.controller_id` carrying the back-reference; the 2-BM source page does not name the drive's specific product line (the EPICS interface is "native Aerotech Ensemble" but the box is not identified, nor is rack-separate vs sealed-in integration confirmed), so the Model row uses `unknown-pending-confirmation` for the part number and the per-Asset Settings block carries placeholders that operators replace via `update_asset_settings` once the physical hardware is verified. A THIRD `MotionController` Asset (`FocusDrive`) models the drive electronics that the `2bmbAERO` EPICS IOC manages on behalf of `Focus`; the Asset is named for its function and the IOC handle `2bmbAERO` is recorded in `alternate_identifiers` (kind `EPICS_PV`) rather than in the name. The drive's product line is almost certainly Aerotech Ensemble-family but unconfirmed on the source page, so the same `unknown-pending-confirmation` pattern carries the per-unit identity placeholders. A FOURTH `MotionController` Asset (`SampleStageDrive`) now models the Oregon Micro Systems VME58 motor controller card in the 2-BM b-station IOC crate (`ioc2bmb`), which drives the `2bmb:m1`-`2bmb:m91` motor band including `SampleTop_X` (`2bmb:m18`) and `SampleTop_Z` (`2bmb:m17`); both stage Assets now carry `controller_id` back-references to `SampleStageDrive`. The remaining 89 driven motors on the 2bmb crate live in [Pending](#pending) until each earns its own Asset registration; the controller Asset is the addressability handle that makes a future "VME-bus glitch took out m1-m91" Caution scope honestly to the bus rather than dispersing across 91 motor Assets. A FIFTH `MotionController` Asset (`FrontEndDrive`) models the sibling OMS VME58 board in the 2-BM a-station IOC crate (`ioc2bma`), which drives the front-end / beam-conditioning motor band (the `Mirror`, the `Monochromator`, the `ConditioningSlit` and `SampleSlit`, and the `Filter`, all enumerated in [Pending](#pending)); none of those driven motors are modelled at v1, so the controller Asset ships in isolation with no current `controller_id` back-references pointing at it. The controller registration still ships because absence-of-tracking on hardware that demonstrably exists (and gets rebooted, replaced, firmware-versioned by 2-BM operators) is exactly the self-justifying-defer that `feedback_intentional_modeling_not_mirroring` exists to forbid. Both OMS-VME58 instances bind to the same `oms_vme58` Model row per the one-Model-per-product-line convention; per-instance identity (serial number, firmware version) lives in the per-Asset Settings block. PARTIAL SHIP today is 5 of 7 controller hardware classes; the remaining 2 (Nanotec ST4118 stepper inside Optique Peter, and the Schunk LPTM 30 inside the camera selector) remain deferred per `project_controller_as_asset_research`; each earns its own Stage-1 call when its own trigger fires.
+All five `MotionController` Assets are named for the function they serve (the device or station they drive); the vendor identity lives on the bound `Model` and the EPICS / IOC handle in `alternate_identifiers`, per the [Asset instance names](../../reference/conventions.md#asset-instance-names) convention. The Aerotech Ensemble HLE10-40-A-MXH (companion drive for `aerotech_abs250mp`) IS now modelled as a separate Asset (`RotaryDrive`) with `tier = Device` under 2-BM, with `Rotary.controller_id` carrying the back-reference. This was the FIRST `MotionController` Asset shipped, anchoring the controller-as-Asset slice on the unambiguously-identified rotary drive per `project_controller_as_asset_stage1_design`. A SECOND `MotionController` Asset (`HexapodDrive`) now models the drive for `Hexapod`, with `Hexapod.controller_id` carrying the back-reference; the 2-BM source page does not name the drive's specific product line (the EPICS interface is "native Aerotech Ensemble" but the box is not identified, nor is rack-separate vs sealed-in integration confirmed), so the Model row uses `unknown-pending-confirmation` for the part number and the per-Asset Settings block carries placeholders that operators replace via `update_asset_settings` once the physical hardware is verified. A THIRD `MotionController` Asset (`FocusDrive`) models the drive electronics that the `2bmbAERO` EPICS IOC manages on behalf of `Focus`; the Asset is named for its function and the IOC handle `2bmbAERO` is recorded in `alternate_identifiers` (kind `EPICS_PV`) rather than in the name. The drive's product line is almost certainly Aerotech Ensemble-family but unconfirmed on the source page, so the same `unknown-pending-confirmation` pattern carries the per-unit identity placeholders. A FOURTH `MotionController` Asset (`SampleStageDrive`) now models the Oregon Micro Systems VME58 motor controller card in the 2-BM b-station IOC crate (`ioc2bmb`), which drives the `2bmb:m1`-`2bmb:m91` motor band including `SampleTop_X` (`2bmb:m18`) and `SampleTop_Z` (`2bmb:m17`); both stage Assets now carry `controller_id` back-references to `SampleStageDrive`. The remaining 89 driven motors on the 2bmb crate live in [Pending](#pending) until each earns its own Asset registration; the controller Asset is the addressability handle that makes a future "VME-bus glitch took out m1-m91" Caution scope honestly to the bus rather than dispersing across 91 motor Assets. A FIFTH `MotionController` Asset (`FrontEndDrive`) models the sibling OMS VME58 board in the 2-BM a-station IOC crate (`ioc2bma`), which drives the front-end / beam-conditioning motor band (the `Mirror`, the `Monochromator`, the `ConditioningSlit` and `SampleSlit`, and the `Filter`, all enumerated in [Pending](#pending)); none of those driven motors are modelled at v1, so the controller Asset ships in isolation with no current `controller_id` back-references pointing at it. The controller registration still ships because absence-of-tracking on hardware that demonstrably exists (and gets rebooted, replaced, firmware-versioned by 2-BM operators) is exactly the self-justifying-defer that `feedback_intentional_modeling_not_mirroring` exists to forbid. Both OMS-VME58 instances bind to the same `oms_vme58` Model row per the one-Model-per-product-line convention; per-instance identity (serial number, firmware version) lives in the per-Asset Settings block. PARTIAL SHIP today is 5 controller Assets. The Microscope objective selector (`2bmb:m1`) and camera selector (`2bmb:m5`) are stepper motors, now identified on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) as a Nanotec `ST4118M1404-B` and a Schunk `LPTM 30`, driven through the existing `SampleStageDrive` OMS VME58 b-station crate rather than through dedicated controller boxes. Whether to register those steppers as distinct controller Assets, or carry them as the selector stages' motors, is a deferred follow-on per `project_controller_as_asset_research`.
 
 The six `Hexapod_*` DoF facets are PseudoAxis Assets (virtual DoFs over the `2bmHXP` hexapod-kinematics solver) and do not bind to a vendor Model: the Model-binding flow (PIDINST) targets physical commissioned hardware, so the physical `Hexapod` carries the Model binding (`aerotech_hex300`) and the facets inherit vendor identity through the constituent wiring. The full six-DoF surface and its constituent-port wiring are described under [Hexapod DoF model](#hexapod-dof-model). The Kohzu SA16A-RM goniometer (`LaminographyPitch`, `2bmb:m49`) is a SEPARATE, permanently-installed stage (staff source page `item_020`), not the hexapod's `Hexapod_Pitch` axis; tomography vs laminography is a tilt setpoint on it, not an insert/remove. Its Model `kohzu_sa16a` is now in the [vendor catalog](../../catalog/index.md), bound when `LaminographyPitch` is registered (currently in [Pending](#pending)). The exact model is the operator working value pending confirmation (STAGE-6: the source swivel kit also lists `SA16A-RS` / `SA07A-R2L`).
 
@@ -195,6 +199,16 @@ Intrinsic detector properties, made explicit at 2-BM because a second detector c
 | `max_framerate_hz` | number > 0 | Hz | Full-frame maximum frame rate; the axis that distinguishes a high-speed PCO Dimax from a general-purpose Oryx without a separate Family. |
 | `sensor_kind` | closed enum: `CMOS \| sCMOS \| CCD \| EMCCD` | | Sensor architecture. Four known values; add-only enum. |
 | `readout_mode` | closed enum: `RollingShutter \| GlobalShutter` | | Shutter / readout architecture; governs motion-blur behaviour under triggered fly-scans. |
+
+### `Table`
+
+The support/positioning table Family (the hutch optical tables; staff name it in the [2-BM components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html)). One Family spans three 2-BM tables that differ only along a settings axis (the motor/axis layout), not a Family axis, so it is one `Table` Family rather than a split: `SampleTable` (four direct translation motors, no combined record), `DetectorTable` (six virtual axes on record `2bmb:table3`, computed from six support motors in an SRI 3-Y / 2-X / 1-Z geometry), and the unused `MirrorTable` (`Dma:table1`). The Family carries motion affordances for the axes a given table drives; the carries-other-equipment relationship is `Asset.parent_id` placement, not an affordance. Draft schema pending registration; the EPICS handles (the virtual record and per-axis or support-motor PVs) live in each Asset's `alternate_identifiers`, not in the schema.
+
+| Setting | Type | Notes |
+| --- | --- | --- |
+| `axis_layout` | closed enum: `translation_xyz \| virtual_pose` | The families-settings-over-subtypes discriminator: which motor/axis layout this table presents. `translation_xyz` = the sample table's direct motors; `virtual_pose` = a composite record exposing translation + tilt virtual axes (the detector and mirror tables; the specific record goes in `virtual_record`). Add-only enum. |
+| `virtual_record` | string, optional | The composite EPICS record when the table exposes one (`2bmb:table3`, `Dma:table1`); absent for the sample table, which addresses its four motors directly. |
+| `geometry` | string, optional | Support-point layout when the axes are computed from support motors (for example, SRI 3 Y-supports / 2 X-supports / 1 Z-support). |
 
 ## Settings
 
@@ -371,14 +385,13 @@ Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexa
 
 ### `Turret`
 
-`RotaryStage` Family assumed (pending 2-BM operator confirmation; if the turret is a translating slide, the Family flips to `LinearStage` and the signal types switch from `rotation_deg` to `linear_mm`).
+`LinearStage` Family: the objective selector is a sliding ball-screw stage (Nanotec ST4118M1404-B, 1.8 deg/step over a 2 mm/rev ball screw, Heidenhain ERO 1420 encoder), not a rotating turret, confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html). Positions are in millimeters and the constituent-wiring signal types are `linear_mm`. The min/max below are the operational span between the outer objective positions (1.1x at -60.030 mm, 10x at 58.640 mm).
 
 | Setting | Value |
 | --- | --- |
-| `min_position` | `0 deg` |
-| `max_position` | `360 deg` |
-| `max_speed` | `30 deg/s` |
-| `encoder_resolution` | `0.01 deg` |
+| `min_position` | `-60.030 mm` |
+| `max_position` | `58.640 mm` |
+| `encoder_resolution` | `0.0016 mm` |
 
 ## Engineering drawings
 
@@ -452,6 +465,8 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 
 Devices that physically exist at 2-BM but are not yet registered as CORA Assets; each carries `new: true` in the 2-BM descriptor (`deployments/2-bm/beamline.yaml`). The first five rows are the front-end / beam-conditioning motor band driven by `FrontEndDrive` (they hold `2bma:m` channels in the descriptor): that controller ships modelled while none of its driven stages do. `BeamPositionMonitor` is a sixth unmodelled front-end device but a diagnostic, not a motor: the descriptor records no PV or controller for it.
 
+Three `Table`-Family support tables also sit here pending registration: `SampleTable` (the four-motor translation table on the Vibraplane base that carries the hexapod stack), `DetectorTable` (the six-virtual-axis `2bmb:table3` table under the Optique Peter stage and microscope), and `MirrorTable` (`Dma:table1`, present but not used operationally). They differ by axis layout, not Family, so they share one `Table` Family ([Family settings schemas](#table)). Whether to describe all three, and whether the axis layout is a settings difference or a Family split, is tracked as `STAGE-7` and `STAGE-8` in [Open questions](questions.md).
+
 | Asset | Family |
 | --- | --- |
 | `Mirror` | `Mirror` |
@@ -461,6 +476,11 @@ Devices that physically exist at 2-BM but are not yet registered as CORA Assets;
 | `Filter` | `Filter` |
 | `BeamPositionMonitor` | `Diagnostic` |
 | `Timing` | `TimingController` |
+| `Camera_HighRes` | `Camera` (second FLIR Oryx, 31 MP, `2bmSP2:`) |
+| `Camera_Selector` | `LinearStage` (Schunk LPTM 30, `2bmb:m5`) |
+| `SampleTable` | `Table` |
+| `DetectorTable` | `Table` |
+| `MirrorTable` | `Table` |
 | Broader sample-stage motors | `LinearStage` + tilt motors |
 | IOC-hosted EPICS Devices | |
 

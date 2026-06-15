@@ -2,7 +2,7 @@
 
 *The Optique Peter detector deployment: a Microscope Assembly over a reusable Optics sub-assembly, materialized as one Fixture binding eight Assets, all contained in one Housing, with four Calibrations.*
 
-The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch. Its Assets are located in the `2-BM-B` Enclosure (the access-gated volume that gates them via the pre-flight permit check). It is the operator-facing imaging system: a vendor housing that carries three swappable microscope objectives on a turret, a linear focus stage, a single Oryx scientific camera, and a LuAG scintillator. The whole unit is controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC's process name, not the CORA model name). This page explains how CORA models it.
+The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch. Its Assets are located in the `2-BM-B` Enclosure (the access-gated volume that gates them via the pre-flight permit check). It is the operator-facing imaging system: a vendor housing that carries three swappable microscope objectives on a sliding ball-screw selector, a linear focus stage, a FLIR Oryx scientific camera, and a LuAG scintillator. (Two Oryx cameras and a camera selector are physically installed, confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html); the v1 model below binds the one camera, with the second camera plus its Schunk selector recorded as a follow-on. See [Watch items](#watch-items).) The whole unit is controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC's process name, not the CORA model name). This page explains how CORA models it.
 
 ## The model in one picture
 
@@ -17,7 +17,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 </li>
 <li><span class="node">Housing</span> <span class="meta">Component, Family Housing</span> <span class="rel">containment parent (Asset.parent_id)</span>
 <ul>
-<li><span class="node">Turret</span> <span class="meta">Device, RotaryStage</span></li>
+<li><span class="node">Turret</span> <span class="meta">Device, LinearStage, sliding ball-screw objective selector</span></li>
 <li><span class="node">Objective_10x</span> <span class="meta">Device, Objective, 10x</span></li>
 <li><span class="node">Objective_2x</span> <span class="meta">Device, Objective, 2x</span></li>
 <li><span class="node">Objective_1.1x</span> <span class="meta">Device, Objective, 1.1x</span></li>
@@ -69,14 +69,14 @@ Five Models cover the hardware:
 | Model | Manufacturer | Part number | Declared Families |
 | --- | --- | --- | --- |
 | `optique_peter_micrx080` | Optique Peter | `MICRX080` | `Housing` |
-| `optique_peter_lens_turret_motor` | Optique Peter | `TripleObj-MCT-turret` | `RotaryStage` |
+| `nanotec_st4118m1404_b` | Nanotec | `ST4118M1404-B` | `LinearStage` |
 | `mitutoyo_plan_apo` | Mitutoyo | `Plan-Apo-NIR` | `Objective` |
 | `flir_oryx` | FLIR | `ORX-10G-51S5M-C` | `Camera` |
 | `crytur_luag` | Crytur | `LuAG:Ce-100um` | `Scintillator` |
 
-Each Model carries the vendor identity that DOIs and citations need (PIDINST property 7). Assets bind to a Model at registration; the Asset's Family set must be a subset of the Model's declared families.
+Each Model carries the vendor identity that DOIs and citations need (PIDINST property 7). Assets bind to a Model at registration; the Asset's Family set must be a subset of the Model's declared families. The objective selector motor is a third-party stepper inside the Optique Peter housing, confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) as a Nanotec `ST4118M1404-B` (with a Heidenhain ERO 1420 encoder), so the `Turret` Asset binds the Nanotec Model rather than an Optique Peter one.
 
-Two open vendor questions worth confirming with the 2-BM operator before the catalog locks. First, the Optique Peter Triple Objective ships with a turret motor whose underlying vendor may differ from Optique Peter (system integrators often source motors from third parties). Second, Mitutoyo Plan Apo NIR is a product family with one part number per magnification (10x, 2x, 1.1x each carry distinct catalog numbers); folding all three into one Model row is a v1 simplification that splits into three rows once part numbers are verified.
+One open vendor question worth confirming with the 2-BM operator before the catalog locks: Mitutoyo Plan Apo NIR is a product family with one part number per magnification (10x, 2x, 1.1x each carry distinct catalog numbers); folding all three into one Model row is a v1 simplification that splits into three rows once part numbers are verified.
 
 ## Assembly: Microscope
 
@@ -100,7 +100,7 @@ The **Optics** Assembly is the reusable core: the turret, the three objectives, 
 
 | Slot | Cardinality | Required Family |
 | --- | --- | --- |
-| `turret` | `Exactly1` | `RotaryStage` |
+| `turret` | `Exactly1` | `LinearStage` |
 | `objectives` | `OneOrMore` | `Objective` |
 | `objective_selector` | `Exactly1` | `PseudoAxis` |
 | `focus` | `Exactly1` | `LinearStage` |
@@ -136,13 +136,13 @@ Where the axes meet: the Fixture answers "what logical cluster lives here for go
 
 ## Routing the objective selector (PseudoAxis)
 
-`Objective_Selector` is a virtual axis inside the Optics sub-assembly. Its **partition rule** is a closed `LookupTable` decomposing an integer index (0, 1, 2) into a turret rotation in degrees:
+`Objective_Selector` is a virtual axis inside the Optics sub-assembly. Its **partition rule** is a closed `LookupTable` decomposing an integer index (0, 1, 2) into a turret position in millimeters (the selector is a sliding ball-screw stage, not a rotating turret):
 
 | `Objective_Selector` | Turret position | Objective in beam |
 | --- | --- | --- |
-| `0` | `121.5942 deg` | 10x Mitutoyo |
-| `1` | `61.9841 deg` | 2x Mitutoyo |
-| `2` | `2.3006 deg` | 1.1x Mitutoyo |
+| `0` | `-60.030 mm` | 1.1x Mitutoyo |
+| `1` | `-0.837 mm` | 2x Mitutoyo |
+| `2` | `58.640 mm` | 10x Mitutoyo |
 
 When an operator or Method writes `Objective_Selector = 1`, CORA's command-execution layer looks up the partition rule and writes the corresponding turret setpoint to the `Turret` motor. Every actuation is recorded as a control-dispatch event with a correlation id linking back to the originating partition-rule resolution, so the full chain (operator command, virtual-axis lookup, constituent setpoint) is reconstructable from the event log. The lookup table itself is event-sourced; revising it (for example, after a turret re-homing campaign) leaves a complete audit trail of which values were in effect at which times.
 
@@ -184,7 +184,7 @@ Two tiers of persistent identifiers:
 - **The Fixture earns one DOI** as a citable experimental station. This mirrors the HZB PEAXIS precedent where the composite imaging station is published as a single Instrument with `HasComponent` relations to its parts.
 - **Each physical bound Asset earns its own DOI**, plus the `Housing` chassis: the housing, the three Objectives, the Oryx camera, the LuAG scintillator, and the lens turret motor. The Fixture's PIDINST record references the constituents via `HasComponent`; each Asset's record references the Fixture via `IsComponentOf`.
 
-`Objective_Selector` is intentionally NOT PIDINST-minted. PIDINST v1.0 requires a Manufacturer (Property 6) and Owner (Property 5), both of which assume a physical instrument with a vendor and an institutional steward. Virtual axes are software routing constructs over a real motor: they carry no Manufacturer (there is no vendor of LookupTables), no independent Owner, and no serial number. The lens index to turret angle table is event-sourced via the partition rule and is fully audit-complete without a DOI; if a citation handle is ever needed it lives on the turret motor's DOI, not on the virtual axis. `GET /assets/{objective_selector_id}/pidinst` returns 404 (not applicable) by design.
+`Objective_Selector` is intentionally NOT PIDINST-minted. PIDINST v1.0 requires a Manufacturer (Property 6) and Owner (Property 5), both of which assume a physical instrument with a vendor and an institutional steward. Virtual axes are software routing constructs over a real motor: they carry no Manufacturer (there is no vendor of LookupTables), no independent Owner, and no serial number. The lens index to turret position table is event-sourced via the partition rule and is fully audit-complete without a DOI; if a citation handle is ever needed it lives on the turret motor's DOI, not on the virtual axis. `GET /assets/{objective_selector_id}/pidinst` returns 404 (not applicable) by design.
 
 For pilot v1, persistent identifiers are stub-minted (no real DOIs registered with DataCite). The production mint path is deferred until 2-BM commissions with real facility DataCite credentials.
 
@@ -209,6 +209,7 @@ A few model questions this deployment surfaces but does not pin down:
 - The PseudoAxis slot constrains the Family but not the structural relationship between the PseudoAxis Asset's `partition_rule` and the `turret` slot. Today the rule references the lens turret motor by Asset id; neither the Optics sub-assembly nor the Microscope enforces that the referenced motor is the one bound into the `turret` slot. A future Assembly-level cross-slot constraint primitive could close this.
 - Per-constituent placement is approximated by the housing's single Mount. The escape valve (one Mount per constituent, referenced to the housing's frame) is available if a use case needs pixel-accurate geometry. Note that `register_fixture` requires every bound constituent to be installed in some Mount; a pool-backed deployment therefore gives each constituent a lightweight Mount even though its spatial placement is approximated by the housing.
 - Method-level binding validation does not yet enforce `needed_assembly_ids` satisfaction at Plan-binding time. A Plan that fails to include a Fixture materializing the required Assembly today passes silently; a future Plan-binding extension would catch this.
+- Two cameras are physically installed (the FLIR Oryx 5 MP at `2bmSP1:` and a FLIR Oryx 31 MP at `2bmSP2:`), switched by a Schunk LPTM 30 selector (`2bmb:m5`) with per-camera rotation motors (`2bmb:m7`/`m8`), all confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html). The v1 model binds the one camera through the Microscope's `camera` leaf slot. Modelling the second camera (likely a `camera` slot that becomes `OneOrMore` plus a camera-selector PseudoAxis and the Schunk selector + rotation stages) is a follow-on slice; the devices are recorded in the [descriptor](../../../../deployments/2-bm/beamline.yaml) with `new: true` today.
 
 ## See also
 

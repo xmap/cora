@@ -143,7 +143,6 @@ _CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
 _CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 _CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
 _CAP_OBJECTIVE_ID = family_stream_id(FamilyName("Objective"))
-_CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 _CAP_HOUSING_ID = family_stream_id(FamilyName("Housing"))
 
@@ -262,26 +261,6 @@ _SCHEMA_OBJECTIVE: dict[str, Any] = {
     "required": ["magnification", "numerical_aperture", "focal_length", "working_distance"],
 }
 
-_SCHEMA_ROTARY_STAGE: dict[str, Any] = {
-    "$schema": _DRAFT,
-    "type": "object",
-    "properties": {
-        "min_position": {"type": "number", "unit": {"system": "udunits", "code": "deg"}},
-        "max_position": {"type": "number", "unit": {"system": "udunits", "code": "deg"}},
-        "max_speed": {
-            "type": "number",
-            "minimum": 0,
-            "unit": {"system": "udunits", "code": "deg/s"},
-        },
-        "encoder_resolution": {
-            "type": "number",
-            "minimum": 0,
-            "unit": {"system": "udunits", "code": "deg"},
-        },
-    },
-    "required": ["min_position", "max_position", "max_speed", "encoder_resolution"],
-}
-
 # PseudoAxis + Housing carry no operator-tunable settings.
 _SCHEMA_EMPTY: dict[str, Any] = {
     "$schema": _DRAFT,
@@ -322,11 +301,15 @@ _SETTINGS_OBJECTIVE_1P1X: dict[str, Any] = {
     "focal_length": 200.0,
     "working_distance": 50.0,
 }
+# The objective selector is a sliding ball-screw stage (LinearStage), not a
+# rotating turret: a Nanotec ST4118M1404-B over a 2 mm/rev ball screw with a
+# Heidenhain ERO 1420 encoder, positions in mm (2-BM beamline components page).
+# min/max span the outer objective positions (1.1x at -60.030, 10x at 58.640).
 _SETTINGS_TURRET: dict[str, Any] = {
-    "min_position": 0.0,
-    "max_position": 360.0,
-    "max_speed": 30.0,
-    "encoder_resolution": 0.01,
+    "min_position": -60.030,
+    "max_position": 58.640,
+    "max_speed": 1.0,
+    "encoder_resolution": 0.0016,
 }
 
 
@@ -375,9 +358,13 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
             correlation_id=_CORRELATION_ID,
         )
 
-    # ----- NEW Families (Objective, RotaryStage, PseudoAxis, Housing)
-    #       + schemas -----
-    for name in ("Objective", "RotaryStage", "PseudoAxis", "Housing"):
+    # ----- NEW Families (Objective, PseudoAxis, Housing) + schemas. The
+    #       turret is a LinearStage (sliding ball-screw selector), so
+    #       LinearStage (registered above) covers it and no RotaryStage
+    #       Family is needed; the Detector Role is presented through the
+    #       Microscope Assembly's presents_as, so no Imager presenter
+    #       Family is defined either. -----
+    for name in ("Objective", "PseudoAxis", "Housing"):
         await bind_define_family(deps)(
             DefineFamily(name=name, affordances=frozenset()),
             principal_id=_PRINCIPAL_ID,
@@ -385,7 +372,6 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         )
     for cap_id, schema in (
         (_CAP_OBJECTIVE_ID, _SCHEMA_OBJECTIVE),
-        (_CAP_ROTARY_STAGE_ID, _SCHEMA_ROTARY_STAGE),
         (_CAP_PSEUDO_AXIS_ID, _SCHEMA_EMPTY),
     ):
         await bind_update_family_settings_schema(deps)(
@@ -410,7 +396,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
             presents_as=frozenset(),
             required_slots=frozenset(
                 {
-                    _slot("turret", _CAP_ROTARY_STAGE_ID),
+                    _slot("turret", _CAP_LINEAR_STAGE_ID),
                     # The three objectives differ only by magnification (a
                     # settings axis), so they share ONE OneOrMore slot rather
                     # than three Exactly1 slots. This keeps the Optics blueprint
@@ -474,7 +460,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     # instance name per the facility Asset-instance-name convention.
     optics_assets: dict[str, UUID] = {}
     for key, asset_name, fam_id, settings in (
-        ("turret", "Turret", _CAP_ROTARY_STAGE_ID, _SETTINGS_TURRET),
+        ("turret", "Turret", _CAP_LINEAR_STAGE_ID, _SETTINGS_TURRET),
         ("objective_10x", "Objective_10x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_10X),
         ("objective_2x", "Objective_2x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_2X),
         ("objective_1.1x", "Objective_1.1x", _CAP_OBJECTIVE_ID, _SETTINGS_OBJECTIVE_1P1X),
@@ -635,7 +621,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
                 invertible=False,
                 readback_aggregator_kind=ReadbackAggregatorKind.IDENTITY,
                 unit_in="index",
-                unit_out="deg",
+                unit_out="mm",
             ),
         ),
         principal_id=_PRINCIPAL_ID,
