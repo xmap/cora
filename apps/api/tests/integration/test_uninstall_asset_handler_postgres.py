@@ -173,7 +173,7 @@ async def test_uninstall_asset_rejects_when_installed_asset_is_fixture_bound(
     assembly_id = await define_assembly.bind(deps)(
         DefineAssembly(
             name="UninstallRig",
-            presents_as_family_id=family_id,
+            presents_as=frozenset(),
             required_slots=frozenset(
                 {
                     TemplateSlot(

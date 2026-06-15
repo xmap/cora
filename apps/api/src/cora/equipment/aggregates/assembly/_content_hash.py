@@ -28,8 +28,7 @@ be a sibling inside `aggregates/fixture/`, not a reuse of this
 module.
 """
 
-from uuid import UUID
-
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly.state import (
     Assembly,
     AssemblyName,
@@ -55,7 +54,7 @@ ASSEMBLY_DEPRECATED_PAYLOAD_TYPE = event_type_to_payload_type("AssemblyDeprecate
 
 def compute_assembly_content_hash(
     name: AssemblyName | str,
-    presents_as_family_id: UUID,
+    presents_as: frozenset[RoleId],
     required_slots: frozenset[TemplateSlot],
     required_wires: frozenset[TemplateWire],
     parameter_overrides_schema: dict[str, object] | None,
@@ -77,7 +76,7 @@ def compute_assembly_content_hash(
     """
     body = canonical_assembly_subset(
         name=name,
-        presents_as_family_id=presents_as_family_id,
+        presents_as=presents_as,
         required_slots=required_slots,
         required_wires=required_wires,
         required_sub_assemblies=required_sub_assemblies,

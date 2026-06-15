@@ -6,55 +6,50 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 
 ## The model in one picture
 
-```
-2-BM (Unit, Asset)
-|
-+-- Frame: 2BM_hutch_frame
-|     |
-|     +-- Mount: optics_mount   ----holds---->   Housing
-|                (6-DoF placement)               (the Housing carries the placement; its
-|                                                 contents inherit position from the known layout)
-|
-+-- Housing (Component, Family Housing)   <-- containment parent
-|     |   physical containment tree (Asset.parent_id):
-|     +-- Turret      (Device, Family LinearStage)   sliding ball-screw objective selector
-|     +-- Objective_10x      (Device, Family Objective)    10x
-|     +-- Objective_2x      (Device, Family Objective)     2x
-|     +-- Objective_1.1x      (Device, Family Objective)   1.1x
-|     +-- Objective_Selector      (Device, Family PseudoAxis)   objective selector
-|     +-- Focus (Device, Family LinearStage)
-|     +-- Camera  (Device, Family Camera)
-|     +-- Scintillator (Device, Family Scintillator)
-|
-+-- Fixture: microscope_at_2bm   (surface_id = 2-BM Trust Surface)
-      materializes Assembly = Microscope, which composes:
-        sub-assembly  optics  -> Assembly = Optics (content-hash pinned)
-        leaf slot     camera        -> Camera
-        leaf slot     scintillator  -> Scintillator
-      and the Optics sub-assembly contributes its own leaf slots, bound in the same Fixture:
-        turret            -> Turret
-        objectives (1+)   -> Objective_10x     |  one OneOrMore slot,
-        objectives (1+)   -> Objective_2x      |  three bindings
-        objectives (1+)   -> Objective_1.1x    |
-        focus             -> Focus
-        objective_selector  -> Objective_Selector  (the objective selector; partition_rule = LookupTable
-                                          0 -> -60.030 mm  (1.1x in beam)
-                                          1 ->  -0.837 mm  (2x   in beam)
-                                          2 ->  58.640 mm  (10x  in beam))
-```
-
-The composition axis as a rendered graph (Assembly to sub-Assembly to Fixture):
-
-```mermaid
-flowchart TD
-  MIC["Assembly: Microscope (presents_as Detector)"]
-  OPT["Assembly: Optics (content-hash pinned)"]
-  FIX(["Fixture: microscope_at_2bm"])
-  MIC -- "sub-assembly: optics @hash" --> OPT
-  MIC -. "leaf slots: camera, scintillator" .-> FIX
-  OPT -. "slots: turret, objectives 1+, objective_selector, focus" .-> FIX
-  FIX == "8 Assets across 6 slot names" ==> AS["Camera, Scintillator, Turret,<br/>Objective_10x, Objective_2x, Objective_1.1x,<br/>Objective_Selector, Focus"]
-```
+<div class="dtree" markdown="0">
+<ul>
+<li><span class="node">2-BM</span> <span class="meta">Unit, Asset</span>
+<ul>
+<li><span class="node">Frame: 2BM_hutch_frame</span>
+<ul>
+<li><span class="node">Mount: optics_mount</span> <span class="meta">6-DoF placement</span> <span class="rel">holds &rarr; Housing</span></li>
+</ul>
+</li>
+<li><span class="node">Housing</span> <span class="meta">Component, Family Housing</span> <span class="rel">containment parent (Asset.parent_id)</span>
+<ul>
+<li><span class="node">Turret</span> <span class="meta">Device, LinearStage, sliding ball-screw objective selector</span></li>
+<li><span class="node">Objective_10x</span> <span class="meta">Device, Objective, 10x</span></li>
+<li><span class="node">Objective_2x</span> <span class="meta">Device, Objective, 2x</span></li>
+<li><span class="node">Objective_1.1x</span> <span class="meta">Device, Objective, 1.1x</span></li>
+<li><span class="node">Objective_Selector</span> <span class="meta">Device, PseudoAxis</span></li>
+<li><span class="node">Focus</span> <span class="meta">Device, LinearStage</span></li>
+<li><span class="node">Camera</span> <span class="meta">Device, Camera</span></li>
+<li><span class="node">Scintillator</span> <span class="meta">Device, Scintillator</span></li>
+</ul>
+</li>
+<li><span class="node">Fixture: microscope_at_2bm</span> <span class="meta">surface_id = 2-BM Trust Surface</span>
+<ul>
+<li><span class="node">materializes Assembly = Microscope</span>
+<ul>
+<li><span class="node">sub-assembly optics</span> <span class="rel">&rarr; Assembly = Optics (content-hash pinned)</span></li>
+<li><span class="node">leaf slot camera</span> <span class="rel">&rarr; Camera</span></li>
+<li><span class="node">leaf slot scintillator</span> <span class="rel">&rarr; Scintillator</span></li>
+</ul>
+</li>
+<li><span class="node">Optics sub-assembly slots</span> <span class="meta">bound in this Fixture</span>
+<ul>
+<li><span class="node">turret</span> <span class="rel">&rarr; Turret</span></li>
+<li><span class="node">objectives (1+)</span> <span class="rel">&rarr; Objective_10x, Objective_2x, Objective_1.1x</span></li>
+<li><span class="node">focus</span> <span class="rel">&rarr; Focus</span></li>
+<li><span class="node">objective_selector</span> <span class="rel">&rarr; Objective_Selector</span></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
 
 `Microscope` is the name of the top Assembly (the blueprint) and, with `microscope_at_2bm`, of the Fixture (the materialization at 2-BM). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical container. None of the three is an operator-facing Asset row in its own right except the housing: the conceptual Microscope-the-thing IS the Assembly plus Fixture pair, the reusable optics cluster IS the Optics sub-assembly, and the physical chassis IS the `Housing` Asset that parents the eight functional constituents.
 
@@ -75,9 +70,9 @@ Five Models cover the hardware:
 | --- | --- | --- | --- |
 | `optique_peter_micrx080` | Optique Peter | `MICRX080` | `Housing` |
 | `nanotec_st4118m1404_b` | Nanotec | `ST4118M1404-B` | `LinearStage` |
-| `mitutoyo_plan_apo_nir` | Mitutoyo | `Plan-Apo-NIR` | `Objective` |
-| `flir_oryx_orx_10g_51s5m_c` | FLIR | `ORX-10G-51S5M-C` | `Camera` |
-| `crytur_luag_ce_100um` | Crytur | `LuAG:Ce-100um` | `Scintillator` |
+| `mitutoyo_plan_apo` | Mitutoyo | `Plan-Apo-NIR` | `Objective` |
+| `flir_oryx` | FLIR | `ORX-10G-51S5M-C` | `Camera` |
+| `crytur_luag` | Crytur | `LuAG:Ce-100um` | `Scintillator` |
 
 Each Model carries the vendor identity that DOIs and citations need (PIDINST property 7). Assets bind to a Model at registration; the Asset's Family set must be a subset of the Model's declared families. The objective selector motor is a third-party stepper inside the Optique Peter housing, confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) as a Nanotec `ST4118M1404-B` (with a Heidenhain ERO 1420 encoder), so the `Turret` Asset binds the Nanotec Model rather than an Optique Peter one.
 
@@ -95,7 +90,7 @@ The top **Assembly** is the reusable composition blueprint. It does two things: 
 
 The sub-assembly link pins the Optics Assembly's content hash, so a later revision of Optics does not silently change what a Microscope built today materializes (snapshot semantics). The camera and scintillator are leaf slots on the Microscope rather than the Optics sub-assembly because they are the parts a deployment swaps most often and the parts that vary between detector builds; the optics cluster (turret, objectives, objective selector, focus) is the stable, shareable core.
 
-The Microscope Assembly presents as the **`Detector`** Role, the functional binding contract a Method targets when it needs a 2D imaging device without pinning a specific Family. It also carries the legacy scalar `presents_as_family_id` pointing at the `Imager` presenter Family (the satisfaction handle for Methods still written against `needed_family_ids = {Imager}`); the Role-based `presents_as` set is the forward-looking path. The Assembly's content hash (SHA-256 over its name, its slots, its sub-assembly links, the presented Family, and the parameter overrides schema) is stable: two facilities that publish the same Microscope Assembly converge on the same hash, which makes the blueprint cross-facility shareable when the federation layer lands.
+The Microscope Assembly presents the **`Detector`** Role through its `presents_as` set, the functional binding contract a Method targets when it needs a 2D imaging device without pinning a specific Family. The legacy scalar presenter field and the `Imager` presenter Family are both gone; `presents_as` is the sole presenter path. The Assembly's content hash (SHA-256 over its name, its slots, its sub-assembly links, the presented Roles (`presents_as`), and the parameter overrides schema) is stable: two facilities that publish the same Microscope Assembly converge on the same hash, which makes the blueprint cross-facility shareable when the federation layer lands.
 
 The Microscope carries **zero `required_wires` in v1**. Earlier sketches modelled this detector as an Asset-with-ports that brokered routing between the turret, focus, and camera; the IOC played that role in real hardware. In CORA's model that brokering dissolves into three different surfaces: the PseudoAxis evaluator handles lens index to turret setpoint, the Conductor / ControlPort layer drives focus and other setpoints directly, and the camera trigger arrives from an external timing source (FPGA, encoder) that lives outside the cluster and is wired in at Plan level. None of these wires are intrinsic to the composition; they all depend on which Conductor, which trigger source, and which command path the deployment uses. The Assembly's value is the slot map plus the content hash.
 

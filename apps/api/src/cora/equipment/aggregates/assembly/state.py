@@ -7,11 +7,10 @@ Declares `required_slots` (Family-typed, cardinality-annotated,
 optionally pre-Placed), `required_wires` (slot-keyed 4-tuples), and
 `required_sub_assemblies` (version-pinned links to child Assemblies,
 so a blueprint can be composed of smaller reusable blueprints, not
-only of individual parts). Exposes a stable `presents_as_family_id`
-so other aggregates
-(Method.needed_families, Capability bindings) can treat an
-instantiated Assembly as one typed unit at the same level as a
-single Asset.
+only of individual parts). Exposes `presents_as` (a set of global
+Role contract ids) so other aggregates (Method role requirements)
+can match an instantiated Assembly against a Role contract at the
+same level as a single Asset.
 
 See `project_assembly_aggregate_design` for the locked design memo.
 
@@ -21,7 +20,7 @@ See `project_assembly_aggregate_design` for the locked design memo.
 event-store stream keying. `name` is a human-readable AssemblyName
 (non-unique). `content_hash` is the structural fingerprint
 (SHA-256 hex over the canonical subset
-`{name, presents_as_family_id, required_slots, required_wires,
+`{name, presents_as, required_slots, required_wires,
 required_sub_assemblies, parameter_overrides_schema}`); two operators
 independently authoring the same Assembly converge on the same hash.
 Each `required_sub_assemblies` link carries the child's content_hash,
@@ -283,9 +282,8 @@ class AssemblyCannotInstantiateError(Exception):
 
 
 class FamilyNotFoundForAssemblyError(Exception):
-    """A FamilyId referenced by `presents_as_family_id` or by a
-    TemplateSlot's `required_family_ids` does not resolve to a defined
-    Family.
+    """A FamilyId referenced by a TemplateSlot's `required_family_ids`
+    does not resolve to a defined Family.
 
     Handler-side projection check (mirrors Plan binding's existence
     checks). Distinct from the Recipe BC's FamilyNotFoundError so the
@@ -733,9 +731,10 @@ class Assembly:
     """Aggregate root: a reusable composition blueprint.
 
     `id` is the opaque UUID stream key; `name` is the human-readable
-    AssemblyName. `presents_as_family_id` is the FamilyId the
-    instantiated Assembly looks like to Method.needed_families and
-    Plan binding (one Asset-shaped unit).
+    AssemblyName. `presents_as` is the set of global Role contracts the
+    instantiated Assembly advertises: what a Method role binding targets
+    via bind_plan_role's role_kind path (Asset.fixture_id ->
+    Assembly.presents_as).
 
     `required_slots`, `required_wires`, and `required_sub_assemblies`
     together describe the composition: slots declare what kinds of
@@ -751,7 +750,7 @@ class Assembly:
     `status` transitions Defined -> Versioned (multiple times) ->
     Deprecated. `version` is an operator-curated label. `content_hash`
     is the SHA-256 hex fingerprint of the canonical subset
-    `{name, presents_as_family_id, required_slots, required_wires,
+    `{name, presents_as, required_slots, required_wires,
     required_sub_assemblies, parameter_overrides_schema}` (excludes
     id / drawing / version / status, which are not structural identity
     per the design memo).
@@ -767,7 +766,6 @@ class Assembly:
 
     id: UUID
     name: AssemblyName
-    presents_as_family_id: UUID
     required_slots: frozenset[TemplateSlot] = field(default_factory=frozenset[TemplateSlot])
     required_wires: frozenset[TemplateWire] = field(default_factory=frozenset[TemplateWire])
     required_sub_assemblies: frozenset[SubAssemblyLink] = field(
@@ -779,24 +777,21 @@ class Assembly:
     version: str | None = None
     content_hash: str | None = None
     presents_as: frozenset[RoleId] = field(default_factory=frozenset[RoleId])
-    """Layer 3 sub-slice 3C: the set of global Role contracts this
-    composed Assembly advertises (Lock 4 universal presents_as).
-    Parallel mechanism to the scalar `presents_as_family_id`: 3C
-    keeps the scalar (per anti-hook #6, one migration cycle), and
-    layers `presents_as` alongside for Role-based binding via 3D's
-    bind_plan_role role_kind path. Microscope-Assembly seeds
-    `{Detector}` at scenario-fixture time.
+    """The set of global Role contracts this composed Assembly
+    advertises (universal `presents_as`). What a Method role binding
+    targets via bind_plan_role's role_kind path (Asset.fixture_id ->
+    Assembly.presents_as). Settable at define / version (replace) and
+    amendable incrementally via add / remove_assembly_presents_as. An
+    empty set is valid (a sub-assembly like Optics presents nothing on
+    its own).
 
-    NOT included in `content_subset()` -- additive orthogonal-axis
-    field, parallel to Family.settings_schema; adding or removing a
-    Role advertisement does not produce a structurally-distinct
-    Assembly identity.
+    Folded into `content_subset()` as sorted RoleId strings, so two
+    facilities publishing the same-named Roles converge on the same
+    Assembly content_hash (RoleIds are deterministic uuid5-over-name).
 
     Affordance-superset check (Family.affordances >=
-    Role.required_affordances) DEFERRED at 3C: Assembly affordances
-    derive from the constituent Family union at register_fixture
-    time, not Assembly template time, so the check belongs at the
-    fixture-registration layer. Watch item logged."""
+    Role.required_affordances) remains DEFERRED to register_fixture
+    time, where the constituent Family union is known."""
 
     def __post_init__(self) -> None:
         slot_names = {slot.slot_name.value for slot in self.required_slots}
@@ -822,7 +817,7 @@ class Assembly:
         """Canonical content subset hashed into `content_hash`.
 
         Pins identity per `project_content_addressed_identity_design`:
-        `name + presents_as_family_id + required_slots + required_wires +
+        `name + presents_as + required_slots + required_wires +
         required_sub_assemblies + parameter_overrides_schema`. Excluded:
         `id` (identity, not
         content), `status` and `version` (lifecycle, derived in evolver
@@ -838,7 +833,7 @@ class Assembly:
         """
         return canonical_assembly_subset(
             name=self.name,
-            presents_as_family_id=self.presents_as_family_id,
+            presents_as=self.presents_as,
             required_slots=self.required_slots,
             required_wires=self.required_wires,
             required_sub_assemblies=self.required_sub_assemblies,
@@ -849,7 +844,7 @@ class Assembly:
 def canonical_assembly_subset(
     *,
     name: "AssemblyName | str",
-    presents_as_family_id: UUID,
+    presents_as: frozenset[RoleId],
     required_slots: frozenset[TemplateSlot],
     required_wires: frozenset[TemplateWire],
     required_sub_assemblies: frozenset[SubAssemblyLink],
@@ -872,7 +867,7 @@ def canonical_assembly_subset(
     name_value = name.value if isinstance(name, AssemblyName) else name
     return {
         "name": name_value,
-        "presents_as_family_id": str(presents_as_family_id),
+        "presents_as": sorted(str(r) for r in presents_as),
         "required_slots": sorted(
             (
                 {

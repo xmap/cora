@@ -65,7 +65,7 @@ async def test_assembly_defined_inserts_with_defined_status() -> None:
         {
             "assembly_id": str(_ASSEMBLY_ID),
             "name": "Microscope",
-            "presents_as_family_id": str(_FAMILY_ID),
+            "presents_as": [str(_FAMILY_ID)],
             "required_slots": [],
             "required_wires": [],
             "parameter_overrides_schema": None,
@@ -78,14 +78,14 @@ async def test_assembly_defined_inserts_with_defined_status() -> None:
     await proj.apply(event, conn)
     args = conn.execute.await_args
     assert args is not None
-    # Positional args after the SQL string: assembly_id, name,
-    # presents_as_family_id, version, content_hash, created_at.
+    # Positional args after the SQL string: assembly_id, name, version,
+    # content_hash, created_at, presents_as.
     assert args.args[1] == _ASSEMBLY_ID
     assert args.args[2] == "Microscope"
-    assert args.args[3] == _FAMILY_ID
-    assert args.args[4] == "v0.1.0"
-    assert args.args[5] == "a" * 64
-    assert args.args[6] == _NOW
+    assert args.args[3] == "v0.1.0"
+    assert args.args[4] == "a" * 64
+    assert args.args[5] == _NOW
+    assert args.args[6] == [_FAMILY_ID]
 
 
 @pytest.mark.unit
@@ -97,7 +97,7 @@ async def test_assembly_defined_handles_null_version() -> None:
         {
             "assembly_id": str(_ASSEMBLY_ID),
             "name": "Microscope",
-            "presents_as_family_id": str(_FAMILY_ID),
+            "presents_as": [str(_FAMILY_ID)],
             "required_slots": [],
             "required_wires": [],
             "parameter_overrides_schema": None,
@@ -110,11 +110,11 @@ async def test_assembly_defined_handles_null_version() -> None:
     await proj.apply(event, conn)
     args = conn.execute.await_args
     assert args is not None
-    assert args.args[4] is None  # version
+    assert args.args[3] is None  # version
 
 
 @pytest.mark.unit
-async def test_assembly_versioned_updates_status_name_family_version_hash() -> None:
+async def test_assembly_versioned_updates_status_name_presents_as_version_hash() -> None:
     proj = AssemblySummaryProjection()
     conn = AsyncMock()
     new_family_id = uuid4()
@@ -123,7 +123,7 @@ async def test_assembly_versioned_updates_status_name_family_version_hash() -> N
         {
             "assembly_id": str(_ASSEMBLY_ID),
             "name": "Microscope-rev2",
-            "presents_as_family_id": str(new_family_id),
+            "presents_as": [str(new_family_id)],
             "required_slots": [],
             "required_wires": [],
             "parameter_overrides_schema": None,
@@ -137,13 +137,13 @@ async def test_assembly_versioned_updates_status_name_family_version_hash() -> N
     await proj.apply(event, conn)
     args = conn.execute.await_args
     assert args is not None
-    # Positional args after the SQL: assembly_id, name,
-    # presents_as_family_id, version, content_hash.
+    # Positional args after the SQL: assembly_id, name, version,
+    # content_hash, presents_as.
     assert args.args[1] == _ASSEMBLY_ID
     assert args.args[2] == "Microscope-rev2"
-    assert args.args[3] == new_family_id
-    assert args.args[4] == "v0.2.0"
-    assert args.args[5] == "c" * 64
+    assert args.args[3] == "v0.2.0"
+    assert args.args[4] == "c" * 64
+    assert args.args[5] == [new_family_id]
 
 
 @pytest.mark.unit
@@ -178,8 +178,9 @@ async def test_unrelated_event_type_is_silently_ignored() -> None:
 
 
 @pytest.mark.unit
-async def test_assembly_defined_seeds_empty_presents_as() -> None:
-    """Layer 3 3C: INSERT defaults presents_as to ARRAY[]::UUID[]."""
+async def test_assembly_defined_writes_empty_presents_as_when_event_carries_none() -> None:
+    """An AssemblyDefined with an empty presents_as folds to an empty
+    UUID[] param (the genesis case before any Role is advertised)."""
     proj = AssemblySummaryProjection()
     conn = AsyncMock()
     event = _stored(
@@ -187,7 +188,7 @@ async def test_assembly_defined_seeds_empty_presents_as() -> None:
         {
             "assembly_id": str(_ASSEMBLY_ID),
             "name": "Microscope",
-            "presents_as_family_id": str(_FAMILY_ID),
+            "presents_as": [],
             "version": None,
             "content_hash": "abc",
             "occurred_at": _NOW.isoformat(),
@@ -198,8 +199,7 @@ async def test_assembly_defined_seeds_empty_presents_as() -> None:
 
     args = conn.execute.await_args
     assert args is not None
-    sql = args.args[0]
-    assert "ARRAY[]::UUID[]" in sql
+    assert args.args[6] == []
 
 
 @pytest.mark.unit
@@ -263,7 +263,7 @@ async def test_assembly_defined_writes_required_sub_assemblies_jsonb() -> None:
         {
             "assembly_id": str(_ASSEMBLY_ID),
             "name": "Microscope",
-            "presents_as_family_id": str(_FAMILY_ID),
+            "presents_as": [str(_FAMILY_ID)],
             "required_slots": [],
             "required_wires": [],
             "required_sub_assemblies": refs,
@@ -290,7 +290,7 @@ async def test_assembly_defined_defaults_missing_required_sub_assemblies_to_empt
         {
             "assembly_id": str(_ASSEMBLY_ID),
             "name": "Detector",
-            "presents_as_family_id": str(_FAMILY_ID),
+            "presents_as": [str(_FAMILY_ID)],
             "required_slots": [],
             "required_wires": [],
             "parameter_overrides_schema": None,
@@ -316,7 +316,7 @@ async def test_assembly_versioned_writes_required_sub_assemblies_jsonb() -> None
         {
             "assembly_id": str(_ASSEMBLY_ID),
             "name": "Microscope",
-            "presents_as_family_id": str(_FAMILY_ID),
+            "presents_as": [str(_FAMILY_ID)],
             "required_slots": [],
             "required_wires": [],
             "required_sub_assemblies": refs,

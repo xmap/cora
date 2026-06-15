@@ -58,14 +58,18 @@ families:
     note: "Per-lens identity inside the Microscope Assembly."
   - name: PseudoAxis
     note: "Virtual-axis Family; the Objective_Selector Asset carries a LookupTable partition rule decomposing an objective index to turret rotation."
-  - name: Imager
-    note: "Presenter Family for detector Assemblies; the 2-BM Optique Peter detector materializes as the Microscope Assembly + Fixture."
   - name: Housing
     note: "Containment chassis Family; the Housing Asset parents the Microscope constituents and carries the Mount."
-  - name: ProbeGeneric
+  - name: GenericProbe
     note: "APS facility-scope template, an abstract detector probe-chain."
-  # Pending in code (documented, not yet defined): Goniometer, Monochromator,
-  # Slit, Mirror; future: OpticalRelay.
+  - name: Table
+    note: "Support/positioning table Family (the hutch optical tables). One Family spans the 4-DOF sample table (pure translation), the 6-DOF detector table (six virtual axes on record 2bmb:table3), and the unused mirror table; the axis set is a per-Asset settings difference, not a Family split. 'Optical' is deliberately not in the name (it would name the contents, not the table's own nature; the OpticalHousing -> Housing precedent). Instances qualify at the Asset layer: SampleTable / DetectorTable / MirrorTable."
+  - name: Slit
+    note: "Beam-defining aperture Family (four independently-driven blades forming a horizontal/vertical aperture). 2-BM: ConditioningSlit (A-station L3-20) and SampleSlit (B-station)."
+  - name: Mirror
+    note: "Beam-steering grazing-incidence mirror optic Family. 2-BM: the Y3-30 mirror (distinct from its MirrorTable support, which is Family Table)."
+  # Pending in code (documented, not yet defined): Goniometer, Monochromator;
+  # future: OpticalRelay.
 
 capabilities:
   - code: cora.capability.tomography
@@ -155,15 +159,23 @@ methods:
 models:
   # Vendor product definitions (reusable across facilities). The per-deployment
   # binding ("which 2-BM asset uses this") lives on the beamline page.
-  - name: aerotech_hexgen_hex300_230hl
+  - name: aerotech_hex300
     manufacturer: { name: Aerotech }
     part_number: "HEX300-230HL-E1-PL4-TAS"
     declared_families: [Hexapod]
-  - name: aerotech_abs250mp_m_as
+  - name: aerotech_abs250mp
     manufacturer: { name: Aerotech }
     part_number: "ABS250MP-M-AS"
     declared_families: [RotaryStage]
-  - name: aerotech_ensemble_hle10_40_a_mxh
+  - name: aerotech_abrs150mp
+    manufacturer: { name: Aerotech }
+    part_number: "ABRS-150MP-M-AS"
+    declared_families: [RotaryStage]
+  - name: aerotech_abs2000
+    manufacturer: { name: Aerotech }
+    part_number: "ABS2000-1000AS-RU"
+    declared_families: [RotaryStage]
+  - name: aerotech_ensemble
     manufacturer: { name: Aerotech }
     part_number: "HLE10-40-A-MXH"
     declared_families: [MotionController]
@@ -175,7 +187,7 @@ models:
     manufacturer: { name: Aerotech }
     part_number: "unknown-pending-confirmation"
     declared_families: [MotionController]
-  - name: aerotech_pro225sl_1000
+  - name: aerotech_pro225sl
     manufacturer: { name: Aerotech }
     part_number: "PRO225SL-1000"
     declared_families: [LinearStage]
@@ -183,23 +195,27 @@ models:
     manufacturer: { name: "Oregon Micro Systems" }
     part_number: "VME58"
     declared_families: [MotionController]
-  - name: kohzu_cyat_070
+  - name: kohzu_cyat070
     manufacturer: { name: Kohzu }
     part_number: "CYAT-070"
+    declared_families: [LinearStage]
+  - name: kohzu_sa16a
+    manufacturer: { name: Kohzu }
+    part_number: "SA16A-RM"   # operator working value; confirm (questions STAGE-6): sources also list SA16A-RS / SA07A-R2L
     declared_families: [LinearStage]
   - name: optique_peter_lens_turret_motor
     manufacturer: { name: "Optique Peter" }
     part_number: "TripleObj-MCT-turret"
     declared_families: [RotaryStage]
-  - name: mitutoyo_plan_apo_nir
+  - name: mitutoyo_plan_apo
     manufacturer: { name: Mitutoyo }
     part_number: "Plan-Apo-NIR"
     declared_families: [Objective]
-  - name: flir_oryx_orx_10g_51s5m_c
+  - name: flir_oryx
     manufacturer: { name: FLIR }
     part_number: "ORX-10G-51S5M-C"
     declared_families: [Camera]
-  - name: crytur_luag_ce_100um
+  - name: crytur_luag
     manufacturer: { name: Crytur }
     part_number: "LuAG:Ce-100um"
     declared_families: [Scintillator]

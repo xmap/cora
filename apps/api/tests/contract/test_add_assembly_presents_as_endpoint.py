@@ -22,18 +22,8 @@ from fastapi.testclient import TestClient
 from cora.api.main import create_app
 
 
-def _define_family(client: TestClient, name: str = "Imager") -> UUID:
-    response = client.post(
-        "/families",
-        json={"name": name, "affordances": []},
-    )
-    assert response.status_code == 201, response.text
-    return UUID(response.json()["family_id"])
-
-
 def _define_assembly(
     client: TestClient,
-    family_id: UUID,
     *,
     name: str = "Microscope",
 ) -> UUID:
@@ -41,7 +31,6 @@ def _define_assembly(
         "/assemblies",
         json={
             "name": name,
-            "presents_as_family_id": str(family_id),
             "required_slots": [],
             "required_wires": [],
         },
@@ -76,8 +65,7 @@ def _create_detector_role(client: TestClient, app: FastAPI) -> UUID:
 def test_post_add_presents_as_returns_204_on_success() -> None:
     app = create_app()
     with TestClient(app) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         role_id = _create_detector_role(client, app)
         response = client.post(
             f"/assemblies/{assembly_id}/add-presents-as",
@@ -102,8 +90,7 @@ def test_post_add_presents_as_returns_404_for_missing_assembly() -> None:
 def test_post_add_presents_as_returns_404_for_missing_role() -> None:
     app = create_app()
     with TestClient(app) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         response = client.post(
             f"/assemblies/{assembly_id}/add-presents-as",
             json={"role_id": "00000000-0000-0000-0000-000000000999"},
@@ -115,8 +102,7 @@ def test_post_add_presents_as_returns_404_for_missing_role() -> None:
 def test_post_add_presents_as_returns_409_on_strict_not_idempotent_retry() -> None:
     app = create_app()
     with TestClient(app) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         role_id = _create_detector_role(client, app)
         body = {"role_id": str(role_id)}
         first = client.post(f"/assemblies/{assembly_id}/add-presents-as", json=body)
@@ -129,8 +115,7 @@ def test_post_add_presents_as_returns_409_on_strict_not_idempotent_retry() -> No
 def test_post_add_presents_as_rejects_malformed_role_id_with_422() -> None:
     app = create_app()
     with TestClient(app) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         response = client.post(
             f"/assemblies/{assembly_id}/add-presents-as",
             json={"role_id": "not-a-uuid"},
@@ -146,8 +131,7 @@ def test_post_add_presents_as_does_not_enforce_affordance_check() -> None:
     per memo Watch item."""
     app = create_app()
     with TestClient(app) as client:
-        family_id = _define_family(client)
-        assembly_id = _define_assembly(client, family_id)
+        assembly_id = _define_assembly(client)
         # Role requires Imageable + Streamable; the Assembly's
         # template carries NO affordance information at all.
         role_resp = client.post(

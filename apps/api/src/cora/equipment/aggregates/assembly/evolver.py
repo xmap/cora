@@ -19,8 +19,9 @@ stream IS the revision history).
 
 **Critical invariant**: every transition arm MUST construct the
 full Assembly dataclass; partial construction relies on dataclass
-defaults that would silently zero out unchanged fields. `id` and
-`presents_as_family_id` are immutable across the lifecycle.
+defaults that would silently zero out unchanged fields. `id` is
+immutable across the lifecycle; `presents_as` is replaced on define
+and version, and amended by the add / remove presents-as events.
 
 Transition events applied to empty state raise ValueError: they
 can never appear before `AssemblyDefined` in a well-formed stream.
@@ -48,7 +49,7 @@ def evolve(state: Assembly | None, event: AssemblyEvent) -> Assembly:
         case AssemblyDefined(
             assembly_id=assembly_id,
             name=name,
-            presents_as_family_id=presents_as_family_id,
+            presents_as=presents_as,
             required_slots=required_slots,
             required_wires=required_wires,
             required_sub_assemblies=required_sub_assemblies,
@@ -61,7 +62,7 @@ def evolve(state: Assembly | None, event: AssemblyEvent) -> Assembly:
             return Assembly(
                 id=assembly_id,
                 name=name,
-                presents_as_family_id=presents_as_family_id,
+                presents_as=presents_as,
                 required_slots=required_slots,
                 required_wires=required_wires,
                 required_sub_assemblies=required_sub_assemblies,
@@ -73,7 +74,7 @@ def evolve(state: Assembly | None, event: AssemblyEvent) -> Assembly:
             )
         case AssemblyVersioned(
             name=name,
-            presents_as_family_id=presents_as_family_id,
+            presents_as=presents_as,
             required_slots=required_slots,
             required_wires=required_wires,
             required_sub_assemblies=required_sub_assemblies,
@@ -86,7 +87,7 @@ def evolve(state: Assembly | None, event: AssemblyEvent) -> Assembly:
             return Assembly(
                 id=prior.id,
                 name=name,
-                presents_as_family_id=presents_as_family_id,
+                presents_as=presents_as,
                 required_slots=required_slots,
                 required_wires=required_wires,
                 required_sub_assemblies=required_sub_assemblies,
@@ -95,17 +96,12 @@ def evolve(state: Assembly | None, event: AssemblyEvent) -> Assembly:
                 status=AssemblyStatus.VERSIONED,
                 version=version,
                 content_hash=content_hash,
-                # presents_as PRESERVED across version: orthogonal-axis
-                # field per 3C (matches Family.presents_as preservation
-                # in 3B + settings_schema preservation precedent).
-                presents_as=prior.presents_as,
             )
         case AssemblyDeprecated():
             prior = require_state(state, "AssemblyDeprecated")
             return Assembly(
                 id=prior.id,
                 name=prior.name,
-                presents_as_family_id=prior.presents_as_family_id,
                 required_slots=prior.required_slots,
                 required_wires=prior.required_wires,
                 required_sub_assemblies=prior.required_sub_assemblies,
@@ -121,7 +117,6 @@ def evolve(state: Assembly | None, event: AssemblyEvent) -> Assembly:
             return Assembly(
                 id=prior.id,
                 name=prior.name,
-                presents_as_family_id=prior.presents_as_family_id,
                 required_slots=prior.required_slots,
                 required_wires=prior.required_wires,
                 required_sub_assemblies=prior.required_sub_assemblies,
@@ -137,7 +132,6 @@ def evolve(state: Assembly | None, event: AssemblyEvent) -> Assembly:
             return Assembly(
                 id=prior.id,
                 name=prior.name,
-                presents_as_family_id=prior.presents_as_family_id,
                 required_slots=prior.required_slots,
                 required_wires=prior.required_wires,
                 required_sub_assemblies=prior.required_sub_assemblies,

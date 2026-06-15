@@ -6,6 +6,7 @@ from uuid import UUID
 import pytest
 
 from cora.equipment import UnauthorizedError
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     AssemblyDefined,
     AssemblyName,
@@ -51,7 +52,7 @@ async def _seed_microscope_assembly(store: InMemoryEventStore) -> None:
     event = AssemblyDefined(
         assembly_id=_ASSEMBLY_ID,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=_FAMILY_ID,
+        presents_as=frozenset({RoleId(_FAMILY_ID)}),
         required_slots=frozenset(),
         required_wires=frozenset(),
         parameter_overrides_schema=None,

@@ -33,7 +33,6 @@ def _assembly(
     return Assembly(
         id=assembly_id,
         name=AssemblyName("Microscope"),
-        presents_as_family_id=uuid4(),
         presents_as=presents_as,
     )
 

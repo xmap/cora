@@ -24,6 +24,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     ASSEMBLY_NAME_MAX_LENGTH,
     Assembly,
@@ -53,7 +54,7 @@ def _state(assembly_id: UUID, family_id: UUID, status: AssemblyStatus) -> Assemb
     return Assembly(
         id=assembly_id,
         name=AssemblyName("Initial"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         status=status,
         content_hash="a" * 64,
     )
@@ -74,7 +75,7 @@ def test_decide_versionable_state_emits_versioned_event(
         command=VersionAssembly(
             assembly_id=assembly_id,
             name=name,
-            presents_as_family_id=family_id,
+            presents_as=frozenset({RoleId(family_id)}),
         ),
         context=VersionAssemblyContext(missing_family_ids=frozenset()),
         now=now,
@@ -101,7 +102,7 @@ def test_decide_none_state_always_raises_not_found(
             command=VersionAssembly(
                 assembly_id=target_id,
                 name=name,
-                presents_as_family_id=uuid4(),
+                presents_as=frozenset({RoleId(uuid4())}),
             ),
             context=VersionAssemblyContext(missing_family_ids=frozenset()),
             now=now,
@@ -124,7 +125,7 @@ def test_decide_deprecated_state_always_raises_cannot_version(
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name=name,
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
             ),
             context=VersionAssemblyContext(missing_family_ids=frozenset()),
             now=now,
@@ -155,7 +156,7 @@ def test_decide_versionable_state_with_missing_families_raises_family_not_found(
             command=VersionAssembly(
                 assembly_id=assembly_id,
                 name=name,
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
             ),
             context=VersionAssemblyContext(missing_family_ids=missing),
             now=now,
@@ -176,7 +177,7 @@ def test_decide_is_pure_same_inputs_yield_same_events(
     command = VersionAssembly(
         assembly_id=assembly_id,
         name=name,
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
     )
     context = VersionAssemblyContext(missing_family_ids=frozenset())
     events_a = version_assembly.decide(state, command, context=context, now=now)

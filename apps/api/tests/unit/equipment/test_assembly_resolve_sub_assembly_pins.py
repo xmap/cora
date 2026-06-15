@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     AssemblyDefined,
     AssemblyName,
@@ -42,7 +43,7 @@ async def _seed_assembly(
     event = AssemblyDefined(
         assembly_id=assembly_id,
         name=AssemblyName("Optics"),
-        presents_as_family_id=uuid4(),
+        presents_as=frozenset({RoleId(uuid4())}),
         required_slots=slots,
         required_wires=frozenset(),
         required_sub_assemblies=sub_assemblies,

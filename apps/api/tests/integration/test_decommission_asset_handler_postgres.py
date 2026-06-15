@@ -237,7 +237,7 @@ async def test_decommission_asset_rejects_when_still_bound_to_fixture(
     assembly_id = await define_assembly.bind(deps)(
         DefineAssembly(
             name="Microscope",
-            presents_as_family_id=family_id,
+            presents_as=frozenset(),
             required_slots=frozenset(
                 {
                     TemplateSlot(

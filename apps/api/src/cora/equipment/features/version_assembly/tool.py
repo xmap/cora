@@ -32,7 +32,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             "Publish a new revision snapshot of an existing Assembly. "
             "Replace-on-version: the args carry the FULL canonical "
             "structural subset (slots, wires, schema, drawing, version "
-            "label, presents_as_family_id), NOT a diff. Multi-source "
+            "label, presents_as), NOT a diff. Multi-source "
             "FSM: Defined and Versioned both accept new revisions; "
             "Deprecated rejects (operators must fork via define_assembly "
             "with a fresh id). Re-attesting the same content produces "
@@ -53,10 +53,10 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                 description="Display name for this revision.",
             ),
         ],
-        presents_as_family_id: Annotated[
-            UUID,
-            Field(description="FamilyId the instantiated Assembly stands in for."),
-        ],
+        presents_as: Annotated[
+            list[UUID],
+            Field(description="Global Role contract ids this revision advertises."),
+        ] = [],  # noqa: B006
         required_slots: Annotated[
             list[TemplateSlotBody],
             Field(description="Full slot set for this revision."),
@@ -94,7 +94,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             VersionAssembly(
                 assembly_id=assembly_id,
                 name=name,
-                presents_as_family_id=presents_as_family_id,
+                presents_as=frozenset(presents_as),
                 required_slots=frozenset(s.to_domain() for s in required_slots),
                 required_wires=frozenset(w.to_domain() for w in required_wires),
                 required_sub_assemblies=frozenset(r.to_domain() for r in required_sub_assemblies),

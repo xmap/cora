@@ -48,6 +48,7 @@ guidance).
 Docstrings are kept terse and operator-readable.
 """
 
+import unicodedata
 from typing import Final
 from uuid import UUID, uuid5
 
@@ -68,12 +69,14 @@ _ROLE_NAMESPACE: Final[UUID] = UUID("d22027f6-9667-5f9f-bab9-5775f0aa70c4")
 def role_stream_id(name: RoleName) -> RoleId:
     """Derive the deterministic stream_id for a Role from its name.
 
-    Lower-cases `name.value` so the derivation matches the projection's
-    `UNIQUE INDEX (LOWER(name))` rule: a `define_role` race on the
-    same case-insensitive name collides on `expected_version=0` at the
-    event store before the projection writer can crash.
+    NFC-normalizes then lower-cases `name.value` so the derivation
+    matches the projection's `UNIQUE INDEX (LOWER(name))` rule and so
+    composed vs decomposed Unicode spelling cannot fork identity: a
+    `define_role` race on the same case-insensitive name collides on
+    `expected_version=0` at the event store before the projection
+    writer can crash. Mirrors `family_stream_id` / `model_stream_id`.
     """
-    return RoleId(uuid5(_ROLE_NAMESPACE, name.value.lower()))
+    return RoleId(uuid5(_ROLE_NAMESPACE, unicodedata.normalize("NFC", name.value).lower()))
 
 
 SEED_ROLE_DETECTOR_ID: Final[RoleId] = role_stream_id(RoleName("Detector"))

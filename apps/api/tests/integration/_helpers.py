@@ -54,6 +54,7 @@ from cora.infrastructure.ports import (
     FixedIdGenerator,
     IdempotencyStore,
     ProfileStore,
+    RoleLookup,
 )
 from cora.shared.facility_code import FacilityCode
 
@@ -80,6 +81,7 @@ def build_postgres_deps(
     credential_lookup: CredentialLookup | None = None,
     facility_lookup: FacilityLookup | None = None,
     asset_lookup: AssetLookup | None = None,
+    role_lookup: RoleLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
 ) -> Kernel:
@@ -120,6 +122,7 @@ def build_postgres_deps(
         credential_lookup=credential_lookup,
         facility_lookup=facility_lookup,
         asset_lookup=asset_lookup,
+        role_lookup=role_lookup,
         profile_store=profile_store,
         llm=llm,
     )

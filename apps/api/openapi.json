@@ -4708,11 +4708,14 @@
             "description": "Optional JSON Schema subset declaring the shape of parameter_overrides accepted at instantiation.",
             "title": "Parameter Overrides Schema"
           },
-          "presents_as_family_id": {
-            "description": "FamilyId the instantiated Assembly stands in for at the Method.needed_families satisfaction boundary.",
-            "format": "uuid",
-            "title": "Presents As Family Id",
-            "type": "string"
+          "presents_as": {
+            "description": "Global Role contract ids this Assembly advertises; what a Method role binding targets at the satisfaction boundary.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Presents As",
+            "type": "array"
           },
           "required_slots": {
             "description": "Slots that compose this Assembly. Each names a slot (canonical identity within the blueprint), the FamilyIds any filling Asset must include, the cardinality, and optional template defaults. Wire shape is a list; duplicates collapse when the route handler converts to the domain frozenset.",
@@ -4752,8 +4755,7 @@
           }
         },
         "required": [
-          "name",
-          "presents_as_family_id"
+          "name"
         ],
         "title": "DefineAssemblyRequest",
         "type": "object"
@@ -14373,11 +14375,14 @@
             "description": "Optional JSON Schema subset declaring the shape of parameter_overrides accepted at instantiation. Excluded if the revision keeps the previous schema unchanged.",
             "title": "Parameter Overrides Schema"
           },
-          "presents_as_family_id": {
-            "description": "FamilyId the instantiated Assembly stands in for. May change across revisions (e.g., DCM-revisited may move from Monochromator to a wider BeamConditioning Family).",
-            "format": "uuid",
-            "title": "Presents As Family Id",
-            "type": "string"
+          "presents_as": {
+            "description": "Global Role contract ids this revision advertises; replaced wholesale on version. What a Method role binding targets.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Presents As",
+            "type": "array"
           },
           "required_slots": {
             "description": "Full slot set for this revision (replace-on-version). Wire shape is a list; duplicates collapse when the route handler converts to the domain frozenset.",
@@ -14417,8 +14422,7 @@
           }
         },
         "required": [
-          "name",
-          "presents_as_family_id"
+          "name"
         ],
         "title": "VersionAssemblyRequest",
         "type": "object"
@@ -17219,7 +17223,7 @@
                 }
               }
             },
-            "description": "A referenced FamilyId (presents_as_family_id or any slot's required_family_ids member) does not resolve to a defined Family."
+            "description": "A referenced RoleId in presents_as does not resolve to a defined Role, or a slot's required_family_ids member does not resolve to a defined Family."
           },
           "409": {
             "content": {
@@ -17714,7 +17718,7 @@
                 }
               }
             },
-            "description": "Assembly with the given assembly_id does not exist, OR a referenced FamilyId (presents_as_family_id or any slot's required_family_ids member) does not resolve to a defined Family."
+            "description": "Assembly with the given assembly_id does not exist, OR a referenced RoleId in presents_as does not resolve to a defined Role, OR a slot's required_family_ids member does not resolve to a defined Family."
           },
           "409": {
             "content": {

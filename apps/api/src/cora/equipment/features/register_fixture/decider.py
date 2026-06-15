@@ -176,7 +176,7 @@ def decide(
 
     A referenced sub-assembly contributes ONLY its leaf slots to the
     materialized binding union. Its own required_wires,
-    parameter_overrides_schema, and presents_as_family_id are NOT honored
+    parameter_overrides_schema, and presents_as are NOT honored
     at the parent Fixture; they are meaningful only when that child is
     registered as a Fixture in its own right.
 

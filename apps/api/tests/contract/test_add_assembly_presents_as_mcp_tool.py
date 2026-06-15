@@ -11,16 +11,10 @@ from tests.contract._mcp_helpers import open_session, parse_sse_data
 
 
 def _seed(client: TestClient, app: FastAPI) -> tuple[UUID, UUID]:
-    family_resp = client.post(
-        "/families",
-        json={"name": "Imager", "affordances": []},
-    )
-    family_id = UUID(family_resp.json()["family_id"])
     asm_resp = client.post(
         "/assemblies",
         json={
             "name": "Microscope",
-            "presents_as_family_id": str(family_id),
             "required_slots": [],
             "required_wires": [],
         },

@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 
+from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.assembly import (
     Assembly,
     AssemblyAlreadyExistsError,
@@ -25,6 +26,7 @@ from cora.equipment.aggregates.assembly import (
     TemplateSlot,
     TemplateWire,
 )
+from cora.equipment.aggregates.role import RoleNotFoundError
 from cora.equipment.features import define_assembly
 from cora.equipment.features.define_assembly import (
     DefineAssembly,
@@ -50,7 +52,7 @@ def test_decide_emits_assembly_defined_for_minimal_command() -> None:
         state=None,
         command=DefineAssembly(
             name="Detector",
-            presents_as_family_id=family_id,
+            presents_as=frozenset({RoleId(family_id)}),
             required_slots=frozenset(),
             required_wires=frozenset(),
         ),
@@ -63,7 +65,7 @@ def test_decide_emits_assembly_defined_for_minimal_command() -> None:
     assert isinstance(event, AssemblyDefined)
     assert event.assembly_id == new_id
     assert event.name == AssemblyName("Detector")
-    assert event.presents_as_family_id == family_id
+    assert event.presents_as == frozenset({family_id})
     assert event.required_slots == frozenset()
     assert event.required_wires == frozenset()
     assert event.drawing is None
@@ -91,7 +93,7 @@ def test_decide_emits_assembly_defined_with_slots_and_wires_and_version() -> Non
         state=None,
         command=DefineAssembly(
             name="Detector",
-            presents_as_family_id=family_id,
+            presents_as=frozenset({RoleId(family_id)}),
             required_slots=frozenset({slot_camera, slot_trigger}),
             required_wires=frozenset({wire}),
             parameter_overrides_schema={
@@ -122,7 +124,7 @@ def test_decide_rejects_non_none_state_with_assembly_already_exists() -> None:
     state = Assembly(
         id=existing_id,
         name=AssemblyName("Existing"),
-        presents_as_family_id=family_id,
+        presents_as=frozenset({RoleId(family_id)}),
         status=AssemblyStatus.DEFINED,
     )
     with pytest.raises(AssemblyAlreadyExistsError) as exc_info:
@@ -130,7 +132,7 @@ def test_decide_rejects_non_none_state_with_assembly_already_exists() -> None:
             state=state,
             command=DefineAssembly(
                 name="X",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
             ),
             context=DefineAssemblyContext(missing_family_ids=frozenset()),
             now=_NOW,
@@ -140,20 +142,23 @@ def test_decide_rejects_non_none_state_with_assembly_already_exists() -> None:
 
 
 @pytest.mark.unit
-def test_decide_rejects_missing_presents_as_family_id_with_family_not_found() -> None:
-    family_id = uuid4()
-    with pytest.raises(FamilyNotFoundForAssemblyError) as exc_info:
+def test_decide_rejects_missing_presents_as_role_with_role_not_found() -> None:
+    role_id = uuid4()
+    with pytest.raises(RoleNotFoundError) as exc_info:
         define_assembly.decide(
             state=None,
             command=DefineAssembly(
                 name="Detector",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(role_id)}),
             ),
-            context=DefineAssemblyContext(missing_family_ids=frozenset({family_id})),
+            context=DefineAssemblyContext(
+                missing_family_ids=frozenset(),
+                missing_role_ids=frozenset({role_id}),
+            ),
             now=_NOW,
             new_id=uuid4(),
         )
-    assert exc_info.value.family_id == family_id
+    assert exc_info.value.role_id == role_id
 
 
 @pytest.mark.unit
@@ -166,7 +171,7 @@ def test_decide_rejects_missing_slot_required_family_with_family_not_found() -> 
             state=None,
             command=DefineAssembly(
                 name="Detector",
-                presents_as_family_id=presents_id,
+                presents_as=frozenset({RoleId(presents_id)}),
                 required_slots=frozenset({slot}),
             ),
             context=DefineAssemblyContext(missing_family_ids=frozenset({slot_family})),
@@ -186,7 +191,7 @@ def test_decide_surfaces_first_missing_family_id_deterministically() -> None:
     with pytest.raises(FamilyNotFoundForAssemblyError) as exc_info:
         define_assembly.decide(
             state=None,
-            command=DefineAssembly(name="X", presents_as_family_id=a),
+            command=DefineAssembly(name="X", presents_as=frozenset({RoleId(a)})),
             context=DefineAssemblyContext(missing_family_ids=frozenset(missing)),
             now=_NOW,
             new_id=uuid4(),
@@ -195,11 +200,35 @@ def test_decide_surfaces_first_missing_family_id_deterministically() -> None:
 
 
 @pytest.mark.unit
+def test_decide_surfaces_first_missing_role_id_deterministically() -> None:
+    """When multiple presented Roles are missing, the decider raises with
+    the sorted-first id so error responses are stable across runs."""
+    a, b, c = uuid4(), uuid4(), uuid4()
+    missing = {a, b, c}
+    expected_first = sorted(missing, key=str)[0]
+    with pytest.raises(RoleNotFoundError) as exc_info:
+        define_assembly.decide(
+            state=None,
+            command=DefineAssembly(
+                name="X",
+                presents_as=frozenset({RoleId(m) for m in missing}),
+            ),
+            context=DefineAssemblyContext(
+                missing_family_ids=frozenset(),
+                missing_role_ids=frozenset(missing),
+            ),
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.role_id == expected_first
+
+
+@pytest.mark.unit
 def test_decide_rejects_invalid_name_via_vo() -> None:
     with pytest.raises(InvalidAssemblyNameError):
         define_assembly.decide(
             state=None,
-            command=DefineAssembly(name="   ", presents_as_family_id=uuid4()),
+            command=DefineAssembly(name="   ", presents_as=frozenset({RoleId(uuid4())})),
             context=DefineAssemblyContext(missing_family_ids=frozenset()),
             now=_NOW,
             new_id=uuid4(),
@@ -213,7 +242,7 @@ def test_decide_rejects_invalid_parameter_overrides_schema() -> None:
             state=None,
             command=DefineAssembly(
                 name="Detector",
-                presents_as_family_id=uuid4(),
+                presents_as=frozenset({RoleId(uuid4())}),
                 parameter_overrides_schema={"oneOf": [{"type": "object"}]},
             ),
             context=DefineAssemblyContext(missing_family_ids=frozenset()),
@@ -237,7 +266,7 @@ def test_decide_content_hash_is_deterministic_across_invocations() -> None:
             state=None,
             command=DefineAssembly(
                 name="Detector",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 required_slots=frozenset({_slot("camera", slot_family)}),
             ),
             context=DefineAssemblyContext(missing_family_ids=frozenset()),
@@ -259,7 +288,7 @@ def test_decide_emits_assembly_defined_with_drawing() -> None:
         state=None,
         command=DefineAssembly(
             name="Detector",
-            presents_as_family_id=family_id,
+            presents_as=frozenset({RoleId(family_id)}),
             drawing=drawing,
         ),
         context=DefineAssemblyContext(missing_family_ids=frozenset()),
@@ -282,7 +311,7 @@ def test_decide_emits_defined_with_required_sub_assemblies() -> None:
         state=None,
         command=DefineAssembly(
             name="Microscope",
-            presents_as_family_id=uuid4(),
+            presents_as=frozenset({RoleId(uuid4())}),
             required_sub_assemblies=frozenset({link}),
         ),
         context=DefineAssemblyContext(missing_family_ids=frozenset()),
@@ -303,7 +332,7 @@ def test_decide_rejects_missing_sub_assembly() -> None:
             state=None,
             command=DefineAssembly(
                 name="Microscope",
-                presents_as_family_id=uuid4(),
+                presents_as=frozenset({RoleId(uuid4())}),
                 required_sub_assemblies=frozenset({link}),
             ),
             context=DefineAssemblyContext(
@@ -328,7 +357,7 @@ def test_decide_rejects_sub_assembly_content_hash_mismatch() -> None:
             state=None,
             command=DefineAssembly(
                 name="Microscope",
-                presents_as_family_id=uuid4(),
+                presents_as=frozenset({RoleId(uuid4())}),
                 required_sub_assemblies=frozenset({link}),
             ),
             context=DefineAssemblyContext(
@@ -354,7 +383,7 @@ def test_decide_rejects_self_referential_sub_assembly() -> None:
             state=None,
             command=DefineAssembly(
                 name="Microscope",
-                presents_as_family_id=uuid4(),
+                presents_as=frozenset({RoleId(uuid4())}),
                 required_sub_assemblies=frozenset({link}),
             ),
             context=DefineAssemblyContext(missing_family_ids=frozenset()),
@@ -376,7 +405,7 @@ def test_decide_rejects_sub_assembly_slot_name_colliding_with_leaf_slot() -> Non
             state=None,
             command=DefineAssembly(
                 name="Microscope",
-                presents_as_family_id=family_id,
+                presents_as=frozenset({RoleId(family_id)}),
                 required_slots=frozenset({leaf}),
                 required_sub_assemblies=frozenset({link}),
             ),
@@ -402,7 +431,7 @@ def test_decide_rejects_duplicate_sub_assembly_link_slot_name() -> None:
             state=None,
             command=DefineAssembly(
                 name="Microscope",
-                presents_as_family_id=uuid4(),
+                presents_as=frozenset({RoleId(uuid4())}),
                 required_sub_assemblies=frozenset({link_a, link_b}),
             ),
             context=DefineAssemblyContext(missing_family_ids=frozenset()),
@@ -426,7 +455,7 @@ def test_decide_rejects_sub_assembly_that_is_itself_a_composite() -> None:
             state=None,
             command=DefineAssembly(
                 name="Microscope",
-                presents_as_family_id=uuid4(),
+                presents_as=frozenset({RoleId(uuid4())}),
                 required_sub_assemblies=frozenset({link}),
             ),
             context=DefineAssemblyContext(
@@ -451,7 +480,7 @@ def test_decide_rejects_leaf_slot_collision_across_composed_blueprints() -> None
             state=None,
             command=DefineAssembly(
                 name="Microscope",
-                presents_as_family_id=uuid4(),
+                presents_as=frozenset({RoleId(uuid4())}),
                 required_sub_assemblies=frozenset({link}),
             ),
             context=DefineAssemblyContext(

@@ -1,9 +1,9 @@
 """The `DefineAssembly` command - intent dataclass for the define_assembly slice.
 
 Carries the caller-controlled structural fields: name,
-presents_as_family_id, required_slots, required_wires, the optional
-parameter_overrides_schema, the optional drawing, and the optional
-operator-curatorial version label.
+presents_as (the global Role contracts the Assembly advertises),
+required_slots, required_wires, the optional parameter_overrides_schema,
+the optional drawing, and the optional operator-curatorial version label.
 
 Server-side concerns (new assembly_id, wall-clock timestamp,
 correlation id, per-event ids, computed content_hash) are injected
@@ -19,7 +19,7 @@ when state is constructed in the evolver) all fire at VO construction
 or evolver-fold time, NOT inside the decider.
 
 Cross-aggregate references checked by the handler before the decider:
-  - presents_as_family_id must resolve to a defined Family.
+  - Every RoleId in presents_as must resolve to a defined Role.
   - Every FamilyId in every slot's required_family_ids must resolve.
 
 Cross-aggregate references NOT checked:
@@ -41,7 +41,7 @@ class DefineAssembly:
     """Define a new Assembly composition blueprint."""
 
     name: str
-    presents_as_family_id: UUID
+    presents_as: frozenset[UUID] = field(default_factory=frozenset[UUID])
     required_slots: frozenset[TemplateSlot] = field(default_factory=frozenset[TemplateSlot])
     required_wires: frozenset[TemplateWire] = field(default_factory=frozenset[TemplateWire])
     required_sub_assemblies: frozenset[SubAssemblyLink] = field(
