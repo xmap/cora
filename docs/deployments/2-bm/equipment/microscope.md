@@ -1,8 +1,8 @@
 # The Microscope detector at 2-BM
 
-*The Optique Peter detector deployment: a Microscope Assembly over a reusable Optics sub-assembly, materialized as one Fixture binding eight Assets, all contained in one Housing, with four Calibrations.*
+*The Optique Peter detector deployment: a Microscope Assembly over a reusable Optics sub-assembly, materialized as one Fixture binding eleven Assets, all contained in one Housing, with four Calibrations.*
 
-The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch. Its Assets are located in the `2-BM-B` Enclosure (the access-gated volume that gates them via the pre-flight permit check). It is the operator-facing imaging system: a vendor housing that carries three swappable microscope objectives on a sliding ball-screw selector, a linear focus stage, a FLIR Oryx scientific camera, and a LuAG scintillator. (Two Oryx cameras and a camera selector are physically installed, confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html); the v1 model below binds the one camera, with the second camera plus its Schunk selector recorded as a follow-on. See [Watch items](#watch-items).) The whole unit is controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC's process name, not the CORA model name). This page explains how CORA models it.
+The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch. Its Assets are located in the `2-BM-B` Enclosure (the access-gated volume that gates them via the pre-flight permit check). It is the operator-facing imaging system: a vendor housing that carries three swappable microscope objectives on a sliding ball-screw selector, a linear focus stage, two FLIR Oryx scientific cameras switched by a folding-mirror stage, and a LuAG scintillator. (Both cameras and the camera selector are modelled, confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html); the per-camera rotation and per-lens fine-focus motors remain a follow-on. See [Watch items](#watch-items).) The whole unit is controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC's process name, not the CORA model name). This page explains how CORA models it.
 
 ## The model in one picture
 
@@ -23,14 +23,21 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 |     +-- Objective_1.1x      (Device, Family Objective)   1.1x
 |     +-- Objective_Selector      (Device, Family PseudoAxis)   objective selector
 |     +-- Focus (Device, Family LinearStage)
-|     +-- Camera  (Device, Family Camera)
+|     +-- Camera  (Device, Family Camera)               5 MP, 2bmSP1:
+|     +-- Camera_HighRes  (Device, Family Camera)        31 MP, 2bmSP2:
+|     +-- Camera_Fold  (Device, Family LinearStage)      Schunk folding-mirror selector stage
+|     +-- Camera_Selector  (Device, Family PseudoAxis)   camera index axis
 |     +-- Scintillator (Device, Family Scintillator)
 |
 +-- Fixture: microscope_at_2bm   (surface_id = 2-BM Trust Surface)
       materializes Assembly = Microscope, which composes:
         sub-assembly  optics  -> Assembly = Optics (content-hash pinned)
-        leaf slot     camera        -> Camera
-        leaf slot     scintillator  -> Scintillator
+        leaf slot     camera (1+)     -> Camera, Camera_HighRes
+        leaf slot     scintillator    -> Scintillator
+        leaf slot     camera_fold     -> Camera_Fold
+        leaf slot     camera_selector -> Camera_Selector  (PseudoAxis; partition_rule = LookupTable
+                                          0 -> 20 mm  (Camera, 5 MP)
+                                          1 -> 15 mm  (Camera_HighRes, 31 MP))
       and the Optics sub-assembly contributes its own leaf slots, bound in the same Fixture:
         turret            -> Turret
         objectives (1+)   -> Objective_10x     |  one OneOrMore slot,
@@ -51,25 +58,25 @@ flowchart TD
   OPT["Assembly: Optics (content-hash pinned)"]
   FIX(["Fixture: microscope_at_2bm"])
   MIC -- "sub-assembly: optics @hash" --> OPT
-  MIC -. "leaf slots: camera, scintillator" .-> FIX
+  MIC -. "leaf slots: camera 1+, scintillator, camera_selector, camera_fold" .-> FIX
   OPT -. "slots: turret, objectives 1+, objective_selector, focus" .-> FIX
-  FIX == "8 Assets across 6 slot names" ==> AS["Camera, Scintillator, Turret,<br/>Objective_10x, Objective_2x, Objective_1.1x,<br/>Objective_Selector, Focus"]
+  FIX == "11 Assets across 8 slot names" ==> AS["Camera, Camera_HighRes, Scintillator,<br/>Camera_Fold, Camera_Selector, Turret,<br/>Objective_10x, Objective_2x, Objective_1.1x,<br/>Objective_Selector, Focus"]
 ```
 
-`Microscope` is the name of the top Assembly (the blueprint) and, with `microscope_at_2bm`, of the Fixture (the materialization at 2-BM). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical container. None of the three is an operator-facing Asset row in its own right except the housing: the conceptual Microscope-the-thing IS the Assembly plus Fixture pair, the reusable optics cluster IS the Optics sub-assembly, and the physical chassis IS the `Housing` Asset that parents the eight functional constituents.
+`Microscope` is the name of the top Assembly (the blueprint) and, with `microscope_at_2bm`, of the Fixture (the materialization at 2-BM). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical container. None of the three is an operator-facing Asset row in its own right except the housing: the conceptual Microscope-the-thing IS the Assembly plus Fixture pair, the reusable optics cluster IS the Optics sub-assembly, and the physical chassis IS the `Housing` Asset that parents the eleven functional constituents.
 
 ## Two axes: composition and containment
 
 This deployment uses both of CORA's structural axes, and they answer different questions.
 
-- **Composition** (Assembly to Fixture, flat) answers *what logical cluster presents here for binding*. The Microscope Assembly composes the Optics sub-assembly plus two leaf slots (camera, scintillator). The Fixture binds the union of every leaf slot, the Microscope's own two plus the Optics sub-assembly's six, to eight concrete Assets.
-- **Containment** (`Asset.parent_id`, a recursive tree) answers *what physical thing holds what*. The `Housing` Asset is the parent of all eight functional constituents. The housing is the part that is installed into the Mount; everything inside it inherits position from the housing's known internal layout. (The housing also physically holds a passive vitreous-carbon window, recorded in the descriptor but not yet registered as a CORA Asset.)
+- **Composition** (Assembly to Fixture, flat) answers *what logical cluster presents here for binding*. The Microscope Assembly composes the Optics sub-assembly plus four leaf slots (camera [OneOrMore], scintillator, camera_selector, camera_fold). The Fixture binds the union of every leaf slot, the Microscope's own five bindings plus the Optics sub-assembly's six, to eleven concrete Assets.
+- **Containment** (`Asset.parent_id`, a recursive tree) answers *what physical thing holds what*. The `Housing` Asset is the parent of all eleven functional constituents. The housing is the part that is installed into the Mount; everything inside it inherits position from the housing's known internal layout. (The housing also physically holds a passive vitreous-carbon window, recorded in the descriptor but not yet registered as a CORA Asset.)
 
-The same eight Assets sit on both axes at once: each is a Fixture-bound constituent (composition) and a child of the `Housing` (containment). The two axes are orthogonal, which is exactly why CORA keeps them separate.
+The same eleven Assets sit on both axes at once: each is a Fixture-bound constituent (composition) and a child of the `Housing` (containment). The two axes are orthogonal, which is exactly why CORA keeps them separate.
 
 ## Vendor catalog (Models)
 
-Five Models cover the hardware:
+Seven Models cover the hardware:
 
 | Model | Manufacturer | Part number | Declared Families |
 | --- | --- | --- | --- |
@@ -77,6 +84,8 @@ Five Models cover the hardware:
 | `nanotec_st4118m1404_b` | Nanotec | `ST4118M1404-B` | `LinearStage` |
 | `mitutoyo_plan_apo_nir` | Mitutoyo | `Plan-Apo-NIR` | `Objective` |
 | `flir_oryx_orx_10g_51s5m_c` | FLIR | `ORX-10G-51S5M-C` | `Camera` |
+| `flir_oryx_orx_10g_310s9m` | FLIR | `ORX-10G-310S9M` | `Camera` |
+| `schunk_lptm_30` | Schunk | `LPTM 30` | `LinearStage` |
 | `crytur_luag_ce_100um` | Crytur | `LuAG:Ce-100um` | `Scintillator` |
 
 Each Model carries the vendor identity that DOIs and citations need (PIDINST property 7). Assets bind to a Model at registration; the Asset's Family set must be a subset of the Model's declared families. The objective selector motor is a third-party stepper inside the Optique Peter housing, confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) as a Nanotec `ST4118M1404-B` (with a Heidenhain ERO 1420 encoder), so the `Turret` Asset binds the Nanotec Model rather than an Optique Peter one.
@@ -90,10 +99,12 @@ The top **Assembly** is the reusable composition blueprint. It does two things: 
 | Member | Kind | Cardinality | Required Family |
 | --- | --- | --- | --- |
 | `optics` | sub-assembly link | one | (the Optics Assembly) |
-| `camera` | leaf slot | `Exactly1` | `Camera` |
+| `camera` | leaf slot | `OneOrMore` | `Camera` |
 | `scintillator` | leaf slot | `Exactly1` | `Scintillator` |
+| `camera_selector` | leaf slot | `Exactly1` | `PseudoAxis` |
+| `camera_fold` | leaf slot | `Exactly1` | `LinearStage` |
 
-The sub-assembly link pins the Optics Assembly's content hash, so a later revision of Optics does not silently change what a Microscope built today materializes (snapshot semantics). The camera and scintillator are leaf slots on the Microscope rather than the Optics sub-assembly because they are the parts a deployment swaps most often and the parts that vary between detector builds; the optics cluster (turret, objectives, objective selector, focus) is the stable, shareable core.
+The sub-assembly link pins the Optics Assembly's content hash, so a later revision of Optics does not silently change what a Microscope built today materializes (snapshot semantics). The camera, scintillator, and camera-select path are leaf slots on the Microscope rather than the Optics sub-assembly because they are the parts a deployment swaps or reconfigures most often and the parts that vary between detector builds; the optics cluster (turret, objectives, objective selector, focus) is the stable, shareable core. The `camera` slot is `OneOrMore` (the same shape as the `objectives` slot): 2-BM binds two cameras, and `camera_selector` (a PseudoAxis, mirroring `objective_selector`) picks which one sees the beam by driving the `camera_fold` stage.
 
 The Microscope Assembly presents as the **`Detector`** Role, the functional binding contract a Method targets when it needs a 2D imaging device without pinning a specific Family. It also carries the legacy scalar `presents_as_family_id` pointing at the `Imager` presenter Family (the satisfaction handle for Methods still written against `needed_family_ids = {Imager}`); the Role-based `presents_as` set is the forward-looking path. The Assembly's content hash (SHA-256 over its name, its slots, its sub-assembly links, the presented Family, and the parameter overrides schema) is stable: two facilities that publish the same Microscope Assembly converge on the same hash, which makes the blueprint cross-facility shareable when the federation layer lands.
 
@@ -110,7 +121,7 @@ The **Optics** Assembly is the reusable core: the turret, the three objectives, 
 | `objective_selector` | `Exactly1` | `PseudoAxis` |
 | `focus` | `Exactly1` | `LinearStage` |
 
-The three installed objectives (10x, 2x, 1.1x) all bind the single `objectives` slot. They differ only by the `magnification` setting, so one `OneOrMore` slot keeps the Optics blueprint (and its content hash) reusable across turret loadouts rather than baking three specific magnifications into the structure; a second beamline with a five-position turret reuses the same blueprint. Per-objective identity lives on the Asset (its name, settings, and calibration), not the slot. `objective_selector` is **the objective selector**: the virtual axis that picks which objective is in the beam (distinct from the separate, deferred camera selector).
+The three installed objectives (10x, 2x, 1.1x) all bind the single `objectives` slot. They differ only by the `magnification` setting, so one `OneOrMore` slot keeps the Optics blueprint (and its content hash) reusable across turret loadouts rather than baking three specific magnifications into the structure; a second beamline with a five-position turret reuses the same blueprint. Per-objective identity lives on the Asset (its name, settings, and calibration), not the slot. `objective_selector` is **the objective selector**: the virtual axis that picks which objective is in the beam (distinct from `camera_selector`, the analogous camera-side axis on the Microscope).
 
 The Optics sub-assembly is composed one level deep: it does not itself reference further sub-assemblies. At Fixture time, a Microscope expands one composing level, the Optics cluster, and rejects deeper nesting; that keeps the materialization rule simple until a real two-tier case earns the extra depth.
 
@@ -120,12 +131,12 @@ The **Fixture** materializes the Microscope Assembly at this specific facility. 
 
 - The Assembly id and its content hash (frozen at registration so later Assembly revisions do not silently change this materialization)
 - The Trust Surface (`2-BM`) for governance scope
-- The slot-to-Asset map binding eight Assets across six leaf slots (the Microscope's `camera` and `scintillator`, plus the Optics sub-assembly's `turret`, `objectives` [the three magnification objectives], `objective_selector`, and `focus`) to the eight specific Asset IDs above
+- The slot-to-Asset map binding eleven Assets across eight leaf slots (the Microscope's `camera` [two cameras], `scintillator`, `camera_selector`, and `camera_fold`, plus the Optics sub-assembly's `turret`, `objectives` [the three magnification objectives], `objective_selector`, and `focus`) to the eleven specific Asset IDs above
 - Parameter overrides, if any (none in v1)
 
 When the Fixture is registered, the decider expands the union of the top Assembly's leaf slots and the referenced Optics sub-assembly's leaf slots into one flat slot namespace, then validates the bindings against that union. A leaf slot name that appeared in both blueprints would be rejected as a namespace collision; here the two sets are disjoint.
 
-A Fixture is single-event genesis: it never changes after registration. Each of the eight bound Assets carries a `fixture_id` back-reference. Operators do not see this field directly; it is a query helper so "which Fixture is this Asset bound into" answers in one lookup.
+A Fixture is single-event genesis: it never changes after registration. Each of the eleven bound Assets carries a `fixture_id` back-reference. Operators do not see this field directly; it is a query helper so "which Fixture is this Asset bound into" answers in one lookup.
 
 The exclusivity invariant matters: an Asset can only belong to one Fixture at a time. `Focus` is bound into the Microscope Fixture, which means it cannot simultaneously be bound into a different Fixture for, say, a non-microscope imaging path. If a future deployment needs the same physical focus motor for a different cluster, the operator detaches it first.
 
@@ -133,7 +144,7 @@ The exclusivity invariant matters: an Asset can only belong to one Fixture at a 
 
 The **2BM_hutch_frame** is a named coordinate frame anchored to the hutch's optical table. The **optics_mount** is a named slot on that frame with a 6-DoF placement (translation in mm, rotation in degrees, extrinsic Tait-Bryan).
 
-The `Housing` Asset is installed into this Mount. It is the rigid mechanical anchor for the whole detector: the housing's position fixes the cluster in space, and the eight functional constituents, which are its children in the containment tree, inherit their position geometrically from the housing's known internal layout. The housing is the one part with an explicit placement; the constituents do not each carry a Mount.
+The `Housing` Asset is installed into this Mount. It is the rigid mechanical anchor for the whole detector: the housing's position fixes the cluster in space, and the eleven functional constituents, which are its children in the containment tree, inherit their position geometrically from the housing's known internal layout. The housing is the one part with an explicit placement; the constituents do not each carry a Mount.
 
 This is a documented approximation. The constituents have their own internal offsets that the model does not yet pin per-part. For tomography reconstruction (where the rotation center is calibrated separately) the approximation is comfortable. If a future use case needs pixel-accurate beam-propagation modelling, the escape valve is to give the constituents their own Mounts referenced to the housing's frame. Not in v1.
 
@@ -154,6 +165,17 @@ The hutch optical table that `2BM_hutch_frame` is anchored to is itself a modell
 When an operator or Method writes `Objective_Selector = 1`, CORA's command-execution layer looks up the partition rule and writes the corresponding turret setpoint to the `Turret` motor. Every actuation is recorded as a control-dispatch event with a correlation id linking back to the originating partition-rule resolution, so the full chain (operator command, virtual-axis lookup, constituent setpoint) is reconstructable from the event log. The lookup table itself is event-sourced; revising it (for example, after a turret re-homing campaign) leaves a complete audit trail of which values were in effect at which times.
 
 This replaces the older convention of carrying `Objective_Selector` as a Method parameter. The virtual axis is addressable, typed, and audit-complete.
+
+## Routing the camera selector (PseudoAxis)
+
+The camera path mirrors the objective path. `Camera_Selector` is a virtual axis on the Microscope. Its **partition rule** is a closed `LookupTable` decomposing a camera index (0, 1) into a position in millimeters for `Camera_Fold`, the Schunk LPTM 30 folding-mirror translation stage that directs the beam to one of the two cameras:
+
+| `Camera_Selector` | `Camera_Fold` position | Camera in beam |
+| --- | --- | --- |
+| `0` | `20 mm` | Camera (FLIR Oryx 5 MP, `2bmSP1:`) |
+| `1` | `15 mm` | Camera_HighRes (FLIR Oryx 31 MP, `2bmSP2:`) |
+
+When an operator or Method writes `Camera_Selector = 1`, the command-execution layer looks up the partition rule and writes the corresponding setpoint to `Camera_Fold`, the same addressable-and-audited chain as the objective selector. As with the objective selector, the LookupTable evaluation kernel is deferred (`eval_lookup_table` raises until the calibration-revision body is wired in), so the path is modelled and validated but does not yet actuate.
 
 ## Calibrations
 
@@ -189,9 +211,9 @@ Per-Asset drawings for the bound physical constituents are listed on the [Engine
 Two tiers of persistent identifiers:
 
 - **The Fixture earns one DOI** as a citable experimental station. This mirrors the HZB PEAXIS precedent where the composite imaging station is published as a single Instrument with `HasComponent` relations to its parts.
-- **Each physical bound Asset earns its own DOI**, plus the `Housing` chassis: the housing, the three Objectives, the Oryx camera, the LuAG scintillator, and the lens turret motor. The Fixture's PIDINST record references the constituents via `HasComponent`; each Asset's record references the Fixture via `IsComponentOf`.
+- **Each physical bound Asset earns its own DOI**, plus the `Housing` chassis: the housing, the three Objectives, the two Oryx cameras, the LuAG scintillator, the lens turret motor, and the Schunk `Camera_Fold` stage. The Fixture's PIDINST record references the constituents via `HasComponent`; each Asset's record references the Fixture via `IsComponentOf`.
 
-`Objective_Selector` is intentionally NOT PIDINST-minted. PIDINST v1.0 requires a Manufacturer (Property 6) and Owner (Property 5), both of which assume a physical instrument with a vendor and an institutional steward. Virtual axes are software routing constructs over a real motor: they carry no Manufacturer (there is no vendor of LookupTables), no independent Owner, and no serial number. The lens index to turret position table is event-sourced via the partition rule and is fully audit-complete without a DOI; if a citation handle is ever needed it lives on the turret motor's DOI, not on the virtual axis. `GET /assets/{objective_selector_id}/pidinst` returns 404 (not applicable) by design.
+`Objective_Selector` and `Camera_Selector` are intentionally NOT PIDINST-minted (both are virtual axes). PIDINST v1.0 requires a Manufacturer (Property 6) and Owner (Property 5), both of which assume a physical instrument with a vendor and an institutional steward. Virtual axes are software routing constructs over a real motor: they carry no Manufacturer (there is no vendor of LookupTables), no independent Owner, and no serial number. The lens index to turret position table is event-sourced via the partition rule and is fully audit-complete without a DOI; if a citation handle is ever needed it lives on the turret motor's DOI, not on the virtual axis. `GET /assets/{objective_selector_id}/pidinst` returns 404 (not applicable) by design.
 
 For pilot v1, persistent identifiers are stub-minted (no real DOIs registered with DataCite). The production mint path is deferred until 2-BM commissions with real facility DataCite credentials.
 
@@ -199,13 +221,15 @@ For pilot v1, persistent identifiers are stub-minted (no real DOIs registered wi
 
 **Switch the active objective.** Write the desired `Objective_Selector` index (0, 1, or 2) to the `Objective_Selector` PseudoAxis. The execution layer looks up the turret position and writes it to the `Turret` motor via the ControlPort. The full chain is audited.
 
+**Switch the active camera.** Write the desired `Camera_Selector` index (0 = 5 MP, 1 = 31 MP) to the `Camera_Selector` PseudoAxis. The execution layer looks up the position and writes it to the `Camera_Fold` stage, the same audited chain as the objective selector.
+
 Removing or replacing the scintillator or camera splits into two ceremonies. The light one returns the same Asset to its slot; the heavy one brings in a different physical Asset. Pick by intent, not by reflex.
 
 **Detach and re-attach the same Asset (light, reversible).** Detaching an Asset from its Fixture slot (`detach_asset_from_fixture`) and later re-attaching it (`attach_asset_to_fixture`) is the reversible ceremony: while detached the Asset stays in inventory at lifecycle `Active` with its `fixture_id` cleared, and re-attaching creates no new aggregates. This works because the original Asset is in the Fixture's frozen `slot_asset_bindings`. It is the path for temporarily pulling a detector for cleaning or recalibration and putting the same one back.
 
 **On-the-shelf state.** An Asset at lifecycle `Active` with `fixture_id = None` is the valid "in inventory, not currently mounted" state. There is no dedicated status word for it; the absence of a `fixture_id` IS the signal. This is the resting state of any detector that has been detached from one Fixture and not yet attached to another. The Asset stays fully addressable, its ports persist, and it can be re-attached to a Fixture slot it was originally declared in.
 
-**Bring in a different Asset, or retire one (heavy).** A Fixture's slot bindings are frozen at genesis, and the `camera` and `scintillator` slots are `Exactly1`, so a substitute that was not bound at registration cannot simply be attached to the slot. Swapping in a different physical detector (a new camera, a fresh scintillator), or retiring one that leaves the facility for good (broken, end-of-life, returned to vendor), is therefore the heavier ceremony. The shape: decommission the old Asset (terminal lifecycle transition) if it is leaving, register the replacement (with its own Model binding), then register a NEW Fixture against the same Assembly with the updated slot map, then detach the surviving Assets from the old Fixture and attach them to the new one. A `rebind_fixture_slot` helper slice would collapse the per-slot churn to two or three commands; it is a watch-item that earns its keep at the second routine retirement.
+**Bring in a different Asset, or retire one (heavy).** A Fixture's slot bindings are frozen at genesis (the `scintillator` slot is `Exactly1`; the `camera` slot is `OneOrMore` but its specific bindings are still fixed at registration), so a substitute that was not bound at registration cannot simply be attached to the slot. Swapping in a different physical detector (a new camera, a fresh scintillator), or retiring one that leaves the facility for good (broken, end-of-life, returned to vendor), is therefore the heavier ceremony. The shape: decommission the old Asset (terminal lifecycle transition) if it is leaving, register the replacement (with its own Model binding), then register a NEW Fixture against the same Assembly with the updated slot map, then detach the surviving Assets from the old Fixture and attach them to the new one. A `rebind_fixture_slot` helper slice would collapse the per-slot churn to two or three commands; it is a watch-item that earns its keep at the second routine retirement.
 
 **Plan rewiring across a swap.** Methods reference the Microscope Assembly (via `needed_assembly_ids`), not the specific Fixture or its bound Assets. A Plan that binds at Assembly level is unaffected by either ceremony. Plans that explicitly enumerate `asset_ids` need their list updated whenever the bound Asset id changes: never for an exchange between pre-declared siblings (the Asset ids do not change), always for a retirement (the new Asset has a new id).
 
@@ -216,7 +240,7 @@ A few model questions this deployment surfaces but does not pin down:
 - The PseudoAxis slot constrains the Family but not the structural relationship between the PseudoAxis Asset's `partition_rule` and the `turret` slot. Today the rule references the lens turret motor by Asset id; neither the Optics sub-assembly nor the Microscope enforces that the referenced motor is the one bound into the `turret` slot. A future Assembly-level cross-slot constraint primitive could close this.
 - Per-constituent placement is approximated by the housing's single Mount. The escape valve (one Mount per constituent, referenced to the housing's frame) is available if a use case needs pixel-accurate geometry. Note that `register_fixture` requires every bound constituent to be installed in some Mount; a pool-backed deployment therefore gives each constituent a lightweight Mount even though its spatial placement is approximated by the housing.
 - Method-level binding validation does not yet enforce `needed_assembly_ids` satisfaction at Plan-binding time. A Plan that fails to include a Fixture materializing the required Assembly today passes silently; a future Plan-binding extension would catch this.
-- Two cameras are physically installed (the FLIR Oryx 5 MP at `2bmSP1:` and a FLIR Oryx 31 MP at `2bmSP2:`), switched by a Schunk LPTM 30 selector (`2bmb:m5`) with per-camera rotation motors (`2bmb:m7`/`m8`), all confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html). The v1 model binds the one camera through the Microscope's `camera` leaf slot. Modelling the second camera (likely a `camera` slot that becomes `OneOrMore` plus a camera-selector PseudoAxis and the Schunk selector + rotation stages) is a follow-on slice; the devices are recorded in the [descriptor](../../../../deployments/2-bm/beamline.yaml) with `new: true` today.
+- Both cameras (5 MP `Camera`, 31 MP `Camera_HighRes`), the `Camera_Fold` Schunk selector stage, and the `Camera_Selector` PseudoAxis are now modelled (the `camera` slot is `OneOrMore`). Still deferred: the per-camera rotation motors (`2bmb:m7`/`m8`) and the per-lens fine-focus motors (`2bmb:m2`/`m3`/`m4`, optics-side), recorded as comment-only references in the descriptor today. They earn Assets when an operator-side Procedure needs them.
 
 ## See also
 

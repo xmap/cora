@@ -35,7 +35,10 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `Objective_1.1x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret position in mm) | `2-BM-B` |
 | `Focus` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `FocusDrive`) | `2-BM-B` |
-| `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture; 5 MP, `2bmSP1:`) | `2-BM-B` |
+| `Camera_HighRes` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture; 31 MP, `2bmSP2:`) | `2-BM-B` |
+| `Camera_Fold` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; Schunk LPTM 30, driven by `SampleStageDrive`) | `2-BM-B` |
+| `Camera_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes camera index to Camera_Fold position in mm) | `2-BM-B` |
 | `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `DetectorTable` | `Device` | `OpticalTable` | `2-BM` (driven by `SampleStageDrive`) | `2-BM-B` |
 | `DetectorTable_AX` | `Device` | `PseudoAxis` | `DetectorTable` (DoF; corrective pitch about lab-X) | `2-BM-B` |
@@ -370,10 +373,23 @@ Bound to Model `aerotech_hexgen_hex300_230hl`, driven by `HexapodDrive` (referen
 
 ### `Camera`
 
+Bound to Model `flir_oryx_orx_10g_51s5m_c`. The FLIR Oryx 5 MP (camera 0, `2bmSP1:`).
+
 | Setting | Value |
 | --- | --- |
 | `sensor_width` | `2448 pixel` |
 | `sensor_height` | `2048 pixel` |
+| `pixel_size` | `3.45 um` |
+| `bit_depth` | `12 bit` |
+
+### `Camera_HighRes`
+
+Bound to Model `flir_oryx_orx_10g_310s9m`. The FLIR Oryx 31 MP (camera 1, `2bmSP2:`). Sensor dimensions are from the staff pre-APS-U detection page; the max frame rate, sensor kind, and readout mode are not on the current components page (DET-8), so they are omitted pending operator confirmation.
+
+| Setting | Value |
+| --- | --- |
+| `sensor_width` | `6464 pixel` |
+| `sensor_height` | `4852 pixel` |
 | `pixel_size` | `3.45 um` |
 | `bit_depth` | `12 bit` |
 
@@ -495,8 +511,6 @@ Devices that physically exist at 2-BM but are not yet registered as CORA Assets;
 | `Filter` | `Filter` |
 | `BeamPositionMonitor` | `Diagnostic` |
 | `Timing` | `TimingController` |
-| `Camera_HighRes` | `Camera` (second FLIR Oryx, 31 MP, `2bmSP2:`) |
-| `Camera_Selector` | `LinearStage` (Schunk LPTM 30, `2bmb:m5`) |
 | Broader sample-stage motors | `LinearStage` + tilt motors |
 | IOC-hosted EPICS Devices | |
 

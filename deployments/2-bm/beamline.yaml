@@ -247,15 +247,15 @@ sample-environment:
 detector:
   enclosure: 2-BM-B
   intro: Convert the transmitted beam to light and record it (the Microscope detector, a scintillator-relay-camera assembly).
-  cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (turret, objectives, objective selector, focus) plus camera and scintillator leaf slots, anchored to a Housing. Fixture(microscope_at_2bm) presents as a Detector
+  cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (turret, objectives, objective selector, focus) plus the camera (OneOrMore), scintillator, camera selector, and camera fold leaf slots, anchored to a Housing. Fixture(microscope_at_2bm) presents as a Detector
   placement: Mount + Frame (2BM_hutch_frame)
   note: >
     Two cameras are installed (item_020): the FLIR Oryx 5 MP (Camera, pv 2bmSP1:)
-    and a FLIR Oryx 31 MP (Camera_HighRes, pv 2bmSP2:), selected by the Camera_Selector
-    (a Schunk LPTM 30 translation stage with folding mirrors, pv 2bmb:m5). The
-    second camera, the selector, and the per-camera rotation motors (2bmb:m7/m8)
-    are recorded here as real devices; registering them as CORA Assets is a
-    follow-on slice (so they carry new: true today).
+    and a FLIR Oryx 31 MP (Camera_HighRes, pv 2bmSP2:), selected by Camera_Selector
+    (a PseudoAxis index axis) which drives Camera_Fold (the Schunk LPTM 30 folding-
+    mirror translation stage, pv 2bmb:m5). Both cameras + the selector are modelled.
+    The per-camera rotation motors (2bmb:m7/m8) and the per-lens fine-focus motors
+    (2bmb:m2/m3/m4) remain deferred (still new / comment-only below).
   devices:
     - name: Housing
       family: Housing      # the microscope housing (containment anchor)
@@ -347,17 +347,23 @@ detector:
       replaceable: true
       confirm: "max frame rate, sensor kind, readout mode (rolling vs global) still blank (DET-8)"
     - name: Camera_HighRes
-      family: Camera             # camera 1 (item_020): FLIR Oryx 31 MP; role-name provisional; CORA Asset build deferred
+      family: Camera             # camera 1 (item_020): FLIR Oryx 31 MP
+      model: flir_oryx_orx_10g_310s9m
       pv: "2bmSP2:"
-      new: true
-      confirm: "FLIR Oryx 31 MP; sensor/pixel/bit-depth/frame-rate not yet recorded"
-    - name: Camera_Selector
-      family: LinearStage        # Schunk LPTM 30 translation stage + folding mirrors, selects camera 0/1 (item_020)
+      sensor: 6464 x 4852 pixel  # from the pre-APS-U detection page; confirm current config
+      pixel_size: 3.45 um
+      bit_depth: 12 bit
+      replaceable: true
+      confirm: "specs from the pre-APS-U fleet page; max frame rate / readout mode not on the current page (DET-8)"
+    - name: Camera_Fold
+      family: LinearStage        # Schunk LPTM 30 translation stage + folding mirrors; physically directs the beam to camera 0/1 (item_020)
       model: schunk_lptm_30
       pv: "2bmb:m5"              # on the ioc2bmb OMS VME58 crate (SampleStageDrive)
       controller: SampleStageDrive
-      new: true
       confirm: "Schunk LPTM 30; positions Pos.0=20, Pos.1=15"
+    - name: Camera_Selector
+      family: PseudoAxis          # virtual index axis; decomposes a camera index (0/1) to a Camera_Fold position (mm)
+      pv: "2bm:MCTOptics:CameraSelect"
     - name: DetectorWindow
       family: Window
       passive: true
