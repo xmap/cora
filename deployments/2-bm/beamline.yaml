@@ -215,7 +215,7 @@ sample-environment:
     # and it is PERMANENTLY installed (tomo vs lamino is a tilt setpoint, not an insert/remove).
     # Working model SA16A-RM (operator); sources also list SA16A-RS / SA07A-R2L, confirm (questions STAGE-6).
     - name: LaminographyPitch
-      family: LinearStage         # mechanically a tilt; family revisit (TiltStage) at modeling
+      family: TiltStage           # rotational limited-range tilt (Kohzu goniometer); not LinearStage, not RotaryStage (a tilt carries no PSO Following/Marking). Modelled in the SampleTower Assembly (#126)
       model: kohzu_sa16a
       pv: "2bmb:m49"
       range: 0..20 deg
