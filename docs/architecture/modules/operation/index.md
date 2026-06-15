@@ -2,9 +2,9 @@
 
 ## Purpose & Scope
 
-The Operation module models one execution of an episodic operational task: bakeout, calibration sweep, optical alignment, beam-mode change, recovery procedure, ID maintenance, KB switching. Operators register a Procedure, start it, append per-step records (setpoint applied, action performed, check verified), then close it via complete, abort, or truncate. Both instrument-level and facility-envelope procedures share this aggregate.
+The Operation module models one execution of an episodic operational task: bakeout, characterization, optical alignment, beam-mode change, recovery procedure, ID maintenance, KB switching. Operators register a Procedure, start it, append per-step records (setpoint applied, action performed, check verified), then close it via complete, abort, or truncate. Both instrument-level and facility-envelope procedures share this aggregate.
 
-A Procedure is distinct from a Run: a Run executes one Plan against a Subject through the experiment lifecycle (ISA-88 batch lens); a Procedure executes one episodic task that may or may not be bound to a Run (ISA-106 lens). When `parent_run_id` is set, the Procedure is a Phase-of-Run (calibration sweep invoked mid-Run); when None, it stands alone (bakeout run between Runs).
+A Procedure is distinct from a Run: a Run executes one Plan against a Subject through the experiment lifecycle (ISA-88 batch lens); a Procedure executes one episodic task that may or may not be bound to a Run (ISA-106 lens). When `parent_run_id` is set, the Procedure is a Phase-of-Run (alignment invoked mid-Run); when None, it stands alone (bakeout run between Runs).
 
 **Execution.** Walking a Procedure step by step, applying each setpoint, running each action, verifying each check, is an optional edge runtime CORA offers for facilities that choose it. The `Conductor` dispatches steps through a substrate-neutral `ControlPort`, with EPICS Channel Access and PVA adapters shipped; a facility may use it or keep its own tooling. Its lower bound is the deterministic real-time loop, which stays in the control system. See [the recording spine and the optional execution edge](../../standards.md#the-recording-spine-and-the-optional-execution-edge).
 
@@ -38,7 +38,7 @@ Out of scope
 | `ProcedureStatus` | closed StrEnum `{Defined, Running, Completed, Aborted, Truncated}` | `Procedure.status` |
 | `StepKind` | closed `Literal["setpoint", "action", "check"]` | per-step entry rows |
 
-`Procedure.kind` is a bare `str` (1-50 chars, validated at the decider) rather than a VO, mirroring the `Supply.kind` precedent: pilot vocabulary will settle and the field will graduate to a closed `ProcedureKind` StrEnum later. Documented starter vocabulary: `bakeout`, `calibration`, `alignment`, `recovery`, `beam_mode_change`, `id_maintenance`, `kb_switching`, `optical_alignment`, `vacuum_regeneration`.
+`Procedure.kind` is a bare `str` (1-50 chars, validated at the decider) rather than a VO, mirroring the `Supply.kind` precedent: pilot vocabulary will settle and the field will graduate to a closed `ProcedureKind` StrEnum later. Documented starter vocabulary: `bakeout`, `characterization`, `alignment`, `recovery`, `beam_mode_change`, `id_maintenance`, `kb_switching`, `optical_alignment`, `vacuum_regeneration`.
 
 ## FSM
 
@@ -224,7 +224,7 @@ Polymorphic-with-discriminator: one row per step, with `step_kind` discriminatin
 
 ## Examples
 
-The four examples below follow the canonical Procedure path: register a calibration sweep targeting one Asset, start it, append one setpoint step + one check step, then complete it. The `append_activities` slice carries producer-supplied `event_id` per entry for safe retries (Idempotency-Key is not used at this slice). For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below follow the canonical Procedure path: register an alignment targeting one Asset, start it, append one setpoint step + one check step, then complete it. The `append_activities` slice carries producer-supplied `event_id` per entry for safe retries (Idempotency-Key is not used at this slice). For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
 
 <!-- extracted from tests/contract/operation/test_*.py -->
 
@@ -239,8 +239,8 @@ The four examples below follow the canonical Procedure path: register a calibrat
     X-Principal-Id: 7b1f2d4e-2a3c-4d5e-8f9a-1b2c3d4e5f60
 
     {
-      "name": "Beamline 2-BM rotary stage calibration sweep",
-      "kind": "calibration",
+      "name": "Beamline 2-BM rotary stage alignment",
+      "kind": "alignment",
       "target_asset_ids": ["c1f2d3c4-b5a6-4978-8869-7a6b5c4d3e2f"]
     }
     ```
@@ -253,8 +253,8 @@ The four examples below follow the canonical Procedure path: register a calibrat
     mcp.call_tool(
         "register_procedure",
         {
-            "name": "Beamline 2-BM rotary stage calibration sweep",
-            "kind": "calibration",
+            "name": "Beamline 2-BM rotary stage alignment",
+            "kind": "alignment",
             "target_asset_ids": ["c1f2d3c4-b5a6-4978-8869-7a6b5c4d3e2f"],
         },
     )

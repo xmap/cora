@@ -102,8 +102,8 @@ def test_decide_accepts_phase_of_run_with_parent_run_id() -> None:
     events = register_procedure.decide(
         state=None,
         command=RegisterProcedure(
-            name="Mid-run calibration",
-            kind="calibration",
+            name="Mid-run alignment",
+            kind="alignment",
             parent_run_id=parent_run,
         ),
         now=_NOW,

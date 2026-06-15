@@ -74,8 +74,8 @@ def test_get_procedure_returns_parent_run_id_for_phase_of_run() -> None:
     with TestClient(create_app()) as client:
         procedure_id = _register_procedure(
             client,
-            name="Mid-run calibration sweep",
-            kind="calibration",
+            name="Mid-run alignment",
+            kind="alignment",
             parent_run_id=parent_run,
         )
         response = client.get(f"/procedures/{procedure_id}")

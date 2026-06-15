@@ -50,7 +50,7 @@ class RegisterProcedureRequest(BaseModel):
         max_length=PROCEDURE_KIND_MAX_LENGTH,
         description=(
             "Free-form ISA-106 procedure-kind discriminator (bakeout, "
-            "calibration, alignment, recovery, beam_mode_change, "
+            "alignment, characterization, recovery, beam_mode_change, "
             "id_maintenance, kb_switching, etc.). Documented starter "
             "vocabulary in project_operation_design memo; closed StrEnum "
             "promotion deferred until pilot vocabulary settles."
@@ -70,8 +70,8 @@ class RegisterProcedureRequest(BaseModel):
         default=None,
         description=(
             "Optional parent Run binding. None = standalone procedure "
-            "(bakeout, calibration sweep run between Runs). Set = "
-            "Phase-of-Run procedure (calibration sweep invoked mid-Run; "
+            "(bakeout, characterization run between Runs). Set = "
+            "Phase-of-Run procedure (alignment invoked mid-Run; "
             "resolves the Phase aggregate question per "
             "project_operation_design memo)."
         ),

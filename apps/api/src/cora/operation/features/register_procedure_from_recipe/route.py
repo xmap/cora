@@ -60,7 +60,7 @@ class RegisterProcedureFromRecipeRequest(BaseModel):
         max_length=PROCEDURE_KIND_MAX_LENGTH,
         description=(
             "Free-form ISA-106 procedure-kind discriminator (bakeout, "
-            "calibration, alignment, recovery, etc.). Mirrors "
+            "alignment, characterization, recovery, etc.). Mirrors "
             "register_procedure's kind field exactly."
         ),
     )

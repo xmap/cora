@@ -53,8 +53,8 @@ def test_post_procedures_accepts_phase_of_run_with_parent_run_id() -> None:
         response = client.post(
             "/procedures",
             json={
-                "name": "Mid-run calibration sweep",
-                "kind": "calibration",
+                "name": "Mid-run alignment",
+                "kind": "alignment",
                 "parent_run_id": parent_run,
             },
         )

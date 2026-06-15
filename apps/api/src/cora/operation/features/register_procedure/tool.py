@@ -34,7 +34,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         name="register_procedure",
         description=(
             "Register a new episodic operational procedure (bakeout, "
-            "calibration, alignment, recovery, beam-mode change, etc.). "
+            "alignment, characterization, recovery, beam-mode change, etc.). "
             "Procedure lands in 'Defined' status; operator transitions "
             "to 'Running' via 'start_procedure' (10c-b)."
         ),
@@ -56,7 +56,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 max_length=PROCEDURE_KIND_MAX_LENGTH,
                 description=(
                     "Free-form ISA-106 procedure-kind discriminator "
-                    "(bakeout, calibration, alignment, etc.)."
+                    "(bakeout, alignment, characterization, etc.)."
                 ),
             ),
         ],

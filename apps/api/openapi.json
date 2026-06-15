@@ -11422,7 +11422,7 @@
             "type": "object"
           },
           "kind": {
-            "description": "Free-form ISA-106 procedure-kind discriminator (bakeout, calibration, alignment, recovery, etc.). Mirrors register_procedure's kind field exactly.",
+            "description": "Free-form ISA-106 procedure-kind discriminator (bakeout, alignment, characterization, recovery, etc.). Mirrors register_procedure's kind field exactly.",
             "maxLength": 50,
             "minLength": 1,
             "title": "Kind",
@@ -11517,7 +11517,7 @@
             "title": "Capability Id"
           },
           "kind": {
-            "description": "Free-form ISA-106 procedure-kind discriminator (bakeout, calibration, alignment, recovery, beam_mode_change, id_maintenance, kb_switching, etc.). Documented starter vocabulary in project_operation_design memo; closed StrEnum promotion deferred until pilot vocabulary settles.",
+            "description": "Free-form ISA-106 procedure-kind discriminator (bakeout, alignment, characterization, recovery, beam_mode_change, id_maintenance, kb_switching, etc.). Documented starter vocabulary in project_operation_design memo; closed StrEnum promotion deferred until pilot vocabulary settles.",
             "maxLength": 50,
             "minLength": 1,
             "title": "Kind",
@@ -11553,7 +11553,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional parent Run binding. None = standalone procedure (bakeout, calibration sweep run between Runs). Set = Phase-of-Run procedure (calibration sweep invoked mid-Run; resolves the Phase aggregate question per project_operation_design memo).",
+            "description": "Optional parent Run binding. None = standalone procedure (bakeout, characterization run between Runs). Set = Phase-of-Run procedure (alignment invoked mid-Run; resolves the Phase aggregate question per project_operation_design memo).",
             "title": "Parent Run Id"
           },
           "target_asset_ids": {

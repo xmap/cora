@@ -53,7 +53,7 @@ from cora.operation.features.append_activities.handler import Handler
 
 _PROCEDURE_STEP_BATCH_MAX = 500
 """Max steps per batch. Generous enough for an EPICS adapter burst
-(a calibration sweep with several setpoints + checks in one POST)
+(an alignment with several setpoints + checks in one POST)
 while small enough that a single bad batch can't OOM the handler.
 Larger batches should split client-side. Mirrors Run BC's reading
 batch cap."""

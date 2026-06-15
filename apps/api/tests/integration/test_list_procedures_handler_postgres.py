@@ -207,7 +207,7 @@ async def test_list_filters_by_parent_run_id(db_pool: asyncpg.Pool) -> None:
     standalone_id = uuid4()
     deps = _build_deps(db_pool, [phase_id, uuid4(), standalone_id, uuid4()])
     await bind_register(deps)(
-        RegisterProcedure(name="Mid-run sweep", kind="calibration", parent_run_id=parent_run),
+        RegisterProcedure(name="Mid-run alignment", kind="alignment", parent_run_id=parent_run),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -82,7 +82,7 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     ---
 
-    Episodic operational tasks: bakeout, calibration sweep, alignment, recovery. Five-state Procedure FSM with truncate for retroactive cleanup, polymorphic per-step entries (setpoint, action, check), and optional binding as a Phase-of-Run.
+    Episodic operational tasks: bakeout, characterization, alignment, recovery. Five-state Procedure FSM with truncate for retroactive cleanup, polymorphic per-step entries (setpoint, action, check), and optional binding as a Phase-of-Run.
 
     [Read →](operation/index.md)
 

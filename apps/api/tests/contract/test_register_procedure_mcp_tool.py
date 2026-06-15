@@ -91,7 +91,7 @@ def test_mcp_register_procedure_tool_accepts_parent_run_id() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "register_procedure",
-                    "arguments": _good_args(kind="calibration", parent_run_id=parent_run),
+                    "arguments": _good_args(kind="alignment", parent_run_id=parent_run),
                 },
             },
             headers=headers,

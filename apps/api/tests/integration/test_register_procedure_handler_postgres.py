@@ -107,8 +107,8 @@ async def test_register_procedure_persists_phase_of_run_with_parent_run_id(
 
     await bind_register_procedure(deps)(
         RegisterProcedure(
-            name="Mid-run calibration sweep",
-            kind="calibration",
+            name="Mid-run alignment",
+            kind="alignment",
             parent_run_id=parent_run,
         ),
         principal_id=_PRINCIPAL_ID,

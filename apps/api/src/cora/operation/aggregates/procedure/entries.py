@@ -60,7 +60,7 @@ family (cross-BC)" for the full shape.
 ## Why writes batch from day one
 
 `append(rows: list[Activity])` always takes a list. Operator
-workflows often record several steps at once (a calibration sweep
+workflows often record several steps at once (an alignment
 with 5 setpoints + 5 checks); batch shape avoids N round-trips. Empty
 lists are a no-op.
 

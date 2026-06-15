@@ -3,7 +3,7 @@
 Owns episodic operational work in CORA (ISA-106 lens):
 
   - `Procedure` aggregate: one execution of an episodic operational
-    task — bakeout, calibration sweep, optical alignment, beam-mode
+    task — bakeout, characterization, optical alignment, beam-mode
     change, recovery procedure, ID maintenance, KB switching. Each
     Procedure has sequenced steps; each step has a Setpoint / Action
     / Check triplet (CORA's rename of ISA-106's canonical

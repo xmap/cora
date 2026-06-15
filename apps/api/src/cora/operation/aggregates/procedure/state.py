@@ -1,7 +1,7 @@
 """Procedure aggregate state, value objects, status enum, and domain errors.
 
 `Procedure` models one execution of an episodic operational task
-(ISA-106 lens): bakeout, calibration sweep, optical alignment,
+(ISA-106 lens): bakeout, characterization, optical alignment,
 beam-mode change, recovery procedure, ID maintenance, KB switching.
 Per the BC map: instrument-level AND facility-envelope procedures
 share this aggregate. No batch identity (distinct from Run BC's
@@ -59,7 +59,7 @@ the API boundary via Pydantic min_length / max_length. Mirrors
      validation, awaiting future enum promotion.
 
 Documented starter vocabulary lives in [[project_operation_design]]
-as guidance, not constraint: bakeout, calibration, alignment,
+as guidance, not constraint: bakeout, characterization, alignment,
 recovery, beam_mode_change, id_maintenance, kb_switching,
 optical_alignment, vacuum_regeneration.
 
@@ -86,7 +86,7 @@ via `ProcedureStartContext` at start_procedure time (mirrors
 flagged in [[project_run_parameters_design]] (which said "a Phase
 aggregate in Operation BC will hold the start/stop event pair").
 Resolution: a Phase IS a Procedure with `parent_run_id` set.
-Standalone Procedures (bakeouts, calibration sweeps run between Runs)
+Standalone Procedures (bakeouts, characterization runs between Runs)
 have `parent_run_id = None`. The aggregate is one; the binding is
 the discriminator.
 """
@@ -1060,7 +1060,7 @@ class Procedure:
 
     `id` is the stable opaque handle. `name` is operator-readable.
     `kind` is the free-form ISA-106 procedure-kind discriminator
-    (bakeout / calibration / alignment / etc.); bare str per the
+    (bakeout / alignment / characterization / etc.); bare str per the
     Supply.kind lock precedent.
 
     `target_asset_ids` is a frozenset of Asset ids the procedure
@@ -1071,8 +1071,8 @@ class Procedure:
 
     `parent_run_id` resolves the Phase aggregate question (per
     [[project_operation_design]]): None = standalone procedure
-    (bakeout, calibration sweep run between Runs); UUID = Phase-of-
-    Run (calibration sweep invoked mid-Run, formerly the planned
+    (bakeout, characterization run between Runs); UUID = Phase-of-
+    Run (alignment invoked mid-Run, formerly the planned
     "Phase" aggregate from [[project_run_parameters_design]] §6g-c).
 
     `status` defaults to `ProcedureStatus.DEFINED`: the

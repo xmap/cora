@@ -53,7 +53,7 @@ asset_ids.
 
 `parent_run_id` is stored as `str | None` in payloads (UUID
 serialized via `str()` when present). Optional binding: standalone
-procedures (bakeouts, calibration sweeps between Runs) have None;
+procedures (bakeouts, characterization runs between Runs) have None;
 Phase-of-Run procedures have the parent Run's id.
 
 Status is NOT carried in event payloads -- the event type itself

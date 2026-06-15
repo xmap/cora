@@ -41,7 +41,7 @@ class RegisterProcedure:
     `capability_id` is the optional cross-BC
     binding to the universal Capability template (Recipe BC 6k)
     this Procedure realizes. OPTIONAL by design: many ceremony
-    Procedures (bakeouts, sample cleaning, calibration sweeps) have
+    Procedures (bakeouts, sample cleaning, characterization runs) have
     no matching Capability template. When supplied, the handler
     loads the bound Capability + the decider validates that
     `Capability.executor_shapes` contains `Procedure`; otherwise

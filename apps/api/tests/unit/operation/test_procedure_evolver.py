@@ -88,8 +88,8 @@ def test_evolve_procedure_registered_with_parent_run_id() -> None:
         None,
         ProcedureRegistered(
             procedure_id=procedure_id,
-            name="Mid-run calibration sweep",
-            kind="calibration",
+            name="Mid-run alignment",
+            kind="alignment",
             target_asset_ids=(),
             parent_run_id=parent_run,
             occurred_at=_NOW,

@@ -4,7 +4,7 @@ Batch shape from day one (matches `append_observations` and
 `append_inferences` precedents). Length-1 batches are the
 degenerate case; same code path either way. Anticipates EPICS
 adapter integration which will batch step records naturally during
-a calibration sweep or alignment run.
+an alignment or characterization run.
 
 Producer-supplied `event_id` (UUIDv7) per entry; store dedups via
 Postgres PK (`ON CONFLICT (event_id) DO NOTHING`). At-least-once

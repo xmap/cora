@@ -118,8 +118,8 @@ async def test_handler_appends_phase_of_run_with_parent_run_id() -> None:
     handler = register_procedure.bind(deps)
     await handler(
         RegisterProcedure(
-            name="Mid-run calibration sweep",
-            kind="calibration",
+            name="Mid-run alignment",
+            kind="alignment",
             parent_run_id=parent_run,
         ),
         principal_id=_PRINCIPAL_ID,

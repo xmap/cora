@@ -509,7 +509,7 @@ class RunBinding:
 
 @dataclass(frozen=True)
 class ProcedureBinding:
-    """Clearance binds to a Procedure. ESAF gates a Procedure (calibration / bakeout)."""
+    """Clearance binds to a Procedure. ESAF gates a Procedure (alignment / bakeout)."""
 
     procedure_id: UUID
 
