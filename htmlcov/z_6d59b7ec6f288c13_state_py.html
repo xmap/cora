@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1164eecb97aa37cc_conductor_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-15 16:26 +0000
+            created at 2026-06-15 17:01 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -85,7 +85,7 @@
     <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Procedure aggregate state, value objects, status enum, and domain errors.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">`Procedure` models one execution of an episodic operational task</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">(ISA-106 lens): bakeout, calibration sweep, optical alignment,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">(ISA-106 lens): bakeout, characterization, optical alignment,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">beam-mode change, recovery procedure, ID maintenance, KB switching.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">Per the BC map: instrument-level AND facility-envelope procedures</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">share this aggregate. No batch identity (distinct from Run BC's</span>&nbsp;</span><span class="r"></span></p>
@@ -143,7 +143,7 @@
     <p class="pln"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t"><span class="str">     validation, awaiting future enum promotion.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t"><span class="str">Documented starter vocabulary lives in [[project_operation_design]]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="str">as guidance, not constraint: bakeout, calibration, alignment,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="str">as guidance, not constraint: bakeout, characterization, alignment,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t"><span class="str">recovery, beam_mode_change, id_maintenance, kb_switching,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="str">optical_alignment, vacuum_regeneration.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -170,7 +170,7 @@
     <p class="pln"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t"><span class="str">flagged in [[project_run_parameters_design]] (which said "a Phase</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t"><span class="str">aggregate in Operation BC will hold the start/stop event pair").</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t"><span class="str">Resolution: a Phase IS a Procedure with `parent_run_id` set.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t"><span class="str">Standalone Procedures (bakeouts, calibration sweeps run between Runs)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t"><span class="str">Standalone Procedures (bakeouts, characterization runs between Runs)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t"><span class="str">have `parent_run_id = None`. The aggregate is one; the binding is</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t"><span class="str">the discriminator.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
@@ -1144,7 +1144,7 @@
     <p class="pln"><span class="n"><a id="t1060" href="#t1060">1060</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1061" href="#t1061">1061</a></span><span class="t"><span class="str">    `id` is the stable opaque handle. `name` is operator-readable.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1062" href="#t1062">1062</a></span><span class="t"><span class="str">    `kind` is the free-form ISA-106 procedure-kind discriminator</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1063" href="#t1063">1063</a></span><span class="t"><span class="str">    (bakeout / calibration / alignment / etc.); bare str per the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1063" href="#t1063">1063</a></span><span class="t"><span class="str">    (bakeout / alignment / characterization / etc.); bare str per the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1064" href="#t1064">1064</a></span><span class="t"><span class="str">    Supply.kind lock precedent.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1065" href="#t1065">1065</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1066" href="#t1066">1066</a></span><span class="t"><span class="str">    `target_asset_ids` is a frozenset of Asset ids the procedure</span>&nbsp;</span><span class="r"></span></p>
@@ -1155,8 +1155,8 @@
     <p class="pln"><span class="n"><a id="t1071" href="#t1071">1071</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1072" href="#t1072">1072</a></span><span class="t"><span class="str">    `parent_run_id` resolves the Phase aggregate question (per</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1073" href="#t1073">1073</a></span><span class="t"><span class="str">    [[project_operation_design]]): None = standalone procedure</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1074" href="#t1074">1074</a></span><span class="t"><span class="str">    (bakeout, calibration sweep run between Runs); UUID = Phase-of-</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1075" href="#t1075">1075</a></span><span class="t"><span class="str">    Run (calibration sweep invoked mid-Run, formerly the planned</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1074" href="#t1074">1074</a></span><span class="t"><span class="str">    (bakeout, characterization run between Runs); UUID = Phase-of-</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1075" href="#t1075">1075</a></span><span class="t"><span class="str">    Run (alignment invoked mid-Run, formerly the planned</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1076" href="#t1076">1076</a></span><span class="t"><span class="str">    "Phase" aggregate from [[project_run_parameters_design]] &#167;6g-c).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1077" href="#t1077">1077</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1078" href="#t1078">1078</a></span><span class="t"><span class="str">    `status` defaults to `ProcedureStatus.DEFINED`: the</span>&nbsp;</span><span class="r"></span></p>
@@ -1289,7 +1289,7 @@
             <a class="nav" href="z_1164eecb97aa37cc_conductor_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-15 16:26 +0000
+            created at 2026-06-15 17:01 +0000
         </p>
     </div>
 </footer>

@@ -199,7 +199,7 @@
 | src/cora/calibration/features/publish\_revision/route.py                                 |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/features/publish\_revision/tool.py                                  |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/projections/\_\_init\_\_.py                                         |        2 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/calibration/projections/calibration.py                                          |       32 |       12 |       10 |        1 |     50.0% |89-97, 142-155 |
+| src/cora/calibration/projections/calibration.py                                          |       32 |        6 |       10 |        2 |     71.4% |91-97, 155 |
 | src/cora/calibration/quantities/\_\_init\_\_.py                                          |       14 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/detector\_pixel\_size.py                                 |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/effective\_thickness.py                                  |        5 |        0 |        0 |        0 |    100.0% |           |
@@ -2259,7 +2259,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **44855** |  **989** | **6168** |  **246** | **97.3%** |           |
+| **TOTAL**                                                                                | **44855** |  **983** | **6168** |  **247** | **97.3%** |           |
 
 
 ## Setup coverage badge
