@@ -6,55 +6,50 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 
 ## The model in one picture
 
-```
-2-BM (Unit, Asset)
-|
-+-- Frame: 2BM_hutch_frame
-|     |
-|     +-- Mount: optics_mount   ----holds---->   Housing
-|                (6-DoF placement)               (the Housing carries the placement; its
-|                                                 contents inherit position from the known layout)
-|
-+-- Housing (Component, Family Housing)   <-- containment parent
-|     |   physical containment tree (Asset.parent_id):
-|     +-- Turret      (Device, Family RotaryStage)
-|     +-- Objective_10x      (Device, Family Objective)    10x
-|     +-- Objective_2x      (Device, Family Objective)     2x
-|     +-- Objective_1.1x      (Device, Family Objective)   1.1x
-|     +-- Objective_Selector      (Device, Family PseudoAxis)   objective selector
-|     +-- Focus (Device, Family LinearStage)
-|     +-- Camera  (Device, Family Camera)
-|     +-- Scintillator (Device, Family Scintillator)
-|
-+-- Fixture: microscope_at_2bm   (surface_id = 2-BM Trust Surface)
-      materializes Assembly = Microscope, which composes:
-        sub-assembly  optics  -> Assembly = Optics (content-hash pinned)
-        leaf slot     camera        -> Camera
-        leaf slot     scintillator  -> Scintillator
-      and the Optics sub-assembly contributes its own leaf slots, bound in the same Fixture:
-        turret            -> Turret
-        objectives (1+)   -> Objective_10x     |  one OneOrMore slot,
-        objectives (1+)   -> Objective_2x      |  three bindings
-        objectives (1+)   -> Objective_1.1x    |
-        focus             -> Focus
-        objective_selector  -> Objective_Selector  (the objective selector; partition_rule = LookupTable
-                                          0 -> 121.5942 deg  (10x in beam)
-                                          1 ->  61.9841 deg  (2x  in beam)
-                                          2 ->   2.3006 deg  (1.1x in beam))
-```
-
-The composition axis as a rendered graph (Assembly to sub-Assembly to Fixture):
-
-```mermaid
-flowchart TD
-  MIC["Assembly: Microscope (presents_as Detector)"]
-  OPT["Assembly: Optics (content-hash pinned)"]
-  FIX(["Fixture: microscope_at_2bm"])
-  MIC -- "sub-assembly: optics @hash" --> OPT
-  MIC -. "leaf slots: camera, scintillator" .-> FIX
-  OPT -. "slots: turret, objectives 1+, objective_selector, focus" .-> FIX
-  FIX == "8 Assets across 6 slot names" ==> AS["Camera, Scintillator, Turret,<br/>Objective_10x, Objective_2x, Objective_1.1x,<br/>Objective_Selector, Focus"]
-```
+<div class="dtree" markdown="0">
+<ul>
+<li><span class="node">2-BM</span> <span class="meta">Unit, Asset</span>
+<ul>
+<li><span class="node">Frame: 2BM_hutch_frame</span>
+<ul>
+<li><span class="node">Mount: optics_mount</span> <span class="meta">6-DoF placement</span> <span class="rel">holds &rarr; Housing</span></li>
+</ul>
+</li>
+<li><span class="node">Housing</span> <span class="meta">Component, Family Housing</span> <span class="rel">containment parent (Asset.parent_id)</span>
+<ul>
+<li><span class="node">Turret</span> <span class="meta">Device, RotaryStage</span></li>
+<li><span class="node">Objective_10x</span> <span class="meta">Device, Objective, 10x</span></li>
+<li><span class="node">Objective_2x</span> <span class="meta">Device, Objective, 2x</span></li>
+<li><span class="node">Objective_1.1x</span> <span class="meta">Device, Objective, 1.1x</span></li>
+<li><span class="node">Objective_Selector</span> <span class="meta">Device, PseudoAxis</span></li>
+<li><span class="node">Focus</span> <span class="meta">Device, LinearStage</span></li>
+<li><span class="node">Camera</span> <span class="meta">Device, Camera</span></li>
+<li><span class="node">Scintillator</span> <span class="meta">Device, Scintillator</span></li>
+</ul>
+</li>
+<li><span class="node">Fixture: microscope_at_2bm</span> <span class="meta">surface_id = 2-BM Trust Surface</span>
+<ul>
+<li><span class="node">materializes Assembly = Microscope</span>
+<ul>
+<li><span class="node">sub-assembly optics</span> <span class="rel">&rarr; Assembly = Optics (content-hash pinned)</span></li>
+<li><span class="node">leaf slot camera</span> <span class="rel">&rarr; Camera</span></li>
+<li><span class="node">leaf slot scintillator</span> <span class="rel">&rarr; Scintillator</span></li>
+</ul>
+</li>
+<li><span class="node">Optics sub-assembly slots</span> <span class="meta">bound in this Fixture</span>
+<ul>
+<li><span class="node">turret</span> <span class="rel">&rarr; Turret</span></li>
+<li><span class="node">objectives (1+)</span> <span class="rel">&rarr; Objective_10x, Objective_2x, Objective_1.1x</span></li>
+<li><span class="node">focus</span> <span class="rel">&rarr; Focus</span></li>
+<li><span class="node">objective_selector</span> <span class="rel">&rarr; Objective_Selector</span></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
 
 `Microscope` is the name of the top Assembly (the blueprint) and, with `microscope_at_2bm`, of the Fixture (the materialization at 2-BM). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical container. None of the three is an operator-facing Asset row in its own right except the housing: the conceptual Microscope-the-thing IS the Assembly plus Fixture pair, the reusable optics cluster IS the Optics sub-assembly, and the physical chassis IS the `Housing` Asset that parents the eight functional constituents.
 
