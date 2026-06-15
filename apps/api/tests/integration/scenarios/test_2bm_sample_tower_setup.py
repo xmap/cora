@@ -81,8 +81,18 @@ from cora.equipment.features.register_asset import bind as bind_register_asset
 from cora.equipment.features.register_fixture import RegisterFixture
 from cora.equipment.features.register_fixture import bind as bind_register_fixture
 from cora.infrastructure.adapters.in_memory_role_lookup import InMemoryRoleLookup
+from cora.recipe.features.define_method import DefineMethod
+from cora.recipe.features.define_method import bind as bind_define_method
+from cora.recipe.features.define_plan import DefinePlan
+from cora.recipe.features.define_plan import bind as bind_define_plan
+from cora.recipe.features.define_practice import DefinePractice
+from cora.recipe.features.define_practice import bind as bind_define_practice
 from tests.integration._equipment_helpers import install_existing_asset_into_fresh_mount
-from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
+from tests.integration._helpers import (
+    build_postgres_deps,
+    make_pg_profile_store,
+    seed_capability_postgres,
+)
 from tests.integration.scenarios._facility_fixture import (
     facility_id_prefix,
     install_aps_unit,
@@ -102,6 +112,10 @@ _FAM_HEXAPOD = family_stream_id(FamilyName("Hexapod"))
 _FAM_TILT_STAGE = family_stream_id(FamilyName("TiltStage"))
 _FAM_ROTARY_STAGE = family_stream_id(FamilyName("RotaryStage"))
 _FAM_LINEAR_STAGE = family_stream_id(FamilyName("LinearStage"))
+
+# Recipe ladder (TOWER-3: a positioning Method binds the tower as a unit).
+_APS_SITE_ID = UUID("01900000-0000-7000-8000-000000430501")
+_CAPABILITY_RECIPE_ID = UUID("01900000-0000-7000-8000-000000c0430e")
 
 
 def _id_queue() -> list[UUID]:
@@ -246,6 +260,42 @@ async def test_sample_tower_deployment_plays_out_end_to_end(db_pool: asyncpg.Poo
             correlation_id=_CORRELATION_ID,
         )
 
+    # ----- Minimal Recipe ladder (TOWER-3): a positioning Method binds the
+    #       tower as a UNIT. The Positioner-Role capability comes from the
+    #       SampleTower Assembly's presents_as, declared via needed_assembly_ids;
+    #       needed_family_ids names the asset-level axes the bound constituents
+    #       directly provide. The Plan binds the stack's asset_ids, no wires. -----
+    await seed_capability_postgres(
+        deps.event_store,
+        _CAPABILITY_RECIPE_ID,
+        code="cora.capability.sample_positioning",
+        name="SamplePositioning",
+    )
+    method_id = await bind_define_method(deps)(
+        DefineMethod(
+            capability_id=_CAPABILITY_RECIPE_ID,
+            name="sample_tower_positioning",
+            needed_family_ids=frozenset({_FAM_ROTARY_STAGE, _FAM_LINEAR_STAGE}),
+            needed_assembly_ids=frozenset({tower_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    practice_id = await bind_define_practice(deps)(
+        DefinePractice(name="2BM_sample_tower_practice", method_id=method_id, site_id=_APS_SITE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    plan_id = await bind_define_plan(deps)(
+        DefinePlan(
+            name="2BM_sample_tower_plan",
+            practice_id=practice_id,
+            asset_ids=frozenset(asset_id for _, asset_id in bound),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
     # ===== Assertions =====
 
     # SampleTower stream: AssemblyDefined with 5 leaf slots, no sub-assemblies,
@@ -310,3 +360,13 @@ async def test_sample_tower_deployment_plays_out_end_to_end(db_pool: asyncpg.Poo
         assert attaches[-1].payload["fixture_id"] == str(fixture_id), (
             f"{slot_name}: attached to the wrong fixture"
         )
+
+    # TOWER-3: the positioning Method requires the tower as a UNIT -- it names
+    # the SampleTower Assembly via needed_assembly_ids, and that Assembly's
+    # presents_as carries the Positioner Role (the unit-level contract).
+    method_events, _ = await deps.event_store.load("Method", method_id)
+    assert str(tower_id) in method_events[0].payload["needed_assembly_ids"]
+
+    # Plan binds the stack asset_ids directly, with no wires.
+    plan_events, _ = await deps.event_store.load("Plan", plan_id)
+    assert not [e for e in plan_events if e.event_type == "PlanWireAdded"]
