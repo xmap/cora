@@ -279,6 +279,7 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
             UpdateAssetPartitionRule(
                 asset_id=facet_id,
                 partition_rule=LookupTable(
+                    calibration_id=cal_id,
                     calibration_revision_id=rev_id,
                     interpolation_kind=InterpolationKind.LINEAR,
                     extrapolation_kind=ExtrapolationKind.CLAMP,
@@ -306,6 +307,7 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
 
         rule = facet_events[2].payload["partition_rule"]
         assert rule["kind"] == "LookupTable", f"{facet_name}: wrong rule kind"
+        assert rule["calibration_id"] == str(cal_ids[facet_name])
         assert rule["calibration_revision_id"] == str(rev_ids[facet_name])
         assert rule["unit_in"] == "keV"
         assert rule["unit_out"] == unit_out

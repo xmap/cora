@@ -268,10 +268,15 @@ class Aggregation:
 class LookupTable:
     """LookupTable partition: `dependent = interpolate(independent, table)`.
 
-    The table itself is referenced by Calibration revision id (not
-    inlined) so the calibration history audit remains the source of
-    truth and the partition rule survives recalibration via explicit
-    revision update. Pinning is intentional: a Method that fixed its
+    The table itself is referenced by Calibration revision (not inlined)
+    so the calibration history audit remains the source of truth and the
+    partition rule survives recalibration via explicit revision update.
+    The reference is the pair `(calibration_id, calibration_revision_id)`:
+    `calibration_id` names the owning Calibration aggregate and
+    `calibration_revision_id` pins the immutable revision within it. Both
+    are needed because a revision id is only resolvable through its parent
+    aggregate; carrying both lets the runtime load the curve directly with
+    no reverse index. Pinning is intentional: a Method that fixed its
     pixel scale at revision R reproduces against revision R even if a
     later revision changed the calibration.
 
@@ -291,6 +296,7 @@ class LookupTable:
     kind: Literal[PartitionRuleKind.LOOKUP_TABLE] = field(
         default=PartitionRuleKind.LOOKUP_TABLE, init=False
     )
+    calibration_id: UUID = field(default_factory=lambda: UUID(int=0))
     calibration_revision_id: UUID = field(default_factory=lambda: UUID(int=0))
     interpolation_kind: InterpolationKind = InterpolationKind.LINEAR
     extrapolation_kind: ExtrapolationKind = ExtrapolationKind.CLAMP
@@ -300,6 +306,11 @@ class LookupTable:
     unit_out: str = ""
 
     def __post_init__(self) -> None:
+        if self.calibration_id == UUID(int=0):
+            raise InvalidPartitionRuleError(
+                sub_code="calibration_id_missing",
+                reason="LookupTable.calibration_id is required",
+            )
         if self.calibration_revision_id == UUID(int=0):
             raise InvalidPartitionRuleError(
                 sub_code="calibration_revision_id_missing",
@@ -490,6 +501,7 @@ def partition_rule_to_payload(rule: PartitionRule) -> dict[str, object]:
                 "constituent_count": constituent_count,
             }
         case LookupTable(
+            calibration_id=calibration_id,
             calibration_revision_id=calibration_revision_id,
             interpolation_kind=interpolation_kind,
             extrapolation_kind=extrapolation_kind,
@@ -500,6 +512,7 @@ def partition_rule_to_payload(rule: PartitionRule) -> dict[str, object]:
         ):
             return {
                 "kind": PartitionRuleKind.LOOKUP_TABLE.value,
+                "calibration_id": str(calibration_id),
                 "calibration_revision_id": str(calibration_revision_id),
                 "interpolation_kind": interpolation_kind.value,
                 "extrapolation_kind": extrapolation_kind.value,
@@ -587,15 +600,18 @@ def partition_rule_from_payload(payload: dict[str, object]) -> PartitionRule:
             )
         case PartitionRuleKind.LOOKUP_TABLE:
             readback_raw = payload.get("readback_aggregator_kind")
-            # Tolerate missing calibration_revision_id by defaulting to
-            # the sentinel UUID(int=0); __post_init__ then raises
-            # InvalidPartitionRuleError(sub_code="calibration_revision_id_missing"),
-            # which is the same error the operator sees if they explicitly
-            # pass the sentinel. Consistent error surface for both cases.
-            raw_cal_id = payload.get("calibration_revision_id")
+            # Tolerate missing calibration_id / calibration_revision_id by
+            # defaulting to the sentinel UUID(int=0); __post_init__ then
+            # raises InvalidPartitionRuleError(sub_code="calibration_id_missing"
+            # / "calibration_revision_id_missing"), the same error the
+            # operator sees if they explicitly pass the sentinel. Consistent
+            # error surface for both cases.
+            raw_cal = payload.get("calibration_id")
+            raw_rev = payload.get("calibration_revision_id")
             return LookupTable(
+                calibration_id=(UUID(str(raw_cal)) if raw_cal is not None else UUID(int=0)),
                 calibration_revision_id=(
-                    UUID(str(raw_cal_id)) if raw_cal_id is not None else UUID(int=0)
+                    UUID(str(raw_rev)) if raw_rev is not None else UUID(int=0)
                 ),
                 interpolation_kind=InterpolationKind(
                     str(payload.get("interpolation_kind", "Linear"))

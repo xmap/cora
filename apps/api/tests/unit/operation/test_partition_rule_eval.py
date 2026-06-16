@@ -52,6 +52,7 @@ from cora.operation.errors import (
 )
 
 _ASSET_ID = UUID("01900000-0000-7000-8000-0000000000a1")
+_CALIBRATION_ID = UUID("01900000-0000-7000-8000-0000000000b0")
 _CALIBRATION_REVISION_ID = UUID("01900000-0000-7000-8000-0000000000b1")
 
 _FINITE_FLOAT = st.floats(allow_nan=False, allow_infinity=False, min_value=-1.0e6, max_value=1.0e6)
@@ -151,7 +152,9 @@ def test_eval_aggregation_rejects_nan_commanded() -> None:
 
 @pytest.mark.unit
 def test_eval_lookup_table_with_retracted_revision_aborts() -> None:
-    rule = LookupTable(calibration_revision_id=_CALIBRATION_REVISION_ID)
+    rule = LookupTable(
+        calibration_id=_CALIBRATION_ID, calibration_revision_id=_CALIBRATION_REVISION_ID
+    )
     with pytest.raises(InvalidPartitionRuleError) as excinfo:
         eval_lookup_table(rule, 1.0, asset_id=_ASSET_ID, calibration_revision=None)
     assert excinfo.value.sub_code == "calibration_revision_retracted"
@@ -159,7 +162,9 @@ def test_eval_lookup_table_with_retracted_revision_aborts() -> None:
 
 @pytest.mark.unit
 def test_eval_lookup_table_with_present_revision_raises_deferred_kernel() -> None:
-    rule = LookupTable(calibration_revision_id=_CALIBRATION_REVISION_ID)
+    rule = LookupTable(
+        calibration_id=_CALIBRATION_ID, calibration_revision_id=_CALIBRATION_REVISION_ID
+    )
     sentinel_revision = object()
     with pytest.raises(PseudoAxisEvaluationFailedError) as excinfo:
         eval_lookup_table(rule, 1.0, asset_id=_ASSET_ID, calibration_revision=sentinel_revision)
@@ -169,7 +174,9 @@ def test_eval_lookup_table_with_present_revision_raises_deferred_kernel() -> Non
 
 @pytest.mark.unit
 def test_eval_lookup_table_rejects_nan_commanded() -> None:
-    rule = LookupTable(calibration_revision_id=_CALIBRATION_REVISION_ID)
+    rule = LookupTable(
+        calibration_id=_CALIBRATION_ID, calibration_revision_id=_CALIBRATION_REVISION_ID
+    )
     with pytest.raises(PseudoAxisEvaluationFailedError):
         eval_lookup_table(rule, float("nan"), asset_id=_ASSET_ID, calibration_revision=object())
 

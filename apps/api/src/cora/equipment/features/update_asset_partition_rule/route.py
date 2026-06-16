@@ -72,6 +72,7 @@ class LookupTableBody(BaseModel):
     """Pydantic model for LookupTable partition rule."""
 
     kind: Literal[PartitionRuleKind.LOOKUP_TABLE] = PartitionRuleKind.LOOKUP_TABLE
+    calibration_id: UUID
     calibration_revision_id: UUID
     interpolation_kind: InterpolationKind = InterpolationKind.LINEAR
     extrapolation_kind: ExtrapolationKind = ExtrapolationKind.CLAMP
@@ -168,6 +169,7 @@ def _to_partition_rule(body: PartitionRuleBody | None) -> PartitionRule | None:
                 constituent_count=constituent_count,
             )
         case LookupTableBody(
+            calibration_id=calibration_id,
             calibration_revision_id=calibration_revision_id,
             interpolation_kind=interpolation_kind,
             extrapolation_kind=extrapolation_kind,
@@ -177,6 +179,7 @@ def _to_partition_rule(body: PartitionRuleBody | None) -> PartitionRule | None:
             unit_out=unit_out,
         ):
             return LookupTable(
+                calibration_id=calibration_id,
                 calibration_revision_id=calibration_revision_id,
                 interpolation_kind=interpolation_kind,
                 extrapolation_kind=extrapolation_kind,

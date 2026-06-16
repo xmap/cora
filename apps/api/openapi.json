@@ -7058,6 +7058,11 @@
       "LookupTableBody": {
         "description": "Pydantic model for LookupTable partition rule.",
         "properties": {
+          "calibration_id": {
+            "format": "uuid",
+            "title": "Calibration Id",
+            "type": "string"
+          },
           "calibration_revision_id": {
             "format": "uuid",
             "title": "Calibration Revision Id",
@@ -7104,6 +7109,7 @@
           }
         },
         "required": [
+          "calibration_id",
           "calibration_revision_id"
         ],
         "title": "LookupTableBody",

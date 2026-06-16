@@ -266,8 +266,10 @@ def test_aggregation_equality_is_structural() -> None:
 
 @pytest.mark.unit
 def test_lookup_table_constructs_happy_path_with_all_fields() -> None:
+    parent_id = uuid4()
     cal_id = uuid4()
     rule = LookupTable(
+        calibration_id=parent_id,
         calibration_revision_id=cal_id,
         interpolation_kind=InterpolationKind.CUBIC,
         extrapolation_kind=ExtrapolationKind.ERROR,
@@ -276,6 +278,7 @@ def test_lookup_table_constructs_happy_path_with_all_fields() -> None:
         unit_in="deg",
         unit_out="um",
     )
+    assert rule.calibration_id == parent_id
     assert rule.calibration_revision_id == cal_id
     assert rule.interpolation_kind == InterpolationKind.CUBIC
     assert rule.extrapolation_kind == ExtrapolationKind.ERROR
@@ -289,7 +292,7 @@ def test_lookup_table_constructs_happy_path_with_all_fields() -> None:
 @pytest.mark.unit
 def test_lookup_table_default_field_values() -> None:
     cal_id = uuid4()
-    rule = LookupTable(calibration_revision_id=cal_id)
+    rule = LookupTable(calibration_id=uuid4(), calibration_revision_id=cal_id)
     assert rule.interpolation_kind == InterpolationKind.LINEAR
     assert rule.extrapolation_kind == ExtrapolationKind.CLAMP
     assert rule.invertible is True
@@ -299,17 +302,25 @@ def test_lookup_table_default_field_values() -> None:
 
 
 @pytest.mark.unit
+def test_lookup_table_rejects_missing_calibration_id() -> None:
+    with pytest.raises(InvalidPartitionRuleError) as info:
+        LookupTable(calibration_revision_id=uuid4())  # calibration_id defaults to UUID(int=0)
+    assert info.value.sub_code == "calibration_id_missing"
+    assert "required" in info.value.reason
+
+
+@pytest.mark.unit
 def test_lookup_table_rejects_missing_calibration_revision_id() -> None:
     with pytest.raises(InvalidPartitionRuleError) as info:
-        LookupTable()  # default is UUID(int=0)
+        LookupTable(calibration_id=uuid4())  # calibration_revision_id defaults to UUID(int=0)
     assert info.value.sub_code == "calibration_revision_id_missing"
     assert "required" in info.value.reason
 
 
 @pytest.mark.unit
-def test_lookup_table_rejects_zero_uuid() -> None:
+def test_lookup_table_rejects_zero_uuid_calibration_revision_id() -> None:
     with pytest.raises(InvalidPartitionRuleError) as info:
-        LookupTable(calibration_revision_id=UUID(int=0))
+        LookupTable(calibration_id=uuid4(), calibration_revision_id=UUID(int=0))
     assert info.value.sub_code == "calibration_revision_id_missing"
 
 
@@ -321,7 +332,11 @@ def test_lookup_table_rejects_zero_uuid() -> None:
 def test_lookup_table_accepts_all_interpolation_kinds(
     interpolation_kind: InterpolationKind,
 ) -> None:
-    rule = LookupTable(calibration_revision_id=uuid4(), interpolation_kind=interpolation_kind)
+    rule = LookupTable(
+        calibration_id=uuid4(),
+        calibration_revision_id=uuid4(),
+        interpolation_kind=interpolation_kind,
+    )
     assert rule.interpolation_kind == interpolation_kind
 
 
@@ -330,13 +345,18 @@ def test_lookup_table_accepts_all_interpolation_kinds(
 def test_lookup_table_accepts_all_extrapolation_kinds(
     extrapolation_kind: ExtrapolationKind,
 ) -> None:
-    rule = LookupTable(calibration_revision_id=uuid4(), extrapolation_kind=extrapolation_kind)
+    rule = LookupTable(
+        calibration_id=uuid4(),
+        calibration_revision_id=uuid4(),
+        extrapolation_kind=extrapolation_kind,
+    )
     assert rule.extrapolation_kind == extrapolation_kind
 
 
 @pytest.mark.unit
 def test_lookup_table_invertible_true_allows_no_readback_aggregator() -> None:
     rule = LookupTable(
+        calibration_id=uuid4(),
         calibration_revision_id=uuid4(),
         invertible=True,
         readback_aggregator_kind=None,
@@ -349,6 +369,7 @@ def test_lookup_table_invertible_true_allows_no_readback_aggregator() -> None:
 def test_lookup_table_invertible_false_requires_readback_aggregator() -> None:
     with pytest.raises(InvalidPartitionRuleError) as info:
         LookupTable(
+            calibration_id=uuid4(),
             calibration_revision_id=uuid4(),
             invertible=False,
             readback_aggregator_kind=None,
@@ -360,6 +381,7 @@ def test_lookup_table_invertible_false_requires_readback_aggregator() -> None:
 @pytest.mark.unit
 def test_lookup_table_invertible_false_accepts_readback_aggregator() -> None:
     rule = LookupTable(
+        calibration_id=uuid4(),
         calibration_revision_id=uuid4(),
         invertible=False,
         readback_aggregator_kind=ReadbackAggregatorKind.SUM,
@@ -370,19 +392,22 @@ def test_lookup_table_invertible_false_accepts_readback_aggregator() -> None:
 
 @pytest.mark.unit
 def test_lookup_table_is_frozen() -> None:
-    rule = LookupTable(calibration_revision_id=uuid4())
+    rule = LookupTable(calibration_id=uuid4(), calibration_revision_id=uuid4())
     with pytest.raises(FrozenInstanceError):
         rule.invertible = False  # type: ignore[misc]
 
 
 @pytest.mark.unit
 def test_lookup_table_equality_is_structural() -> None:
+    parent_id = uuid4()
     cal_id = uuid4()
     a = LookupTable(
+        calibration_id=parent_id,
         calibration_revision_id=cal_id,
         interpolation_kind=InterpolationKind.LINEAR,
     )
     b = LookupTable(
+        calibration_id=parent_id,
         calibration_revision_id=cal_id,
         interpolation_kind=InterpolationKind.LINEAR,
     )
@@ -831,8 +856,10 @@ def test_aggregation_round_trip_codec() -> None:
 
 @pytest.mark.unit
 def test_lookup_table_round_trip_codec() -> None:
+    parent_id = uuid4()
     cal_id = uuid4()
     original = LookupTable(
+        calibration_id=parent_id,
         calibration_revision_id=cal_id,
         interpolation_kind=InterpolationKind.CUBIC,
         extrapolation_kind=ExtrapolationKind.ERROR,
@@ -843,7 +870,8 @@ def test_lookup_table_round_trip_codec() -> None:
     )
     payload = partition_rule_to_payload(original)
     assert payload["kind"] == PartitionRuleKind.LOOKUP_TABLE.value
-    # UUID serialized as string
+    # UUIDs serialized as strings
+    assert payload["calibration_id"] == str(parent_id)
     assert payload["calibration_revision_id"] == str(cal_id)
     rebuilt = partition_rule_from_payload(payload)
     assert rebuilt == original
@@ -1039,12 +1067,25 @@ def test_partition_rule_from_payload_rejects_affine_with_nan_gain() -> None:
 
 
 @pytest.mark.unit
+def test_partition_rule_from_payload_rejects_lookup_table_missing_calibration_id() -> None:
+    with pytest.raises(InvalidPartitionRuleError) as info:
+        partition_rule_from_payload(
+            {
+                "kind": "LookupTable",
+                "calibration_revision_id": str(uuid4()),
+            }
+        )
+    # Missing calibration_id defaults to UUID(int=0), which is rejected
+    assert info.value.sub_code == "calibration_id_missing"
+
+
+@pytest.mark.unit
 def test_partition_rule_from_payload_rejects_lookup_table_missing_calibration_revision_id() -> None:
     with pytest.raises(InvalidPartitionRuleError) as info:
         partition_rule_from_payload(
             {
                 "kind": "LookupTable",
-                "interpolation_kind": "Linear",
+                "calibration_id": str(uuid4()),
             }
         )
     # Missing calibration_revision_id defaults to UUID(int=0), which is rejected
@@ -1057,6 +1098,7 @@ def test_partition_rule_from_payload_rejects_lookup_table_with_zero_uuid() -> No
         partition_rule_from_payload(
             {
                 "kind": "LookupTable",
+                "calibration_id": str(uuid4()),
                 "calibration_revision_id": str(UUID(int=0)),
             }
         )
@@ -1162,13 +1204,14 @@ def test_expected_constituent_count_aggregation_default_returns_1() -> None:
 
 @pytest.mark.unit
 def test_expected_constituent_count_lookup_table_returns_1() -> None:
-    rule = LookupTable(calibration_revision_id=uuid4())
+    rule = LookupTable(calibration_id=uuid4(), calibration_revision_id=uuid4())
     assert expected_constituent_count(rule) == 1
 
 
 @pytest.mark.unit
 def test_expected_constituent_count_lookup_table_non_invertible_returns_1() -> None:
     rule = LookupTable(
+        calibration_id=uuid4(),
         calibration_revision_id=uuid4(),
         invertible=False,
         readback_aggregator_kind=ReadbackAggregatorKind.MEAN,

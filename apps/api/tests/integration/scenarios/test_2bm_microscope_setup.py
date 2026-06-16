@@ -608,15 +608,16 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         rev_ids.append(rev_id)
 
     # ----- LookupTable partition rule on objective_selector -----
-    # The calibration_revision_id is a placeholder: the runtime evaluator
+    # The calibration reference is a placeholder: the runtime evaluator
     # expects a revision carrying the index-to-angle table (a
-    # CalibrationQuantity the closed catalog does not have yet), and the
-    # handler does not load the revision, so a real magnification revision
-    # id satisfies construction without inventing a sentinel.
+    # CalibrationQuantity the closed catalog does not have yet), so a real
+    # magnification calibration + revision id pair satisfies construction
+    # without inventing a sentinel.
     await bind_update_asset_partition_rule(deps)(
         UpdateAssetPartitionRule(
             asset_id=optics_assets["objective_selector"],
             partition_rule=LookupTable(
+                calibration_id=cal_ids[0],
                 calibration_revision_id=rev_ids[0],
                 invertible=False,
                 readback_aggregator_kind=ReadbackAggregatorKind.IDENTITY,
