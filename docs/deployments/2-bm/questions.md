@@ -66,7 +66,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 ### Rebooting a stuck hexapod
 
-When the hexapod controller locks up, the recovery is a power-cycle ceremony: stop the IOC, power-cycle the controller's PDU outlet, restart the IOC, then confirm the axes re-enable. CORA has modelled it as the [`hexapod_reboot` recipe](recipes.md). Most of the records are now read directly from the authoritative reboot script [`decarlof/2bmb-bin/hexapod_reboot.py`](https://github.com/decarlof/2bmb-bin/blob/HEAD/hexapod_reboot.py); the only things not in the repo are the per-deployment PDU secrets in `~/access.json`. So the asks below are a quick confirm that the script matches current production, plus the one secret (HXP-5).
+When the hexapod controller locks up, the recovery is a power-cycle ceremony: stop the IOC, power-cycle the controller's PDU outlet, restart the IOC, then confirm the axes re-enable. CORA has modelled it as the [`hexapod_reboot` recipe](recipes.md). Most of the records are now read directly from the authoritative reboot script [`decarlof/2bmb-bin/hexapod_reboot.py`](https://github.com/decarlof/2bmb-bin/blob/HEAD/hexapod_reboot.py); the only things not in the repo are the per-deployment PDU secrets in `~/access.json`. So the asks below are: confirm that public repo is the current production version (HXP-7, which backs HXP-3 / HXP-4 / HXP-6 in one go), and provide the one deployment secret (HXP-5).
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
@@ -74,6 +74,7 @@ When the hexapod controller locks up, the recovery is a power-cycle ceremony: st
 | HXP-4 | `Nice-to-have` | Confirm the IOC stop / start scripts and host. | `hexapod_IOC_stop.sh` / `hexapod_IOC.sh`, IOC host `arcturus` (user `2bmb`) | yes, from the reboot script | [Recipes](recipes.md) |
 | HXP-5 | `Blocks-go-live` | Which of the two PDUs (`a` default, or `b`) powers the hexapod, and its IP address? The PDU type, the HTTP endpoints, and the outlet are known from the script; only the choice and IP live in `~/access.json`, not the repo. | NetBooter over HTTP (`/cmd.cgi?rly=N`, `/status.xml`), outlet 5; PDU `a`, IP unknown | partly (type / endpoints / outlet known; PDU choice + IP not) | [Recipes](recipes.md) |
 | HXP-6 | `Nice-to-have` | Confirm the reboot timings are the current operating values. | 10 s off-wait, 30 s on-wait, 10 s IOC settle, 180 s enable poll at 1 s intervals (script defaults) | yes, from the reboot script | [Recipes](recipes.md) |
+| HXP-7 | `Blocks-go-live` | Is the public [`decarlof/2bmb-bin`](https://github.com/decarlof/2bmb-bin) repo (and specifically `hexapod_reboot.py`) the current production version, or is there a newer or internal copy we should track instead? CORA read the reboot records from it, so a yes resolves the "confirm current" on HXP-3, HXP-4, and HXP-6 at once; it is also the operational-scripts source for the IOC start/stop and energy scripts. | `decarlof/2bmb-bin` is current and authoritative | not yet | [Recipes](recipes.md) |
 
 ## Sample stages
 
