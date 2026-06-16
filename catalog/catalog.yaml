@@ -236,9 +236,11 @@ models:
     part_number: "LuAG:Ce-100um"
     declared_families: [Scintillator]
 
-# recipes: none defined for 2-BM today (recipe ladders are exercised per
-# scenario, not registered as a persistent catalog).
-recipes: []
+# Recipes are deliberately not a catalog kind: a Recipe (Recipe BC) is the
+# deployment-bound executable step sequence that hardcodes a beamline's device
+# addresses, so it is per-deployment, not cross-facility vocabulary. The
+# portable rung is the Method. Authored Recipes, if any, belong in the
+# deployment docs, not here.
 
 # Assemblies: reusable composition blueprints. The spine computes each
 # Assembly's id (uuid5 over name) and content_hash; sub-assembly links reference

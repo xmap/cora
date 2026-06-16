@@ -2,14 +2,14 @@
 
 *Operation BC Procedures registered at 2-BM.*
 
-Each Procedure binds a Method + Practice + Plan to a set of target Assets. See [Model](../../architecture/model.md) for the aggregate shape.
+A Procedure is the record of one operational task. It acts on a set of target Assets and may realize a [Capability](../../catalog/capabilities.md); it runs either standalone or as a phase of a [Run](runs.md). The Procedure aggregate does not itself bind a Method, Practice, or Plan: those name the technique and its wiring, while the Procedure is the task record and its per-step log. See [Model](../../architecture/model.md) for the aggregate shape.
+
+The line between a Run and a Procedure is the data product: an operation that yields a scientific [Dataset](datasets.md) is a [Run](runs.md), one that only performs and logs a task is a Procedure. The dark- and flat-field baselines therefore run as subject-less calibration [Runs](runs.md), not Procedures; the tasks below are the no-data operations: homing, alignment, characterization, recovery, and the coordinated energy change.
 
 | Procedure | Target Assets |
 | --- | --- |
 | `motor_homing` | `Rotary`, `SampleTop_X` |
 | `first_light` | `StationShutter` + image chain |
-| `dark_baseline` | `StationShutter` + image chain |
-| `flat_baseline` | `StationShutter` + image chain |
 | `resolution_alignment` | `Focus` + image chain |
 | `focus_alignment` | `SampleTop_Z` + image chain |
 | `center_alignment` | `Rotary`, `SampleTop_X` + image chain |

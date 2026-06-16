@@ -2,8 +2,12 @@
 
 The catalog descriptor (catalog/catalog.yaml) is the single human-readable
 source for CORA's cross-facility vocabulary: Roles, Families, Capabilities,
-Methods, Models, Assemblies (Recipes when any are defined). The docs build
-renders the Catalog pages from it.
+Methods, Models, Assemblies. The docs build renders the Catalog pages from it.
+
+Recipes are intentionally NOT a catalog kind. A Recipe (Recipe BC) is the
+deployment-bound executable step sequence that hardcodes a beamline's device
+addresses, so it is per-deployment, not cross-facility vocabulary; the portable
+rung is the Method. Authored Recipes, if any, belong in the deployment docs.
 
 Source-of-truth note (the no-drift boundary):
   - Roles and the closed enums (Affordance, ExecutorShape) are CODE-defined.
@@ -181,14 +185,6 @@ class Model(BaseModel):
     declared_families: list[str] = []
 
 
-class Recipe(BaseModel):
-    model_config = _MODEL_CONFIG
-
-    name: str
-    capability: str
-    steps: list[Any] = []
-
-
 class TemplateSlot(BaseModel):
     model_config = _MODEL_CONFIG
 
@@ -250,7 +246,6 @@ class Catalog:
     capabilities: list[Capability]
     methods: list[Method]
     models: list[Model]
-    recipes: list[Recipe]
     assemblies: list[Assembly]
 
 
@@ -281,7 +276,6 @@ def load(path: str | Path) -> Catalog:
             capabilities=[Capability.model_validate(c) for c in raw.get("capabilities", [])],
             methods=[Method.model_validate(m) for m in raw.get("methods", [])],
             models=[Model.model_validate(m) for m in raw.get("models", [])],
-            recipes=[Recipe.model_validate(r) for r in raw.get("recipes", [])],
             assemblies=[Assembly.model_validate(a) for a in raw.get("assemblies", [])],
         )
     except ValidationError as exc:
