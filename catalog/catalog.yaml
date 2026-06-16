@@ -239,3 +239,29 @@ models:
 # recipes: none defined for 2-BM today (recipe ladders are exercised per
 # scenario, not registered as a persistent catalog).
 recipes: []
+
+# Assemblies: reusable composition blueprints. The spine computes each
+# Assembly's id (uuid5 over name) and content_hash; sub-assembly links reference
+# the child by name. A beamline materializes these as Fixtures (slot -> Asset),
+# which live in the deployment descriptor, not here.
+assemblies:
+  - name: Optics
+    note: >-
+      Reusable optics core: turret, objectives, virtual objective selector, and
+      focus stage. Presents nothing on its own; composed by detector Assemblies.
+    presents_as: []
+    required_slots:
+      - { slot_name: turret, required_families: [LinearStage], cardinality: Exactly1 }
+      - { slot_name: objectives, required_families: [Objective], cardinality: OneOrMore }
+      - { slot_name: objective_selector, required_families: [PseudoAxis], cardinality: Exactly1 }
+      - { slot_name: focus, required_families: [LinearStage], cardinality: Exactly1 }
+  - name: Microscope
+    note: >-
+      Full scintillator-relay detector: the Optics sub-assembly plus camera and
+      scintillator leaf slots. Presents the Detector Role. Zero required_wires in v1.
+    presents_as: [Detector]
+    required_slots:
+      - { slot_name: camera, required_families: [Camera], cardinality: Exactly1 }
+      - { slot_name: scintillator, required_families: [Scintillator], cardinality: Exactly1 }
+    required_sub_assemblies:
+      - { slot_name: optics, sub_assembly: Optics }

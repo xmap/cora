@@ -78,36 +78,13 @@ Each Model carries the vendor identity that DOIs and citations need (PIDINST pro
 
 One open vendor question worth confirming with the 2-BM operator before the catalog locks: Mitutoyo Plan Apo NIR is a product family with one part number per magnification (10x, 2x, 1.1x each carry distinct catalog numbers); folding all three into one Model row is a v1 simplification that splits into three rows once part numbers are verified.
 
-## Assembly: Microscope
+## Composition blueprint (in the Catalog)
 
-The top **Assembly** is the reusable composition blueprint. It does two things: it references the Optics sub-assembly by a version-pinned link, and it declares the leaf slots that are specific to a full detector (the parts that are not part of the reusable optics cluster).
+The Microscope and its reusable **Optics** core are not specific to 2-BM: they are composition blueprints in the cross-facility [Catalog](../../../catalog/assemblies.md). The blueprint owns the slot map (which Families fill which named positions, with cardinalities), the sub-assembly links, and the content hash that lets another facility reuse the same structure. For the exact slot table, see the [Assemblies catalog page](../../../catalog/assemblies.md); this page covers only how 2-BM materializes it.
 
-| Member | Kind | Cardinality | Required Family |
-| --- | --- | --- | --- |
-| `optics` | sub-assembly link | one | (the Optics Assembly) |
-| `camera` | leaf slot | `Exactly1` | `Camera` |
-| `scintillator` | leaf slot | `Exactly1` | `Scintillator` |
+In summary: the **Microscope** Assembly presents the `Detector` Role (via `presents_as`) and composes the **Optics** sub-assembly (turret, objectives, virtual objective selector, focus) plus two leaf slots specific to a full detector, `camera` and `scintillator`. The camera and scintillator sit on the Microscope rather than the Optics core because they are the parts a deployment swaps most often; the optics cluster is the stable, shareable part, content-hashed in its own right so a second microscope or a spare optics bench can reference it without redeclaring the slot map. The three installed objectives (10x, 2x, 1.1x) all bind the single `OneOrMore` objectives slot, differing only by the `magnification` setting, so the blueprint stays reusable across turret loadouts; per-objective identity lives on the Asset, not the slot.
 
-The sub-assembly link pins the Optics Assembly's content hash, so a later revision of Optics does not silently change what a Microscope built today materializes (snapshot semantics). The camera and scintillator are leaf slots on the Microscope rather than the Optics sub-assembly because they are the parts a deployment swaps most often and the parts that vary between detector builds; the optics cluster (turret, objectives, objective selector, focus) is the stable, shareable core.
-
-The Microscope Assembly presents the **`Detector`** Role through its `presents_as` set, the functional binding contract a Method targets when it needs a 2D imaging device without pinning a specific Family. The legacy scalar presenter field and the `Imager` presenter Family are both gone; `presents_as` is the sole presenter path. The Assembly's content hash (SHA-256 over its name, its slots, its sub-assembly links, the presented Roles (`presents_as`), and the parameter overrides schema) is stable: two facilities that publish the same Microscope Assembly converge on the same hash, which makes the blueprint cross-facility shareable when the federation layer lands.
-
-The Microscope carries **zero `required_wires` in v1**. Earlier sketches modelled this detector as an Asset-with-ports that brokered routing between the turret, focus, and camera; the IOC played that role in real hardware. In CORA's model that brokering dissolves into three different surfaces: the PseudoAxis evaluator handles lens index to turret setpoint, the Conductor / ControlPort layer drives focus and other setpoints directly, and the camera trigger arrives from an external timing source (FPGA, encoder) that lives outside the cluster and is wired in at Plan level. None of these wires are intrinsic to the composition; they all depend on which Conductor, which trigger source, and which command path the deployment uses. The Assembly's value is the slot map plus the content hash.
-
-## Sub-assembly: Optics
-
-The **Optics** Assembly is the reusable core: the turret, the three objectives, the virtual objective selector, and the focus stage. It is content-hashed in its own right, so the same optics cluster can be referenced by more than one detector build (a second microscope at another station, a spare optics bench) without redeclaring its slot map.
-
-| Slot | Cardinality | Required Family |
-| --- | --- | --- |
-| `turret` | `Exactly1` | `LinearStage` |
-| `objectives` | `OneOrMore` | `Objective` |
-| `objective_selector` | `Exactly1` | `PseudoAxis` |
-| `focus` | `Exactly1` | `LinearStage` |
-
-The three installed objectives (10x, 2x, 1.1x) all bind the single `objectives` slot. They differ only by the `magnification` setting, so one `OneOrMore` slot keeps the Optics blueprint (and its content hash) reusable across turret loadouts rather than baking three specific magnifications into the structure; a second beamline with a five-position turret reuses the same blueprint. Per-objective identity lives on the Asset (its name, settings, and calibration), not the slot. `objective_selector` is **the objective selector**: the virtual axis that picks which objective is in the beam (distinct from the separate, deferred camera selector).
-
-The Optics sub-assembly is composed one level deep: it does not itself reference further sub-assemblies. At Fixture time, a Microscope expands one composing level, the Optics cluster, and rejects deeper nesting; that keeps the materialization rule simple until a real two-tier case earns the extra depth.
+The Microscope carries **zero `required_wires` in v1**. The routing a reader might expect inside the detector is not intrinsic to the cluster: lens index to turret setpoint is handled by the PseudoAxis evaluator (the routing section below), focus and other setpoints are driven directly through the Conductor / ControlPort layer, and the camera trigger arrives from an external timing source wired in at Plan level. All three depend on the deployment's control path, not the composition, so none are blueprint wires.
 
 ## Fixture: Microscope at 2-BM
 

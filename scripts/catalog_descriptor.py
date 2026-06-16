@@ -2,16 +2,19 @@
 
 The catalog descriptor (catalog/catalog.yaml) is the single human-readable
 source for CORA's cross-facility vocabulary: Roles, Families, Capabilities,
-Methods, Models (Recipes when any are defined). The docs build renders the
-Catalog pages from it.
+Methods, Models, Assemblies (Recipes when any are defined). The docs build
+renders the Catalog pages from it.
 
 Source-of-truth note (the no-drift boundary):
   - Roles and the closed enums (Affordance, ExecutorShape) are CODE-defined.
     This module mirrors the closed enums as frozensets to validate against, and
     a test asserts each mirror equals its `cora` enum. The Roles authored here
     are guarded by a test asserting they equal the code's SEED_ROLES.
-  - Families, Capabilities, Methods, Models have no global code seed; this
-    descriptor is their consolidated source, guarded by the round-trip test.
+  - Families, Capabilities, Methods, Models, Assemblies have no global code
+    seed; this descriptor is their consolidated source, guarded by the
+    round-trip test. An Assembly's id and content_hash are spine-computed, so
+    the descriptor never authors them; sub-assembly links reference the child
+    by name.
 
 Zero cora.* imports by design: the docs build runs under a lean interpreter
 that does not install the cora package. The enum mirrors below are kept honest
@@ -64,6 +67,9 @@ AFFORDANCES: frozenset[str] = frozenset(
 )
 EXECUTOR_SHAPES: frozenset[str] = frozenset({"Method", "Procedure"})
 MANUFACTURER_ID_TYPES: frozenset[str] = frozenset({"ROR", "GRID", "ISNI"})
+SLOT_CARDINALITIES: frozenset[str] = frozenset(
+    {"Exactly1", "ZeroOrOne", "OneOrMore", "ZeroOrMore"}
+)
 
 # Catalog models are closed-shape; forbid unknown keys so a mistyped field name
 # (descripton, needed_familes) fails the build instead of silently rendering empty.
@@ -183,6 +189,58 @@ class Recipe(BaseModel):
     steps: list[Any] = []
 
 
+class TemplateSlot(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    slot_name: str
+    required_families: list[str] = Field(min_length=1)
+    cardinality: str
+    # Optional template defaults applied at instantiation unless overridden.
+    # Both fold into the Assembly content_hash, so they are authorable here for
+    # the same reason the other schema fields are; placement is a plain dict
+    # (the descriptor has zero cora imports for the Placement type).
+    default_settings: dict[str, Any] | None = None
+    default_placement: dict[str, Any] | None = None
+
+    @field_validator("cardinality")
+    @classmethod
+    def _known_cardinality(cls, value: str) -> str:
+        if value not in SLOT_CARDINALITIES:
+            raise ValueError(f"unknown slot cardinality: {value}")
+        return value
+
+
+class TemplateWire(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    source_slot: str
+    source_port: str
+    target_slot: str
+    target_port: str
+
+
+class SubAssemblyLink(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    slot_name: str
+    # The child Assembly's NAME. The spine derives the child's id (uuid5 over
+    # name) and content_hash at define time; authoring a hash here would be a
+    # value the round-trip cannot guard, so the descriptor links by name.
+    sub_assembly: str
+
+
+class Assembly(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    name: str
+    note: str | None = None
+    presents_as: list[str] = []
+    required_slots: list[TemplateSlot] = []
+    required_wires: list[TemplateWire] = []
+    required_sub_assemblies: list[SubAssemblyLink] = []
+    parameter_overrides_schema: dict[str, Any] | None = None
+
+
 @dataclass(frozen=True)
 class Catalog:
     """A validated catalog: the cross-facility vocabulary, in file order."""
@@ -193,6 +251,7 @@ class Catalog:
     methods: list[Method]
     models: list[Model]
     recipes: list[Recipe]
+    assemblies: list[Assembly]
 
 
 def load(path: str | Path) -> Catalog:
@@ -223,6 +282,7 @@ def load(path: str | Path) -> Catalog:
             methods=[Method.model_validate(m) for m in raw.get("methods", [])],
             models=[Model.model_validate(m) for m in raw.get("models", [])],
             recipes=[Recipe.model_validate(r) for r in raw.get("recipes", [])],
+            assemblies=[Assembly.model_validate(a) for a in raw.get("assemblies", [])],
         )
     except ValidationError as exc:
         raise CatalogError(f"{path}: catalog failed validation:\n{exc}") from exc
@@ -233,7 +293,8 @@ def load(path: str | Path) -> Catalog:
 
 def _check_references(path: Path, catalog: Catalog) -> None:
     """Within-catalog referential integrity: a typo in a method's capability or
-    needed_families, or a model's declared_families, fails the build instead of
+    needed_families, a model's declared_families, or an assembly's slot
+    families / presented roles / sub-assembly links, fails the build instead of
     rendering a dead in-page link or silently dropping a binding."""
     family_names = {f.name for f in catalog.families}
     capability_codes = {c.code for c in catalog.capabilities}
@@ -249,3 +310,45 @@ def _check_references(path: Path, catalog: Catalog) -> None:
         unknown = sorted(set(model.declared_families) - family_names)
         if unknown:
             raise CatalogError(f"{path}: model '{model.name}' declares unknown families {unknown}")
+
+    role_names = {r.name for r in catalog.roles}
+    assembly_names = {a.name for a in catalog.assemblies}
+    for a in catalog.assemblies:
+        unknown_roles = sorted(set(a.presents_as) - role_names)
+        if unknown_roles:
+            raise CatalogError(
+                f"{path}: assembly '{a.name}' presents unknown roles {unknown_roles}"
+            )
+        leaf_slot_names = {s.slot_name for s in a.required_slots}
+        for s in a.required_slots:
+            unknown_fams = sorted(set(s.required_families) - family_names)
+            if unknown_fams:
+                raise CatalogError(
+                    f"{path}: assembly '{a.name}' slot '{s.slot_name}' "
+                    f"needs unknown families {unknown_fams}"
+                )
+        # Slots and sub-assembly link positions share one slot-name namespace
+        # that must stay collision-free (a clash raises
+        # SubAssemblySlotNameConflictError at define_assembly). Wires, however,
+        # close over leaf slots ONLY (see the separate loop below), matching the
+        # spine: a wire endpoint may not name a sub-assembly link position.
+        slot_namespace = set(leaf_slot_names)
+        for link in a.required_sub_assemblies:
+            if link.sub_assembly not in assembly_names:
+                raise CatalogError(
+                    f"{path}: assembly '{a.name}' references unknown "
+                    f"sub-assembly '{link.sub_assembly}'"
+                )
+            if link.slot_name in slot_namespace:
+                raise CatalogError(
+                    f"{path}: assembly '{a.name}' slot_name '{link.slot_name}' "
+                    f"collides across slots and sub-assemblies"
+                )
+            slot_namespace.add(link.slot_name)
+        for w in a.required_wires:
+            for endpoint in (w.source_slot, w.target_slot):
+                if endpoint not in leaf_slot_names:
+                    raise CatalogError(
+                        f"{path}: assembly '{a.name}' wire references "
+                        f"unknown slot '{endpoint}'"
+                    )
