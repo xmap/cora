@@ -15,7 +15,7 @@ You do not need to edit this file or know where it lives. If you do not use GitH
 
 **If you are not the beamline scientist:** a few rows name a different contact. Safety and interlocks: **PSS-1**. Facility utilities (gas, compressed air): **SUP-1**, **SUP-2**. If a row is really a controls/EPICS, network, or engineering question rather than yours, just route it to the right person or tell us who that is.
 
-**Where to start:** the six `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `STAGE-1`, `DET-1`, `DET-2`, `DET-3`, `DET-4`, `DET-5`. If you only have five minutes, do these first. After that, `Blocks-go-live` items (including the safety item `PSS-1`) matter before CORA ever controls or observes hardware.
+**Where to start:** the six `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `STAGE-1`, `DET-1`, `DET-2`, `DET-3`, `DET-4`, `DET-5`. If you only have five minutes, do these first. After that, `Blocks-go-live` items matter before CORA ever controls or observes hardware: notably the safety item `PSS-1`, and `DET-10` so CORA and the MCTOptics server do not end up commanding the focus motors at the same time.
 
 ## How this page works
 
@@ -88,7 +88,7 @@ Two things remain:
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DET-1 | `Blocks-build` | Is the lens turret a rotating turret, or a sliding (translating) objective selector? This sets whether its positions are degrees or millimeters. | rotating (degrees) | [Microscope](equipment/microscope.md) |
-| DET-2 | `Blocks-build` | Today, what physically moves the focus stage: an operator or a scan command, or does the detector's own IOC (the MCTOptics IOC) move it on its own, for example refocusing when the objective changes? CORA will decide its own control boundary from your answer. | the IOC does not move it on its own; it moves only on command | [Microscope](equipment/microscope.md) |
+| DET-2 | `Blocks-build` | How many focus motors does the microscope have, and how are they arranged: a single shared focus stage (we believe the `2bmbAERO:m1` Z rail), or one fine-focus motor per objective (we believe `2bmb:m2`, `m3`, `m4`) plus a shared coarse Z stage? Your answer decides whether CORA models one focus axis or a per-lens focus group. | single shared focus stage; per-lens differences held as software offsets | [Microscope](equipment/microscope.md) |
 | DET-3 | `Blocks-build` | How are cameras selected: a single fixed bay, or is there a selection stage? | single bay, no selection stage | [Microscope](equipment/microscope.md) |
 | DET-4 | `Blocks-build` | How does the camera bay move, if at all: fixed, or is there a rotation stage? | fixed, no rotation stage | [Microscope](equipment/microscope.md) |
 | DET-5 | `Blocks-build` | Is there a second active FLIR Oryx camera bay (`2bmSP2:`), or is 2-BM genuinely single-camera? | single-camera; any second Oryx is offline | [Microscope](equipment/microscope.md) |
@@ -96,6 +96,7 @@ Two things remain:
 | DET-7 | `Nice-to-have` | The three distinct Mitutoyo part numbers, one per magnification (10x / 2x / 1.1x)? Today all three share one catalog row. | one `Plan-Apo-NIR` family row | [Vendor catalog](assets.md#vendor-catalog-models) |
 | DET-8 | `Blocks-go-live` | The FLIR Oryx's max frame rate, sensor kind, and readout mode (rolling vs global), plus its part number for the datasheet? CORA needs these camera values and they are currently blank. | only sensor size / pixel / bit-depth recorded | [Settings](assets.md#settings) |
 | DET-9 | `Nice-to-have` | The measured magnification of the 2x Mitutoyo objective at 25 keV? The current 2.0x is nominal, pending re-measurement. | 2.0x nominal (provisional) | [Microscope](equipment/microscope.md) |
+| DET-10 | `Blocks-go-live` | When an objective is selected, does the MCTOptics server automatically move the focus to the stored position for that lens, or is focus set as a separate explicit step? And is focus ever moved mid-scan (continuous autofocus), or only at lens-change setup? CORA plans to drive focus itself with a full audit trail, so it needs to know what moves it today to avoid two systems commanding the same motor. | MCTOptics applies a stored focus per lens at lens change; focus is not moved mid-scan | [Microscope](equipment/microscope.md) |
 
 ## Timing
 
