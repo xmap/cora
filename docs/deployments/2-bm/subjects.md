@@ -4,6 +4,8 @@
 
 A Subject is the sample-or-thing being measured, proposal-anchored at operations phase and kinematic-mounted at acquisition time. See [Model](../../architecture/model.md) for the aggregate shape.
 
+Each Subject runs a custody lifecycle from intake (`Received`) through mount and measurement to a terminal disposition: `Returned` to the PI, `Stored` for a follow-up beamtime, or `Discarded` with an audited reason. The three terminal transitions are exercised by the `test_2bm_subject_returned` / `_stored` / `_discarded` scenarios.
+
 - `porous sandstone core (Proposal 2026-1234, sample A)`
 - `porous sandstone core (Proposal 2026-1234, sample A, continuous rotation)`
 - `porous sandstone core (Proposal 2026-1234, sample A, degraded run)`
@@ -17,6 +19,5 @@ A Subject is the sample-or-thing being measured, proposal-anchored at operations
 
 ## Pending
 
-- Subject disposition terminals (`Returned` / `Stored` / `Discarded`)
 - Proposal co-I sample roster
 - Calibration phantom (Siemens star, USAF 1951, sphere)
