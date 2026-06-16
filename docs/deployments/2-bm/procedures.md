@@ -4,7 +4,7 @@
 
 A Procedure is the record of one operational task. It acts on a set of target Assets and may realize a [Capability](../../catalog/capabilities.md); it runs either standalone or as a phase of a [Run](runs.md). The Procedure aggregate does not itself bind a Method, Practice, or Plan: those name the technique and its wiring, while the Procedure is the task record and its per-step log. See [Model](../../architecture/model.md) for the aggregate shape.
 
-The line between a Run and a Procedure is the data product: an operation that yields a scientific [Dataset](datasets.md) is a [Run](runs.md), one that only performs and logs a task is a Procedure. The dark- and flat-field baselines therefore run as subject-less calibration [Runs](runs.md), not Procedures; the tasks below are the no-data operations: homing, alignment, characterization, recovery, and the coordinated energy change.
+The split between a Run and a Procedure is the lens, not the data product: a Run is the measurement batch (ISA-88), normally against a [Subject](subjects.md) and composed by a Campaign; a Procedure is an operational task (ISA-106). Both can produce a [Dataset](datasets.md) (a Dataset cites either a producing Run or a producing Procedure), so whether data comes out does not decide it. The dark- and flat-field baselines are subject-less calibration captures, kept with the [Runs](runs.md); the tasks below are the operational ones: homing, alignment, characterization, recovery, and the coordinated energy change.
 
 An operation can also be authored as a [Recipe](recipes.md): a reusable, parameterized step sequence (setpoint / check / action) that expands into a Procedure once an operator binds its tunable values.
 

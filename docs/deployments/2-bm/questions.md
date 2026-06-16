@@ -58,11 +58,22 @@ CORA describes the sample hexapod's six degrees of freedom as named axes: three 
 
 Short answer: not yet, and that is expected.
 
-CORA can describe the hexapod's six axes and how they connect, and it checks that those connections are valid. What it cannot do yet is send a "move the sample to this position" command. Moving a hexapod means turning one target pose into six coordinated leg movements, and that math (the kinematics solver) runs inside the hexapod's own Aerotech controller, reached through the `2bmHXP:` EPICS interface. CORA just needs a live connection to that controller so it can hand over a pose and read back where the stage ended up. That connection comes with a running beamline, so it is deferred until the system is stood up. Until then the six axes are described and the wiring is validated, but no motion command will execute. The channel map, the solver location, and how to talk to it are all now known from the beamline components page; the controller's firmware version comes in with the controller serial/firmware items (`DRIVE-2`). Only one hexapod question is left below.
+CORA can describe the hexapod's six axes and how they connect, and it checks that those connections are valid. What it cannot do yet is send a "move the sample to this position" command. Moving a hexapod means turning one target pose into six coordinated leg movements, and that math (the kinematics solver) runs inside the hexapod's own Aerotech controller, reached through the `2bmHXP:` EPICS interface. CORA just needs a live connection to that controller so it can hand over a pose and read back where the stage ended up. That connection comes with a running beamline, so it is deferred until the system is stood up. Until then the six axes are described and the wiring is validated, but no motion command will execute. The channel map, the solver location, and how to talk to it are all now known from the beamline components page; the controller's firmware version comes in with the controller serial/firmware items (`DRIVE-2`). The rotation-name confirmation is below, followed by the reboot records the [`hexapod_reboot` recipe](recipes.md) needs.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
 | HXP-2 | `Nice-to-have` | Do our rotation names match yours? We used Roll = about X, Pitch = about Y, Yaw = about Z (matching the vendor datasheet's A/B/C envelope). | A = Roll, B = Pitch, C = Yaw | yes | [Hexapod DoF model](assets.md#hexapod-dof-model) |
+
+### Rebooting a stuck hexapod
+
+When the hexapod controller locks up, the recovery is a power-cycle ceremony: stop the IOC, power-cycle the controller's PDU outlet, restart the IOC, then confirm the axes re-enable. CORA has modelled it as the [`hexapod_reboot` recipe](recipes.md). The records below come from the external `2bmb-bin/hexapod_reboot.py` script (not in CORA, and not in the beamline descriptor or the published 2-BM procedures), so they need confirming before the recipe can run. CORA's assumed values are the script's; we just need a yes/no or a correction on each.
+
+| ID | Priority | Question | CORA assumes | Already done? | Resolves |
+| --- | --- | --- | --- | --- | --- |
+| HXP-3 | `Blocks-go-live` | The exact EPICS PVs the reboot uses to (a) read whether all hexapod axes are enabled and (b) force-enable them. Are these current? | `2bmHXP:HexapodAllEnabled.VAL` (read), `2bmHXP:EnableWork.PROC` (force-enable) | not yet | [Recipes](recipes.md) |
+| HXP-4 | `Blocks-go-live` | How the hexapod IOC is stopped and restarted: which host runs it, and the exact stop / start commands. | scripts `hexapod_IOC_stop.sh` / `hexapod_IOC.sh` on host `arcturus` | not yet | [Recipes](recipes.md) |
+| HXP-5 | `Blocks-go-live` | Which PDU powers the hexapod controller, how CORA talks to it, and which outlet is the hexapod. | NetBooter-style PDU over HTTP (`/cmd.cgi` to switch, `/status.xml` to read), outlet 4 | not yet | [Recipes](recipes.md) |
+| HXP-6 | `Nice-to-have` | The reboot timings: how long to wait after powering the controller off, after powering it on, and how long to poll for "all enabled" before giving up. | 10 s off-settle, 10 s boot-settle, 180 s enable poll at 2 s intervals | not yet | [Recipes](recipes.md) |
 
 ## Sample stages
 

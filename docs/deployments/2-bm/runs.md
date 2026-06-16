@@ -2,7 +2,7 @@
 
 *Run BC Runs registered at 2-BM.*
 
-A Run is the operator-started execution of a Plan that produces a [Dataset](datasets.md), typically against a [Subject](subjects.md); the dark- and flat-field baselines are subject-less calibration Runs captured ahead of a scan (not enumerated individually below). Runs are composed by [Campaigns](campaigns.md). The companion lens is a [Procedure](procedures.md), the operational task record that produces no Dataset (alignment, homing, recovery, energy change): an operation that yields a Dataset is a Run, one that only logs a task is a Procedure. See [Model](../../architecture/model.md) for the aggregate shape.
+A Run is the operator-started execution of a Plan: the measurement batch (ISA-88 lens), normally against a [Subject](subjects.md) and composed by [Campaigns](campaigns.md). The dark- and flat-field baselines are subject-less calibration Runs captured ahead of a scan (not enumerated individually below). Its companion is the [Procedure](procedures.md), the operational-task lens (ISA-106): alignment, homing, recovery, energy change. The split is the lens, not the data product: both can produce a [Dataset](datasets.md) (a Dataset cites either a producing Run or a producing Procedure). See [Model](../../architecture/model.md) for the aggregate shape.
 
 | Run | Subject | Campaign |
 | --- | --- | --- |
