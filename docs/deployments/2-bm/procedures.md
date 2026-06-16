@@ -17,10 +17,13 @@ Each Procedure binds a Method + Practice + Plan to a set of target Assets. See [
 | `pitch_alignment` | `Rotary`, `Hexapod_Pitch` + image chain |
 | `sensitivity_characterization` | `Hexapod_Roll`, `Hexapod_Pitch` |
 | `hexapod_reboot` | `Hexapod` |
+| `set_energy` | the energy-tracking facets (`Monochromator` Bragg arms + M2 offset, `SampleSlit` vertical pair) |
 
 Image chain = `Camera`, `Scintillator`.
 
 When `center_alignment` converges, the operator records the result as a `rotation_center` [Calibration](../../architecture/modules/calibration/index.md) on the rotary stage, appended with a `MeasuredSource` citing the Procedure. The alignment is the act; the Calibration stores the value.
+
+`set_energy` is the coordinating energy-change operation: given a target energy (a free keV value), it drives the energy-tracking optic axes together to their per-energy positions, reading each axis's [energy curve](assets.md#energy-tracking-optic-axes). It realizes the `cora.capability.energy_change` Capability (a Method declares the free-keV parameter; the Procedure executes the coordinated move) and satisfies the `energy_configured` precondition stub above. Because the curves interpolate, an operator can request an energy between the configured saved points, not just the menu. The operator's `EnergyChange` [Decision](decisions.md) is the forward-looking justification; this Procedure is the motion record. Runtime motion is deferred (the per-axis curve evaluation is not yet wired) and the curves are provisional pending the real saved positions, so today the Procedure records the coordinated move rather than executing it.
 
 ## From the 2-BM procedures source
 
