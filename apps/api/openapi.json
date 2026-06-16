@@ -1876,7 +1876,8 @@
           "rotation_center",
           "detector_pixel_size",
           "magnification",
-          "effective_thickness"
+          "effective_thickness",
+          "energy_position_curve"
         ],
         "title": "CalibrationQuantity",
         "type": "string"

@@ -148,6 +148,38 @@ def test_effective_thickness_value_shape() -> None:
 
 
 @pytest.mark.unit
+def test_energy_position_curve_operating_point_shape() -> None:
+    """The curve quantity identifies WHICH curve (the axis), and carries
+    NO `energy` operating-point key: energy is the value-side independent
+    variable here, unlike the scalar quantities that label a point by
+    energy."""
+    schema = get_operating_point_schema(CalibrationQuantity.ENERGY_POSITION_CURVE)
+    properties: dict[str, Any] = schema.get("properties", {})
+    assert set(properties.keys()) == {"axis_designation", "beam_mode"}
+    assert "axis_designation" in schema["required"]
+    assert "energy" not in properties
+
+
+@pytest.mark.unit
+def test_energy_position_curve_value_shape() -> None:
+    """The value carries the whole (energy, position) curve in one
+    revision; each point requires energy + position."""
+    schema = get_value_schema(CalibrationQuantity.ENERGY_POSITION_CURVE)
+    properties: dict[str, Any] = schema.get("properties", {})
+    assert "points" in properties
+    assert "points" in schema["required"]
+    item_schema: dict[str, Any] = properties["points"]["items"]
+    assert set(item_schema["required"]) == {"energy", "position"}
+    # The value-side energy axis reuses the operating-point energy bounds +
+    # unit (1-100 keV, multipleOf 0.001) so the vocabulary stays uniform.
+    energy: dict[str, Any] = item_schema["properties"]["energy"]
+    assert energy["minimum"] == 1
+    assert energy["maximum"] == 100
+    assert energy["multipleOf"] == 0.001
+    assert energy["unit"] == {"system": "udunits", "code": "keV"}
+
+
+@pytest.mark.unit
 def test_energy_bounds_consistent_across_quantities() -> None:
     """Every quantity that carries an `energy` operating_point key
     must declare the same bounds (1-100 keV, multipleOf 0.001) and the
