@@ -43,7 +43,7 @@ call site.
 """
 
 from collections.abc import Sequence
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 from cora.infrastructure.kernel import Kernel
@@ -73,7 +73,16 @@ from cora.operation.features.conduct_procedure.command import (
 )
 from cora.operation.ports.recipe_expander import RecipeExpander
 from cora.recipe.aggregates.capability import CapabilityStatus, load_capability
+from cora.recipe.aggregates.plan import (
+    PlanNotFoundError,
+    constituents_from_wires,
+    load_plan,
+)
 from cora.recipe.aggregates.recipe import load_recipe_at_version
+from cora.run.aggregates.run import RunNotFoundError, load_run
+
+if TYPE_CHECKING:
+    from cora.operation._pseudoaxis_expander import ConstituentResolver
 
 _COMMAND_NAME = "ConductProcedure"
 
@@ -164,6 +173,36 @@ def bind(
         else:
             steps = tuple(command.steps)
 
+        # A Phase-of-Run Procedure resolves a pseudoaxis's constituent
+        # motors from its Run's Plan wires: parent_run_id -> Run.plan_id
+        # -> Plan.wires (the same load chain start_procedure walks for
+        # its Supply gate). A missing Run / Plan in that chain is
+        # corruption, so raise rather than silently skip. Standalone /
+        # recipe-driven Procedures (no parent_run_id) pass no resolver, so
+        # any pseudoaxis SetpointStep hits the wiring-deferred default and
+        # is rejected with PartitionRuleNotFoundError.
+        #
+        # This composes with recipe-driven expansion rather than
+        # conflicting: the recipe block above produces the STEPS; the wires
+        # resolve each pseudoaxis step's CONSTITUENTS. A Procedure that is
+        # both recipe-driven and a Run phase gets recipe steps with
+        # wire-resolved constituents. (Watch item: this loads Run + Plan
+        # once per conduct; if a high-frequency re-conduct loop makes that
+        # latency matter, cache per command-lifetime.)
+        constituent_resolver: ConstituentResolver | None = None
+        if procedure.parent_run_id is not None:
+            parent_run = await load_run(deps.event_store, procedure.parent_run_id)
+            if parent_run is None:
+                raise RunNotFoundError(procedure.parent_run_id)
+            plan = await load_plan(deps.event_store, parent_run.plan_id)
+            if plan is None:
+                raise PlanNotFoundError(parent_run.plan_id)
+
+            def _resolve_constituents(asset_id: UUID) -> tuple[UUID, ...]:
+                return constituents_from_wires(plan, asset_id)
+
+            constituent_resolver = _resolve_constituents
+
         # Pre-Conductor PseudoAxis expansion: rewrite any virtual-axis
         # SetpointStep into N sequential constituent SetpointSteps so
         # the Conductor's existing dispatch loop walks the constituents
@@ -175,6 +214,7 @@ def bind(
             steps,
             event_store=deps.event_store,
             correlation_id=correlation_id,
+            constituent_resolver=constituent_resolver,
         )
 
         result = await conductor.conduct(

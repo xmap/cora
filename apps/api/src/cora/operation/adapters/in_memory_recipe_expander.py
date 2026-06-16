@@ -51,11 +51,13 @@ class InMemoryRecipeExpander:
     overridden in production; tests pass a different version when they
     need to assert provenance carries the expander identity.
 
-    `constituent_resolver` defaults to the wiring-deferred resolver in
-    `_pseudoaxis_expander`; the Plan.wiring-backed resolver lands in a
-    follow-up slice. The runtime evaluator self-gates on
-    `Asset.partition_rule is not None`, so no Family-id wiring is
-    required on this adapter.
+    `constituent_resolver` defaults to None (the wiring-deferred resolver
+    in `_pseudoaxis_expander`, which raises for any PseudoAxis step). The
+    Plan.wiring-backed resolver is supplied per-call by the
+    conduct_procedure handler (loaded from Run.plan_id -> Plan.wires) via
+    the `expand_pseudoaxis` `constituent_resolver` kwarg, which takes
+    precedence over this field; the field stays for tests that prefer to
+    configure a resolver on the adapter (test_pseudoaxis_roundtrip).
     """
 
     version: str = _DEFAULT_VERSION
@@ -74,21 +76,26 @@ class InMemoryRecipeExpander:
         *,
         event_store: EventStore,
         correlation_id: UUID,
+        constituent_resolver: ConstituentResolver | None = None,
     ) -> tuple[Step, ...]:
-        """Delegate to `expand_pseudoaxis_steps` with the configured resolver.
+        """Delegate to `expand_pseudoaxis_steps` with a resolver.
 
-        When no resolver is configured the expander's wiring-deferred
-        default is used, which raises `PartitionRuleNotFoundError` so
-        every PseudoAxis SetpointStep encountered is rejected with the
-        right typed error until the Plan.wiring-backed resolver lands.
+        A per-call `constituent_resolver` (the conduct_procedure handler's
+        Plan.wiring-backed resolver) takes precedence over any resolver
+        configured on the adapter. When neither is present the wiring-
+        deferred default is used, which raises `PartitionRuleNotFoundError`
+        so every PseudoAxis SetpointStep encountered is rejected with the
+        right typed error (standalone / no-Run Procedures).
         """
-        if self.constituent_resolver is None:
+        resolver: Callable[[UUID], tuple[UUID, ...]] | None = (
+            constituent_resolver or self.constituent_resolver
+        )
+        if resolver is None:
             return await expand_pseudoaxis_steps(
                 steps,
                 event_store=event_store,
                 correlation_id=correlation_id,
             )
-        resolver: Callable[[UUID], tuple[UUID, ...]] = self.constituent_resolver
         return await expand_pseudoaxis_steps(
             steps,
             event_store=event_store,

@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from cora.infrastructure.ports import EventStore
+    from cora.operation._pseudoaxis_expander import ConstituentResolver
     from cora.operation.conductor import Step
     from cora.recipe.aggregates.recipe import RecipeStep
 
@@ -78,6 +79,7 @@ class RecipeExpander(Protocol):
         *,
         event_store: EventStore,
         correlation_id: UUID,
+        constituent_resolver: ConstituentResolver | None = None,
     ) -> tuple[Step, ...]:
         """Rewrite PseudoAxis SetpointSteps into N constituent SetpointSteps.
 
@@ -86,6 +88,13 @@ class RecipeExpander(Protocol):
         the resolved tuple of constituent setpoints. ActionStep and
         CheckStep pass through unchanged. Non-PseudoAxis SetpointSteps
         pass through unchanged.
+
+        `constituent_resolver`, when supplied, resolves a pseudoaxis's
+        constituent Asset ids for THIS call (the conduct_procedure handler
+        builds it from the Run's Plan wires). It takes precedence over any
+        resolver configured on the adapter; when neither is supplied the
+        wiring-deferred default raises `PartitionRuleNotFoundError` for
+        every PseudoAxis SetpointStep.
 
         Impure by design: the underlying evaluator loads Assets via
         `event_store`. This is the seam that keeps the deterministic
