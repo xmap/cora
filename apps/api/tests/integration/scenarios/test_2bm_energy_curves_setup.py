@@ -38,10 +38,15 @@ revision, carrying a keV -> position LookupTable. invertible=True is honest
 (the underlying Bragg geometry is monotonic in energy); confirm against the
 real saved points.
 
-It does NOT execute motion (eval_lookup_table is deferred), and it does NOT
-model the coordinating "set energy" operation that drives all the axes
-together as one discrete move - that heterogeneous fan-out is a later step.
-This is an intentional-completeness shape model of the per-device mapping.
+It does NOT drive motion: it sets up the per-axis curves but does not conduct
+them. The interpolation kernel (eval_lookup_table) is now wired and proven in
+test_pseudoaxis_roundtrip.py, but a beamline move additionally needs the real
+saved positions (these curves are PROVISIONAL), the per-facet constituent
+wiring, and live EPICS dispatch. This scenario also does NOT model the
+coordinating "set energy" operation that drives all the axes together as one
+discrete move - that heterogeneous fan-out is the set_energy Procedure
+(test_2bm_set_energy.py). This is an intentional-completeness shape model of
+the per-device mapping.
 
 ## Asset stack
 
@@ -282,7 +287,12 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
                     calibration_id=cal_id,
                     calibration_revision_id=rev_id,
                     interpolation_kind=InterpolationKind.LINEAR,
-                    extrapolation_kind=ExtrapolationKind.CLAMP,
+                    # ERROR, not CLAMP: an energy past the lowest / highest
+                    # calibrated point is refused, not silently driven to the
+                    # endpoint position. This is CORA's conservative default,
+                    # not a staff-confirmed policy; ENERGY-4 is the open
+                    # question on what out-of-range should do.
+                    extrapolation_kind=ExtrapolationKind.ERROR,
                     invertible=True,
                     unit_in="keV",
                     unit_out=unit_out,
@@ -312,6 +322,7 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
         assert rule["unit_in"] == "keV"
         assert rule["unit_out"] == unit_out
         assert rule["invertible"] is True
+        assert rule["extrapolation_kind"] == "Error"
 
         cal_events, _ = await deps.event_store.load("Calibration", cal_ids[facet_name])
         assert [e.event_type for e in cal_events] == [

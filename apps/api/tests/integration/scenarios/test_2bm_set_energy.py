@@ -22,13 +22,20 @@ the (PROVISIONAL) positions the per-energy curves yield there by interpolation.
 
 What this proves (and what it does not): it proves the coordinating shape
 holds together (a Capability + Method + a Procedure recording the multi-axis
-move across heterogeneous axes, deg arms + mm slits/offset). It does NOT
-execute motion: the partition-rule runtime (`eval_lookup_table`) is deferred
-system-wide, so the per-energy positions are recorded, not computed live. The
-per-axis energy curves themselves are established by the energy-curve scenario
-(test_2bm_energy_curves_setup.py); here each facet is a bare PseudoAxis the
-operation drives. The operator's EnergyChange Decision (test_2bm_energy_change.py)
-is the forward-looking justification; this Procedure is the motion artifact.
+move across heterogeneous axes, deg arms + mm slits/offset). This scenario
+RECORDS the coordinated move as logbook activities (the motion artifact); it
+does not conduct the facets through the Conductor. The pure interpolation
+kernel that turns an energy into a position is now wired and proven end-to-end
+in test_pseudoaxis_roundtrip.py, so the positions would be computed live on a
+real conduct. Three prerequisites still stand between here and a real beamline
+move: (1) real saved positions (the curves seeded today are PROVISIONAL
+placeholders, hence the illustrative setpoints recorded below), (2) per-facet
+constituent wiring that names each physical motor, and (3) live EPICS dispatch.
+The per-axis energy curves themselves are established by
+the energy-curve scenario (test_2bm_energy_curves_setup.py); here each facet
+is a bare PseudoAxis the operation drives. The operator's EnergyChange Decision
+(test_2bm_energy_change.py) is the forward-looking justification; this
+Procedure is the motion artifact.
 
 ## Asset stack
 
@@ -129,7 +136,8 @@ _DEVICES = (
 _TARGET_ENERGY_KEV = 22.0
 
 # The five energy-driven facets + the PROVISIONAL per-axis setpoints the
-# per-energy curves yield at 22.0 keV by interpolation (eval deferred; illustrative).
+# per-energy curves would yield at 22.0 keV by interpolation (illustrative
+# placeholders recorded here; the live kernel computes them on a real conduct).
 # (facet_name, parent_id, units, setpoint)
 _AXES: tuple[tuple[str, UUID, str, float], ...] = (
     ("Monochromator_BraggArmUpstream", _MONOCHROMATOR_ID, "deg", 0.76),
