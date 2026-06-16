@@ -6,6 +6,8 @@ A Procedure is the record of one operational task. It acts on a set of target As
 
 The line between a Run and a Procedure is the data product: an operation that yields a scientific [Dataset](datasets.md) is a [Run](runs.md), one that only performs and logs a task is a Procedure. The dark- and flat-field baselines therefore run as subject-less calibration [Runs](runs.md), not Procedures; the tasks below are the no-data operations: homing, alignment, characterization, recovery, and the coordinated energy change.
 
+An operation can also be authored as a [Recipe](recipes.md): a reusable, parameterized step sequence (setpoint / check / action) that expands into a Procedure once an operator binds its tunable values.
+
 | Procedure | Target Assets |
 | --- | --- |
 | `motor_homing` | `Rotary`, `SampleTop_X` |

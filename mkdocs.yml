@@ -97,6 +97,7 @@ nav:
         - Sample tower: deployments/2-bm/equipment/sample_tower.md
       - Getting ready:
         - Procedures: deployments/2-bm/procedures.md
+        - Recipes: deployments/2-bm/recipes.md
         - Supplies: deployments/2-bm/supplies.md
         - Enclosures: deployments/2-bm/enclosures.md
       - Running a measurement:
