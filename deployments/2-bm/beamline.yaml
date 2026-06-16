@@ -451,7 +451,6 @@ controls:
       pv: "2bmbMZ1:SG:"
       path: "PSO -> MUX2-1 -> GateDly1 -> camera Line2"
       replaceable: true
-      new: true
       confirm: true
   software_iocs_not_modeled:
     # Software processes, not hardware. They belong to the Plan/Method wiring layer

@@ -40,6 +40,7 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `Hexapod_Pitch` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation B about Y) | `2-BM-B` |
 | `Hexapod_Yaw` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation C about Z) | `2-BM-B` |
 | `FocusDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `Timing` | `Device` | `TimingController` | `2-BM` (softGlueZynq trigger box; generates the camera trigger train via PSO, no `controller_id`) | `2-BM-B` |
 | `Housing` | `Component` | `Housing` | `2-BM` (installed into a Mount; parents the Microscope constituents) | `2-BM-B` |
 | `Turret` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; sliding ball-screw objective selector) | `2-BM-B` |
 | `Objective_10x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
@@ -200,7 +201,7 @@ Identity + configuration + connectivity of a separately-modelled drive-electroni
 
 ### `TimingController`
 
-Identity + configuration + connectivity of a separately-modelled timing-signal box, the second `<Domain>Controller` Family after `MotionController`. Same intentional-design posture: every field exists because reproducibility, federation, or operational reasoning needs it. The driven device (the camera) carries the `Triggerable` affordance; the timing box carries `Pulsing` (via the `Controller` Role) because it is the active generator of the trigger pulse train. Draft schema pending 2-BM operator confirmation on the softGlueZynq physical box.
+Identity + configuration + connectivity of a separately-modelled timing-signal box, the second `<Domain>Controller` Family after `MotionController`. Same intentional-design posture: every field exists because reproducibility, federation, or operational reasoning needs it. The driven device (the camera) carries the `Triggerable` affordance; the timing box carries `Pulsing` (via the `Controller` Role) because it is the active generator of the trigger pulse train. This schema backs the registered `Timing` Asset ([Settings](#timing)); the per-box values land via `update_asset_settings` once 2-BM staff confirms the physical softGlueZynq box (`TIME-1`).
 
 | Setting | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -320,6 +321,21 @@ Placeholder values below follow the same intentional-design posture as `RotaryDr
 | `protocol` | `Aerotech_Native` |
 
 `ip_address` is omitted at v1 pending operator confirmation; the field is optional on the schema.
+
+### `Timing`
+
+The softGlueZynq FPGA timing box (`2bmbMZ1:SG:`) that generates the camera trigger pulse train (`PSO -> MUX2-1 -> GateDly1 -> camera Line2`). First `TimingController` Asset shipped at 2-BM; it carries the `Pulsing` affordance via the `Controller` Role and, unlike a `MotionController`, is itself the actor (the pulse generator), not a driven device, so it carries no `controller_id`. Substrate ("FPGA") is not a Family axis: the box is a `TimingController` whose identity and gateware (bitstream) version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes), replacing the earlier `TriggerFPGA` placeholder.
+
+Placeholder values below follow the same intentional-design posture as the `MotionController` boxes: the substrate for reproducibility provenance ships now, and the operator-confirmed identity and gateware version land via `update_asset_settings` once 2-BM staff verifies the physical box (`TIME-1`). For an FPGA box the gateware/bitstream version is the reproducibility-critical field: the trigger logic itself can change between Runs, so a Run cannot honestly answer "did the timing change between Run X and Run Y" without it.
+
+| Setting | Value |
+| --- | --- |
+| `serial_number` | `unknown-pending-confirmation` (TIME-1) |
+| `firmware_version` | `unknown-pending-confirmation` (TIME-1) |
+| `output_channel_count` | `unknown-pending-confirmation` (TIME-1) |
+| `protocol` | `EPICS` |
+
+`ip_address` is omitted at v1 pending operator confirmation; the field is optional on the schema. The detailed trigger routing (the softGlue logic-block wiring) is per-Run / per-Method configuration, not Asset settings.
 
 ### `Rotary`
 
@@ -496,7 +512,6 @@ Three `Table`-Family support tables also sit here pending registration: `SampleT
 | Asset | Family |
 | --- | --- |
 | `BeamPositionMonitor` | `Diagnostic` |
-| `Timing` | `TimingController` |
 | `Camera_HighRes` | `Camera` (second FLIR Oryx, 31 MP, `2bmSP2:`) |
 | `Camera_Selector` | `LinearStage` (Schunk LPTM 30, `2bmb:m5`) |
 | `SampleTable` | `Table` |
@@ -504,8 +519,6 @@ Three `Table`-Family support tables also sit here pending registration: `SampleT
 | `MirrorTable` | `Table` |
 | Broader sample-stage motors | `LinearStage` + tilt motors |
 | IOC-hosted EPICS Devices | |
-
-`TimingController` here is the catalog-aligned Family, replacing the earlier `TriggerFPGA` placeholder. Substrate ("FPGA") is not a Family axis: the softGlueZynq is a `TimingController` whose identity + gateware version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
 
 ## Decommissioned (provenance only)
 

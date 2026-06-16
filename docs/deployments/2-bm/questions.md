@@ -91,7 +91,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| TIME-1 | `Nice-to-have` | The softGlueZynq's gateware (bitstream) version? The box itself is identified on the components page (a Xilinx Zynq SoC on a MicroZed carrier, EPICS prefix `2bmbMZ1:SG:`); only the bitstream version is missing. Optional for now. | identity known; bitstream version not recorded | not yet | [Pending](assets.md#pending) |
+| TIME-1 | `Nice-to-have` | The softGlueZynq's gateware (bitstream) version? The box itself is identified on the components page (a Xilinx Zynq SoC on a MicroZed carrier, EPICS prefix `2bmbMZ1:SG:`); only the bitstream version is missing. Optional for now. | registered as a `TimingController` Asset; bitstream version still a placeholder | yes | [Settings](assets.md#settings) |
 
 ## Beam path and front end
 
