@@ -46,13 +46,11 @@ enclosures:
   - name: 2-BM-A
     role: optics-hutch
     facility_code: aps
-    permit_signal:
-      confirm: "per-hutch PSS search-and-secure permit PV; ask 2-BM staff"
+    permit_signal: "S02BM-PSS:StaA:SecureM"   # 1 = searched/secured (PSS-1, post-migration)
   - name: 2-BM-B
     role: experiment-hutch
     facility_code: aps
-    permit_signal:
-      confirm: "per-hutch PSS search-and-secure permit PV; ask 2-BM staff"
+    permit_signal: "S02BM-PSS:StaB:SecureM"   # 1 = searched/secured (PSS-1, post-migration)
 
 # ===========================================================================
 # The beam path: source -> detector
