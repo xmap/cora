@@ -76,6 +76,7 @@ from cora.recipe.aggregates.plan.state import (
     RoleBinding,
     Wire,
 )
+from cora.recipe.aggregates.plan.wires_reading import constituents_from_wires
 from cora.recipe.aggregates.plan.wires_validation import (
     validate_pseudoaxis_fanout,
     validate_wire_endpoints,
@@ -135,6 +136,7 @@ __all__ = [
     "PlanWireTargetAlreadyConnectedError",
     "RoleBinding",
     "Wire",
+    "constituents_from_wires",
     "event_type_name",
     "evolve",
     "fold",
