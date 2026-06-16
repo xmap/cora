@@ -166,8 +166,8 @@
 | src/cora/calibration/aggregates/calibration/\_\_init\_\_.py                              |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/aggregates/calibration/events.py                                    |       78 |        3 |       22 |        1 |     96.0% |   454-470 |
 | src/cora/calibration/aggregates/calibration/evolver.py                                   |       23 |        3 |        6 |        1 |     86.2% |   121-123 |
-| src/cora/calibration/aggregates/calibration/read.py                                      |       23 |        5 |        2 |        0 |     72.0% |   116-120 |
-| src/cora/calibration/aggregates/calibration/state.py                                     |      112 |        1 |       10 |        2 |     97.5% |402, 512-\>515 |
+| src/cora/calibration/aggregates/calibration/read.py                                      |       23 |        5 |        2 |        0 |     72.0% |   125-129 |
+| src/cora/calibration/aggregates/calibration/state.py                                     |      112 |        1 |       10 |        2 |     97.5% |403, 513-\>516 |
 | src/cora/calibration/errors.py                                                           |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/features/\_\_init\_\_.py                                            |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/features/append\_calibration\_revision/\_\_init\_\_.py              |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -200,10 +200,11 @@
 | src/cora/calibration/features/publish\_revision/tool.py                                  |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/projections/\_\_init\_\_.py                                         |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/projections/calibration.py                                          |       32 |        6 |       10 |        2 |     71.4% |91-97, 155 |
-| src/cora/calibration/quantities/\_\_init\_\_.py                                          |       15 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/calibration/quantities/\_\_init\_\_.py                                          |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/detector\_pixel\_size.py                                 |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/effective\_thickness.py                                  |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/energy\_position\_curve.py                               |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/calibration/quantities/index\_position\_table.py                                |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/magnification.py                                         |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/rotation\_center.py                                      |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/routes.py                                                           |       36 |        0 |        8 |        0 |    100.0% |           |
@@ -2260,7 +2261,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **44890** |  **984** | **6176** |  **249** | **97.3%** |           |
+| **TOTAL**                                                                                | **44896** |  **984** | **6176** |  **249** | **97.3%** |           |
 
 
 ## Setup coverage badge

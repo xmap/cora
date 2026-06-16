@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1164eecb97aa37cc__pseudoaxis_expander_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-16 16:32 +0000
+            created at 2026-06-16 16:54 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -99,8 +99,8 @@
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">per the non-determinism principle: the evaluator reloads the Asset on</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">every invocation.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">For a LookupTable rule the evaluator loads the pinned calibration curve</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">itself (via `load_pinned_curve`, keyed by the rule's `calibration_id` +</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">For a LookupTable rule the evaluator loads the pinned calibration lookup</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">itself (via `load_pinned_lookup`, keyed by the rule's `calibration_id` +</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">`calibration_revision_id`) and passes the extracted points to the pure</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">kernel. A dangling pin (calibration or revision absent) raises</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">`InvalidPartitionRuleError(sub_code="calibration_revision_retracted")`.</span>&nbsp;</span><span class="r"></span></p>
@@ -117,7 +117,7 @@
     <p class="run"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="key">from</span> <span class="nam">dataclasses</span> <span class="key">import</span> <span class="nam">dataclass</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="key">from</span> <span class="nam">typing</span> <span class="key">import</span> <span class="nam">TYPE_CHECKING</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">calibration</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">calibration</span><span class="op">.</span><span class="nam">read</span> <span class="key">import</span> <span class="nam">load_pinned_curve</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">calibration</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">calibration</span><span class="op">.</span><span class="nam">read</span> <span class="key">import</span> <span class="nam">load_pinned_lookup</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">equipment</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">_partition_rule</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="nam">Affine</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="nam">Aggregation</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -264,10 +264,10 @@
     <p class="exc show_exc"><span class="n"><a id="t180" href="#t180">180</a></span><span class="t">                        <span class="fst">f"</span><span class="fst">(got </span><span class="op">{</span><span class="nam">len</span><span class="op">(</span><span class="nam">constituent_asset_ids</span><span class="op">)</span><span class="op">}</span><span class="fst">)</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t181" href="#t181">181</a></span><span class="t">                    <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t182" href="#t182">182</a></span><span class="t">                <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t183" href="#t183">183</a></span><span class="t">            <span class="nam">curve</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">load_pinned_curve</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t183" href="#t183">183</a></span><span class="t">            <span class="nam">points</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">load_pinned_lookup</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t184" href="#t184">184</a></span><span class="t">                <span class="nam">event_store</span><span class="op">,</span> <span class="nam">rule</span><span class="op">.</span><span class="nam">calibration_id</span><span class="op">,</span> <span class="nam">rule</span><span class="op">.</span><span class="nam">calibration_revision_id</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t185" href="#t185">185</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t186" href="#t186">186</a></span><span class="t">            <span class="key">if</span> <span class="nam">curve</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t186" href="#t186">186</a></span><span class="t">            <span class="key">if</span> <span class="nam">points</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t187" href="#t187">187</a></span><span class="t">                <span class="key">raise</span> <span class="nam">InvalidPartitionRuleError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t188" href="#t188">188</a></span><span class="t">                    <span class="nam">sub_code</span><span class="op">=</span><span class="str">"calibration_revision_retracted"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t189" href="#t189">189</a></span><span class="t">                    <span class="nam">reason</span><span class="op">=</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -280,7 +280,7 @@
     <p class="exc show_exc"><span class="n"><a id="t196" href="#t196">196</a></span><span class="t">                <span class="nam">rule</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t197" href="#t197">197</a></span><span class="t">                <span class="nam">commanded_value</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t198" href="#t198">198</a></span><span class="t">                <span class="nam">asset_id</span><span class="op">=</span><span class="nam">asset_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc show_exc"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t">                <span class="nam">curve</span><span class="op">=</span><span class="nam">curve</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t">                <span class="nam">points</span><span class="op">=</span><span class="nam">points</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t">            <span class="nam">constituent_values</span> <span class="op">=</span> <span class="op">(</span><span class="nam">forward</span><span class="op">,</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t">        <span class="key">case</span> <span class="nam">CompositePartition</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -343,7 +343,7 @@
             <a class="nav" href="z_1164eecb97aa37cc__pseudoaxis_expander_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-16 16:32 +0000
+            created at 2026-06-16 16:54 +0000
         </p>
     </div>
 </footer>
