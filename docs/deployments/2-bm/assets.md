@@ -21,9 +21,14 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `FrontEndDrive` | `Device` | `MotionController` | `2-BM` (a-station OMS VME58; drives the front-end optics band) | `2-BM-A` |
 | `Mirror` | `Device` | `Mirror` | `2-BM` (driven by `FrontEndDrive`) | `2-BM-A` |
 | `Monochromator` | `Device` | `Monochromator` | `2-BM` (driven by `FrontEndDrive`) | `2-BM-A` |
+| `Monochromator_BraggArmUpstream` | `Device` | `PseudoAxis` | `Monochromator` (energy-driven; LookupTable converts energy in keV to the upstream Bragg-arm angle in deg) | `2-BM-A` |
+| `Monochromator_BraggArmDownstream` | `Device` | `PseudoAxis` | `Monochromator` (energy-driven; downstream Bragg-arm angle in deg) | `2-BM-A` |
+| `Monochromator_M2Y` | `Device` | `PseudoAxis` | `Monochromator` (energy-driven; M2 vertical beam-offset compensator in mm) | `2-BM-A` |
 | `ConditioningSlit` | `Device` | `Slit` | `2-BM` (white-beam slits; driven by `FrontEndDrive`) | `2-BM-A` |
 | `Filter` | `Device` | `Filter` | `2-BM` (foil changer; driven by `FrontEndDrive`) | `2-BM-A` |
 | `SampleSlit` | `Device` | `Slit` | `2-BM` (B-station slits; driven by `FrontEndDrive`) | `2-BM-B` |
+| `SampleSlit_VerticalTop` | `Device` | `PseudoAxis` | `SampleSlit` (energy-driven; top blade tracks the per-energy beam position in mm) | `2-BM-B` |
+| `SampleSlit_VerticalBottom` | `Device` | `PseudoAxis` | `SampleSlit` (energy-driven; bottom blade tracks the per-energy beam position in mm) | `2-BM-B` |
 | `SampleTop_X` | `Device` | `LinearStage` | `2-BM` (driven by `SampleStageDrive`) | `2-BM-B` |
 | `SampleTop_Z` | `Device` | `LinearStage` | `2-BM` (driven by `SampleStageDrive`) | `2-BM-B` |
 | `HexapodDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
@@ -104,6 +109,18 @@ Each DoF reads its feedback from the physical `Hexapod` and exposes one operator
 Six wires, one per DoF (`Hexapod.<axis>_feedback_out -> Hexapod_<Axis>.constituent_in`), carry the feedback each PseudoAxis needs to reconstruct its readback. `validate_pseudoaxis_fanout` accepts each: exactly one OUTPUT port on the facet, one incoming wire, homogeneous `signal_type`, and `SolverReference` is exempt from the arity check.
 
 These ports and wires are modelled and validate at Plan-bind, but the runtime that would decompose a virtual setpoint into hexapod motion (`eval_solver_reference`) is still deferred and raises `NotImplementedError`, so the wired Plan is not yet runtime-executable. The executable model lives in `apps/api/tests/integration/scenarios/test_2bm_hexapod_pose_wiring.py`.
+
+## Energy-tracking optic axes
+
+Setting the beam energy at 2-BM is a discrete coordinated move, not one knob. The staff energy-change IOC stores per-energy positions for the whole double-multilayer monochromator (the `store_0` saved table) and drives roughly fifteen motors together (some are discrete index moves, not continuous curves) to a configured set of energies (Mono 13.374, 13.574, 18.0, 20.0, 25.0, 25.584 keV), per the staff-authored [docs2bm components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html). The motors that actually move with energy are the DMM Bragg arms (`dmm_us_arm` / `dmm_ds_arm`) and the M2 vertical offset compensator (`dmm_m2_y`), plus the B-station sample-slit vertical pair (`b_slit_top` / `b_slit_bot`) tracking the resulting beam walk. Two things that look like energy axes are not: `crystal2_z` (M2 Z, `2bma:m8`) is a setup translation the IOC does not drive, and the mirror is held constant (its deflection geometry does not change with energy). Neither carries an energy curve.
+
+CORA models each per-axis relationship as a continuous curve. The underlying physics is continuous (Bragg geometry), so the beamline's discrete saved list is its operational sampling, not a limit: CORA interpolates the saved points and can answer for an off-list energy too. The carrier is a `PseudoAxis` sub-module parented to the physical optic (Device-in-Device, like the hexapod DoFs), carrying a `LookupTable` partition rule that converts energy (`unit_in = "keV"`) to the axis position (`unit_out` is `deg` for the Bragg arms, `mm` for the offset compensator and the slit blades). The rule pins a `Calibration` revision by id rather than inlining the table, so the conversion is reproducible and survives recalibration.
+
+The Calibration uses the `energy_position_curve` quantity, the catalog's first curve-valued (relationship) quantity. The scalar quantities (`magnification`, `rotation_center`) each carry one measured number and treat `energy` as an operating-point condition (the value you read at the energy you are at); here the whole curve across energy lives in ONE revision (a `points` array), because the curve is evaluated to reach any energy. Energy is the value-side independent variable; the operating-point only names which curve (`axis_designation` is the staff handle, `beam_mode` is `mono` since these axes track energy only in Mono mode).
+
+`invertible = True`: the underlying Bragg geometry is monotonic in energy, so the readback reconstructs by inverse interpolation and the facet needs no constituent ports or Plan wires (unlike the hexapod `SolverReference` DoFs). The real saved points should confirm monotonicity.
+
+The seeded curves today are PROVISIONAL: the x-points are the real configured Mono energies, but the positions are placeholders pending the real `store_0` table from 2-BM staff (see [Open questions](questions.md#energy-and-the-optics)). Runtime evaluation is deferred (`eval_lookup_table` is not wired), so this is an intentional-completeness model of the per-device mapping, not a runtime motion path. The Bragg-arm angles, being a closed-form function of energy, may later become a computed relationship rather than an interpolated table. The coordinating "set energy" operation that drives all the axes together as one discrete move is a later step. The executable model lives in `apps/api/tests/integration/scenarios/test_2bm_energy_curves_setup.py`.
 
 ## Vendor catalog (Models)
 

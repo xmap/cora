@@ -132,12 +132,29 @@ conditioning-optics:
       note: present but not used operationally; carries the Y3-30 mirror; underlying EPICS PVs for the support motors are TBD
     - name: Monochromator
       family: Monochromator
-      pv: { crystal2_z: "2bma:m8" }   # plus m25-m32 for alignment
+      pv:
+        bragg_arm_upstream: "2bma:m30"     # dmm_us_arm
+        bragg_arm_downstream: "2bma:m31"   # dmm_ds_arm
+        m2_offset_y: "2bma:m32"            # dmm_m2_y, beam-exit-offset compensation
+        crystal2_z: "2bma:m8"              # dmm M2 Z; second-crystal setup translation, NOT energy-driven
       controller: FrontEndDrive
       material: Si multilayer
       crystal_z_mm: [29335, 29934]
       confirm: true
-      note: insertable, pink-beam operation bypasses it
+      note: >
+        Energy is set by the energy-change IOC as a discrete coordinated move:
+        saved per-energy positions for the whole DMM are stored (store_0) and
+        driven together to a configured set of energies (Mono 13.374, 13.574,
+        18.0, 20.0, 25.0, 25.584 keV). The per-energy DMM axes are the Bragg
+        arms (bragg_arm_upstream/downstream) and the M2 vertical offset
+        compensator (m2_offset_y); crystal2_z (M2 Z) is a setup translation the
+        IOC does NOT drive. The m25-m29 tank/alignment motors ARE in the
+        coordinated move, but the components page names only the Bragg arms and
+        m2_offset_y as varying per energy, so CORA carries energy curves for
+        those alone (m25-m29 not modeled as per-energy curves pending staff
+        confirmation). CORA models each per-axis relationship as a continuous
+        curve interpolating the saved points. Insertable; pink-beam operation
+        bypasses it. Source: docs2bm item_020.
 
 beam-defining-and-safety:
   enclosure: 2-BM-B
