@@ -259,7 +259,7 @@ async def test_set_energy_records_a_coordinated_move(db_pool: asyncpg.Pool) -> N
         deps.event_store,
         _CAPABILITY_ENERGY_CHANGE_ID,
         code="cora.capability.energy_change",
-        name="EnergyChange",
+        name="Energy Change",
         shapes=frozenset({ExecutorShape.METHOD, ExecutorShape.PROCEDURE}),
     )
     method_id = await bind_define_method(deps)(
@@ -284,6 +284,8 @@ async def test_set_energy_records_a_coordinated_move(db_pool: asyncpg.Pool) -> N
     procedure_id = await bind_register_procedure(deps)(
         RegisterProcedure(
             name=f"2-BM set energy to {_TARGET_ENERGY_KEV} keV",
+            # kind names the specific operation, distinct from the energy_change
+            # Capability code (as motor_homing's kind sits under maintenance).
             kind="set_energy",
             target_asset_ids=frozenset(facet_ids.values()),
             capability_id=_CAPABILITY_ENERGY_CHANGE_ID,
