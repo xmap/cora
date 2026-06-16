@@ -40,6 +40,7 @@ from cora.equipment.aggregates._partition_rule import (
     ExtrapolationKind,
     InterpolationKind,
     LookupTable,
+    ReadbackAggregatorKind,
 )
 from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import (
@@ -61,6 +62,7 @@ from cora.operation.adapters.in_memory_recipe_expander import (
 )
 from cora.operation.aggregates.procedure import InMemoryActivityStore
 from cora.operation.conductor import Conductor, InMemoryActionRegistry, SetpointStep
+from cora.operation.errors import PseudoAxisCommandOutsideRangeError
 from cora.operation.features import (
     abort_procedure,
     append_activities,
@@ -462,3 +464,162 @@ async def test_conduct_pseudoaxis_lookup_table_dispatches_interpolated_position_
     reading = await control_port.read(_constituent_address(constituent_id))
     expected = 0.6 + (4.0 / 7.0) * (0.9 - 0.6)
     assert math.isclose(reading.value, expected, rel_tol=1e-9)
+
+
+async def _setup_foil_selector(deps: Kernel) -> tuple[UUID, UUID]:
+    """Register a discrete foil-selector PseudoAxis (index -> position via a
+    NEAREST LookupTable over an index_position_table calibration) plus its
+    single constituent motor. Returns (selector_id, constituent_id)."""
+    actor = ActorId(_PRINCIPAL_ID)
+    family_id = await define_family.bind(deps)(
+        DefineFamily(name="PseudoAxis", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    selector_id = await register_asset.bind(deps)(
+        RegisterAsset(name="FoilSelector", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await add_asset_family.bind(deps)(
+        AddAssetFamily(asset_id=selector_id, family_id=family_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    constituent_id = await register_asset.bind(deps)(
+        RegisterAsset(name="FoilPaddleMotor", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    cal_id = await bind_define_calibration(deps)(
+        DefineCalibration(
+            target_id=selector_id,
+            quantity=CalibrationQuantity.INDEX_POSITION_TABLE,
+            operating_point={"device_designation": "downstream_filter_paddle"},
+            description="Foil slot index -> motor position for the runtime proof.",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    rev_id = await bind_append_calibration_revision(deps)(
+        AppendCalibrationRevision(
+            calibration_id=cal_id,
+            value={
+                "points": [
+                    {"name": "600 um Al", "position": 0.0},
+                    {"name": "150 um Al", "position": 26.0},
+                    {"name": "300 um C", "position": 53.0},
+                    {"name": "50 um C", "position": 80.0},
+                    {"name": "None", "position": 106.0},
+                ],
+                "position_unit": "mm",
+            },
+            status=CalibrationStatus.VERIFIED,
+            source=AssertedSource(asserted_by=actor),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await update_asset_partition_rule.bind(deps)(
+        UpdateAssetPartitionRule(
+            asset_id=selector_id,
+            partition_rule=LookupTable(
+                calibration_id=cal_id,
+                calibration_revision_id=rev_id,
+                interpolation_kind=InterpolationKind.NEAREST,
+                extrapolation_kind=ExtrapolationKind.ERROR,
+                invertible=False,
+                readback_aggregator_kind=ReadbackAggregatorKind.IDENTITY,
+                unit_in="index",
+                unit_out="mm",
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    return selector_id, constituent_id
+
+
+@pytest.mark.integration
+async def test_conduct_pseudoaxis_foil_selector_dispatches_selected_slot_position_postgres(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Selecting a discrete foil slot snaps to its saved motor position and
+    dispatches it: conduct -> NEAREST kernel -> ControlPort. Commanding slot
+    index 2 (300 um C) drives the paddle motor to 53.0 mm."""
+    ids = [UUID(int=0x01900000_0000_7000_8000_00000BAD4000 + i) for i in range(120)]
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=ids)
+    selector_id, constituent_id = await _setup_foil_selector(deps)
+
+    procedure_id = await register_procedure.bind(deps)(
+        RegisterProcedure(
+            name="SelectFoil",
+            kind="bakeout",
+            target_asset_ids=frozenset(),
+            parent_run_id=None,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    control_port = InMemoryControlPort()
+    control_port.simulate_connect(_constituent_address(constituent_id))
+    handler = _build_conduct_handler(
+        deps,
+        control_port=control_port,
+        constituent_map={selector_id: (constituent_id,)},
+    )
+
+    result = await handler(
+        ConductProcedure(
+            procedure_id=procedure_id,
+            steps=(SetpointStep(address=f"pseudoaxis://{selector_id}/foil", value=2.0),),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert result.succeeded is True
+    assert result.completed_count == 1
+    reading = await control_port.read(_constituent_address(constituent_id))
+    assert reading.value == 53.0
+
+
+@pytest.mark.integration
+async def test_conduct_pseudoaxis_foil_selector_refuses_out_of_range_slot_postgres(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Commanding a slot index past the table is refused (Error extrapolation):
+    you cannot select a foil that is not there."""
+    ids = [UUID(int=0x01900000_0000_7000_8000_00000BAD5000 + i) for i in range(120)]
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=ids)
+    selector_id, constituent_id = await _setup_foil_selector(deps)
+
+    procedure_id = await register_procedure.bind(deps)(
+        RegisterProcedure(
+            name="SelectFoilBad",
+            kind="bakeout",
+            target_asset_ids=frozenset(),
+            parent_run_id=None,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    control_port = InMemoryControlPort()
+    control_port.simulate_connect(_constituent_address(constituent_id))
+    handler = _build_conduct_handler(
+        deps,
+        control_port=control_port,
+        constituent_map={selector_id: (constituent_id,)},
+    )
+
+    with pytest.raises(PseudoAxisCommandOutsideRangeError):
+        await handler(
+            ConductProcedure(
+                procedure_id=procedure_id,
+                steps=(SetpointStep(address=f"pseudoaxis://{selector_id}/foil", value=9.0),),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )

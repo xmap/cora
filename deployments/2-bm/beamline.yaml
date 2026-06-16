@@ -109,9 +109,9 @@ conditioning-optics:
       family: Filter
       pv: { upstream_paddle: "2bma:m17", downstream_paddle: "2bma:m18" }
       controller: FrontEndDrive
-      foils: ["1 mm C", "150 um Al", "600 um Al", "1 mm Al"]
+      foils: ["600 um Al", "150 um Al", "300 um C", "50 um C", "None"]   # operational downstream paddle (2bma:m18), in slot order; per-slot motor positions live in the index_position_table calibration (see test_2bm_filter_foil_setup.py)
       confirm: true
-      note: only the downstream paddle is currently operational
+      note: two paddles - downstream (2bma:m18) is operational and its foils are listed above; upstream (2bma:m17) is bound in software but not in service (selecting it has no beam effect). Foil materials/positions per the docs2bm components page (FOIL-1)
     - name: Mirror
       family: Mirror
       pv: { downstream_y: "2bma:m2", upstream_y: "2bma:m5", stripe_select: "2bma:m3" }
@@ -122,6 +122,7 @@ conditioning-optics:
       replaceable: true          # APS-U spare exists
       stripes: ["5 nm Pt", "W/Si x50 (b)", "W/Si x50 (c)", "W/Si x50 (d)"]  # recoatable
       confirm: true
+      note: per docs2bm the stripe selector (2bma:m3) is energy- and mode-dependent (Mono holds it at one position; Pink sweeps it per energy with a coordinated table-X move), not a free discrete pick, and the page publishes no stripe->position map; CORA models it with the beam-mode work (deferred), not as a filter-style index axis
     - name: MirrorTable
       family: Table
       pv: "Dma:table1"
