@@ -49,9 +49,9 @@ Realizes [`cora.capability.energy_change`](../../catalog/capabilities.md). Drive
 | 6 | action | `coordinate_energy_move` | `{ energy_kev: <<energy_kev>>, axis_count: 5 }` |
 | 7-11 | check | each axis readback (`.RBV`) *(illustrative)* | `within_tolerance` |
 
-The setpoint positions are the curve outputs at 22 keV and are **provisional**: the per-energy curves await the real saved-position table from 2-BM staff. Because curve interpolation (`eval_lookup_table`) is deferred, a v1 recipe encodes **one energy's resolved positions**, so author one recipe per saved energy (the configured menu is 13.374 / 13.574 / 18.0 / 20.0 / 25.0 / 25.584 keV) until that runtime lands. `energy_kev` is recorded but does not drive live position computation at v1.
+The setpoint positions are the curve outputs at 22 keV and are **provisional**: the per-energy curves await the real saved-position table from 2-BM staff. The curve-interpolation math (`eval_lookup_table`) now exists on main, but two things still block a live free-keV recipe: the saved per-energy table is not populated, and the Plan.wiring-backed constituent resolver that would let the recipe address the five facets as `pseudoaxis://` constituents is still deferred. So a v1 recipe still encodes **one energy's resolved positions** as literal setpoints, one recipe per saved energy (the configured menu is 13.374 / 13.574 / 18.0 / 20.0 / 25.0 / 25.584 keV); `energy_kev` is recorded but does not drive live position computation at v1.
 
-**To run, needs:** the `coordinate_energy_move` action body (not registered today); the per-energy curve runtime (`eval_lookup_table`) and the pseudoaxis constituent resolver (both deferred, so the five facets cannot yet be addressed as `pseudoaxis://` constituents); and the real readback (`.RBV`) PVs confirmed by staff.
+**To run, needs:** the `coordinate_energy_move` action body (not registered today, only `collect` / `discrete` / `continuous` are); the Plan.wiring-backed pseudoaxis constituent resolver (still deferred, so the five facets cannot yet be addressed as `pseudoaxis://` constituents); the populated per-energy saved table from staff; and the real readback (`.RBV`) PVs. The curve-interpolation runtime (`eval_lookup_table`) itself has since landed on main.
 
 ### `hexapod_reboot`
 
