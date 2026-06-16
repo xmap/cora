@@ -96,6 +96,10 @@ capabilities:
     name: Maintenance
     description: "One-shot setup, recovery, and ceremony operations with no scientific Dataset output."
     executor_shapes: [Method, Procedure]
+  - code: cora.capability.energy_change
+    name: Energy Change
+    description: "Set the beam energy as one coordinated move of the energy-driven optic axes (the DMM Bragg arms + M2 offset, and the beam-tracking sample-slit vertical pair) to their per-energy positions. Takes a free energy value (keV) that interpolates the per-axis energy curves; distinct from a future energy_scan sweep. Realized as a Method (the parameterized recipe) and executed as a Procedure (the coordinated move)."
+    executor_shapes: [Method, Procedure]
   # Pending in code: cora.capability.energy_scan, cora.capability.steering.
 
 methods:
@@ -159,6 +163,10 @@ methods:
     capability: cora.capability.tomography
     purpose: "Tiled lateral-translation tomography for samples larger than the field of view, stitched in post."
     needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+  - name: beamline_energy_change
+    capability: cora.capability.energy_change
+    purpose: "Set the beam energy by driving the energy-tracking optic axes (the DMM Bragg arms + M2 offset, and the sample-slit vertical pair) to their per-energy positions as one coordinated move."
+    needed_families: [Monochromator, Slit, PseudoAxis]
 
 models:
   # Vendor product definitions (reusable across facilities). The per-deployment
