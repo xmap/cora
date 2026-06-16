@@ -109,7 +109,7 @@ stateDiagram-v2
 | `RunObservationLogbookOpened` | `run_id`, `logbook_id`, `schema`, `occurred_at` | `append_observations` first write per Run (lazy open) |
 | `RunAddedToCampaign` | `run_id`, `campaign_id`, `occurred_at` | post-hoc Campaign membership write (see Campaign module) |
 | `RunRemovedFromCampaign` | `run_id`, `campaign_id`, `occurred_at` | post-hoc Campaign membership removal |
-| `DecisionDebriefRequested` | `run_id`, `debriefer_agent_id`, `terminal_event_id`, `occurred_at` | appended by an Agent BC subscriber (RunDebriefer / CautionDrafter) BEFORE invoking its LLM as a per-(run, terminal-event, agent) lease marker; first writer wins via the existing `UNIQUE(stream_type, stream_id, version)` constraint; audit-only with a no-op evolver fold |
+| `DecisionDebriefRequested` | `run_id`, `debriefer_agent_id`, `terminal_event_id`, `occurred_at` | appended by an Agent BC subscriber (RunDebriefer / CautionDrafter) before invoking its LLM; a per-(run, terminal-event, agent) lease so concurrent subscribers do not double-invoke; first write wins, audit-only |
 
 Individual reading rows do not emit per-row events on the Run stream; they are written directly to `entries_run_observations` via the `ObservationStore` port. The row's `event_id`, `correlation_id`, and `causation_id` constitute the audit trail without bloating the main event log.
 

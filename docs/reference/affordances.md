@@ -2,20 +2,20 @@
 
 *Closed-enum primitives a [Family](../catalog/families.md) declares it supports. Set-membership over Affordances drives the cross-BC Plan-bind matching engine: `union(family.affordances for family in wired_asset.family_ids) ⊇ method.capability.required_affordances`.*
 
-An **Affordance** is a claim about what a device can do. Affordances are declared on Families (Equipment BC). The contract a Method must satisfy is declared one layer up on its bound **Capability** template (Recipe BC `Capability.required_affordances`). At `define_plan` time, the union of every wired Asset's Families' affordances must cover the bound Method's Capability's required set — otherwise the handler raises `PlanAffordancesNotSatisfiedError` (409).
+An **Affordance** is a claim about what a device can do. Affordances are declared on Families (Equipment BC). The contract a Method must satisfy is declared one layer up on its bound **Capability** template (Recipe BC `Capability.required_affordances`). At `define_plan` time, the union of every wired Asset's Families' affordances must cover the bound Method's Capability's required set; otherwise the handler raises `PlanAffordancesNotSatisfiedError` (409).
 
 ## Two patterns
 
 The v1 closed enum carries 29 items in two explicit patterns:
 
-- **Pattern A — Operational affordances (`-able` / `-ible` / `-ing`)**: 28 items. The device is the actor.
-  - **`-able` / `-ible` form (22 items)**: "device supports doing X" — `Rotatable`, `Triggerable`, `Bendable`, …
-  - **`-ing` gerund form (6 items)**: "device performs X" / "device is X-ing" — `Marking`, `Pulsing`, `Following`, `Leading`, `Recording`, `Capturing`. Used where the device's role in a signal chain or data flow is the primitive being claimed; `-able` would invert the direction.
-- **Pattern C — Lifecycle affordances (noun)**: 1 item — `Consumable`. Passive parts whose identity is operationally tracked even though they have no command surface (scintillator screens, filters, sample holders, target foils).
+- **Pattern A: Operational affordances (`-able` / `-ible` / `-ing`)**: 28 items. The device is the actor.
+  - **`-able` / `-ible` form (22 items)**: "device supports doing X": `Rotatable`, `Triggerable`, `Bendable`, …
+  - **`-ing` gerund form (6 items)**: "device performs X" / "device is X-ing": `Marking`, `Pulsing`, `Following`, `Leading`, `Recording`, `Capturing`. Used where the device's role in a signal chain or data flow is the primitive being claimed; `-able` would invert the direction.
+- **Pattern C: Lifecycle affordances (noun)**: 1 item, `Consumable`. Passive parts whose identity is operationally tracked even though they have no command surface (scintillator screens, filters, sample holders, target foils).
 
 The convention is grounded in [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) ("Protocols that describe a _capability_ should be named using the suffixes `able`, `ible`, or `ing`"), [.NET Framework Design Guidelines](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-classes-structs-and-interfaces) ("DO name interfaces with adjective phrases"), and [W3C SOSA](https://www.w3.org/TR/vocab-ssn/) `ObservableProperty` / `ActuatableProperty`. The pre-rename v1 enum had a third Pattern B for noun-named signal flows (`EncoderInput` / `EncoderOutput` / `PulseGenerator`); those dissolved into Pattern A's `-ing` form (`Following` / `Leading` / `Pulsing`) once the role-based reframing made the device-as-actor reading natural.
 
-## Pattern A — Operational affordances (28)
+## Pattern A: Operational affordances (28)
 
 ### Motion (9)
 
@@ -75,7 +75,7 @@ The convention is grounded in [Swift API Design Guidelines](https://www.swift.or
 | `Identifiable` | Device returns a persistent identifier (serial number, MAC, etc.) on query. |
 | `Reportable` | Device returns a health/status reading on query (temperature, error count, firmware version, etc.). |
 
-## Pattern C — Lifecycle affordances (1)
+## Pattern C: Lifecycle affordances (1)
 
 | Affordance | Contract |
 |---|---|
@@ -109,14 +109,12 @@ Note on **W3C SOSA inversion**: SOSA puts `-able` on the *property being acted o
 ## Catalog governance
 
 - **Closed enum at v1.** Adding a value requires a CORA release; per-deployment extensions are not supported at this layer.
-- **Add-only amendment path.** Never remove a published value. If a value becomes obsolete, deprecate it in docs and stop using it in new Family declarations — but the enum member stays for replay safety.
+- **Add-only amendment path.** Never remove a published value. If a value becomes obsolete, deprecate it in docs and stop using it in new Family declarations, but the enum member stays for replay safety.
 - **Banned pattern: `<noun>Selectable` / `<noun>Addressable`.** Parameter-selection items belong in `Family.settings_schema` or in an operations-layer `Capability`, not in `Affordance`. The grammatical test: "device supports being configured to set X" means settings_schema; "device supports doing X" means Affordance.
 - **Contract per Affordance.** Each entry in the enum carries a one-line operational contract docstring inline at `cora.equipment.aggregates.family.affordance` (Bloch `Cloneable`-trap mitigation). The longer-form contract on this page is the authoritative reference for adapter authors.
-- **Form discipline.** Pattern A is `-able`/`-ible`/`-ing` (Swift Guidelines triad); Pattern C noun is reserved for the single lifecycle case (`Consumable`). New entries that don't fit one of these forms — particularly compound noun-named signal interfaces — should be reframed as role/flow `-ing` gerunds (precedent: `Following`/`Leading`/`Pulsing` absorbed the pre-rename Pattern B nouns).
+- **Form discipline.** Pattern A is `-able`/`-ible`/`-ing` (Swift Guidelines triad); Pattern C noun is reserved for the single lifecycle case (`Consumable`). New entries that don't fit one of these forms, particularly compound noun-named signal interfaces, should be reframed as role/flow `-ing` gerunds (precedent: `Following`/`Leading`/`Pulsing` absorbed the pre-rename Pattern B nouns).
 
 ## Related
 
-- [Families](../catalog/families.md) — registered Families at the deployment level
-- [Capabilities](../catalog/capabilities.md) — Recipe BC operations-layer templates that consume Affordances as `required_affordances`
-- Capability vocabulary research (4-round, 11+ corpus) — section 5 of `project_capability_research` in user-memory
-- Design lock at `project_family_affordance_design` in user-memory
+- [Families](../catalog/families.md): registered Families at the deployment level
+- [Capabilities](../catalog/capabilities.md): Recipe BC operations-layer templates that consume Affordances as `required_affordances`

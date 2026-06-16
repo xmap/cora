@@ -16,7 +16,7 @@ The load-bearing auth vars (full list in `.env.example`):
 
 ### Startup boot gate
 
-If you set `TRUST_POLICY_ID` without `REQUIRE_AUTHENTICATED_PRINCIPAL=true`, `create_app()` raises `RuntimeError` at boot. Rationale: without the header check, anyone can send `X-Principal-Id: 00000000-…0` and impersonate SYSTEM under the configured policy. Setting both together is the only safe combination; the seeded bootstrap policy permits SYSTEM to register Actors + define Policies, so anyone who can spoof the header gets standing admin.
+If you set `TRUST_POLICY_ID` without `REQUIRE_AUTHENTICATED_PRINCIPAL=true`, `create_app()` raises `RuntimeError` at boot. Without the header check, anyone could send `X-Principal-Id: 00000000-…0` and impersonate SYSTEM under the configured policy, so the two must be set together.
 
 Test env (`APP_ENV=test`) is exempt: legitimate test fixtures exercise the SYSTEM-fallback-under-real-policy scenario.
 
@@ -56,7 +56,7 @@ The proxy owns the identity → UUID mapping in this mode. Migrating to bearer m
 
 ### MCP edge
 
-MCP streamable-HTTP runs the same `BearerAuthMiddleware` as REST (shipped 2026-05-20). Per-path audience dispatch binds `/mcp/*` to the MCP Surface UUID (`SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID`); a token issued for HTTP cannot replay against MCP. Under bearer-auth posture the middleware enforces bearer-required for every `/mcp/*` path including FastMCP framing methods (`initialize`, `tools/list`, `notifications/initialized`), so a missing-bearer request returns 401 before reaching the tool layer. Tool handlers resolve the calling `principal_id` via `get_mcp_principal_id(ctx)`, the MCP-side mirror of `get_principal_id`. Write tools remain visible in `tools/list` and are gated at call time, not by deregistration. MCP_STDIO (subprocess transport) inherits the operator's local OS identity per spec; bearer auth is HTTP-edge only.
+MCP streamable-HTTP runs the same `BearerAuthMiddleware` as REST. Per-path audience dispatch binds `/mcp/*` to the MCP Surface UUID (`SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID`); a token issued for HTTP cannot replay against MCP. Under bearer-auth posture the middleware enforces bearer-required for every `/mcp/*` path including FastMCP framing methods (`initialize`, `tools/list`, `notifications/initialized`), so a missing-bearer request returns 401 before reaching the tool layer. Tool handlers resolve the calling `principal_id` via `get_mcp_principal_id(ctx)`, the MCP-side mirror of `get_principal_id`. Write tools remain visible in `tools/list` and are gated at call time, not by deregistration. MCP_STDIO (subprocess transport) inherits the operator's local OS identity per spec; bearer auth is HTTP-edge only.
 
 ## Surface decomposition and the bootstrap policy
 
@@ -73,11 +73,9 @@ To enable real authz:
 2. Set `TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002` and `REQUIRE_AUTHENTICATED_PRINCIPAL=true`.
 3. Restart. At lifespan start the verifier confirms the policy stream exists, binds to `SYSTEM_HTTP_SURFACE_ID`, and that all 3 seeded Surfaces are present; boot fails loud if anything is missing.
 
-An earlier nil-surface bootstrap policy (`...0001`) existed before the Surface decomposition. Its evaluate-time nil-as-wildcard shim has been removed, so it is inert; use `...0002`.
-
 ## First-boot workflow
 
-A fresh deployment with `TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002` (V2 bootstrap policy) starts in a deliberate narrow-permissive state. The `.env.example` template still ships the commented-out V1 value (`...000000000001`); set it to the V2 id above, which the Surface decomposition section recommends for new and existing deployments.
+A fresh deployment with `TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002` (the bootstrap policy) starts in a deliberate narrow-permissive state.
 
 - The seed permits `SYSTEM_PRINCIPAL_ID` (the nil UUID `00000000-…0`) to call `DefinePolicy` and `RegisterActor` on the nil conduit + the HTTP Surface.
 - That's it. Every other command Denies.
@@ -166,4 +164,4 @@ This returns the sorted list of commands the named principal can run via the nam
 | Event-sourced `ActorIdpBindings` (JIT Actor provisioning) | Deferred | First case where adding an operator is too high-friction via config-time bindings |
 | `trust.check_others` permission separation | Watch item | When ABAC lands or first cross-tenant deploy |
 
-Bootstrap policy, Surface decomposition, HTTP edge auth, permission queries, and MCP edge-auth parity are all shipped. See `memory/project_bootstrap_policy_design.md`, `memory/project_conduit_injection_design.md`, `memory/project_edge_auth_design.md`, `memory/project_permissions_query_design.md`, and `memory/project_mcp_edge_auth_design.md` for design rationale + anti-hooks.
+Bootstrap policy, Surface decomposition, HTTP edge auth, permission queries, and MCP edge-auth parity are all in place.

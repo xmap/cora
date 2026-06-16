@@ -1,6 +1,6 @@
 # Auth
 
-For implementers wiring authentication and authorization. Each row names a role, the current pick, and the trigger that would force a swap. Edge authentication is in place for both HTTP (shipped 2026-05-19) and MCP streamable-HTTP (shipped 2026-05-20); the proxy-only contract is now a legacy fallback.
+For implementers wiring authentication and authorization. Each row names a role, the current pick, and the trigger that would force a swap. Edge authentication is in place for both HTTP and MCP streamable-HTTP; the proxy-only contract is a legacy fallback.
 
 ## Authentication
 
