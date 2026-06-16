@@ -200,9 +200,10 @@
 | src/cora/calibration/features/publish\_revision/tool.py                                  |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/projections/\_\_init\_\_.py                                         |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/projections/calibration.py                                          |       32 |        6 |       10 |        2 |     71.4% |91-97, 155 |
-| src/cora/calibration/quantities/\_\_init\_\_.py                                          |       14 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/calibration/quantities/\_\_init\_\_.py                                          |       15 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/detector\_pixel\_size.py                                 |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/effective\_thickness.py                                  |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/calibration/quantities/energy\_position\_curve.py                               |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/magnification.py                                         |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/rotation\_center.py                                      |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/routes.py                                                           |       36 |        0 |        8 |        0 |    100.0% |           |
@@ -595,7 +596,7 @@
 | src/cora/equipment/adapters/postgres\_role\_lookup.py                                    |       17 |        6 |        2 |        0 |     57.9% | 50-54, 58 |
 | src/cora/equipment/aggregates/\_\_init\_\_.py                                            |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/\_drawing.py                                               |       32 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/equipment/aggregates/\_partition\_rule.py                                       |      173 |        0 |       60 |        3 |     98.7% |525-\>exit, 627-\>exit, 673-\>exit |
+| src/cora/equipment/aggregates/\_partition\_rule.py                                       |      173 |        0 |       60 |        3 |     98.7% |528-\>exit, 630-\>exit, 676-\>exit |
 | src/cora/equipment/aggregates/\_placement.py                                             |       33 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/\_value\_types.py                                          |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/assembly/\_\_init\_\_.py                                   |        5 |        0 |        0 |        0 |    100.0% |           |
@@ -2259,7 +2260,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **44855** |  **983** | **6168** |  **247** | **97.3%** |           |
+| **TOTAL**                                                                                | **44861** |  **983** | **6168** |  **247** | **97.3%** |           |
 
 
 ## Setup coverage badge
