@@ -26,7 +26,7 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `Monochromator_M2Y` | `Device` | `PseudoAxis` | `Monochromator` (energy-driven; M2 vertical beam-offset compensator in mm) | `2-BM-A` |
 | `ConditioningSlit` | `Device` | `Slit` | `2-BM` (white-beam slits; driven by `FrontEndDrive`) | `2-BM-A` |
 | `Filter` | `Device` | `Filter` | `2-BM` (foil changer; driven by `FrontEndDrive`) | `2-BM-A` |
-| `Filter_FoilSelector` | `Device` | `PseudoAxis` | `Filter` (discrete foil selector; LookupTable snaps a slot index to the downstream paddle position in mm) | `2-BM-A` |
+| `Filter_FoilSelector` | `Device` | `PseudoAxis` | `Filter` (discrete foil selector; LookupTable snaps a slot index to the downstream paddle position) | `2-BM-A` |
 | `SampleSlit` | `Device` | `Slit` | `2-BM` (B-station slits; driven by `FrontEndDrive`) | `2-BM-B` |
 | `SampleSlit_VerticalTop` | `Device` | `PseudoAxis` | `SampleSlit` (energy-driven; top blade tracks the per-energy beam position in mm) | `2-BM-B` |
 | `SampleSlit_VerticalBottom` | `Device` | `PseudoAxis` | `SampleSlit` (energy-driven; bottom blade tracks the per-energy beam position in mm) | `2-BM-B` |

@@ -15,8 +15,8 @@ emission at the end. No business-logic state survives across commands
 per the non-determinism principle: the evaluator reloads the Asset on
 every invocation.
 
-For a LookupTable rule the evaluator loads the pinned calibration curve
-itself (via `load_pinned_curve`, keyed by the rule's `calibration_id` +
+For a LookupTable rule the evaluator loads the pinned calibration lookup
+itself (via `load_pinned_lookup`, keyed by the rule's `calibration_id` +
 `calibration_revision_id`) and passes the extracted points to the pure
 kernel. A dangling pin (calibration or revision absent) raises
 `InvalidPartitionRuleError(sub_code="calibration_revision_retracted")`.
@@ -33,7 +33,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from cora.calibration.aggregates.calibration.read import load_pinned_curve
+from cora.calibration.aggregates.calibration.read import load_pinned_lookup
 from cora.equipment.aggregates._partition_rule import (
     Affine,
     Aggregation,
@@ -180,10 +180,10 @@ async def resolve_pseudoaxis_command(
                         f"(got {len(constituent_asset_ids)})"
                     ),
                 )
-            curve = await load_pinned_curve(
+            points = await load_pinned_lookup(
                 event_store, rule.calibration_id, rule.calibration_revision_id
             )
-            if curve is None:
+            if points is None:
                 raise InvalidPartitionRuleError(
                     sub_code="calibration_revision_retracted",
                     reason=(
@@ -196,7 +196,7 @@ async def resolve_pseudoaxis_command(
                 rule,
                 commanded_value,
                 asset_id=asset_id,
-                curve=curve,
+                points=points,
             )
             constituent_values = (forward,)
         case CompositePartition():

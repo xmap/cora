@@ -29,7 +29,7 @@ from cora.calibration.aggregates.calibration.events import from_stored
 from cora.calibration.aggregates.calibration.evolver import fold
 from cora.calibration.aggregates.calibration.state import (
     Calibration,
-    CalibrationNotCurveValuedError,
+    CalibrationNotLookupValuedError,
 )
 from cora.calibration.quantities import (
     CalibrationQuantity,
@@ -68,7 +68,7 @@ async def load_calibration(event_store: EventStore, calibration_id: UUID) -> Cal
     return fold(events)
 
 
-async def load_pinned_curve(
+async def load_pinned_lookup(
     event_store: EventStore,
     calibration_id: UUID,
     revision_id: UUID,
@@ -87,7 +87,7 @@ async def load_pinned_curve(
 
     Returns None when the calibration stream is empty or the pinned
     revision is absent (a dangling reference); the caller surfaces that as
-    an unavailable-calibration abort. Raises `CalibrationNotCurveValuedError`
+    an unavailable-calibration abort. Raises `CalibrationNotLookupValuedError`
     when the calibration's quantity is not a position-lookup quantity (a
     misconfigured rule), so the failure is explicit rather than a KeyError
     on a missing `points` key.
@@ -107,7 +107,7 @@ async def load_pinned_curve(
         case CalibrationQuantity.INDEX_POSITION_TABLE:
             return index_position_table.index_position_points(revision.value)
         case _:
-            raise CalibrationNotCurveValuedError(calibration_id, calibration.quantity)
+            raise CalibrationNotLookupValuedError(calibration_id, calibration.quantity)
 
 
 async def load_calibration_timestamps(

@@ -1,13 +1,13 @@
-"""Unit tests for `load_pinned_curve`, the cross-BC curve-load helper.
+"""Unit tests for `load_pinned_lookup`, the cross-BC lookup-load helper.
 
-`load_pinned_curve` is what a LookupTable partition-rule evaluator calls
+`load_pinned_lookup` is what a LookupTable partition-rule evaluator calls
 to turn a pinned `(calibration_id, revision_id)` into the `(independent,
 dependent)` points it interpolates. It owns all Calibration-payload
 knowledge so the consuming kernel stays decoupled. These tests pin its
-three branches: a curve-valued calibration returns its points, a dangling
-pin (missing calibration or missing revision) returns None, and a
-scalar-valued calibration raises rather than KeyError on a missing
-`points` key.
+branches: a continuous energy curve returns its points, a discrete index
+table returns its (slot-index, position) points, a dangling pin (missing
+calibration or missing revision) returns None, and a scalar-valued
+calibration raises rather than KeyError on a missing `points` key.
 """
 
 from datetime import UTC, datetime
@@ -17,10 +17,10 @@ import pytest
 
 from cora.calibration.aggregates.calibration import (
     AssertedSource,
-    CalibrationNotCurveValuedError,
+    CalibrationNotLookupValuedError,
     CalibrationStatus,
 )
-from cora.calibration.aggregates.calibration.read import load_pinned_curve
+from cora.calibration.aggregates.calibration.read import load_pinned_lookup
 from cora.calibration.features.append_calibration_revision import AppendCalibrationRevision
 from cora.calibration.features.append_calibration_revision import (
     bind as bind_append_calibration_revision,
@@ -76,15 +76,15 @@ async def _seed_energy_curve(store: InMemoryEventStore) -> tuple[UUID, UUID]:
 
 
 @pytest.mark.unit
-async def test_load_pinned_curve_returns_points_for_curve_calibration() -> None:
+async def test_load_pinned_lookup_returns_points_for_curve_calibration() -> None:
     store = InMemoryEventStore()
     cal_id, rev_id = await _seed_energy_curve(store)
-    curve = await load_pinned_curve(store, cal_id, rev_id)
+    curve = await load_pinned_lookup(store, cal_id, rev_id)
     assert curve == ((18.0, 0.6), (25.0, 0.9))
 
 
 @pytest.mark.unit
-async def test_load_pinned_curve_returns_indexed_points_for_index_table() -> None:
+async def test_load_pinned_lookup_returns_indexed_points_for_index_table() -> None:
     store = InMemoryEventStore()
     deps = _deps(store)
     cal_id = await bind_define_calibration(deps)(
@@ -115,27 +115,27 @@ async def test_load_pinned_curve_returns_indexed_points_for_index_table() -> Non
         correlation_id=_CORRELATION_ID,
     )
     # The slot index is the array order: (0, 0.0), (1, 26.0), (2, 106.0).
-    points = await load_pinned_curve(store, cal_id, rev_id)
+    points = await load_pinned_lookup(store, cal_id, rev_id)
     assert points == ((0.0, 0.0), (1.0, 26.0), (2.0, 106.0))
 
 
 @pytest.mark.unit
-async def test_load_pinned_curve_returns_none_when_calibration_absent() -> None:
+async def test_load_pinned_lookup_returns_none_when_calibration_absent() -> None:
     store = InMemoryEventStore()
-    curve = await load_pinned_curve(store, uuid4(), uuid4())
+    curve = await load_pinned_lookup(store, uuid4(), uuid4())
     assert curve is None
 
 
 @pytest.mark.unit
-async def test_load_pinned_curve_returns_none_when_revision_absent() -> None:
+async def test_load_pinned_lookup_returns_none_when_revision_absent() -> None:
     store = InMemoryEventStore()
     cal_id, _rev_id = await _seed_energy_curve(store)
-    curve = await load_pinned_curve(store, cal_id, uuid4())
+    curve = await load_pinned_lookup(store, cal_id, uuid4())
     assert curve is None
 
 
 @pytest.mark.unit
-async def test_load_pinned_curve_raises_for_scalar_valued_calibration() -> None:
+async def test_load_pinned_lookup_raises_for_scalar_valued_calibration() -> None:
     store = InMemoryEventStore()
     deps = _deps(store)
     cal_id = await bind_define_calibration(deps)(
@@ -158,6 +158,6 @@ async def test_load_pinned_curve_raises_for_scalar_valued_calibration() -> None:
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    with pytest.raises(CalibrationNotCurveValuedError) as info:
-        await load_pinned_curve(store, cal_id, rev_id)
+    with pytest.raises(CalibrationNotLookupValuedError) as info:
+        await load_pinned_lookup(store, cal_id, rev_id)
     assert info.value.quantity == CalibrationQuantity.MAGNIFICATION.value

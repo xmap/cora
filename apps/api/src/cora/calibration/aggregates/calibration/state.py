@@ -311,20 +311,21 @@ class CalibrationRevisionNotFoundError(Exception):
         self.revision_id = revision_id
 
 
-class CalibrationNotCurveValuedError(Exception):
-    """A consumer asked for the curve points of a non-curve-valued calibration.
+class CalibrationNotLookupValuedError(Exception):
+    """A consumer asked for the lookup points of a non-lookup-valued calibration.
 
     A `LookupTable` partition rule pins a calibration whose quantity is
-    scalar-valued (for example `magnification`), not a curve. Curve
-    interpolation needs the relationship-across-a-range shape that only
-    curve-valued quantities (today `energy_position_curve`) carry.
-    Operator-correctable: point the rule at a curve-valued calibration.
+    scalar-valued (for example `magnification`), not a position lookup.
+    LookupTable interpolation needs the position-lookup shape that the
+    lookup-valued quantities carry (today `energy_position_curve`, a
+    continuous curve, and `index_position_table`, a discrete table).
+    Operator-correctable: point the rule at a lookup-valued calibration.
     """
 
     def __init__(self, calibration_id: UUID, quantity: str) -> None:
         super().__init__(
             f"Calibration {calibration_id} has quantity {quantity!r}, which is not "
-            f"curve-valued; LookupTable interpolation needs a curve-valued quantity"
+            f"lookup-valued; LookupTable interpolation needs a position-lookup quantity"
         )
         self.calibration_id = calibration_id
         self.quantity = quantity

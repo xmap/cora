@@ -13,7 +13,7 @@ these functions only do the math. NaN / Inf inputs and aggregator-shape
 mismatches (e.g. `Difference` with constituent_count != 2) raise
 `PseudoAxisEvaluationFailedError`.
 
-`eval_lookup_table` takes the calibration curve as already-extracted
+`eval_lookup_table` takes the calibration points as already-extracted
 `(independent, dependent)` pairs (the caller loads the pinned revision and
 extracts them) so the kernel stays pure and decoupled from the Calibration
 payload shape. It interpolates LINEAR or snaps NEAREST; CUBIC is not yet
@@ -189,26 +189,26 @@ def eval_aggregation(
     )
 
 
-def _ordered_curve(
-    asset_id: UUID, curve: tuple[tuple[float, float], ...]
+def _ordered_points(
+    asset_id: UUID, points: tuple[tuple[float, float], ...]
 ) -> tuple[list[float], list[float]]:
-    """Validate and order a calibration curve into parallel x / y lists.
+    """Validate and order lookup points into parallel x / y lists.
 
     Requires at least two points, all finite, with strictly increasing
     independent values once sorted (duplicate independents make forward
-    interpolation ambiguous). A malformed curve is a data-substrate
+    interpolation ambiguous). A malformed lookup is a data-substrate
     failure, not an operator error, so it raises
     `PseudoAxisEvaluationFailedError` (mapped to 500), matching the
     other math-kernel failures.
     """
     kind = PartitionRuleKind.LOOKUP_TABLE
-    if len(curve) < 2:
+    if len(points) < 2:
         raise PseudoAxisEvaluationFailedError(
             asset_id=asset_id,
             kind=kind,
-            reason=f"LookupTable curve needs at least 2 points (got {len(curve)})",
+            reason=f"LookupTable needs at least 2 points (got {len(points)})",
         )
-    ordered = sorted(curve, key=lambda point: point[0])
+    ordered = sorted(points, key=lambda point: point[0])
     xs = [point[0] for point in ordered]
     ys = [point[1] for point in ordered]
     for x, y in ordered:
@@ -216,7 +216,7 @@ def _ordered_curve(
             raise PseudoAxisEvaluationFailedError(
                 asset_id=asset_id,
                 kind=kind,
-                reason=f"LookupTable curve has a non-finite point ({x!r}, {y!r})",
+                reason=f"LookupTable has a non-finite point ({x!r}, {y!r})",
             )
     for i in range(1, len(xs)):
         if xs[i] == xs[i - 1]:
@@ -224,7 +224,7 @@ def _ordered_curve(
                 asset_id=asset_id,
                 kind=kind,
                 reason=(
-                    f"LookupTable curve has a duplicate independent value {xs[i]!r}; "
+                    f"LookupTable has a duplicate independent value {xs[i]!r}; "
                     "forward interpolation is ambiguous"
                 ),
             )
@@ -267,23 +267,23 @@ def eval_lookup_table(
     commanded: float,
     *,
     asset_id: UUID,
-    curve: tuple[tuple[float, float], ...],
+    points: tuple[tuple[float, float], ...],
 ) -> float:
-    """Evaluate a LookupTable rule by interpolating a calibration curve.
+    """Evaluate a LookupTable rule by interpolating the calibration points.
 
-    `curve` is the resolved, already-extracted sequence of `(independent,
+    `points` is the resolved, already-extracted sequence of `(independent,
     dependent)` pairs the caller pulled from the pinned Calibration
-    revision; the kernel stays pure and decoupled from the Calibration
-    payload shape. `interpolation_kind` selects `LINEAR` (straight line
-    between the bracketing points) or `NEAREST` (snap to the closest
-    independent point); `CUBIC` is not yet implemented. Outside the
-    tabulated range, `extrapolation_kind=Clamp` returns the nearest
-    endpoint's dependent value and `Error` raises
-    `PseudoAxisCommandOutsideRangeError`.
+    revision (a continuous energy curve or a discrete index table); the
+    kernel stays pure and decoupled from the Calibration payload shape.
+    `interpolation_kind` selects `LINEAR` (straight line between the
+    bracketing points) or `NEAREST` (snap to the closest independent
+    point); `CUBIC` is not yet implemented. Outside the tabulated range,
+    `extrapolation_kind=Clamp` returns the nearest endpoint's dependent
+    value and `Error` raises `PseudoAxisCommandOutsideRangeError`.
     """
     kind = PartitionRuleKind.LOOKUP_TABLE
     _ensure_commanded_finite(asset_id, kind, commanded)
-    xs, ys = _ordered_curve(asset_id, curve)
+    xs, ys = _ordered_points(asset_id, points)
     low, high = xs[0], xs[-1]
 
     if commanded < low or commanded > high:

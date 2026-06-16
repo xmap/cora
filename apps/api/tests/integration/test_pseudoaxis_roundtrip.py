@@ -345,7 +345,7 @@ async def test_conduct_pseudoaxis_lookup_table_dispatches_interpolated_position_
     calibration curve and dispatches it.
 
     Exercises the full runtime chain end-to-end: conduct -> PseudoAxis
-    expansion -> resolve_pseudoaxis_command -> load_pinned_curve (loads the
+    expansion -> resolve_pseudoaxis_command -> load_pinned_lookup (loads the
     pinned Calibration revision) -> eval_lookup_table (LINEAR interpolation)
     -> ControlPort.write. This is the exact path the 2-BM energy facets
     take; here it runs against the in-memory ControlPort so no hardware is

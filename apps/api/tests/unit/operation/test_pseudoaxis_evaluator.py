@@ -201,7 +201,7 @@ async def test_resolve_raises_invalid_rule_when_pinned_calibration_absent() -> N
     deps = _build_deps(event_store=store)
     asset_id, _family_id = await _setup_pseudoaxis_asset(deps, rule=_LOOKUP_RULE)
     # The LookupTable rule pins a calibration that was never seeded into
-    # the store, so load_pinned_curve returns None and the evaluator aborts.
+    # the store, so load_pinned_lookup returns None and the evaluator aborts.
 
     with pytest.raises(InvalidPartitionRuleError) as exc_info:
         await resolve_pseudoaxis_command(

@@ -174,49 +174,49 @@ def _lookup_rule(
 def test_eval_lookup_table_linear_interpolates_between_points() -> None:
     rule = _lookup_rule(interpolation_kind=InterpolationKind.LINEAR)
     # 22 keV sits 4/7 of the way from 18 to 25: 0.6 + (4/7)*(0.9-0.6).
-    result = eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, curve=_CURVE)
+    result = eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, points=_CURVE)
     assert math.isclose(result, 0.6 + (4.0 / 7.0) * 0.3, rel_tol=1e-12)
 
 
 @pytest.mark.unit
 def test_eval_lookup_table_linear_returns_exact_value_at_a_tabulated_point() -> None:
     rule = _lookup_rule(interpolation_kind=InterpolationKind.LINEAR)
-    assert math.isclose(eval_lookup_table(rule, 18.0, asset_id=_ASSET_ID, curve=_CURVE), 0.6)
-    assert math.isclose(eval_lookup_table(rule, 25.0, asset_id=_ASSET_ID, curve=_CURVE), 0.9)
+    assert math.isclose(eval_lookup_table(rule, 18.0, asset_id=_ASSET_ID, points=_CURVE), 0.6)
+    assert math.isclose(eval_lookup_table(rule, 25.0, asset_id=_ASSET_ID, points=_CURVE), 0.9)
 
 
 @pytest.mark.unit
 def test_eval_lookup_table_sorts_unordered_curve_before_interpolating() -> None:
     rule = _lookup_rule(interpolation_kind=InterpolationKind.LINEAR)
     reversed_curve = ((25.0, 0.9), (18.0, 0.6))
-    result = eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, curve=reversed_curve)
+    result = eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, points=reversed_curve)
     assert math.isclose(result, 0.6 + (4.0 / 7.0) * 0.3, rel_tol=1e-12)
 
 
 @pytest.mark.unit
 def test_eval_lookup_table_nearest_snaps_to_closest_point() -> None:
     rule = _lookup_rule(interpolation_kind=InterpolationKind.NEAREST)
-    assert eval_lookup_table(rule, 19.0, asset_id=_ASSET_ID, curve=_CURVE) == 0.6
-    assert eval_lookup_table(rule, 24.0, asset_id=_ASSET_ID, curve=_CURVE) == 0.9
+    assert eval_lookup_table(rule, 19.0, asset_id=_ASSET_ID, points=_CURVE) == 0.6
+    assert eval_lookup_table(rule, 24.0, asset_id=_ASSET_ID, points=_CURVE) == 0.9
 
 
 @pytest.mark.unit
 def test_eval_lookup_table_clamp_below_range_returns_low_endpoint() -> None:
     rule = _lookup_rule(extrapolation_kind=ExtrapolationKind.CLAMP)
-    assert eval_lookup_table(rule, 10.0, asset_id=_ASSET_ID, curve=_CURVE) == 0.6
+    assert eval_lookup_table(rule, 10.0, asset_id=_ASSET_ID, points=_CURVE) == 0.6
 
 
 @pytest.mark.unit
 def test_eval_lookup_table_clamp_above_range_returns_high_endpoint() -> None:
     rule = _lookup_rule(extrapolation_kind=ExtrapolationKind.CLAMP)
-    assert eval_lookup_table(rule, 40.0, asset_id=_ASSET_ID, curve=_CURVE) == 0.9
+    assert eval_lookup_table(rule, 40.0, asset_id=_ASSET_ID, points=_CURVE) == 0.9
 
 
 @pytest.mark.unit
 def test_eval_lookup_table_error_below_range_raises_outside_range() -> None:
     rule = _lookup_rule(extrapolation_kind=ExtrapolationKind.ERROR)
     with pytest.raises(PseudoAxisCommandOutsideRangeError) as excinfo:
-        eval_lookup_table(rule, 10.0, asset_id=_ASSET_ID, curve=_CURVE)
+        eval_lookup_table(rule, 10.0, asset_id=_ASSET_ID, points=_CURVE)
     assert excinfo.value.asset_id == _ASSET_ID
     assert excinfo.value.commanded == 10.0
 
@@ -225,14 +225,14 @@ def test_eval_lookup_table_error_below_range_raises_outside_range() -> None:
 def test_eval_lookup_table_error_above_range_raises_outside_range() -> None:
     rule = _lookup_rule(extrapolation_kind=ExtrapolationKind.ERROR)
     with pytest.raises(PseudoAxisCommandOutsideRangeError):
-        eval_lookup_table(rule, 99.0, asset_id=_ASSET_ID, curve=_CURVE)
+        eval_lookup_table(rule, 99.0, asset_id=_ASSET_ID, points=_CURVE)
 
 
 @pytest.mark.unit
 def test_eval_lookup_table_cubic_not_implemented_raises() -> None:
     rule = _lookup_rule(interpolation_kind=InterpolationKind.CUBIC)
     with pytest.raises(PseudoAxisEvaluationFailedError) as excinfo:
-        eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, curve=_CURVE)
+        eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, points=_CURVE)
     assert excinfo.value.kind == PartitionRuleKind.LOOKUP_TABLE
     assert "not implemented" in excinfo.value.reason
 
@@ -241,14 +241,14 @@ def test_eval_lookup_table_cubic_not_implemented_raises() -> None:
 def test_eval_lookup_table_rejects_nan_commanded() -> None:
     rule = _lookup_rule()
     with pytest.raises(PseudoAxisEvaluationFailedError):
-        eval_lookup_table(rule, float("nan"), asset_id=_ASSET_ID, curve=_CURVE)
+        eval_lookup_table(rule, float("nan"), asset_id=_ASSET_ID, points=_CURVE)
 
 
 @pytest.mark.unit
 def test_eval_lookup_table_rejects_curve_with_fewer_than_two_points() -> None:
     rule = _lookup_rule()
     with pytest.raises(PseudoAxisEvaluationFailedError) as excinfo:
-        eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, curve=((18.0, 0.6),))
+        eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, points=((18.0, 0.6),))
     assert "at least 2 points" in excinfo.value.reason
 
 
@@ -256,7 +256,7 @@ def test_eval_lookup_table_rejects_curve_with_fewer_than_two_points() -> None:
 def test_eval_lookup_table_rejects_duplicate_independent_value() -> None:
     rule = _lookup_rule()
     with pytest.raises(PseudoAxisEvaluationFailedError) as excinfo:
-        eval_lookup_table(rule, 18.0, asset_id=_ASSET_ID, curve=((18.0, 0.6), (18.0, 0.9)))
+        eval_lookup_table(rule, 18.0, asset_id=_ASSET_ID, points=((18.0, 0.6), (18.0, 0.9)))
     assert "duplicate" in excinfo.value.reason
 
 
@@ -264,7 +264,7 @@ def test_eval_lookup_table_rejects_duplicate_independent_value() -> None:
 @given(commanded=st.floats(min_value=18.0, max_value=25.0))
 def test_eval_lookup_table_linear_stays_within_endpoint_bounds(commanded: float) -> None:
     rule = _lookup_rule(interpolation_kind=InterpolationKind.LINEAR)
-    result = eval_lookup_table(rule, commanded, asset_id=_ASSET_ID, curve=_CURVE)
+    result = eval_lookup_table(rule, commanded, asset_id=_ASSET_ID, points=_CURVE)
     assert 0.6 <= result <= 0.9
 
 
@@ -276,8 +276,8 @@ def test_eval_lookup_table_linear_stays_within_endpoint_bounds(commanded: float)
 def test_eval_lookup_table_linear_is_monotonic_for_increasing_curve(a: float, b: float) -> None:
     assume(a < b)
     rule = _lookup_rule(interpolation_kind=InterpolationKind.LINEAR)
-    ya = eval_lookup_table(rule, a, asset_id=_ASSET_ID, curve=_CURVE)
-    yb = eval_lookup_table(rule, b, asset_id=_ASSET_ID, curve=_CURVE)
+    ya = eval_lookup_table(rule, a, asset_id=_ASSET_ID, points=_CURVE)
+    yb = eval_lookup_table(rule, b, asset_id=_ASSET_ID, points=_CURVE)
     assert ya <= yb
 
 
