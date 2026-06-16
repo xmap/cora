@@ -55,6 +55,7 @@ from cora.recipe.features.add_plan_wire import AddPlanWire
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_plan import DefinePlan
 from cora.recipe.features.define_practice import DefinePractice
+from cora.run.aggregates.run import RunNotFoundError
 from cora.run.features import start_run
 from cora.run.features.start_run import StartRun
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
@@ -398,3 +399,37 @@ async def test_conduct_multi_constituent_orders_constituents_by_wire_port_postgr
     # constituent_in_0) gets -3.0; constituent 1 (motor_1) gets +3.0.
     assert (await control_port.read(_constituent_address(motor_0))).value == -3.0
     assert (await control_port.read(_constituent_address(motor_1))).value == 3.0
+
+
+@pytest.mark.integration
+async def test_conduct_phase_of_run_procedure_with_dangling_run_raises_postgres(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A Phase-of-Run Procedure whose `parent_run_id` references no Run is
+    corruption: conduct refuses with `RunNotFoundError` rather than silently
+    skipping wire resolution. `register_procedure` does not validate
+    `parent_run_id`, so a dangling reference is constructible, and the
+    resolver block raises before any actuation."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(20)])
+    missing_run_id = uuid4()
+    procedure_id = await register_procedure.bind(deps)(
+        RegisterProcedure(
+            name="orphan phase",
+            kind="bakeout",
+            target_asset_ids=frozenset(),
+            parent_run_id=missing_run_id,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    handler = _build_conduct_handler(deps, control_port=InMemoryControlPort())
+
+    with pytest.raises(RunNotFoundError):
+        await handler(
+            ConductProcedure(
+                procedure_id=procedure_id,
+                steps=(SetpointStep(address="epics_ca://noop/setpoint", value=0.0),),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
