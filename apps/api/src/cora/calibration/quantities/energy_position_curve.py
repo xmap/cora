@@ -78,6 +78,23 @@ OPERATING_POINT_SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
 }
 
+
+def curve_points(value: dict[str, Any]) -> tuple[tuple[float, float], ...]:
+    """Extract the (energy, position) pairs from an energy_position_curve value.
+
+    Returns the points in stored order as `(independent, dependent)` float
+    pairs: energy (keV) is the independent variable, position the
+    dependent. The value dict has already passed `VALUE_SCHEMA` validation
+    at append time (>= 2 points, each with a required numeric energy +
+    position), so this reads the validated shape. The consuming
+    `LookupTable` kernel owns ordering and interpolation; this helper only
+    normalizes the payload-specific key names into positional pairs so the
+    kernel stays decoupled from this quantity's schema.
+    """
+    points = value["points"]
+    return tuple((float(point["energy"]), float(point["position"])) for point in points)
+
+
 VALUE_SCHEMA: dict[str, Any] = {
     "$schema": _DRAFT,
     "type": "object",
@@ -116,4 +133,4 @@ VALUE_SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
 }
 
-__all__ = ["OPERATING_POINT_SCHEMA", "VALUE_SCHEMA"]
+__all__ = ["OPERATING_POINT_SCHEMA", "VALUE_SCHEMA", "curve_points"]

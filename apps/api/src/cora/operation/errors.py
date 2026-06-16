@@ -146,6 +146,31 @@ class PseudoAxisSingularityExceededError(Exception):
         self.threshold = threshold
 
 
+class PseudoAxisCommandOutsideRangeError(Exception):
+    """A LookupTable command fell outside the calibrated range with extrapolation_kind=Error.
+
+    The operator requested an independent value (for example a beam
+    energy) below the lowest or above the highest tabulated point of the
+    pinned calibration curve, and the rule's `extrapolation_kind` is
+    `Error` (refuse rather than clamp to the endpoint). Operator-
+    correctable: request a value inside the calibrated range, or extend
+    the calibration with a revision that covers it. Mapped to 422,
+    alongside the other evaluator-input failures the operator can fix,
+    NOT 500 (the command was well-formed; the request is the problem).
+    """
+
+    def __init__(self, asset_id: object, commanded: float, low: float, high: float) -> None:
+        super().__init__(
+            f"PseudoAxis command {commanded!r} for asset {asset_id!r} is outside the "
+            f"calibrated range [{low!r}, {high!r}] and extrapolation_kind=Error "
+            "forbids extrapolation"
+        )
+        self.asset_id = asset_id
+        self.commanded = commanded
+        self.low = low
+        self.high = high
+
+
 class PseudoAxisConstituentDispatchError(Exception):
     """A ControlPort write to one of the constituents failed mid-dispatch.
 

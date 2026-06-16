@@ -16,6 +16,7 @@ PseudoAxis Family id so the wiring-deferred default does not reject the
 virtual-axis address.
 """
 
+import math
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from uuid import UUID
@@ -24,10 +25,21 @@ import asyncpg
 import pytest
 import structlog.testing
 
+from cora.calibration.aggregates.calibration import AssertedSource, CalibrationStatus
+from cora.calibration.features.append_calibration_revision import AppendCalibrationRevision
+from cora.calibration.features.append_calibration_revision import (
+    bind as bind_append_calibration_revision,
+)
+from cora.calibration.features.define_calibration import DefineCalibration
+from cora.calibration.features.define_calibration import bind as bind_define_calibration
+from cora.calibration.quantities import CalibrationQuantity
 from cora.equipment.aggregates._partition_rule import (
     Affine,
     Aggregation,
     AggregatorKind,
+    ExtrapolationKind,
+    InterpolationKind,
+    LookupTable,
 )
 from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.features import (
@@ -59,6 +71,7 @@ from cora.operation.features import (
 )
 from cora.operation.features.conduct_procedure import ConductProcedure
 from cora.operation.features.register_procedure import RegisterProcedure
+from cora.shared.identity import ActorId
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 5, 12, 0, 0, tzinfo=UTC)
@@ -320,3 +333,132 @@ async def test_conduct_pseudoaxis_setpoint_with_affine_rule_fans_out_to_one_cons
 
     reading = await control_port.read(_constituent_address(constituent_id))
     assert reading.value == 2.0 * commanded + 1.0
+
+
+@pytest.mark.integration
+async def test_conduct_pseudoaxis_lookup_table_dispatches_interpolated_position_postgres(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A LookupTable PseudoAxis move computes a position from the pinned
+    calibration curve and dispatches it.
+
+    Exercises the full runtime chain end-to-end: conduct -> PseudoAxis
+    expansion -> resolve_pseudoaxis_command -> load_pinned_curve (loads the
+    pinned Calibration revision) -> eval_lookup_table (LINEAR interpolation)
+    -> ControlPort.write. This is the exact path the 2-BM energy facets
+    take; here it runs against the in-memory ControlPort so no hardware is
+    needed. Proves the move now COMPUTES the position rather than only
+    recording it.
+    """
+    ids = [UUID(int=0x01900000_0000_7000_8000_00000BAD3000 + i) for i in range(120)]
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=ids)
+    actor = ActorId(_PRINCIPAL_ID)
+
+    family_id = await define_family.bind(deps)(
+        DefineFamily(name="PseudoAxis", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    pseudoaxis_asset_id = await register_asset.bind(deps)(
+        RegisterAsset(name="DmmUsArm", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await add_asset_family.bind(deps)(
+        AddAssetFamily(asset_id=pseudoaxis_asset_id, family_id=family_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    constituent_id = await register_asset.bind(deps)(
+        RegisterAsset(name="DmmUsArmMotor", tier=AssetTier.DEVICE, parent_id=_PARENT_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    cal_id = await bind_define_calibration(deps)(
+        DefineCalibration(
+            target_id=pseudoaxis_asset_id,
+            quantity=CalibrationQuantity.ENERGY_POSITION_CURVE,
+            operating_point={"axis_designation": "dmm_us_arm", "beam_mode": "mono"},
+            description="Test energy -> position curve for the LookupTable runtime proof.",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    rev_id = await bind_append_calibration_revision(deps)(
+        AppendCalibrationRevision(
+            calibration_id=cal_id,
+            value={
+                "points": [
+                    {"energy": 18.0, "position": 0.6},
+                    {"energy": 25.0, "position": 0.9},
+                ],
+                "position_unit": "deg",
+                "provisional": True,
+            },
+            status=CalibrationStatus.PROVISIONAL,
+            source=AssertedSource(asserted_by=actor),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    await update_asset_partition_rule.bind(deps)(
+        UpdateAssetPartitionRule(
+            asset_id=pseudoaxis_asset_id,
+            partition_rule=LookupTable(
+                calibration_id=cal_id,
+                calibration_revision_id=rev_id,
+                interpolation_kind=InterpolationKind.LINEAR,
+                extrapolation_kind=ExtrapolationKind.ERROR,
+                unit_in="keV",
+                unit_out="deg",
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    procedure_id = await register_procedure.bind(deps)(
+        RegisterProcedure(
+            name="SetEnergyMove",
+            kind="bakeout",
+            target_asset_ids=frozenset(),
+            parent_run_id=None,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    control_port = InMemoryControlPort()
+    control_port.simulate_connect(_constituent_address(constituent_id))
+
+    handler = _build_conduct_handler(
+        deps,
+        control_port=control_port,
+        constituent_map={pseudoaxis_asset_id: (constituent_id,)},
+    )
+
+    # 22 keV sits between the saved 18 and 25 keV points; LINEAR gives
+    # 0.6 + (4/7)*(0.9 - 0.6).
+    commanded = 22.0
+    result = await handler(
+        ConductProcedure(
+            procedure_id=procedure_id,
+            steps=(
+                SetpointStep(
+                    address=f"pseudoaxis://{pseudoaxis_asset_id}/energy",
+                    value=commanded,
+                ),
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert result.succeeded is True
+    assert result.completed_count == 1
+
+    reading = await control_port.read(_constituent_address(constituent_id))
+    expected = 0.6 + (4.0 / 7.0) * (0.9 - 0.6)
+    assert math.isclose(reading.value, expected, rel_tol=1e-9)

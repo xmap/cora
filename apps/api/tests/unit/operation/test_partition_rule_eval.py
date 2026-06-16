@@ -9,11 +9,12 @@ transport bridge.
 Each per-kind function gets a happy-path example (forward and, where
 defined, inverse) plus a representative edge case (NaN / Inf rejection
 at the boundary, arity guards on the aggregator, divide-by-zero on the
-Affine inverse, non-negative requirement on the Product nth-root,
-retracted calibration revision on LookupTable, deferred-kernel raise
-when the revision is present). Hypothesis round-trip properties pin
-forward-then-inverse symmetry for Affine and the equal-split / pairwise
-shapes of Aggregation.
+Affine inverse, non-negative requirement on the Product nth-root, and,
+for LookupTable, LINEAR interpolation, NEAREST snap, clamp vs error
+extrapolation, and malformed-curve guards). Hypothesis round-trip
+properties pin forward-then-inverse symmetry for Affine, the equal-split
+/ pairwise shapes of Aggregation, and within-bounds monotonicity for the
+LookupTable LINEAR kernel.
 """
 
 from __future__ import annotations
@@ -30,7 +31,8 @@ from cora.equipment.aggregates._partition_rule import (
     Aggregation,
     AggregatorKind,
     CompositePartition,
-    InvalidPartitionRuleError,
+    ExtrapolationKind,
+    InterpolationKind,
     LookupTable,
     PartitionKind,
     PartitionRuleKind,
@@ -47,6 +49,7 @@ from cora.operation._partition_rule_eval import (
     eval_solver_reference,
 )
 from cora.operation.errors import (
+    PseudoAxisCommandOutsideRangeError,
     PseudoAxisEvaluationFailedError,
     PseudoAxisSingularityExceededError,
 )
@@ -149,36 +152,133 @@ def test_eval_aggregation_rejects_nan_commanded() -> None:
 
 # -- eval_lookup_table ------------------------------------------------------
 
+# A two-segment energy -> position curve. Energy (keV) is the independent
+# variable; position the dependent. Linear between (18, 0.6) and (25, 0.9).
+_CURVE: tuple[tuple[float, float], ...] = ((18.0, 0.6), (25.0, 0.9))
+
+
+def _lookup_rule(
+    *,
+    interpolation_kind: InterpolationKind = InterpolationKind.LINEAR,
+    extrapolation_kind: ExtrapolationKind = ExtrapolationKind.CLAMP,
+) -> LookupTable:
+    return LookupTable(
+        calibration_id=_CALIBRATION_ID,
+        calibration_revision_id=_CALIBRATION_REVISION_ID,
+        interpolation_kind=interpolation_kind,
+        extrapolation_kind=extrapolation_kind,
+    )
+
 
 @pytest.mark.unit
-def test_eval_lookup_table_with_retracted_revision_aborts() -> None:
-    rule = LookupTable(
-        calibration_id=_CALIBRATION_ID, calibration_revision_id=_CALIBRATION_REVISION_ID
-    )
-    with pytest.raises(InvalidPartitionRuleError) as excinfo:
-        eval_lookup_table(rule, 1.0, asset_id=_ASSET_ID, calibration_revision=None)
-    assert excinfo.value.sub_code == "calibration_revision_retracted"
+def test_eval_lookup_table_linear_interpolates_between_points() -> None:
+    rule = _lookup_rule(interpolation_kind=InterpolationKind.LINEAR)
+    # 22 keV sits 4/7 of the way from 18 to 25: 0.6 + (4/7)*(0.9-0.6).
+    result = eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, curve=_CURVE)
+    assert math.isclose(result, 0.6 + (4.0 / 7.0) * 0.3, rel_tol=1e-12)
 
 
 @pytest.mark.unit
-def test_eval_lookup_table_with_present_revision_raises_deferred_kernel() -> None:
-    rule = LookupTable(
-        calibration_id=_CALIBRATION_ID, calibration_revision_id=_CALIBRATION_REVISION_ID
-    )
-    sentinel_revision = object()
+def test_eval_lookup_table_linear_returns_exact_value_at_a_tabulated_point() -> None:
+    rule = _lookup_rule(interpolation_kind=InterpolationKind.LINEAR)
+    assert math.isclose(eval_lookup_table(rule, 18.0, asset_id=_ASSET_ID, curve=_CURVE), 0.6)
+    assert math.isclose(eval_lookup_table(rule, 25.0, asset_id=_ASSET_ID, curve=_CURVE), 0.9)
+
+
+@pytest.mark.unit
+def test_eval_lookup_table_sorts_unordered_curve_before_interpolating() -> None:
+    rule = _lookup_rule(interpolation_kind=InterpolationKind.LINEAR)
+    reversed_curve = ((25.0, 0.9), (18.0, 0.6))
+    result = eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, curve=reversed_curve)
+    assert math.isclose(result, 0.6 + (4.0 / 7.0) * 0.3, rel_tol=1e-12)
+
+
+@pytest.mark.unit
+def test_eval_lookup_table_nearest_snaps_to_closest_point() -> None:
+    rule = _lookup_rule(interpolation_kind=InterpolationKind.NEAREST)
+    assert eval_lookup_table(rule, 19.0, asset_id=_ASSET_ID, curve=_CURVE) == 0.6
+    assert eval_lookup_table(rule, 24.0, asset_id=_ASSET_ID, curve=_CURVE) == 0.9
+
+
+@pytest.mark.unit
+def test_eval_lookup_table_clamp_below_range_returns_low_endpoint() -> None:
+    rule = _lookup_rule(extrapolation_kind=ExtrapolationKind.CLAMP)
+    assert eval_lookup_table(rule, 10.0, asset_id=_ASSET_ID, curve=_CURVE) == 0.6
+
+
+@pytest.mark.unit
+def test_eval_lookup_table_clamp_above_range_returns_high_endpoint() -> None:
+    rule = _lookup_rule(extrapolation_kind=ExtrapolationKind.CLAMP)
+    assert eval_lookup_table(rule, 40.0, asset_id=_ASSET_ID, curve=_CURVE) == 0.9
+
+
+@pytest.mark.unit
+def test_eval_lookup_table_error_below_range_raises_outside_range() -> None:
+    rule = _lookup_rule(extrapolation_kind=ExtrapolationKind.ERROR)
+    with pytest.raises(PseudoAxisCommandOutsideRangeError) as excinfo:
+        eval_lookup_table(rule, 10.0, asset_id=_ASSET_ID, curve=_CURVE)
+    assert excinfo.value.asset_id == _ASSET_ID
+    assert excinfo.value.commanded == 10.0
+
+
+@pytest.mark.unit
+def test_eval_lookup_table_error_above_range_raises_outside_range() -> None:
+    rule = _lookup_rule(extrapolation_kind=ExtrapolationKind.ERROR)
+    with pytest.raises(PseudoAxisCommandOutsideRangeError):
+        eval_lookup_table(rule, 99.0, asset_id=_ASSET_ID, curve=_CURVE)
+
+
+@pytest.mark.unit
+def test_eval_lookup_table_cubic_not_implemented_raises() -> None:
+    rule = _lookup_rule(interpolation_kind=InterpolationKind.CUBIC)
     with pytest.raises(PseudoAxisEvaluationFailedError) as excinfo:
-        eval_lookup_table(rule, 1.0, asset_id=_ASSET_ID, calibration_revision=sentinel_revision)
+        eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, curve=_CURVE)
     assert excinfo.value.kind == PartitionRuleKind.LOOKUP_TABLE
-    assert "not yet wired" in excinfo.value.reason
+    assert "not implemented" in excinfo.value.reason
 
 
 @pytest.mark.unit
 def test_eval_lookup_table_rejects_nan_commanded() -> None:
-    rule = LookupTable(
-        calibration_id=_CALIBRATION_ID, calibration_revision_id=_CALIBRATION_REVISION_ID
-    )
+    rule = _lookup_rule()
     with pytest.raises(PseudoAxisEvaluationFailedError):
-        eval_lookup_table(rule, float("nan"), asset_id=_ASSET_ID, calibration_revision=object())
+        eval_lookup_table(rule, float("nan"), asset_id=_ASSET_ID, curve=_CURVE)
+
+
+@pytest.mark.unit
+def test_eval_lookup_table_rejects_curve_with_fewer_than_two_points() -> None:
+    rule = _lookup_rule()
+    with pytest.raises(PseudoAxisEvaluationFailedError) as excinfo:
+        eval_lookup_table(rule, 22.0, asset_id=_ASSET_ID, curve=((18.0, 0.6),))
+    assert "at least 2 points" in excinfo.value.reason
+
+
+@pytest.mark.unit
+def test_eval_lookup_table_rejects_duplicate_independent_value() -> None:
+    rule = _lookup_rule()
+    with pytest.raises(PseudoAxisEvaluationFailedError) as excinfo:
+        eval_lookup_table(rule, 18.0, asset_id=_ASSET_ID, curve=((18.0, 0.6), (18.0, 0.9)))
+    assert "duplicate" in excinfo.value.reason
+
+
+@pytest.mark.unit
+@given(commanded=st.floats(min_value=18.0, max_value=25.0))
+def test_eval_lookup_table_linear_stays_within_endpoint_bounds(commanded: float) -> None:
+    rule = _lookup_rule(interpolation_kind=InterpolationKind.LINEAR)
+    result = eval_lookup_table(rule, commanded, asset_id=_ASSET_ID, curve=_CURVE)
+    assert 0.6 <= result <= 0.9
+
+
+@pytest.mark.unit
+@given(
+    a=st.floats(min_value=18.0, max_value=25.0),
+    b=st.floats(min_value=18.0, max_value=25.0),
+)
+def test_eval_lookup_table_linear_is_monotonic_for_increasing_curve(a: float, b: float) -> None:
+    assume(a < b)
+    rule = _lookup_rule(interpolation_kind=InterpolationKind.LINEAR)
+    ya = eval_lookup_table(rule, a, asset_id=_ASSET_ID, curve=_CURVE)
+    yb = eval_lookup_table(rule, b, asset_id=_ASSET_ID, curve=_CURVE)
+    assert ya <= yb
 
 
 # -- eval_composite_partition ----------------------------------------------

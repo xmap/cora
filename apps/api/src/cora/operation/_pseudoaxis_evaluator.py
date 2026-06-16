@@ -8,17 +8,18 @@ authz sweep and the sequential ControlPort dispatch loop; this module
 is the math + load step only.
 
 Pure function from `(event_store, asset_id, commanded_value,
-constituent_asset_ids, correlation_id, calibration_revision)` to a
-`ResolvedSetpoints` record, modulo the event-store I/O for the
-Asset load and the one structlog emission at the end. No
-business-logic state survives across commands per the
-non-determinism principle: the evaluator reloads the Asset on every
-invocation.
+constituent_asset_ids, correlation_id)` to a `ResolvedSetpoints`
+record, modulo the event-store I/O for the Asset load (and, for
+LookupTable rules, the pinned-calibration load) and the one structlog
+emission at the end. No business-logic state survives across commands
+per the non-determinism principle: the evaluator reloads the Asset on
+every invocation.
 
-`calibration_revision` is supplied by the caller for the LookupTable
-arm and may be None for every other rule kind; LookupTable + None
-raises `InvalidPartitionRuleError(sub_code=
-"calibration_revision_retracted")` per the memo lock.
+For a LookupTable rule the evaluator loads the pinned calibration curve
+itself (via `load_pinned_curve`, keyed by the rule's `calibration_id` +
+`calibration_revision_id`) and passes the extracted points to the pure
+kernel. A dangling pin (calibration or revision absent) raises
+`InvalidPartitionRuleError(sub_code="calibration_revision_retracted")`.
 
 Self-gated on `Asset.partition_rule is not None`: any Asset that has
 had a rule set is a virtual axis. The earlier Family-membership
@@ -32,10 +33,12 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from cora.calibration.aggregates.calibration.read import load_pinned_curve
 from cora.equipment.aggregates._partition_rule import (
     Affine,
     Aggregation,
     CompositePartition,
+    InvalidPartitionRuleError,
     LookupTable,
     PartitionRuleKind,
     SolverReference,
@@ -98,7 +101,6 @@ async def resolve_pseudoaxis_command(
     commanded_value: float,
     constituent_asset_ids: tuple[UUID, ...],
     correlation_id: UUID,
-    calibration_revision: object | None = None,
 ) -> ResolvedSetpoints:
     """Resolve a PseudoAxis virtual-axis command into constituent setpoints.
 
@@ -112,8 +114,8 @@ async def resolve_pseudoaxis_command(
          as a virtual axis).
       3. Dispatch on `type(state.partition_rule)` into the matching
          pure evaluator in `_partition_rule_eval`. For `LookupTable`,
-         pass `calibration_revision` through; for `SolverReference`,
-         apply the singularity-threshold guard via
+         load the pinned calibration curve and pass its points; for
+         `SolverReference`, apply the singularity-threshold guard via
          `check_solver_residual`.
       4. Emit one `pseudoaxis.resolved` structured-log event with the
          rule kind, the resolved setpoints, the latency, the
@@ -178,11 +180,23 @@ async def resolve_pseudoaxis_command(
                         f"(got {len(constituent_asset_ids)})"
                     ),
                 )
+            curve = await load_pinned_curve(
+                event_store, rule.calibration_id, rule.calibration_revision_id
+            )
+            if curve is None:
+                raise InvalidPartitionRuleError(
+                    sub_code="calibration_revision_retracted",
+                    reason=(
+                        f"LookupTable evaluation aborted for asset {asset_id!r}: pinned "
+                        f"calibration revision {rule.calibration_revision_id!r} of calibration "
+                        f"{rule.calibration_id!r} is unavailable (retracted or load failed)"
+                    ),
+                )
             forward = eval_lookup_table(
                 rule,
                 commanded_value,
                 asset_id=asset_id,
-                calibration_revision=calibration_revision,
+                curve=curve,
             )
             constituent_values = (forward,)
         case CompositePartition():
@@ -202,6 +216,13 @@ async def resolve_pseudoaxis_command(
 
     elapsed_ms = (time.perf_counter() - started) * 1000.0
 
+    # Provenance: record which calibration revision a LookupTable move
+    # interpolated from (None for the other rule kinds, which carry no
+    # calibration).
+    calibration_revision_id = (
+        str(rule.calibration_revision_id) if isinstance(rule, LookupTable) else None
+    )
+
     _log.info(
         _RESOLVED_LOG_EVENT,
         asset_id=str(asset_id),
@@ -212,6 +233,7 @@ async def resolve_pseudoaxis_command(
         status="ok",
         correlation_id=str(correlation_id),
         residual=residual,
+        calibration_revision_id=calibration_revision_id,
     )
 
     return ResolvedSetpoints(

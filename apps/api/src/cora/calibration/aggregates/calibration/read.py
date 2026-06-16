@@ -27,7 +27,11 @@ import asyncpg
 
 from cora.calibration.aggregates.calibration.events import from_stored
 from cora.calibration.aggregates.calibration.evolver import fold
-from cora.calibration.aggregates.calibration.state import Calibration
+from cora.calibration.aggregates.calibration.state import (
+    Calibration,
+    CalibrationNotCurveValuedError,
+)
+from cora.calibration.quantities import CalibrationQuantity, energy_position_curve
 from cora.infrastructure.ports import EventStore
 
 _STREAM_TYPE = "Calibration"
@@ -58,6 +62,43 @@ async def load_calibration(event_store: EventStore, calibration_id: UUID) -> Cal
     stored, _version = await event_store.load(_STREAM_TYPE, calibration_id)
     events = [from_stored(s) for s in stored]
     return fold(events)
+
+
+async def load_pinned_curve(
+    event_store: EventStore,
+    calibration_id: UUID,
+    revision_id: UUID,
+) -> tuple[tuple[float, float], ...] | None:
+    """Load a pinned calibration revision and return its curve points.
+
+    The cross-BC entry point a `LookupTable` partition-rule evaluator
+    uses: it loads the owning Calibration aggregate, finds the revision
+    pinned by the rule, and returns the curve as `(independent,
+    dependent)` float pairs. All Calibration-payload knowledge stays here
+    (the consuming kernel sees only positional pairs).
+
+    Returns None when the calibration stream is empty or the pinned
+    revision is absent (a dangling reference); the caller surfaces that as
+    an unavailable-calibration abort. Raises
+    `CalibrationNotCurveValuedError` when the calibration's quantity is
+    scalar-valued (a misconfigured rule), so the failure is explicit
+    rather than a KeyError on a missing `points` key.
+
+    Today `energy_position_curve` is the only curve-valued quantity; a
+    second one adds a dispatch arm here (rule of three).
+    """
+    calibration = await load_calibration(event_store, calibration_id)
+    if calibration is None:
+        return None
+    revision = next(
+        (rev for rev in calibration.revisions if rev.revision_id == revision_id),
+        None,
+    )
+    if revision is None:
+        return None
+    if calibration.quantity != CalibrationQuantity.ENERGY_POSITION_CURVE.value:
+        raise CalibrationNotCurveValuedError(calibration_id, calibration.quantity)
+    return energy_position_curve.curve_points(revision.value)
 
 
 async def load_calibration_timestamps(

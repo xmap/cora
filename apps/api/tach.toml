@@ -67,7 +67,16 @@ depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.calibration.aggregates"
-depends_on = ["cora.infrastructure", "cora.shared"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.calibration.quantities"]
+
+[[modules]]
+# Closed catalog of CalibrationQuantity values + per-quantity JSON Schemas.
+# A foundational leaf that both the aggregates (load_pinned_curve curve
+# extraction) and the features (define / append deciders validate values
+# against the schemas) build on, so it is its own module rather than
+# parent-BC code the aggregates may not reach up into.
+path = "cora.calibration.quantities"
+depends_on = []
 
 [[modules]]
 path = "cora.data.aggregates"
@@ -241,6 +250,11 @@ depends_on = [
     "cora.operation.aggregates",
     "cora.equipment.aggregates",
     "cora.recipe.aggregates",
+    # `cora.calibration.aggregates` provides `load_pinned_curve` used by
+    # the PseudoAxis runtime evaluator to load a LookupTable rule's pinned
+    # calibration curve before interpolating (the rule pins
+    # calibration_id + calibration_revision_id; the curve is not inlined).
+    "cora.calibration.aggregates",
     # `cora.run.aggregates` provides `load_run` used by
     # `start_procedure` handler to resolve the parent Run's
     # Method.needed_supplies chain for Phase-of-Run pre-flight gate
@@ -282,6 +296,9 @@ depends_on = [
     "cora.infrastructure",
     "cora.shared",
     "cora.calibration.aggregates",
+    # define / append deciders + list routes validate against and surface
+    # the closed CalibrationQuantity catalog + per-quantity schemas.
+    "cora.calibration.quantities",
     # publish_revision slice emits a cross-BC event pair
     # (CalibrationRevisionPublished on Calibration; PublicationReceiptRecorded
     # on the matching outbound Permit) atomically via

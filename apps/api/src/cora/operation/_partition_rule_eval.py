@@ -9,10 +9,17 @@ mathematical failure.
 
 Discipline: pure, side-effect-free, deterministic. No I/O, no clock,
 no global state, no logging. The caller is responsible for observability;
-these functions only do the math. NaN / Inf inputs raise
-`InvalidPartitionRuleError`. Aggregator-shape mismatches (e.g.
-`Difference` with constituent_count != 2) raise
+these functions only do the math. NaN / Inf inputs and aggregator-shape
+mismatches (e.g. `Difference` with constituent_count != 2) raise
 `PseudoAxisEvaluationFailedError`.
+
+`eval_lookup_table` takes the calibration curve as already-extracted
+`(independent, dependent)` pairs (the caller loads the pinned revision and
+extracts them) so the kernel stays pure and decoupled from the Calibration
+payload shape. It interpolates LINEAR or snaps NEAREST; CUBIC is not yet
+implemented. Out-of-range with `extrapolation_kind=Error` raises
+`PseudoAxisCommandOutsideRangeError`; with `Clamp` it returns the nearest
+endpoint.
 
 The `SolverReference` evaluator is a placeholder: it raises
 `NotImplementedError` so the foundation layer can ship; the solver
@@ -31,13 +38,15 @@ from cora.equipment.aggregates._partition_rule import (
     Aggregation,
     AggregatorKind,
     CompositePartition,
-    InvalidPartitionRuleError,
+    ExtrapolationKind,
+    InterpolationKind,
     LookupTable,
     PartitionKind,
     PartitionRuleKind,
     SolverReference,
 )
 from cora.operation.errors import (
+    PseudoAxisCommandOutsideRangeError,
     PseudoAxisEvaluationFailedError,
     PseudoAxisSingularityExceededError,
 )
@@ -180,51 +189,127 @@ def eval_aggregation(
     )
 
 
+def _ordered_curve(
+    asset_id: UUID, curve: tuple[tuple[float, float], ...]
+) -> tuple[list[float], list[float]]:
+    """Validate and order a calibration curve into parallel x / y lists.
+
+    Requires at least two points, all finite, with strictly increasing
+    independent values once sorted (duplicate independents make forward
+    interpolation ambiguous). A malformed curve is a data-substrate
+    failure, not an operator error, so it raises
+    `PseudoAxisEvaluationFailedError` (mapped to 500), matching the
+    other math-kernel failures.
+    """
+    kind = PartitionRuleKind.LOOKUP_TABLE
+    if len(curve) < 2:
+        raise PseudoAxisEvaluationFailedError(
+            asset_id=asset_id,
+            kind=kind,
+            reason=f"LookupTable curve needs at least 2 points (got {len(curve)})",
+        )
+    ordered = sorted(curve, key=lambda point: point[0])
+    xs = [point[0] for point in ordered]
+    ys = [point[1] for point in ordered]
+    for x, y in ordered:
+        if not math.isfinite(x) or not math.isfinite(y):
+            raise PseudoAxisEvaluationFailedError(
+                asset_id=asset_id,
+                kind=kind,
+                reason=f"LookupTable curve has a non-finite point ({x!r}, {y!r})",
+            )
+    for i in range(1, len(xs)):
+        if xs[i] == xs[i - 1]:
+            raise PseudoAxisEvaluationFailedError(
+                asset_id=asset_id,
+                kind=kind,
+                reason=(
+                    f"LookupTable curve has a duplicate independent value {xs[i]!r}; "
+                    "forward interpolation is ambiguous"
+                ),
+            )
+    return xs, ys
+
+
+def _linear_interpolate(xs: list[float], ys: list[float], commanded: float) -> float:
+    """Straight-line interpolation of `commanded` within [xs[0], xs[-1]].
+
+    Caller guarantees `xs[0] <= commanded <= xs[-1]` and strictly
+    increasing xs. Exact-point hits return the tabulated dependent value.
+    """
+    for i in range(1, len(xs)):
+        if commanded <= xs[i]:
+            x0, x1 = xs[i - 1], xs[i]
+            y0, y1 = ys[i - 1], ys[i]
+            fraction = (commanded - x0) / (x1 - x0)
+            return y0 + fraction * (y1 - y0)
+    return ys[-1]
+
+
+def _nearest_value(xs: list[float], ys: list[float], commanded: float) -> float:
+    """Return the dependent value of the point whose independent is nearest.
+
+    Ties resolve to the lower independent value (first match), which is
+    deterministic.
+    """
+    best_index = 0
+    best_distance = abs(xs[0] - commanded)
+    for i in range(1, len(xs)):
+        distance = abs(xs[i] - commanded)
+        if distance < best_distance:
+            best_distance = distance
+            best_index = i
+    return ys[best_index]
+
+
 def eval_lookup_table(
     rule: LookupTable,
     commanded: float,
     *,
     asset_id: UUID,
-    calibration_revision: object | None,
+    curve: tuple[tuple[float, float], ...],
 ) -> float:
-    """Evaluate a LookupTable rule against a pinned Calibration revision.
+    """Evaluate a LookupTable rule by interpolating a calibration curve.
 
-    `calibration_revision` is the resolved revision object loaded by
-    the caller; the evaluator takes it as opaque so this module stays
-    decoupled from the Calibration BC's payload shape. None means
-    the pinned revision has been retracted (or could not be loaded);
-    that aborts evaluation with `InvalidPartitionRuleError(sub_code=
-    "calibration_revision_retracted")` per the memo lock.
-
-    The actual interpolation kernel is deferred: the foundation layer
-    ships the shape-and-error-surface contract so callers can rely on
-    the signature, the `(interpolation_kind, extrapolation_kind)` pair
-    is honoured, and the retraction-abort path is exercised. The real
-    interpolation lands when a real Calibration revision body shape
-    is wired into Operation in a follow-up.
+    `curve` is the resolved, already-extracted sequence of `(independent,
+    dependent)` pairs the caller pulled from the pinned Calibration
+    revision; the kernel stays pure and decoupled from the Calibration
+    payload shape. `interpolation_kind` selects `LINEAR` (straight line
+    between the bracketing points) or `NEAREST` (snap to the closest
+    independent point); `CUBIC` is not yet implemented. Outside the
+    tabulated range, `extrapolation_kind=Clamp` returns the nearest
+    endpoint's dependent value and `Error` raises
+    `PseudoAxisCommandOutsideRangeError`.
     """
     kind = PartitionRuleKind.LOOKUP_TABLE
     _ensure_commanded_finite(asset_id, kind, commanded)
-    if calibration_revision is None:
-        raise InvalidPartitionRuleError(
-            sub_code="calibration_revision_retracted",
+    xs, ys = _ordered_curve(asset_id, curve)
+    low, high = xs[0], xs[-1]
+
+    if commanded < low or commanded > high:
+        if rule.extrapolation_kind is ExtrapolationKind.ERROR:
+            raise PseudoAxisCommandOutsideRangeError(
+                asset_id=asset_id, commanded=commanded, low=low, high=high
+            )
+        result = ys[0] if commanded < low else ys[-1]
+        _ensure_result_finite(asset_id, kind, result, "LookupTable clamp")
+        return result
+
+    if rule.interpolation_kind is InterpolationKind.NEAREST:
+        result = _nearest_value(xs, ys, commanded)
+    elif rule.interpolation_kind is InterpolationKind.LINEAR:
+        result = _linear_interpolate(xs, ys, commanded)
+    else:
+        raise PseudoAxisEvaluationFailedError(
+            asset_id=asset_id,
+            kind=kind,
             reason=(
-                f"LookupTable evaluation aborted for asset {asset_id!r}: "
-                f"pinned calibration revision {rule.calibration_revision_id!r} "
-                "is unavailable (retracted or load failed); calibration revision "
-                "loading deferred"
+                f"LookupTable interpolation_kind={rule.interpolation_kind.value} "
+                "is not implemented (LINEAR and NEAREST are supported)"
             ),
         )
-    raise PseudoAxisEvaluationFailedError(
-        asset_id=asset_id,
-        kind=kind,
-        reason=(
-            f"LookupTable interpolation kernel not yet wired "
-            f"(interpolation_kind={rule.interpolation_kind.value}, "
-            f"extrapolation_kind={rule.extrapolation_kind.value}); "
-            "follow-up slice ships the kernel"
-        ),
-    )
+    _ensure_result_finite(asset_id, kind, result, "LookupTable interpolation")
+    return result
 
 
 def eval_composite_partition(

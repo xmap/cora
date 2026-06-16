@@ -72,6 +72,7 @@ from cora.operation.aggregates.procedure import (
 from cora.operation.errors import (
     AssetNotPseudoAxisError,
     PartitionRuleNotFoundError,
+    PseudoAxisCommandOutsideRangeError,
     PseudoAxisConstituentDispatchError,
     PseudoAxisConstituentNotFoundError,
     PseudoAxisConstituentUnauthorizedError,
@@ -316,6 +317,12 @@ def register_operation_routes(app: FastAPI) -> None:
         # singular for the configured solver).
         PseudoAxisConstituentNotFoundError,
         PseudoAxisSingularityExceededError,
+        # LookupTable command outside the calibrated range with
+        # extrapolation_kind=Error: operator requested an energy beyond
+        # the tabulated curve endpoints (request the problem, not the
+        # server), so 422 rather than the 500 the math-kernel failures
+        # below land at.
+        PseudoAxisCommandOutsideRangeError,
     ):
         app.add_exception_handler(unprocessable_cls, _handle_unprocessable)
     # Server-side determinism bugs / data corruption: HTTP 500. Distinct

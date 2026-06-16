@@ -30,6 +30,7 @@ from cora.calibration.aggregates.calibration import (
     CalibrationAlreadyExistsError,
     CalibrationCannotPublishRevisionError,
     CalibrationIdentityAlreadyExistsError,
+    CalibrationNotCurveValuedError,
     CalibrationNotFoundError,
     CalibrationRevisionNotFoundError,
     InvalidCalibrationDescriptionError,
@@ -124,6 +125,11 @@ def register_calibration_routes(app: FastAPI) -> None:
         InvalidCalibrationValueError,
         InvalidCalibrationSourceError,
         SupersedesRevisionNotFoundError,
+        # A LookupTable partition rule pinned a scalar-valued calibration;
+        # raised at conduct time from load_pinned_curve. App-scoped, so it
+        # surfaces from the Operation conduct path too (400, operator
+        # re-points the rule).
+        CalibrationNotCurveValuedError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     for not_found_cls in (
