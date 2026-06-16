@@ -55,33 +55,35 @@ The setpoint positions are the curve outputs at 22 keV and are **provisional**: 
 
 ### `hexapod_reboot`
 
-Realizes [`cora.capability.maintenance`](../../catalog/capabilities.md). Recovers a stuck hexapod controller on the `2bmHXP:` axis: stop the IOC, power-cycle its PDU outlet, restart the IOC, confirm all axes enabled. A pure setpoint/action/check sequence with no scientific output. Optional bindings: the two settling durations.
+Realizes [`cora.capability.maintenance`](../../catalog/capabilities.md). Recovers a stuck hexapod controller on the `2bmHXP:` axis: stop the IOC, power-cycle its PDU outlet, restart the IOC, confirm all axes enabled. A flat setpoint/action/check sequence with no scientific output. The records below are confirmed against the authoritative reboot script [`decarlof/2bmb-bin/hexapod_reboot.py`](https://github.com/decarlof/2bmb-bin/blob/HEAD/hexapod_reboot.py); the bindings are the timing durations.
 
 Phase 1, stop the IOC:
 
 - action `run_shell_script { script: "hexapod_IOC_stop.sh" }`
 - check the IOC is stopped
 
-Phase 2, power-cycle the PDU outlet:
+Phase 2, power-cycle the PDU outlet (NetBooter PDU, **outlet 5**, over HTTP: `/cmd.cgi?rly=N` to toggle, `/status.xml` to read):
 
-- setpoint PDU outlet 4 = off, then action `pdu_power_toggle { outlet: 4, state: "off" }`, then check the outlet is off
-- action `sleep { seconds: <<settle_off_s>> }` (power settling, 10 s in the captured run)
-- setpoint PDU outlet 4 = on, then action `pdu_power_toggle { outlet: 4, state: "on" }`, then check the outlet is on
-- action `sleep { seconds: <<settle_on_s>> }` (controller boot, 10 s)
+- action `pdu_power_toggle { outlet: 5, state: "off" }`, then check the outlet is off
+- action `sleep { seconds: <<off_wait>> }` (power discharge, default 10 s)
+- action `pdu_power_toggle { outlet: 5, state: "on" }`, then check the outlet is on
+- action `sleep { seconds: <<on_wait>> }` (controller boot, default 30 s)
 
 Phase 3, restart the IOC:
 
 - action `run_shell_script { script: "hexapod_IOC.sh" }`
-- check the IOC is running
+- action `sleep { seconds: <<ioc_settle>> }` (IOC settle, default 10 s), then check the enable PV is connected
 
 Phase 4, confirm enabled:
 
-- action `caget_poll { pv: "2bmHXP:HexapodAllEnabled.VAL", timeout_s: 180, interval_s: 2 }` *(record illustrative)*
-- check `2bmHXP:HexapodAllEnabled.VAL == 1` *(record illustrative)*
+- action `caget_poll { pv: "2bmHXP:HexapodAllEnabled.VAL", timeout_s: 180, interval_s: 1 }`
+- check `2bmHXP:HexapodAllEnabled.VAL == 1`
 
-Only the `2bmHXP:` prefix is confirmed in the descriptor. The reboot-specific records (`HexapodAllEnabled.VAL`, the PDU `outlet 4` endpoints, the shell-script names, the IOC channel) come from the external `2bmb-bin/hexapod_reboot.py` script and are *(illustrative, confirm with staff)*; they are tracked as [HXP-3 through HXP-6](questions.md#the-hexapod). This recipe captures the **happy path only**: the force-enable fallback (if `HexapodAllEnabled` stays 0 after the timeout, run `caput 2bmHXP:EnableWork.PROC 1` then re-poll) is a conditional branch the v1 body cannot express, so it stays an operator decision and is the v2 conditional-branch trigger. The Equipment-BC fault and restore that bracket the ceremony, and the Caution registered against the controller, are separate commands in their own BCs, not recipe steps.
+The PVs (`2bmHXP:HexapodAllEnabled.VAL` read, `2bmHXP:EnableWork.PROC` force-enable), the IOC scripts, the host (`arcturus`), the NetBooter endpoints, outlet 5, and the timings are all confirmed from the reboot script (tracked as [HXP-3 through HXP-6](questions.md#the-hexapod)). What is NOT in the repo: the script selects one of two PDUs (`a` default, or `b`), and that choice plus the PDU IP live in the operator's `~/access.json`, so they remain a deployment secret to confirm. The script also runs an optional TCP controller-readiness check (port 5001) between power-on and IOC restart, gated on a configured controller IP; its applicability to the Aerotech hexapod ties to the open drive identity (`DRIVE-4`).
 
-**To run, needs:** four action bodies that are not registered today (`run_shell_script`, `pdu_power_toggle`, `sleep`, `caget_poll`) plus their substrate adapters (a shell or SSH execution port, an HTTP port for the NetBooter PDU, a channel-access poll body); and the reboot-specific records confirmed by staff (HXP-3 through HXP-6).
+This recipe captures the **happy path only** (controller enabled on the first check). The script's real flow is conditional: if `HexapodAllEnabled` is not `1`, it rechecks after 3 s, then issues `caput 2bmHXP:EnableWork.PROC 1` and polls every 1 s up to 180 s. That branch is a conditional the v1 body cannot express, so it stays an operator decision and is the v2 conditional-branch trigger. The Equipment-BC fault and restore that bracket the ceremony, and the Caution registered against the controller, are separate commands in their own BCs, not recipe steps.
+
+**To run, needs:** action bodies that are not registered today (`run_shell_script`, `pdu_power_toggle` over the NetBooter HTTP API, `sleep`, `caget_poll`, plus `caput` for the force-enable branch) and their substrate adapters (a shell or SSH execution port, an HTTP port for the PDU, a channel-access read/write port). The records themselves are now confirmed from the reboot script; only the PDU selection (`a` / `b`) and its IP remain a deployment secret.
 
 ## Status
 

@@ -66,14 +66,14 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 ### Rebooting a stuck hexapod
 
-When the hexapod controller locks up, the recovery is a power-cycle ceremony: stop the IOC, power-cycle the controller's PDU outlet, restart the IOC, then confirm the axes re-enable. CORA has modelled it as the [`hexapod_reboot` recipe](recipes.md). The records below come from the external `2bmb-bin/hexapod_reboot.py` script (not in CORA, and not in the beamline descriptor or the published 2-BM procedures), so they need confirming before the recipe can run. CORA's assumed values are the script's; we just need a yes/no or a correction on each.
+When the hexapod controller locks up, the recovery is a power-cycle ceremony: stop the IOC, power-cycle the controller's PDU outlet, restart the IOC, then confirm the axes re-enable. CORA has modelled it as the [`hexapod_reboot` recipe](recipes.md). Most of the records are now read directly from the authoritative reboot script [`decarlof/2bmb-bin/hexapod_reboot.py`](https://github.com/decarlof/2bmb-bin/blob/HEAD/hexapod_reboot.py); the only things not in the repo are the per-deployment PDU secrets in `~/access.json`. So the asks below are a quick confirm that the script matches current production, plus the one secret (HXP-5).
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| HXP-3 | `Blocks-go-live` | The exact EPICS PVs the reboot uses to (a) read whether all hexapod axes are enabled and (b) force-enable them. Are these current? | `2bmHXP:HexapodAllEnabled.VAL` (read), `2bmHXP:EnableWork.PROC` (force-enable) | not yet | [Recipes](recipes.md) |
-| HXP-4 | `Blocks-go-live` | How the hexapod IOC is stopped and restarted: which host runs it, and the exact stop / start commands. | scripts `hexapod_IOC_stop.sh` / `hexapod_IOC.sh` on host `arcturus` | not yet | [Recipes](recipes.md) |
-| HXP-5 | `Blocks-go-live` | Which PDU powers the hexapod controller, how CORA talks to it, and which outlet is the hexapod. | NetBooter-style PDU over HTTP (`/cmd.cgi` to switch, `/status.xml` to read), outlet 4 | not yet | [Recipes](recipes.md) |
-| HXP-6 | `Nice-to-have` | The reboot timings: how long to wait after powering the controller off, after powering it on, and how long to poll for "all enabled" before giving up. | 10 s off-settle, 10 s boot-settle, 180 s enable poll at 2 s intervals | not yet | [Recipes](recipes.md) |
+| HXP-3 | `Nice-to-have` | Confirm the enable / force-enable PVs are still current. | `2bmHXP:HexapodAllEnabled.VAL` (read), `2bmHXP:EnableWork.PROC` (force-enable) | yes, from the reboot script | [Recipes](recipes.md) |
+| HXP-4 | `Nice-to-have` | Confirm the IOC stop / start scripts and host. | `hexapod_IOC_stop.sh` / `hexapod_IOC.sh`, IOC host `arcturus` (user `2bmb`) | yes, from the reboot script | [Recipes](recipes.md) |
+| HXP-5 | `Blocks-go-live` | Which of the two PDUs (`a` default, or `b`) powers the hexapod, and its IP address? The PDU type, the HTTP endpoints, and the outlet are known from the script; only the choice and IP live in `~/access.json`, not the repo. | NetBooter over HTTP (`/cmd.cgi?rly=N`, `/status.xml`), outlet 5; PDU `a`, IP unknown | partly (type / endpoints / outlet known; PDU choice + IP not) | [Recipes](recipes.md) |
+| HXP-6 | `Nice-to-have` | Confirm the reboot timings are the current operating values. | 10 s off-wait, 30 s on-wait, 10 s IOC settle, 180 s enable poll at 1 s intervals (script defaults) | yes, from the reboot script | [Recipes](recipes.md) |
 
 ## Sample stages
 
