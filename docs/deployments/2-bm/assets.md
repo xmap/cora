@@ -421,7 +421,7 @@ Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexa
 
 ## Engineering drawings
 
-Each Asset may carry one canonical engineering reference as a `(system, number, revision)` triple per the [Drawing VO](../../architecture/modules/equipment/index.md). The carrier holds the build-to document for the physical specimen; the [Mount drawing](equipment/microscope.md#engineering-drawings) on the slot is a separate document (where the slot lives in the beamline).
+Each Asset may carry one canonical engineering reference as a `(system, number, revision)` triple per the [Drawing VO](../../architecture/modules/equipment/index.md). The carrier holds the build-to document for the physical specimen; the [Mount drawing](equipment/microscope.md#calibration-drawings-and-citation) on the slot is a separate document (where the slot lives in the beamline).
 
 Assets not listed below have no canonical document cited on the 2-BM source page yet (Aerotech `ABS250MP` datasheet for `Rotary`, Kohzu `CYAT-070` datasheet for the four `SampleTop_*` stages, an APS shutter drawing for `StationShutter`, and a FLIR Oryx datasheet for `Camera`). These populate when the operator confirms the canonical reference.
 
