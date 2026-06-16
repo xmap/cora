@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from cora.equipment.aggregates.assembly.state import SlotCardinality
 from cora.equipment.aggregates.family.affordance import Affordance
 from cora.equipment.aggregates.model.state import ManufacturerIdentifierType
 from cora.equipment.aggregates.role import SEED_ROLES
@@ -65,6 +66,8 @@ def test_catalog_loads_and_validates() -> None:
     assert len(cat.capabilities) >= 5
     assert len(cat.methods) >= 15
     assert len(cat.models) >= 12
+    assert len(cat.assemblies) >= 2
+    assert {a.name for a in cat.assemblies} >= {"Microscope", "Optics"}
     # every method references a capability that exists in the catalog
     codes = {c.code for c in cat.capabilities}
     for m in cat.methods:
@@ -81,6 +84,10 @@ def test_executor_shape_mirror_matches_code() -> None:
 
 def test_manufacturer_id_type_mirror_matches_code() -> None:
     assert {t.value for t in ManufacturerIdentifierType} == cd.MANUFACTURER_ID_TYPES
+
+
+def test_slot_cardinality_mirror_matches_code() -> None:
+    assert {c.value for c in SlotCardinality} == cd.SLOT_CARDINALITIES
 
 
 def test_roles_match_seed_roles() -> None:
@@ -104,6 +111,7 @@ def test_renders_all_catalog_pages() -> None:
         "catalog/capabilities.md",
         "catalog/methods.md",
         "catalog/families.md",
+        "catalog/assemblies.md",
         "catalog/roles.md",
         "catalog/models.md",
     }
@@ -115,6 +123,11 @@ def test_renders_all_catalog_pages() -> None:
     assert "depth-of-focus" in pages["catalog/methods.md"]
     assert "`Imageable`" in pages["catalog/roles.md"]
     assert "Aerotech" in pages["catalog/models.md"]
+    assemblies_md = pages["catalog/assemblies.md"]
+    assert "`Microscope`" in assemblies_md
+    assert "`Optics`" in assemblies_md
+    assert "`Detector`" in assemblies_md  # Microscope presents_as
+    assert "`optics` -> `Optics`" in assemblies_md  # sub-assembly link rendered
 
 
 def test_catalog_guards_reject_bad_data(tmp_path: Path) -> None:
@@ -143,6 +156,95 @@ def test_catalog_guards_reject_bad_data(tmp_path: Path) -> None:
         "capabilities:\n  - "
         "{code: cora.capability.x, name: X, executor_shapes: [Method], descripton: oops}\n",
         encoding="utf-8",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(typo)
+
+
+def test_assembly_guards_reject_bad_data(tmp_path: Path) -> None:
+    def _write(name: str, body: str) -> Path:
+        p = tmp_path / name
+        p.write_text(body, encoding="utf-8")
+        return p
+
+    # a slot referencing a family the catalog does not define fails the build
+    unknown_family = _write(
+        "unknown_family.yaml",
+        "families:\n  - {name: Camera}\n"
+        "assemblies:\n  - name: A\n    required_slots:\n"
+        "      - {slot_name: s, required_families: [Ghost], cardinality: Exactly1}\n",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(unknown_family)
+
+    # presents_as referencing an undefined role fails
+    unknown_role = _write(
+        "unknown_role.yaml",
+        "assemblies:\n  - {name: A, presents_as: [Ghost]}\n",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(unknown_role)
+
+    # a sub-assembly link to an undefined Assembly name fails
+    unknown_sub = _write(
+        "unknown_sub.yaml",
+        "assemblies:\n  - name: A\n    required_sub_assemblies:\n"
+        "      - {slot_name: x, sub_assembly: Ghost}\n",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(unknown_sub)
+
+    # a wire endpoint naming an undeclared slot fails
+    bad_wire = _write(
+        "bad_wire.yaml",
+        "families:\n  - {name: Camera}\n"
+        "assemblies:\n  - name: A\n    required_slots:\n"
+        "      - {slot_name: s, required_families: [Camera], cardinality: Exactly1}\n"
+        "    required_wires:\n"
+        "      - {source_slot: s, source_port: o, target_slot: ghost, target_port: i}\n",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(bad_wire)
+
+    # a wire endpoint naming a sub-assembly LINK position fails: wires close over
+    # leaf slots only, matching the spine (WireReferencesUnknownSlotError there)
+    wire_to_link = _write(
+        "wire_to_link.yaml",
+        "families:\n  - {name: Camera}\n"
+        "assemblies:\n  - {name: Child}\n  - name: A\n    required_slots:\n"
+        "      - {slot_name: cam, required_families: [Camera], cardinality: Exactly1}\n"
+        "    required_sub_assemblies:\n      - {slot_name: optics, sub_assembly: Child}\n"
+        "    required_wires:\n"
+        "      - {source_slot: cam, source_port: o, target_slot: optics, target_port: i}\n",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(wire_to_link)
+
+    # a sub-assembly link slot_name colliding with a leaf slot_name fails
+    collision = _write(
+        "collision.yaml",
+        "families:\n  - {name: Camera}\n"
+        "assemblies:\n  - {name: Child}\n  - name: A\n    required_slots:\n"
+        "      - {slot_name: dup, required_families: [Camera], cardinality: Exactly1}\n"
+        "    required_sub_assemblies:\n      - {slot_name: dup, sub_assembly: Child}\n",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(collision)
+
+    # an unknown cardinality value fails (validated against the mirror)
+    bad_cardinality = _write(
+        "bad_cardinality.yaml",
+        "families:\n  - {name: Camera}\n"
+        "assemblies:\n  - name: A\n    required_slots:\n"
+        "      - {slot_name: s, required_families: [Camera], cardinality: AtLeast2}\n",
+    )
+    with pytest.raises(cd.CatalogError):
+        cd.load(bad_cardinality)
+
+    # a typo'd assembly field is rejected (extra=forbid)
+    typo = _write(
+        "assembly_typo.yaml",
+        "assemblies:\n  - {name: A, presents_az: [Detector]}\n",
     )
     with pytest.raises(cd.CatalogError):
         cd.load(typo)

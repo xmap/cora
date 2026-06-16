@@ -1,10 +1,10 @@
 """Render the catalog descriptor into the Catalog inventory pages.
 
 `render_all(catalog)` returns a {src_uri: markdown} dict with one generated page
-per kind: capabilities, methods, families, roles, models. Each page is the clean
-fact table plus per-item one-liners from the descriptor, and links up to the
-hand-authored Catalog hub (catalog/index.md) for the naming / governance /
-closed-core conventions.
+per kind: capabilities, methods, families, roles, models, assemblies. Each page
+is the clean fact table plus per-item one-liners from the descriptor, and links
+up to the hand-authored Catalog hub (catalog/index.md) for the naming /
+governance / closed-core conventions.
 
 The mkdocs on_files hook in scripts/mkdocs_hooks.py injects these as virtual
 files at build time; nothing is written to disk.
@@ -165,11 +165,49 @@ def _models(catalog: Catalog) -> str:
     )
 
 
+def _assemblies(catalog: Catalog) -> str:
+    rows = [
+        [
+            f"`{a.name}`",
+            _codes(a.presents_as),
+            "; ".join(
+                f"`{s.slot_name}` ({s.cardinality}): {_codes(s.required_families)}"
+                + (f" (defaults: {_codes(sorted(s.default_settings))})" if s.default_settings else "")
+                + (" (default placement)" if s.default_placement else "")
+                for s in a.required_slots
+            ),
+            ", ".join(
+                f"`{link.slot_name}` -> `{link.sub_assembly}`"
+                for link in a.required_sub_assemblies
+            ),
+            a.note or "",
+        ]
+        for a in catalog.assemblies
+    ]
+    return "\n\n".join(
+        [
+            "# Assemblies",
+            "Reusable composition blueprints: a named cluster of Family-typed slots "
+            "(cardinality-annotated), optional slot-to-slot wires, and version-pinned "
+            "sub-assembly links to child blueprints. An Assembly advertises which "
+            "[Roles](roles.md) it satisfies via `presents_as`, at the same level a single "
+            "Asset does. A beamline materializes a blueprint into specific hardware as a "
+            "Fixture; that per-deployment binding lives on the beamline page, not here. The "
+            "running system assigns each Assembly a content-hash identity, so two facilities "
+            "that publish the same blueprint converge; this page is the human vocabulary, "
+            "keyed by name.",
+            _banner(),
+            _table(["Assembly", "Presents as", "Slots", "Sub-assemblies", "Note"], rows),
+        ]
+    )
+
+
 def render_all(catalog: Catalog) -> dict[str, str]:
     return {
         "catalog/capabilities.md": _capabilities(catalog) + "\n",
         "catalog/methods.md": _methods(catalog) + "\n",
         "catalog/families.md": _families(catalog) + "\n",
+        "catalog/assemblies.md": _assemblies(catalog) + "\n",
         "catalog/roles.md": _roles(catalog) + "\n",
         "catalog/models.md": _models(catalog) + "\n",
     }

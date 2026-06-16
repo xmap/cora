@@ -4,14 +4,15 @@
 
 ## How the vocabulary composes
 
-The kinds below are not five separate lists; they are one chain, sliced per kind for lookup. A measurement technique enters CORA as a [Method](methods.md). A Method declares the device [Families](families.md) it needs and the [Capability](capabilities.md) contract it realizes. A Family advertises which functional [Roles](roles.md) it can satisfy (`presents_as`), and a Role in turn requires a closed set of [Affordances](../reference/affordances.md), the primitive verbs a device supports. When a beamline is built, an Asset binds a vendor [Model](models.md) to record the specific hardware that fills a Family. So the chain reads: a Method needs Families, Families present Roles, Roles require Affordances, and Models are the concrete hardware that satisfy Families. The per-kind pages below are that one chain, each viewed from one link.
+The kinds below are not separate lists; they are one chain, sliced per kind for lookup. A measurement technique enters CORA as a [Method](methods.md). A Method declares the device [Families](families.md) it needs and the [Capability](capabilities.md) contract it realizes. A Family advertises which functional [Roles](roles.md) it can satisfy (`presents_as`), and a Role in turn requires a closed set of [Affordances](../reference/affordances.md), the primitive verbs a device supports. A Method that needs a whole cluster of devices rather than one binds a composed [Assembly](assemblies.md) blueprint, which groups Family-typed slots (optionally reusing smaller sub-assemblies) into one unit that presents its own Roles via `presents_as`, exactly as a single device does. When a beamline is built, an Asset binds a vendor [Model](models.md) to record the specific hardware that fills a Family, and a Fixture materializes an Assembly blueprint into those specific Assets. So the chain reads: a Method needs Families or composed Assemblies, Families and Assemblies present Roles, Roles require Affordances, and Models are the concrete hardware that satisfy Families. The per-kind pages below are that one chain, each viewed from one link.
 
 ## Inventories
 
 - [Capabilities](capabilities.md): Recipe BC operations-layer templates (`cora.capability.*`), the namespace for what an operation provides. Each Method binds one Capability.
 - [Methods](methods.md): Recipe BC technique catalog (ISA-88 General Recipe layer). Each Method declares the device Families it needs and the Capability contract it realizes.
 - [Families](families.md): Equipment BC device-class abstractions, the contract a Method declares as `needed_families`.
-- [Roles](roles.md): Equipment BC functional binding contracts. Methods reference these via `required_roles`; Families and Assemblies advertise satisfaction via `presents_as`.
+- [Assemblies](assemblies.md): Equipment BC composition blueprints. A named cluster of Family-typed slots plus version-pinned sub-assembly links; presents Roles via `presents_as` and is content-hash-identified so a blueprint is reusable across facilities. A beamline materializes one into specific hardware as a Fixture.
+- [Roles](roles.md): Equipment BC functional binding contracts. Methods reference these via `required_roles`; Families and [Assemblies](assemblies.md) advertise satisfaction via `presents_as`.
 - [Models](models.md): the vendor product catalog. A beamline Asset binds a Model to record what specific hardware it is.
 
 ## Naming conventions
