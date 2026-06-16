@@ -99,12 +99,18 @@ conditioning-optics:
     - name: ConditioningSlit
       family: Slit
       pv: { x_in: "2bma:m14", x_out: "2bma:m13", y_top: "2bma:m15", y_bot: "2bma:m16" }
+      virtual_pv: { h_size: "2bma:Slit1Hsize", h_center: "2bma:Slit1Hcenter", v_size: "2bma:Slit1Vsize", v_center: "2bma:Slit1Vcenter" }
       controller: FrontEndDrive
-      z_mm: 25225
+      z_mm: 25225                  # from APS reference table APS_1404611 (BEAM-5)
+      position_tolerance: "dx=dy=250 um, dz=5 mm"
       white_beam: true
       water_cooled: true
-      confirm: true
-      note: L3-20 four-blade slit; virtual aperture records 2bma:Slit1Hsize/Hcenter/Vsize/Vcenter
+      note: >
+        APS L3-20 four-blade slit (X+ outboard 2bma:m13, X- inboard 2bma:m14,
+        Y+ up 2bma:m15, Y- down 2bma:m16); the Size/Centre calc records drive both
+        blades of a pair together (calc records hosted on ioc2bmb1 despite the 2bma:
+        prefix). Reference drawing L3200000-03. Names, structure, z, and tolerances
+        confirmed BEAM-5 (#141).
     - name: Filter
       family: Filter
       pv: { upstream_paddle: "2bma:m17", downstream_paddle: "2bma:m18" }
@@ -195,10 +201,19 @@ beam-defining-and-safety:
     - name: SampleSlit
       family: Slit
       pv: { y_top: "2bma:m9", y_bot: "2bma:m10", x: ["2bma:m11", "2bma:m12"] }
+      virtual_pv: { h_size: "2bma:Slit2Hsize", h_center: "2bma:Slit2Hcenter", v_size: "2bma:Slit2Vsize", v_center: "2bma:Slit2Vcenter" }
       controller: FrontEndDrive
-      z_mm: 50500
-      confirm: true
-      note: vertical pair tracks the per-energy beam position, reuses the A-side class
+      z_mm: 50500                  # from layout drawing A342-RT1000-02 (BEAM-5)
+      position_tolerance: "dx=dy=250 um, dz=5 mm"
+      note: >
+        APS L3-20 four-blade slit at the sample-hutch entrance; reuses the A-side
+        class. The vertical pair also tracks the per-energy beam position (see the
+        SampleSlit_Vertical* PseudoAxes). Names, structure, z, and tolerances
+        confirmed BEAM-5 (#141). CAVEAT: on the 2slit.adl screen the horizontal
+        "Inb"/"outboard" labels are FLIPPED vs the physical direction (the detector
+        image is mirrored left/right), so bind 2bma:m11/m12 to the X+/X- blades by
+        PHYSICAL convention (positive X outboard), NOT the on-screen label.
+        Reference drawing L3200000-03.
     - name: BeamPositionMonitor
       family: Diagnostic
       new: true
