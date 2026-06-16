@@ -84,7 +84,7 @@ front-end:
       pv: "S02BM-PSS:FES"
       new: true
       confirm: true
-      note: front-end safety shutter, gated by the personnel safety system
+      note: front-end safety shutter, gated by the personnel safety system; opened at session start and kept open throughout for optics thermal stability, not toggled per scan (BEAM-1)
     - name: vacuum_isolation
       family: Vacuum             # Supply(kind=Vacuum) observation, not a separate asset
       pv: { BIV: "2bm:BIV", gate_valves: [GV1, GV2, GV3] }
@@ -185,6 +185,12 @@ beam-defining-and-safety:
           aperture_mm: [60.0, 44.5]
           replaceable: true
           confirm: true
+          note: >
+            This SBS is the operator-side "fast shutter" at 2-BM-B (no separate
+            fast actuator exists today). TomoScan cycles it closed for dark and
+            white (flat) fields and open for projections, many times per scan;
+            open before a run starts (operator-opened at session start). No
+            separate FastShutter Asset is modelled (BEAM-1).
         - name: BeamStop
           family: BeamStop
           passive: true

@@ -91,7 +91,6 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| BEAM-1 | `Blocks-go-live` | Is the beam shutter already open when a tomography run starts, or does the operator open it as part of run startup? The TomoScan sequence does open and close the fast shutter during a scan; we want to confirm the state CORA's run-start should assume. | open before the run (handled by commissioning / a pre-run caution) | yes | [Procedures](procedures.md) |
 | BEAM-2 | `Nice-to-have` | How many front-end Be windows are in the stack, and what is their total thickness? | windows exist; count and thickness unconfirmed | not yet | [Pending](assets.md#pending) |
 | BEAM-3 | `Nice-to-have` | Is there a canonical APS drawing for the B-station safety shutter (`StationShutter`) beyond its RSS tag (`02-BM-A-P-01`)? | shutter modelled; only the RSS tag on file | not yet | [Engineering drawings](assets.md#engineering-drawings) |
 
