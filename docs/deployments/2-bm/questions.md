@@ -55,9 +55,16 @@ CORA describes the sample hexapod's six degrees of freedom as named axes: three 
 
 ### Can CORA move the hexapod yet?
 
-Short answer: not yet, and that is expected.
+Not the real stage yet, but closer than "wait for the beamline" suggests.
 
-CORA can describe the hexapod's six axes and how they connect, and it checks that those connections are valid. What it cannot do yet is send a "move the sample to this position" command. Moving a hexapod means turning one target pose into six coordinated leg movements, and that math (the kinematics solver) already runs inside the hexapod's own controller. CORA just needs a live connection to that controller so it can hand over a pose and read back where the stage ended up. That connection comes with a running beamline, so it is deferred until the system is stood up. Until then the six axes are described and the wiring is validated, but no motion command will execute. The questions below (`HXP-3` to `HXP-5`) are what that connection needs, and `HXP-1` is a question you can answer right now.
+The hard part of moving a hexapod, turning one target position into six coordinated leg movements, is already done for us inside the Aerotech controller. CORA does not compute it and never will; its job is only to hand the controller a target and read back where the stage ended up.
+
+Two things remain:
+
+1. A small piece of CORA software (a connector) that hands the controller a target and reads the result. This is ours to build, and we can build and rehearse it against a simulated controller before the beamline is powered on. Rehearsed runs are tagged simulated, so their data can never be mistaken for real measurements.
+2. A live link to the real controller, needed only for moving the real stage. That one comes with a running beamline.
+
+`HXP-3` to `HXP-5` shape the connector; `HXP-1` (which channel is which axis) you can answer now.
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
@@ -65,7 +72,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 | HXP-2 | `Nice-to-have` | Do our rotation names match yours? We used Roll = about X, Pitch = about Y, Yaw = about Z (matching the vendor datasheet's A/B/C envelope). | A = Roll, B = Pitch, C = Yaw | [Hexapod DoF model](assets.md#hexapod-dof-model) |
 | HXP-3 | `Blocks-go-live` | What is the hexapod's motion solver called, and where does it run? | `2bmHXP`, an EPICS soft IOC | [Hexapod DoF model](assets.md#hexapod-dof-model) |
 | HXP-4 | `Blocks-go-live` | What version of that solver is in use? | `1.0.0` placeholder | [Hexapod DoF model](assets.md#hexapod-dof-model) |
-| HXP-5 | `Blocks-go-live` | How should CORA talk to it (an EPICS soft-IOC record, a controller API, or something else)? | EPICS soft-IOC record | [Hexapod DoF model](assets.md#hexapod-dof-model) |
+| HXP-5 | `Blocks-go-live` | What interface(s) does the solver expose for handing it a target pose and reading back where the stage ended up: an EPICS soft-IOC record set, a controller or vendor API, both, or something else? List what is available; CORA will choose how it connects. | an EPICS soft-IOC record set | [Hexapod DoF model](assets.md#hexapod-dof-model) |
 
 ## Sample stages
 
@@ -81,7 +88,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DET-1 | `Blocks-build` | Is the lens turret a rotating turret, or a sliding (translating) objective selector? This sets whether its positions are degrees or millimeters. | rotating (degrees) | [Microscope](equipment/microscope.md) |
-| DET-2 | `Blocks-build` | Does CORA drive the focus stage directly, or does the detector's own IOC move it behind the scenes? This decides which side owns that control path. | CORA drives it | [Microscope](equipment/microscope.md) |
+| DET-2 | `Blocks-build` | Today, what physically moves the focus stage: an operator or a scan command, or does the detector's own IOC (the MCTOptics IOC) move it on its own, for example refocusing when the objective changes? CORA will decide its own control boundary from your answer. | the IOC does not move it on its own; it moves only on command | [Microscope](equipment/microscope.md) |
 | DET-3 | `Blocks-build` | How are cameras selected: a single fixed bay, or is there a selection stage? | single bay, no selection stage | [Microscope](equipment/microscope.md) |
 | DET-4 | `Blocks-build` | How does the camera bay move, if at all: fixed, or is there a rotation stage? | fixed, no rotation stage | [Microscope](equipment/microscope.md) |
 | DET-5 | `Blocks-build` | Is there a second active FLIR Oryx camera bay (`2bmSP2:`), or is 2-BM genuinely single-camera? | single-camera; any second Oryx is offline | [Microscope](equipment/microscope.md) |
@@ -109,7 +116,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| PSS-1 | `Blocks-go-live` | Does the APS Personnel Safety System expose hutch-search and shutter-permit status as readable Channel Access PVs? If so, what are the PV names; if not, what is the integration path for an external observer? CORA needs this so it can decide whether to start its own data-collection run, by reading the hutch-permit status. To be clear: CORA only reads the permit. It never drives, holds, or releases the PSS permit or the beam; the PSS remains the sole interlock. Confirming the PV names does not put CORA into the safety chain. Confirmer: APS safety-systems / PSS contact. | no PV names known; confirmer: APS safety-systems / PSS contact | [Enclosures](enclosures.md) |
+| PSS-1 | `Blocks-go-live` | Does the APS Personnel Safety System expose hutch-search and shutter-permit status as readable Channel Access PVs? If so, what are the PV names; if not, how is that status readable today by a read-only outside system: a different protocol (for example P4P or Tango), a relay or hardwired output, a gateway, or only by a request to PSS engineering? CORA needs this so it can decide whether to start its own data-collection run, by reading the hutch-permit status. To be clear: CORA only reads the permit. It never drives, holds, or releases the PSS permit or the beam; the PSS remains the sole interlock. Confirming the PV names does not put CORA into the safety chain. Confirmer: APS safety-systems / PSS contact. | no PV names known; confirmer: APS safety-systems / PSS contact | [Enclosures](enclosures.md) |
 
 ## Supplies
 
@@ -140,7 +147,7 @@ CORA will later read proposal and user information from the APS scheduling syste
 | --- | --- | --- | --- | --- |
 | SCHED-1 | `Nice-to-have` | Once a user group is on-site for their beamtime, does APS ever move their scheduled time window (earlier or later) before they start, or do time changes only happen before they arrive? | time changes happen only before arrival | [2-BM index](index.md) |
 | SCHED-2 | `Nice-to-have` | Is the beamline staff contact (local contact) for a beamtime listed among that experiment's users in the scheduling system, or tracked separately as a beamline-side assignment? | listed as one of the beamtime's people | [2-BM index](index.md) |
-| SCHED-3 | `Nice-to-have` | Are APS badge numbers ever reused or reassigned to a different person over time, and should CORA treat a badge number as personal data it must be able to delete on request? Confirmer: APS User Office / data-management contact. | badge stable per person; treated as deletable personal data | [2-BM index](index.md) |
+| SCHED-3 | `Nice-to-have` | Are APS badge numbers ever reused or reassigned to a different person over time, or is a badge number stable for life per person? And under APS data governance, is a badge number classified as personal data subject to deletion on request? Confirmer: APS User Office / data-management contact. | badge stable per person; classified as deletable personal data | [2-BM index](index.md) |
 
 ## Not on this page
 
