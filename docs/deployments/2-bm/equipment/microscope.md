@@ -2,7 +2,7 @@
 
 *The Optique Peter detector deployment: a Microscope Assembly over a reusable Optics sub-assembly, materialized as one Fixture binding eight Assets, all contained in one Housing, with four Calibrations.*
 
-The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch. Its Assets are located in the `2-BM-B` Enclosure (the access-gated volume that gates them via the pre-flight permit check). It is the operator-facing imaging system: a vendor housing that carries three swappable microscope objectives on a sliding ball-screw selector, a linear focus stage, a FLIR Oryx scientific camera, and a LuAG scintillator. (Two Oryx cameras and a camera selector are physically installed, confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html); the v1 model below binds the one camera, with the second camera plus its Schunk selector recorded as a follow-on. See [Watch items](#watch-items).) The whole unit is controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC's process name, not the CORA model name). This page explains how CORA models it.
+The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch. Its Assets are located in the `2-BM-B` Enclosure (the access-gated volume that gates them via the pre-flight permit check). It is the operator-facing imaging system: a vendor housing that carries three swappable microscope objectives on a sliding ball-screw selector, a linear propagation-distance stage (the sample-to-detector rail), a FLIR Oryx scientific camera, and a LuAG scintillator. (Two Oryx cameras and a camera selector are physically installed, confirmed on the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html); the v1 model below binds the one camera, with the second camera plus its Schunk selector recorded as a follow-on. See [Watch items](#watch-items).) The whole unit is controlled by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC's process name, not the CORA model name). This page explains how CORA models it.
 
 ## The model in one picture
 
@@ -22,7 +22,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 <li><span class="node">Objective_2x</span> <span class="meta">Device, Objective, 2x</span></li>
 <li><span class="node">Objective_1.1x</span> <span class="meta">Device, Objective, 1.1x</span></li>
 <li><span class="node">Objective_Selector</span> <span class="meta">Device, PseudoAxis</span></li>
-<li><span class="node">Focus</span> <span class="meta">Device, LinearStage</span></li>
+<li><span class="node">PropagationDistance</span> <span class="meta">Device, LinearStage</span></li>
 <li><span class="node">Camera</span> <span class="meta">Device, Camera</span></li>
 <li><span class="node">Scintillator</span> <span class="meta">Device, Scintillator</span></li>
 </ul>
@@ -40,7 +40,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 <ul>
 <li><span class="node">turret</span> <span class="rel">&rarr; Turret</span></li>
 <li><span class="node">objectives (1+)</span> <span class="rel">&rarr; Objective_10x, Objective_2x, Objective_1.1x</span></li>
-<li><span class="node">focus</span> <span class="rel">&rarr; Focus</span></li>
+<li><span class="node">propagation_distance</span> <span class="rel">&rarr; PropagationDistance</span></li>
 <li><span class="node">objective_selector</span> <span class="rel">&rarr; Objective_Selector</span></li>
 </ul>
 </li>
@@ -88,22 +88,22 @@ The top **Assembly** is the reusable composition blueprint. It does two things: 
 | `camera` | leaf slot | `Exactly1` | `Camera` |
 | `scintillator` | leaf slot | `Exactly1` | `Scintillator` |
 
-The sub-assembly link pins the Optics Assembly's content hash, so a later revision of Optics does not silently change what a Microscope built today materializes (snapshot semantics). The camera and scintillator are leaf slots on the Microscope rather than the Optics sub-assembly because they are the parts a deployment swaps most often and the parts that vary between detector builds; the optics cluster (turret, objectives, objective selector, focus) is the stable, shareable core.
+The sub-assembly link pins the Optics Assembly's content hash, so a later revision of Optics does not silently change what a Microscope built today materializes (snapshot semantics). The camera and scintillator are leaf slots on the Microscope rather than the Optics sub-assembly because they are the parts a deployment swaps most often and the parts that vary between detector builds; the optics cluster (turret, objectives, objective selector, propagation distance) is the stable, shareable core.
 
 The Microscope Assembly presents the **`Detector`** Role through its `presents_as` set, the functional binding contract a Method targets when it needs a 2D imaging device without pinning a specific Family. The legacy scalar presenter field and the `Imager` presenter Family are both gone; `presents_as` is the sole presenter path. The Assembly's content hash (SHA-256 over its name, its slots, its sub-assembly links, the presented Roles (`presents_as`), and the parameter overrides schema) is stable: two facilities that publish the same Microscope Assembly converge on the same hash, which makes the blueprint cross-facility shareable when the federation layer lands.
 
-The Microscope carries **zero `required_wires` in v1**. Earlier sketches modelled this detector as an Asset-with-ports that brokered routing between the turret, focus, and camera; the IOC played that role in real hardware. In CORA's model that brokering dissolves into three different surfaces: the PseudoAxis evaluator handles lens index to turret setpoint, the Conductor / ControlPort layer drives focus and other setpoints directly, and the camera trigger arrives from an external timing source (FPGA, encoder) that lives outside the cluster and is wired in at Plan level. None of these wires are intrinsic to the composition; they all depend on which Conductor, which trigger source, and which command path the deployment uses. The Assembly's value is the slot map plus the content hash.
+The Microscope carries **zero `required_wires` in v1**. Earlier sketches modelled this detector as an Asset-with-ports that brokered routing between the turret, propagation distance, and camera; the IOC played that role in real hardware. In CORA's model that brokering dissolves into three different surfaces: the PseudoAxis evaluator handles lens index to turret setpoint, the Conductor / ControlPort layer drives propagation distance and other setpoints directly, and the camera trigger arrives from an external timing source (FPGA, encoder) that lives outside the cluster and is wired in at Plan level. None of these wires are intrinsic to the composition; they all depend on which Conductor, which trigger source, and which command path the deployment uses. The Assembly's value is the slot map plus the content hash.
 
 ## Sub-assembly: Optics
 
-The **Optics** Assembly is the reusable core: the turret, the three objectives, the virtual objective selector, and the focus stage. It is content-hashed in its own right, so the same optics cluster can be referenced by more than one detector build (a second microscope at another station, a spare optics bench) without redeclaring its slot map.
+The **Optics** Assembly is the reusable core: the turret, the three objectives, the virtual objective selector, and the propagation-distance stage. It is content-hashed in its own right, so the same optics cluster can be referenced by more than one detector build (a second microscope at another station, a spare optics bench) without redeclaring its slot map.
 
 | Slot | Cardinality | Required Family |
 | --- | --- | --- |
 | `turret` | `Exactly1` | `LinearStage` |
 | `objectives` | `OneOrMore` | `Objective` |
 | `objective_selector` | `Exactly1` | `PseudoAxis` |
-| `focus` | `Exactly1` | `LinearStage` |
+| `propagation_distance` | `Exactly1` | `LinearStage` |
 
 The three installed objectives (10x, 2x, 1.1x) all bind the single `objectives` slot. They differ only by the `magnification` setting, so one `OneOrMore` slot keeps the Optics blueprint (and its content hash) reusable across turret loadouts rather than baking three specific magnifications into the structure; a second beamline with a five-position turret reuses the same blueprint. Per-objective identity lives on the Asset (its name, settings, and calibration), not the slot. `objective_selector` is **the objective selector**: the virtual axis that picks which objective is in the beam (distinct from the separate, deferred camera selector).
 
@@ -115,14 +115,14 @@ The **Fixture** materializes the Microscope Assembly at this specific facility. 
 
 - The Assembly id and its content hash (frozen at registration so later Assembly revisions do not silently change this materialization)
 - The Trust Surface (`2-BM`) for governance scope
-- The slot-to-Asset map binding eight Assets across six leaf slots (the Microscope's `camera` and `scintillator`, plus the Optics sub-assembly's `turret`, `objectives` [the three magnification objectives], `objective_selector`, and `focus`) to the eight specific Asset IDs above
+- The slot-to-Asset map binding eight Assets across six leaf slots (the Microscope's `camera` and `scintillator`, plus the Optics sub-assembly's `turret`, `objectives` [the three magnification objectives], `objective_selector`, and `propagation_distance`) to the eight specific Asset IDs above
 - Parameter overrides, if any (none in v1)
 
 When the Fixture is registered, the decider expands the union of the top Assembly's leaf slots and the referenced Optics sub-assembly's leaf slots into one flat slot namespace, then validates the bindings against that union. A leaf slot name that appeared in both blueprints would be rejected as a namespace collision; here the two sets are disjoint.
 
 A Fixture is single-event genesis: it never changes after registration. Each of the eight bound Assets carries a `fixture_id` back-reference. Operators do not see this field directly; it is a query helper so "which Fixture is this Asset bound into" answers in one lookup.
 
-The exclusivity invariant matters: an Asset can only belong to one Fixture at a time. `Focus` is bound into the Microscope Fixture, which means it cannot simultaneously be bound into a different Fixture for, say, a non-microscope imaging path. If a future deployment needs the same physical focus motor for a different cluster, the operator detaches it first.
+The exclusivity invariant matters: an Asset can only belong to one Fixture at a time. `PropagationDistance` is bound into the Microscope Fixture, which means it cannot simultaneously be bound into a different Fixture for, say, a non-microscope imaging path. If a future deployment needs the same physical propagation-distance stage for a different cluster, the operator detaches it first.
 
 ## Physical placement and containment (Housing + Mount + Frame)
 

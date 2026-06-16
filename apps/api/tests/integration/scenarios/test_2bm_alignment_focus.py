@@ -29,9 +29,9 @@ stage in the 2-BM Asset inventory.
 
 Both routines optimize image sharpness, but on different motors:
 
-  - `resolution_alignment` adjusts the **microscope internal focus**
-    (`Focus`, lens-to-scintillator distance, small
-    range, sub-micron resolution).
+  - `resolution_alignment` adjusts the **propagation distance**
+    (`PropagationDistance`, the sample-to-detector rail `2bmbAERO:m1`,
+    ~1000 mm travel).
   - `focus_alignment` adjusts the **sample-to-scintillator distance**
     (`SampleTop_Z`, cm-range linear stage, ~10um resolution).
     Affects magnification + depth-of-focus together.
@@ -64,7 +64,7 @@ the sample-Z range is wider and the sharpness curve broader.
   - FLIR Oryx 5MP camera (the alignment-frame detector)
   - LuAG scintillator (visible-light conversion)
 
-Rotation stage, X-correction motor, and Optique Peter focus-Z are
+Rotation stage, X-correction motor, and the propagation-distance stage are
 omitted: this routine does not manipulate them. They participate in
 the downstream `center` / `roll` / `pitch` routines and the
 upstream `resolution` routine respectively.

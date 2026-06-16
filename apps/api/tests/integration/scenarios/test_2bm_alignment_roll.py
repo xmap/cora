@@ -68,7 +68,7 @@ absolute position carries the calibration after the routine completes.
   - FLIR Oryx 5MP camera (the alignment-frame detector)
   - LuAG scintillator (visible-light conversion)
 
-X-correction motor, Z motor, and Optique Peter focus-Z are omitted:
+X-correction motor, Z motor, and the propagation-distance stage are omitted:
 this routine does not manipulate them. They participate in the
 `center`, `focus`, and `resolution` routines respectively.
 

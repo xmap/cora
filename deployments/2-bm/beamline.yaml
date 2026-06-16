@@ -281,7 +281,7 @@ sample-environment:
 detector:
   enclosure: 2-BM-B
   intro: Convert the transmitted beam to light and record it (the Microscope detector, a scintillator-relay-camera assembly).
-  cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (turret, objectives, objective selector, focus) plus camera and scintillator leaf slots, anchored to a Housing. Fixture(microscope_at_2bm) presents as a Detector
+  cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (turret, objectives, objective selector, propagation distance) plus camera and scintillator leaf slots, anchored to a Housing. Fixture(microscope_at_2bm) presents as a Detector
   placement: Mount + Frame (2BM_hutch_frame)
   note: >
     Two cameras are installed (item_020): the FLIR Oryx 5 MP (Camera, pv 2bmSP1:)
@@ -356,14 +356,14 @@ detector:
     - name: Objective_Selector
       family: PseudoAxis          # virtual, decomposes a lens index to a turret position (mm) on the sliding selector
       pv: "2bm:MCTOptics:LensSelect"
-    - name: Focus
-      family: LinearStage         # shared focus Z-rail; per-lens fine focus is on 2bmb:m2/m3/m4 (LENS0/1/2_FOCUS, item_020), offsets in software
+    - name: PropagationDistance
+      family: LinearStage         # sample-to-detector distance (propagation) rail, not a focus stage; per-lens fine focus is on 2bmb:m2/m3/m4 (LENS0/1/2_FOCUS, item_020, MCTOptics), offsets in software
       model: aerotech_pro225sl
       pv: "2bmbAERO:m1"
-      controller: FocusDrive
+      controller: PropagationDistanceDrive
       travel: 1000 mm
-      confirm: true
-      note: the 2bm-docs components page calls 2bmbAERO:m1 the detector Z stage (PropagationDistance, the sample-to-detector throw); CORA models it as the microscope focus stage pending confirmation (DET-10)
+      confirm: false
+      note: 2bmbAERO:m1 sets the sample-to-detector distance (propagation distance) for inline phase contrast; confirmed not a focus motor (DET-10, staff issue + 2bm-docs 5eb45b3). Per-lens fine focus is separate (2bmb:m2/m3/m4, MCTOptics; DET-2)
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
     - name: Scintillator
       family: Scintillator
@@ -429,7 +429,7 @@ controls:
       family: MotionController
       protocol: Aerotech_Native
       axis_count: 6
-    - name: FocusDrive
+    - name: PropagationDistanceDrive
       family: MotionController
       protocol: Aerotech_Native
       axis_count: 1

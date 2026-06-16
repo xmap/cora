@@ -10,7 +10,7 @@ Each Procedure binds a Method + Practice + Plan to a set of target Assets. See [
 | `first_light` | `StationShutter` + image chain |
 | `dark_baseline` | `StationShutter` + image chain |
 | `flat_baseline` | `StationShutter` + image chain |
-| `resolution_alignment` | `Focus` + image chain |
+| `resolution_alignment` | `PropagationDistance` + image chain |
 | `focus_alignment` | `SampleTop_Z` + image chain |
 | `center_alignment` | `Rotary`, `SampleTop_X` + image chain |
 | `roll_alignment` | `Rotary`, `Hexapod_Roll` + image chain |

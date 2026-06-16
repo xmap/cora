@@ -6,11 +6,12 @@ bc_primary: Operation
 bc_touches: Equipment, Operation, Recipe
 
 Scenario test for the `resolution` step of the rotation-axis alignment
-chain. Adjusts the Optique Peter focus-Z motor on a mounted resolution
-target (Siemens star) until the image sharpness metric peaks. Comes
-first in the five-routine chain (`resolution -> focus -> center ->
-roll -> pitch`); without it, downstream routines run on defocused
-frames and produce meaningless calibrated values.
+chain. Adjusts the propagation-distance stage (the sample-to-detector
+rail, `2bmbAERO:m1`) on a mounted resolution target (Siemens star)
+until the image sharpness metric peaks. Comes first in the five-routine
+chain (`resolution -> focus -> center -> roll -> pitch`); without it,
+downstream routines run on low-contrast frames and produce meaningless
+calibrated values.
 
 See [[project_pilot_docs_design]] for the phase / file-naming taxonomy
 this scenario fits into.
@@ -19,10 +20,10 @@ this scenario fits into.
 
 To ground the `resolution_alignment` Procedure inventory row on
 `docs/deployments/2-bm/procedures.md`, and to register a new Asset
-(`Focus`) that no prior scenario has touched. Per
+(`PropagationDistance`) that no prior scenario has touched. Per
 [[project_pilot_docs_design]] no doc page may name an aggregate until
-a scenario test registers it; this file unlocks the focus-Z motor in
-the 2-BM Asset inventory.
+a scenario test registers it; this file unlocks the propagation-distance
+stage in the 2-BM Asset inventory.
 
 ## Domain shape (synthesized from APS imaging-group practice)
 
@@ -30,24 +31,23 @@ Iterative peak-search on a 1D sharpness curve:
 
   1. Mount a resolution target (Siemens star, USAF 1951, or grating) on
      the kinematic tip.
-  2. Set focus-Z to an initial position, acquire a frame, measure
-     sharpness via image-analysis (`tomopy.misc.morph` or per-beamline
-     equivalent).
-  3. Step focus-Z in one direction (typically +50um), acquire,
-     measure. If sharper, continue; if worse, the peak is bracketed.
+  2. Set the propagation distance to an initial position, acquire a
+     frame, measure sharpness via image-analysis (`tomopy.misc.morph`
+     or per-beamline equivalent).
+  3. Step the propagation distance in one direction, acquire, measure.
+     If sharper, continue; if worse, the peak is bracketed.
   4. Bisect within the bracket, acquire, measure. Repeat until the
      sharpness improvement per step falls under tolerance.
-  5. Lock focus-Z at the peak.
+  5. Lock the propagation distance at the peak.
 
-Typical convergence: 3-4 acquisitions starting within +/- 100um of the
-true peak. Sharpness scale is target-dependent; absolute values are
-not comparable across resolution targets, only across iterations of
-the same target.
+Typical convergence: a few acquisitions bracketing the peak. Sharpness
+scale is target-dependent; absolute values are not comparable across
+resolution targets, only across iterations of the same target.
 
-## Asset stack (focus motor + detector chain)
+## Asset stack (propagation-distance stage + detector chain)
 
-  - Optique Peter focus-Z motor (the lens-to-scintillator distance
-    knob; small range, sub-micron resolution)
+  - Propagation-distance stage (the sample-to-detector rail;
+    `2bmbAERO:m1`, Aerotech PRO225SL-1000, ~1000 mm travel)
   - FLIR Oryx 5MP camera (the alignment-frame detector)
   - LuAG scintillator (visible-light conversion)
 
@@ -78,6 +78,12 @@ during resolution; they participate in the downstream `center` and
   - **Peak detection is operator judgment.** The final Check carries
     `passed=True` when the operator decides the sharpness curve has
     peaked; there is no enforced numerical convergence criterion.
+  - **Open (DET-2 / DET-10 follow-up).** DET-10 confirmed `2bmbAERO:m1`
+    is the propagation-distance stage (not a focus motor), which this
+    scenario now binds. Whether the `resolution` step physically tunes
+    the propagation distance (modeled here) or the microscope's per-lens
+    focus (MCTOptics-owned, `2bmb:m2/m3/m4`, not yet a CORA Asset) is
+    unresolved and rides on the DET-2 fold-in.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -138,27 +144,29 @@ _ACTOR_OPERATOR_ID = _PRINCIPAL_ID
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000355501")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000355a01")
 
-# Capabilities (focus motor needs LinearStage; image chain needs Camera +
-# Scintillator; the focus motor's drive electronics is a separate
+# Capabilities (the propagation-distance stage needs LinearStage; image chain
+# needs Camera + Scintillator; the stage's drive electronics is a separate
 # MotionController Asset per [[project-controller-as-asset-stage1-design]])
 _CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
 _CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
 _CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
 _CAP_MOTION_CONTROLLER_ID = family_stream_id(FamilyName("MotionController"))
 
-# Devices: the focus motor's controller (FocusDrive) is
-# registered FIRST so Focus's controller_id back-
-# reference targets an already-registered Asset stream. Image chain
-# (camera + scintillator) is passive and carries no controller_id.
-# FocusDrive is the THIRD MotionController Asset shipped
-# at 2-BM (rotary + hexapod first); the drive's specific product line
-# is not named on the 2-BM source page (operators address it via the
-# IOC handle `2bmbAERO`; the drive itself is almost certainly Aerotech
-# Ensemble-family but unconfirmed), so the Asset name uses the IOC
-# handle and settings carry `unknown-pending-confirmation` placeholders
-# per the intentional-modeling rule.
+# Devices: the propagation-distance stage's controller
+# (PropagationDistanceDrive) is registered FIRST so
+# PropagationDistance's controller_id back-reference targets an
+# already-registered Asset stream. Image chain (camera + scintillator)
+# is passive and carries no controller_id. PropagationDistanceDrive is
+# the THIRD MotionController Asset shipped at 2-BM (rotary + hexapod
+# first); the drive's specific product line is not named on the 2-BM
+# source page (operators address it via the IOC handle `2bmbAERO`; the
+# drive itself is almost certainly Aerotech Ensemble-family but
+# unconfirmed), so the Asset name is functional and the IOC handle
+# `2bmbAERO` is recorded in alternate_identifiers; settings carry
+# `unknown-pending-confirmation` placeholders per the
+# intentional-modeling rule.
 _ASSET_AEROTECH_2BMBAERO_DRIVE_ID = UUID("01900000-0000-7000-8000-000000355a41")
-_ASSET_FOCUS_Z_ID = UUID("01900000-0000-7000-8000-000000355a11")
+_ASSET_PROPAGATION_DISTANCE_ID = UUID("01900000-0000-7000-8000-000000355a11")
 _ASSET_ORYX_5MP_ID = UUID("01900000-0000-7000-8000-000000355a21")
 _ASSET_SCINTILLATOR_LUAG_ID = UUID("01900000-0000-7000-8000-000000355a31")
 
@@ -176,14 +184,14 @@ _STEPS_OPEN_EVENT_ID = UUID("01900000-0000-7000-8000-000000355f12")
 
 _DEVICES = (
     DeviceSpec(
-        "FocusDrive",
+        "PropagationDistanceDrive",
         _ASSET_AEROTECH_2BMBAERO_DRIVE_ID,
         "MotionController",
         _CAP_MOTION_CONTROLLER_ID,
     ),
     DeviceSpec(
-        "Focus",
-        _ASSET_FOCUS_Z_ID,
+        "PropagationDistance",
+        _ASSET_PROPAGATION_DISTANCE_ID,
         "LinearStage",
         _CAP_LINEAR_STAGE_ID,
         controller_id=_ASSET_AEROTECH_2BMBAERO_DRIVE_ID,
@@ -251,10 +259,10 @@ def _setpoint(
     sampled_at: datetime,
     note: str | None = None,
 ) -> ActivityInput:
-    """Build a focus-Z Setpoint step input. `role` distinguishes
+    """Build a propagation-distance Setpoint step input. `role` distinguishes
     initial position, search steps, bisection, and final lock."""
     payload: dict[str, Any] = {
-        "channel": "Focus",
+        "channel": "PropagationDistance",
         "target_value": target_mm,
         "units": "mm",
         "role": role,
@@ -334,14 +342,14 @@ def _postgres_step_store(db_pool: asyncpg.Pool):
 async def test_resolution_alignment_plays_out_end_to_end(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """Seed facility + focus-Z motor + image chain + the focus motor's
-    drive-electronics controller (`FocusDrive`, the third
-    MotionController Asset shipped at 2-BM per the controller-as-Asset
-    design). Run an iterative focus-peak search Procedure on a
-    Siemens-star resolution target. Assert the auditable record carries
-    4 iterations bracketing the peak plus one final lock setpoint, AND
-    that the focus motor's `controller_id` back-reference targets the
-    controller Asset stream that the install ceremony registered."""
+    """Seed facility + propagation-distance stage + image chain + the
+    stage's drive-electronics controller (`PropagationDistanceDrive`,
+    the third MotionController Asset shipped at 2-BM per the
+    controller-as-Asset design). Run an iterative peak-search Procedure
+    on a Siemens-star resolution target. Assert the auditable record
+    carries 4 iterations bracketing the peak plus one final lock
+    setpoint, AND that the stage's `controller_id` back-reference targets
+    the controller Asset stream that the install ceremony registered."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
 
     # ----- Install the 2-BM facility hierarchy (Argonne -> APS -> Unit) + the 3 Devices -----
@@ -356,7 +364,11 @@ async def test_resolution_alignment_plays_out_end_to_end(
 
     # ----- Equipment BC: activate all 3 Devices (Commissioned -> Active) -----
 
-    for asset_id in (_ASSET_FOCUS_Z_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID):
+    for asset_id in (
+        _ASSET_PROPAGATION_DISTANCE_ID,
+        _ASSET_ORYX_5MP_ID,
+        _ASSET_SCINTILLATOR_LUAG_ID,
+    ):
         await bind_activate_asset(deps)(
             ActivateAsset(asset_id=asset_id),
             principal_id=_PRINCIPAL_ID,
@@ -397,7 +409,7 @@ async def test_resolution_alignment_plays_out_end_to_end(
             name="2BM_resolution_plan",
             practice_id=_PRACTICE_RESOLUTION_ID,
             asset_ids=frozenset(
-                {_ASSET_FOCUS_Z_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
+                {_ASSET_PROPAGATION_DISTANCE_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
             ),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -411,7 +423,7 @@ async def test_resolution_alignment_plays_out_end_to_end(
             name="2-BM resolution alignment (Siemens-star target)",
             kind="resolution_alignment",
             target_asset_ids=frozenset(
-                {_ASSET_FOCUS_Z_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
+                {_ASSET_PROPAGATION_DISTANCE_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
             ),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -425,9 +437,10 @@ async def test_resolution_alignment_plays_out_end_to_end(
 
     # ----- Procedure step entries: 4-iteration peak-bracket search -----
     #
-    # The operator brackets the focus-Z peak with two outward steps from
-    # the initial position, then bisects to land within tolerance of the
-    # peak. Final Setpoint locks the focus at the peak.
+    # The operator brackets the propagation-distance peak with two outward
+    # steps from the initial position, then bisects to land within
+    # tolerance of the peak. Final Setpoint locks the propagation distance
+    # at the peak.
 
     t = _NOW
     target = "siemens_star"
@@ -509,8 +522,8 @@ async def test_resolution_alignment_plays_out_end_to_end(
             correlation_id=_CORRELATION_ID,
         )
 
-    # Finalize (post-convergence, outside the iteration loop): lock the focus
-    # at the peak position.
+    # Finalize (post-convergence, outside the iteration loop): lock the
+    # propagation distance at the peak position.
     count_final = await bind_append_step(deps, step_store=step_store)(
         AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=finalize),
         principal_id=_PRINCIPAL_ID,
@@ -552,12 +565,16 @@ async def test_resolution_alignment_plays_out_end_to_end(
 
     # ----- Assert: each of the 3 target Assets ended in Active lifecycle -----
 
-    for asset_id in (_ASSET_FOCUS_Z_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID):
+    for asset_id in (
+        _ASSET_PROPAGATION_DISTANCE_ID,
+        _ASSET_ORYX_5MP_ID,
+        _ASSET_SCINTILLATOR_LUAG_ID,
+    ):
         asset_events, _ = await deps.event_store.load("Asset", asset_id)
         event_types = [e.event_type for e in asset_events]
         assert event_types == ["AssetRegistered", "AssetFamilyAdded", "AssetActivated"]
 
-    # ----- Assert: FocusDrive controller stream landed -----
+    # ----- Assert: PropagationDistanceDrive controller stream landed -----
     # Controller stays Commissioned (not activated): controllers are the
     # leaf of the drive-electronics chain at v1, and activation is a
     # stage-side ceremony. Same shape as the rotary anchor's
@@ -572,11 +589,13 @@ async def test_resolution_alignment_plays_out_end_to_end(
     # Omit-when-None wire shape: key absent rather than serialized as null.
     assert "controller_id" not in controller_events[0].payload
 
-    # ----- Assert: focus_Z's AssetRegistered carries the controller_id back-reference -----
+    # ----- Assert: propagation stage's AssetRegistered carries the controller_id back-ref -----
 
-    focus_z_events, _ = await deps.event_store.load("Asset", _ASSET_FOCUS_Z_ID)
-    focus_z_registered_payload = focus_z_events[0].payload
-    assert UUID(focus_z_registered_payload["controller_id"]) == _ASSET_AEROTECH_2BMBAERO_DRIVE_ID
+    propagation_events, _ = await deps.event_store.load("Asset", _ASSET_PROPAGATION_DISTANCE_ID)
+    propagation_registered_payload = propagation_events[0].payload
+    assert (
+        UUID(propagation_registered_payload["controller_id"]) == _ASSET_AEROTECH_2BMBAERO_DRIVE_ID
+    )
 
     # ----- Assert: passive image-chain Assets omit controller_id (no modelled drive) -----
 

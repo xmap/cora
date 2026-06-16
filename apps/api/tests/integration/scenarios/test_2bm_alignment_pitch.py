@@ -69,7 +69,7 @@ steps are milliradians.
   - FLIR Oryx 5MP camera (the alignment-frame detector)
   - LuAG scintillator (visible-light conversion)
 
-X-correction, Z, roll, and Optique Peter focus-Z motors are omitted:
+X-correction, Z, roll, and propagation-distance motors are omitted:
 this routine does not manipulate them. They participate in `center`,
 `focus`, `roll`, and `resolution` routines respectively.
 

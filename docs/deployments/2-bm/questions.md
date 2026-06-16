@@ -15,7 +15,7 @@ You do not need to edit this file or know where it lives. If you do not use GitH
 
 **If you are not the beamline scientist:** a few rows name a different contact. Safety and interlocks: **PSS-1**. Facility utilities (gas, compressed air): **SUP-1**, **SUP-2**. If a row is really a controls/EPICS, network, or engineering question rather than yours, just route it to the right person or tell us who that is.
 
-**Where to start:** the `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `DET-2`, `DET-10`, `STAGE-7`, and `STAGE-8`. If you only have a few minutes, do these first. After that, the `Blocks-go-live` items (including the safety item `PSS-1`) matter before CORA ever controls or observes hardware.
+**Where to start:** the `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `DET-2`, `STAGE-7`, and `STAGE-8`. If you only have a few minutes, do these first. After that, the `Blocks-go-live` items (including the safety item `PSS-1`) matter before CORA ever controls or observes hardware.
 
 ## How this page works
 
@@ -43,10 +43,10 @@ CORA records each controller box's identity (serial, firmware) so it can later a
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| DRIVE-1 | `Blocks-go-live` | Serial numbers for the five motion-controller boxes (drives for the rotary, the hexapod, the focus stage, and the two OMS VME58 crate cards)? | `unknown-pending-confirmation` | not yet | [Settings](assets.md#settings) |
+| DRIVE-1 | `Blocks-go-live` | Serial numbers for the five motion-controller boxes (drives for the rotary, the hexapod, the propagation-distance stage, and the two OMS VME58 crate cards)? | `unknown-pending-confirmation` | not yet | [Settings](assets.md#settings) |
 | DRIVE-2 | `Blocks-go-live` | Firmware versions for those same five boxes? | `unknown-pending-confirmation` | not yet | [Settings](assets.md#settings) |
 | DRIVE-3 | `Nice-to-have` | Are the Aerotech drives network-attached, and if so their IP addresses? | left blank (assumed not needed) | not yet | [Settings](assets.md#settings) |
-| DRIVE-4 | `Nice-to-have` | Exact Aerotech model / part number for the hexapod drive and the focus-stage drive? The rotary drive is named (Aerotech Ensemble HLE10-40-A-MXH); these two boxes are not. | `unknown-pending-confirmation`; vendor known to be Aerotech | not yet | [Vendor catalog](assets.md#vendor-catalog-models) |
+| DRIVE-4 | `Nice-to-have` | Exact Aerotech model / part number for the hexapod drive and the propagation-distance-stage drive? The rotary drive is named (Aerotech Ensemble HLE10-40-A-MXH); these two boxes are not. | `unknown-pending-confirmation`; vendor known to be Aerotech | not yet | [Vendor catalog](assets.md#vendor-catalog-models) |
 | DRIVE-5 | `Nice-to-have` | Serial number of the Nanotec `ST4118M1404-B` stepper driving the Microscope objective selector? The model is now known from the components page; only the per-unit serial is missing. Optional for now. | model known; serial not recorded | [Vendor catalog](equipment/microscope.md#vendor-catalog-models) |
 | DRIVE-6 | `Nice-to-have` | Serial number of the Schunk `LPTM 30` stepper driving the Microscope camera selector? The model is now known from the components page; only the per-unit serial is missing. Optional for now. | model known; serial not recorded | [Pending](assets.md#pending) |
 
@@ -85,7 +85,6 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 | DET-7 | `Nice-to-have` | The Mitutoyo part number for the 1.1x objective? The 2x and 10x part numbers are on record; the 1.1x is the one still missing, and all three currently share one catalog row. | one `Plan-Apo-NIR` family row | yes | [Vendor catalog](equipment/microscope.md#vendor-catalog-models) |
 | DET-8 | `Blocks-go-live` | The FLIR Oryx's max frame rate, sensor kind, and readout mode (rolling vs global), plus its part number for the datasheet? Our docs give part number ORX-10G-51S5M-C and a max frame rate of about 162 fps; please confirm those and add the sensor kind (CMOS?) and readout mode. | sensor size / pixel / bit-depth recorded; docs suggest ORX-10G-51S5M-C, about 162 fps | not yet | [Settings](assets.md#settings) |
 | DET-9 | `Nice-to-have` | Which magnification is the middle objective physically at 2-BM, and its measured value at 25 keV? CORA records 2.0x (nominal), but the Microscope lens table lists the installed middle objective as 5x (measured about 4.93). Objectives are swappable, so please confirm what is installed now. | 2.0x nominal (provisional); docs suggest 5x installed | yes | [Microscope](equipment/microscope.md) |
-| DET-10 | `Blocks-build` | The Aerotech PRO225SL-1000 stage on `2bmbAERO:m1`: CORA currently describes it as the microscope focus stage (`Focus`). The components page calls it the detector Z stage, the sample-to-detector throw (propagation distance). Is that one stage or two, and which job does `2bmbAERO:m1` do? This decides what the detector Z-rail alignment procedure targets. | one stage, described as the microscope focus (`Focus`) | yes | [Microscope](equipment/microscope.md) |
 
 ## Timing
 
