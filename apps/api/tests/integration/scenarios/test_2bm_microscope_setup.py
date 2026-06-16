@@ -40,7 +40,7 @@ Crytur LuAG, Optique Peter, Mitutoyo) lives on the Model rows + settings
 + calibration operating points, not in the Asset names. The middle
 objective is 2x (the physically-installed Mitutoyo M Plan Apo).
 
-## Calibrations (4 revisions)
+## Calibrations (5 revisions)
 
   - 3 magnification calibrations, one per objective:
     {objective_designation: "10x_Mitutoyo", energy: 25} -> 9.83 effective
@@ -48,6 +48,9 @@ objective is 2x (the physically-installed Mitutoyo M Plan Apo).
     {objective_designation: "1.1x_Mitutoyo", energy: 25} -> 1.10 effective
   - 1 scintillator effective_thickness calibration:
     {scintillator_material: "LuAG", energy: 25} -> 100 micrometer
+  - 1 index_position_table calibration for the objective selector:
+    {device_designation: "microscope_objective_turret"} -> 3 slot positions
+    (placeholder slot order + positions pending staff, DET-11)
 
 All AssertedSource (operator-attested from the vendor datasheet + Optique
 Peter doc), status Provisional.
@@ -73,7 +76,12 @@ from cora.calibration.features.append_calibration_revision import (
 from cora.calibration.features.define_calibration import DefineCalibration
 from cora.calibration.features.define_calibration import bind as bind_define_calibration
 from cora.calibration.quantities import CalibrationQuantity
-from cora.equipment.aggregates._partition_rule import LookupTable, ReadbackAggregatorKind
+from cora.equipment.aggregates._partition_rule import (
+    ExtrapolationKind,
+    InterpolationKind,
+    LookupTable,
+    ReadbackAggregatorKind,
+)
 from cora.equipment.aggregates.assembly import (
     SlotCardinality,
     SlotName,
@@ -607,18 +615,63 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         )
         rev_ids.append(rev_id)
 
+    # ----- index_position_table Calibration for the objective selector -----
+    # The objective selector is a discrete index axis (the same shape as the
+    # 2-BM filter foil carousel): the operator commands a slot index, the
+    # turret snaps to the saved position. It now points at a real
+    # index_position_table Calibration; earlier it borrowed a magnification
+    # revision as a placeholder because no index quantity existed. The slot
+    # order and positions are PROVISIONAL placeholders pending the real
+    # turret positions from 2-BM staff (DET-11); the magnification of each
+    # objective is a separate Calibration above.
+    selector_cal_id = await bind_define_calibration(deps)(
+        DefineCalibration(
+            target_id=optics_assets["objective_selector"],
+            quantity=CalibrationQuantity.INDEX_POSITION_TABLE,
+            operating_point={"device_designation": "microscope_objective_turret"},
+            description=(
+                "Slot index -> turret position for the Microscope objective selector. "
+                "PROVISIONAL placeholder slot order + positions pending the real turret "
+                "positions from 2-BM staff (DET-11)."
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    selector_rev_id = await bind_append_calibration_revision(deps)(
+        AppendCalibrationRevision(
+            calibration_id=selector_cal_id,
+            value={
+                "points": [
+                    {"name": "10x_Mitutoyo", "position": -50.0},
+                    {"name": "2x_Mitutoyo", "position": 0.0},
+                    {"name": "1.1x_Mitutoyo", "position": 50.0},
+                ],
+                "position_unit": "mm",
+                "provisional": True,
+            },
+            status=CalibrationStatus.PROVISIONAL,
+            source=AssertedSource(asserted_by=actor),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    cal_ids.append(selector_cal_id)
+
     # ----- LookupTable partition rule on objective_selector -----
-    # The calibration reference is a placeholder: the runtime evaluator
-    # expects a revision carrying the index-to-angle table (a
-    # CalibrationQuantity the closed catalog does not have yet), so a real
-    # magnification calibration + revision id pair satisfies construction
-    # without inventing a sentinel.
+    # Discrete selector: NEAREST snaps a commanded slot index to the saved
+    # turret position; Error refuses an index outside the table (no such
+    # objective). invertible=False + Identity readback for the single turret
+    # motor. (Earlier this defaulted to LINEAR, which would have interpolated
+    # between slots; NEAREST is correct for a discrete pick.)
     await bind_update_asset_partition_rule(deps)(
         UpdateAssetPartitionRule(
             asset_id=optics_assets["objective_selector"],
             partition_rule=LookupTable(
-                calibration_id=cal_ids[0],
-                calibration_revision_id=rev_ids[0],
+                calibration_id=selector_cal_id,
+                calibration_revision_id=selector_rev_id,
+                interpolation_kind=InterpolationKind.NEAREST,
+                extrapolation_kind=ExtrapolationKind.ERROR,
                 invertible=False,
                 readback_aggregator_kind=ReadbackAggregatorKind.IDENTITY,
                 unit_in="index",
@@ -718,7 +771,8 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     assert "AssetPartitionRuleUpdated" in sel_types
     assert "AssetSettingsUpdated" not in sel_types
 
-    # 4 Calibrations, one revision each.
+    # 5 Calibrations (4 magnification/thickness + the objective-selector
+    # index_position_table), one revision each.
     for cal_id in cal_ids:
         events, _ = await deps.event_store.load("Calibration", cal_id)
         assert [e.event_type for e in events] == [
