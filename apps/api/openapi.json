@@ -1877,7 +1877,8 @@
           "detector_pixel_size",
           "magnification",
           "effective_thickness",
-          "energy_position_curve"
+          "energy_position_curve",
+          "index_position_table"
         ],
         "title": "CalibrationQuantity",
         "type": "string"

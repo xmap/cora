@@ -80,8 +80,9 @@ def test_calibration_quantity_value_set_is_locked() -> None:
         "magnification",
         "effective_thickness",
         "energy_position_curve",
+        "index_position_table",
     }
-    assert len(list(CalibrationQuantity)) == 5
+    assert len(list(CalibrationQuantity)) == 6
 
 
 # ---------- Error-class instantiation + attribute pins ----------

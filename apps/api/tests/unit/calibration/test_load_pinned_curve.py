@@ -84,6 +84,42 @@ async def test_load_pinned_curve_returns_points_for_curve_calibration() -> None:
 
 
 @pytest.mark.unit
+async def test_load_pinned_curve_returns_indexed_points_for_index_table() -> None:
+    store = InMemoryEventStore()
+    deps = _deps(store)
+    cal_id = await bind_define_calibration(deps)(
+        DefineCalibration(
+            target_id=_TARGET_ID,
+            quantity=CalibrationQuantity.INDEX_POSITION_TABLE,
+            operating_point={"device_designation": "downstream_filter_paddle"},
+            description="discrete foil table under test",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    rev_id = await bind_append_calibration_revision(deps)(
+        AppendCalibrationRevision(
+            calibration_id=cal_id,
+            value={
+                "points": [
+                    {"name": "600 um Al", "position": 0.0},
+                    {"name": "150 um Al", "position": 26.0},
+                    {"name": "None", "position": 106.0},
+                ],
+                "position_unit": "mm",
+            },
+            status=CalibrationStatus.PROVISIONAL,
+            source=AssertedSource(asserted_by=_ACTOR),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    # The slot index is the array order: (0, 0.0), (1, 26.0), (2, 106.0).
+    points = await load_pinned_curve(store, cal_id, rev_id)
+    assert points == ((0.0, 0.0), (1.0, 26.0), (2.0, 106.0))
+
+
+@pytest.mark.unit
 async def test_load_pinned_curve_returns_none_when_calibration_absent() -> None:
     store = InMemoryEventStore()
     curve = await load_pinned_curve(store, uuid4(), uuid4())

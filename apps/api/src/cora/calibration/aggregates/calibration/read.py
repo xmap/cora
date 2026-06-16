@@ -31,7 +31,11 @@ from cora.calibration.aggregates.calibration.state import (
     Calibration,
     CalibrationNotCurveValuedError,
 )
-from cora.calibration.quantities import CalibrationQuantity, energy_position_curve
+from cora.calibration.quantities import (
+    CalibrationQuantity,
+    energy_position_curve,
+    index_position_table,
+)
 from cora.infrastructure.ports import EventStore
 
 _STREAM_TYPE = "Calibration"
@@ -73,19 +77,20 @@ async def load_pinned_curve(
 
     The cross-BC entry point a `LookupTable` partition-rule evaluator
     uses: it loads the owning Calibration aggregate, finds the revision
-    pinned by the rule, and returns the curve as `(independent,
-    dependent)` float pairs. All Calibration-payload knowledge stays here
-    (the consuming kernel sees only positional pairs).
+    pinned by the rule, and returns its lookup as `(independent,
+    dependent)` float pairs. Two quantities are position-lookup-valued and
+    dispatch here: `energy_position_curve` (continuous, energy -> position)
+    and `index_position_table` (discrete, slot index -> position). All
+    Calibration-payload knowledge stays here (the consuming kernel sees
+    only positional pairs; the name "curve" reads broadly as the pinned
+    position relationship, continuous or discrete-sampled).
 
     Returns None when the calibration stream is empty or the pinned
     revision is absent (a dangling reference); the caller surfaces that as
-    an unavailable-calibration abort. Raises
-    `CalibrationNotCurveValuedError` when the calibration's quantity is
-    scalar-valued (a misconfigured rule), so the failure is explicit
-    rather than a KeyError on a missing `points` key.
-
-    Today `energy_position_curve` is the only curve-valued quantity; a
-    second one adds a dispatch arm here (rule of three).
+    an unavailable-calibration abort. Raises `CalibrationNotCurveValuedError`
+    when the calibration's quantity is not a position-lookup quantity (a
+    misconfigured rule), so the failure is explicit rather than a KeyError
+    on a missing `points` key.
     """
     calibration = await load_calibration(event_store, calibration_id)
     if calibration is None:
@@ -96,9 +101,13 @@ async def load_pinned_curve(
     )
     if revision is None:
         return None
-    if calibration.quantity != CalibrationQuantity.ENERGY_POSITION_CURVE.value:
-        raise CalibrationNotCurveValuedError(calibration_id, calibration.quantity)
-    return energy_position_curve.curve_points(revision.value)
+    match CalibrationQuantity(calibration.quantity):
+        case CalibrationQuantity.ENERGY_POSITION_CURVE:
+            return energy_position_curve.curve_points(revision.value)
+        case CalibrationQuantity.INDEX_POSITION_TABLE:
+            return index_position_table.index_position_points(revision.value)
+        case _:
+            raise CalibrationNotCurveValuedError(calibration_id, calibration.quantity)
 
 
 async def load_calibration_timestamps(

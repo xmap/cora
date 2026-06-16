@@ -180,6 +180,29 @@ def test_energy_position_curve_value_shape() -> None:
 
 
 @pytest.mark.unit
+def test_index_position_table_operating_point_shape() -> None:
+    """The discrete table identifies WHICH selector (the device), and
+    carries NO energy key: a foil carousel is the same at any energy."""
+    schema = get_operating_point_schema(CalibrationQuantity.INDEX_POSITION_TABLE)
+    properties: dict[str, Any] = schema.get("properties", {})
+    assert set(properties.keys()) == {"device_designation"}
+    assert "device_designation" in schema["required"]
+    assert "energy" not in properties
+
+
+@pytest.mark.unit
+def test_index_position_table_value_shape() -> None:
+    """The value carries the slots in selection order; each slot requires
+    a human name + a motor position, and the array index is the slot."""
+    schema = get_value_schema(CalibrationQuantity.INDEX_POSITION_TABLE)
+    properties: dict[str, Any] = schema.get("properties", {})
+    assert "points" in properties
+    assert "points" in schema["required"]
+    item_schema: dict[str, Any] = properties["points"]["items"]
+    assert set(item_schema["required"]) == {"name", "position"}
+
+
+@pytest.mark.unit
 def test_energy_bounds_consistent_across_quantities() -> None:
     """Every quantity that carries an `energy` operating_point key
     must declare the same bounds (1-100 keV, multipleOf 0.001) and the

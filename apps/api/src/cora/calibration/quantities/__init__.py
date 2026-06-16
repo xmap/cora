@@ -36,6 +36,7 @@ from cora.calibration.quantities import (
     detector_pixel_size,
     effective_thickness,
     energy_position_curve,
+    index_position_table,
     magnification,
     rotation_center,
 )
@@ -59,6 +60,7 @@ class CalibrationQuantity(StrEnum):
     MAGNIFICATION = "magnification"
     EFFECTIVE_THICKNESS = "effective_thickness"
     ENERGY_POSITION_CURVE = "energy_position_curve"
+    INDEX_POSITION_TABLE = "index_position_table"
 
 
 # Per-quantity schema registry (built at import time)
@@ -82,6 +84,10 @@ _SCHEMAS_BY_QUANTITY: dict[CalibrationQuantity, tuple[dict[str, Any], dict[str, 
     CalibrationQuantity.ENERGY_POSITION_CURVE: (
         energy_position_curve.OPERATING_POINT_SCHEMA,
         energy_position_curve.VALUE_SCHEMA,
+    ),
+    CalibrationQuantity.INDEX_POSITION_TABLE: (
+        index_position_table.OPERATING_POINT_SCHEMA,
+        index_position_table.VALUE_SCHEMA,
     ),
 }
 
