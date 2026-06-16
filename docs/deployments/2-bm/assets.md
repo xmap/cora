@@ -44,11 +44,11 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `PropagationDistanceDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `Timing` | `Device` | `TimingController` | `2-BM` (softGlueZynq trigger box; generates the camera trigger train via PSO, no `controller_id`) | `2-BM-B` |
 | `Housing` | `Component` | `Housing` | `2-BM` (installed into a Mount; parents the Microscope constituents) | `2-BM-B` |
-| `Turret` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; sliding ball-screw objective selector) | `2-BM-B` |
+| `Turret` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; sliding ball-screw objective selector, moved by MCTOptics under `LensSelect`) | `2-BM-B` |
 | `Objective_10x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_2x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_1.1x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
-| `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret position in mm) | `2-BM-B` |
+| `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; writes the MCTOptics `LensSelect` composite; partition rule records lens-to-turret positions, MCTOptics actuates) | `2-BM-B` |
 | `PropagationDistance` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `PropagationDistanceDrive`) | `2-BM-B` |
 | `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |

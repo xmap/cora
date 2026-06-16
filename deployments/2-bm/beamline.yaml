@@ -322,7 +322,7 @@ detector:
     - name: Turret
       family: LinearStage         # sliding ball-screw objective selector (item_020), not a rotating turret
       model: nanotec_st4118m1404_b  # motor is a Nanotec stepper (item_020), not Optique Peter; ball-screw 2 mm/rev
-      pv: "2bmb:m1"               # on the ioc2bmb OMS VME58 crate (SampleStageDrive)
+      pv: "2bmb:m1"               # on the ioc2bmb OMS VME58 crate (SampleStageDrive); MCTOptics commands it via LensSelect, not driven directly (DET-2)
       controller: SampleStageDrive
       range: -60.030..58.64 mm     # selector positions in mm
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
@@ -369,7 +369,7 @@ detector:
           source: AssertedSource
           status: Provisional
     - name: Objective_Selector
-      family: PseudoAxis          # virtual, decomposes a lens index to a turret position (mm) on the sliding selector
+      family: PseudoAxis          # virtual; writes the MCTOptics LensSelect composite, which sequences turret move + per-lens focus (2bmb:m2/m3/m4) + rotation offsets (DET-2); partition rule records lens positions, MCTOptics actuates
       pv: "2bm:MCTOptics:LensSelect"
     - name: PropagationDistance
       family: LinearStage         # sample-to-detector distance (propagation) rail, not a focus stage; per-lens fine focus is on 2bmb:m2/m3/m4 (LENS0/1/2_FOCUS, item_020, MCTOptics), offsets in software

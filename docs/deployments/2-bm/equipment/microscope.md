@@ -92,7 +92,7 @@ The sub-assembly link pins the Optics Assembly's content hash, so a later revisi
 
 The Microscope Assembly presents the **`Detector`** Role through its `presents_as` set, the functional binding contract a Method targets when it needs a 2D imaging device without pinning a specific Family. The legacy scalar presenter field and the `Imager` presenter Family are both gone; `presents_as` is the sole presenter path. The Assembly's content hash (SHA-256 over its name, its slots, its sub-assembly links, the presented Roles (`presents_as`), and the parameter overrides schema) is stable: two facilities that publish the same Microscope Assembly converge on the same hash, which makes the blueprint cross-facility shareable when the federation layer lands.
 
-The Microscope carries **zero `required_wires` in v1**. Earlier sketches modelled this detector as an Asset-with-ports that brokered routing between the turret, propagation distance, and camera; the IOC played that role in real hardware. In CORA's model that brokering dissolves into three different surfaces: the PseudoAxis evaluator handles lens index to turret setpoint, the Conductor / ControlPort layer drives propagation distance and other setpoints directly, and the camera trigger arrives from an external timing source (FPGA, encoder) that lives outside the cluster and is wired in at Plan level. None of these wires are intrinsic to the composition; they all depend on which Conductor, which trigger source, and which command path the deployment uses. The Assembly's value is the slot map plus the content hash.
+The Microscope carries **zero `required_wires` in v1**. Earlier sketches modelled this detector as an Asset-with-ports that brokered routing between the turret, propagation distance, and camera; the IOC played that role in real hardware. In CORA's model that brokering dissolves into three different surfaces: the PseudoAxis evaluator hands the lens index to the MCTOptics composite (`LensSelect`), the Conductor / ControlPort layer drives propagation distance and other setpoints directly, and the camera trigger arrives from an external timing source (FPGA, encoder) that lives outside the cluster and is wired in at Plan level. None of these wires are intrinsic to the composition; they all depend on which Conductor, which trigger source, and which command path the deployment uses. The Assembly's value is the slot map plus the content hash.
 
 ## Sub-assembly: Optics
 
@@ -136,7 +136,9 @@ Where the axes meet: the Fixture answers "what logical cluster lives here for go
 
 ## Routing the objective selector (PseudoAxis)
 
-`Objective_Selector` is a virtual axis inside the Optics sub-assembly. Its **partition rule** is a closed `LookupTable` decomposing an integer index (0, 1, 2) into a turret position in millimeters (the selector is a sliding ball-screw stage, not a rotating turret):
+`Objective_Selector` is a virtual axis inside the Optics sub-assembly. CORA addresses it by writing a lens index (0, 1, 2) to the composite `2bm:MCTOptics:LensSelect` PV. The MCTOptics IOC owns the sequencing behind that single write: it moves the turret (`2bmb:m1`) to the selected objective's calibrated position, applies that objective's per-lens fine focus (`2bmb:m2`/`m3`/`m4`, the `LENS0/1/2_FOCUS` macros), and applies the per-combination focus and rotation offsets from its autosave file. CORA drives the high-level composite (`LensSelect`, `LensName{0,1,2}`, `CameraSelect`, and the `LensSelected`/`CameraSelected` status readbacks); it does NOT write the raw `2bmb:m1`-`m4` motor records. This is the [composite-IOC convention](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html#composite-iocs): an encapsulating IOC presents the composite as one addressable surface, and downstream consumers (including CORA) treat it that way. Confirmed by 2-BM staff (DET-2).
+
+The `Objective_Selector` partition rule, a closed `LookupTable` over lens index, is therefore CORA's PROVENANCE RECORD of which turret position each objective sits at (the selector is a sliding ball-screw stage, not a rotating turret), not an actuation path CORA executes:
 
 | `Objective_Selector` | Turret position | Objective in beam |
 | --- | --- | --- |
@@ -144,9 +146,13 @@ Where the axes meet: the Fixture answers "what logical cluster lives here for go
 | `1` | `-0.837 mm` | 2x Mitutoyo |
 | `2` | `58.640 mm` | 10x Mitutoyo |
 
-When an operator or Method writes `Objective_Selector = 1`, CORA's command-execution layer looks up the partition rule and writes the corresponding turret setpoint to the `Turret` motor. Every actuation is recorded as a control-dispatch event with a correlation id linking back to the originating partition-rule resolution, so the full chain (operator command, virtual-axis lookup, constituent setpoint) is reconstructable from the event log. The lookup table itself is event-sourced; revising it (for example, after a turret re-homing campaign) leaves a complete audit trail of which values were in effect at which times.
+When an operator or Method writes `Objective_Selector = 1`, CORA writes lens index 1 to `2bm:MCTOptics:LensSelect` and MCTOptics performs the move. The write is recorded as a control-dispatch event with a correlation id, so the chain (operator command, virtual-axis index, composite PV write) is reconstructable from the event log. The lookup table itself is event-sourced; revising it (for example, after a turret re-homing campaign) leaves a complete audit trail of which positions were recorded when.
+
+The per-lens fine-focus motors (`2bmb:m2/m3/m4`) are MCTOptics-owned and are NOT modelled as CORA Assets; they move as a side effect of `LensSelect`. (Not to be confused with `PropagationDistance` / `2bmbAERO:m1`, the sample-to-detector rail, which CORA does drive directly: see DET-10.)
 
 This replaces the older convention of carrying `Objective_Selector` as a Method parameter. The virtual axis is addressable, typed, and audit-complete.
+
+> **Deferred (DET-2 follow-up).** Whether to retire the index-to-position `LookupTable` outright (modelling `Objective_Selector` as a pass-through index write) and to stop modelling `Turret` as a raw-motor Asset is a structural question best taken when CORA builds the real control layer. Today the actuation model is descriptive, so the provenance-record framing above is the intentional v1.
 
 ## Calibrations
 
@@ -190,7 +196,7 @@ For pilot v1, persistent identifiers are stub-minted (no real DOIs registered wi
 
 ## Operator runbook
 
-**Switch the active objective.** Write the desired `Objective_Selector` index (0, 1, or 2) to the `Objective_Selector` PseudoAxis. The execution layer looks up the turret position and writes it to the `Turret` motor via the ControlPort. The full chain is audited.
+**Switch the active objective.** Write the desired `Objective_Selector` index (0, 1, or 2) to the `Objective_Selector` PseudoAxis. The execution layer writes that index to the MCTOptics composite (`2bm:MCTOptics:LensSelect`); MCTOptics moves the turret to the selected objective's position and applies its per-lens focus and rotation offsets. The full chain is audited.
 
 Removing or replacing the scintillator or camera splits into two ceremonies. The light one returns the same Asset to its slot; the heavy one brings in a different physical Asset. Pick by intent, not by reflex.
 
