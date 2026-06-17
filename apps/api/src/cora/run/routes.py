@@ -68,6 +68,7 @@ from cora.run.aggregates.run import (
     InvalidSamplingProcedureError,
     RunAlreadyAssignedToCampaignError,
     RunAlreadyExistsError,
+    RunBeamAvailabilityUnknownError,
     RunBoundPlanDeprecatedError,
     RunCannotAbortError,
     RunCannotAdjustError,
@@ -85,6 +86,7 @@ from cora.run.aggregates.run import (
     RunPlanAssetDecommissionedError,
     RunRequiresActiveClearanceError,
     RunRequiresAvailableSupplyError,
+    RunRequiresOpenBeamShuttersError,
     RunRequiresPermittedEnclosureError,
     RunSubjectNotMountableError,
     RunSupplyCoverageMismatchError,
@@ -216,6 +218,11 @@ def register_run_routes(app: FastAPI) -> None:
         # [[project_enclosure_stage1_design]] L-pre-1.
         RunRequiresPermittedEnclosureError,
         RunEnclosureCoverageMismatchError,
+        # Run-start beam-availability pre-flight gate (BEAM-1):
+        # closed shutters / denied permit, and the fail-closed
+        # unknown branch when a beam PV could not be read.
+        RunRequiresOpenBeamShuttersError,
+        RunBeamAvailabilityUnknownError,
         # Run-start campaign-membership gate (6i-c).
         RunCannotJoinCampaignError,
         # Run-side campaign-membership invariant (6i-c).

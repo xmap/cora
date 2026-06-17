@@ -350,6 +350,17 @@ def bind(deps: Kernel) -> Handler:
                 kind: tuple(refs) for kind, refs in satisfaction.items()
             }
 
+        # BEAM-1 cross-BC beam-availability pre-flight read: ask the
+        # injected lookup for the live front-end + station shutter states
+        # and the ACIS FES-permit composite at the start instant. The
+        # default Kernel lookup (AllBeamOpenLookup) returns all-open so
+        # the decider's beam gate passes trivially (pre-BEAM-1 behavior +
+        # test default); the production ControlPort-backed adapter reads
+        # the configured PVs live. The port never raises for substrate
+        # disconnects: a bad read surfaces as quality_ok=False and the
+        # decider fails closed.
+        beam_availability = await deps.beam_availability_lookup.read_beam_availability()
+
         context = RunStartContext(
             plan=plan,
             subject=subject,
@@ -359,6 +370,7 @@ def bind(deps: Kernel) -> Handler:
             needed_supplies_satisfaction=needed_supplies_satisfaction,
             referencing_enclosures=referencing_enclosures,
             campaign=campaign,
+            beam_availability=beam_availability,
         )
 
         now = deps.clock.now()
