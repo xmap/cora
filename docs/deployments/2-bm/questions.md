@@ -1,45 +1,37 @@
 # Open questions
 
-*The open items CORA needs 2-BM staff to confirm. Only open items appear here.*
+*Facts CORA needs 2-BM staff to confirm or correct. Each row is a question about the real beamline; only open items appear here.*
 
-## What we need from you
+## How to reply
 
-Below are the facts we need you to confirm or correct about 2-BM hardware. Most you can answer from memory in a couple of minutes.
-
-**How to reply:** open a short issue at [github.com/xmap/cora/issues](https://github.com/xmap/cora/issues), one per answer or several together. Quote the item ID and write the answer in plain text, for example:
+Open a short issue at [github.com/xmap/cora/issues](https://github.com/xmap/cora/issues), one answer or several together. Quote the item ID and write the answer in plain text:
 
 > HXP-2: A = Roll, B = Pitch, C = Yaw
 > DET-9: the installed middle objective is 5x
 
-You do not need to edit this file or know where it lives. If you do not use GitHub, just send the same thing (the item ID and your answer) to whoever shared this page with you.
+You do not need to edit this file or know where it lives. If you do not use GitHub, send the same thing (the item ID and your answer) to whoever shared this page. A few rows name a different contact: facility utilities (gas, compressed air) for **SUP-1**, **SUP-2**. If a row is really a controls/EPICS, network, or engineering question, route it to the right person or tell us who that is.
 
-**If you are not the beamline scientist:** a few rows name a different contact. Facility utilities (gas, compressed air): **SUP-1**, **SUP-2**. If a row is really a controls/EPICS, network, or engineering question rather than yours, just route it to the right person or tell us who that is.
+## How to read a row
 
-**Where to start:** the `Blocks-build` items (whose answers change how we have to describe a device, not just a value we fill in) are all answered now. What matters most next are the `Blocks-go-live` items: a temporary guess is fine for the description, but the real value is needed before CORA controls or observes the hardware.
+A *CORA assumes* value is only ever a placeholder for the description; CORA never uses a guessed value to move or observe hardware. No `Blocks-build` items are open right now, so start with the `Blocks-go-live` rows.
 
-## How this page works
+**Priority:**
 
-CORA keeps a structured description of each device: its axes, its identity, and how the parts connect. Some of your answers just fill in a value, like a serial number. Others change the structure itself, like whether the objective selector rotates or slides. We mark the second kind `Blocks-build`.
-
-Where we do not have your answer yet, CORA fills in a clearly-marked temporary guess so the description work can continue. Sometimes that guess is already built into CORA's model (for example, we have described the optical tables as best we understand them); other times CORA is just holding a blank. The *Already done?* column tells you which. Either way, it is still an open question until you confirm, and we never use a guessed value to move or control any hardware. The one exception to "a guess is fine for now" is a `Blocks-build` item: if it is still open when we finalize the description it affects, that is a hard stop, and we have to wait for your answer before we can proceed.
-
-**Priority** is one of:
-
-- `Blocks-build`: CORA cannot describe the device correctly until we know this. Your answer changes the structure of the description.
-- `Blocks-go-live`: a temporary guess is fine for the description, but the real value is needed before CORA controls or observes the hardware.
+- `Blocks-build`: your answer changes the structure of the description, so CORA cannot finalize it until you reply. None are open right now.
+- `Blocks-go-live`: a guess is fine for the description, but the real value is needed before CORA controls or observes the hardware.
 - `Nice-to-have`: extra detail for the record and for datasheets.
 
-**The columns:**
+**Columns:**
 
-- *CORA assumes* is our current temporary guess (or a note that nothing is recorded yet). Where it is a real guess, please confirm or correct it. Where it says something like `unknown-pending-confirmation` or `not yet registered`, it just means we have no value yet.
-- *Already done?* tells you whether CORA has already built this guess into its model. **yes** means we made a best guess and it is live in CORA now, so your answer either confirms it or tells us to change something already there; **not yet** means CORA has no value recorded and is simply waiting for yours.
-- *Resolves* is only for us: it shows where your answer gets recorded once confirmed. You do not need to click it to reply.
+- *CORA assumes*: the current placeholder, or a note that nothing is recorded yet. Confirm or correct it where it is a real guess; `unknown-pending-confirmation` or `not yet registered` just means we have no value yet.
+- *Already done?*: **yes** means the guess is live in CORA now, so your answer confirms it or tells us to change it; **not yet** means CORA is holding a blank and waiting for yours.
+- *Resolves*: where the answer gets recorded once confirmed. This is for us, not something you click to reply.
 
-When an item is confirmed, we record the value, replace the temporary guess, and delete the row from this page. The deletion is intentional and is kept in our change history, along with who confirmed it and, if it overturned an earlier value, why. So this page always shows only what is still open; its length is just the count of things we are still waiting on. Each ID is permanent: once an item is removed, that ID is never reused for a different question. IDs run per section.
+Once an item is confirmed we record the value, replace the guess, and delete the row, noting who confirmed it and, if it overturned an earlier value, why. This page always shows only what is still open. Each ID is permanent and never reused, and IDs run per section.
 
 ## Drives and controllers
 
-CORA records each controller box's identity (serial, firmware) so it can later answer questions like "did the controller firmware change between Monday's scan and Friday's?". These are temporary guesses today.
+CORA records each controller box's identity (serial, firmware) so it can later tell whether the firmware changed between two scans. These are placeholders today.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
@@ -51,13 +43,7 @@ CORA records each controller box's identity (serial, firmware) so it can later a
 
 ## The hexapod
 
-CORA describes the sample hexapod's six degrees of freedom as named axes: three translations (X, Y, Z) and three rotations (Roll, Pitch, Yaw). See [Hexapod DoF model](assets.md#hexapod-dof-model).
-
-### Can CORA move the hexapod yet?
-
-Short answer: not yet, and that is expected.
-
-CORA can describe the hexapod's six axes and how they connect, and it checks that those connections are valid. What it cannot do yet is send a "move the sample to this position" command. Moving a hexapod means turning one target pose into six coordinated leg movements, and that math (the kinematics solver) runs inside the hexapod's own Aerotech controller, reached through the `2bmHXP:` EPICS interface. CORA just needs a live connection to that controller so it can hand over a pose and read back where the stage ended up. That connection comes with a running beamline, so it is deferred until the system is stood up. Until then the six axes are described and the wiring is validated, but no motion command will execute. The channel map, the solver location, and how to talk to it are all now known from the beamline components page; the controller's firmware version comes in with the controller serial/firmware items (`DRIVE-2`). The rotation-name confirmation is below, followed by the reboot records the [`hexapod_reboot` recipe](recipes.md) needs.
+The sample hexapod's six degrees of freedom are described as named axes: three translations (X, Y, Z) and three rotations (Roll, Pitch, Yaw). See [Hexapod DoF model](assets.md#hexapod-dof-model).
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
@@ -65,7 +51,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 
 ### Rebooting a stuck hexapod
 
-When the hexapod controller locks up, the recovery is a power-cycle ceremony: stop the IOC, power-cycle the controller's PDU outlet, restart the IOC, then confirm the axes re-enable. CORA has modelled it as the [`hexapod_reboot` recipe](recipes.md). Most of the records are now read directly from the authoritative reboot script [`decarlof/2bmb-bin/hexapod_reboot.py`](https://github.com/decarlof/2bmb-bin/blob/HEAD/hexapod_reboot.py); the only things not in the repo are the per-deployment PDU secrets in `~/access.json`. So the asks below are: confirm that public repo is the current production version (HXP-7, which backs HXP-3 / HXP-4 / HXP-6 in one go), and provide the one deployment secret (HXP-5).
+Recovery from a controller lock-up is the [`hexapod_reboot` recipe](recipes.md), read from the authoritative script [`decarlof/2bmb-bin/hexapod_reboot.py`](https://github.com/decarlof/2bmb-bin/blob/HEAD/hexapod_reboot.py). Confirming that script is the current production copy (HXP-7) settles HXP-3, HXP-4, and HXP-6 at once; the only value not in the repo is the deployment PDU secret (HXP-5).
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
@@ -77,6 +63,8 @@ When the hexapod controller locks up, the recovery is a power-cycle ceremony: st
 
 ## Sample stages
 
+These rows confirm vendor models, datasheets, and travel limits for the sample-side stages.
+
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
 | STAGE-2 | `Nice-to-have` | A datasheet PDF for the Kohzu CYAT-070 alignment stages (`SampleTop_X` / `SampleTop_Z`)? The part number and key specs are on the components page; we just have no datasheet on file. Also: our docs quote 15 mm of travel each way, but CORA records 10 mm each way (`-10..10 mm`); which is right? | `Kohzu CYAT-070`, no datasheet on file; travel -10..10 mm (docs say 15 mm each way) | yes | [Engineering drawings](assets.md#engineering-drawings) |
@@ -87,6 +75,8 @@ When the hexapod controller locks up, the recovery is a power-cycle ceremony: st
 
 ## The Microscope detector
 
+Objectives and the turret selector on the Optique Peter microscope. Objectives are swappable, so several rows confirm what is mounted now.
+
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
 | DET-7 | `Nice-to-have` | The Mitutoyo part number for the 1.1x objective? The 2x and 10x part numbers are on record; the 1.1x is the one still missing, and all three currently share one catalog row. | one `Plan-Apo-NIR` family row | yes | [Vendor catalog](equipment/microscope.md#vendor-catalog-models) |
@@ -95,11 +85,15 @@ When the hexapod controller locks up, the recovery is a power-cycle ceremony: st
 
 ## Timing
 
+Only the softGlueZynq timing box's gateware (bitstream) version is still open.
+
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
 | TIME-1 | `Nice-to-have` | The softGlueZynq's gateware (bitstream) version? The box itself is identified on the components page (a Xilinx Zynq SoC on a MicroZed carrier, EPICS prefix `2bmbMZ1:SG:`); only the bitstream version is missing. Optional for now. | registered as a `TimingController` Asset; bitstream version still a placeholder | yes | [Settings](assets.md#settings) |
 
 ## Beam path and front end
+
+Two rows cover the front-end windows and the B-station safety shutter.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
@@ -107,6 +101,8 @@ When the hexapod controller locks up, the recovery is a power-cycle ceremony: st
 | BEAM-3 | `Nice-to-have` | Is there a canonical APS drawing for the B-station safety shutter (`StationShutter`) beyond its RSS tag (`02-BM-A-P-01`)? | shutter modelled; only the RSS tag on file | not yet | [Engineering drawings](assets.md#engineering-drawings) |
 
 ## Energy and the optics
+
+On an energy change the DMM monochromator, its Bragg arms, and the tracking slits move together to saved per-energy positions. These items supply those saved values and confirm how they are driven.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
@@ -117,6 +113,8 @@ When the hexapod controller locks up, the recovery is a power-cycle ceremony: st
 | ENERGY-5 | `Nice-to-have` | The DMM tank/alignment motors (`2bma:m25`-`m29`) are part of the energy-change coordinated move, but the components page does not say whether their saved positions actually differ per energy. Do they vary with energy, or are they re-asserted at fixed values? If they vary, CORA would add curves for them too. | in the coordinated move; per-energy variation unconfirmed; not modeled as curves | not yet | [Energy-tracking optic axes](assets.md#energy-tracking-optic-axes) |
 
 ## Filters and the mirror stripe
+
+These rows cover the absorber-foil paddles and the mirror coating stripe.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
@@ -136,7 +134,7 @@ When the hexapod controller locks up, the recovery is a power-cycle ceremony: st
 
 ## Equipment protection (BLEPS)
 
-BLEPS is the beamline equipment-protection interlock, and it is a different system from the PSS: BLEPS protects equipment, the PSS protects people. CORA does not model the BLEPS PLC logic. Following the same observation-only stance it uses for the PSS, CORA would observe BLEPS outcomes on axes it already has: utility faults become Supply status, device faults become an Asset's condition. None of these block today's model (CORA does not model BLEPS yet); they confirm the mapping before CORA ingests any BLEPS signal.
+BLEPS is the beamline equipment-protection interlock, separate from the PSS: BLEPS protects equipment, the PSS protects people. CORA does not model its logic; it would only observe outcomes, mapping utility faults to Supply status and device faults to an Asset's condition. These items confirm that mapping before any BLEPS signal is ingested.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
@@ -146,6 +144,8 @@ BLEPS is the beamline equipment-protection interlock, and it is a different syst
 
 ## Supplies
 
+Facility utilities confirm 2-BM's sample-environment gas and compressed air.
+
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
 | SUP-1 | `Nice-to-have` | The sample-environment gas-mix composition available at 2-BM? Confirmer: facility utilities. | a gas supply exists; mixture unknown; confirmer: facility utilities | not yet | [Supplies](supplies.md) |
@@ -153,7 +153,7 @@ BLEPS is the beamline equipment-protection interlock, and it is a different syst
 
 ## Data storage and transfer
 
-CORA records where each dataset's bytes live and how they move between storage locations, so it can later answer "where is this scan's data now?" and verify that copies are intact. Our current guesses come from the existing DMagic setup; please confirm or correct. Confirmer: the beamline's data-management / controls contact, these may not be beamline-scientist questions.
+CORA records where each dataset's bytes live and how they move between locations, so it can later answer "where is this scan's data now?" and verify that copies are intact. The guesses below come from the existing DMagic setup. Confirmer: the beamline's data-management / controls contact, these may not be beamline-scientist questions.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
@@ -167,7 +167,7 @@ CORA records where each dataset's bytes live and how they move between storage l
 
 ## Proposals, users and scheduling
 
-CORA will later read proposal and user information from the APS scheduling system (the same `beam-api` / DMagic data the beamline already uses), so it can label each run with its proposal and notify the right people. None of these block today's work; they help us get the design right before we build it. Confirmer: the beamline scientist, except SCHED-3 (APS User Office / data-management contact).
+CORA will read proposal and user information from the APS scheduling system (the `beam-api` / DMagic data the beamline already uses) to label each run with its proposal and notify the right people. These help us get the design right before we build it. Confirmer: the beamline scientist, except SCHED-3 (APS User Office / data-management contact).
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
@@ -177,4 +177,4 @@ CORA will later read proposal and user information from the APS scheduling syste
 
 ## Not on this page
 
-Hardware CORA has deliberately not described yet (the mirror, the wider sample-stage motor band, IOC-hosted devices, past high-speed cameras) lives in [assets.md Pending](assets.md#pending) and [Decommissioned](assets.md#decommissioned-provenance-only). Those raise their own questions here only once CORA starts describing them.
+Hardware CORA has deliberately not described yet (the mirror, the wider sample-stage motor band, IOC-hosted devices, past high-speed cameras) lives in [assets.md Pending](assets.md#pending) and [Decommissioned](assets.md#decommissioned-provenance-only). It raises questions here only once CORA starts describing it.
