@@ -94,6 +94,7 @@ CORA can describe the hexapod's six axes and how they connect, and it checks tha
 | --- | --- | --- | --- | --- | --- |
 | BEAM-2 | `Nice-to-have` | How many front-end Be windows are in the stack, and what is their total thickness? | windows exist; count and thickness unconfirmed | not yet | [Pending](assets.md#pending) |
 | BEAM-3 | `Nice-to-have` | Is there a canonical APS drawing for the B-station safety shutter (`StationShutter`) beyond its RSS tag (`02-BM-A-P-01`)? | shutter modelled; only the RSS tag on file | not yet | [Engineering drawings](assets.md#engineering-drawings) |
+| BEAM-6 | `Nice-to-have` | We record `2bma:m3` as the mirror's coating-stripe selector. Can you confirm that, and clarify what the table X motors (`2bma:m1` / `2bma:m4`) do: do they also play a part in selecting the stripe, or is that note a mix-up? (The `2bma:table1` record appears to map its `M1Y` support slot to `2bma:m3`.) | `2bma:m3` is the stripe selector; the "table-X drives stripe selection" note is likely a mix-up with the `table1` `M1Y` slot | yes | [Inventory](assets.md#inventory) |
 
 ## Energy and the optics
 
