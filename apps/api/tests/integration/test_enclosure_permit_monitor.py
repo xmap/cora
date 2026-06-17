@@ -148,6 +148,82 @@ async def test_loop_records_observation_from_observer(db_pool: asyncpg.Pool) -> 
     assert events[0].payload["to_status"] == "Permitted"
 
 
+@pytest.mark.unit
+async def test_record_observation_bad_status_is_noop() -> None:
+    name = "hutch-bad"
+    # Unparseable status flattens to a no-op before any event-store access,
+    # so a None kernel is never touched.
+    await record_observation(cast("Kernel", None), _obs(name, "Garbage"), {name: uuid4()})
+
+
+@pytest.mark.unit
+async def test_loop_logs_and_survives_record_failure() -> None:
+    name = "hutch-rec-fail"
+    kernel = _RaisingLoadKernel()
+    observer = _FakeObserver([_obs(name, "Permitted")])
+    task = asyncio.create_task(
+        run_enclosure_permit_monitor(
+            observer=observer,
+            kernel=cast("Kernel", kernel),
+            name_to_id={name: uuid4()},
+            reconnect_delay_seconds=3600.0,
+        )
+    )
+    try:
+        await asyncio.wait_for(kernel.load_attempted.wait(), timeout=2.0)
+        await asyncio.sleep(0)
+        assert not task.done()  # the record error was swallowed; loop survives
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+
+@pytest.mark.unit
+async def test_loop_logs_and_survives_observer_iteration_failure() -> None:
+    observer = _BoomObserver()
+    task = asyncio.create_task(
+        run_enclosure_permit_monitor(
+            observer=observer,
+            kernel=cast("Kernel", None),
+            name_to_id={"hutch-iter-fail": uuid4()},
+            reconnect_delay_seconds=3600.0,
+        )
+    )
+    try:
+        await asyncio.wait_for(observer.observe_started.wait(), timeout=2.0)
+        await asyncio.sleep(0)
+        assert not task.done()  # the iteration error was swallowed; loop survives
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+
+@pytest.mark.unit
+async def test_loop_cancellation_during_record_propagates() -> None:
+    name = "hutch-cancel"
+    observer = _FakeObserver([_obs(name, "Permitted")])
+    with pytest.raises(asyncio.CancelledError):
+        await run_enclosure_permit_monitor(
+            observer=observer,
+            kernel=cast("Kernel", _CancelOnLoadKernel()),
+            name_to_id={name: uuid4()},
+            reconnect_delay_seconds=0.0,
+        )
+
+
+@pytest.mark.unit
+async def test_lifespan_nonempty_starts_and_cancels_monitor_task() -> None:
+    async with enclosure_permit_monitor_lifespan(
+        observer=_FakeObserver([]),
+        kernel=cast("Kernel", None),
+        name_to_id={"hutch-lifespan": uuid4()},
+    ):
+        await asyncio.sleep(0)  # let the background task start and park on reconnect
+    # context exit cancels the task cleanly: no hang, no error surfaced
+
+
 class _FakeObserver:
     """Yields a fixed observation sequence once, then ends the stream."""
 
@@ -160,3 +236,40 @@ class _FakeObserver:
     async def _drain(self) -> AsyncGenerator[EnclosureObservation]:
         for observation in self._observations:
             yield observation
+
+
+class _BoomObserver:
+    """Raises mid-iteration so the loop's outer resilience branch fires."""
+
+    def __init__(self) -> None:
+        self.observe_started = asyncio.Event()
+
+    def observe(self, scope: EnclosureObserverScope) -> AsyncGenerator[EnclosureObservation]:
+        return self._drain()
+
+    async def _drain(self) -> AsyncGenerator[EnclosureObservation]:
+        self.observe_started.set()
+        raise RuntimeError("observer boom")
+        yield  # pragma: no cover - unreachable, marks this body an async generator
+
+
+class _RaisingLoadKernel:
+    """Kernel double whose event-store load raises, to drive the per-record branch."""
+
+    def __init__(self) -> None:
+        self.load_attempted = asyncio.Event()
+        self.event_store = self
+
+    async def load(self, *, stream_type: str, stream_id: UUID) -> object:
+        self.load_attempted.set()
+        raise RuntimeError("load boom")
+
+
+class _CancelOnLoadKernel:
+    """Kernel double whose load raises CancelledError, modelling shutdown mid-record."""
+
+    def __init__(self) -> None:
+        self.event_store = self
+
+    async def load(self, *, stream_type: str, stream_id: UUID) -> object:
+        raise asyncio.CancelledError

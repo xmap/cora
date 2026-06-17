@@ -134,6 +134,14 @@ async def test_always_permitted_enclosure_lookup_find_by_ids_returns_empty_list(
 
 
 @pytest.mark.unit
+async def test_always_permitted_enclosure_lookup_by_name_returns_none() -> None:
+    """The stub holds no named rows and must not fabricate an id for
+    address resolution (seeding / monitoring target real streams)."""
+    lookup: EnclosureLookup = AlwaysPermittedEnclosureLookup()
+    assert await lookup.lookup_by_name(facility_code="cora", name="hutch-a") is None
+
+
+@pytest.mark.unit
 def test_always_permitted_enclosure_lookup_satisfies_enclosure_lookup_protocol() -> None:
     """Structural conformance via typed assignment; `EnclosureLookup`
     is not `runtime_checkable`."""
