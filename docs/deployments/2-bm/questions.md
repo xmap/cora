@@ -13,9 +13,9 @@ Below are the facts we need you to confirm or correct about 2-BM hardware. Most 
 
 You do not need to edit this file or know where it lives. If you do not use GitHub, just send the same thing (the item ID and your answer) to whoever shared this page with you.
 
-**If you are not the beamline scientist:** a few rows name a different contact. Safety and interlocks: **PSS-1**. Facility utilities (gas, compressed air): **SUP-1**, **SUP-2**. If a row is really a controls/EPICS, network, or engineering question rather than yours, just route it to the right person or tell us who that is.
+**If you are not the beamline scientist:** a few rows name a different contact. Facility utilities (gas, compressed air): **SUP-1**, **SUP-2**. If a row is really a controls/EPICS, network, or engineering question rather than yours, just route it to the right person or tell us who that is.
 
-**Where to start:** the `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `STAGE-7` and `STAGE-8`. If you only have a few minutes, do these first. After that, the `Blocks-go-live` items (including the safety item `PSS-1`) matter before CORA ever controls or observes hardware.
+**Where to start:** the `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `STAGE-7` and `STAGE-8`. If you only have a few minutes, do these first. After that, the `Blocks-go-live` items matter before CORA ever controls or observes hardware.
 
 ## How this page works
 
@@ -127,12 +127,6 @@ When the hexapod controller locks up, the recovery is a power-cycle ceremony: st
 | FOIL-1 | `Blocks-go-live` | We model the operational downstream absorber-foil paddle (`2bma:m18`) as a discrete selector with these slots and motor positions, read from the components page: `600 um Al` at 0, `150 um Al` at 26, `300 um C` at 53, `50 um C` at 80, `None` at 106. Are the slots, order, and positions correct, and is the position unit millimetres (the components page says the motor EGU is "consistent with mm" but does not state it outright)? | downstream paddle modelled with the positions above; unit assumed mm | yes | [Filter foil selection](assets.md#filter-foil-selection) |
 | FOIL-2 | `Nice-to-have` | We treat the upstream paddle (`2bma:m17`) as bound-in-software but not in service (selecting it has no beam effect), so CORA does not model it as a live selector. Is that right, and should we ever expect it to come back into service? | upstream paddle not modelled as a live selector | yes | [Filter foil selection](assets.md#filter-foil-selection) |
 | MIRROR-1 | `Nice-to-have` | We understand the mirror coating stripe (`2bma:m3`) is not a free discrete pick: in Mono mode it is held at one position, and in Pink mode it is swept per energy together with the optical-table X stages, managed by the energy-change IOC. We will model it with the beam-mode work, not as a filter-style index axis. Is that understanding correct, and is there a stripe-to-position mapping (which stripe sits at which `m3` position) we can record? | stripe selection deferred to the beam-mode work; energy/mode-dependent, no stripe->position map on file | not yet | [Filter foil selection](assets.md#filter-foil-selection) |
-
-## Safety interlocks
-
-| ID | Priority | Question | CORA assumes | Already done? | Resolves |
-| --- | --- | --- | --- | --- | --- |
-| PSS-1 | `Blocks-go-live` | Does the APS Personnel Safety System expose hutch-search and shutter-permit status as readable Channel Access PVs? We found candidate PVs in an APS 2-BM status screen: hutch searched `PA:02BM:STA_A_SRCHD_TO_B` and `PA:02BM:STA_B_SRCHD_TO_B`, beam permission `PA:02BM:STA_A_BEAMREADY_PL`, front-end shutter `PA:02BM:STA_A_FES_OPEN_PL`, B-station shutter `PA:02BM:STA_B_SBS_OPEN_PL`. Are these the right PVs for an external read-only observer (the people-interlock `PA:` reflections, as opposed to BLEPS equipment-protection tags)? CORA needs this so it can decide whether to start its own data-collection run, by reading the hutch-permit status. To be clear: CORA only reads the permit. It never drives, holds, or releases the PSS permit or the beam; the PSS remains the sole interlock. Confirming the PV names does not put CORA into the safety chain. Confirmer: APS safety-systems / PSS contact. | candidate `PA:02BM:` PVs identified (listed at left); names unconfirmed; confirmer: APS safety-systems / PSS contact | not yet | [Enclosures](enclosures.md) |
 
 ## Equipment protection (BLEPS)
 

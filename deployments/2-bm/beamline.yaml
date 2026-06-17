@@ -41,18 +41,16 @@ enclosures:
   # permit gates beam-on work. Each sits within the APS Site (facility_code: aps),
   # a space inside a larger space, not an equipment pointer. Each device group
   # below names the Enclosure its devices are located in via `enclosure:`.
-  # The per-hutch search-and-secure permit signal is an operator-confirm item:
-  # only the shutter PVs (FES, SBS) are known today, not the permit PV.
+  # Each hutch's permit_signal is the post-migration PSS search-and-secure PV
+  # (S02BM-PSS:Sta{A,B}:SecureM, confirmed PSS-1); see enclosures.md for the full PV set.
   - name: 2-BM-A
     role: optics-hutch
     facility_code: aps
-    permit_signal:
-      confirm: "per-hutch PSS search-and-secure permit PV; ask 2-BM staff"
+    permit_signal: "S02BM-PSS:StaA:SecureM"   # 1 = searched/secured (PSS-1, post-migration)
   - name: 2-BM-B
     role: experiment-hutch
     facility_code: aps
-    permit_signal:
-      confirm: "per-hutch PSS search-and-secure permit PV; ask 2-BM staff"
+    permit_signal: "S02BM-PSS:StaB:SecureM"   # 1 = searched/secured (PSS-1, post-migration)
 
 # ===========================================================================
 # The beam path: source -> detector

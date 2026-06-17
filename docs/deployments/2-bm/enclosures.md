@@ -37,11 +37,27 @@ Every ancestor enters the widened scope regardless of its own lifecycle. Whether
 
 See [Runs](runs.md) and [Procedures](procedures.md) for what each gated operation binds.
 
+## Personnel Safety System PVs (PSS-1)
+
+2-BM was migrated to the new PSS naming (`S02BM-PSS:*`) in mid-2026; the pre-migration `PA:02BM:STA_*` names CORA originally proposed are retired. The post-migration read-only Channel Access PVs CORA polls, all on the PSS gateway `s2pvgate.xray.aps.anl.gov:5064`:
+
+| Signal | PV | Read |
+| --- | --- | --- |
+| `2-BM-A` searched / secured | `S02BM-PSS:StaA:SecureM` | `1` = secure |
+| `2-BM-B` searched / secured | `S02BM-PSS:StaB:SecureM` | `1` = secure |
+| FES permit ("beam ready") | `S02BM-PSS:FES:FEEPSPermitM` | `1` = permitted |
+| FES (front-end shutter) state | `S02BM-PSS:FES:BeamBlockingM` | `1` = blocked / CLOSED, `0` = open (inverted) |
+| SBS (P6-50 station shutter) state | `S02BM-PSS:SBS:BeamBlockingM` | `1` = blocked / CLOSED, `0` = open (inverted) |
+| Upstream permit (composite) | `SR-ACIS:2BM:FesPermitM` | `1` = FES-open permitted |
+
+The Enclosure permit maps straight off the per-hutch secure PVs: `2-BM-A` is Permitted when `StaA:SecureM == 1`, `2-BM-B` when `StaB:SecureM == 1` (these are the `permit_signal` handles in the descriptor). The two `BeamBlockingM` PVs report blocking state, not shutter position, so "shutter open" is the predicate `BeamBlockingM == 0`. The `SR-ACIS:2BM:FesPermitM` composite folds storage-ring health, injection state, the APS-wide permits, the per-beamline PSS state, and the BLEPS fault chain into one boolean; it is the recommended single read for a run pre-flight "upstream OK" check (the `FEEPSPermitM` FES permit is a subset of it).
+
+CORA reads only: it never drives, holds, or releases the PSS permit or the beam, and reading these PVs does not put CORA into the safety chain. The PSS retains sole interlock authority. The names are validated against the post-migration 2-BM staff screens (PSS-1); a formal sign-off by the APS PSS gateway owner is the one remaining nicety.
+
 ## Pending
 
-No 2-BM Enclosures are registered yet. Two integration items remain:
+No 2-BM Enclosures are registered yet. One integration item remains:
 
-- The production Personnel Safety System observer adapter, which subscribes to both hutch permit channels and reports interlock permit changes into `observe_enclosure_status`. Until it integrates at first pilot, the permit channel has no live source.
-- The per-hutch search-and-secure permit PVs. Only the shutter PVs (`S02BM-PSS:FES`, `S02BM-PSS:SBS`) are known today; the permit signal for each hutch is an operator-confirm item, carried as a `confirm` note in the descriptor.
+- The production Personnel Safety System observer adapter, which subscribes to both hutch permit channels (`S02BM-PSS:StaA:SecureM` / `StaB:SecureM`, above) and reports interlock permit changes into `observe_enclosure_status`. Until it integrates at first pilot, the permit channel has no live source.
 
 The chain-walk gate is in place and proven (see the `test_2bm_enclosure_chain_walk` and `test_2bm_two_hutch_enclosure_gate` scenarios) and fires the moment the two hutch Enclosures register.
