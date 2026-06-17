@@ -23,11 +23,13 @@ the EPICS `table3` record computes the pose from the six support motors,
 so the geometry is owned by the IOC, not CORA; addressing an axis is a
 direct ControlPort write to its `table3.*` PV.
 
-Containment is shallow: both tables parent the 2-BM Unit. Deferred to
-separate slices: MirrorTable's axes (X-surface-only pending upstream bug
-2bm-docs#171); re-parenting the microscope Housing onto DetectorTable and
-the Mirror onto MirrorTable (moves with those scenarios). Per-device
-location is descriptor-owned and not asserted here.
+Containment is shallow here: both tables parent the 2-BM Unit. The
+Housing-onto-DetectorTable and Mirror-onto-MirrorTable re-parents have
+since landed in their own scenarios (the microscope and front-end-optics
+setups), and the microscope scenario further nests the PropagationDistance
+rail between DetectorTable and Housing (DET-12). Still deferred:
+MirrorTable's axes (X-surface-only pending upstream bug 2bm-docs#171).
+Per-device location is descriptor-owned and not asserted here.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false

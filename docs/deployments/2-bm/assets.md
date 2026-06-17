@@ -52,13 +52,13 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `DetectorTable_Roll` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; rotation; raw label `AZ`; `2bmb:table3.AZ`) | `2-BM-B` |
 | `DetectorTable_Pitch` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; rotation; raw label `AX`; `2bmb:table3.AX`) | `2-BM-B` |
 | `DetectorTable_Yaw` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; rotation; raw label `AY`; `2bmb:table3.AY`) | `2-BM-B` |
-| `Housing` | `Component` | `Housing` | `DetectorTable` (sits on the detector table; installed into a Mount; parents the Microscope constituents) | `2-BM-B` |
+| `Housing` | `Component` | `Housing` | `PropagationDistance` (rides the sample-to-detector rail, which sits on the `DetectorTable`; installed into a Mount; parents the Microscope constituents) | `2-BM-B` |
 | `Turret` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; sliding ball-screw objective selector, moved by MCTOptics under `LensSelect`) | `2-BM-B` |
 | `Objective_10x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_2x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_1.1x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; writes the MCTOptics `LensSelect` composite; partition rule records lens-to-turret positions, MCTOptics actuates) | `2-BM-B` |
-| `PropagationDistance` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `PropagationDistanceDrive`) | `2-BM-B` |
+| `PropagationDistance` | `Device` | `LinearStage` | `DetectorTable` (the sample-to-detector rail mounted on the detector table; carries the `Housing`; bound into Microscope Fixture; driven by `PropagationDistanceDrive`) | `2-BM-B` |
 | `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 

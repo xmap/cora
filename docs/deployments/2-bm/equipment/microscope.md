@@ -15,7 +15,9 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 <li><span class="node">Mount: optics_mount</span> <span class="meta">6-DoF placement</span> <span class="rel">holds &rarr; Housing</span></li>
 </ul>
 </li>
-<li><span class="node">DetectorTable</span> <span class="meta">Device, Family Table</span> <span class="rel">carries &rarr; Housing</span>
+<li><span class="node">DetectorTable</span> <span class="meta">Device, Family Table</span> <span class="rel">carries &rarr; PropagationDistance</span>
+<ul>
+<li><span class="node">PropagationDistance</span> <span class="meta">Device, LinearStage; sample-to-detector rail</span> <span class="rel">carries &rarr; Housing</span>
 <ul>
 <li><span class="node">Housing</span> <span class="meta">Component, Family Housing</span> <span class="rel">containment parent (Asset.parent_id)</span>
 <ul>
@@ -24,9 +26,10 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 <li><span class="node">Objective_2x</span> <span class="meta">Device, Objective, 2x</span></li>
 <li><span class="node">Objective_1.1x</span> <span class="meta">Device, Objective, 1.1x</span></li>
 <li><span class="node">Objective_Selector</span> <span class="meta">Device, PseudoAxis</span></li>
-<li><span class="node">PropagationDistance</span> <span class="meta">Device, LinearStage</span></li>
 <li><span class="node">Camera</span> <span class="meta">Device, Camera</span></li>
 <li><span class="node">Scintillator</span> <span class="meta">Device, Scintillator</span></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -55,14 +58,14 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 </ul>
 </div>
 
-`Microscope` is the Assembly (the blueprint) and, with `microscope_at_2bm`, the Fixture (the materialization). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical chassis and the only operator-facing Asset row of the three; it parents the eight functional constituents.
+`Microscope` is the Assembly (the blueprint) and, with `microscope_at_2bm`, the Fixture (the materialization). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical chassis; it parents seven of the eight functional constituents. The eighth, the `PropagationDistance` rail, is the part the housing itself rides on, so it parents the housing rather than sitting inside it.
 
 ## Two axes: composition and containment
 
 Like the [sample tower](sample_tower.md), the detector uses both of CORA's structural axes.
 
 - **Composition** (Assembly to Fixture, flat) answers *what logical cluster presents for binding*. The `Microscope` Assembly composes the `Optics` sub-assembly plus two leaf slots (`camera`, `scintillator`); the Fixture `microscope_at_2bm` binds eight Assets across six leaf slots on the 2-BM Trust Surface. The Assembly `presents_as` the `Detector` Role, so a Method can require a 2D imaging device without pinning a Family.
-- **Containment** (`Asset.parent_id`) answers *what physically holds what*. The `Housing` parents all eight constituents, and the housing itself sits on the `DetectorTable` (its `parent_id`), so the chain is `2-BM -> DetectorTable -> Housing -> constituents`. The housing is the one part installed into a Mount (`optics_mount` on `2BM_hutch_frame`, 6-DoF), and the constituents inherit position from its known internal layout; the Mount records where it sits in space, the `parent_id` what it rests on (orthogonal axes). This is an approximation: tomography reconstruction calibrates the rotation center separately, so per-constituent Mounts are not pinned (pixel-accurate beam-propagation modelling would add them).
+- **Containment** (`Asset.parent_id`) answers *what physically holds what*. The `Housing` parents seven constituents, the housing rides on the `PropagationDistance` rail (the sample-to-detector stage, so moving it travels the whole detector), and the rail sits on the `DetectorTable`, so the chain is `2-BM -> DetectorTable -> PropagationDistance -> Housing -> constituents`. The housing is the one part installed into a Mount (`optics_mount` on `2BM_hutch_frame`, 6-DoF), and the constituents inherit position from its known internal layout; the Mount records where it sits in space, the `parent_id` what it rests on (orthogonal axes). The rail-carries-housing mounting is an engineering assumption pending staff confirmation (see [Open items](#open-items)). This is an approximation: tomography reconstruction calibrates the rotation center separately, so per-constituent Mounts are not pinned (pixel-accurate beam-propagation modelling would add them).
 
 The two axes are orthogonal: the same eight Assets sit on both at once.
 
@@ -124,6 +127,7 @@ Switch the active objective by writing the `Objective_Selector` index (0/1/2); t
 - `register_fixture` requires every bound constituent to be installed in some Mount, so a pool-backed deployment gives each a lightweight Mount even though the housing approximates its placement.
 - Plan-binding does not yet enforce `needed_assembly_ids` satisfaction: a Plan that omits a Fixture materializing the required Assembly passes silently today.
 - Two cameras are installed (FLIR Oryx 5 MP at `2bmSP1:`, 31 MP at `2bmSP2:`), switched by a Schunk LPTM 30 selector (`2bmb:m5`) with rotation motors (`2bmb:m7`/`m8`); the v1 model binds the one camera, and the second camera plus selector is a follow-on recorded in the [descriptor](../../../../deployments/2-bm/beamline.yaml) with `new: true`.
+- Containment models `PropagationDistance` (the sample-to-detector rail, `2bmbAERO:m1`) as carrying the `Housing` (`DetectorTable -> PropagationDistance -> Housing`), on the engineering assumption that moving the rail travels the whole detector. Whether the entire microscope rides the rail, or only part of it moves while the rest stays on the table, is the open world-fact [DET-12](../questions.md#the-microscope-detector); a staff answer that contradicts it would flip the rail back to a housing constituent.
 
 ## Exercised model
 

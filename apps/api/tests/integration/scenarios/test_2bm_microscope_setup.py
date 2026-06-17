@@ -16,8 +16,11 @@ end-to-end against Postgres:
   - one **Fixture** (microscope_at_2bm) that binds 8 concrete Assets across
     the union of leaf slots (the Microscope's 2 plus the Optics
     sub-assembly's 4; the three objectives share one OneOrMore slot),
-  - one **Housing** Asset (Family Housing) that physically
-    contains all 8 constituents (Asset.parent_id) and carries the Mount.
+  - one **Housing** Asset (Family Housing) that physically contains
+    7 of the constituents (Asset.parent_id) and carries the Mount; the
+    8th, the PropagationDistance rail, carries the housing instead, so
+    the chain is 2-BM -> DetectorTable -> PropagationDistance -> Housing
+    -> constituents.
 
 This is the Assembly + Fixture conversion that the flat-composition
 predecessor of this scenario deferred. It is the first scenario to
@@ -452,10 +455,10 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- DetectorTable (the optical table the Housing sits on). Minimal
-    #       Table-family registration; the full table + its six virtual axes
-    #       are modelled in test_2bm_optical_tables_setup.py. Here it is the
-    #       Housing's containment parent, correcting the earlier float-on-Unit. -----
+    # ----- DetectorTable (the optical table). Minimal Table-family
+    #       registration; the full table + its six virtual axes are modelled
+    #       in test_2bm_optical_tables_setup.py. Here it carries the
+    #       PropagationDistance rail, which in turn carries the Housing. -----
     detector_table_id = await bind_register_asset(deps)(
         RegisterAsset(name="DetectorTable", tier=AssetTier.DEVICE, parent_id=_2BM_UNIT_ID),
         principal_id=_PRINCIPAL_ID,
@@ -467,9 +470,15 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Housing (Component, containment parent), sitting on the DetectorTable -----
+    # ----- Housing (Component, containment parent of the optics constituents),
+    #       riding on the PropagationDistance rail: moving the rail moves the
+    #       whole detector. Chain is 2-BM -> DetectorTable -> PropagationDistance
+    #       -> Housing -> constituents (the rail-carries-housing mounting is the
+    #       DET-12 engineering assumption pending staff confirmation). -----
     housing_id = await bind_register_asset(deps)(
-        RegisterAsset(name="Housing", tier=AssetTier.COMPONENT, parent_id=detector_table_id),
+        RegisterAsset(
+            name="Housing", tier=AssetTier.COMPONENT, parent_id=_ASSET_PROPAGATION_DISTANCE_ID
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -510,12 +519,19 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
                 correlation_id=_CORRELATION_ID,
             )
 
-    # ----- Re-parent the facility leaf Assets under the housing -----
-    for asset_id in (_ASSET_CAMERA_ID, _ASSET_SCINTILLATOR_ID, _ASSET_PROPAGATION_DISTANCE_ID):
+    # ----- Re-parent the facility leaf Assets: the camera and scintillator sit
+    #       inside the housing; the propagation-distance rail sits on the
+    #       DetectorTable and carries the housing (so it parents the table, not
+    #       the housing). -----
+    for asset_id, to_parent_id in (
+        (_ASSET_CAMERA_ID, housing_id),
+        (_ASSET_SCINTILLATOR_ID, housing_id),
+        (_ASSET_PROPAGATION_DISTANCE_ID, detector_table_id),
+    ):
         await bind_relocate_asset(deps)(
             RelocateAsset(
                 asset_id=asset_id,
-                to_parent_id=housing_id,
+                to_parent_id=to_parent_id,
                 reason="Microscope composition lock landed",
             ),
             principal_id=_PRINCIPAL_ID,
@@ -767,13 +783,19 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     assert bound_slot_names == {slot for slot, _ in bound}
     assert sum(1 for b in bindings if b["slot_name"] == "objectives") == 3
 
-    # Containment: every constituent's parent is the housing; the housing sits
-    # on the DetectorTable, which in turn parents the 2-BM Unit. Each bound
-    # Asset carries AssetAttachedToFixture.
+    # Containment chain 2-BM -> DetectorTable -> PropagationDistance -> Housing
+    # -> constituents: the optics constituents parent the housing, the housing
+    # rides the propagation-distance rail, the rail sits on the DetectorTable,
+    # which parents the 2-BM Unit. Each bound Asset carries AssetAttachedToFixture.
     housing_events, _ = await deps.event_store.load("Asset", housing_id)
-    assert housing_events[0].payload["parent_id"] == str(detector_table_id)
+    assert housing_events[0].payload["parent_id"] == str(_ASSET_PROPAGATION_DISTANCE_ID)
     detector_table_events, _ = await deps.event_store.load("Asset", detector_table_id)
     assert detector_table_events[0].payload["parent_id"] == str(_2BM_UNIT_ID)
+    # the rail was re-parented onto the DetectorTable (it carries the housing),
+    # not into the housing like the camera and scintillator leaves.
+    prop_events, _ = await deps.event_store.load("Asset", _ASSET_PROPAGATION_DISTANCE_ID)
+    prop_relocations = [e for e in prop_events if e.event_type == "AssetRelocated"]
+    assert prop_relocations[-1].payload["to_parent_id"] == str(detector_table_id)
     # the 5 optics-cluster Assets are children of the housing (containment).
     for name, asset_id in optics_assets.items():
         events, _ = await deps.event_store.load("Asset", asset_id)
@@ -782,7 +804,8 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         events, _ = await deps.event_store.load("Asset", asset_id)
         types = [e.event_type for e in events]
         assert "AssetAttachedToFixture" in types, f"{slot_name}: expected fixture attach"
-        # the relocated facility Assets carry AssetRelocated under the housing
+        # the relocated facility Assets carry AssetRelocated (camera + scintillator
+        # into the housing, the rail onto the DetectorTable).
         if slot_name in ("camera", "scintillator", "propagation_distance"):
             assert "AssetRelocated" in types, f"{slot_name}: expected re-parent"
 
