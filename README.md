@@ -155,7 +155,8 @@
 | src/cora/agent/tools.py                                                                  |       34 |        1 |        2 |        1 |     94.4% |       105 |
 | src/cora/agent/wire.py                                                                   |       14 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/api/\_\_init\_\_.py                                                             |        0 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/api/main.py                                                                     |      232 |        0 |       14 |        2 |     99.2% |282-\>281, 617-\>620 |
+| src/cora/api/\_enclosure\_permit\_observer.py                                            |       61 |        0 |       16 |        0 |    100.0% |           |
+| src/cora/api/main.py                                                                     |      239 |        0 |       16 |        2 |     99.2% |285-\>284, 644-\>647 |
 | src/cora/api/middleware.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/api/protected\_resource\_metadata.py                                            |       30 |        0 |        8 |        1 |     97.4% | 127-\>125 |
 | src/cora/calibration/\_\_init\_\_.py                                                     |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -533,10 +534,12 @@
 | src/cora/decision/routes.py                                                              |       36 |        2 |        8 |        0 |     95.5% |   104-105 |
 | src/cora/decision/tools.py                                                               |       14 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/decision/wire.py                                                                |       13 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/enclosure/\_\_init\_\_.py                                                       |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/enclosure/\_\_init\_\_.py                                                       |        8 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/enclosure/\_enclosure\_seed.py                                                  |       46 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/enclosure/\_monitor.py                                                          |       68 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/enclosure/\_projections.py                                                      |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/adapters/\_\_init\_\_.py                                              |        2 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/enclosure/adapters/postgres\_enclosure\_lookup.py                               |       29 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/enclosure/adapters/postgres\_enclosure\_lookup.py                               |       36 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/enclosure/aggregates/\_\_init\_\_.py                                            |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/aggregates/\_value\_types.py                                          |       31 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/enclosure/aggregates/enclosure/\_\_init\_\_.py                                  |        5 |        0 |        0 |        0 |    100.0% |           |
@@ -1239,7 +1242,7 @@
 | src/cora/infrastructure/adapters/in\_memory\_asset\_lookup.py                            |       41 |        0 |       14 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/in\_memory\_clearance\_template\_lookup.py              |       15 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/in\_memory\_credential\_lookup.py                       |       17 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/adapters/in\_memory\_enclosure\_lookup.py                        |       20 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/infrastructure/adapters/in\_memory\_enclosure\_lookup.py                        |       28 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/in\_memory\_event\_store.py                             |       61 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/in\_memory\_facility\_lookup.py                         |       28 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/in\_memory\_family\_lookup.py                           |       15 |        0 |        0 |        0 |    100.0% |           |
@@ -1262,7 +1265,7 @@
 | src/cora/infrastructure/auth/config.py                                                   |       56 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/exception\_handlers.py                                      |       44 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/idp\_registry.py                                            |       48 |        0 |       18 |        0 |    100.0% |           |
-| src/cora/infrastructure/config.py                                                        |       68 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/infrastructure/config.py                                                        |       70 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/infrastructure/control\_port\_route.py                                          |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/deps.py                                                          |      107 |        0 |       14 |        1 |     99.2% | 996-\>992 |
 | src/cora/infrastructure/event\_envelope.py                                               |        7 |        0 |        0 |        0 |    100.0% |           |
@@ -1293,7 +1296,7 @@
 | src/cora/infrastructure/ports/clearance\_template\_lookup.py                             |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/clock.py                                                   |       15 |        2 |        0 |        0 |     86.7% |    37, 40 |
 | src/cora/infrastructure/ports/credential\_lookup.py                                      |        8 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/ports/enclosure\_lookup.py                                       |       14 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/ports/enclosure\_lookup.py                                       |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/event\_publisher.py                                        |        4 |        4 |        0 |        0 |      0.0% |     51-57 |
 | src/cora/infrastructure/ports/event\_store.py                                            |       34 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/facility\_lookup.py                                        |       12 |        0 |        0 |        0 |    100.0% |           |
@@ -2262,7 +2265,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **44911** |  **976** | **6180** |  **253** | **97.3%** |           |
+| **TOTAL**                                                                                | **45115** |  **976** | **6222** |  **253** | **97.3%** |           |
 
 
 ## Setup coverage badge
