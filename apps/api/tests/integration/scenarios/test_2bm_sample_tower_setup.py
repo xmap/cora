@@ -80,6 +80,12 @@ from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_asset import bind as bind_register_asset
 from cora.equipment.features.register_fixture import RegisterFixture
 from cora.equipment.features.register_fixture import bind as bind_register_fixture
+from cora.equipment.features.update_asset_settings import UpdateAssetSettings
+from cora.equipment.features.update_asset_settings import bind as bind_update_asset_settings
+from cora.equipment.features.update_family_settings_schema import UpdateFamilySettingsSchema
+from cora.equipment.features.update_family_settings_schema import (
+    bind as bind_update_family_settings_schema,
+)
 from cora.infrastructure.adapters.in_memory_role_lookup import InMemoryRoleLookup
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
@@ -112,6 +118,20 @@ _FAM_HEXAPOD = family_stream_id(FamilyName("Hexapod"))
 _FAM_TILT_STAGE = family_stream_id(FamilyName("TiltStage"))
 _FAM_ROTARY_STAGE = family_stream_id(FamilyName("RotaryStage"))
 _FAM_LINEAR_STAGE = family_stream_id(FamilyName("LinearStage"))
+
+# The Table settings schema (inline per scenario; strictness is injected at
+# validation, so no additionalProperties). SampleTable is translation_xyz (four
+# direct motors, no combined record). Same schema as test_2bm_optical_tables_setup.
+_SCHEMA_TABLE = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "axis_layout": {"type": "string", "enum": ["translation_xyz", "virtual_pose"]},
+        "virtual_record": {"type": "string"},
+        "geometry": {"type": "string"},
+    },
+    "required": ["axis_layout"],
+}
 
 # Recipe ladder (TOWER-3: a positioning Method binds the tower as a unit).
 _APS_SITE_ID = UUID("01900000-0000-7000-8000-000000430501")
@@ -161,6 +181,14 @@ async def test_sample_tower_deployment_plays_out_end_to_end(db_pool: asyncpg.Poo
             correlation_id=_CORRELATION_ID,
         )
 
+    # The Table family carries a settings schema so SampleTable's axis_layout is
+    # enforced (the detector/mirror tables get virtual_pose in their own scenario).
+    await bind_update_family_settings_schema(deps)(
+        UpdateFamilySettingsSchema(family_id=_FAM_TABLE, settings_schema=_SCHEMA_TABLE),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
     # ----- The six stack Assets, registered bottom-to-top with each one's
     #       parent_id set to the stage directly below (literal-deep chain).
     #       The base table parents to the 2-BM Unit. -----
@@ -186,6 +214,15 @@ async def test_sample_tower_deployment_plays_out_end_to_end(db_pool: asyncpg.Poo
             correlation_id=_CORRELATION_ID,
         )
         parent = aid  # next stage rides on this one
+
+    # SampleTable's axis_layout (four direct translation motors, no combined record).
+    await bind_update_asset_settings(deps)(
+        UpdateAssetSettings(
+            asset_id=tower["table"], settings_patch={"axis_layout": "translation_xyz"}
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
 
     # ----- SampleTower Assembly: presents as the Positioner Role; one slot
     #       per stack element, sample_top is OneOrMore (binds X + Z). No
@@ -360,6 +397,13 @@ async def test_sample_tower_deployment_plays_out_end_to_end(db_pool: asyncpg.Poo
         assert attaches[-1].payload["fixture_id"] == str(fixture_id), (
             f"{slot_name}: attached to the wrong fixture"
         )
+
+    # SampleTable carries its schema-validated axis_layout (translation_xyz),
+    # the Table-family settings contract shared with the detector/mirror tables.
+    table_events, _ = await deps.event_store.load("Asset", tower["table"])
+    table_settings = [e for e in table_events if e.event_type == "AssetSettingsUpdated"]
+    assert table_settings, "SampleTable should carry a settings update"
+    assert table_settings[-1].payload["settings"] == {"axis_layout": "translation_xyz"}
 
     # TOWER-3: the positioning Method requires the tower as a UNIT -- it names
     # the SampleTower Assembly via needed_assembly_ids, and that Assembly's

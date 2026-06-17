@@ -41,6 +41,12 @@ from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_family import bind as bind_define_family
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_asset import bind as bind_register_asset
+from cora.equipment.features.update_asset_settings import UpdateAssetSettings
+from cora.equipment.features.update_asset_settings import bind as bind_update_asset_settings
+from cora.equipment.features.update_family_settings_schema import UpdateFamilySettingsSchema
+from cora.equipment.features.update_family_settings_schema import (
+    bind as bind_update_family_settings_schema,
+)
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 from tests.integration.scenarios._facility_fixture import (
     facility_id_prefix,
@@ -57,6 +63,36 @@ _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-000000431a01")
 
 # Family id (deterministic uuid5 from the name).
 _FAM_TABLE = family_stream_id(FamilyName("Table"))
+
+# The Table settings schema (the JSON-Schema subset; strictness is injected at
+# validation, so no additionalProperties here). axis_layout is the discriminator
+# between the sample table's direct motors and the detector/mirror virtual records.
+# Defined inline per scenario (rule-of-three not fired: only two scenarios use it).
+_SCHEMA_TABLE = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "axis_layout": {"type": "string", "enum": ["translation_xyz", "virtual_pose"]},
+        "virtual_record": {"type": "string"},
+        "geometry": {"type": "string"},
+    },
+    "required": ["axis_layout"],
+}
+
+# Per-table settings. Both new tables are virtual_pose (composite EPICS records);
+# the sample table's translation_xyz is set in the sample-tower scenario.
+_TABLE_SETTINGS: dict[str, dict[str, object]] = {
+    "DetectorTable": {
+        "axis_layout": "virtual_pose",
+        "virtual_record": "2bmb:table3",
+        "geometry": "SRI: 3 Y-supports, 2 X-supports, 1 Z-support",
+    },
+    "MirrorTable": {
+        "axis_layout": "virtual_pose",
+        "virtual_record": "2bma:table1",
+        "geometry": "SRI support table",
+    },
+}
 
 
 def _id_queue() -> list[UUID]:
@@ -88,15 +124,21 @@ async def test_optical_tables_registered_as_standalone_assets(db_pool: asyncpg.P
         devices=(),
     )
 
-    # ----- Table Family (empty affordances; the real set + the settings
-    #       schema live in the descriptor and a deferred schema slice). -----
+    # ----- Table Family (empty affordances) + its settings schema, so the
+    #       per-table axis_layout is enforced, not just documented. -----
     await bind_define_family(deps)(
         DefineFamily(name="Table", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
+    await bind_update_family_settings_schema(deps)(
+        UpdateFamilySettingsSchema(family_id=_FAM_TABLE, settings_schema=_SCHEMA_TABLE),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
 
-    # ----- The two support tables, registered standalone under the Unit. -----
+    # ----- The two support tables, registered standalone under the Unit, each
+    #       with its schema-validated settings (both virtual_pose). -----
     tables: dict[str, UUID] = {}
     for asset_name in ("DetectorTable", "MirrorTable"):
         aid = await bind_register_asset(deps)(
@@ -107,6 +149,11 @@ async def test_optical_tables_registered_as_standalone_assets(db_pool: asyncpg.P
         tables[asset_name] = aid
         await bind_add_asset_family(deps)(
             AddAssetFamily(asset_id=aid, family_id=_FAM_TABLE),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+        await bind_update_asset_settings(deps)(
+            UpdateAssetSettings(asset_id=aid, settings_patch=_TABLE_SETTINGS[asset_name]),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -127,3 +174,8 @@ async def test_optical_tables_registered_as_standalone_assets(db_pool: asyncpg.P
         family_added = [e for e in events if e.event_type == "AssetFamilyAdded"]
         assert len(family_added) == 1, f"{asset_name} should carry exactly one Family binding"
         assert family_added[0].payload["family_id"] == str(_FAM_TABLE)
+
+        # Schema-validated settings landed (the event carries the full post-merge dict).
+        settings_updated = [e for e in events if e.event_type == "AssetSettingsUpdated"]
+        assert len(settings_updated) == 1, f"{asset_name} should have one settings update"
+        assert settings_updated[0].payload["settings"] == _TABLE_SETTINGS[asset_name]
