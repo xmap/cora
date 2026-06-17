@@ -152,7 +152,7 @@ The per-lens fine-focus motors (`2bmb:m2/m3/m4`) are MCTOptics-owned and are NOT
 
 This replaces the older convention of carrying `Objective_Selector` as a Method parameter. The virtual axis is addressable, typed, and audit-complete.
 
-> **Deferred (DET-2 follow-up).** Whether to retire the index-to-position `LookupTable` outright (modelling `Objective_Selector` as a pass-through index write) and to stop modelling `Turret` as a raw-motor Asset is a structural question best taken when CORA builds the real control layer. Today the actuation model is descriptive, so the provenance-record framing above is the intentional v1.
+> **Deferred (DET-2 follow-up), with a hard constraint for whoever wires the control layer.** Today the actuation model is descriptive, so the provenance-record framing above is the intentional v1. **When the real control layer is wired** (the PseudoAxis expander's constituent resolver, which will read `Plan.wiring`), `Objective_Selector` MUST be routed as a single write to the `2bm:MCTOptics:LensSelect` composite. It must NOT be decomposed into a raw `Turret` / `2bmb:m1` setpoint the way a normal PseudoAxis is: decomposing it would move the turret while skipping the per-lens focus (`2bmb:m2/m3/m4`) and rotation offsets MCTOptics applies, and would put CORA and MCTOptics in contention over the same motors. The default PseudoAxis expander behavior (decompose to constituents) is therefore the wrong default for this one axis. Open structural choice *within* that constraint: whether to retire the index-to-position `LookupTable` entirely (making `Objective_Selector` a pass-through index write) and stop modelling `Turret` as a raw-motor Asset, or keep them as provenance records.
 
 ## Calibrations
 
