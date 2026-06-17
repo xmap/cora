@@ -123,6 +123,8 @@ nav:
     - Assemblies: catalog/assemblies.md
     - Roles: catalog/roles.md
     - Models: catalog/models.md
+  - Blog:
+    - blog/index.md
   - Talks: talks.md
   - Reference:
     - reference/index.md
@@ -175,6 +177,9 @@ extra_javascript:
 
 plugins:
   - search
+  - blog:
+      blog_dir: blog
+      post_excerpt: optional
 
 hooks:
   - scripts/mkdocs_hooks.py
