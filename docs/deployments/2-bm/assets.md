@@ -386,12 +386,17 @@ Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexa
 
 ### `Camera`
 
+The active 5 MP FLIR Oryx, confirmed by 2-BM staff (DET-8): a Sony IMX250 CMOS global-shutter sensor, IOC-reported model `Oryx ORX-10G-51S5M`, serial number `19173710`, firmware `1710.0.0.0`. The per-unit serial lives in the Camera Asset's `alternate_identifiers` (kind `SerialNumber`); the firmware version is per-unit identity recorded alongside it (the `Camera` schema carries no firmware field, unlike the controller schemas). The areaDetector / Spinnaker SDK, driver, and ADCore versions are IOC-deployment state, not Camera-Asset state, and are not recorded here.
+
 | Setting | Value |
 | --- | --- |
 | `sensor_width` | `2448 pixel` |
 | `sensor_height` | `2048 pixel` |
 | `pixel_size` | `3.45 um` |
 | `bit_depth` | `12 bit` |
+| `max_framerate_hz` | `162 Hz` |
+| `sensor_kind` | `CMOS` |
+| `readout_mode` | `GlobalShutter` |
 
 ### `Objective_10x` (10x)
 

@@ -390,16 +390,23 @@ detector:
       family: Camera              # camera 0 (the modeled camera)
       model: flir_oryx
       pv: "2bmSP1:"
-      sensor: 2448 x 2048 pixel
+      sensor: Sony IMX250 CMOS global shutter, 2448 x 2048 pixel   # DET-8 (#142)
       pixel_size: 3.45 um
       bit_depth: 12 bit
+      max_framerate_hz: 162
+      readout_mode: GlobalShutter
+      serial_number: "19173710"
+      firmware_version: "1710.0.0.0"
+      part_number_reported: "Oryx ORX-10G-51S5M"   # IOC-reported; catalog SKU ORX-10G-51S5M-C is the same class (10G vs 10GS = form factor only)
       replaceable: true
-      confirm: "max frame rate, sensor kind, readout mode (rolling vs global) still blank (DET-8)"
     - name: Camera_HighRes
       family: Camera             # camera 1 (item_020): FLIR Oryx 31 MP; role-name provisional; CORA Asset build deferred
+      model_reported: "Oryx ORX-10G-310S9M"        # DET-8 (#142): per-unit identity known, recorded for when it graduates from Pending
       pv: "2bmSP2:"
+      serial_number: "22150530"
+      firmware_version: "1904.0.72.0"
       new: true
-      confirm: "FLIR Oryx 31 MP; sensor/pixel/bit-depth/frame-rate not yet recorded"
+      confirm: "FLIR Oryx 31 MP; per-unit identity confirmed (DET-8); sensor size/pixel/bit-depth/frame-rate still to record when modeled"
     - name: Camera_Selector
       family: LinearStage        # Schunk LPTM 30 translation stage + folding mirrors, selects camera 0/1 (item_020)
       model: schunk_lptm_30
