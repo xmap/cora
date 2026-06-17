@@ -109,7 +109,7 @@ methods:
     needed_families: [RotaryStage, LinearStage]
   - name: resolution_alignment
     capability: cora.capability.alignment
-    purpose: "The resolution step, an iterative focus-Z peak search on a mounted resolution target."
+    purpose: "The resolution step, an iterative propagation-distance peak search on a mounted resolution target."
     needed_families: [LinearStage, Camera, Scintillator]
   - name: focus_alignment
     capability: cora.capability.alignment
