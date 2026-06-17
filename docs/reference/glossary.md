@@ -46,9 +46,9 @@ For anyone reading CORA. Each term defined once and used the same way in code, c
 *ISA, ISO/IEC, NIST, PROV-O, RAiD.*
 
 - **ISA-95.** Manufacturing operations hierarchy: Enterprise / Site / Area / Unit / Component / Device. CORA draws the three equipment tiers (Unit / Component / Device) from it for `Asset.tier`; the upper levels (institution / site / area) are facility-envelope scope owned by the Federation `Facility` aggregate, not Asset tiers.
-- **ISA-88.** Batch control. Basis for Track A (Method / Practice / Plan / Run).
-- **ISA-106.** Continuous-process operations. Basis for Track B.
-- **ISA-99 / IEC 62443.** Industrial cybersecurity. Basis for Track C: Zones, Conduits, Policies (`trust` BC).
+- **ISA-88.** Batch control. Footnote lens on the **Procedure** group (Method / Practice / Plan / Run).
+- **ISA-106.** Continuous-process operations. Footnote lens on the **Resource** group.
+- **ISA-99 / IEC 62443.** Industrial cybersecurity. Footnote lens on the **Authority** group: Zones, Conduits, Policies (`trust` BC).
 - **ISO/IEC 42001 + NIST AI RMF.** AI governance frameworks. Inform Decision and Strategy BCs.
 - **W3C PROV-O.** Provenance ontology. Borrowed at API boundaries (Activity, Entity, Agent, used, wasGeneratedBy). W3C Provenance Working Group is closed; PROV-O is frozen 2013 bedrock vocabulary, not a moving spec. Community momentum lives in downstream consumers (RO-Crate, FAIRSCAPE).
 - **RAiD (ISO 23527).** Research Activity Identifier. Forward-compat field on `RunStarted`.

@@ -1,4 +1,4 @@
-# Recipe module <span class="md-maturity md-maturity--stable" title="Track A core: five aggregates (Capability, Method, Practice, Plan, Recipe) span the abstract-to-bound recipe ladder plus the executable step sequence">stable</span>
+# Recipe module <span class="md-maturity md-maturity--stable" title="Procedure group core: five aggregates (Capability, Method, Practice, Plan, Recipe) span the abstract-to-bound recipe ladder plus the executable step sequence">stable</span>
 
 ## Purpose & Scope
 

@@ -6,7 +6,7 @@ The shape under every CORA feature: a BC owns a slice of the domain, an aggregat
 
 ## Bounded contexts
 
-CORA is a set of bounded contexts (BCs) organised into tracks. Each BC owns its model, language, and API surface. Each aggregate inside a BC owns one consistency boundary.
+CORA is a set of bounded contexts (BCs) organised into groups. Each BC owns its model, language, and API surface. Each aggregate inside a BC owns one consistency boundary.
 
 Status legend: **Active** = aggregate is shipping and listed under [Modules](modules/index.md); **Planned** = scoped, not yet implemented.
 
@@ -14,7 +14,7 @@ Status legend: **Active** = aggregate is shipping and listed under [Modules](mod
 _Generated from the code at build time._
 <!-- /arch:bc-table -->
 
-<!-- arch:count kind=bc spell=true cap=true -->Seventeen<!-- /arch:count --> BCs and <!-- arch:count kind=aggregate spell=true -->forty<!-- /arch:count --> aggregates ship today; two more BCs are reserved with single planned aggregates. Tracks group BCs by the lens they take on operations: Foundation owns the shared facts every other track refers to, Track A is the batch-shaped recipe ladder, Track B is the always-on resource and procedure side, Track C is the trust topology that gates the others, Governance owns the formal and informal operator controls, Decisions and agents own the audit and configuration of consequential choices, and Independent covers what doesn't sit on any single track.
+<!-- arch:count kind=bc spell=true cap=true -->Seventeen<!-- /arch:count --> BCs and <!-- arch:count kind=aggregate spell=true -->forty<!-- /arch:count --> aggregates ship today; two more BCs are reserved with single planned aggregates. Each group is named for the operational role its BCs play in running an experiment: **Foundation** owns the shared facts every other group refers to (identity, equipment); **Procedure** is the planned-work recipe ladder and its execution instances; **Resource** is the continuous and consumable substrate work runs on, plus its upkeep; **Authority** is where CORA itself decides or grants permission to act, intra- and cross-facility; **Assurance** is observed state and recorded evidence that conditions work but that CORA does not decide; **Governance** is the audit and configuration of consequential choices; and **Outcome** is what the experiment studies and produces. The ISA and peer standards that shaped several BCs (ISA-88, ISA-106, ISA-99) are documentation provenance recorded in the [glossary](../reference/glossary.md), not the partition. To place a new BC, take the first role above that fits; if none fits, the BC charter is mis-scoped rather than the scheme needing an eighth group, and a new group is added only when three homeless BCs share a genuinely new role.
 
 ## Aggregates
 

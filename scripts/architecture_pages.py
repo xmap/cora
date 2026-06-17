@@ -16,9 +16,9 @@ tables cannot drift. An unknown kind, a missing/unknown arg, an unpaired marker,
 an empty render raises ArchMarkerError, which aborts `mkdocs build` regardless of
 the mkdocs `strict:` flag (so local and CI behave the same).
 
-Only the Track grouping (editorial) and the Planned-BC rows (not in code) are
+Only the group labels (editorial) and the Planned-BC rows (not in code) are
 authored here; everything else is read from the code model. A guard test asserts
-the Track rows cover exactly the introspected BCs, so a new BC cannot be silently
+the group rows cover exactly the introspected BCs, so a new BC cannot be silently
 dropped from the table.
 """
 
@@ -30,32 +30,35 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from architecture_introspect import ArchModel
 
-# Editorial: the Track label carried per row, in table order. Membership is
-# guarded against the code model by a test (a new BC must be placed here).
+# Editorial: the group label carried per row, in table order. Each label is a
+# single role-noun naming the operational role its BCs play in running an
+# experiment; the ISA/standard lens is documentation provenance (see the
+# glossary), not the partition. Membership is guarded against the code model by
+# a test (a new BC must be placed here).
 _BC_ROWS: tuple[tuple[str, str], ...] = (
     ("Foundation", "access"),
     ("Foundation", "equipment"),
-    ("Track A (episodic procedures)", "recipe"),
-    ("Track A", "run"),
-    ("Track A", "campaign"),
-    ("Track B (continuous operations)", "supply"),
-    ("Track B", "operation"),
-    ("Track C (trust topology)", "trust"),
-    ("Governance", "safety"),
-    ("Governance", "enclosure"),
-    ("Governance", "caution"),
-    ("Governance", "calibration"),
-    ("Decisions and agents", "decision"),
-    ("Decisions and agents", "agent"),
-    ("Independent", "subject"),
-    ("Independent", "data"),
-    ("Independent", "federation"),
+    ("Procedure", "recipe"),
+    ("Procedure", "run"),
+    ("Procedure", "campaign"),
+    ("Resource", "supply"),
+    ("Resource", "operation"),
+    ("Authority", "trust"),
+    ("Authority", "safety"),
+    ("Authority", "federation"),
+    ("Assurance", "enclosure"),
+    ("Assurance", "calibration"),
+    ("Assurance", "caution"),
+    ("Governance", "decision"),
+    ("Governance", "agent"),
+    ("Outcome", "subject"),
+    ("Outcome", "data"),
 )
 
 # Reserved BCs scoped but not implemented (no code, so authored here).
 _PLANNED_ROWS: tuple[tuple[str, str, str], ...] = (
-    ("Decisions and agents", "strategy", "strategy"),
-    ("Independent", "budget", "budget"),
+    ("Governance", "strategy", "strategy"),
+    ("Resource", "budget", "budget"),
 )
 
 _INLINE_KINDS = frozenset({"count", "bc-aggregates"})
@@ -118,15 +121,28 @@ def render_bc_table(model: ArchModel, _args: dict[str, str]) -> str:
     missing = {bc.name for bc in model.bcs} - placed
     if missing:
         raise ArchMarkerError(
-            f"arch:bc-table: BCs are not placed in the editorial Track map "
+            f"arch:bc-table: BCs are not placed in the editorial group map "
             f"(scripts/architecture_pages.py _BC_ROWS): {sorted(missing)}"
         )
+    # Group order is first appearance in _BC_ROWS, then any planned-only group.
+    # Each group's Planned rows render directly after its Active rows so the group
+    # reads as one contiguous block.
+    group_order: list[str] = []
+    for group, _ in _BC_ROWS:
+        if group not in group_order:
+            group_order.append(group)
+    for group, _, _ in _PLANNED_ROWS:
+        if group not in group_order:
+            group_order.append(group)
     rows: list[list[str]] = []
-    for track, bc in _BC_ROWS:
-        rows.append([track, f"`{bc}`", _aggs(model, bc), "Active"])
-    for track, bc, agg in _PLANNED_ROWS:
-        rows.append([track, f"`{bc}`", f"`{agg}`", "Planned"])
-    return _table(["Track", "BC", "Aggregates", "Status"], rows)
+    for group in group_order:
+        for g, bc in _BC_ROWS:
+            if g == group:
+                rows.append([group, f"`{bc}`", _aggs(model, bc), "Active"])
+        for g, bc, agg in _PLANNED_ROWS:
+            if g == group:
+                rows.append([group, f"`{bc}`", f"`{agg}`", "Planned"])
+    return _table(["Group", "BC", "Aggregates", "Status"], rows)
 
 
 def _count_value(model: ArchModel, args: dict[str, str]) -> int:

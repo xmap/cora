@@ -130,8 +130,8 @@ def test_bc_table_renders_full_membership() -> None:
     assert chr(0x2014) not in table
 
 
-def test_bc_table_track_map_covers_every_bc() -> None:
-    # The editorial Track map must place every introspected BC, else a new BC is
+def test_bc_table_group_map_covers_every_bc() -> None:
+    # The editorial group map must place every introspected BC, else a new BC is
     # silently dropped from the table. render_bc_table also raises on a gap.
     placed = {bc for _, bc in ap._BC_ROWS} | {bc for _, bc, _ in ap._PLANNED_ROWS}
     assert {bc.name for bc in _MODEL.bcs} - placed == set()
