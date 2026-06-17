@@ -226,6 +226,7 @@ sample-environment:
       axis_channels: { X: "2bmHXP:m1", Y: "2bmHXP:m2", Pitch: "2bmHXP:m4", Roll: "2bmHXP:m5" }
       controller: HexapodDrive
       replaceable: true
+      serial_number: "486060-01"   # operator-confirmed (#156)
       travel: "x 55 mm, y 60 mm, z 25 mm, a 15 deg, b 15 deg, c 30 deg"
       drawing: { system: EDMS, number: Hex300-Data-Sheet, revision: D20250203 }
     # Kohzu goniometer/swivel. Staff item_020 confirms it is a SEPARATE stage (not the hexapod pitch),
@@ -245,15 +246,17 @@ sample-environment:
       new: true
     - name: Rotary
       family: RotaryStage         # the rotation axis (theta)
-      model: aerotech_abs250mp   # Aerotech ABS250MP-M-AS, air-bearing
+      model: aerotech_abrs250mp   # Aerotech ABRS-250MP-M-AS, air-bearing (part number corrected from ABS250MP-M-AS typo, #156)
       pv: "2bmb:m102"
       controller: RotaryDrive
       trigger_source: PSO         # position-synchronized output drives the camera
       replaceable: true
+      serial_number: "146853-A-1-1-X"           # operator-confirmed (#156)
+      drawing: { system: EDMS, number: 630C2125, revision: "(-)" }   # Aerotech vendor drawing (#156)
       range: -360..360 deg
       max_speed: 720 deg/s
       encoder_resolution: 0.0001 deg
-      # Rotary kit per 2-BM staff source (pre-APSU ops/item_100 "Rotary Stages"). ABS250MP-M-AS is the
+      # Rotary kit per 2-BM staff source (pre-APSU ops/item_100 "Rotary Stages"). ABRS-250MP-M-AS is the
       # currently-installed 2-BM-B rotary (manual/item_020). Mode/station labels ("fast tomo"/"mona tomo"/
       # "spindle") and whether the swap is a live loadout variant conflict pre vs post APSU; confirm (questions STAGE-5).
       interchangeable_with: ["ABRS-150MP-M-AS", "ABS2000-1000AS-RU"]
@@ -363,6 +366,7 @@ detector:
       pv: "2bmbAERO:m1"
       controller: PropagationDistanceDrive
       travel: 1000 mm
+      motor: { part: "Aerotech BM250_UF", type: "AC servo, 240 VAC", serial_number: "234848-07" }   # motor inside the stage, distinct from the PropagationDistanceDrive electronics (#156)
       confirm: false
       note: 2bmbAERO:m1 sets the sample-to-detector distance (propagation distance) for inline phase contrast; confirmed not a focus motor (DET-10, staff issue + 2bm-docs 5eb45b3). Per-lens fine focus is separate (2bmb:m2/m3/m4, MCTOptics; DET-2)
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
@@ -428,8 +432,10 @@ controls:
       axis_count: 1
     - name: HexapodDrive
       family: MotionController
+      model: aerotech_automation1_ixr3   # Aerotech Automation1-iXR3, separate rack (#156)
       protocol: Aerotech_Native
       axis_count: 6
+      serial_number: "486125-01"         # operator-confirmed (#156); firmware still pending (DRIVE-2)
     - name: PropagationDistanceDrive
       family: MotionController
       protocol: Aerotech_Native

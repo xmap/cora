@@ -175,9 +175,9 @@ models:
     manufacturer: { name: Aerotech }
     part_number: "HEX300-230HL-E1-PL4-TAS"
     declared_families: [Hexapod]
-  - name: aerotech_abs250mp
+  - name: aerotech_abrs250mp
     manufacturer: { name: Aerotech }
-    part_number: "ABS250MP-M-AS"
+    part_number: "ABRS-250MP-M-AS"
     declared_families: [RotaryStage]
   - name: aerotech_abrs150mp
     manufacturer: { name: Aerotech }
@@ -191,9 +191,9 @@ models:
     manufacturer: { name: Aerotech }
     part_number: "HLE10-40-A-MXH"
     declared_families: [MotionController]
-  - name: aerotech_hexapod_drive_unknown_pn
+  - name: aerotech_automation1_ixr3
     manufacturer: { name: Aerotech }
-    part_number: "unknown-pending-confirmation"
+    part_number: "Automation1-iXR3-VL1-VB4-VB4-SB0CT222222-P1P1P1P1P1P1-CO-LC1MT1PSO6-SI0-TAS"
     declared_families: [MotionController]
   - name: aerotech_2bmbaero_drive_unknown_pn
     manufacturer: { name: Aerotech }

@@ -74,7 +74,7 @@ The two axes are orthogonal: the same Assets sit on both at once.
 The load-bearing rule: a different *scan* over the same installed stack is a Recipe `Method` / `Plan`; a different *installed stack* (a stage added, removed, or physically exchanged) is a different Fixture.
 
 - **Tomography, laminography, and mosaic are all Method/Plan over this one Fixture.** Laminography is not a separate instrument and not a second loadout: the Kohzu `LaminographyPitch` goniometer and its fixed wedge are permanently installed, and tomo vs lamino is a tilt *setpoint* on that stage (a Plan parameter), not a hardware insert or remove. Mosaic / large-sample tiling steps the `SampleTop` and table translations between sub-scans on the same stack.
-- **A second Fixture is reserved for a real hardware exchange.** The 2-BM rotary kit (ABS250MP-M-AS installed, plus ABRS-150MP-M-AS and the ABS2000-1000AS-RU spindle) is interchangeable in principle, but the b-station stack runs the single installed ABS250MP today, so the swap is a future trigger, not a live loadout variant.
+- **A second Fixture is reserved for a real hardware exchange.** The 2-BM rotary kit (ABRS-250MP-M-AS installed, plus ABRS-150MP-M-AS and the ABS2000-1000AS-RU spindle) is interchangeable in principle, but the b-station stack runs the single installed ABRS-250MP today, so the swap is a future trigger, not a live loadout variant.
 
 ## Families
 
@@ -86,7 +86,7 @@ The tower introduces one new Family and reuses the rest.
 
 ## Open items
 
-- **STAGE-5** (operator): the rotary kit's mode/station labels (`fast tomo` / `mona tomo` / `spindle`) conflict pre vs post APS-U, and whether the b-station stack actively swaps among the kit today (the model assumes one installed ABS250MP, not swapped).
+- **STAGE-5** (operator): the rotary kit's mode/station labels (`fast tomo` / `mona tomo` / `spindle`) conflict pre vs post APS-U, and whether the b-station stack actively swaps among the kit today (the model assumes one installed ABRS-250MP, not swapped).
 - **STAGE-6** (operator): the exact Kohzu model of `LaminographyPitch` (working value `SA16A-RM`; the source swivel kit also lists `SA16A-RS` / `SA07A-R2L`).
 - **Deferred:** the fixed laminography wedge (a passive part, not a slotted Asset), the hexapod's six DoF facets (`PseudoAxis`), and the lamino pitch-tracks-theta coupling (a conduct-time PseudoAxis / Plan concern, not an Assembly template wire).
 

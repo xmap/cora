@@ -141,29 +141,29 @@ Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manu
 | Model | Manufacturer | Part number | Declared Families | Bound at 2-BM |
 | --- | --- | --- | --- | --- |
 | `aerotech_hex300` | Aerotech | `HEX300-230HL-E1-PL4-TAS` | `Hexapod` | `Hexapod` |
-| `aerotech_abs250mp` | Aerotech | `ABS250MP-M-AS` | `RotaryStage` | `Rotary` |
+| `aerotech_abrs250mp` | Aerotech | `ABRS-250MP-M-AS` | `RotaryStage` | `Rotary` |
 | `aerotech_ensemble` | Aerotech | `HLE10-40-A-MXH` | `MotionController` | `RotaryDrive` |
-| `aerotech_hexapod_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` (DRIVE-4) | `MotionController` | `HexapodDrive` |
+| `aerotech_automation1_ixr3` | Aerotech | `Automation1-iXR3-VL1-VB4-VB4-SB0CT222222-P1P1P1P1P1P1-CO-LC1MT1PSO6-SI0-TAS` | `MotionController` | `HexapodDrive` |
 | `aerotech_2bmbaero_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` (DRIVE-4) | `MotionController` | `PropagationDistanceDrive` |
 | `aerotech_pro225sl` | Aerotech | `PRO225SL-1000` | `LinearStage` | `PropagationDistance` |
 | `oms_vme58` | Oregon Micro Systems | `VME58` | `MotionController` | `SampleStageDrive`, `FrontEndDrive` |
 | `kohzu_cyat070` | Kohzu | `CYAT-070` | `LinearStage` | `SampleTop_X`, `SampleTop_Z` |
 
-Model ids are derived deterministically from the `(manufacturer, part number)` key, so the same vendor product converges on one id across facilities. `oms_vme58` is that case here: `SampleStageDrive` and `FrontEndDrive` are two physical boards of one product line, so both bind the single `oms_vme58` row. The two `unknown-pending-confirmation` rows are the exception: a placeholder part number is not a real vendor key, so `aerotech_hexapod_drive_unknown_pn` and `aerotech_2bmbaero_drive_unknown_pn` stay distinct rather than collapsing onto one id. Each re-registers under its derived id once its real part number is confirmed.
+Model ids are derived deterministically from the `(manufacturer, part number)` key, so the same vendor product converges on one id across facilities. `oms_vme58` is that case here: `SampleStageDrive` and `FrontEndDrive` are two physical boards of one product line, so both bind the single `oms_vme58` row. The remaining `unknown-pending-confirmation` row (`aerotech_2bmbaero_drive_unknown_pn`, the PropagationDistance drive) is the deliberate exception: a placeholder part number is not a real vendor key, so it falls back to a random id rather than colliding with another unconfirmed drive. It re-registers under its derived id once its real part number is confirmed (DRIVE-4), exactly as the hexapod drive did once operator confirmation identified it as the Aerotech Automation1-iXR3 (`aerotech_automation1_ixr3`), replacing its earlier placeholder.
 
-Part-number suffixes encode operationally significant variants: Aerotech `HEX300-230HL-E1-PL4-TAS` (`-E1` incremental encoder, `-PL4` ultra-high-accuracy preload, `-TAS` thermally stabilized), `ABS250MP-M-AS` (`-M` mid-precision class, `-AS` air-bearing series), and `PRO225SL-1000` (`-1000` mm travel). The full type designation is stored as a single `part_number` string.
+Part-number suffixes encode operationally significant variants: Aerotech `HEX300-230HL-E1-PL4-TAS` (`-E1` incremental encoder, `-PL4` ultra-high-accuracy preload, `-TAS` thermally stabilized), `ABRS-250MP-M-AS` (`ABRS` air-bearing rotary series, `-M` mid-precision class, `-AS` air-bearing-stage suffix), and `PRO225SL-1000` (`-1000` mm travel). The full type designation is stored as a single `part_number` string.
 
 All five `MotionController` Assets are named for the equipment they drive; vendor identity lives on the bound `Model` and the EPICS / IOC handle in `alternate_identifiers`, per the [Asset instance names](../../reference/conventions.md#asset-instance-names) convention.
 
 | Controller Asset | Drives | Bound Model | Back-reference |
 | --- | --- | --- | --- |
 | `RotaryDrive` | `Rotary` | `aerotech_ensemble` (Ensemble HLE10-40-A-MXH) | `Rotary.controller_id` |
-| `HexapodDrive` | `Hexapod` | `aerotech_hexapod_drive_unknown_pn` | `Hexapod.controller_id` |
+| `HexapodDrive` | `Hexapod` | `aerotech_automation1_ixr3` | `Hexapod.controller_id` |
 | `PropagationDistanceDrive` | `PropagationDistance` (EPICS IOC `2bmbAERO`) | `aerotech_2bmbaero_drive_unknown_pn` | `PropagationDistance.controller_id` |
 | `SampleStageDrive` | `SampleTop_X` (`2bmb:m18`), `SampleTop_Z` (`2bmb:m17`), and 89 further motors on crate `ioc2bmb` | `oms_vme58` | `SampleTop_X.controller_id`, `SampleTop_Z.controller_id` |
 | `FrontEndDrive` | the front-end optics on crate `ioc2bma`: `Mirror`, `Monochromator`, `ConditioningSlit`, `SampleSlit`, `Filter` | `oms_vme58` | `controller_id` on each of the five optics |
 
-The two OMS VME58 boards bind the same `oms_vme58` Model row (one product line, two physical boards); per-instance identity (serial number, firmware version) lives in each Asset's [Settings](#settings). `HexapodDrive` and `PropagationDistanceDrive` are Aerotech drives whose product line the [2-BM source page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) does not name, so their Models carry `unknown-pending-confirmation` part numbers until staff confirm the hardware.
+The two OMS VME58 boards bind the same `oms_vme58` Model row (one product line, two physical boards); per-instance identity (serial number, firmware version) lives in each Asset's [Settings](#settings). `PropagationDistanceDrive` is an Aerotech drive whose product line the [2-BM source page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) does not name, so its Model carries `unknown-pending-confirmation` until staff confirm the hardware (DRIVE-4); `HexapodDrive` was resolved to the Aerotech Automation1-iXR3 by operator confirmation (#156).
 
 The Microscope objective selector (`2bmb:m1`) and camera selector (`2bmb:m5`) are stepper motors, identified on the source page as a Nanotec `ST4118M1404-B` and a Schunk `LPTM 30`, driven through the `SampleStageDrive` OMS VME58 crate rather than through dedicated controller boxes. Whether to register those steppers as distinct controller Assets, or carry them as the selector stages' motors, is a deferred follow-on.
 
@@ -308,11 +308,11 @@ Bound to Model `oms_vme58` (same product line as `SampleStageDrive`; one Model r
 
 ### `HexapodDrive`
 
-Bound to Model `aerotech_hexapod_drive_unknown_pn`, drives `Hexapod` (back-reference on `Hexapod.controller_id`). The [2-BM source page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) names the vendor (Aerotech) and an EPICS interface ("native Aerotech Ensemble", recorded in `alternate_identifiers`) but not the controller box or whether it is rack-separate or sealed into the stage, so the product line is left as a placeholder rather than overclaimed. `axis_count=6` reflects the hexapod's six degrees of freedom.
+Bound to Model `aerotech_automation1_ixr3`, drives `Hexapod` (back-reference on `Hexapod.controller_id`). Operator confirmation (2026-06-15, issue #156) identified the drive as an Aerotech Automation1-iXR3 in a separate rack (not sealed into the HexGen 300 housing), serial number `486125-01`, resolving the `unknown-pending-confirmation` placeholder and the HexapodDrive half of DRIVE-4; the real vendor key re-mints the deterministic Model id. The "native Aerotech Ensemble" EPICS interface handle lives in `alternate_identifiers`. `axis_count=6` reflects the hexapod's six degrees of freedom; the firmware version is still pending (DRIVE-2).
 
 | Setting | Value |
 | --- | --- |
-| `serial_number` | `unknown-pending-confirmation` (DRIVE-1) |
+| `serial_number` | `486125-01` |
 | `firmware_version` | `unknown-pending-confirmation` (DRIVE-2) |
 | `axis_count` | `6` |
 | `protocol` | `Aerotech_Native` |
@@ -334,7 +334,7 @@ The detailed trigger routing (the softGlue logic-block wiring) is per-Run / per-
 
 ### `Rotary`
 
-Bound to Model `aerotech_abs250mp`. Aerotech ABS250MP-M-AS air-bearing direct-drive rotary stage (250 mm aperture, mid-precision class), driven by `RotaryDrive` (referenced via `Rotary.controller_id`).
+Bound to Model `aerotech_abrs250mp`. Aerotech ABRS-250MP-M-AS air-bearing direct-drive rotary stage (250 mm aperture, mid-precision class), driven by `RotaryDrive` (referenced via `Rotary.controller_id`). Operator confirmation (2026-06-15, issue #156) corrected the part number from the catalog typo `ABS250MP-M-AS` to the hardware-label value `ABRS-250MP-M-AS` (the ABRS air-bearing-rotary series), which re-mints the deterministic Model id. Per-unit identity is now on record: serial number `146853-A-1-1-X` in `alternate_identifiers`, and the vendor engineering drawing `630C2125 REV (-)` (see [Engineering drawings](#engineering-drawings)).
 
 | Setting | Value |
 | --- | --- |
@@ -357,7 +357,7 @@ Bound to Model `kohzu_cyat070`, driven by `SampleStageDrive` (referenced via `Sa
 
 ### `Hexapod`
 
-Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexapod.controller_id`). Values from the Aerotech HEX300-230HL product datasheet (Hex300-Data-Sheet-D20250203). Per-DoF figures collapse to the dominant axis where the vendor's range across DoFs fits within a faithful envelope (e.g., translation accuracy reported as the laxest of X / Y / Z).
+Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexapod.controller_id`). The physical unit's serial number is `486060-01` (operator-confirmed 2026-06-15, issue #156; carried in `alternate_identifiers`). Values from the Aerotech HEX300-230HL product datasheet (Hex300-Data-Sheet-D20250203). Per-DoF figures collapse to the dominant axis where the vendor's range across DoFs fits within a faithful envelope (e.g., translation accuracy reported as the laxest of X / Y / Z).
 
 | Setting | Value |
 | --- | --- |
@@ -434,7 +434,7 @@ Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexa
 
 Each Asset may carry one canonical engineering reference as a `(system, number, revision)` triple per the [Drawing VO](../../architecture/modules/equipment/index.md). The carrier holds the build-to document for the physical specimen; the [Mount drawing](equipment/microscope.md#calibration-drawings-and-citation) on the slot is a separate document (where the slot lives in the beamline).
 
-Assets not listed below have no canonical document cited on the 2-BM source page yet (Aerotech `ABS250MP` datasheet for `Rotary`, Kohzu `CYAT-070` datasheet for the four `SampleTop_*` stages, an APS shutter drawing for `StationShutter`, and a FLIR Oryx datasheet for `Camera`). These populate when the operator confirms the canonical reference.
+Assets not listed below have no canonical document cited on the 2-BM source page yet (Kohzu `CYAT-070` datasheet for the four `SampleTop_*` stages, an APS shutter drawing for `StationShutter`, and a FLIR Oryx datasheet for `Camera`). These populate when the operator confirms the canonical reference.
 
 ### `Hexapod`
 
@@ -445,6 +445,16 @@ Assets not listed below have no canonical document cited on the 2-BM source page
 | `revision` | `D20250203` |
 
 Aerotech HEX300-230HL hexapod product datasheet (Hex300-Data-Sheet-D20250203.pdf). The Microscope deployment cites this as the structured reference for the 6-DoF positioner that anchors the sample stack.
+
+### `Rotary`
+
+| Field | Value |
+| --- | --- |
+| `system` | `EDMS` |
+| `number` | `630C2125` |
+| `revision` | `(-)` |
+
+Aerotech vendor-issued engineering drawing for the `ABRS-250MP-M-AS` rotary stage (operator-confirmed 2026-06-15, issue #156). Serves as the canonical reference until an `ABRS-250MP` datasheet PDF is also obtained.
 
 ### `PropagationDistance`
 
