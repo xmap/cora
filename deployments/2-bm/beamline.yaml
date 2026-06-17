@@ -131,7 +131,6 @@ conditioning-optics:
       pv: "2bma:table1"
       support_motors: [M0X, M0Y, M1Y, M2X, M2Y, "Z (along beam)"]
       geometry: "SRI support table (table_full IOC); virtual record 2bma:table1"
-      new: true
       confirm: true
       note: in operational use (STAGE-7); carries the Y3-30 mirror. X axes (M0X=2bma:m1, M2X=2bma:m4) driven by the energy-change IOC for stripe selection. The M1Y support-motor slot is a known IOC substitution error (mapped to the in-vacuum stripe-selector 2bma:m3, not a table Y); bind only the table-X surface until 2bm-docs#171 is fixed. AX=pitch, AY=yaw, AZ=roll (STAGE-9).
     - name: Monochromator
@@ -315,9 +314,8 @@ detector:
       pv: { x: "2bmb:table3.X", y: "2bmb:table3.Y", z: "2bmb:table3.Z", ax: "2bmb:table3.AX", ay: "2bmb:table3.AY", az: "2bmb:table3.AZ" }
       support_motors: { M0X: "2bmb:m13", M0Y: "2bmb:m14", M1Y: "2bmb:m12", M2X: "2bmb:m10", M2Y: "2bmb:m9", M2Z: "2bmb:m11" }
       geometry: "SRI: 3 Y-supports, 2 X-supports, 1 Z-support; six virtual axes (three linear X/Y/Z, three angular AX/AY/AZ) computed from six support motors via virtual record 2bmb:table3"
-      new: true
       confirm: true
-      note: carries the Optique Peter Z stage and the microscope; the detector Z-rail alignment procedure drives the angular axes table3.AX and table3.AY. AX=pitch, AY=yaw, AZ=roll (STAGE-9; the source-legend vs procedure conflict was resolved in favour of the procedure). Still pending registration as a CORA Asset
+      note: carries the Optique Peter Z stage and the microscope; the detector Z-rail alignment procedure drives the angular axes table3.AX and table3.AY. AX=pitch, AY=yaw, AZ=roll (STAGE-9; the source-legend vs procedure conflict was resolved in favour of the procedure). Registered as a CORA Asset (test_2bm_optical_tables_setup.py)
     - name: Housing
       family: Housing      # the microscope housing (containment anchor)
       model: optique_peter_micrx080
