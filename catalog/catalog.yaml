@@ -63,7 +63,7 @@ families:
   - name: GenericProbe
     note: "APS facility-scope template, an abstract detector probe-chain."
   - name: Table
-    note: "Support/positioning table Family (the hutch optical tables). One Family spans the 4-DOF sample table (pure translation), the 6-DOF detector table (six virtual axes on record 2bmb:table3), and the unused mirror table; the axis set is a per-Asset settings difference, not a Family split. 'Optical' is deliberately not in the name (it would name the contents, not the table's own nature; the OpticalHousing -> Housing precedent). Instances qualify at the Asset layer: SampleTable / DetectorTable / MirrorTable."
+    note: "Support/positioning table Family (the hutch optical tables). One Family spans the 4-DOF sample table (pure translation), the 6-DOF detector table (six virtual axes on record 2bmb:table3), and the mirror table (in operational use, its X axes driven by the energy-change IOC for stripe selection, STAGE-7); the axis set is a per-Asset settings difference, not a Family split. 'Optical' is deliberately not in the name (it would name the contents, not the table's own nature; the OpticalHousing -> Housing precedent). Instances qualify at the Asset layer: SampleTable / DetectorTable / MirrorTable."
   - name: Slit
     note: "Beam-defining aperture Family (four independently-driven blades forming a horizontal/vertical aperture). 2-BM: ConditioningSlit (A-station L3-20) and SampleSlit (B-station)."
   - name: Mirror
