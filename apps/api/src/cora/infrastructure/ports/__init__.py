@@ -23,7 +23,7 @@ from cora.infrastructure.ports.authorize import (
 from cora.infrastructure.ports.beam_availability_lookup import (
     AllBeamOpenLookup,
     BeamAvailabilityLookup,
-    BeamAvailabilityResult,
+    BeamAvailabilityLookupResult,
 )
 from cora.infrastructure.ports.capability_lookup import (
     AlwaysEmptyCapabilityLookup,
@@ -152,7 +152,7 @@ __all__ = [
     "Authorize",
     "AuthzResult",
     "BeamAvailabilityLookup",
-    "BeamAvailabilityResult",
+    "BeamAvailabilityLookupResult",
     "CacheBreakpoint",
     "CacheTTL",
     "CachedError",

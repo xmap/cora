@@ -46,7 +46,7 @@ from typing import cast
 from uuid import UUID
 
 from cora.equipment.aggregates.asset import Asset
-from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityResult
+from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 
@@ -87,7 +87,7 @@ class ProcedureStartContext:
     [[project_enclosure_stage1_design]] L-pre-1 (always-derive-from-
     Asset-chain). Procedure does NOT carry a `needed_enclosure_permits`
     field; the located-in chain IS the declaration."""
-    beam_availability: BeamAvailabilityResult | None = None
+    beam_availability: BeamAvailabilityLookupResult | None = None
     """Live beam-availability reading at the Procedure-start instant
     (BEAM-1, mirror of `RunStartContext.beam_availability`), or None
     when the deployment configured no beam PVs (gate skipped,

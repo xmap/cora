@@ -135,6 +135,30 @@ async def test_read_beam_availability_non_integer_value_fails_closed() -> None:
 
 
 @pytest.mark.unit
+async def test_read_beam_availability_fractional_value_fails_closed() -> None:
+    """A fractional BeamBlockingM must NOT truncate to 0 and read open."""
+    port = _port_with({FES_PV: _scalar(0.4), SBS_PV: _scalar(0), PERMIT_PV: _scalar(1)})
+    lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
+
+    result = await lookup.read_beam_availability()
+
+    assert result.fes_open is False  # 0.4 is not an exact 0
+    assert result.quality_ok is False  # untrustworthy reading -> fail closed
+
+
+@pytest.mark.unit
+async def test_read_beam_availability_float_zero_reads_open() -> None:
+    """An exact 0.0 (integral float) is a clean open reading."""
+    port = _port_with({FES_PV: _scalar(0.0), SBS_PV: _scalar(0), PERMIT_PV: _scalar(1)})
+    lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
+
+    result = await lookup.read_beam_availability()
+
+    assert result.fes_open is True
+    assert result.quality_ok is True
+
+
+@pytest.mark.unit
 def test_build_beam_availability_lookup_with_empty_pvs_returns_stub() -> None:
     """Empty config -> always-open stub (beam-by-default)."""
     port = InMemoryControlPort()

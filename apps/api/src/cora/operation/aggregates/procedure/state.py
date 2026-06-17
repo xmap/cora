@@ -691,7 +691,7 @@ class ProcedureBeamAvailabilityUnknownError(Exception):
     Cross-BC pre-flight gate per BEAM-1, fail-closed branch and mirror
     of `RunBeamAvailabilityUnknownError`: at least one contributing beam
     PV read had non-Good quality (disconnected / bad / timed out), so
-    `BeamAvailabilityResult.quality_ok` is False. The decider refuses
+    `BeamAvailabilityLookupResult.quality_ok` is False. The decider refuses
     the start rather than assume beam is open. The sibling
     `ProcedureRequiresOpenBeamShuttersError` covers the
     determined-but-closed branch. Mapped to HTTP 409.

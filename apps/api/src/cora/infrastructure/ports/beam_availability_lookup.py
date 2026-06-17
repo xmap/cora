@@ -16,7 +16,7 @@ than event-sourced into an aggregate + projection. The novelty is
 contained behind this port: the production adapter
 (`ControlPortBeamAvailabilityLookup`) reads the configured PVs through
 the Operation BC's `ControlPort`; the consuming decider still sees only
-a `BeamAvailabilityResult` value object, so it stays pure and
+a `BeamAvailabilityLookupResult` value object, so it stays pure and
 projection-shaped. See [[project_non_determinism_principle]]: the
 handler injects the reading, the decider is pure.
 
@@ -29,7 +29,7 @@ read as "beam open".
 
 ## No BC imports
 
-`BeamAvailabilityResult` carries bare `bool`s so this port stays inside
+`BeamAvailabilityLookupResult` carries bare `bool`s so this port stays inside
 `cora.infrastructure.ports`'s `depends_on = []` tach contract.
 """
 
@@ -38,7 +38,7 @@ from typing import Protocol
 
 
 @dataclass(frozen=True)
-class BeamAvailabilityResult:
+class BeamAvailabilityLookupResult:
     """Point-in-time beam-availability reading for the run / procedure gate.
 
     `fes_open` / `sbs_open` are the front-end and station (P6-50) shutter
@@ -64,7 +64,7 @@ class BeamAvailabilityResult:
 class BeamAvailabilityLookup(Protocol):
     """Cross-BC port: read current beam availability for the start gate."""
 
-    async def read_beam_availability(self) -> BeamAvailabilityResult:
+    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
         """Return the current beam-availability reading.
 
         Never raises for substrate disconnects: a failed / bad-quality
@@ -86,8 +86,8 @@ class AllBeamOpenLookup:
     trivially, preserving the pre-BEAM-1 "no beam gate" behavior.
     """
 
-    async def read_beam_availability(self) -> BeamAvailabilityResult:
-        return BeamAvailabilityResult(
+    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+        return BeamAvailabilityLookupResult(
             fes_open=True, sbs_open=True, fes_permit=True, quality_ok=True
         )
 
@@ -95,5 +95,5 @@ class AllBeamOpenLookup:
 __all__ = [
     "AllBeamOpenLookup",
     "BeamAvailabilityLookup",
-    "BeamAvailabilityResult",
+    "BeamAvailabilityLookupResult",
 ]

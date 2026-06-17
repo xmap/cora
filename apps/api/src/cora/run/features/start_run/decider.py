@@ -298,16 +298,17 @@ def decide(
     # configures beam PVs the handler reads the live front-end + station
     # shutter states (BeamBlockingM, inverted polarity: 0 == open) and
     # the ACIS FES-permit composite at the start instant and threads the
-    # BeamAvailabilityResult here. None means the deployment configures
+    # BeamAvailabilityLookupResult here. None means the deployment configures
     # no beam PVs (beam-by-default; generic deployments + the pre-BEAM-1
     # behavior). Fail-closed: a read whose quality is not Good
     # (disconnected / bad PV) refuses the Run rather than assume beam is
     # open. Distinct axis from the Enclosure SecureM permit above:
     # beam-open cycles per-scan, the enclosure permit is access-state.
-    # The reading is captured verbatim on the RunStarted payload below
-    # for start-instant provenance; BEAM-1 forbids recording the per-
-    # scan shutter cycling, so this single snapshot is the only beam
-    # state the Run stream carries.
+    # The reading is consumed ONLY by this gate and intentionally NOT
+    # persisted: a started Run necessarily passed the gate, so a stored
+    # snapshot would always be all-open and carry no information beyond
+    # the RunStarted event's existence; BEAM-1 also forbids recording the
+    # per-scan shutter cycling.
     if context.beam_availability is not None:
         beam = context.beam_availability
         if not beam.quality_ok:

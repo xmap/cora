@@ -646,7 +646,7 @@ class RunBeamAvailabilityUnknownError(Exception):
 
     Cross-BC pre-flight gate per BEAM-1, fail-closed branch: at least one
     contributing beam PV read had non-Good quality (disconnected / bad /
-    timed out), so `BeamAvailabilityResult.quality_ok` is False. The
+    timed out), so `BeamAvailabilityLookupResult.quality_ok` is False. The
     decider refuses the Run rather than assume beam is open: a dead
     gateway must never read as "beam available". The sibling
     `RunRequiresOpenBeamShuttersError` covers the determined-but-closed

@@ -17,7 +17,7 @@ from uuid import UUID
 
 import pytest
 
-from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityResult
+from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureBeamAvailabilityUnknownError,
@@ -37,8 +37,8 @@ def _beam(
     sbs_open: bool = True,
     fes_permit: bool = True,
     quality_ok: bool = True,
-) -> BeamAvailabilityResult:
-    return BeamAvailabilityResult(
+) -> BeamAvailabilityLookupResult:
+    return BeamAvailabilityLookupResult(
         fes_open=fes_open,
         sbs_open=sbs_open,
         fes_permit=fes_permit,
@@ -56,7 +56,7 @@ def _procedure() -> Procedure:
     )
 
 
-def _context(beam_availability: BeamAvailabilityResult | None) -> ProcedureStartContext:
+def _context(beam_availability: BeamAvailabilityLookupResult | None) -> ProcedureStartContext:
     return ProcedureStartContext(assets={}, beam_availability=beam_availability)
 
 

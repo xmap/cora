@@ -25,7 +25,7 @@ from cora.equipment.aggregates.asset import (
     AssetName,
     AssetTier,
 )
-from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityResult
+from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
@@ -45,8 +45,8 @@ def _beam(
     sbs_open: bool = True,
     fes_permit: bool = True,
     quality_ok: bool = True,
-) -> BeamAvailabilityResult:
-    return BeamAvailabilityResult(
+) -> BeamAvailabilityLookupResult:
+    return BeamAvailabilityLookupResult(
         fes_open=fes_open,
         sbs_open=sbs_open,
         fes_permit=fes_permit,
@@ -65,7 +65,7 @@ def _active_clearance() -> ClearanceLookupResult:
 
 
 def _context(
-    beam_availability: BeamAvailabilityResult | None,
+    beam_availability: BeamAvailabilityLookupResult | None,
 ) -> tuple[RunStartContext, frozenset[UUID]]:
     """Build a RunStartContext that passes every check EXCEPT possibly
     the beam gate. Returns the context + the needed_family_ids the

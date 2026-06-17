@@ -34,7 +34,7 @@ from cora.equipment.aggregates.asset.events import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityResult
+from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.recipe.aggregates.method import MethodNotFoundError
 from cora.recipe.aggregates.method.events import MethodDefined
 from cora.recipe.aggregates.method.events import (
@@ -896,10 +896,10 @@ class _FixedBeamLookup:
     covered by test_start_run_beam_gate_decider).
     """
 
-    def __init__(self, reading: BeamAvailabilityResult) -> None:
+    def __init__(self, reading: BeamAvailabilityLookupResult) -> None:
         self._reading = reading
 
-    async def read_beam_availability(self) -> BeamAvailabilityResult:
+    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
         return self._reading
 
 
@@ -911,7 +911,9 @@ async def test_handler_raises_requires_open_beam_when_lookup_reports_closed_shut
     deps = replace(
         deps,
         beam_availability_lookup=_FixedBeamLookup(
-            BeamAvailabilityResult(fes_open=False, sbs_open=True, fes_permit=True, quality_ok=True)
+            BeamAvailabilityLookupResult(
+                fes_open=False, sbs_open=True, fes_permit=True, quality_ok=True
+            )
         ),
     )
     handler = start_run.bind(deps)
@@ -933,7 +935,9 @@ async def test_handler_raises_beam_unknown_when_lookup_reports_bad_quality() -> 
     deps = replace(
         deps,
         beam_availability_lookup=_FixedBeamLookup(
-            BeamAvailabilityResult(fes_open=True, sbs_open=True, fes_permit=True, quality_ok=False)
+            BeamAvailabilityLookupResult(
+                fes_open=True, sbs_open=True, fes_permit=True, quality_ok=False
+            )
         ),
     )
     handler = start_run.bind(deps)
@@ -955,7 +959,9 @@ async def test_handler_starts_when_lookup_reports_all_open() -> None:
     deps = replace(
         deps,
         beam_availability_lookup=_FixedBeamLookup(
-            BeamAvailabilityResult(fes_open=True, sbs_open=True, fes_permit=True, quality_ok=True)
+            BeamAvailabilityLookupResult(
+                fes_open=True, sbs_open=True, fes_permit=True, quality_ok=True
+            )
         ),
     )
     handler = start_run.bind(deps)

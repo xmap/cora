@@ -2,7 +2,7 @@
 
 Reads the configured beam PVs live via the Operation BC's `ControlPort`
 at the run / procedure start instant and maps them to a
-`BeamAvailabilityResult`. Lives in `cora.operation.adapters` because the
+`BeamAvailabilityLookupResult`. Lives in `cora.operation.adapters` because the
 Operation BC owns `ControlPort`; the consumer (Run / Operation start
 handlers) depends only on the `BeamAvailabilityLookup` port in
 `cora.infrastructure.ports`.
@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 
 from cora.infrastructure.ports.beam_availability_lookup import (
     AllBeamOpenLookup,
-    BeamAvailabilityResult,
+    BeamAvailabilityLookupResult,
 )
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
@@ -46,11 +46,11 @@ class ControlPortBeamAvailabilityLookup:
         self._sbs_pv = beam_pvs.get("sbs")
         self._fes_permit_pv = beam_pvs.get("fes_permit")
 
-    async def read_beam_availability(self) -> BeamAvailabilityResult:
+    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
         fes_open, fes_ok = await self._read_open(self._fes_pv)
         sbs_open, sbs_ok = await self._read_open(self._sbs_pv)
         fes_permit, permit_ok = await self._read_permit(self._fes_permit_pv)
-        return BeamAvailabilityResult(
+        return BeamAvailabilityLookupResult(
             fes_open=fes_open,
             sbs_open=sbs_open,
             fes_permit=fes_permit,
@@ -82,10 +82,18 @@ class ControlPortBeamAvailabilityLookup:
             return None, False
         if reading.quality != "Good":
             return None, False
+        raw = reading.value
         try:
-            return int(reading.value), True
-        except (TypeError, ValueError):
+            value = int(raw)
+        except (TypeError, ValueError, OverflowError):
             return None, False
+        # A fractional reading on a binary shutter / permit PV (e.g. a
+        # 0.4 BeamBlockingM) is not trustworthy: int() would truncate it
+        # to 0 and read it as "open", a fail-OPEN hole. Treat any
+        # non-integral float the same as a bad read (fail closed).
+        if isinstance(raw, float) and not raw.is_integer():
+            return None, False
+        return value, True
 
 
 def build_beam_availability_lookup(
