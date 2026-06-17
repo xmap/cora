@@ -15,6 +15,8 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 <li><span class="node">Mount: optics_mount</span> <span class="meta">6-DoF placement</span> <span class="rel">holds &rarr; Housing</span></li>
 </ul>
 </li>
+<li><span class="node">DetectorTable</span> <span class="meta">Device, Family Table</span> <span class="rel">carries &rarr; Housing</span>
+<ul>
 <li><span class="node">Housing</span> <span class="meta">Component, Family Housing</span> <span class="rel">containment parent (Asset.parent_id)</span>
 <ul>
 <li><span class="node">Turret</span> <span class="meta">Device, LinearStage, sliding ball-screw objective selector</span></li>
@@ -25,6 +27,8 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 <li><span class="node">PropagationDistance</span> <span class="meta">Device, LinearStage</span></li>
 <li><span class="node">Camera</span> <span class="meta">Device, Camera</span></li>
 <li><span class="node">Scintillator</span> <span class="meta">Device, Scintillator</span></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><span class="node">Fixture: microscope_at_2bm</span> <span class="meta">surface_id = 2-BM Trust Surface</span>
@@ -58,7 +62,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 Like the [sample tower](sample_tower.md), the detector uses both of CORA's structural axes.
 
 - **Composition** (Assembly to Fixture, flat) answers *what logical cluster presents for binding*. The `Microscope` Assembly composes the `Optics` sub-assembly plus two leaf slots (`camera`, `scintillator`); the Fixture `microscope_at_2bm` binds eight Assets across six leaf slots on the 2-BM Trust Surface. The Assembly `presents_as` the `Detector` Role, so a Method can require a 2D imaging device without pinning a Family.
-- **Containment** (`Asset.parent_id`) answers *what physically holds what*. Here it is shallow: the `Housing` parents all eight constituents. The housing is the one part installed into a Mount (`optics_mount` on `2BM_hutch_frame`, 6-DoF), and the constituents inherit position from its known internal layout. This is an approximation: tomography reconstruction calibrates the rotation center separately, so per-constituent Mounts are not pinned (pixel-accurate beam-propagation modelling would add them).
+- **Containment** (`Asset.parent_id`) answers *what physically holds what*. The `Housing` parents all eight constituents, and the housing itself sits on the `DetectorTable` (its `parent_id`), so the chain is `2-BM -> DetectorTable -> Housing -> constituents`. The housing is the one part installed into a Mount (`optics_mount` on `2BM_hutch_frame`, 6-DoF), and the constituents inherit position from its known internal layout; the Mount records where it sits in space, the `parent_id` what it rests on (orthogonal axes). This is an approximation: tomography reconstruction calibrates the rotation center separately, so per-constituent Mounts are not pinned (pixel-accurate beam-propagation modelling would add them).
 
 The two axes are orthogonal: the same eight Assets sit on both at once.
 

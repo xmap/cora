@@ -52,7 +52,7 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `DetectorTable_Roll` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; rotation; raw label `AZ`; `2bmb:table3.AZ`) | `2-BM-B` |
 | `DetectorTable_Pitch` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; rotation; raw label `AX`; `2bmb:table3.AX`) | `2-BM-B` |
 | `DetectorTable_Yaw` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; rotation; raw label `AY`; `2bmb:table3.AY`) | `2-BM-B` |
-| `Housing` | `Component` | `Housing` | `2-BM` (installed into a Mount; parents the Microscope constituents) | `2-BM-B` |
+| `Housing` | `Component` | `Housing` | `DetectorTable` (sits on the detector table; installed into a Mount; parents the Microscope constituents) | `2-BM-B` |
 | `Turret` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; sliding ball-screw objective selector, moved by MCTOptics under `LensSelect`) | `2-BM-B` |
 | `Objective_10x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_2x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |

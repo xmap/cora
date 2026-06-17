@@ -153,6 +153,7 @@ _CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
 _CAP_OBJECTIVE_ID = family_stream_id(FamilyName("Objective"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 _CAP_HOUSING_ID = family_stream_id(FamilyName("Housing"))
+_CAP_TABLE_ID = family_stream_id(FamilyName("Table"))
 
 # Facility-install Device asset ids (scenario-supplied; the leaf detector
 # parts that pre-exist under 2-BM before the microscope is composed).
@@ -374,7 +375,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     #       Family is needed; the Detector Role is presented through the
     #       Microscope Assembly's presents_as, so no Imager presenter
     #       Family is defined either. -----
-    for name in ("Objective", "PseudoAxis", "Housing"):
+    for name in ("Objective", "PseudoAxis", "Housing", "Table"):
         await bind_define_family(deps)(
             DefineFamily(name=name, affordances=frozenset()),
             principal_id=_PRINCIPAL_ID,
@@ -451,9 +452,24 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Housing (Component, containment parent) -----
+    # ----- DetectorTable (the optical table the Housing sits on). Minimal
+    #       Table-family registration; the full table + its six virtual axes
+    #       are modelled in test_2bm_optical_tables_setup.py. Here it is the
+    #       Housing's containment parent, correcting the earlier float-on-Unit. -----
+    detector_table_id = await bind_register_asset(deps)(
+        RegisterAsset(name="DetectorTable", tier=AssetTier.DEVICE, parent_id=_2BM_UNIT_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_add_asset_family(deps)(
+        AddAssetFamily(asset_id=detector_table_id, family_id=_CAP_TABLE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # ----- Housing (Component, containment parent), sitting on the DetectorTable -----
     housing_id = await bind_register_asset(deps)(
-        RegisterAsset(name="Housing", tier=AssetTier.COMPONENT, parent_id=_2BM_UNIT_ID),
+        RegisterAsset(name="Housing", tier=AssetTier.COMPONENT, parent_id=detector_table_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -751,10 +767,13 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     assert bound_slot_names == {slot for slot, _ in bound}
     assert sum(1 for b in bindings if b["slot_name"] == "objectives") == 3
 
-    # Containment: every constituent's parent is the housing; the housing's
-    # parent is the 2-BM Unit. Each bound Asset carries AssetAttachedToFixture.
+    # Containment: every constituent's parent is the housing; the housing sits
+    # on the DetectorTable, which in turn parents the 2-BM Unit. Each bound
+    # Asset carries AssetAttachedToFixture.
     housing_events, _ = await deps.event_store.load("Asset", housing_id)
-    assert housing_events[0].payload["parent_id"] == str(_2BM_UNIT_ID)
+    assert housing_events[0].payload["parent_id"] == str(detector_table_id)
+    detector_table_events, _ = await deps.event_store.load("Asset", detector_table_id)
+    assert detector_table_events[0].payload["parent_id"] == str(_2BM_UNIT_ID)
     # the 5 optics-cluster Assets are children of the housing (containment).
     for name, asset_id in optics_assets.items():
         events, _ = await deps.event_store.load("Asset", asset_id)
