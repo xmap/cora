@@ -27,7 +27,7 @@ Out of scope
 |---|---|---|---|
 | `Family` | `id: UUID` | `id`, `name: FamilyName`, `status: FamilyStatus`, `version: str?`, `affordances: frozenset[Affordance]`, `presents_as: frozenset[RoleId]`, `settings_schema: dict?` | yes (3-state) |
 | `Model` | `id: UUID` | `id`, `name`, `manufacturer: Manufacturer`, `part_number`, `declared_family_ids: frozenset[UUID]`, `status: ModelStatus`, `version: str?` | yes (3-state) |
-| `Asset` | `id: UUID` | `id`, `name`, `tier`, `parent_id?`, `lifecycle`, `condition`, `family_ids: frozenset[UUID]`, `settings: dict`, `ports: frozenset[AssetPort]`, `model_id?`, `owners: frozenset[AssetOwner]`, `alternate_identifiers: frozenset[AlternateIdentifier]`, `fixture_id?`, `drawing?`, `commissioned_at?`, `decommissioned_at?`, `controller_id?`, `facility_code?` | yes (4-state lifecycle, 3-state condition) |
+| `Asset` | `id: UUID` | `id`, `name`, `tier`, `parent_id?`, `lifecycle`, `condition`, `family_ids: frozenset[UUID]`, `settings: dict`, `ports: frozenset[AssetPort]`, `model_id?`, `owners: frozenset[AssetOwner]`, `alternate_identifiers: frozenset[AlternateIdentifier]`, `fixture_id?`, `drawing?`, `commissioned_at?`, `decommissioned_at?`, `controller_id?`, `facility_code?`, `partition_rule: PartitionRule?` (PseudoAxis only) | yes (4-state lifecycle, 3-state condition) |
 | `Frame` | `id: UUID` | `id`, `name`, `parent_id?`, `placement: Placement?`, `supersedes: FrameRevisionLink?`, `status` | yes (2-state) |
 | `Mount` | `id: UUID` | `id`, `slot_code`, `parent_id?`, `placement: Placement`, `drawing?`, `installed_asset_id?`, `status` | yes (2-state) |
 | `Assembly` | `id: UUID` | `id`, `name`, `presents_as: frozenset[RoleId]`, `required_slots: frozenset[TemplateSlot]`, `required_sub_assemblies: frozenset[SubAssemblyLink]`, `required_wires: frozenset[TemplateWire]`, `parameter_overrides_schema: dict?`, `drawing?`, `status: AssemblyStatus`, `version: str?`, `content_hash: str?` | yes (3-state) |
@@ -126,6 +126,22 @@ flowchart LR
 The materialization stays flat on purpose. Everything that points at equipment (a `Calibration`, a `Plan.wiring` entry, a `Caution`, a Trust Zone) wants the real leaf Asset directly; the PIDINST owners and manufacturers record is the honest union over those leaves; and the physical "inside what" fact is already carried by `Asset.parent_id`. A nested-Fixture tree would duplicate that fact and complicate every reader.
 
 The split between the type side and the instance side is deliberate. `Assembly` (a composite blueprint) earns its own materialization aggregate, `Fixture`, because a materialization carries state of its own: the slot bindings, the parameter overrides, and the content-hash snapshot. `Model` (a single-device catalog entry) does NOT get a separate instance aggregate, because a model-realization carries no state beyond a pointer: an Asset simply sets `model_id`. For the same reason `Model` does not compose; a catalog row is atomic. A composite vendor product, a bundle SKU whose sub-SKUs operators reference as a unit, would be modeled as an Assembly, not as a `Model` of sub-Models. A `Model.sub_models` tier symmetric with `Assembly.sub_assemblies` is not modelled today.
+
+## Virtual axes and partition rules
+
+A `PseudoAxis` is a Family whose Assets are virtual axes: the operator commands one value (a beam energy, a hexapod degree of freedom, a foil slot, a table tilt) and the runtime resolves it into setpoints on the real motors underneath. The resolving math is `Asset.partition_rule`, a typed value object that only `PseudoAxis` Assets carry. The operator writes the virtual port; the evaluator in the [Operation](../operation/index.md) module reads the rule and writes the resolved setpoints to the constituent motors through `ControlPort`. The point is one consistent positioner-axis vocabulary across devices whose internal kinematics differ.
+
+`PartitionRule` is a closed discriminated union of five shapes, each naming who owns the math:
+
+| Kind | Shape | Who owns the math | Example |
+|---|---|---|---|
+| `Affine` | `out = gain * in + offset` | CORA (a linear map) | pitch tracking in the linear approximation, lever-arm couplings |
+| `Aggregation` | `out = aggregator(c1, ..., cN)` over `Sum` / `Difference` / `MidRange` / `Product` | CORA (deterministic arithmetic) | slit center and gap from two blades |
+| `LookupTable` | `out = interpolate(in, calibration revision)` | a pinned `Calibration` revision | energy to optic position, foil slot to motor position |
+| `CompositePartition` | `out = sum(constituents)`, split by a partition discipline | CORA (a split rule) | sample-stack Y shared between hexapod and table |
+| `SolverReference` | `out = solver(in)`, the solver named by id | the device firmware or IOC | hexapod 6-DoF, six-circle HKL |
+
+Two points are load-bearing. First, a `PseudoAxis` need not carry a rule at all: when an edge IOC already computes the geometry (a detector optical table's virtual pose axes, for example), CORA names the axis and writes its value directly, recording the move without re-implementing the kinematics. This is the spine and edge seam: coordinated actuation can live at the edge, and the thing to avoid is a second, drift-prone source of truth. Second, the `LookupTable` shape references its table by `Calibration` revision id rather than inlining it, so the calibration history stays the source of truth and the rule survives recalibration by pinning a new revision. The five-shape catalog grows by PR, the same closed-with-paired-migration discipline as `Affordance` and the [Calibration quantities](../calibration/index.md).
 
 ## Family naming conventions
 
