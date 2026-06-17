@@ -109,7 +109,7 @@ methods:
     needed_families: [RotaryStage, LinearStage]
   - name: resolution_alignment
     capability: cora.capability.alignment
-    purpose: "The resolution step, an iterative focus-Z peak search on a mounted resolution target."
+    purpose: "The resolution step, an iterative propagation-distance peak search on a mounted resolution target."
     needed_families: [LinearStage, Camera, Scintillator]
   - name: focus_alignment
     capability: cora.capability.alignment
@@ -250,13 +250,13 @@ assemblies:
   - name: Optics
     note: >-
       Reusable optics core: turret, objectives, virtual objective selector, and
-      focus stage. Presents nothing on its own; composed by detector Assemblies.
+      propagation-distance stage. Presents nothing on its own; composed by detector Assemblies.
     presents_as: []
     required_slots:
       - { slot_name: turret, required_families: [LinearStage], cardinality: Exactly1 }
       - { slot_name: objectives, required_families: [Objective], cardinality: OneOrMore }
       - { slot_name: objective_selector, required_families: [PseudoAxis], cardinality: Exactly1 }
-      - { slot_name: focus, required_families: [LinearStage], cardinality: Exactly1 }
+      - { slot_name: propagation_distance, required_families: [LinearStage], cardinality: Exactly1 }
   - name: Microscope
     note: >-
       Full scintillator-relay detector: the Optics sub-assembly plus camera and

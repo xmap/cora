@@ -9,7 +9,7 @@ Materializes the 2-BM Optique Peter detector as the Microscope model,
 end-to-end against Postgres:
 
   - a reusable, content-hashed **Optics** sub-assembly (turret + 3
-    objectives + objective_selector + focus),
+    objectives + objective_selector + propagation_distance),
   - a top **Microscope** Assembly that references Optics by a
     version-pinned sub-assembly link and adds camera + scintillator
     leaf slots, presenting as the Detector Role via presents_as,
@@ -158,7 +158,7 @@ _CAP_HOUSING_ID = family_stream_id(FamilyName("Housing"))
 # parts that pre-exist under 2-BM before the microscope is composed).
 _ASSET_CAMERA_ID = UUID("01900000-0000-7000-8000-000000420a11")
 _ASSET_SCINTILLATOR_ID = UUID("01900000-0000-7000-8000-000000420a21")
-_ASSET_FOCUS_ID = UUID("01900000-0000-7000-8000-000000420a31")
+_ASSET_PROPAGATION_DISTANCE_ID = UUID("01900000-0000-7000-8000-000000420a31")
 
 # Recipe ladder
 _CAPABILITY_RECIPE_ID = UUID("01900000-0000-7000-8000-000000c0420e")
@@ -168,7 +168,9 @@ _DRAFT = "https://json-schema.org/draft/2020-12/schema"
 _DEVICES = (
     DeviceSpec("Camera", _ASSET_CAMERA_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
-    DeviceSpec("Focus", _ASSET_FOCUS_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
+    DeviceSpec(
+        "PropagationDistance", _ASSET_PROPAGATION_DISTANCE_ID, "LinearStage", _CAP_LINEAR_STAGE_ID
+    ),
 )
 
 
@@ -285,9 +287,9 @@ _SETTINGS_CAMERA: dict[str, Any] = {
     "bit_depth": 12,
 }
 _SETTINGS_SCINTILLATOR: dict[str, Any] = {"thickness": 100.0, "decay_time": 0.07}
-_SETTINGS_FOCUS: dict[str, Any] = {
-    "min_position": -5.0,
-    "max_position": 5.0,
+_SETTINGS_PROPAGATION_DISTANCE: dict[str, Any] = {
+    "min_position": 0.0,
+    "max_position": 1000.0,
     "max_speed": 0.5,
     "encoder_resolution": 0.0005,
 }
@@ -335,7 +337,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue(), role_lookup=role_lookup)
     actor = ActorId(_PRINCIPAL_ID)
 
-    # ----- Facility install (APS -> 2-BM + camera/scintillator/focus) -----
+    # ----- Facility install (APS -> 2-BM + camera/scintillator/propagation_distance) -----
     await install_aps_unit(
         deps,
         profile_store=make_pg_profile_store(db_pool),
@@ -358,7 +360,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     for asset_id, settings in (
         (_ASSET_CAMERA_ID, _SETTINGS_CAMERA),
         (_ASSET_SCINTILLATOR_ID, _SETTINGS_SCINTILLATOR),
-        (_ASSET_FOCUS_ID, _SETTINGS_FOCUS),
+        (_ASSET_PROPAGATION_DISTANCE_ID, _SETTINGS_PROPAGATION_DISTANCE),
     ):
         await bind_update_asset_settings(deps)(
             UpdateAssetSettings(asset_id=asset_id, settings_patch=settings),
@@ -413,7 +415,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
                     # settings + calibration), not the slot.
                     _slot("objectives", _CAP_OBJECTIVE_ID, SlotCardinality.ONE_OR_MORE),
                     _slot("objective_selector", _CAP_PSEUDO_AXIS_ID),
-                    _slot("focus", _CAP_LINEAR_STAGE_ID),
+                    _slot("propagation_distance", _CAP_LINEAR_STAGE_ID),
                 }
             ),
         ),
@@ -493,7 +495,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
             )
 
     # ----- Re-parent the facility leaf Assets under the housing -----
-    for asset_id in (_ASSET_CAMERA_ID, _ASSET_SCINTILLATOR_ID, _ASSET_FOCUS_ID):
+    for asset_id in (_ASSET_CAMERA_ID, _ASSET_SCINTILLATOR_ID, _ASSET_PROPAGATION_DISTANCE_ID):
         await bind_relocate_asset(deps)(
             RelocateAsset(
                 asset_id=asset_id,
@@ -519,7 +521,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         ("objectives", optics_assets["objective_2x"]),
         ("objectives", optics_assets["objective_1.1x"]),
         ("objective_selector", optics_assets["objective_selector"]),
-        ("focus", _ASSET_FOCUS_ID),
+        ("propagation_distance", _ASSET_PROPAGATION_DISTANCE_ID),
     ]
     for i, (slot_name, asset_id) in enumerate(bound):
         await install_existing_asset_into_fresh_mount(
@@ -723,7 +725,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     # ===== Assertions =====
 
     # Optics sub-assembly stream: AssemblyDefined with 4 leaf slots
-    # (turret, objectives [OneOrMore], objective_selector, focus).
+    # (turret, objectives [OneOrMore], objective_selector, propagation_distance).
     optics_events, _ = await deps.event_store.load("Assembly", optics_id)
     assert [e.event_type for e in optics_events] == ["AssemblyDefined"]
     assert len(optics_events[0].payload["required_slots"]) == 4
@@ -762,7 +764,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
         types = [e.event_type for e in events]
         assert "AssetAttachedToFixture" in types, f"{slot_name}: expected fixture attach"
         # the relocated facility Assets carry AssetRelocated under the housing
-        if slot_name in ("camera", "scintillator", "focus"):
+        if slot_name in ("camera", "scintillator", "propagation_distance"):
             assert "AssetRelocated" in types, f"{slot_name}: expected re-parent"
 
     # objective_selector carries the partition rule + no settings.

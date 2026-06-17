@@ -2,7 +2,7 @@
 
 *The Optique Peter detector: a `Microscope` Assembly over a reusable `Optics` sub-assembly, materialized as one Fixture binding eight Assets, all contained in one `Housing`, presenting the `Detector` Role.*
 
-The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch (Enclosure `2-BM-B`). It is the operator-facing imaging system: a vendor housing carrying three swappable objectives on a sliding ball-screw selector, a linear focus stage, a FLIR Oryx camera, and a LuAG scintillator. (A second Oryx camera and its selector are installed but not yet modelled; see [Open items](#open-items).) The whole unit is driven by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC process name, not the CORA model name). This page explains how CORA models it.
+The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch (Enclosure `2-BM-B`). It is the operator-facing imaging system: a vendor housing carrying three swappable objectives on a sliding ball-screw selector, a linear propagation-distance stage (the sample-to-detector rail), a FLIR Oryx camera, and a LuAG scintillator. (A second Oryx camera and its selector are installed but not yet modelled; see [Open items](#open-items).) The whole unit is driven by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC process name, not the CORA model name). This page explains how CORA models it.
 
 ## The model in one picture
 
@@ -22,7 +22,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 <li><span class="node">Objective_2x</span> <span class="meta">Device, Objective, 2x</span></li>
 <li><span class="node">Objective_1.1x</span> <span class="meta">Device, Objective, 1.1x</span></li>
 <li><span class="node">Objective_Selector</span> <span class="meta">Device, PseudoAxis</span></li>
-<li><span class="node">Focus</span> <span class="meta">Device, LinearStage</span></li>
+<li><span class="node">PropagationDistance</span> <span class="meta">Device, LinearStage</span></li>
 <li><span class="node">Camera</span> <span class="meta">Device, Camera</span></li>
 <li><span class="node">Scintillator</span> <span class="meta">Device, Scintillator</span></li>
 </ul>
@@ -40,7 +40,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 <ul>
 <li><span class="node">turret</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; Turret</span></li>
 <li><span class="node">objectives</span> <span class="meta">OneOrMore</span> <span class="rel">&rarr; Objective_10x, Objective_2x, Objective_1.1x</span></li>
-<li><span class="node">focus</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; Focus</span></li>
+<li><span class="node">propagation_distance</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; PropagationDistance</span></li>
 <li><span class="node">objective_selector</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; Objective_Selector</span></li>
 </ul>
 </li>
@@ -64,11 +64,11 @@ The two axes are orthogonal: the same eight Assets sit on both at once.
 
 ## Composition: blueprint in the Catalog, materialized here
 
-The `Microscope` and its reusable `Optics` core are cross-facility composition blueprints, not 2-BM-specific: their slot maps, sub-assembly links, and content hashes live in the [Assemblies catalog](../../../catalog/assemblies.md). In summary, the Microscope presents the `Detector` Role and composes the `Optics` sub-assembly (turret, objectives, objective selector, focus) plus two leaf slots specific to a full detector, `camera` and `scintillator` (the parts a deployment swaps most often); the three objectives all bind the one `OneOrMore` objectives slot, differing only by `magnification`. This page covers how 2-BM materializes that blueprint.
+The `Microscope` and its reusable `Optics` core are cross-facility composition blueprints, not 2-BM-specific: their slot maps, sub-assembly links, and content hashes live in the [Assemblies catalog](../../../catalog/assemblies.md). In summary, the Microscope presents the `Detector` Role and composes the `Optics` sub-assembly (turret, objectives, objective selector, propagation distance) plus two leaf slots specific to a full detector, `camera` and `scintillator` (the parts a deployment swaps most often); the three objectives all bind the one `OneOrMore` objectives slot, differing only by `magnification`. This page covers how 2-BM materializes that blueprint.
 
 The Fixture `microscope_at_2bm` binds eight Assets across six leaf slots on the 2-BM Trust Surface. It is single-event genesis (it never changes after registration), each bound Asset carries a `fixture_id` back-reference, and an Asset belongs to only one Fixture at a time.
 
-The Microscope carries **zero `required_wires`**: lens-index-to-turret routing is the `Objective_Selector` PseudoAxis (below), focus and other setpoints go through the Conductor / ControlPort layer, and the camera trigger arrives from an external timing source wired at Plan level. None of these is intrinsic to the composition, so none is a blueprint wire.
+The Microscope carries **zero `required_wires`**: lens-index-to-turret routing is the `Objective_Selector` PseudoAxis (below), propagation distance and other setpoints go through the Conductor / ControlPort layer, and the camera trigger arrives from an external timing source wired at Plan level. None of these is intrinsic to the composition, so none is a blueprint wire.
 
 ## Vendor catalog (Models)
 

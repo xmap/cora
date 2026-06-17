@@ -40,7 +40,7 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `Hexapod_Roll` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation A about X) | `2-BM-B` |
 | `Hexapod_Pitch` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation B about Y) | `2-BM-B` |
 | `Hexapod_Yaw` | `Device` | `PseudoAxis` | `Hexapod` (DoF; rotation C about Z) | `2-BM-B` |
-| `FocusDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `PropagationDistanceDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `Timing` | `Device` | `TimingController` | `2-BM` (softGlueZynq trigger box; generates the camera trigger train via PSO, no `controller_id`) | `2-BM-B` |
 | `Housing` | `Component` | `Housing` | `2-BM` (installed into a Mount; parents the Microscope constituents) | `2-BM-B` |
 | `Turret` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; sliding ball-screw objective selector) | `2-BM-B` |
@@ -48,7 +48,7 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `Objective_2x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_1.1x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; partition rule decomposes lens index to turret position in mm) | `2-BM-B` |
-| `Focus` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `FocusDrive`) | `2-BM-B` |
+| `PropagationDistance` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; driven by `PropagationDistanceDrive`) | `2-BM-B` |
 | `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 
@@ -144,8 +144,8 @@ Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manu
 | `aerotech_abs250mp` | Aerotech | `ABS250MP-M-AS` | `RotaryStage` | `Rotary` |
 | `aerotech_ensemble` | Aerotech | `HLE10-40-A-MXH` | `MotionController` | `RotaryDrive` |
 | `aerotech_hexapod_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` (DRIVE-4) | `MotionController` | `HexapodDrive` |
-| `aerotech_2bmbaero_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` (DRIVE-4) | `MotionController` | `FocusDrive` |
-| `aerotech_pro225sl` | Aerotech | `PRO225SL-1000` | `LinearStage` | `Focus` |
+| `aerotech_2bmbaero_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` (DRIVE-4) | `MotionController` | `PropagationDistanceDrive` |
+| `aerotech_pro225sl` | Aerotech | `PRO225SL-1000` | `LinearStage` | `PropagationDistance` |
 | `oms_vme58` | Oregon Micro Systems | `VME58` | `MotionController` | `SampleStageDrive`, `FrontEndDrive` |
 | `kohzu_cyat070` | Kohzu | `CYAT-070` | `LinearStage` | `SampleTop_X`, `SampleTop_Z` |
 
@@ -159,11 +159,11 @@ All five `MotionController` Assets are named for the equipment they drive; vendo
 | --- | --- | --- | --- |
 | `RotaryDrive` | `Rotary` | `aerotech_ensemble` (Ensemble HLE10-40-A-MXH) | `Rotary.controller_id` |
 | `HexapodDrive` | `Hexapod` | `aerotech_hexapod_drive_unknown_pn` | `Hexapod.controller_id` |
-| `FocusDrive` | `Focus` (EPICS IOC `2bmbAERO`) | `aerotech_2bmbaero_drive_unknown_pn` | `Focus.controller_id` |
+| `PropagationDistanceDrive` | `PropagationDistance` (EPICS IOC `2bmbAERO`) | `aerotech_2bmbaero_drive_unknown_pn` | `PropagationDistance.controller_id` |
 | `SampleStageDrive` | `SampleTop_X` (`2bmb:m18`), `SampleTop_Z` (`2bmb:m17`), and 89 further motors on crate `ioc2bmb` | `oms_vme58` | `SampleTop_X.controller_id`, `SampleTop_Z.controller_id` |
 | `FrontEndDrive` | the front-end optics on crate `ioc2bma`: `Mirror`, `Monochromator`, `ConditioningSlit`, `SampleSlit`, `Filter` | `oms_vme58` | `controller_id` on each of the five optics |
 
-The two OMS VME58 boards bind the same `oms_vme58` Model row (one product line, two physical boards); per-instance identity (serial number, firmware version) lives in each Asset's [Settings](#settings). `HexapodDrive` and `FocusDrive` are Aerotech drives whose product line the [2-BM source page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) does not name, so their Models carry `unknown-pending-confirmation` part numbers until staff confirm the hardware.
+The two OMS VME58 boards bind the same `oms_vme58` Model row (one product line, two physical boards); per-instance identity (serial number, firmware version) lives in each Asset's [Settings](#settings). `HexapodDrive` and `PropagationDistanceDrive` are Aerotech drives whose product line the [2-BM source page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) does not name, so their Models carry `unknown-pending-confirmation` part numbers until staff confirm the hardware.
 
 The Microscope objective selector (`2bmb:m1`) and camera selector (`2bmb:m5`) are stepper motors, identified on the source page as a Nanotec `ST4118M1404-B` and a Schunk `LPTM 30`, driven through the `SampleStageDrive` OMS VME58 crate rather than through dedicated controller boxes. Whether to register those steppers as distinct controller Assets, or carry them as the selector stages' motors, is a deferred follow-on.
 
@@ -273,9 +273,9 @@ Bound to Model `aerotech_ensemble` (Aerotech Ensemble HLE10-40-A-MXH digital dri
 | `axis_count` | `1` |
 | `protocol` | `Aerotech_Native` |
 
-### `FocusDrive`
+### `PropagationDistanceDrive`
 
-Bound to Model `aerotech_2bmbaero_drive_unknown_pn`, drives `Focus` (back-reference on `Focus.controller_id`). Operators address the focus motor via `2bmbAERO:m1` (IOC name + channel). The IOC is software (an EPICS process); the Asset modelled here is the hardware drive box behind it, so the IOC handle `2bmbAERO` lives in `alternate_identifiers` (kind `EPICS_PV`), not in the name. `axis_count=1` reflects the 1:1 binding to the single focus stage; `protocol=Aerotech_Native` matches the other Aerotech drives.
+Bound to Model `aerotech_2bmbaero_drive_unknown_pn`, drives `PropagationDistance` (back-reference on `PropagationDistance.controller_id`). Operators address the propagation-distance stage via `2bmbAERO:m1` (IOC name + channel). The IOC is software (an EPICS process); the Asset modelled here is the hardware drive box behind it, so the IOC handle `2bmbAERO` lives in `alternate_identifiers` (kind `EPICS_PV`), not in the name. `axis_count=1` reflects the 1:1 binding to the single propagation-distance stage; `protocol=Aerotech_Native` matches the other Aerotech drives.
 
 | Setting | Value |
 | --- | --- |
@@ -446,7 +446,7 @@ Assets not listed below have no canonical document cited on the 2-BM source page
 
 Aerotech HEX300-230HL hexapod product datasheet (Hex300-Data-Sheet-D20250203.pdf). The Microscope deployment cites this as the structured reference for the 6-DoF positioner that anchors the sample stack.
 
-### `Focus`
+### `PropagationDistance`
 
 | Field | Value |
 | --- | --- |

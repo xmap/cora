@@ -12,7 +12,7 @@ An operation can also be authored as a [Recipe](recipes.md): a reusable, paramet
 | --- | --- |
 | `motor_homing` | `Rotary`, `SampleTop_X` |
 | `first_light` | `StationShutter` + image chain |
-| `resolution_alignment` | `Focus` + image chain |
+| `resolution_alignment` | `PropagationDistance` + image chain |
 | `focus_alignment` | `SampleTop_Z` + image chain |
 | `center_alignment` | `Rotary`, `SampleTop_X` + image chain |
 | `roll_alignment` | `Rotary`, `Hexapod_Roll` + image chain |
