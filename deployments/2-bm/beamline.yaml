@@ -453,9 +453,10 @@ controls:
   motion_controllers:
     - name: RotaryDrive
       family: MotionController
-      model: aerotech_ensemble
+      model: aerotech_ensemble_ml          # Aerotech ENSEMBLE ML 10-40-IO-MXH (Multi-Loop); corrected from HLe (#162 DRIVE-4)
       protocol: Aerotech_Native
       axis_count: 1
+      serial_number: "730792/1"            # operator-confirmed (#161); firmware still pending (DRIVE-2)
     - name: HexapodDrive
       family: MotionController
       model: aerotech_automation1_ixr3   # Aerotech Automation1-iXR3, separate rack (#156)
@@ -464,8 +465,10 @@ controls:
       serial_number: "486125-01"         # operator-confirmed (#156); firmware still pending (DRIVE-2)
     - name: PropagationDistanceDrive
       family: MotionController
+      model: aerotech_ensemble_hle         # Aerotech Ensemble HLe 10-40-A-IO-MXH, 2bmbAERO IOC (#162 DRIVE-4, operator-confirmed 2026-06-16)
       protocol: Aerotech_Native
       axis_count: 1
+      serial_number: "228849-02"           # operator-confirmed (#161); firmware still pending (DRIVE-2)
     - name: SampleStageDrive
       family: MotionController
       model: oms_vme58

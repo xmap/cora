@@ -187,17 +187,17 @@ models:
     manufacturer: { name: Aerotech }
     part_number: "ABS2000-1000AS-RU"
     declared_families: [RotaryStage]
-  - name: aerotech_ensemble
+  - name: aerotech_ensemble_ml
     manufacturer: { name: Aerotech }
-    part_number: "HLE10-40-A-MXH"
+    part_number: "ENSEMBLEML 10-40-IO-MXH"   # Ensemble ML (Multi-Loop); corrected from HLE10-40-A-MXH (#162 DRIVE-4)
     declared_families: [MotionController]
   - name: aerotech_automation1_ixr3
     manufacturer: { name: Aerotech }
     part_number: "Automation1-iXR3-VL1-VB4-VB4-SB0CT222222-P1P1P1P1P1P1-CO-LC1MT1PSO6-SI0-TAS"
     declared_families: [MotionController]
-  - name: aerotech_2bmbaero_drive_unknown_pn
+  - name: aerotech_ensemble_hle
     manufacturer: { name: Aerotech }
-    part_number: "unknown-pending-confirmation"
+    part_number: "EnsembleHLe10-40-A-IO-MXH"   # 2bmbAERO IOC drive; resolved from placeholder (#162 DRIVE-4)
     declared_families: [MotionController]
   - name: aerotech_pro225sl
     manufacturer: { name: Aerotech }

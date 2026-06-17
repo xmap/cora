@@ -43,10 +43,9 @@ CORA records each controller box's identity (serial, firmware) so it can later a
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| DRIVE-1 | `Blocks-go-live` | Serial numbers for the five motion-controller boxes (drives for the rotary, the hexapod, the propagation-distance stage, and the two OMS VME58 crate cards)? | `unknown-pending-confirmation` | not yet | [Settings](assets.md#settings) |
-| DRIVE-2 | `Blocks-go-live` | Firmware versions for those same five boxes? | `unknown-pending-confirmation` | not yet | [Settings](assets.md#settings) |
+| DRIVE-1 | `Blocks-go-live` | Serial numbers for the two OMS VME58 crate cards (`SampleStageDrive`, `FrontEndDrive`)? The three Aerotech drives (rotary, hexapod, propagation-distance) are now confirmed and recorded; these two await a crate-access hardware visit. | `unknown-pending-confirmation` | not yet | [Settings](assets.md#settings) |
+| DRIVE-2 | `Blocks-go-live` | Firmware versions for all five motion-controller boxes (the three Aerotech drives plus the two OMS VME58 cards)? | `unknown-pending-confirmation` | not yet | [Settings](assets.md#settings) |
 | DRIVE-3 | `Nice-to-have` | Are the Aerotech drives network-attached, and if so their IP addresses? | left blank (assumed not needed) | not yet | [Settings](assets.md#settings) |
-| DRIVE-4 | `Nice-to-have` | Exact Aerotech model / part number for the propagation-distance-stage drive (`2bmbAERO`)? The rotary drive (Aerotech Ensemble HLE10-40-A-MXH) and the hexapod drive (Aerotech Automation1-iXR3, confirmed) are named; this box is not. | `unknown-pending-confirmation`; vendor known to be Aerotech | not yet | [Vendor catalog](assets.md#vendor-catalog-models) |
 | DRIVE-5 | `Nice-to-have` | Serial number of the Nanotec `ST4118M1404-B` stepper driving the Microscope objective selector? The model is now known from the components page; only the per-unit serial is missing. Optional for now. | model known; serial not recorded | not yet | [Vendor catalog](equipment/microscope.md#vendor-catalog-models) |
 | DRIVE-6 | `Nice-to-have` | Serial number of the Schunk `LPTM 30` stepper driving the Microscope camera selector? The model is now known from the components page; only the per-unit serial is missing. Optional for now. | model known; serial not recorded | not yet | [Pending](assets.md#pending) |
 

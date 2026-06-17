@@ -173,14 +173,14 @@ Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manu
 | --- | --- | --- | --- | --- |
 | `aerotech_hex300` | Aerotech | `HEX300-230HL-E1-PL4-TAS` | `Hexapod` | `Hexapod` |
 | `aerotech_abrs250mp` | Aerotech | `ABRS-250MP-M-AS` | `RotaryStage` | `Rotary` |
-| `aerotech_ensemble` | Aerotech | `HLE10-40-A-MXH` | `MotionController` | `RotaryDrive` |
+| `aerotech_ensemble_ml` | Aerotech | `ENSEMBLEML 10-40-IO-MXH` | `MotionController` | `RotaryDrive` |
 | `aerotech_automation1_ixr3` | Aerotech | `Automation1-iXR3-VL1-VB4-VB4-SB0CT222222-P1P1P1P1P1P1-CO-LC1MT1PSO6-SI0-TAS` | `MotionController` | `HexapodDrive` |
-| `aerotech_2bmbaero_drive_unknown_pn` | Aerotech | `unknown-pending-confirmation` (DRIVE-4) | `MotionController` | `PropagationDistanceDrive` |
+| `aerotech_ensemble_hle` | Aerotech | `EnsembleHLe10-40-A-IO-MXH` | `MotionController` | `PropagationDistanceDrive` |
 | `aerotech_pro225sl` | Aerotech | `PRO225SL-1000` | `LinearStage` | `PropagationDistance` |
 | `oms_vme58` | Oregon Micro Systems | `VME58` | `MotionController` | `SampleStageDrive`, `FrontEndDrive` |
 | `kohzu_cyat070` | Kohzu | `CYAT-070` | `LinearStage` | `SampleTop_X`, `SampleTop_Z` |
 
-Model ids are derived deterministically from the `(manufacturer, part number)` key, so the same vendor product converges on one id across facilities. `oms_vme58` is that case here: `SampleStageDrive` and `FrontEndDrive` are two physical boards of one product line, so both bind the single `oms_vme58` row. The remaining `unknown-pending-confirmation` row (`aerotech_2bmbaero_drive_unknown_pn`, the PropagationDistance drive) is the deliberate exception: a placeholder part number is not a real vendor key, so it falls back to a random id rather than colliding with another unconfirmed drive. It re-registers under its derived id once its real part number is confirmed (DRIVE-4), exactly as the hexapod drive did once operator confirmation identified it as the Aerotech Automation1-iXR3 (`aerotech_automation1_ixr3`), replacing its earlier placeholder.
+Model ids are derived deterministically from the `(manufacturer, part number)` key, so the same vendor product converges on one id across facilities. `oms_vme58` is that case here: `SampleStageDrive` and `FrontEndDrive` are two physical boards of one product line, so both bind the single `oms_vme58` row. Two drives shipped with `unknown-pending-confirmation` placeholders (a placeholder part number is not a real vendor key, so it falls back to a random id rather than colliding with another unconfirmed drive); both have since re-registered under their derived ids once operator confirmation identified them, the hexapod drive as the Aerotech Automation1-iXR3 (`aerotech_automation1_ixr3`) and the PropagationDistance drive as the Aerotech Ensemble HLe (`aerotech_ensemble_hle`), each replacing its earlier placeholder (DRIVE-4).
 
 Part-number suffixes encode operationally significant variants: Aerotech `HEX300-230HL-E1-PL4-TAS` (`-E1` incremental encoder, `-PL4` ultra-high-accuracy preload, `-TAS` thermally stabilized), `ABRS-250MP-M-AS` (`ABRS` air-bearing rotary series, `-M` mid-precision class, `-AS` air-bearing-stage suffix), and `PRO225SL-1000` (`-1000` mm travel). The full type designation is stored as a single `part_number` string.
 
@@ -188,13 +188,13 @@ All five `MotionController` Assets are named for the equipment they drive; vendo
 
 | Controller Asset | Drives | Bound Model | Back-reference |
 | --- | --- | --- | --- |
-| `RotaryDrive` | `Rotary` | `aerotech_ensemble` (Ensemble HLE10-40-A-MXH) | `Rotary.controller_id` |
+| `RotaryDrive` | `Rotary` | `aerotech_ensemble_ml` (Ensemble ML 10-40-IO-MXH) | `Rotary.controller_id` |
 | `HexapodDrive` | `Hexapod` | `aerotech_automation1_ixr3` | `Hexapod.controller_id` |
-| `PropagationDistanceDrive` | `PropagationDistance` (EPICS IOC `2bmbAERO`) | `aerotech_2bmbaero_drive_unknown_pn` | `PropagationDistance.controller_id` |
+| `PropagationDistanceDrive` | `PropagationDistance` (EPICS IOC `2bmbAERO`) | `aerotech_ensemble_hle` | `PropagationDistance.controller_id` |
 | `SampleStageDrive` | `SampleTop_X` (`2bmb:m18`), `SampleTop_Z` (`2bmb:m17`), and 89 further motors on crate `ioc2bmb` | `oms_vme58` | `SampleTop_X.controller_id`, `SampleTop_Z.controller_id` |
 | `FrontEndDrive` | the front-end optics on crate `ioc2bma`: `Mirror`, `Monochromator`, `ConditioningSlit`, `SampleSlit`, `Filter` | `oms_vme58` | `controller_id` on each of the five optics |
 
-The two OMS VME58 boards bind the same `oms_vme58` Model row (one product line, two physical boards); per-instance identity (serial number, firmware version) lives in each Asset's [Settings](#settings). `PropagationDistanceDrive` is an Aerotech drive whose product line the [2-BM source page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) does not name, so its Model carries `unknown-pending-confirmation` until staff confirm the hardware (DRIVE-4); `HexapodDrive` was resolved to the Aerotech Automation1-iXR3 by operator confirmation (#156).
+The two OMS VME58 boards bind the same `oms_vme58` Model row (one product line, two physical boards); per-instance identity (serial number, firmware version) lives in each Asset's [Settings](#settings). `PropagationDistanceDrive` was resolved to the Aerotech Ensemble HLe (`aerotech_ensemble_hle`, `EnsembleHLe10-40-A-IO-MXH`) by operator confirmation (#162 DRIVE-4, 2026-06-16); `HexapodDrive` was resolved to the Aerotech Automation1-iXR3 by operator confirmation (#156).
 
 The Microscope objective selector (`2bmb:m1`) and camera selector (`2bmb:m5`) are stepper motors, identified on the source page as a Nanotec `ST4118M1404-B` and a Schunk `LPTM 30`, driven through the `SampleStageDrive` OMS VME58 crate rather than through dedicated controller boxes. Whether to register those steppers as distinct controller Assets, or carry them as the selector stages' motors, is a deferred follow-on.
 
@@ -251,7 +251,7 @@ Identity, configuration, and connectivity of a separately-modelled drive-electro
 | `axis_count` | integer, 1-91 | yes | Operational metadata. Bounds bracket the smallest single-axis drive (1) to the largest OMS VME58 deployment at 2-BM (91 motors). |
 | `protocol` | closed enum: `EPICS \| Aerotech_Native \| OMS_VME \| Serial_RS232 \| Serial_RS485 \| Modbus_TCP \| Other` | yes | Communication protocol. Six known values plus `Other`. |
 
-`manufacturer` is NOT on this schema: vendor identity lives on the bound Model row per the Capability-declares-settings-schema pattern (`Aerotech` for `RotaryDrive` comes from `aerotech_ensemble`).
+`manufacturer` is NOT on this schema: vendor identity lives on the bound Model row per the Capability-declares-settings-schema pattern (`Aerotech` for `RotaryDrive` comes from `aerotech_ensemble_ml`).
 
 ### `TimingController`
 
@@ -325,22 +325,22 @@ The front-end mirror optical table (record `2bma:table1`). `axis_layout = virtua
 
 ### `RotaryDrive`
 
-Bound to Model `aerotech_ensemble` (Aerotech Ensemble HLE10-40-A-MXH digital drive), drives `Rotary` (back-reference on `Rotary.controller_id`). The `unknown-pending-confirmation` placeholders below land via `update_asset_settings` once 2-BM staff confirm the serial number and firmware version on the hardware; the same holds for the other four drives.
+Bound to Model `aerotech_ensemble_ml` (Aerotech Ensemble ML 10-40-IO-MXH digital drive; Multi-Loop subseries, with the `-IO-` option, corrected from the catalog Ensemble HLe by operator confirmation, #162 DRIVE-4), drives `Rotary` (back-reference on `Rotary.controller_id`). The serial number below was confirmed by operator hardware-label readings (#161 DRIVE-1); the `firmware_version` placeholder lands via `update_asset_settings` once a vendor-utility session confirms it (DRIVE-2), as for the other drives.
 
 | Setting | Value |
 | --- | --- |
-| `serial_number` | `unknown-pending-confirmation` (DRIVE-1) |
+| `serial_number` | `730792/1` |
 | `firmware_version` | `unknown-pending-confirmation` (DRIVE-2) |
 | `axis_count` | `1` |
 | `protocol` | `Aerotech_Native` |
 
 ### `PropagationDistanceDrive`
 
-Bound to Model `aerotech_2bmbaero_drive_unknown_pn`, drives `PropagationDistance` (back-reference on `PropagationDistance.controller_id`). Operators address the propagation-distance stage via `2bmbAERO:m1` (IOC name + channel). The IOC is software (an EPICS process); the Asset modelled here is the hardware drive box behind it, so the IOC handle `2bmbAERO` lives in `alternate_identifiers` (kind `EPICS_PV`), not in the name. `axis_count=1` reflects the 1:1 binding to the single propagation-distance stage; `protocol=Aerotech_Native` matches the other Aerotech drives.
+Bound to Model `aerotech_ensemble_hle` (Aerotech Ensemble HLe 10-40-A-IO-MXH digital drive; resolved from the `unknown-pending-confirmation` placeholder by operator confirmation 2026-06-16, #162 DRIVE-4), drives `PropagationDistance` (back-reference on `PropagationDistance.controller_id`). Operators address the propagation-distance stage via `2bmbAERO:m1` (IOC name + channel). The IOC is software (an EPICS process); the Asset modelled here is the hardware drive box behind it, so the IOC handle `2bmbAERO` lives in `alternate_identifiers` (kind `EPICS_PV`), not in the name. `axis_count=1` reflects the 1:1 binding to the single propagation-distance stage; `protocol=Aerotech_Native` matches the other Aerotech drives. The serial number below was confirmed by operator hardware-label readings (#161 DRIVE-1); `firmware_version` is still pending a vendor-utility session (DRIVE-2).
 
 | Setting | Value |
 | --- | --- |
-| `serial_number` | `unknown-pending-confirmation` (DRIVE-1) |
+| `serial_number` | `228849-02` |
 | `firmware_version` | `unknown-pending-confirmation` (DRIVE-2) |
 | `axis_count` | `1` |
 | `protocol` | `Aerotech_Native` |
