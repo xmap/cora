@@ -16,7 +16,8 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | --- | --- | --- | --- | --- |
 | `StationShutter` | `Device` | `Shutter` | `2-BM` | `2-BM-B` |
 | `SampleTable` | `Device` | `Table` | `2-BM` (four-motor translation base on the Vibraplane; carries the sample stack; driven by `SampleStageDrive`) | `2-BM-B` |
-| `RotaryDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
+| `RotaryDriveChassis` | `Component` | `Housing` | `2-BM` (Aerotech TM3-A power/distribution chassis; parents the `RotaryDrive` card) | `2-BM-B` |
+| `RotaryDrive` | `Device` | `MotionController` | `RotaryDriveChassis` (installed in the chassis) | `2-BM-B` |
 | `Rotary` | `Device` | `RotaryStage` | `LaminographyPitch` (driven by `RotaryDrive`) | `2-BM-B` |
 | `SampleStageDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `FrontEndDrive` | `Device` | `MotionController` | `2-BM` (a-station OMS VME58; drives the front-end optics band) | `2-BM-A` |
@@ -77,7 +78,7 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `TiltStage` | `Rotatable`, `Homeable`, `Limitable` |
 | `Scintillator` | `Consumable` |
 | `Camera` | `Imageable`, `Binnable`, `Triggerable`, `Streamable`, `Recording` |
-| `Housing` | (empty; the containment chassis Family carried by the `Housing` Asset that parents the Microscope constituents; no command surface) |
+| `Housing` | (empty; the containment chassis Family, no command surface; carried by the `Housing` Asset that parents the Microscope constituents and by `RotaryDriveChassis` that parents the `RotaryDrive` card) |
 | `Objective` | (pending: empty at initial registration) |
 | `PseudoAxis` | (empty; partition rules live on `Asset.partition_rule`, not as affordances) |
 | `Table` | `Translatable`, `Rotatable` (the hutch support tables: `SampleTable` is translation-only, the detector and mirror tables add tilt axes. One `Table` Family across all three, confirmed by 2-BM staff (STAGE-8): the per-table axis set is a settings difference, not a Family split, see [Family settings schemas](#table)). Carries-other-equipment is `parent_id` placement, not an affordance; there is no Supporting affordance. All three (`SampleTable`, `DetectorTable`, `MirrorTable`) are seeded ([Inventory](#inventory)). |
@@ -177,6 +178,7 @@ Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manu
 | `aerotech_automation1_ixr3` | Aerotech | `Automation1-iXR3-VL1-VB4-VB4-SB0CT222222-P1P1P1P1P1P1-CO-LC1MT1PSO6-SI0-TAS` | `MotionController` | `HexapodDrive` |
 | `aerotech_ensemble_hle` | Aerotech | `EnsembleHLe10-40-A-IO-MXH` | `MotionController` | `PropagationDistanceDrive` |
 | `aerotech_pro225sl` | Aerotech | `PRO225SL-1000` | `LinearStage` | `PropagationDistance` |
+| `aerotech_tm3a` | Aerotech | `TM3-A-20B VDC-20B VDC / NO SPLIT / PS24-1 / C1ML-06 / C2ML-09 / US-115VAC` | `Housing` | `RotaryDriveChassis` |
 | `oms_vme58` | Oregon Micro Systems | `VME58` | `MotionController` | `SampleStageDrive`, `FrontEndDrive` |
 | `kohzu_cyat070` | Kohzu | `CYAT-070` | `LinearStage` | `SampleTop_X`, `SampleTop_Z` |
 
@@ -327,12 +329,23 @@ The front-end mirror optical table (record `2bma:table1`). `axis_layout = virtua
 
 Bound to Model `aerotech_ensemble_ml` (Aerotech Ensemble ML 10-40-IO-MXH digital drive; Multi-Loop subseries, with the `-IO-` option, corrected from the catalog Ensemble HLe by operator confirmation, #162 DRIVE-4), drives `Rotary` (back-reference on `Rotary.controller_id`). The serial number below was confirmed by operator hardware-label readings (#161 DRIVE-1); the `firmware_version` placeholder lands via `update_asset_settings` once a vendor-utility session confirms it (DRIVE-2), as for the other drives.
 
+The drive card is installed in `RotaryDriveChassis` (see below): `RotaryDrive.parent_id` points at that chassis. The chassis identity (its own serial number, order number, and drawing) lives on that Asset, not overloaded onto this drive.
+
 | Setting | Value |
 | --- | --- |
 | `serial_number` | `730792/1` |
 | `firmware_version` | `unknown-pending-confirmation` (DRIVE-2) |
 | `axis_count` | `1` |
 | `protocol` | `Aerotech_Native` |
+
+### `RotaryDriveChassis`
+
+Bound to Model `aerotech_tm3a` (Aerotech TM3-A power and distribution chassis), Family `Housing` (the containment-chassis Family). This is the chassis the `RotaryDrive` Ensemble ML card is installed in: it provides the DC bus (two 20 V segments), the integrated 24 V PS24-1 supply, US 115 VAC input, and Aeronet distribution to the ML drive cards via slots C1ML and C2ML. It is inventory-only (no command surface), and it parents `RotaryDrive` via `parent_id`. The chassis is a separate physical thing from the drive card, so its identity lives here rather than as cross-references on the drive: the per-unit serial number and the vendor order number are carried in `alternate_identifiers`, and the build-to document `630D2079 REV-H` is the canonical [Drawing](#engineering-drawings). Recording the chassis as its own Asset (rather than folding its identifiers onto `RotaryDrive`) follows the identity-bearing-component convention; see [issue #162](https://github.com/xmap/cora/issues/162).
+
+| Alternate identifier | Kind | Value |
+| --- | --- | --- |
+| serial number | `SerialNumber` | `160591-A-1-1` |
+| vendor order number | `Other` | `730578` |
 
 ### `PropagationDistanceDrive`
 
@@ -521,6 +534,16 @@ Aerotech HEX300-230HL hexapod product datasheet (Hex300-Data-Sheet-D20250203.pdf
 | `revision` | `(-)` |
 
 Aerotech vendor-issued engineering drawing for the `ABRS-250MP-M-AS` rotary stage (operator-confirmed 2026-06-15, issue #156). Serves as the canonical reference until an `ABRS-250MP` datasheet PDF is also obtained.
+
+### `RotaryDriveChassis`
+
+| Field | Value |
+| --- | --- |
+| `system` | `EDMS` |
+| `number` | `630D2079` |
+| `revision` | `H` |
+
+Aerotech build-to drawing for the TM3-A chassis that houses the `RotaryDrive` Ensemble ML card (operator label `630D2079 REV-H`, operator-confirmed, #162 DRIVE-4).
 
 ### `PropagationDistance`
 
