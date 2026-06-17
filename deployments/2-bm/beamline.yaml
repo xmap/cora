@@ -126,7 +126,7 @@ conditioning-optics:
       replaceable: true          # APS-U spare exists
       stripes: ["5 nm Pt", "W/Si x50 (b)", "W/Si x50 (c)", "W/Si x50 (d)"]  # recoatable
       confirm: true
-      note: per docs2bm the stripe selector (2bma:m3) is energy- and mode-dependent (Mono holds it at one position; Pink sweeps it per energy with a coordinated table-X move), not a free discrete pick, and the page publishes no stripe->position map; CORA models it with the beam-mode work (deferred), not as a filter-style index axis
+      note: per docs2bm the stripe selector (2bma:m3) is energy- and mode-dependent (Mono holds it at m3 about 1.0; Pink sweeps it per energy with a coordinated table-X move on 2bma:m1/m4), not a free discrete pick. The page gives a partial Pink m3-position-vs-energy table (30 keV -> 3.039, 40 -> 13.0, 50 -> 39.0, 60 -> 49.0 mm) but NOT which named stripe (a/b/c/d) sits at which position, nor the full saved set (MIRROR-1, MODE-3); CORA models it with the beam-mode work (deferred), not as a filter-style index axis
     - name: MirrorTable
       family: Table
       pv: "2bma:table1"
@@ -157,8 +157,13 @@ conditioning-optics:
         m2_offset_y as varying per energy, so CORA carries energy curves for
         those alone (m25-m29 not modeled as per-energy curves pending staff
         confirmation). CORA models each per-axis relationship as a continuous
-        curve interpolating the saved points. Insertable; pink-beam operation
-        bypasses it. Source: docs2bm item_020.
+        curve interpolating the saved points. Two beam modes (MODE-1): in Mono
+        the DMM is inserted (the per-energy axes above); in Pink the DMM Y motors
+        drive out (about -10, beam passes straight through) and the Bragg arms
+        park, with the mirror coating stripe setting the high-energy cutoff. Pink
+        configured energies: 30, 40, 50, 60 keV. The exact Mono<->Pink insert and
+        bypass positions and any required sequence are unconfirmed (MODE-2).
+        Source: docs2bm item_020.
 
 beam-defining-and-safety:
   enclosure: 2-BM-B
