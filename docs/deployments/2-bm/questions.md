@@ -109,7 +109,6 @@ When the hexapod controller locks up, the recovery is a power-cycle ceremony: st
 | --- | --- | --- | --- | --- | --- |
 | BEAM-2 | `Nice-to-have` | How many front-end Be windows are in the stack, and what is their total thickness? | windows exist; count and thickness unconfirmed | not yet | [Pending](assets.md#pending) |
 | BEAM-3 | `Nice-to-have` | Is there a canonical APS drawing for the B-station safety shutter (`StationShutter`) beyond its RSS tag (`02-BM-A-P-01`)? | shutter modelled; only the RSS tag on file | not yet | [Engineering drawings](assets.md#engineering-drawings) |
-| BEAM-5 | `Blocks-go-live` | We propose two names for the front-end slits: `ConditioningSlit` for the A-station L3 four-blade slit (`2bma:m13`-`m16`), and `SampleSlit` for the B-station slit (`2bma:m9`-`m12`). Do those names match how you refer to them, and is the four-blade aperture (H size and centre, V size and centre) structure right? If you have them: the A-station position along the beam, and the slit-position tolerances. | names `ConditioningSlit` and `SampleSlit`, both four-blade slits; B-station at z = 50500 mm | yes | [Inventory](assets.md#inventory) |
 
 ## Energy and the optics
 
