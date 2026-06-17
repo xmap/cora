@@ -21,7 +21,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityResult
+from cora.infrastructure.ports.beam_availability_lookup import (
+    AllBeamOpenLookup,
+    BeamAvailabilityResult,
+)
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlTimeoutError,
@@ -30,6 +33,7 @@ from cora.operation.ports.control_port import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookup
     from cora.operation.ports.control_port import ControlPort
 
 
@@ -84,4 +88,21 @@ class ControlPortBeamAvailabilityLookup:
             return None, False
 
 
-__all__ = ["ControlPortBeamAvailabilityLookup"]
+def build_beam_availability_lookup(
+    control_port: ControlPort, beam_pvs: Mapping[str, str]
+) -> BeamAvailabilityLookup:
+    """Build the deployment's `BeamAvailabilityLookup` (BEAM-1).
+
+    Mirrors `build_control_port`'s empty-config default: with no beam
+    PVs configured (`BEAM_AVAILABILITY_PVS` unset, generic / non-2BM
+    deployments) returns the always-open `AllBeamOpenLookup` stub so the
+    start gate passes trivially (beam-by-default); with PVs configured
+    returns a `ControlPortBeamAvailabilityLookup` reading them live
+    through the shared `ControlPort`.
+    """
+    if not beam_pvs:
+        return AllBeamOpenLookup()
+    return ControlPortBeamAvailabilityLookup(control_port=control_port, beam_pvs=beam_pvs)
+
+
+__all__ = ["ControlPortBeamAvailabilityLookup", "build_beam_availability_lookup"]

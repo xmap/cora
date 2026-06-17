@@ -10,8 +10,10 @@ from datetime import UTC, datetime
 
 import pytest
 
+from cora.infrastructure.ports.beam_availability_lookup import AllBeamOpenLookup
 from cora.operation.adapters.control_port_beam_availability_lookup import (
     ControlPortBeamAvailabilityLookup,
+    build_beam_availability_lookup,
 )
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.ports.control_port import Reading
@@ -130,3 +132,31 @@ async def test_read_beam_availability_non_integer_value_fails_closed() -> None:
 
     assert result.fes_open is False
     assert result.quality_ok is False
+
+
+@pytest.mark.unit
+def test_build_beam_availability_lookup_with_empty_pvs_returns_stub() -> None:
+    """Empty config -> always-open stub (beam-by-default)."""
+    port = InMemoryControlPort()
+    lookup = build_beam_availability_lookup(port, {})
+    assert isinstance(lookup, AllBeamOpenLookup)
+
+
+@pytest.mark.unit
+def test_build_beam_availability_lookup_with_pvs_returns_control_port_adapter() -> None:
+    port = InMemoryControlPort()
+    lookup = build_beam_availability_lookup(port, ALL_PVS)
+    assert isinstance(lookup, ControlPortBeamAvailabilityLookup)
+
+
+@pytest.mark.unit
+def test_wire_operation_reuses_injected_control_port() -> None:
+    """The composition root injects ONE shared ControlPort so the
+    Conductor, beam lookup, and enclosure observer share one substrate
+    instance instead of each building its own."""
+    from cora.operation import wire_operation
+    from tests.unit._helpers import build_deps
+
+    injected = InMemoryControlPort()
+    handlers = wire_operation(build_deps(), control_port=injected)
+    assert handlers.control_port is injected

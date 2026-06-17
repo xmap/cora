@@ -31,6 +31,7 @@ Observability stack:
 import contextlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from dataclasses import replace
 
 from fastapi import FastAPI
 from mcp.server.fastmcp import FastMCP
@@ -155,6 +156,10 @@ from cora.operation import (
     register_operation_tools,
     wire_operation,
 )
+from cora.operation.adapters.control_port_beam_availability_lookup import (
+    build_beam_availability_lookup,
+)
+from cora.operation.adapters.control_port_config import build_control_port
 from cora.recipe import (
     RecipeHandlers,
     register_recipe_projections,
@@ -457,6 +462,25 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 # see them in the kernel.
                 settings=settings,
             )
+
+            # BEAM-1 / PSS-1 share ONE ControlPort: built here so the
+            # Conductor (via wire_operation), the beam-availability
+            # lookup on the Kernel, and the enclosure permit observer
+            # all talk to the same substrate instance rather than each
+            # building its own set of CA / PVA channels. The Kernel
+            # default for beam_availability_lookup is the always-open
+            # stub; override it with the production ControlPort-backed
+            # adapter (or, when BEAM_AVAILABILITY_PVS is empty, the same
+            # stub) BEFORE wiring so wire_run / wire_operation close over
+            # the right lookup.
+            shared_control_port = build_control_port(settings.control_port_routes)
+            deps = replace(
+                deps,
+                beam_availability_lookup=build_beam_availability_lookup(
+                    shared_control_port, settings.beam_availability_pvs
+                ),
+            )
+
             app.state.deps = deps
             app.state.access = wire_access(deps)
             app.state.trust = wire_trust(deps)
@@ -469,7 +493,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             app.state.decision = wire_decision(deps)
             app.state.supply = wire_supply(deps)
             app.state.enclosure = wire_enclosure(deps)
-            app.state.operation = wire_operation(deps)
+            app.state.operation = wire_operation(deps, control_port=shared_control_port)
             app.state.safety = wire_safety(deps)
             app.state.caution = wire_caution(deps)
             app.state.calibration = wire_calibration(deps)

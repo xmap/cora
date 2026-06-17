@@ -118,8 +118,17 @@ class OperationHandlers:
     released on hot-reload + test-process restart."""
 
 
-def wire_operation(deps: Kernel) -> OperationHandlers:
+def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> OperationHandlers:
     """Build the Operation BC handlers from shared dependencies.
+
+    `control_port` lets the composition root inject ONE shared
+    `ControlPort` so the Conductor, the BEAM-1 beam-availability lookup,
+    and the PSS-1 enclosure observer all talk to the same substrate
+    instance (a single set of CA / PVA channels) rather than each
+    building its own. When omitted (the default, used by tests and any
+    caller that doesn't share) the port is materialised from
+    `deps.settings.control_port_routes` via `build_control_port` as
+    before.
 
     Note on the conduct_procedure / Conductor wire-up: the Conductor needs
     the FINAL (post-tracing) versions of start / complete / abort /
@@ -173,7 +182,11 @@ def wire_operation(deps: Kernel) -> OperationHandlers:
         command_name="AppendProcedureActivities",
         bc=_BC,
     )
-    control_port = build_control_port(deps.settings.control_port_routes)
+    control_port = (
+        control_port
+        if control_port is not None
+        else build_control_port(deps.settings.control_port_routes)
+    )
     action_registry = InMemoryActionRegistry(
         {"collect": collect, "discrete": discrete, "continuous": continuous}
     )
