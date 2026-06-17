@@ -243,6 +243,39 @@ class Settings(BaseSettings):
     # `cora.operation.adapters.control_port_config` for the factory.
     control_port_routes: list[ControlPortRoute] = []
 
+    # Enclosure permit observer (PSS-1, beam-availability slice).
+    # Maps each Enclosure name to the read-only Channel Access PV whose
+    # value drives its permit (e.g. S02BM-PSS:StaA:SecureM, 1=secure).
+    # When empty (default) the enclosure monitor loop is a no-op and no
+    # deployment enclosures are seeded, so a generic boot is unaffected.
+    # Read from ENCLOSURE_PERMIT_PVS as JSON, for example:
+    #
+    #   ENCLOSURE_PERMIT_PVS='{
+    #     "2-BM-A":"S02BM-PSS:StaA:SecureM",
+    #     "2-BM-B":"S02BM-PSS:StaB:SecureM"
+    #   }'
+    #
+    # The keys are the enclosures to seed (under self_facility_code) and
+    # monitor; the values are their SecureM PVs. See
+    # `cora.enclosure.adapters.control_port_enclosure_observer`.
+    enclosure_permit_pvs: dict[str, str] = {}
+
+    # Beam-availability pre-flight (BEAM-1, beam-availability slice).
+    # Role -> read-only PV for the run / procedure start gate. `fes` and
+    # `sbs` are the front-end and station-shutter BeamBlockingM PVs
+    # (INVERTED: 0 = open); `fes_permit` is the ACIS upstream composite.
+    # When empty (default) the gate is skipped (beam-by-default), so a
+    # generic boot is unaffected. Read from BEAM_AVAILABILITY_PVS as JSON:
+    #
+    #   BEAM_AVAILABILITY_PVS='{
+    #     "fes":"S02BM-PSS:FES:BeamBlockingM",
+    #     "sbs":"S02BM-PSS:SBS:BeamBlockingM",
+    #     "fes_permit":"SR-ACIS:2BM:FesPermitM"
+    #   }'
+    #
+    # See `cora.operation.adapters.control_port_beam_availability_lookup`.
+    beam_availability_pvs: dict[str, str] = {}
+
     @field_validator("database_url")
     @classmethod
     def _validate_database_url(cls, value: str) -> str:
