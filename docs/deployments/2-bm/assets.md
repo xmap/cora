@@ -45,6 +45,12 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `PropagationDistanceDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `Timing` | `Device` | `TimingController` | `2-BM` (softGlueZynq trigger box; generates the camera trigger train via PSO, no `controller_id`) | `2-BM-B` |
 | `DetectorTable` | `Device` | `Table` | `2-BM` (detector support table `2bmb:table3`; carries the propagation-distance stage and the microscope `Housing`; `detector_z_rail_alignment` targets `.AX` / `.AY`) | `2-BM-B` |
+| `DetectorTable_X` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; translation along X; `2bmb:table3.X`) | `2-BM-B` |
+| `DetectorTable_Y` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; translation along Y; `2bmb:table3.Y`) | `2-BM-B` |
+| `DetectorTable_Z` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; translation along Z; `2bmb:table3.Z`) | `2-BM-B` |
+| `DetectorTable_Roll` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; rotation; raw label `AZ`; `2bmb:table3.AZ`) | `2-BM-B` |
+| `DetectorTable_Pitch` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; rotation; raw label `AX`; `2bmb:table3.AX`) | `2-BM-B` |
+| `DetectorTable_Yaw` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; rotation; raw label `AY`; `2bmb:table3.AY`) | `2-BM-B` |
 | `Housing` | `Component` | `Housing` | `2-BM` (installed into a Mount; parents the Microscope constituents) | `2-BM-B` |
 | `Turret` | `Device` | `LinearStage` | `Housing` (bound into Microscope Fixture; sliding ball-screw objective selector, moved by MCTOptics under `LensSelect`) | `2-BM-B` |
 | `Objective_10x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
@@ -114,6 +120,21 @@ Each DoF reads its feedback from the physical `Hexapod` and exposes one operator
 Six wires, one per DoF (`Hexapod.<axis>_feedback_out -> Hexapod_<Axis>.constituent_in`), carry the feedback each PseudoAxis needs to reconstruct its readback. `validate_pseudoaxis_fanout` accepts each: exactly one OUTPUT port on the facet, one incoming wire, homogeneous `signal_type`, and `SolverReference` is exempt from the arity check.
 
 These ports and wires are modelled and validate at Plan-bind, but the runtime that would decompose a virtual setpoint into hexapod motion (`eval_solver_reference`) is still deferred and raises `NotImplementedError`, so the wired Plan is not yet runtime-executable. The executable model lives in `apps/api/tests/integration/scenarios/test_2bm_hexapod_pose_wiring.py`.
+
+## Detector table axes
+
+The detector optical table presents six virtual axes on the `2bmb:table3` record, modelled as six `PseudoAxis` sub-Assets parented to `DetectorTable` (Device-in-Device, like the hexapod DoFs). They use the hexapod-aligned axis vocabulary so CORA has one consistent positioner-axis naming:
+
+| Axis Asset | Kind | `table3` field | Raw label |
+| --- | --- | --- | --- |
+| `DetectorTable_X` | translation | `.X` | n/a |
+| `DetectorTable_Y` | translation | `.Y` | n/a |
+| `DetectorTable_Z` | translation | `.Z` | n/a |
+| `DetectorTable_Pitch` | rotation | `.AX` | `AX` |
+| `DetectorTable_Yaw` | rotation | `.AY` | `AY` |
+| `DetectorTable_Roll` | rotation | `.AZ` | `AZ` |
+
+Unlike the hexapod, these axes carry NO partition rule and no constituent wiring. The `table3` IOC record (the `table_full` IOC) computes the pose from the six support motors (`M0X` / `M0Y` / `M1Y` / `M2X` / `M2Y` / `M2Z`) in its SRI geometry, so the kinematics are owned by the edge, not by CORA. Addressing an axis is a direct ControlPort write to its `table3.*` PV, and the IOC moves the supports. This is the spine/edge seam: coordinated actuation lives at the edge; CORA names the axis and records the move rather than re-implementing the geometry (which would create a second, drift-prone source of truth). Each axis's `table3.*` PV, plus the raw `AX` / `AY` / `AZ` label for the rotations, live in its `alternate_identifiers`. The angular-axis mapping (`AX` = pitch, `AY` = yaw, `AZ` = roll) is staff-confirmed (STAGE-9). The model lives in `apps/api/tests/integration/scenarios/test_2bm_optical_tables_setup.py`.
 
 ## Energy-tracking optic axes
 
@@ -233,7 +254,7 @@ Intrinsic detector properties, made explicit at 2-BM because a second detector c
 
 ### `Table`
 
-The support/positioning table Family (the hutch optical tables; staff name it in the [2-BM components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html)). One Family spans three 2-BM tables that differ only along a settings axis (the motor/axis layout), not a Family axis, so it is one `Table` Family rather than a split (confirmed by 2-BM staff, STAGE-8): `SampleTable` (four direct translation motors, no combined record), `DetectorTable` (six virtual axes on record `2bmb:table3`, computed from six support motors in an SRI 3-Y / 2-X / 1-Z geometry), and `MirrorTable` (`2bma:table1`, also a six-axis SRI table), whose X axes (`M0X` / `M2X`) are driven by the energy-change IOC for stripe selection (staff confirmed it is in operational use, not unused, STAGE-7). The Family carries motion affordances for the axes a given table drives; the carries-other-equipment relationship is `Asset.parent_id` placement, not an affordance. All three are in the [Inventory](#inventory) with schema-validated settings (each carries an enforced `axis_layout`; see the per-Asset [Settings](#settings) blocks). Modelling each table's virtual axes as PseudoAxis facets (`DetectorTable`'s six and `MirrorTable`'s X-surface-only pending 2bm-docs#171) remains a deferred follow-up; the EPICS handles (the virtual record and per-axis or support-motor PVs) live in each Asset's `alternate_identifiers`, not in the schema.
+The support/positioning table Family (the hutch optical tables; staff name it in the [2-BM components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html)). One Family spans three 2-BM tables that differ only along a settings axis (the motor/axis layout), not a Family axis, so it is one `Table` Family rather than a split (confirmed by 2-BM staff, STAGE-8): `SampleTable` (four direct translation motors, no combined record), `DetectorTable` (six virtual axes on record `2bmb:table3`, computed from six support motors in an SRI 3-Y / 2-X / 1-Z geometry), and `MirrorTable` (`2bma:table1`, also a six-axis SRI table), whose X axes (`M0X` / `M2X`) are driven by the energy-change IOC for stripe selection (staff confirmed it is in operational use, not unused, STAGE-7). The Family carries motion affordances for the axes a given table drives; the carries-other-equipment relationship is `Asset.parent_id` placement, not an affordance. All three are in the [Inventory](#inventory) with schema-validated settings (each carries an enforced `axis_layout`; see the per-Asset [Settings](#settings) blocks). `DetectorTable`'s six virtual axes are modelled as PseudoAxis sub-Assets (see [Detector table axes](#detector-table-axes)); `MirrorTable`'s axes remain a deferred follow-up (X-surface-only pending 2bm-docs#171). The EPICS handles (the virtual record and per-axis or support-motor PVs) live in each Asset's `alternate_identifiers`, not in the schema.
 
 | Setting | Type | Notes |
 | --- | --- | --- |
@@ -556,7 +577,7 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 
 Devices that physically exist at 2-BM but are not yet registered as CORA Assets; each carries `new: true` in the 2-BM descriptor (`deployments/2-bm/beamline.yaml`). The five front-end / beam-conditioning optics driven by `FrontEndDrive` are now registered (see the [Inventory](#inventory)); `BeamPositionMonitor` remains an unmodelled front-end device, but a diagnostic, not a motor: the descriptor records no PV or controller for it.
 
-All three `Table`-Family support tables are registered ([Inventory](#inventory)): `SampleTable` (the sample-tower base), `DetectorTable`, and `MirrorTable`. Their `Table` settings schema is enforced (each carries a validated `axis_layout`; see [Settings](#settings)). Modelling each table's virtual axes as PseudoAxis facets (`DetectorTable`'s six; `MirrorTable`'s X-surface-only pending 2bm-docs#171) remains a deferred follow-up.
+All three `Table`-Family support tables are registered ([Inventory](#inventory)): `SampleTable` (the sample-tower base), `DetectorTable`, and `MirrorTable`. Their `Table` settings schema is enforced (each carries a validated `axis_layout`; see [Settings](#settings)). `DetectorTable`'s six virtual axes are modelled as PseudoAxis sub-Assets ([Detector table axes](#detector-table-axes)); `MirrorTable`'s axes remain deferred (X-surface-only pending 2bm-docs#171).
 
 | Asset | Family |
 | --- | --- |
