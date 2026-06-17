@@ -236,10 +236,20 @@ def bind(deps: Kernel) -> Handler:
                     kind: tuple(refs) for kind, refs in satisfaction.items()
                 }
 
+        # BEAM-1 cross-BC beam-availability pre-flight read (mirror of
+        # start_run): ask the injected lookup for the live shutter +
+        # FES-permit state at the start instant. The default Kernel
+        # lookup (AllBeamOpenLookup) returns all-open so the decider's
+        # beam gate passes trivially; the production ControlPort-backed
+        # adapter reads the configured PVs live and fails closed on a
+        # bad read.
+        beam_availability = await deps.beam_availability_lookup.read_beam_availability()
+
         context = ProcedureStartContext(
             assets=assets,
             needed_supplies_satisfaction=needed_supplies_satisfaction,
             referencing_enclosures=referencing_enclosures,
+            beam_availability=beam_availability,
         )
 
         now = deps.clock.now()

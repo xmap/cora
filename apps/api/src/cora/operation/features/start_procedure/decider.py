@@ -42,11 +42,13 @@ from datetime import datetime
 from cora.equipment.aggregates.asset import AssetLifecycle
 from cora.operation.aggregates.procedure import (
     Procedure,
+    ProcedureBeamAvailabilityUnknownError,
     ProcedureCannotStartError,
     ProcedureEnclosureCoverageMismatchError,
     ProcedureNotFoundError,
     ProcedurePlanAssetDecommissionedError,
     ProcedureRequiresAvailableSupplyError,
+    ProcedureRequiresOpenBeamShuttersError,
     ProcedureRequiresPermittedEnclosureError,
     ProcedureStarted,
     ProcedureStatus,
@@ -82,6 +84,12 @@ def decide(
         fails the check -> ProcedureRequiresPermittedEnclosureError;
         when some rows pass and some fail ->
         ProcedureEnclosureCoverageMismatchError
+      - When beam_availability is present (deployment configures beam
+        PVs), the read quality must be Good (else fail-closed
+        -> ProcedureBeamAvailabilityUnknownError) and the shutters +
+        FES permit must be open (else
+        -> ProcedureRequiresOpenBeamShuttersError). None skips the gate
+        (beam-by-default).
     """
     if state is None:
         raise ProcedureNotFoundError(command.procedure_id)
@@ -138,5 +146,26 @@ def decide(
         if len(failing_rows) == len(context.referencing_enclosures):
             raise ProcedureRequiresPermittedEnclosureError(state.id, failing_summary)
         raise ProcedureEnclosureCoverageMismatchError(state.id, failing_summary)
+
+    # cross-BC beam-availability gate per BEAM-1: mirror of start_run's
+    # beam gate. None means no beam PVs configured (beam-by-default).
+    # Fail-closed on non-Good quality; refuse when any shutter is closed
+    # or the FES permit is denied. Distinct axis from the Enclosure
+    # SecureM permit above (beam-open cycles per-scan).
+    if context.beam_availability is not None:
+        beam = context.beam_availability
+        if not beam.quality_ok:
+            raise ProcedureBeamAvailabilityUnknownError(state.id)
+        blocking = frozenset(
+            flag
+            for flag, ok in (
+                ("fes_open", beam.fes_open),
+                ("sbs_open", beam.sbs_open),
+                ("fes_permit", beam.fes_permit),
+            )
+            if not ok
+        )
+        if blocking:
+            raise ProcedureRequiresOpenBeamShuttersError(state.id, blocking)
 
     return [ProcedureStarted(procedure_id=state.id, occurred_at=now)]
