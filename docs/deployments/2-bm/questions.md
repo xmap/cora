@@ -9,13 +9,13 @@ Below are the facts we need you to confirm or correct about 2-BM hardware. Most 
 **How to reply:** open a short issue at [github.com/xmap/cora/issues](https://github.com/xmap/cora/issues), one per answer or several together. Quote the item ID and write the answer in plain text, for example:
 
 > HXP-2: A = Roll, B = Pitch, C = Yaw
-> DET-2: CORA drives the focus stage directly
+> DET-9: the installed middle objective is 5x
 
 You do not need to edit this file or know where it lives. If you do not use GitHub, just send the same thing (the item ID and your answer) to whoever shared this page with you.
 
 **If you are not the beamline scientist:** a few rows name a different contact. Safety and interlocks: **PSS-1**. Facility utilities (gas, compressed air): **SUP-1**, **SUP-2**. If a row is really a controls/EPICS, network, or engineering question rather than yours, just route it to the right person or tell us who that is.
 
-**Where to start:** the `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `DET-2`, `STAGE-7`, and `STAGE-8`. If you only have a few minutes, do these first. After that, the `Blocks-go-live` items (including the safety item `PSS-1`) matter before CORA ever controls or observes hardware.
+**Where to start:** the `Blocks-build` items below help us most, because your answer changes how we have to describe the device, not just a value we fill in. They are `STAGE-7` and `STAGE-8`. If you only have a few minutes, do these first. After that, the `Blocks-go-live` items (including the safety item `PSS-1`) matter before CORA ever controls or observes hardware.
 
 ## How this page works
 
@@ -93,7 +93,6 @@ When the hexapod controller locks up, the recovery is a power-cycle ceremony: st
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| DET-2 | `Blocks-build` | Does CORA drive the focus stage directly, or does the detector's own IOC move it behind the scenes? This decides which side owns that control path. The motors are now mapped (shared Z rail `2bmbAERO:m1`, per-lens fine focus `2bmb:m2/m3/m4`); what we still need is who owns the control path. | CORA drives it | yes | [Microscope](equipment/microscope.md) |
 | DET-7 | `Nice-to-have` | The Mitutoyo part number for the 1.1x objective? The 2x and 10x part numbers are on record; the 1.1x is the one still missing, and all three currently share one catalog row. | one `Plan-Apo-NIR` family row | yes | [Vendor catalog](equipment/microscope.md#vendor-catalog-models) |
 | DET-9 | `Nice-to-have` | Which magnification is the middle objective physically at 2-BM, and its measured value at 25 keV? CORA records 2.0x (nominal), but the Microscope lens table lists the installed middle objective as 5x (measured about 4.93). Objectives are swappable, so please confirm what is installed now. | 2.0x nominal (provisional); docs suggest 5x installed | yes | [Microscope](equipment/microscope.md) |
 | DET-11 | `Blocks-go-live` | The objective turret selector (`2bmb:m1`, Nanotec stepper): for each objective (10x, 2x, 1.1x), the physical slot order and the turret motor position that brings it into the beam? CORA models the selector as a discrete index axis (commanded slot index -> saved turret position), but the slot order and positions it carries today are placeholders. | placeholder slot order + positions; modelled as a discrete index axis | yes | [Microscope](equipment/microscope.md) |

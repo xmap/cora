@@ -68,7 +68,7 @@ The `Microscope` and its reusable `Optics` core are cross-facility composition b
 
 The Fixture `microscope_at_2bm` binds eight Assets across six leaf slots on the 2-BM Trust Surface. It is single-event genesis (it never changes after registration), each bound Asset carries a `fixture_id` back-reference, and an Asset belongs to only one Fixture at a time.
 
-The Microscope carries **zero `required_wires`**: lens-index-to-turret routing is the `Objective_Selector` PseudoAxis (below), propagation distance and other setpoints go through the Conductor / ControlPort layer, and the camera trigger arrives from an external timing source wired at Plan level. None of these is intrinsic to the composition, so none is a blueprint wire.
+The Microscope carries **zero `required_wires`**: lens selection is the `Objective_Selector` PseudoAxis handing the lens index to the MCTOptics composite (`LensSelect`, below), propagation distance and other setpoints go through the Conductor / ControlPort layer, and the camera trigger arrives from an external timing source wired at Plan level. None of these is intrinsic to the composition, so none is a blueprint wire.
 
 ## Vendor catalog (Models)
 
@@ -84,7 +84,9 @@ Each Model carries the vendor identity PIDINST needs (Manufacturer + Model). The
 
 ## Objective selector
 
-`Objective_Selector` is a virtual axis. Its `partition_rule` is a closed `LookupTable` mapping an integer index to a turret position in millimeters (the selector is a sliding ball-screw stage, not a rotating turret):
+`Objective_Selector` is a virtual axis. CORA addresses it by writing a lens index (0, 1, 2) to the composite `2bm:MCTOptics:LensSelect` PV; the MCTOptics IOC owns the sequencing behind that single write, moving the turret (`2bmb:m1`) to the selected objective's position and applying that objective's per-lens fine focus (`2bmb:m2`/`m3`/`m4`, the `LENS0/1/2_FOCUS` macros) and rotation offsets. CORA drives the high-level composite (`LensSelect`, `LensName`, `CameraSelect`, and the status readbacks), never the raw `2bmb:m1`-`m4` motor records. Confirmed by 2-BM staff (DET-2).
+
+Its `partition_rule`, a closed `LookupTable` over lens index, is therefore CORA's PROVENANCE RECORD of which turret position each objective sits at (the selector is a sliding ball-screw stage, not a rotating turret), not an actuation path CORA executes:
 
 | `Objective_Selector` | Turret position | Objective in beam |
 | --- | --- | --- |
@@ -92,7 +94,9 @@ Each Model carries the vendor identity PIDINST needs (Manufacturer + Model). The
 | `1` | `-0.837 mm` | 2x Mitutoyo |
 | `2` | `58.640 mm` | 10x Mitutoyo |
 
-Writing `Objective_Selector = 1` makes the command layer look up the rule and write the turret setpoint to `Turret`. Every actuation is recorded as a control-dispatch event with a correlation id, and the lookup table is itself event-sourced, so revisions leave an audit trail.
+Writing `Objective_Selector = 1` writes lens index 1 to `2bm:MCTOptics:LensSelect`, and MCTOptics performs the move; the write is recorded as a control-dispatch event with a correlation id, and the lookup table is itself event-sourced, so revisions leave an audit trail of which positions were recorded when. The per-lens fine-focus motors (`2bmb:m2/m3/m4`) are MCTOptics-owned and are NOT modelled as CORA Assets; they move as a side effect of `LensSelect` (distinct from `PropagationDistance` / `2bmbAERO:m1`, the sample-to-detector rail CORA drives directly).
+
+> **Deferred (DET-2 follow-up).** Whether to retire the index-to-position `LookupTable` (modelling `Objective_Selector` as a pass-through index write) and stop modelling `Turret` as a raw-motor Asset is a structural question for when CORA builds the real control layer. Today the actuation model is descriptive, so the provenance-record framing above is the intentional v1.
 
 ## Families
 
@@ -108,7 +112,7 @@ Writing `Objective_Selector = 1` makes the command layer look up the rule and wr
 
 ## Operating and swapping
 
-Switch the active objective by writing the `Objective_Selector` index (0/1/2); the execution layer resolves the turret position and drives `Turret`. Pulling a detector for cleaning or recalibration and returning the same one is the light, reversible path (`detach_asset_from_fixture` then `attach_asset_to_fixture`; the Asset stays `Active` with `fixture_id` cleared). Bringing in a *different* camera or scintillator, or retiring one, is heavier: decommission the old Asset if it is leaving, register the replacement, register a new Fixture against the same Assembly with the updated slot map, then move the surviving Assets across. Methods that bind at Assembly level (`needed_assembly_ids`) are unaffected; Plans that enumerate `asset_ids` need the new id only on a retirement.
+Switch the active objective by writing the `Objective_Selector` index (0/1/2); the execution layer writes that index to the MCTOptics composite (`2bm:MCTOptics:LensSelect`), and MCTOptics moves the turret and applies the per-lens focus and rotation offsets. Pulling a detector for cleaning or recalibration and returning the same one is the light, reversible path (`detach_asset_from_fixture` then `attach_asset_to_fixture`; the Asset stays `Active` with `fixture_id` cleared). Bringing in a *different* camera or scintillator, or retiring one, is heavier: decommission the old Asset if it is leaving, register the replacement, register a new Fixture against the same Assembly with the updated slot map, then move the surviving Assets across. Methods that bind at Assembly level (`needed_assembly_ids`) are unaffected; Plans that enumerate `asset_ids` need the new id only on a retirement.
 
 ## Open items
 
