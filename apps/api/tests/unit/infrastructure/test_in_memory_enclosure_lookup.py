@@ -190,6 +190,46 @@ async def test_find_by_ids_excludes_decommissioned() -> None:
 
 
 @pytest.mark.unit
+async def test_lookup_by_name_resolves_active_address() -> None:
+    lookup = InMemoryEnclosureLookup()
+    eid = uuid4()
+    lookup.register(enclosure_id=eid, name="2-BM-A", facility_code="aps", permit_status="Permitted")
+    result = await lookup.lookup_by_name(facility_code="aps", name="2-BM-A")
+    assert result is not None
+    assert result.enclosure_id == eid
+
+
+@pytest.mark.unit
+async def test_lookup_by_name_resolves_to_active_when_address_reused() -> None:
+    """Decommission + re-register at the same (facility, name) address keeps
+    a tombstoned row and a fresh Active one; lookup_by_name returns the
+    Active one (the live enclosure operators currently mean)."""
+    lookup = InMemoryEnclosureLookup()
+    tomb, live = uuid4(), uuid4()
+    lookup.register(
+        enclosure_id=tomb, name="2-BM-A", facility_code="aps", lifecycle="Decommissioned"
+    )
+    lookup.register(enclosure_id=live, name="2-BM-A", facility_code="aps", lifecycle="Active")
+    result = await lookup.lookup_by_name(facility_code="aps", name="2-BM-A")
+    assert result is not None
+    assert result.enclosure_id == live
+
+
+@pytest.mark.unit
+async def test_lookup_by_name_distinguishes_facility() -> None:
+    lookup = InMemoryEnclosureLookup()
+    lookup.register(enclosure_id=uuid4(), name="2-BM-A", facility_code="aps")
+    assert await lookup.lookup_by_name(facility_code="max-iv", name="2-BM-A") is None
+
+
+@pytest.mark.unit
+async def test_lookup_by_name_unknown_address_returns_none() -> None:
+    lookup = InMemoryEnclosureLookup()
+    lookup.register(enclosure_id=uuid4(), name="2-BM-A", facility_code="aps")
+    assert await lookup.lookup_by_name(facility_code="aps", name="2-BM-B") is None
+
+
+@pytest.mark.unit
 def test_satisfies_enclosure_lookup_protocol() -> None:
     lookup: EnclosureLookup = InMemoryEnclosureLookup()
     assert lookup is not None

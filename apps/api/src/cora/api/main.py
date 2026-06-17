@@ -57,6 +57,7 @@ from cora.agent import (
     seed_run_debriefer_agent,
     wire_agent,
 )
+from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
 from cora.calibration import (
@@ -101,9 +102,11 @@ from cora.decision import (
 )
 from cora.enclosure import (
     EnclosureHandlers,
+    enclosure_permit_monitor_lifespan,
     register_enclosure_projections,
     register_enclosure_routes,
     register_enclosure_tools,
+    seed_enclosures,
     wire_enclosure,
 )
 from cora.enclosure.adapters import PostgresEnclosureLookup
@@ -582,10 +585,34 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # Safe to re-run forever.
             await seed_clearance_templates(deps)
 
+            # Enclosure BC: seed the deployment's permit-gated hutches and run
+            # the PSS permit monitor. Drain the enclosure projection first so
+            # the seeder's lookup_by_name pre-check reflects prior boots
+            # (mirrors the federation drain above). All no-ops when
+            # enclosure_permit_pvs is unset (generic / non-2BM boots). The
+            # ControlPort lives on the Operation BC handler bundle; the
+            # observer bridges it to the Enclosure observer port at this
+            # composition root (the one module depending on both BCs).
+            enclosure_only_registry = ProjectionRegistry()
+            register_enclosure_projections(enclosure_only_registry, deps)
+            if deps.pool is not None:
+                await drain_projections(deps.pool, enclosure_only_registry, deadline_seconds=5.0)
+            enclosure_permit_ids = await seed_enclosures(deps)
+            enclosure_permit_observer = ControlPortEnclosureObserver(
+                control_port=app.state.operation.control_port,
+                permit_pvs=settings.enclosure_permit_pvs,
+                clock=deps.clock,
+            )
+
             try:
                 async with (
                     projection_worker_lifespan(deps, registry, settings),
                     idempotency_pruner_lifespan(deps),
+                    enclosure_permit_monitor_lifespan(
+                        observer=enclosure_permit_observer,
+                        kernel=deps,
+                        name_to_id=enclosure_permit_ids,
+                    ),
                 ):
                     yield
             finally:

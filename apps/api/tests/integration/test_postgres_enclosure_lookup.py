@@ -211,3 +211,37 @@ async def test_find_by_ids_excludes_decommissioned(db_pool: asyncpg.Pool) -> Non
     returned = {r.enclosure_id for r in results}
     assert enc_active in returned
     assert enc_tomb not in returned
+
+
+@pytest.mark.integration
+async def test_lookup_by_name_resolves_active_address(db_pool: asyncpg.Pool) -> None:
+    suffix = uuid4().hex[:8]
+    name = f"hutch-addr-{suffix}"
+    enc = await _seed_enclosure(db_pool, name=name)
+    await _drain_enclosure(db_pool)
+
+    lookup = PostgresEnclosureLookup(db_pool)
+    result = await lookup.lookup_by_name(facility_code="cora", name=name)
+    assert result is not None
+    assert result.enclosure_id == enc
+    assert result.lifecycle == EnclosureLifecycle.ACTIVE.value
+
+
+@pytest.mark.integration
+async def test_lookup_by_name_excludes_decommissioned(db_pool: asyncpg.Pool) -> None:
+    """Address resolution returns only the Active row; a tombstoned-only
+    address resolves to None (the partial-active index posture)."""
+    suffix = uuid4().hex[:8]
+    name = f"hutch-tomb-addr-{suffix}"
+    enc = await _seed_enclosure(db_pool, name=name)
+    await _decommission(db_pool, enclosure_id=enc, now=_T2)
+    await _drain_enclosure(db_pool)
+
+    lookup = PostgresEnclosureLookup(db_pool)
+    assert await lookup.lookup_by_name(facility_code="cora", name=name) is None
+
+
+@pytest.mark.integration
+async def test_lookup_by_name_unknown_address_returns_none(db_pool: asyncpg.Pool) -> None:
+    lookup = PostgresEnclosureLookup(db_pool)
+    assert await lookup.lookup_by_name(facility_code="cora", name=f"nope-{uuid4().hex[:8]}") is None

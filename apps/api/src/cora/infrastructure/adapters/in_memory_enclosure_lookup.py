@@ -31,6 +31,10 @@ class InMemoryEnclosureLookup:
         seed: Mapping[UUID, EnclosureLookupResult] | None = None,
     ) -> None:
         self._records: dict[UUID, EnclosureLookupResult] = dict(seed) if seed is not None else {}
+        # facility_code is not on EnclosureLookupResult (the gate path
+        # does not need it), so address resolution (lookup_by_name) keeps
+        # it in a parallel map keyed by enclosure_id.
+        self._facility_by_id: dict[UUID, str] = {}
         self._lock = Lock()
 
     def register(
@@ -42,6 +46,7 @@ class InMemoryEnclosureLookup:
         observed_at: str | None = None,
         source_kind: str | None = None,
         source_id: str | None = None,
+        facility_code: str = "cora",
     ) -> None:
         """Test helper: install an enclosure reference keyed by `enclosure_id`.
 
@@ -62,6 +67,7 @@ class InMemoryEnclosureLookup:
                 source_kind=source_kind,
                 source_id=source_id,
             )
+            self._facility_by_id[enclosure_id] = facility_code
 
     async def lookup(self, enclosure_id: UUID) -> EnclosureLookupResult | None:
         with self._lock:
@@ -76,6 +82,19 @@ class InMemoryEnclosureLookup:
                 for eid, reference in self._records.items()
                 if eid in enclosure_ids and reference.lifecycle == "Active"
             ]
+
+    async def lookup_by_name(
+        self, *, facility_code: str, name: str
+    ) -> EnclosureLookupResult | None:
+        with self._lock:
+            for eid, reference in self._records.items():
+                if (
+                    reference.name == name
+                    and reference.lifecycle == "Active"
+                    and self._facility_by_id.get(eid) == facility_code
+                ):
+                    return reference
+        return None
 
 
 __all__ = ["InMemoryEnclosureLookup"]

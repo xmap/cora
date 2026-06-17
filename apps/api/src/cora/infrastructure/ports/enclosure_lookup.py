@@ -137,6 +137,25 @@ class EnclosureLookup(Protocol):
         """
         ...
 
+    async def lookup_by_name(
+        self, *, facility_code: str, name: str
+    ) -> EnclosureLookupResult | None:
+        """Resolve the `(facility_code, name)` address to its Active enclosure.
+
+        Returns the single Active row at that address, or None if no
+        Active enclosure is registered there. The address is reusable
+        across the decommission / re-register lifecycle (the projection's
+        partial-unique index is on Active rows only), so at most one row
+        matches; Decommissioned rows are excluded.
+
+        Used by Enclosure-BC-local callers, not the cross-BC gate path:
+        the boot seeder (existence pre-check for idempotent seeding,
+        since enclosure ids are minted, not address-derived) and the
+        permit monitor loop (resolve a configured enclosure name to its
+        minted `EnclosureId` before issuing `observe_enclosure_status`).
+        """
+        ...
+
 
 class AlwaysPermittedEnclosureLookup:
     """Stub: every enclosure id resolves to a synthetic Active+Permitted row.
@@ -176,6 +195,16 @@ class AlwaysPermittedEnclosureLookup:
 
     async def find_by_ids(self, *, enclosure_ids: frozenset[UUID]) -> list[EnclosureLookupResult]:
         return []
+
+    async def lookup_by_name(
+        self, *, facility_code: str, name: str
+    ) -> EnclosureLookupResult | None:
+        # The stub holds no named rows. Unlike `lookup` (which blanket-
+        # permits any id for cross-BC gate checks), address resolution
+        # must not fabricate an id: a synthetic id would not match any
+        # real enclosure stream, so callers seeding / monitoring would
+        # target a non-existent aggregate. None is the honest answer.
+        return None
 
 
 __all__ = [

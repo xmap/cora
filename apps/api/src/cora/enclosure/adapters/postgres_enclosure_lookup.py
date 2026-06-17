@@ -79,6 +79,16 @@ WHERE enclosure_id = ANY($1)
   AND lifecycle = 'Active'
 """
 
+_LOOKUP_BY_NAME_SQL = """
+SELECT enclosure_id, name, permit_status, lifecycle,
+       last_observed_at, last_source_kind, last_source_id
+FROM proj_enclosure_summary
+WHERE facility_code = $1
+  AND name = $2
+  AND lifecycle = 'Active'
+LIMIT 1
+"""
+
 
 class PostgresEnclosureLookup:
     """asyncpg-backed `EnclosureLookup` implementation."""
@@ -99,6 +109,15 @@ class PostgresEnclosureLookup:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(_FIND_BY_IDS_SQL, sorted(enclosure_ids))
         return [_row_to_reference(r) for r in rows]
+
+    async def lookup_by_name(
+        self, *, facility_code: str, name: str
+    ) -> EnclosureLookupResult | None:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(_LOOKUP_BY_NAME_SQL, facility_code, name)
+        if row is None:
+            return None
+        return _row_to_reference(row)
 
 
 def _format_observed_at(raw: Any) -> str | None:

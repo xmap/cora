@@ -28,6 +28,8 @@ Layout:
     _projections.py           -- register_enclosure_projections(registry, deps)
 """
 
+from cora.enclosure._enclosure_seed import seed_enclosures
+from cora.enclosure._monitor import enclosure_permit_monitor_lifespan
 from cora.enclosure._projections import register_enclosure_projections
 from cora.enclosure.errors import UnauthorizedError
 from cora.enclosure.routes import register_enclosure_routes
@@ -37,8 +39,10 @@ from cora.enclosure.wire import EnclosureHandlers, wire_enclosure
 __all__ = [
     "EnclosureHandlers",
     "UnauthorizedError",
+    "enclosure_permit_monitor_lifespan",
     "register_enclosure_projections",
     "register_enclosure_routes",
     "register_enclosure_tools",
+    "seed_enclosures",
     "wire_enclosure",
 ]
