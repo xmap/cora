@@ -16,11 +16,17 @@ Things CORA still needs the beamline team to confirm are collected on [Open ques
 
 ## The beamline
 
-What 2-BM physically is, walked source to detector.
+The systems you operate, and the devices they are built from.
+
+**Fixtures**, the composed units: a Fixture materializes a cross-facility [Assembly](../../catalog/assemblies.md) blueprint into this beamline's specific hardware, the same portable-to-bound move as a Recipe materializing a Method (an Assembly is to a Fixture as a Method is to a Recipe). These are the Assemblies 2-BM materializes:
+
+- [Microscope](equipment/microscope.md): the Optique Peter detector, a `Microscope` Assembly over a reusable `Optics` sub-assembly in one `Housing`, presenting the `Detector` Role.
+- [Sample tower](equipment/sample_tower.md): the sample positioning stack, a `SampleTower` Assembly presenting the `Positioner` Role, with the stages held in a containment chain.
+
+**Devices**, the hardware behind them:
 
 - [Layout](beamline.md): the equipment walk source to detector, every device with its calibration and condition, generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
 - [Assets](assets.md): the CORA Asset model view (flat tree by `parent_id`, Family affordances, vendor Models, settings schemas, drawings).
-- [Microscope](equipment/microscope.md): the Optique Peter detector as a Microscope Assembly over a reusable Optics sub-assembly, contained in one Housing.
 
 ## Getting ready
 

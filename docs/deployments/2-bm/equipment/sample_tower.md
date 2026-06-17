@@ -1,6 +1,6 @@
-# The sample tower at 2-BM
+# Sample tower
 
-*The 2-BM sample positioning stack: one `SampleTower` Assembly presenting as the `Positioner` Role, materialized as one Fixture binding the installed stack, with the kinematic order carried as a containment chain.*
+*The 2-BM Fixture that materializes the cross-facility `SampleTower` Assembly: the sample positioning stack, binding the installed stages, presenting the `Positioner` Role, with the kinematic order carried as a containment chain.*
 
 The sample tower sits in the 2-BM experiment hutch (Enclosure `2-BM-B`). It is the operator-facing positioning system: a stack of motion stages, floor to sample, that places and rotates the specimen in the beam. Standard tomography, laminography, and mosaic / large-sample scans all run on this one tower; they differ in the scan recipe, not in the installed hardware. This page explains how CORA models it.
 

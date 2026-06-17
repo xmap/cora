@@ -1,6 +1,6 @@
-# The Microscope detector at 2-BM
+# Microscope
 
-*The Optique Peter detector: a `Microscope` Assembly over a reusable `Optics` sub-assembly, materialized as one Fixture binding eight Assets, all contained in one `Housing`, presenting the `Detector` Role.*
+*The 2-BM Fixture that materializes the cross-facility `Microscope` Assembly: the Optique Peter detector, binding eight Assets across six slots over a reusable `Optics` sub-assembly, all contained in one `Housing`, presenting the `Detector` Role.*
 
 The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch (Enclosure `2-BM-B`). It is the operator-facing imaging system: a vendor housing carrying three swappable objectives on a sliding ball-screw selector, a linear propagation-distance stage (the sample-to-detector rail), a FLIR Oryx camera, and a LuAG scintillator. (A second Oryx camera and its selector are installed but not yet modelled; see [Open items](#open-items).) The whole unit is driven by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC process name, not the CORA model name). This page explains how CORA models it.
 
