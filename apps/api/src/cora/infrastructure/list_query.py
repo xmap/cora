@@ -299,7 +299,13 @@ def _filter_column(spec: FilterSpec) -> str:
     return spec.column if spec.column is not None else spec.attr
 
 
-def _render_filter_fragment(spec: FilterSpec, param_number: int) -> str:
+def render_filter_fragment(spec: FilterSpec, param_number: int) -> str:
+    """Render one filter's sargable WHERE fragment at the given `$N`.
+
+    Public because it is the single source of truth for "how a filter
+    becomes SQL", reused by enumerate-style queries that need the
+    composer but not the full handler (see `build_select`).
+    """
     column = _filter_column(spec)
     if isinstance(spec, ScalarFilter):
         return f"{column} = ${param_number}"
@@ -327,7 +333,7 @@ def _active_filter_value(spec: FilterSpec, value: Any) -> bool:
     return True
 
 
-def _build_sql(
+def build_select(
     *,
     select_columns: str,
     table: str,
@@ -341,6 +347,12 @@ def _build_sql(
     `cursor_param_start` is the param number for `cursor_at`
     (`cursor_id` is the next one) when the cursor predicate should
     be appended; None when the call has no cursor.
+
+    Public so enumerate-style queries that need the same sargable
+    `WHERE ... ORDER BY (time, id) ASC LIMIT $1` shape but not the
+    full paginated handler reuse one composer rather than re-rolling
+    the SQL. `active_filter_fragments` accepts any WHERE fragments,
+    including constant predicates with no `$N` placeholder.
     """
     where_parts = list(active_filter_fragments)
     if cursor_param_start is not None:
@@ -443,12 +455,12 @@ def make_list_query_handler[Q: _Query, Item, Page](
             value = getattr(query, spec.attr)
             if not _active_filter_value(spec, value):
                 continue
-            active_fragments.append(_render_filter_fragment(spec, next_param))
+            active_fragments.append(render_filter_fragment(spec, next_param))
             filter_values.append(value)
             next_param += 1
 
         cursor_param_start = next_param if cursor_at is not None else None
-        sql = _build_sql(
+        sql = build_select(
             select_columns=select_columns,
             table=table,
             active_filter_fragments=active_fragments,
@@ -499,5 +511,7 @@ __all__ = [
     "ColumnNotInFilter",
     "FilterSpec",
     "ScalarFilter",
+    "build_select",
     "make_list_query_handler",
+    "render_filter_fragment",
 ]

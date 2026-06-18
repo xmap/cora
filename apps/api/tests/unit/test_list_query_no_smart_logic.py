@@ -13,7 +13,7 @@ column has a perfect index.
 The factory was redesigned to compose SQL dynamically from only the
 active filter fragments, so this anti-pattern can't be emitted by
 construction. This test pins that invariant: if a future change to
-`_render_filter_fragment` or `_build_sql` ever reintroduces the
+`render_filter_fragment` or `build_select` ever reintroduces the
 pattern (or merely a fragment that looks like it), the test fails.
 
 Companion integration test

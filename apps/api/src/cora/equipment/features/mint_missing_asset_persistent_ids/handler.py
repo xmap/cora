@@ -53,6 +53,7 @@ from cora.equipment.features.mint_missing_asset_persistent_ids.command import (
     SkippedAsset,
 )
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.list_query import ScalarFilter, build_select, render_filter_fragment
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
@@ -160,25 +161,33 @@ async def mint_for_asset_ids(
 async def _enumerate_missing(deps: Kernel, *, facility_code: str | None, limit: int) -> list[UUID]:
     """Asset ids with no persistent identifier (excluding Decommissioned).
 
-    Composes the optional facility filter into the WHERE clause rather than a
-    `$N IS NULL OR ...` guard, matching the sargable-SQL discipline in
-    `infrastructure.list_query`. Pool-None (in-memory mode) returns empty, like
-    the list-query handlers.
+    Reuses the shared `infrastructure.list_query` composer (`build_select` +
+    `render_filter_fragment`) rather than hand-rolling SQL, so there is one
+    sargable-composition path in the codebase, not two. The optional facility
+    filter is rendered as a `column = $N` fragment (NOT a `$N IS NULL OR ...`
+    guard) to stay sargable under a generic plan, exactly as the list-query
+    handlers do. This is an enumerate, not a paginated list, so it borrows the
+    composer but not the full handler (no cursor, no page). Pool-None
+    (in-memory mode) returns empty, like the list-query handlers.
+
+    `$1` is the LIMIT; the lone optional facility filter is `$2`.
     """
     if deps.pool is None:
         _log.info("mint_missing_asset_persistent_ids.no_pool")
         return []
 
+    fragments = ["persistent_id IS NULL", "lifecycle <> 'Decommissioned'"]
     params: list[Any] = [limit]
-    where = ["persistent_id IS NULL", "lifecycle <> 'Decommissioned'"]
     if facility_code is not None:
+        fragments.append(render_filter_fragment(ScalarFilter("facility_code"), 2))
         params.append(facility_code)
-        where.append(f"facility_code = ${len(params)}")
-    sql = (
-        f"SELECT asset_id FROM {_TABLE} "
-        f"WHERE {' AND '.join(where)} "
-        "ORDER BY created_at, asset_id "
-        "LIMIT $1"
+    sql = build_select(
+        select_columns="asset_id",
+        table=_TABLE,
+        active_filter_fragments=fragments,
+        time_column="created_at",
+        id_column="asset_id",
+        cursor_param_start=None,
     )
     async with deps.pool.acquire() as conn:
         rows = await conn.fetch(sql, *params)

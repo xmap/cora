@@ -60,6 +60,23 @@ async def _register_asset(db_pool: asyncpg.Pool, *, name: str) -> UUID:
     return asset_id
 
 
+async def _register_root_asset(db_pool: asyncpg.Pool, *, name: str, facility_code: str) -> UUID:
+    """Register a facility-rooted Asset so the projection carries a
+    non-null `facility_code` (only roots bind one, per the
+    `{parent_id, facility_code}` XOR rule); lets the facility filter
+    actually match.
+    """
+    asset_id = uuid4()
+    deps = _build_deps(db_pool, ids=[asset_id, uuid4()])
+    returned = await register_asset.bind(deps)(
+        RegisterAsset(name=name, tier=AssetTier.UNIT, parent_id=None, facility_code=facility_code),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert returned == asset_id
+    return asset_id
+
+
 def _bulk_handler(deps: Kernel) -> mint_missing_asset_persistent_ids.Handler:
     """Bridge the bulk orchestrator to the assign slice, mirroring wire_equipment."""
     assign = assign_asset_persistent_id.bind(deps)
@@ -146,3 +163,39 @@ async def test_bulk_mint_is_a_noop_on_rerun(db_pool: asyncpg.Pool) -> None:
     assert second.minted == ()
     assert second.skipped == ()
     assert second.failed == ()
+
+
+@pytest.mark.integration
+async def test_bulk_mint_facility_code_filter_excludes_other_facilities(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The optional facility_code filter scopes the sweep: only Assets in
+    the named facility are enumerated and minted; Assets outside it are left
+    untouched. Exercises the shared-composer facility fragment
+    (`facility_code = $2`), the only filtered path through `_enumerate_missing`.
+
+    `in_scope` is rooted in the bootstrap-seeded `cora` facility (only roots
+    bind a facility_code, and registration validates it exists). `out_of_scope`
+    is a parent-bound Device, so its projected facility_code is NULL and the
+    `= 'cora'` predicate excludes it (NULL never equals).
+    """
+    in_scope = await _register_root_asset(db_pool, name="Bulk-Fac-Cora", facility_code="cora")
+    out_of_scope = await _register_asset(db_pool, name="Bulk-Fac-None")
+    await drain_equipment_projections(db_pool)
+
+    # One id: if the filter leaked the NULL-facility Asset into the sweep,
+    # the second mint would exhaust the queue and fail the test loudly.
+    result = await _bulk_handler(_build_deps(db_pool, ids=[uuid4()]))(
+        MintMissingAssetPersistentIds(facility_code="cora"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert result.scanned == 1
+    assert {m.asset_id for m in result.minted} == {in_scope}
+    assert result.failed == ()
+
+    await drain_equipment_projections(db_pool)
+    pids = await _persistent_ids(db_pool, [in_scope, out_of_scope])
+    assert pids[in_scope] is not None
+    assert pids[out_of_scope] is None
