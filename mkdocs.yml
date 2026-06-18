@@ -90,14 +90,13 @@ nav:
     - 2-BM:
       - deployments/2-bm/index.md
       - Open questions: deployments/2-bm/questions.md
-      - The beamline:
-        - Fixtures:
-          - Microscope: deployments/2-bm/equipment/microscope.md
-          - Sample tower: deployments/2-bm/equipment/sample_tower.md
-        - Devices:
-          - Layout: deployments/2-bm/beamline.md
-          - Assets: deployments/2-bm/assets.md
-          - Computed axes: deployments/2-bm/computed-axes.md
+      - As-built:
+        - deployments/2-bm/as-built.md
+        - Layout: deployments/2-bm/beamline.md
+        - Microscope: deployments/2-bm/equipment/microscope.md
+        - Sample tower: deployments/2-bm/equipment/sample_tower.md
+        - Assets: deployments/2-bm/assets.md
+        - Computed axes: deployments/2-bm/computed-axes.md
       - Operations:
         - deployments/2-bm/operations.md
         - Procedures: deployments/2-bm/procedures.md
