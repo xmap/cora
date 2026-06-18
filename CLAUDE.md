@@ -34,4 +34,4 @@ One-line subject, body explains WHY. Recent commits set the tone — `git log --
 
 ## Reviewer subagents
 
-- [`naming-r3-reviewer`](.claude/agents/naming-r3-reviewer.md): auto-invoked on rename or new-name commits (aggregate fields, event/command classes, slice directories, aggregate types, agent types). Checks R1-R5 with an explicit guard against the R3 noun-LAST trap. First committed reviewer; more axes added only after a rule-of-three trigger fires.
+- [`naming-r3-reviewer`](.claude/agents/naming-r3-reviewer.md): auto-invoked on rename or new-name commits (aggregate fields, event/command classes, slice directories, aggregate types, agent types, procedure kinds). Checks R1-R6 with an explicit guard against the R3 noun-LAST trap; R6 (procedure-kind operation-noun-LAST) added 2026-06 alongside the `set_energy` to `energy_setting` normalization. Further axes added only after a rule-of-three trigger fires.
