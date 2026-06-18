@@ -1,6 +1,6 @@
 # Recipes
 
-*Deployment-bound recipe designs for 2-BM (Recipe BC).*
+*2-BM's deployment-bound step sequences, baselines, set-energy, and hexapod reboot, that expand into Procedures.*
 
 A Recipe is an ordered, parameterized step sequence (setpoint / check / action) that expands into a [Procedure](procedures.md) once an operator binds its tunable values. Recipes are **deployment-bound**: they hardcode 2-BM device addresses, so they live here, not in the cross-facility [Catalog](../../catalog/index.md) (the portable rung is the [Method](../../catalog/methods.md)). See [Model](../../architecture/model.md) for the aggregate shape.
 

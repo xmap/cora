@@ -1,6 +1,6 @@
 # Procedures
 
-*Operation BC Procedures registered at 2-BM.*
+*The operational tasks 2-BM runs and records: alignment, homing, characterization, recovery, and the coordinated energy change.*
 
 A Procedure is the record of one operational task. It acts on a set of target Assets and may realize a [Capability](../../catalog/capabilities.md); it runs either standalone or as a phase of a [Run](experiment.md). The Procedure aggregate does not itself bind a Method, Practice, or Plan: those name the technique and its wiring, while the Procedure is the task record and its per-step log. See [Model](../../architecture/model.md) for the aggregate shape.
 

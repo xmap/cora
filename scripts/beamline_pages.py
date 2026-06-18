@@ -269,13 +269,13 @@ def _render_page(descriptor: BeamlineDescriptor) -> str:
     beamline = descriptor.beamline
     blocks: list[str] = [f"# {beamline.name} hardware"]
 
+    blocks.append("*The installed beamline, as the beam's journey: source to detection.*")
     blocks.append(
-        "The installed beamline as a walk along the beam, in three stages: Source "
-        "(deliver the beam), Sample (hold the specimen), Detection (record the "
-        "signal). Each device pairs its human name with the EPICS handle, its key "
-        "specs, and whether it is field replaceable. `new` marks a device not yet "
-        "modeled in CORA; `confirm` marks a value taken from the docs that 2-BM "
-        "staff have not yet verified."
+        "Three stages: Source (deliver the beam), Sample (hold the specimen), "
+        "Detection (record the signal). Each device pairs its human name with the "
+        "EPICS handle, its key specs, and whether it is field replaceable. `new` "
+        "marks a device not yet modeled in CORA; `confirm` marks a value taken from "
+        "the docs that 2-BM staff have not yet verified."
     )
     blocks.append(
         _admonition(

@@ -1,6 +1,6 @@
 # Enclosures
 
-*Enclosure BC permits that gate Runs and Procedures at 2-BM.*
+*The two hutch permits that gate beam-on work at 2-BM, and the pre-flight chain that checks them.*
 
 An Enclosure models the observed permit status of an access-gated volume: a physical space whose interlock and search-and-secure sequence must be satisfied before beam-on work proceeds inside it. See the [Enclosure module](../../architecture/modules/enclosure/index.md) for the aggregate shape and the permit / lifecycle axes.
 

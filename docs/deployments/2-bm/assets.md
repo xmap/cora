@@ -1,6 +1,6 @@
 # Assets
 
-*Equipment BC Assets registered under the 2-BM Unit.*
+*The CORA Asset model for 2-BM: the device tree, per-Asset settings, vendor Models, and drawings.*
 
 The Devices that hang off 2-BM. The 2-BM Asset itself is a root Asset with `tier = Unit` (bound to its Site Facility via `facility_code`) and is declared on the [2-BM index](index.md). See [Model](../../architecture/model.md) for the aggregate shape.
 

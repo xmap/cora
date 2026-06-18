@@ -1,6 +1,6 @@
 # Cautions
 
-*Caution BC Cautions targeting 2-BM Assets and Procedures.*
+*Operator tribal knowledge for 2-BM: known quirks and their recovery, surfaced on every run start.*
 
 Operator tribal knowledge captured at shakedown, first-light, or production time. Surfaced on every future Run start via the `CautionLookup` snapshot. See [Model](../../architecture/model.md) for the aggregate shape.
 
