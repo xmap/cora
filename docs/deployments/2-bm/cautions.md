@@ -52,3 +52,4 @@ Operator tribal knowledge captured at shakedown, first-light, or production time
 | `Camera` | | | Detector dark-frame drift after long beam-off periods |
 | `Scintillator` | | | Scintillator browning under prolonged white-beam exposure |
 | Sample-stage Devices | | | Sample-stage backlash after manual handling |
+| `Monochromator` | | | Flat-field stripe pattern drifts over hours (DMM optics); acquire flats as close to scan time as possible |

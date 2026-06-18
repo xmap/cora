@@ -20,7 +20,7 @@ A Dataset records an already-existing artifact (URI, checksum, byte size, encodi
 | Dataset | Producing Run | Subject |
 | --- | --- | --- |
 | Rocking curve | energy-characterization Run | |
-| Vibration baseline | vibration-baseline Run | |
+| Vibration baseline ([item_070](https://docs2bm.readthedocs.io/en/latest/source/ops/item_070.html)) | vibration-baseline Run | |
 | Reconstructed volume | | |
 | Segmentation mask | | |
 | Dark-subtracted flat | | |
