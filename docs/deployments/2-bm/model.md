@@ -17,4 +17,4 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 | Caution (Caution) | [Operations > Cautions](cautions.md) |
 | Supply (Supply) | [Operations > Supplies](operations.md#supplies) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
-| Subject, Run, Campaign, Dataset, Decision | [The experiment](experiment.md) (live; app read-API) |
+| Subject, Run, Campaign, Dataset, Decision | [Experiment](experiment.md) (live; app read-API) |

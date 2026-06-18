@@ -105,7 +105,7 @@ nav:
         - Enclosures: deployments/2-bm/enclosures.md
         - Cautions: deployments/2-bm/cautions.md
       - Governance: deployments/2-bm/governance.md
-      - The experiment: deployments/2-bm/experiment.md
+      - Experiment: deployments/2-bm/experiment.md
       - Model: deployments/2-bm/model.md
     - Facility envelope:
       - APS (Site):

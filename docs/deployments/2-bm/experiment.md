@@ -1,4 +1,4 @@
-# The experiment
+# Experiment
 
 *The live operational view. This page describes the shape; the running app serves the data.*
 
