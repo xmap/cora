@@ -209,7 +209,7 @@ migrate-hash:
 # imports it to render the deployment beam-path page). No global install needed;
 # uv caches the env after the first run.
 MKDOCS = uv run --no-project \
-	--with "mkdocs-material==9.5.49" \
+	--with "mkdocs-material==9.7.6" \
 	--with "pyyaml>=6,<7" \
 	--with "pydantic>=2.13.4,<3" \
 	mkdocs

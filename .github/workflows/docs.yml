@@ -50,7 +50,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install MkDocs Material and descriptor deps
-        run: pip install --quiet "mkdocs-material==9.5.49" "pyyaml>=6,<7" "pydantic>=2.13.4,<3"
+        run: pip install --quiet "mkdocs-material==9.7.6" "pyyaml>=6,<7" "pydantic>=2.13.4,<3"
 
       - name: Stage README and CONTRIBUTING into docs/
         run: python scripts/stage_docs.py

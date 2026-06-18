@@ -1,5 +1,6 @@
 ---
 date: 2026-06-17
+pin: true
 slug: where-cora-fits
 authors:
   - dgursoy
