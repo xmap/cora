@@ -1,6 +1,6 @@
 # 2-BM
 
-*Operational bending-magnet micro-CT at APS. This page walks the beamline and how a measurement gets done on it.*
+*Operational bending-magnet micro-CT at APS. Start here, then follow the zone that matches what you need.*
 
 | Property | Value |
 | --- | --- |
@@ -10,53 +10,33 @@
 | Institution | Argonne (context; not modeled as an Asset or Facility) |
 | Drawing | `(ICMS, A342-RT1000, 02)` (APS beamline layout drawing, Rev 02, May 2026) |
 
-The measurement lifecycle below is the reading order: the beamline itself, then getting it ready, running a measurement, the results, and the envelope that governs it. The physical layer is generated from the descriptor; the operational stages are hand-authored today and become CORA-projection-generated in a later phase.
+## How to read these pages
 
-Things CORA still needs the beamline team to confirm are collected on [Open questions](questions.md).
+The deployment separates what is configured from what is live. The configured zones are static: they describe the
+beamline as it is built and operated, and they live in these docs. The live zone is per-experiment data whose
+system of record is CORA's running read-API; the docs describe only its shape. The reader's journey runs across
+the static zones and into the live one:
 
-## The beamline
+- [As-built](as-built.md): the equipment actually installed, its measured state, and the composed fixtures. The
+  asset-tree backbone of the beamline.
+- [Techniques](techniques.md): what 2-BM can do, each technique linking up to the cross-facility Catalog.
+- [Operations](operations.md): the task-keyed runbook, from readying the beam to recovery, with the procedures,
+  recipes, hutch permits, and cautions under it.
+- [Governance](governance.md): the static authorization boundary, the operator pool and the trust zones and
+  policies that gate commands.
+- [The experiment](experiment.md): the live operational view, subjects, runs, campaigns, datasets, and decisions,
+  described in shape here and served live by the app.
 
-The systems you operate, and the devices they are built from.
+Two cross-cutting pages sit beside the journey:
 
-**Fixtures**, the composed units: a Fixture materializes a cross-facility [Assembly](../../catalog/assemblies.md) blueprint into this beamline's specific hardware, the same portable-to-bound move as a Recipe materializing a Method (an Assembly is to a Fixture as a Method is to a Recipe). These are the Assemblies 2-BM materializes:
+- [Open questions](questions.md): what CORA still needs the beamline team to confirm.
+- [How 2-BM is modeled](model.md): the developer's by-kind index, mapping each CORA aggregate to where its 2-BM
+  instances are documented.
 
-- [Microscope](equipment/microscope.md): the Optique Peter detector, a `Microscope` Assembly over a reusable `Optics` sub-assembly, presenting the `Detector` Role.
-- [Sample tower](equipment/sample_tower.md): the sample positioning stack, a `SampleTower` Assembly presenting the `Positioner` Role, with the stages held in a containment chain.
+## Catalog and deployment
 
-**Devices**, the hardware behind them:
-
-- [Layout](beamline.md): the equipment walk source to detector, every device with its calibration and condition, generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
-- [Assets](assets.md): the CORA Asset model view (flat tree by `parent_id`, Family affordances, vendor Models, settings schemas, drawings).
-
-## Getting ready
-
-Setup before a scan.
-
-- [Procedures](procedures.md): alignment, characterization, and recovery routines (Operation BC).
-- [Recipes](recipes.md): deployment-bound recipe designs (set-energy, hexapod reboot) that expand into Procedures (Recipe BC).
-- [Supplies](operations.md#supplies): the resources a run needs available (beam, cooling, vacuum).
-- [Enclosures](enclosures.md): two hutch permits, optics hutch `2-BM-A` and experiment hutch `2-BM-B`, each gating its hutch's devices through the located-in pre-flight chain walk (Enclosure BC).
-- Clearances: the safety forms that must be Active to start, issued at the [APS Site](../aps/index.md#the-safety-envelope).
-
-## Running a measurement
-
-The act of measuring.
-
-- [Subjects](experiment.md#subjects): the samples mounted and measured.
-- [Runs](experiment.md#runs): execution instances and their state.
-- [Campaigns](experiment.md#campaigns): series that group many runs.
-- The recipe a run executes is a [Method](../../catalog/methods.md) (cross-facility) bound through an APS [Practice](../aps/index.md#the-techniques-adapted-here).
-
-## Results
-
-What came out and whether it is trustworthy.
-
-- [Datasets](experiment.md#datasets): the data products, with lineage back to the run, subject, and equipment.
-
-## Operating envelope
-
-Who and what governs.
-
-- [Decisions](experiment.md#decisions): the accountability ledger (overrides, steering).
-- [Cautions](cautions.md): operator advisories and tribal knowledge.
-- [Governance](governance.md): the static authorization boundary, the operator pool and the trust zones and policies that gate commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md#who-acts-here); on the beamline they surface only through the actions they take above.
+The generic, cross-facility vocabulary (Capabilities, Methods, Families, Models, Assemblies) lives in the
+[Catalog](../../catalog/index.md). This deployment names those types and records only 2-BM's specifics: a Fixture
+materializes an [Assembly](../../catalog/assemblies.md) as a Recipe materializes a
+[Method](../../catalog/methods.md), and an Asset binds a [Model](../../catalog/models.md) to fill a Family. The
+deployment restates none of the generic shape; it links up to it.
