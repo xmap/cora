@@ -116,6 +116,17 @@ conditioning-optics:
       foils: ["600 um Al", "150 um Al", "300 um C", "50 um C", "None"]   # operational downstream paddle (2bma:m18), in slot order; per-slot motor positions live in the index_position_table calibration (see test_2bm_filter_foil_setup.py)
       confirm: true
       note: two paddles - downstream (2bma:m18) is operational and its foils are listed above; upstream (2bma:m17) is bound in software but not in service (selecting it has no beam effect). Foil materials/positions per the docs2bm components page (FOIL-1)
+    - name: DiagnosticFlag
+      family: Screen
+      pv: "2bma:m44"
+      controller: FrontEndDrive
+      note: >
+        Motorized phosphor beam-viewing flag (the staff "diagnostic flag",
+        item_006 / item_020): a vertical insert on 2bma:m44. Raised into the
+        beam in Mono and parked in Pink; in Mono its Y is energy-dependent
+        (staff energy_move_flag). Exact in-hutch position, the energy-tracking
+        Y curve, and whether to model the position as a PseudoAxis are pending
+        (FLAG-1).
     - name: Mirror
       family: Mirror
       pv: { downstream_y: "2bma:m2", upstream_y: "2bma:m5", stripe_select: "2bma:m3" }

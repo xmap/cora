@@ -30,6 +30,7 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `ConditioningSlit` | `Device` | `Slit` | `2-BM` (white-beam slits; driven by `FrontEndDrive`) | `2-BM-A` |
 | `Filter` | `Device` | `Filter` | `2-BM` (foil changer; driven by `FrontEndDrive`) | `2-BM-A` |
 | `Filter_FoilSelector` | `Device` | `PseudoAxis` | `Filter` (discrete foil selector; LookupTable snaps a slot index to the downstream paddle position) | `2-BM-A` |
+| `DiagnosticFlag` | `Device` | `Screen` | `2-BM` (motorized phosphor beam-viewing flag, `2bma:m44`; driven by `FrontEndDrive`; raised in Mono, parked in Pink) | `2-BM-A` |
 | `SampleSlit` | `Device` | `Slit` | `2-BM` (B-station slits; driven by `FrontEndDrive`) | `2-BM-B` |
 | `SampleSlit_VerticalTop` | `Device` | `PseudoAxis` | `SampleSlit` (energy-driven; top blade tracks the per-energy beam position in mm) | `2-BM-B` |
 | `SampleSlit_VerticalBottom` | `Device` | `PseudoAxis` | `SampleSlit` (energy-driven; bottom blade tracks the per-energy beam position in mm) | `2-BM-B` |
@@ -88,6 +89,7 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `Mirror` | `Translatable`, `Homeable`, `Limitable` (vertical jacks set the deflection geometry; the coating stripe selector tracks energy and beam mode, see [Beam modes](procedures.md#beam-modes-mono-pink)) |
 | `Monochromator` | `Translatable`, `Homeable`, `Limitable` (the Bragg arms and the M2 vertical offset set the energy via an IOC coordinated move; insertable, bypassed in pink beam, see [Beam modes](procedures.md#beam-modes-mono-pink)) |
 | `Filter` | `Indexable`, `Attenuable` (discrete absorber-foil selection that attenuates the white beam) |
+| `Screen` | `Translatable`, `Homeable`, `Limitable` (the beam-viewing flag inserts and retracts on a vertical motor, `2bma:m44`; the phosphor screen itself is passive) |
 
 `Scintillator` is the lone Pattern-C consumer at v1 (passive optical screen; tracked via `Consumable` lifecycle, no command surface). `PseudoAxis` is a facet Family: it carries no affordances, but Methods bind against it via `needed_family_ids`, and the Family membership is the gate that lets an Asset carry a `partition_rule`. Detector Assemblies, including the Microscope, advertise the `Detector` Role through the Assembly's `presents_as` set rather than through a presenter Family; the `SampleTower` Assembly likewise advertises the `Positioner` Role. `TiltStage` is the Kohzu laminography goniometer (a rotational, limited-range stage, so not `LinearStage`, and not `RotaryStage` whose `Following`/`Marking` PSO affordances a tilt does not carry).
 
@@ -135,7 +137,7 @@ The six `Hexapod_*` DoF facets are PseudoAxis Assets (virtual DoFs over the `2bm
 
 ## Family settings schemas
 
-NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: the 2-BM detector classes (the active FLIR Oryx and the decommissioned PCO Dimax) differ along settings axes (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not Family axes, so the high-framerate variant stays a `Camera` rather than a separate Family. `PseudoAxis` carries no settings schema (it is a facet Family).
+NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: the 2-BM detector classes (the active FLIR Oryx and the decommissioned PCO Dimax) differ along settings axes (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not Family axes, so the high-framerate variant stays a `Camera` rather than a separate Family. `PseudoAxis` carries no settings schema (it is a facet Family). The `Screen` family likewise carries no settings schema (a beam-viewing flag has no operator-tunable settings at v1).
 
 ### `Objective`
 

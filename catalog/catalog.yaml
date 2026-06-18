@@ -72,6 +72,8 @@ families:
     note: "Energy-selecting optic Family; at 2-BM the double-multilayer monochromator (DMM). The energy-change IOC drives its Bragg arms + M2 vertical offset per energy; inserting it picks the beam energy, pink-beam operation bypasses it."
   - name: Filter
     note: "Discrete absorber-foil changer Family; at 2-BM the C / Al foil paddles that attenuate and condition the white beam (only the downstream paddle is currently operational)."
+  - name: Screen
+    note: "Fluorescent / phosphor beam-viewing screen Family: a screen inserted into the beam to make it visible for alignment and diagnostics. Anatomical (it IS a screen); the diagnostic use is the function, not the Family name. 2-BM: the DiagnosticFlag (motorized phosphor flag on 2bma:m44). Distinct from Scintillator, which is the detector's image-forming screen inside the Microscope."
   # Pending in code (documented, not yet defined): Goniometer;
   # future: OpticalRelay.
 
