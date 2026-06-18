@@ -181,8 +181,10 @@ def _device_table(devices: list[Device]) -> str:
     return _table(_DEVICE_HEADERS, _device_rows(devices))
 
 
-def _render_group(name: str, group: Group) -> str:
-    blocks: list[str] = [f"## {_humanize(name)}"]
+def _render_group(name: str, group: Group, *, level: int = 2, show_heading: bool = True) -> str:
+    blocks: list[str] = []
+    if show_heading:
+        blocks.append(f"{'#' * level} {_humanize(name)}")
     if group.intro:
         blocks.append(group.intro.strip())
 
@@ -254,15 +256,26 @@ def _render_resources(resources: Any) -> str:
     return "\n\n".join(blocks)
 
 
+# The beam-path stages the Hardware page renders around, in beam order. Title and
+# one-line framing per stage; the descriptor's groups carry the device detail.
+_STAGES: tuple[tuple[str, str, str], ...] = (
+    ("source", "Source", "Produce, condition, and define the incident beam."),
+    ("sample", "Sample", "Hold and manipulate the specimen."),
+    ("detection", "Detection", "Record the signal."),
+)
+
+
 def _render_page(descriptor: BeamlineDescriptor) -> str:
     beamline = descriptor.beamline
-    blocks: list[str] = [f"# {beamline.name} layout"]
+    blocks: list[str] = [f"# {beamline.name} hardware"]
 
     blocks.append(
-        "A walk along the beam, source to detector. Each device pairs its human "
-        "name with the EPICS handle, its key specs, and whether it is field "
-        "replaceable. `new` marks a device not yet modeled in CORA; `confirm` "
-        "marks a value taken from the docs that 2-BM staff have not yet verified."
+        "The installed beamline as a walk along the beam, in three stages: Source "
+        "(deliver the beam), Sample (hold the specimen), Detection (record the "
+        "signal). Each device pairs its human name with the EPICS handle, its key "
+        "specs, and whether it is field replaceable. `new` marks a device not yet "
+        "modeled in CORA; `confirm` marks a value taken from the docs that 2-BM "
+        "staff have not yet verified."
     )
     blocks.append(
         _admonition(
@@ -310,8 +323,16 @@ def _render_page(descriptor: BeamlineDescriptor) -> str:
         blocks.append("## Enclosures")
         blocks.append(_table(["Enclosure", "Role", "Facility", "Permit signal"], rows))
 
-    for name, group in descriptor.groups:
-        blocks.append(_render_group(name, group))
+    for stage_key, stage_title, stage_intro in _STAGES:
+        stage_groups = [(n, g) for n, g in descriptor.groups if g.stage == stage_key]
+        if not stage_groups:
+            continue
+        blocks.append(f"## {stage_title}")
+        multi = len(stage_groups) > 1
+        if multi:
+            blocks.append(stage_intro)
+        for n, g in stage_groups:
+            blocks.append(_render_group(n, g, level=3, show_heading=multi))
 
     if descriptor.controls is not None:
         blocks.append(_render_controls(descriptor.controls))

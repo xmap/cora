@@ -91,10 +91,9 @@ nav:
       - deployments/2-bm/index.md
       - Open questions: deployments/2-bm/questions.md
       - Hardware:
-        - deployments/2-bm/hardware.md
-        - Layout: deployments/2-bm/beamline.md
-        - Microscope: deployments/2-bm/equipment/microscope.md
-        - Sample tower: deployments/2-bm/equipment/sample_tower.md
+        - deployments/2-bm/beamline.md
+        - Sample: deployments/2-bm/equipment/sample_tower.md
+        - Detection: deployments/2-bm/equipment/microscope.md
       - Techniques: deployments/2-bm/techniques.md
       - Operations:
         - deployments/2-bm/operations.md

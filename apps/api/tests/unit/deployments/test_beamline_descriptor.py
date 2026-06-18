@@ -141,13 +141,22 @@ def test_renders_enclosures_table_facility_and_permit_columns() -> None:
     assert "`S02BM-PSS:StaB:SecureM`" in markdown
 
 
-def test_renders_one_h2_per_group_and_no_em_dash() -> None:
+def test_renders_three_stage_walk_and_no_em_dash() -> None:
     descriptor = bd.load(_DESCRIPTOR)
     markdown = _render_with_catalog()
 
-    assert markdown.startswith("# 2-BM layout")
-    for name, _group in descriptor.groups:
-        assert f"## {_humanize(name)}" in markdown
+    assert markdown.startswith("# 2-BM hardware")
+    # the three beam-path stages render as H2, in source -> sample -> detection order
+    for stage in ("## Source", "## Sample", "## Detection"):
+        assert stage in markdown
+    assert (
+        markdown.index("## Source") < markdown.index("## Sample") < markdown.index("## Detection")
+    )
+    # the multi-subsystem source stage renders each subsystem as H3
+    source_groups = [name for name, group in descriptor.groups if group.stage == "source"]
+    assert len(source_groups) >= 2
+    for sub_key in source_groups:
+        assert f"### {_humanize(sub_key)}" in markdown
     assert "## Controls" in markdown
     assert "## Resources" in markdown
     # a known CORA-modeled device and a promoted marker tag both render

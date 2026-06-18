@@ -1,7 +1,7 @@
 # Techniques
 
 *What 2-BM can do. Each technique runs a portable [Catalog](../../catalog/methods.md) Method, bound to this
-beamline's [hardware](hardware.md) and [Operations](operations.md). This function view survives equipment swaps.*
+beamline's [hardware](beamline.md) and [Operations](operations.md). This function view survives equipment swaps.*
 
 ## Imaging
 

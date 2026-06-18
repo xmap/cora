@@ -12,7 +12,7 @@
 
 The configured zones live in these docs; the live experiment is served by the running app.
 
-- [Hardware](hardware.md): the installed beamline, source to detector, and its measured state.
+- [Hardware](beamline.md): the installed beamline as the beam's journey, source to detection.
 - [Techniques](techniques.md): what 2-BM can do, linked to the cross-facility [Catalog](../../catalog/index.md).
 - [Operations](operations.md): the task runbook, with procedures, recipes, permits, and cautions.
 - [Experiment](experiment.md): the live view (runs, subjects, datasets), described here, served by the app.
