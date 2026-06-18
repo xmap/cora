@@ -391,7 +391,7 @@ Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexa
 
 ### `Camera`
 
-The active 5 MP FLIR Oryx, confirmed by 2-BM staff (DET-8): a Sony IMX250 CMOS global-shutter sensor, IOC-reported model `Oryx ORX-10G-51S5M`, serial number `19173710`, firmware `1710.0.0.0`. The per-unit serial lives in the Camera Asset's `alternate_identifiers` (kind `SerialNumber`); the firmware version is per-unit identity recorded alongside it (the `Camera` schema carries no firmware field, unlike the controller schemas). The areaDetector / Spinnaker SDK, driver, and ADCore versions are IOC-deployment state, not Camera-Asset state, and are not recorded here.
+The active 5 MP FLIR Oryx, confirmed by 2-BM staff (DET-8): a Sony IMX250 CMOS global-shutter sensor, IOC-reported model `Oryx ORX-10G-51S5M`, serial number `19173710`, firmware `1710.0.0.0`. The per-unit serial lives in the Camera Asset's `alternate_identifiers` (kind `SerialNumber`); the firmware version is per-unit identity recorded alongside it (the `Camera` schema carries no firmware field, unlike the controller schemas). The camera's EPICS channel prefix `2bmSP1:` lives in `alternate_identifiers` (kind `EPICS_PV`), the same convention each drive uses for its IOC handle (for example `2bmbAERO` on `PropagationDistanceDrive`): it is the addressing channel operators reach the camera through, distinct from the driver software running behind it. The areaDetector / Spinnaker SDK, driver, and ADCore versions are IOC-deployment state, not Camera-Asset state, and are not recorded here.
 
 | Setting | Value |
 | --- | --- |
