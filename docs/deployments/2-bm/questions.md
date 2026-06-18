@@ -178,4 +178,4 @@ CORA will read proposal and user information from the APS scheduling system (the
 
 ## Not on this page
 
-Hardware CORA has deliberately not described yet (the mirror, the wider sample-stage motor band, IOC-hosted devices, past high-speed cameras) lives in [assets.md Pending](assets.md#pending) and [Decommissioned](assets.md#decommissioned-provenance-only). It raises questions here only once CORA starts describing it.
+Hardware CORA has deliberately not described yet (the wider sample-stage motor band, IOC-hosted devices, past high-speed cameras) lives in [assets.md Pending](assets.md#pending) and [Decommissioned](assets.md#decommissioned-provenance-only). It raises questions here only once CORA starts describing it. The `Mirror` is the exception that proves the rule: it is now a registered Asset ([Inventory](assets.md#inventory)), so it already raises questions here (`MIRROR-1`, `MODE-1`, `MODE-3`) even though its coating-stripe physics stay deferred to the beam-mode work.
