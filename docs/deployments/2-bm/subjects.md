@@ -21,3 +21,4 @@ Each Subject runs a custody lifecycle from intake (`Received`) through mount and
 
 - Proposal co-I sample roster
 - Calibration phantom (Siemens star, USAF 1951, sphere)
+- Channel-cut crystal (energy-calibration standard, known lattice spacing; the measuring tool for the `energy_characterization` [Procedure](procedures.md), like the phantom is for alignment). The crystal and its 2d, and whether it is a removable standard or installed equipment, are open question `ENERGY-7`.

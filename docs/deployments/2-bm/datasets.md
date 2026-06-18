@@ -19,7 +19,7 @@ A Dataset records an already-existing artifact (URI, checksum, byte size, encodi
 
 | Dataset | Producing Run | Subject |
 | --- | --- | --- |
-| Rocking curve | energy-characterization Run | |
+| Rocking curve | energy-characterization Procedure | channel-cut crystal |
 | Vibration baseline | vibration-baseline Run | |
 | Reconstructed volume | | |
 | Segmentation mask | | |
