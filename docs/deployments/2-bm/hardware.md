@@ -1,12 +1,15 @@
 # Hardware
 
-*The installed beamline at 2-BM, source to detector, and its measured state.*
+*The installed beamline at 2-BM, by subsystem, source to detector.*
 
-Each entry names the cross-facility [Catalog](../../catalog/index.md) type it instantiates and records only this
-beamline's specifics: installed Models, serials, measured calibrations, and deviations.
+Each device names the [Catalog](../../catalog/index.md) type it instantiates and records only this beamline's
+specifics: Models, serials, measured calibrations, deviations. The full device walk, grouped by subsystem in beam
+order, is the [Layout](beamline.md); the two composed end stations have their own pages.
 
-- [Layout](beamline.md): the device walk source to detector, generated from the descriptor.
-- [Microscope](equipment/microscope.md): the detector fixture, an `Optics` sub-assembly under one `Housing`.
-- [Sample tower](equipment/sample_tower.md): the sample positioning stack.
-- [Assets](assets.md): the asset tree by `parent_id`, with settings, vendor Models, and drawings.
-- [Computed axes](computed-axes.md): the virtual axes (hexapod DoF, detector table, energy, foil selector).
+- **Front end, optics, beam-defining and safety**: the source-conditioning subsystems (filters, slits,
+  monochromator, mirror, shutters), in the [Layout](beamline.md).
+- **Sample environment**: the [Sample tower](equipment/sample_tower.md), the stack that places and rotates the
+  specimen.
+- **Detector**: the [Microscope](equipment/microscope.md), the imaging detector.
+
+The CORA model encoding (asset tree, settings, virtual axes) lives under [Model](model.md).
