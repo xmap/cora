@@ -43,9 +43,9 @@ them. The interpolation kernel (eval_lookup_table) is now wired and proven in
 test_pseudoaxis_roundtrip.py, but a beamline move additionally needs the real
 saved positions (these curves are PROVISIONAL), the per-facet constituent
 wiring, and live EPICS dispatch. This scenario also does NOT model the
-coordinating "set energy" operation that drives all the axes together as one
-discrete move - that heterogeneous fan-out is the set_energy Procedure
-(test_2bm_set_energy.py). This is an intentional-completeness shape model of
+coordinating energy-setting operation that drives all the axes together as one
+discrete move - that heterogeneous fan-out is the energy_setting Procedure
+(test_2bm_energy_setting.py). This is an intentional-completeness shape model of
 the per-device mapping.
 
 ## Asset stack

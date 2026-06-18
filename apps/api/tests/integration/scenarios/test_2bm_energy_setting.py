@@ -227,9 +227,9 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
 
 
 @pytest.mark.integration
-async def test_set_energy_records_a_coordinated_move(db_pool: asyncpg.Pool) -> None:
+async def test_energy_setting_records_a_coordinated_move(db_pool: asyncpg.Pool) -> None:
     """Define the energy_change Capability + beamline_energy_change Method
-    (free-keV), then register + run a set_energy Procedure that records the
+    (free-keV), then register + run an energy_setting Procedure that records the
     coordinated move across the five energy facets to their per-energy
     positions. Assert the Procedure FSM and the recorded step sequence."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
@@ -288,13 +288,13 @@ async def test_set_energy_records_a_coordinated_move(db_pool: asyncpg.Pool) -> N
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Operation BC: register + start the set_energy Procedure -----
+    # ----- Operation BC: register + start the energy_setting Procedure -----
     procedure_id = await bind_register_procedure(deps)(
         RegisterProcedure(
             name=f"2-BM set energy to {_TARGET_ENERGY_KEV} keV",
             # kind names the specific operation, distinct from the energy_change
             # Capability code (as motor_homing's kind sits under maintenance).
-            kind="set_energy",
+            kind="energy_setting",
             target_asset_ids=frozenset(facet_ids.values()),
             capability_id=_CAPABILITY_ENERGY_CHANGE_ID,
         ),
@@ -345,7 +345,7 @@ async def test_set_energy_records_a_coordinated_move(db_pool: asyncpg.Pool) -> N
         "ProcedureCompleted",
     ]
     genesis = procedure_events[0].payload
-    assert genesis["kind"] == "set_energy"
+    assert genesis["kind"] == "energy_setting"
     assert genesis["capability_id"] == str(_CAPABILITY_ENERGY_CHANGE_ID)
     assert set(genesis["target_asset_ids"]) == {str(fid) for fid in facet_ids.values()}
 

@@ -35,7 +35,7 @@ Realizes [`cora.capability.acquisition`](../../catalog/capabilities.md). Shutter
 
 These two are clean Recipe v1 shapes but invoke action bodies that are not registered yet, so they are authorable as data but cannot be conducted until their executors land. That executor work sits in the same deferred-runtime bucket as live hexapod motion (see [Open questions](questions.md#the-hexapod)); it is not a separate surprise.
 
-### `set_energy`
+### `energy_setting`
 
 Realizes [`cora.capability.energy_change`](../../catalog/capabilities.md). Drives the energy-tracking optic axes to their per-energy positions as one coordinated move. Binds one value: `energy_kev`.
 
@@ -89,6 +89,6 @@ One manual step follows a reboot but sits outside this controller-side sequence:
 
 ## Status
 
-`dark_baseline` and `flat_baseline` are conductible today (they reuse `collect`); the baseline reduction that follows the capture is downstream of the recipe. `set_energy` and `hexapod_reboot` are valid Recipe v1 data but not yet runnable: conducting either would fail at the first unregistered action body. They are recorded here so the step order, addresses, and tunable values are captured as reviewable data ahead of the executor work, which sits in the same deferred-runtime bucket as live motion.
+`dark_baseline` and `flat_baseline` are conductible today (they reuse `collect`); the baseline reduction that follows the capture is downstream of the recipe. `energy_setting` and `hexapod_reboot` are valid Recipe v1 data but not yet runnable: conducting either would fail at the first unregistered action body. They are recorded here so the step order, addresses, and tunable values are captured as reviewable data ahead of the executor work, which sits in the same deferred-runtime bucket as live motion.
 
 The deterministic legs of the three newly modeled [Procedures](procedures.md) are candidate recipes for the same future executor work: the close-to-target aperture of `slit_centering` and the per-blade sweep of `blade_throw_characterization` are flat setpoint / action sequences, while their centring and edge-fit legs (and the whole `detector_z_rail_alignment` search) stay at the edge because recipes carry no feedback loop. They are not authored as recipes yet; the procedures above model the act today.
