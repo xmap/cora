@@ -8,7 +8,7 @@ Each recipe below realizes one [Capability](../../catalog/capabilities.md) as a 
 
 ## Runnable today
 
-These two reuse the registered `collect` action body (acquire a frame stack, poll until done), so they can be conducted without new executor code. The pixel-wise baseline math (mean / std) is downstream data reduction, not a recipe step (per the catalog convention that reduction lives in pipelines, not in CORA); the captured stack becomes a baseline [Dataset](experiment.md#datasets). These same captures are also modeled as subject-less calibration [Runs](experiment.md#runs); a recipe is the as-data form of the capture sequence (it expands into a Procedure).
+These two reuse the registered `collect` action body (acquire a frame stack, poll until done), so they can be conducted without new executor code. The pixel-wise baseline math (mean / std) is downstream data reduction, not a recipe step (per the catalog convention that reduction lives in pipelines, not in CORA); the captured stack becomes a baseline [Dataset](experiment.md). These same captures are also modeled as subject-less calibration [Runs](experiment.md); a recipe is the as-data form of the capture sequence (it expands into a Procedure).
 
 ### `dark_baseline`
 

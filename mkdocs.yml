@@ -90,8 +90,8 @@ nav:
     - 2-BM:
       - deployments/2-bm/index.md
       - Open questions: deployments/2-bm/questions.md
-      - As-built:
-        - deployments/2-bm/as-built.md
+      - Hardware:
+        - deployments/2-bm/hardware.md
         - Layout: deployments/2-bm/beamline.md
         - Microscope: deployments/2-bm/equipment/microscope.md
         - Sample tower: deployments/2-bm/equipment/sample_tower.md
@@ -106,7 +106,7 @@ nav:
         - Cautions: deployments/2-bm/cautions.md
       - Governance: deployments/2-bm/governance.md
       - The experiment: deployments/2-bm/experiment.md
-      - How 2-BM is modeled: deployments/2-bm/model.md
+      - Model: deployments/2-bm/model.md
     - Facility envelope:
       - APS (Site):
         - deployments/aps/index.md

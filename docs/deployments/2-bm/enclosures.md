@@ -35,7 +35,7 @@ Because each Device names exactly one hutch, each hutch's permit gates only the 
 
 Every ancestor enters the widened scope regardless of its own lifecycle. Whether a retired ancestor's interlock still blocks is decided by the Enclosure's own lifecycle, not the Asset's: a Decommissioned Enclosure is excluded at the read layer, but an Enclosure that is still Active and NotPermitted on a Decommissioned ancestor Asset correctly refuses the Run (decommissioning an Asset does not retire the interlock on the hutch it sits in). The chain walk reads only the Equipment Asset projection and the Enclosure projection; it never crosses into the Federation Facility hierarchy.
 
-See [Runs](experiment.md#runs) and [Procedures](procedures.md) for what each gated operation binds.
+See [Runs](experiment.md) and [Procedures](procedures.md) for what each gated operation binds.
 
 ## Personnel Safety System PVs (PSS-1)
 

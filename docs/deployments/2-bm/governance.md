@@ -1,11 +1,7 @@
 # Governance
 
-*The static authorization boundary at 2-BM: who may act, and the trust shape that gates their commands.*
-
-This page holds the configured, slow-changing authorization facts: the operator pool and the Trust boundary that
-decides who may issue which command. It is static config, set when the beamline is brought online and changed
-deliberately. The per-run choices an operator or agent makes during a measurement (overrides, completions,
-steering) are live accountability data, not config; they live with [Decisions](experiment.md#decisions).
+*Who may act at 2-BM, and the trust policies that gate their commands. Static config; the per-run
+[decisions](experiment.md) operators and agents make are live, not here.*
 
 ## Who acts
 
