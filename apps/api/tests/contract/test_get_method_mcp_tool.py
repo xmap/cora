@@ -93,6 +93,10 @@ def test_mcp_get_method_tool_returns_structured_method_for_known_id() -> None:
     assert structured["needed_family_ids"] == [cap1]
     # Null until version_method runs (6b).
     assert structured["version"] is None
+    # compute classification mirrors the REST MethodResponse.
+    assert structured["execution_pattern"] == "Batch"
+    assert structured["monotone_quality"] is False
+    assert structured["resumable_from_checkpoint"] is False
 
 
 @pytest.mark.contract

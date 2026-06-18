@@ -7405,10 +7405,25 @@
             ],
             "title": "Deprecated At"
           },
+          "execution_pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Pattern"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "monotone_quality": {
+            "title": "Monotone Quality",
+            "type": "boolean"
           },
           "name": {
             "maxLength": 200,
@@ -7429,6 +7444,10 @@
             },
             "title": "Needed Supplies",
             "type": "array"
+          },
+          "resumable_from_checkpoint": {
+            "title": "Resumable From Checkpoint",
+            "type": "boolean"
           },
           "status": {
             "title": "Status",
@@ -7464,7 +7483,10 @@
           "needed_family_ids",
           "needed_supplies",
           "status",
-          "version"
+          "version",
+          "execution_pattern",
+          "monotone_quality",
+          "resumable_from_checkpoint"
         ],
         "title": "MethodResponse",
         "type": "object"

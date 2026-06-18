@@ -43,6 +43,12 @@ class MethodOutput(BaseModel):
     needed_supplies: list[str]
     status: str
     version: str | None
+    # compute classification, read from folded state (mirrors the REST
+    # MethodResponse). execution_pattern is the enum string value
+    # (Batch / Iterative / Streaming) or null; the two claims default False.
+    execution_pattern: str | None
+    monotone_quality: bool
+    resumable_from_checkpoint: bool
     created_at: datetime | None = None
     versioned_at: datetime | None = None
     deprecated_at: datetime | None = None
@@ -81,6 +87,11 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             needed_supplies=sorted(method.needed_supplies),
             status=method.status.value,
             version=method.version,
+            execution_pattern=(
+                method.execution_pattern.value if method.execution_pattern is not None else None
+            ),
+            monotone_quality=method.monotone_quality,
+            resumable_from_checkpoint=method.resumable_from_checkpoint,
             created_at=timestamps.created_at if timestamps is not None else None,
             versioned_at=timestamps.versioned_at if timestamps is not None else None,
             deprecated_at=timestamps.deprecated_at if timestamps is not None else None,

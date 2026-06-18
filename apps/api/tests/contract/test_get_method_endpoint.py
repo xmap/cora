@@ -20,13 +20,18 @@ def _define_method(
     name: str = "XRF Mapping",
     needed_family_ids: list[str] | None = None,
     needed_supplies: list[str] | None = None,
+    execution_pattern: str = "Batch",
+    monotone_quality: bool = False,
+    resumable_from_checkpoint: bool = False,
 ) -> UUID:
     body: dict[str, object] = {
-        "execution_pattern": "Batch",
+        "execution_pattern": execution_pattern,
         "name": name,
         # Capability per call so tests stay isolated.
         "capability_id": create_capability_via_api(client),
         "needed_family_ids": needed_family_ids if needed_family_ids is not None else [],
+        "monotone_quality": monotone_quality,
+        "resumable_from_checkpoint": resumable_from_checkpoint,
     }
     if needed_supplies is not None:
         body["needed_supplies"] = needed_supplies
@@ -154,6 +159,46 @@ def test_get_method_returns_422_for_malformed_method_id() -> None:
     with TestClient(create_app()) as client:
         response = client.get("/methods/not-a-uuid")
     assert response.status_code == 422
+
+
+# ---------- compute classification on response ----------
+
+
+@pytest.mark.contract
+def test_get_method_returns_compute_classification_defaults_for_batch() -> None:
+    """A Batch Method surfaces execution_pattern="Batch" and the two
+    claims default to False on the GET response."""
+    with TestClient(create_app()) as client:
+        method_id = _define_method(client, name="Gridrec", needed_family_ids=[])
+        response = client.get(f"/methods/{method_id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["execution_pattern"] == "Batch"
+    assert body["monotone_quality"] is False
+    assert body["resumable_from_checkpoint"] is False
+
+
+@pytest.mark.contract
+def test_get_method_round_trips_iterative_compute_classification() -> None:
+    """An Iterative Method with both claims set round-trips through the
+    GET response (define -> get)."""
+    with TestClient(create_app()) as client:
+        method_id = _define_method(
+            client,
+            name="SIRT",
+            needed_family_ids=[],
+            execution_pattern="Iterative",
+            monotone_quality=True,
+            resumable_from_checkpoint=True,
+        )
+        response = client.get(f"/methods/{method_id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["execution_pattern"] == "Iterative"
+    assert body["monotone_quality"] is True
+    assert body["resumable_from_checkpoint"] is True
 
 
 # ---------- Lifecycle timestamps in response ----------

@@ -71,6 +71,13 @@ class MethodResponse(BaseModel):
     needed_supplies: list[str]
     status: str
     version: str | None
+    # compute classification, read from folded state. execution_pattern
+    # is the enum string value (Batch / Iterative / Streaming) or null
+    # for unclassified (legacy / acquisition) Methods; the two claims
+    # default False. Rendered as a primitive string to match `status`.
+    execution_pattern: str | None
+    monotone_quality: bool
+    resumable_from_checkpoint: bool
     created_at: datetime | None = None
     versioned_at: datetime | None = None
     deprecated_at: datetime | None = None
@@ -126,6 +133,11 @@ async def get_methods(
         needed_supplies=sorted(method.needed_supplies),
         status=method.status.value,
         version=method.version,
+        execution_pattern=(
+            method.execution_pattern.value if method.execution_pattern is not None else None
+        ),
+        monotone_quality=method.monotone_quality,
+        resumable_from_checkpoint=method.resumable_from_checkpoint,
         created_at=timestamps.created_at if timestamps is not None else None,
         versioned_at=timestamps.versioned_at if timestamps is not None else None,
         deprecated_at=timestamps.deprecated_at if timestamps is not None else None,
