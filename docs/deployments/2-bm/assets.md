@@ -217,7 +217,7 @@ Identity, configuration, and connectivity of a separately-modelled timing-signal
 | `output_channel_count` | integer, 1-64 | yes | Number of independent trigger / gate output lines the box drives. Analogue of `MotionController.axis_count`. |
 | `protocol` | closed enum: `EPICS \| Aerotech_Native \| OMS_VME \| Serial_RS232 \| Serial_RS485 \| Modbus_TCP \| Other` | yes | Communication protocol, shared closed enum with `MotionController`. softGlueZynq is `EPICS`. |
 
-The detailed trigger routing (the softGlue logic-block wiring, e.g. the `PSO -> MUX2-1 -> GateDly1 -> camera Line2` path on the 2-BM box) is per-Run / per-Method configuration, not Asset settings: it changes with the scan, while the schema above records the durable box identity.
+The detailed trigger routing (the softGlue logic-block wiring, e.g. the `{PSO, trigILF} -> MUX2-1 -> GateDly1 -> camera Line2` path on the 2-BM box) is per-Run / per-Method configuration, not Asset settings: it changes with the scan, while the schema above records the durable box identity.
 
 ### `Camera`
 
@@ -343,7 +343,7 @@ Bound to Model `aerotech_automation1_ixr3`, drives `Hexapod` (back-reference on 
 
 ### `Timing`
 
-The softGlueZynq FPGA timing box (`2bmbMZ1:SG:`) that generates the camera trigger pulse train (`PSO -> MUX2-1 -> GateDly1 -> camera Line2`). It carries the `Pulsing` affordance via the `Controller` Role and, unlike a `MotionController`, is itself the actor (the pulse generator), not a driven device, so it carries no `controller_id`. Substrate ("FPGA") is not a Family axis: the box is a `TimingController` whose identity and gateware (bitstream) version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
+The softGlueZynq FPGA timing box (`2bmbMZ1:SG:`) that generates the camera trigger pulse train (`{PSO, trigILF} -> MUX2-1 -> GateDly1 -> camera Line2`, where `MUX2-1` is a 2:1 selector routing either the raw PSO train or the `trigILF` subset of PSO pulses to the camera, set per scan via `MUX2-1_SEL_Signal`, item_060). It carries the `Pulsing` affordance via the `Controller` Role and, unlike a `MotionController`, is itself the actor (the pulse generator), not a driven device, so it carries no `controller_id`. Substrate ("FPGA") is not a Family axis: the box is a `TimingController` whose identity and gateware (bitstream) version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
 
 The placeholders below land via `update_asset_settings` once 2-BM staff confirm the physical box (`TIME-1`). For an FPGA box the gateware/bitstream version is the reproducibility-critical field: the trigger logic can change between Runs, so a Run cannot answer "did the timing change between Run X and Run Y" without it.
 
