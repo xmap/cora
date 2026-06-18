@@ -62,7 +62,7 @@ The composition the Fixture materializes (Assembly to Fixture):
 
 ## Two axes: composition and containment
 
-Like the [Microscope](microscope.md), the tower uses both of CORA's structural axes, and they answer different questions.
+Like the [Microscope](microscope.md), the tower uses both of CORA's structural axes. The general mechanisms (containment, blueprint reuse, materialization) are defined in the [equipment module](../../../architecture/modules/equipment/index.md#composition-axes); this section is how the tower uses them.
 
 - **Composition** (Assembly to Fixture, flat) answers *what logical cluster presents here for binding*. The `SampleTower` Assembly composes five leaf slots; the Fixture binds them to six concrete Assets (the `sample_top` OneOrMore slot carries two). The Assembly `presents_as` the `Positioner` Role, so a Method can require a sample positioner as one typed unit.
 - **Containment** (`Asset.parent_id`, a recursive tree) answers *what physical thing holds what*. Here it is a literal-deep chain: `SampleTable` parents the `Hexapod`, which parents `LaminographyPitch`, then `Rotary`, then `SampleTop_X`, then `SampleTop_Z`. Each stage's position depends on the one below, which is the physical truth and is why the chain is deep rather than the Microscope's shallow housing-parents-all.
