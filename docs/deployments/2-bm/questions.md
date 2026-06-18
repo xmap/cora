@@ -94,6 +94,18 @@ Only the softGlueZynq timing box's gateware (bitstream) version is still open.
 | --- | --- | --- | --- | --- | --- |
 | TIME-1 | `Nice-to-have` | The softGlueZynq's gateware (bitstream) version? The box itself is identified on the components page (a Xilinx Zynq SoC on a MicroZed carrier, EPICS prefix `2bmbMZ1:SG:`); only the bitstream version is missing. Optional for now. | registered as a `TimingController` Asset; bitstream version still a placeholder | yes | [Settings](assets.md#settings) |
 
+## Fine-positioning piezo controllers (Jena)
+
+CORA has registered the two Piezosystem Jena piezo controllers (NV100D, item_027; NV200D/NET, item_028) as `MotionController` boxes, but the item pages describe how to operate them, not what each physically positions. These rows confirm that and the per-box detail; the function answer (PIEZO-1) is what lets CORA name and register the driven X/Y axes.
+
+| ID | Priority | Question | CORA assumes | Already done? | Resolves |
+| --- | --- | --- | --- | --- | --- |
+| PIEZO-1 | `Blocks-go-live` | What does each Jena piezo controller physically position, and in which hutch? The NV100D (`OpticsFineDrive`) is reached from the `mct_optics` screen, so CORA guesses it fine-positions a microscope optic; the NV200D (`SampleFineDrive`) is FPGA-stepped during tomography and "complements" the NV100D, so its X/Y could move an optics / detector element rather than the sample. The answer finalizes both provisional controller names and lets CORA register the driven axes. | provisional names `OpticsFineDrive` / `SampleFineDrive`, both placed in `2-BM-B`; driven element unconfirmed | yes | [Fine-positioning piezo controllers](assets.md#fine-positioning-piezo-controllers-jena-nv100d-nv200d) |
+| PIEZO-2 | `Nice-to-have` | The piezo actuator / flexure-stage models and their travel for each controller's two axes (item_028 notes the NV200D stroke as 0 to 100 um)? CORA needs these to register the X/Y `LinearStage` axes once PIEZO-1 names them. | no actuator model or travel on file; axes not yet registered | not yet | [Fine-positioning piezo controllers](assets.md#fine-positioning-piezo-controllers-jena-nv100d-nv200d) |
+| PIEZO-3 | `Nice-to-have` | Confirm the vendor (Piezosystem Jena) and the exact part numbers for the two controllers? CORA records `NV100D` and `NV200D/NET` as working values. | `Piezosystem Jena` `NV100D` / `NV200D/NET` (working values) | yes | [Vendor catalog](assets.md#vendor-catalog-models) |
+| PIEZO-4 | `Nice-to-have` | The two static IP addresses per controller, to record alongside the EPICS IOC handles (host `arcturus`, IOCs `JenaNV100D` / `JenaNV200D`)? | IOC host / names known from the item pages; per-axis IPs not recorded | not yet | [Fine-positioning piezo controllers](assets.md#fine-positioning-piezo-controllers-jena-nv100d-nv200d) |
+| PIEZO-5 | `Nice-to-have` | Confirm the NV200D FPGA trigger mapping and its purpose. item_028 routes the JenaX / JenaY cables to FPGA `out2` / `out3`, but labels the delay PVs `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses that cable map; which axis is on which output? And what is the 1024-position triggered-step mode used for (interlaced / dithered tomographic sampling)? | wired `Timing.out2 -> X`, `Timing.out3 -> Y` per the cable map, with the delay-PV labels recorded as the apparent cross; step use-case assumed fine-sampling during tomography | yes | [NV200D trigger wiring](assets.md#nv200d-trigger-wiring) |
+
 ## Beam path and front end
 
 Two rows cover the front-end windows and the B-station safety shutter.
