@@ -5,7 +5,7 @@
 This page holds the configured, slow-changing authorization facts: the operator pool and the Trust boundary that
 decides who may issue which command. It is static config, set when the beamline is brought online and changed
 deliberately. The per-run choices an operator or agent makes during a measurement (overrides, completions,
-steering) are live accountability data, not config; they live with [Decisions](decisions.md).
+steering) are live accountability data, not config; they live with [Decisions](experiment.md#decisions).
 
 ## Who acts
 

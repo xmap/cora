@@ -42,21 +42,21 @@ Setup before a scan.
 
 The act of measuring.
 
-- [Subjects](subjects.md): the samples mounted and measured.
-- [Runs](runs.md): execution instances and their state.
-- [Campaigns](campaigns.md): series that group many runs.
+- [Subjects](experiment.md#subjects): the samples mounted and measured.
+- [Runs](experiment.md#runs): execution instances and their state.
+- [Campaigns](experiment.md#campaigns): series that group many runs.
 - The recipe a run executes is a [Method](../../catalog/methods.md) (cross-facility) bound through an APS [Practice](../aps/index.md#the-techniques-adapted-here).
 
 ## Results
 
 What came out and whether it is trustworthy.
 
-- [Datasets](datasets.md): the data products, with lineage back to the run, subject, and equipment.
+- [Datasets](experiment.md#datasets): the data products, with lineage back to the run, subject, and equipment.
 
 ## Operating envelope
 
 Who and what governs.
 
-- [Decisions](decisions.md): the accountability ledger (overrides, steering).
+- [Decisions](experiment.md#decisions): the accountability ledger (overrides, steering).
 - [Cautions](cautions.md): operator advisories and tribal knowledge.
 - [Governance](governance.md): the static authorization boundary, the operator pool and the trust zones and policies that gate commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md#who-acts-here); on the beamline they surface only through the actions they take above.

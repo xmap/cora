@@ -15,7 +15,7 @@ links:
   - Recipe module: architecture/modules/recipe/index.md
   - Run module: architecture/modules/run/index.md
   - Operation module: architecture/modules/operation/index.md
-  - 2-BM runs: deployments/2-bm/runs.md
+  - 2-BM experiment: deployments/2-bm/experiment.md
   - 2-BM procedures: deployments/2-bm/procedures.md
 ---
 

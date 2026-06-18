@@ -103,14 +103,8 @@ nav:
         - Recipes: deployments/2-bm/recipes.md
         - Supplies: deployments/2-bm/supplies.md
         - Enclosures: deployments/2-bm/enclosures.md
-      - Running a measurement:
-        - Subjects: deployments/2-bm/subjects.md
-        - Runs: deployments/2-bm/runs.md
-        - Campaigns: deployments/2-bm/campaigns.md
-      - Results:
-        - Datasets: deployments/2-bm/datasets.md
+      - The experiment: deployments/2-bm/experiment.md
       - Operating envelope:
-        - Decisions: deployments/2-bm/decisions.md
         - Cautions: deployments/2-bm/cautions.md
         - Governance: deployments/2-bm/governance.md
     - Facility envelope:

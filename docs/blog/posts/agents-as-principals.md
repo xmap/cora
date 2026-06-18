@@ -15,7 +15,7 @@ links:
   - Where CORA Fits: blog/posts/where-cora-fits.md
   - Agent module: architecture/modules/agent/index.md
   - Access module: architecture/modules/access/index.md
-  - 2-BM decisions: deployments/2-bm/decisions.md
+  - 2-BM experiment: deployments/2-bm/experiment.md
 ---
 
 # Agents as Principals: one identity for humans and AI
