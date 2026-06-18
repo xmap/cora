@@ -111,9 +111,8 @@ nav:
         - Datasets: deployments/2-bm/datasets.md
       - Operating envelope:
         - Decisions: deployments/2-bm/decisions.md
-        - Policies: deployments/2-bm/policies.md
         - Cautions: deployments/2-bm/cautions.md
-        - Actors: deployments/2-bm/actors.md
+        - Governance: deployments/2-bm/governance.md
     - Facility envelope:
       - APS (Site):
         - deployments/aps/index.md

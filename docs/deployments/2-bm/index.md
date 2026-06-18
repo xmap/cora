@@ -58,6 +58,5 @@ What came out and whether it is trustworthy.
 Who and what governs.
 
 - [Decisions](decisions.md): the accountability ledger (overrides, steering).
-- [Policies](policies.md): the authorization rules in effect at the beamline.
 - [Cautions](cautions.md): operator advisories and tribal knowledge.
-- People and autonomous agents are facility principals at the [APS Site](../aps/index.md#who-acts-here); on the beamline they surface only through the actions they take above.
+- [Governance](governance.md): the static authorization boundary, the operator pool and the trust zones and policies that gate commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md#who-acts-here); on the beamline they surface only through the actions they take above.
