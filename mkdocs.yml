@@ -104,8 +104,8 @@ nav:
         - Recipes: deployments/2-bm/recipes.md
         - Enclosures: deployments/2-bm/enclosures.md
         - Cautions: deployments/2-bm/cautions.md
-      - Governance: deployments/2-bm/governance.md
       - Experiment: deployments/2-bm/experiment.md
+      - Governance: deployments/2-bm/governance.md
       - Model: deployments/2-bm/model.md
     - Facility envelope:
       - APS (Site):

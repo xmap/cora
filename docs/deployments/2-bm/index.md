@@ -15,8 +15,8 @@ The configured zones live in these docs; the live experiment is served by the ru
 - [Hardware](hardware.md): the installed beamline, source to detector, and its measured state.
 - [Techniques](techniques.md): what 2-BM can do, linked to the cross-facility [Catalog](../../catalog/index.md).
 - [Operations](operations.md): the task runbook, with procedures, recipes, permits, and cautions.
-- [Governance](governance.md): who may act, and the trust policies that gate commands.
 - [Experiment](experiment.md): the live view (runs, subjects, datasets), described here, served by the app.
+- [Governance](governance.md): who may act, and the trust policies that gate commands.
 
 Also: [Open questions](questions.md) for what we still need to confirm, and [Model](model.md) for the by-kind
 index into the zones above.
