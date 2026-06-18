@@ -152,6 +152,19 @@ The NV200D is stepped by the already-modelled softGlueZynq `Timing` box: the FPG
 
 Two wires carry the trigger: `Timing.out2 -> SampleFineDrive.step_x_in` and `Timing.out3 -> SampleFineDrive.step_y_in` (the JenaX and JenaY coaxial cables land on FPGA `out2` and `out3` per item_028). Each leg has a softGlue gate-delay PV set to the exposure time plus a margin: `2bmbMZ1:SG:GateDly-3_DLY` and `2bmbMZ1:SG:GateDly-2_DLY`. The delay-PV labels read `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses the cable-to-output map above; the apparent cross is recorded verbatim and flagged for confirmation (PIEZO-5). `signal_type = step_trigger_ttl` is a working free-text value (ports are open-vocabulary, up to 50 characters); it is distinct from the camera's `TriggerIn` because this edge advances a motion step rather than starting an exposure. The ports sit on the controller box in this slice; they migrate onto the per-axis Assets when those are registered. `OpticsFineDrive` (NV100D) carries no trigger input: item_027 describes no FPGA stepping for it.
 
+### Camera trigger wiring
+
+The camera trigger is the headline path of [item_060](https://docs2bm.readthedocs.io/en/latest/source/ops/item_060.html): the `Timing` box generates the trigger pulse train and routes it (the raw PSO train, or the `trigILF` subset selected by `MUX2-1`) through to the camera, where each edge starts an exposure. The durable leg is modelled as ports plus a wire resolved at Plan-bind time, the same idiom as the [NV200D legs](#nv200d-trigger-wiring) above; the [Microscope](equipment/microscope.md) carries no blueprint wire for it, because the camera trigger arrives from an external timing source wired at the Plan level:
+
+| Asset | Port | Direction | `signal_type` |
+| --- | --- | --- | --- |
+| `Timing` | `camera_trigger_out` | OUTPUT | `frame_trigger_ttl` |
+| `Camera` | `trigger_in` | INPUT | `frame_trigger_ttl` |
+
+One wire carries the trigger: `Timing.camera_trigger_out -> Camera.trigger_in`. `signal_type = frame_trigger_ttl` is deliberately distinct from the piezo legs' `step_trigger_ttl`: this edge starts an exposure, not a motion step. The `Camera` carries the `Triggerable` affordance, so `trigger_in` is its consumed `TriggerIn` signal. The executable model is `apps/api/tests/integration/scenarios/test_2bm_trigger_wiring.py`, which wires this leg alongside the two piezo legs and validates all three at Plan-bind time.
+
+Two labels on this leg stay open for 2-BM staff (`TIME-2`): the exact FPGA output channel feeding the camera (the path string ends at the camera's `Line2` input but names no box-side output, so `camera_trigger_out` is the CORA-side port name pending that number), and the `GateDly1` block name (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028, whereas `GateDly1` is so far unconfirmed). softGlue gate-delay `Width` and `DLY` are counted in 10 MHz clock cycles (100 ns per count, so `Width = 100` is a 10 us pulse, item_060); the concrete per-scan values are Method / Plan configuration, not Asset state.
+
 ## Family settings schemas
 
 NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: the 2-BM detector classes (the active FLIR Oryx and the decommissioned PCO Dimax) differ along settings axes (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not Family axes, so the high-framerate variant stays a `Camera` rather than a separate Family. `PseudoAxis` carries no settings schema (it is a facet Family).
@@ -217,7 +230,7 @@ Identity, configuration, and connectivity of a separately-modelled timing-signal
 | `output_channel_count` | integer, 1-64 | yes | Number of independent trigger / gate output lines the box drives. Analogue of `MotionController.axis_count`. |
 | `protocol` | closed enum: `EPICS \| Aerotech_Native \| OMS_VME \| Serial_RS232 \| Serial_RS485 \| Modbus_TCP \| Other` | yes | Communication protocol, shared closed enum with `MotionController`. softGlueZynq is `EPICS`. |
 
-The detailed trigger routing (the softGlue logic-block wiring, e.g. the `{PSO, trigILF} -> MUX2-1 -> GateDly1 -> camera Line2` path on the 2-BM box) is per-Run / per-Method configuration, not Asset settings: it changes with the scan, while the schema above records the durable box identity.
+The durable trigger wiring (the box's output ports and the Plan wires routing them to the camera and the piezo) is modelled as ports plus Plan wires; see [Camera trigger wiring](#camera-trigger-wiring) and [NV200D trigger wiring](#nv200d-trigger-wiring). What stays per-Run / per-Method configuration is the per-scan routing: which PSO subset `MUX2-1` selects (raw PSO or `trigILF`) and the `GateDly` width / delay values. The schema above records only the durable box identity.
 
 ### `Camera`
 
@@ -354,7 +367,7 @@ The placeholders below land via `update_asset_settings` once 2-BM staff confirm 
 | `output_channel_count` | `unknown-pending-confirmation` (TIME-1) |
 | `protocol` | `EPICS` |
 
-The detailed trigger routing (the softGlue logic-block wiring) is per-Run / per-Method configuration, not Asset settings.
+The durable trigger wiring is modelled as ports plus Plan wires ([Camera trigger wiring](#camera-trigger-wiring), [NV200D trigger wiring](#nv200d-trigger-wiring)); only the per-scan routing values (the `MUX2-1` select and the `GateDly` width / delay) stay Method / Plan configuration.
 
 ### `Rotary`
 

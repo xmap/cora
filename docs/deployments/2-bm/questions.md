@@ -86,11 +86,12 @@ Objectives and the turret selector on the Optique Peter microscope. Objectives a
 
 ## Timing
 
-Only the softGlueZynq timing box's gateware (bitstream) version is still open.
+The softGlueZynq box is registered and its trigger outputs are wired to the camera and the piezo (ports plus Plan wires). What stays open is the gateware (bitstream) version and two labels on the camera leg (the FPGA output channel and the `GateDly1` block name).
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
 | TIME-1 | `Nice-to-have` | The softGlueZynq's gateware (bitstream) version? The box itself is identified on the components page (a Xilinx Zynq SoC on a MicroZed carrier, EPICS prefix `2bmbMZ1:SG:`); only the bitstream version is missing. Optional for now. | registered as a `TimingController` Asset; bitstream version still a placeholder | yes | [Settings](assets.md#settings) |
+| TIME-2 | `Nice-to-have` | Two labels on the camera trigger leg: (a) which FPGA output channel feeds the camera (the routing string ends at the camera's `Line2` input but names no box-side output), and (b) the `GateDly1` block name on that leg (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028; `GateDly1` is so far unconfirmed). | wired `Timing.camera_trigger_out -> Camera.trigger_in` with `camera_trigger_out` a placeholder port name pending the channel; `GateDly1` recorded but flagged | yes | [Camera trigger wiring](assets.md#camera-trigger-wiring) |
 
 ## Fine-positioning piezo controllers (Jena)
 
