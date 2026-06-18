@@ -30,6 +30,7 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `ConditioningSlit` | `Device` | `Slit` | `2-BM` (white-beam slits; driven by `FrontEndDrive`) | `2-BM-A` |
 | `Filter` | `Device` | `Filter` | `2-BM` (foil changer; driven by `FrontEndDrive`) | `2-BM-A` |
 | `Filter_FoilSelector` | `Device` | `PseudoAxis` | `Filter` (discrete foil selector; LookupTable snaps a slot index to the downstream paddle position) | `2-BM-A` |
+| `DiagnosticFlag` | `Device` | `LinearStage` | `2-BM` (motorized phosphor beam-viewing flag, a vertical insert on `2bma:m44`; the phosphor is passive cargo; driven by `FrontEndDrive`; raised in Mono, parked in Pink) | `2-BM-A` |
 | `SampleSlit` | `Device` | `Slit` | `2-BM` (B-station slits; driven by `FrontEndDrive`) | `2-BM-B` |
 | `SampleSlit_VerticalTop` | `Device` | `PseudoAxis` | `SampleSlit` (energy-driven; top blade tracks the per-energy beam position in mm) | `2-BM-B` |
 | `SampleSlit_VerticalBottom` | `Device` | `PseudoAxis` | `SampleSlit` (energy-driven; bottom blade tracks the per-energy beam position in mm) | `2-BM-B` |
@@ -63,6 +64,8 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; writes the MCTOptics `LensSelect` composite; partition rule records lens-to-turret positions, MCTOptics actuates) | `2-BM-B` |
 | `PropagationDistance` | `Device` | `LinearStage` | `DetectorTable` (the sample-to-detector rail mounted on the detector table; carries the `Housing`; bound into Microscope Fixture; driven by `PropagationDistanceDrive`) | `2-BM-B` |
 | `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `Camera_HighRes` | `Device` | `Camera` | `Housing` (the alternate FLIR Oryx 31 MP, selected by `Camera_Selector`; not bound into the Microscope Fixture) | `2-BM-B` |
+| `Camera_Selector` | `Device` | `LinearStage` | `Housing` (Schunk LPTM 30; switches the optical path between the two cameras) | `2-BM-B` |
 | `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 
 ## Family affordances
@@ -152,6 +155,19 @@ The NV200D is stepped by the already-modelled softGlueZynq `Timing` box: the FPG
 
 Two wires carry the trigger: `Timing.out2 -> SampleFineDrive.step_x_in` and `Timing.out3 -> SampleFineDrive.step_y_in` (the JenaX and JenaY coaxial cables land on FPGA `out2` and `out3` per item_028). Each leg has a softGlue gate-delay PV set to the exposure time plus a margin: `2bmbMZ1:SG:GateDly-3_DLY` and `2bmbMZ1:SG:GateDly-2_DLY`. The delay-PV labels read `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses the cable-to-output map above; the apparent cross is recorded verbatim and flagged for confirmation (PIEZO-5). `signal_type = step_trigger_ttl` is a working free-text value (ports are open-vocabulary, up to 50 characters); it is distinct from the camera's `TriggerIn` because this edge advances a motion step rather than starting an exposure. The ports sit on the controller box in this slice; they migrate onto the per-axis Assets when those are registered. `OpticsFineDrive` (NV100D) carries no trigger input: item_027 describes no FPGA stepping for it.
 
+### Camera trigger wiring
+
+The camera trigger is the headline path of [item_060](https://docs2bm.readthedocs.io/en/latest/source/ops/item_060.html): the `Timing` box generates the trigger pulse train and routes it (the raw PSO train, or the `trigILF` subset selected by `MUX2-1`) through to the camera, where each edge starts an exposure. The durable leg is modelled as ports plus a wire resolved at Plan-bind time, the same idiom as the [NV200D legs](#nv200d-trigger-wiring) above; the [Microscope](equipment/microscope.md) carries no blueprint wire for it, because the camera trigger arrives from an external timing source wired at the Plan level:
+
+| Asset | Port | Direction | `signal_type` |
+| --- | --- | --- | --- |
+| `Timing` | `camera_trigger_out` | OUTPUT | `frame_trigger_ttl` |
+| `Camera` | `trigger_in` | INPUT | `frame_trigger_ttl` |
+
+One wire carries the trigger: `Timing.camera_trigger_out -> Camera.trigger_in`. `signal_type = frame_trigger_ttl` is deliberately distinct from the piezo legs' `step_trigger_ttl`: this edge starts an exposure, not a motion step. The `Camera` carries the `Triggerable` affordance, so `trigger_in` is its consumed `TriggerIn` signal. The executable model is `apps/api/tests/integration/scenarios/test_2bm_trigger_wiring.py`, which wires this leg alongside the two piezo legs and validates all three at Plan-bind time.
+
+Two labels on this leg stay open for 2-BM staff (`TIME-2`): the exact FPGA output channel feeding the camera (the path string ends at the camera's `Line2` input but names no box-side output, so `camera_trigger_out` is the CORA-side port name pending that number), and the `GateDly1` block name (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028, whereas `GateDly1` is so far unconfirmed). softGlue gate-delay `Width` and `DLY` are counted in 10 MHz clock cycles (100 ns per count, so `Width = 100` is a 10 us pulse, item_060); the concrete per-scan values are Method / Plan configuration, not Asset state.
+
 ## Family settings schemas
 
 NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: the 2-BM detector classes (the active FLIR Oryx and the decommissioned PCO Dimax) differ along settings axes (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not Family axes, so the high-framerate variant stays a `Camera` rather than a separate Family. `PseudoAxis` carries no settings schema (it is a facet Family).
@@ -217,7 +233,7 @@ Identity, configuration, and connectivity of a separately-modelled timing-signal
 | `output_channel_count` | integer, 1-64 | yes | Number of independent trigger / gate output lines the box drives. Analogue of `MotionController.axis_count`. |
 | `protocol` | closed enum: `EPICS \| Aerotech_Native \| OMS_VME \| Serial_RS232 \| Serial_RS485 \| Modbus_TCP \| Other` | yes | Communication protocol, shared closed enum with `MotionController`. softGlueZynq is `EPICS`. |
 
-The detailed trigger routing (the softGlue logic-block wiring, e.g. the `PSO -> MUX2-1 -> GateDly1 -> camera Line2` path on the 2-BM box) is per-Run / per-Method configuration, not Asset settings: it changes with the scan, while the schema above records the durable box identity.
+The durable trigger wiring (the box's output ports and the Plan wires routing them to the camera and the piezo) is modelled as ports plus Plan wires; see [Camera trigger wiring](#camera-trigger-wiring) and [NV200D trigger wiring](#nv200d-trigger-wiring). What stays per-Run / per-Method configuration is the per-scan routing: which PSO subset `MUX2-1` selects (raw PSO or `trigILF`) and the `GateDly` width / delay values. The schema above records only the durable box identity.
 
 ### `Camera`
 
@@ -343,7 +359,7 @@ Bound to Model `aerotech_automation1_ixr3`, drives `Hexapod` (back-reference on 
 
 ### `Timing`
 
-The softGlueZynq FPGA timing box (`2bmbMZ1:SG:`) that generates the camera trigger pulse train (`PSO -> MUX2-1 -> GateDly1 -> camera Line2`). It carries the `Pulsing` affordance via the `Controller` Role and, unlike a `MotionController`, is itself the actor (the pulse generator), not a driven device, so it carries no `controller_id`. Substrate ("FPGA") is not a Family axis: the box is a `TimingController` whose identity and gateware (bitstream) version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
+The softGlueZynq FPGA timing box (`2bmbMZ1:SG:`) that generates the camera trigger pulse train (`{PSO, trigILF} -> MUX2-1 -> GateDly1 -> camera Line2`, where `MUX2-1` is a 2:1 selector routing either the raw PSO train or the `trigILF` subset of PSO pulses to the camera, set per scan via `MUX2-1_SEL_Signal`, item_060). It carries the `Pulsing` affordance via the `Controller` Role and, unlike a `MotionController`, is itself the actor (the pulse generator), not a driven device, so it carries no `controller_id`. Substrate ("FPGA") is not a Family axis: the box is a `TimingController` whose identity and gateware (bitstream) version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
 
 The placeholders below land via `update_asset_settings` once 2-BM staff confirm the physical box (`TIME-1`). For an FPGA box the gateware/bitstream version is the reproducibility-critical field: the trigger logic can change between Runs, so a Run cannot answer "did the timing change between Run X and Run Y" without it.
 
@@ -354,7 +370,7 @@ The placeholders below land via `update_asset_settings` once 2-BM staff confirm 
 | `output_channel_count` | `unknown-pending-confirmation` (TIME-1) |
 | `protocol` | `EPICS` |
 
-The detailed trigger routing (the softGlue logic-block wiring) is per-Run / per-Method configuration, not Asset settings.
+The durable trigger wiring is modelled as ports plus Plan wires ([Camera trigger wiring](#camera-trigger-wiring), [NV200D trigger wiring](#nv200d-trigger-wiring)); only the per-scan routing values (the `MUX2-1` select and the `GateDly` width / delay) stay Method / Plan configuration.
 
 ### `Rotary`
 
@@ -423,6 +439,14 @@ The active 5 MP FLIR Oryx, confirmed by 2-BM staff (DET-8): a Sony IMX250 CMOS g
 | `max_framerate_hz` | `162 Hz` |
 | `sensor_kind` | `CMOS` |
 | `readout_mode` | `GlobalShutter` |
+
+### `Camera_HighRes`
+
+The alternate FLIR Oryx 31 MP, the camera the validated `detector_z_rail_alignment` ran on. Per-unit identity is confirmed (DET-8): IOC-reported model `Oryx ORX-10G-310S9M`, serial number `22150530`, firmware `1904.0.72.0`, bound to catalog Model `flir_oryx_31mp`; the serial, firmware, and the EPICS prefix `2bmSP2:` live in the Asset's `alternate_identifiers`. The `Camera_Selector` switches the optical path between this camera and the 5 MP `Camera`, so it is registered under the `Housing` but is not bound into the single-camera Microscope Fixture. Its pixel pitch is the same `3.45 um` as the 5 MP unit (staff `2bm-procedures`); the remaining `Camera`-schema settings (`sensor_width`, `sensor_height`, `bit_depth`, and the extended `max_framerate_hz` / `sensor_kind` / `readout_mode`) are not yet on file, so the Asset is registered identity-only with settings pending (DET-13).
+
+### `Camera_Selector`
+
+The Schunk LPTM 30 translation stage with folding mirrors that selects camera 0 / 1 (`2bmb:m5`, on the `SampleStageDrive` crate), bound to catalog Model `schunk_lptm_30`. The two saved positions are Pos.0 = 20 and Pos.1 = 15; the `LinearStage` settings (`min_position`, `max_position`, `max_speed`, `encoder_resolution`) are not yet recorded, so it is registered identity-only with settings pending.
 
 ### `Objective_10x` (10x)
 
@@ -558,8 +582,6 @@ All three `Table`-Family support tables are registered ([Inventory](#inventory))
 | Asset | Family |
 | --- | --- |
 | `BeamPositionMonitor` | `Diagnostic` |
-| `Camera_HighRes` | `Camera` (second FLIR Oryx, 31 MP, `2bmSP2:`) |
-| `Camera_Selector` | `LinearStage` (Schunk LPTM 30, `2bmb:m5`) |
 | Broader sample-stage motors | `LinearStage` + tilt motors |
 | IOC-hosted EPICS Devices | |
 

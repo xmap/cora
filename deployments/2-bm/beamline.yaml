@@ -116,6 +116,17 @@ conditioning-optics:
       foils: ["600 um Al", "150 um Al", "300 um C", "50 um C", "None"]   # operational downstream paddle (2bma:m18), in slot order; per-slot motor positions live in the index_position_table calibration (see test_2bm_filter_foil_setup.py)
       confirm: true
       note: two paddles - downstream (2bma:m18) is operational and its foils are listed above; upstream (2bma:m17) is bound in software but not in service (selecting it has no beam effect). Foil materials/positions per the docs2bm components page (FOIL-1)
+    - name: DiagnosticFlag
+      family: LinearStage
+      pv: "2bma:m44"
+      controller: FrontEndDrive
+      note: >
+        Motorized phosphor beam-viewing flag (the staff "diagnostic flag",
+        item_006 / item_020): a vertical insert on 2bma:m44. Raised into the
+        beam in Mono and parked in Pink; in Mono its Y is energy-dependent
+        (staff energy_move_flag). Exact in-hutch position, the energy-tracking
+        Y curve, and whether to model the position as a PseudoAxis are pending
+        (FLAG-1).
     - name: Mirror
       family: Mirror
       pv: { downstream_y: "2bma:m2", upstream_y: "2bma:m5", stripe_select: "2bma:m3" }
@@ -419,20 +430,23 @@ detector:
       part_number_reported: "Oryx ORX-10G-51S5M"   # IOC-reported; catalog SKU ORX-10G-51S5M-C is the same class (10G vs 10GS = form factor only)
       replaceable: true
     - name: Camera_HighRes
-      family: Camera             # camera 1 (item_020): FLIR Oryx 31 MP; role-name provisional; CORA Asset build deferred
-      model_reported: "Oryx ORX-10G-310S9M"        # DET-8 (#142): per-unit identity known, recorded for when it graduates from Pending
+      family: Camera             # camera 1 (item_020): FLIR Oryx 31 MP, the alternate detector selected by Camera_Selector
+      model: flir_oryx_31mp
+      model_reported: "Oryx ORX-10G-310S9M"        # DET-8 (#142): per-unit identity confirmed
       pv: "2bmSP2:"
       serial_number: "22150530"
       firmware_version: "1904.0.72.0"
-      new: true
-      confirm: "FLIR Oryx 31 MP; per-unit identity confirmed (DET-8); sensor size/pixel/bit-depth/frame-rate still to record when modeled"
+      pixel_size: 3.45 um        # shared with the 5 MP Oryx (staff 2bm-procedures)
+      note: >
+        Registered identity-only: sensor width/height, bit depth, frame rate,
+        sensor kind, and readout mode are pending staff (DET-13). The validated
+        detector_z_rail_alignment procedure ran on this camera.
     - name: Camera_Selector
       family: LinearStage        # Schunk LPTM 30 translation stage + folding mirrors, selects camera 0/1 (item_020)
       model: schunk_lptm_30
       pv: "2bmb:m5"              # on the ioc2bmb OMS VME58 crate (SampleStageDrive)
       controller: SampleStageDrive
-      new: true
-      confirm: "Schunk LPTM 30; positions Pos.0=20, Pos.1=15"
+      note: "Schunk LPTM 30; saved positions Pos.0=20, Pos.1=15. Registered identity-only; LinearStage settings pending."
     - name: DetectorWindow
       family: Window
       passive: true
@@ -511,7 +525,8 @@ controls:
     - name: Timing
       family: TimingController
       pv: "2bmbMZ1:SG:"
-      path: "PSO -> MUX2-1 -> GateDly1 -> camera Line2; out2 -> JenaX (GateDly-3_DLY); out3 -> JenaY (GateDly-2_DLY)"
+      path: "{PSO, trigILF} -> MUX2-1 -> GateDly1 -> camera Line2; out2 -> JenaX (GateDly-3_DLY); out3 -> JenaY (GateDly-2_DLY)"
+      # MUX2-1 is a 2:1 selector: input0 = raw PSO train, input1 = trigILF (a chosen subset of PSO pulses); routed per scan via MUX2-1_SEL_Signal (item_060)
       replaceable: true
       confirm: true
   software_iocs_not_modeled:

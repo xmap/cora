@@ -60,15 +60,32 @@ Both 2-BM safety shutters are open before a tomography run begins, opened by the
 
 ## From the 2-BM procedures source
 
-The [2bm-procedures](https://github.com/xray-imaging/2bm-procedures) repo ([rendered](https://docs2bm.readthedocs.io/en/latest/source/procedures.html)) is the staff-authored source for 2-BM procedures. Three are validated at the beamline; CORA has not modelled them yet (their target Assets are in [Pending](#pending)). Each staff procedure is structured as Name / Devices / Preconditions / Parameters / Steps / Postconditions / Failure modes; adopting that precondition-graph shape (the tables here are flat) is a future Operation BC concern.
+The [2bm-procedures](https://github.com/xray-imaging/2bm-procedures) repo ([rendered](https://docs2bm.readthedocs.io/en/latest/source/procedures.html)) is the staff-authored source for 2-BM procedures. Three are validated at the beamline; CORA has not modelled them yet (their target Assets are in [Pending](#pending)). Each staff procedure is structured as Name / Devices / Preconditions / Parameters / Steps / Postconditions / Failure modes; adopting that precondition-graph shape into the Operation BC `Procedure` aggregate is a future concern. The dependency graph for `detector_z_rail_alignment` is reproduced below as a first step, ahead of that modelling.
 
 | Staff procedure (validated) | Target Assets | Note |
 | --- | --- | --- |
-| Detector Z-rail alignment to the beam | `DetectorTable` (angular axes `2bmb:table3.AX` / `.AY`) | NOT the same as `roll_alignment` / `pitch_alignment` above: those align the sample `Hexapod`, not the detector table |
-| Centre and close an L3-style slit aperture | `ConditioningSlit` | two-phase: centre on Hcenter / Vcenter, then sequential H / V size reduction |
-| Calibrate the throw of each L3 slit blade motor | `ConditioningSlit` blade motors | drive each blade by +/- blade_throw_mm, measure edge shift, report per-blade slopes |
+| Detector Z-rail alignment to the beam | drives `PropagationDistance` (the Z walk on `2bmbAERO:m1`) and the `DetectorTable` angular axes (`2bmb:table3.AX` / `.AY`, the tilt correction); imaging chain `Scintillator` + `Camera` | NOT the same as `roll_alignment` / `pitch_alignment` above: those align the sample `Hexapod`, not the detector table. The staff `target_asset_ids` are `PropagationDistance`, `DetectorTable`, `Scintillator` (the staff name is `Scintillator_LuAG`; CORA keeps the material as a setting). |
+| Centre and close an L3-style slit aperture | `ConditioningSlit` (A) or `SampleSlit` (B) | runs on either L3 station (the `--slit-station` parameter, default B), not only the A-station slit; two-phase: centre on Hcenter / Vcenter, then sequential H / V size reduction |
+| Calibrate the throw of each L3 slit blade motor | `ConditioningSlit` (A) or `SampleSlit` (B) blade motors | runs on either L3 station (default B); drive each blade by +/- blade_throw_mm, measure edge shift, report per-blade slopes |
 
 The source also defines eight stub procedures as named targets for a precondition graph (each declares only its postcondition): `beamline_enabled`, `a_slits_open`, `energy_configured`, `flag_in_beam`, `b_shutter_open` (P6-50 safety shutter), `b_slits_configured`, `sample_out_of_beam`, `microscope_configured`. They become real Procedures as the alignment procedures' preconditions are modelled.
+
+### Precondition graph (`detector_z_rail_alignment`)
+
+The staff source carries the preconditions as a machine-readable list (the `PRECONDITIONS` array in `detector_z_rail_alignment.py`): each entry is a postcondition *state*, a satisfying *procedure* that establishes it, an informal *predicate* over PVs, and a 2bm-docs spec page. The state name and the procedure name differ, which the flat list above blurs: the eight stubs are the states; the procedures that satisfy them are named in the second column here. This is the shape a future `Procedure.preconditions` would carry; it is reproduced so the dependency edges are explicit.
+
+| Precondition state | Satisfying procedure | Predicate (representative PVs) | Spec |
+| --- | --- | --- | --- |
+| `beamline_enabled` | `enable_beamline` | `S02BM-PSS:StaA:SecureM` = 1 and `StaB:SecureM` = 1 and `FES:BeamBlockingM` = 0 and `SR-ACIS:2BM:FesPermitM` = 1 | item_003 |
+| `a_slits_open` | `set_a_slits` | A-station H and V size RBV >= 0.5 mm (CORA descriptor: `2bma:Slit1Hsize` / `Slit1Vsize`) | item_004 |
+| `energy_configured` | `set_energy_to_preselect` | Mirror M1 and DMM at the per-energy positions (energy lookup table) | item_005 |
+| `flag_in_beam` | `set_flag_in` | `2bma:m44.RBV` at the mode/energy target (0 mm in pink) | item_006 |
+| `b_shutter_open` | `open_b_shutter` | `S02BM-PSS:SBS:BeamBlockingM` = 0 (open; inverted enum, STATE 0 = not blocking) | item_007 |
+| `b_slits_configured` | `set_b_slits` | B slits about 1.0 x 1.0 mm, centred on the energy-set vertical Y | item_008 |
+| `sample_out_of_beam` | `move_sample_out_of_beam` | the mount-dependent sample axis at its out-of-beam position | item_009 |
+| `microscope_configured` | `configure_microscope_for_alignment` | `2bm:MCTOptics:LensSelect` = 0 (1.1x slot), `2bmb:table3.Y` at the energy Y, and 200 <= `2bmbAERO:m1.RBV` <= 500 mm | item_010 |
+
+Three further preconditions in the source have no dedicated procedure: `fes_shutter_open` (bundled into `enable_beamline`), `pss_interlocks_satisfied` (a sub-condition of `beamline_enabled`), and `mctoptics_ioc_reachable` (an infrastructure check: `caget` on `2bm:MCTOptics:CameraSelect` succeeds). Several predicates the staff left as TBD are already pinned by CORA's descriptor (the A-slit size PVs above are one example); folding those in is part of adopting the graph.
 
 ## Pending
 

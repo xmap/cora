@@ -14,9 +14,12 @@ The timing box is the first `TimingController` Asset at 2-BM. Unlike a
 pulse train, so the `Pulsing` affordance is its own (carried via the
 `Controller` Role), not a driven device's. Being a controller, it carries
 no `controller_id` back-reference, exactly as `FrontEndDrive` does in
-test_2bm_front_end_optics_setup.py. The per-Run trigger routing (the
-softGlue logic-block wiring) is Plan / Method configuration, not Asset
-state, so this slice registers identity only.
+test_2bm_front_end_optics_setup.py. The durable trigger wiring (the box's
+output ports and the Plan wires that route them to the camera and the
+NV200D piezo) is modeled in test_2bm_trigger_wiring.py; only the per-scan
+routing values (the MUX2-1 select, the trigILF pulse subset, the GateDly
+width / delay) stay Plan / Method configuration. This slice registers the
+box's identity only.
 
 ## Asset stack
 

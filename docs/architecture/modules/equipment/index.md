@@ -170,7 +170,7 @@ A useful cross-check on Family naming and gap detection: the function-and-anatom
 |--------------|-----------------------------------------------|----------------------------------------------------|-----------------------------------------|--------------------------|
 | **Defining** | -                                             | Mask, Slit, Collimator, Baffle                     | -                                       | Slits-with-Filters       |
 | **Modifying**| Mirror, Monochromator, Filter, Window         | Foil                                               | -                                       | DMM                      |
-| **Sensing**  | Camera, Scintillator, Objective               | -                                                  | -                                       | Microscope (presents_as Detector) |
+| **Sensing**  | Camera, Scintillator, Objective, Screen       | -                                                  | -                                       | Microscope (presents_as Detector) |
 | **Positioning** | -                                          | LinearStage, RotaryStage, Hexapod, Blade, PseudoAxis | -                                     | SampleStack              |
 | **Terminating** | -                                          | BeamStop                                           | Shutter                                 | -                        |
 | **Controlling** | -                                          | -                                                  | MotionController, TimingController, `<Domain>Controller` siblings | - |

@@ -243,6 +243,14 @@ models:
     manufacturer: { name: FLIR }
     part_number: "ORX-10G-51S5M-C"
     declared_families: [Camera]
+  - name: flir_oryx_31mp
+    manufacturer: { name: FLIR }
+    part_number: "ORX-10G-310S9M"
+    declared_families: [Camera]
+  - name: schunk_lptm_30
+    manufacturer: { name: Schunk }
+    part_number: "LPTM-30"
+    declared_families: [LinearStage]
   - name: crytur_luag
     manufacturer: { name: Crytur }
     part_number: "LuAG:Ce-100um"

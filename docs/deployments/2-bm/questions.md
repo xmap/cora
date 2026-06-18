@@ -82,17 +82,19 @@ Objectives and the turret selector on the Optique Peter microscope. Objectives a
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
 | DET-7 | `Nice-to-have` | The Mitutoyo part number for the 1.1x objective? The 2x and 10x part numbers are on record; the 1.1x is the one still missing, and all three currently share one catalog row. | one `Plan-Apo-NIR` family row | yes | [Vendor catalog](equipment/microscope.md#vendor-catalog-models) |
-| DET-9 | `Nice-to-have` | Which magnification is the middle objective physically at 2-BM, and its measured value at 25 keV? CORA records 2.0x (nominal), but the Microscope lens table lists the installed middle objective as 5x (measured about 4.93). Objectives are swappable, so please confirm what is installed now. | 2.0x nominal (provisional); docs suggest 5x installed | yes | [Microscope](equipment/microscope.md) |
+| DET-9 | `Nice-to-have` | Which magnification is the middle objective physically at 2-BM, and its measured value at 25 keV? CORA records 2.0x (nominal), but the Microscope lens table lists the installed middle objective as 5x (measured about 4.93). The field-tested staff `2bm-procedures` repo independently corroborates this: it hard-codes the middle objective (MCTOptics `LensSelect` index 1) as 5.0x. Objectives are swappable, so please confirm what is installed now. | 2.0x nominal (provisional); the microscope lens table and the field-tested staff repo both indicate 5x installed | yes | [Microscope](equipment/microscope.md) |
 | DET-11 | `Blocks-go-live` | The objective turret selector (`2bmb:m1`, Nanotec stepper): for each objective (10x, 2x, 1.1x), the physical slot order and the turret motor position that brings it into the beam? CORA models the selector as a discrete index axis (commanded slot index -> saved turret position), but the slot order and positions it carries today are placeholders. | placeholder slot order + positions; modelled as a discrete index axis | yes | [Microscope](equipment/microscope.md) |
 | DET-12 | `Nice-to-have` | When the propagation-distance stage (`2bmbAERO:m1`, the sample-to-detector rail) moves, does the whole detector (the Optique Peter housing with its objectives, scintillator, and camera) travel along the beam as one unit, or does only part of it move while the rest stays fixed to the detector table? Put another way: is the microscope mounted on top of that stage, or are the stage and the microscope mounted side by side on the table? | the stage carries the whole microscope, so CORA models the rail as the support the housing rests on; please confirm the physical mounting | yes | [Microscope](equipment/microscope.md) |
+| DET-13 | `Nice-to-have` | The FLIR Oryx 31 MP (`Camera_HighRes`, `2bmSP2:`) sensor specs to complete its `Camera` settings: sensor width and height (pixels), bit depth, max frame rate, sensor kind, and readout mode? Per-unit identity (model `ORX-10G-310S9M`, serial `22150530`, firmware `1904.0.72.0`) and the 3.45 um pixel pitch are already confirmed, so the Asset is registered identity-only until these land. | registered identity-only; sensor settings pending | yes | [Microscope](equipment/microscope.md) |
 
 ## Timing
 
-Only the softGlueZynq timing box's gateware (bitstream) version is still open.
+The softGlueZynq box is registered and its trigger outputs are wired to the camera and the piezo (ports plus Plan wires). What stays open is the gateware (bitstream) version and two labels on the camera leg (the FPGA output channel and the `GateDly1` block name).
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
 | TIME-1 | `Nice-to-have` | The softGlueZynq's gateware (bitstream) version? The box itself is identified on the components page (a Xilinx Zynq SoC on a MicroZed carrier, EPICS prefix `2bmbMZ1:SG:`); only the bitstream version is missing. Optional for now. | registered as a `TimingController` Asset; bitstream version still a placeholder | yes | [Settings](assets.md#settings) |
+| TIME-2 | `Nice-to-have` | Two labels on the camera trigger leg: (a) which FPGA output channel feeds the camera (the routing string ends at the camera's `Line2` input but names no box-side output), and (b) the `GateDly1` block name on that leg (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028; `GateDly1` is so far unconfirmed). | wired `Timing.camera_trigger_out -> Camera.trigger_in` with `camera_trigger_out` a placeholder port name pending the channel; `GateDly1` recorded but flagged | yes | [Camera trigger wiring](assets.md#camera-trigger-wiring) |
 
 ## Fine-positioning piezo controllers (Jena)
 
@@ -108,12 +110,13 @@ CORA has registered the two Piezosystem Jena piezo controllers (NV100D, item_027
 
 ## Beam path and front end
 
-Two rows cover the front-end windows and the B-station safety shutter.
+Three rows cover the front-end windows, the B-station safety shutter, and the diagnostic flag.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
 | BEAM-2 | `Nice-to-have` | How many front-end Be windows are in the stack, and what is their total thickness? | windows exist; count and thickness unconfirmed | not yet | [Pending](assets.md#pending) |
 | BEAM-3 | `Nice-to-have` | Is there a canonical APS drawing for the B-station safety shutter (`StationShutter`) beyond its RSS tag (`02-BM-A-P-01`)? | shutter modelled; only the RSS tag on file | not yet | [Engineering drawings](assets.md#engineering-drawings) |
+| FLAG-1 | `Nice-to-have` | For the diagnostic flag (`DiagnosticFlag`, `2bma:m44`): its exact in-hutch location (which 2-BM-A position / z), and the energy-dependent vertical positions it takes in Mono (the staff `energy_move_flag` table) plus its parked Pink position? CORA registers it as a `Screen` Asset on `FrontEndDrive`, raised in Mono and parked in Pink, but does not yet carry its positions or model the Y as an energy-tracking axis. | registered as a `Screen` Asset; in-hutch position and energy-tracking Y curve pending | yes | [Beam modes](procedures.md#beam-modes-mono-pink) |
 
 ## Energy and the optics
 

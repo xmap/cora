@@ -2,7 +2,7 @@
 
 *The 2-BM Fixture that materializes the cross-facility `Microscope` Assembly: the Optique Peter detector, binding eight Assets across six slots over a reusable `Optics` sub-assembly, the optics in one `Housing` that rides the `PropagationDistance` rail, presenting the `Detector` Role.*
 
-The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch (Enclosure `2-BM-B`). It is the operator-facing imaging system: a vendor housing carrying three swappable objectives on a sliding ball-screw selector, a linear propagation-distance stage (the sample-to-detector rail), a FLIR Oryx camera, and a LuAG scintillator. (A second Oryx camera and its selector are installed but not yet modelled; see [Open items](#open-items).) The whole unit is driven by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC process name, not the CORA model name). This page explains how CORA models it.
+The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch (Enclosure `2-BM-B`). It is the operator-facing imaging system: a vendor housing carrying three swappable objectives on a sliding ball-screw selector, a linear propagation-distance stage (the sample-to-detector rail), a FLIR Oryx camera, and a LuAG scintillator. (A second, higher-resolution Oryx camera and its `Camera_Selector` are also modelled; only the 31 MP sensor settings remain pending, see [Open items](#open-items).) The whole unit is driven by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC process name, not the CORA model name). This page explains how CORA models it.
 
 ## The model in one picture
 
@@ -85,6 +85,8 @@ The Microscope carries **zero `required_wires`**: lens selection is the `Objecti
 | `nanotec_st4118m1404_b` | Nanotec | `ST4118M1404-B` | `LinearStage` |
 | `mitutoyo_plan_apo` | Mitutoyo | `Plan-Apo-NIR` | `Objective` |
 | `flir_oryx` | FLIR | `ORX-10G-51S5M-C` | `Camera` |
+| `flir_oryx_31mp` | FLIR | `ORX-10G-310S9M` | `Camera` |
+| `schunk_lptm_30` | Schunk | `LPTM-30` | `LinearStage` |
 | `crytur_luag` | Crytur | `LuAG:Ce-100um` | `Scintillator` |
 
 Each Model carries the vendor identity PIDINST needs (Manufacturer + Model). The `Turret` binds the Nanotec Model because the objective-selector motor is a third-party stepper (Nanotec `ST4118M1404-B` with a Heidenhain ERO 1420 encoder) inside the Optique Peter housing, confirmed on the [components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html). Mitutoyo Plan Apo NIR carries one part number per magnification, so the single `mitutoyo_plan_apo` row splits into three once those numbers are confirmed.
@@ -126,9 +128,9 @@ Switch the active objective by writing the `Objective_Selector` index (0/1/2); t
 - The `Objective_Selector` `partition_rule` references the turret motor by Asset id, but nothing enforces that this is the same motor bound into the `turret` slot; there is no cross-slot constraint primitive today.
 - `register_fixture` requires every bound constituent to be installed in some Mount, so a pool-backed deployment gives each a lightweight Mount even though the housing approximates its placement.
 - Plan-binding does not yet enforce `needed_assembly_ids` satisfaction: a Plan that omits a Fixture materializing the required Assembly passes silently today.
-- Two cameras are installed (FLIR Oryx 5 MP at `2bmSP1:`, 31 MP at `2bmSP2:`), switched by a Schunk LPTM 30 selector (`2bmb:m5`) with rotation motors (`2bmb:m7`/`m8`); the v1 model binds the one camera, and the second camera plus selector is a follow-on recorded in the [descriptor](../../../../deployments/2-bm/beamline.yaml) with `new: true`.
+- The alternate 31 MP camera (`Camera_HighRes`) and the `Camera_Selector` (Schunk LPTM 30, `2bmb:m5`, rotation motors `2bmb:m7`/`m8`) are now registered Assets under the `Housing`: the selector switches the optical path between the 5 MP `Camera` (bound into the Fixture) and the 31 MP. `Camera_HighRes` is registered identity-only; its `Camera`-schema settings (sensor size, bit depth, frame rate, sensor kind, readout mode) are pending staff ([DET-13](../questions.md#the-microscope-detector)).
 - Containment models `PropagationDistance` (the sample-to-detector rail, `2bmbAERO:m1`) as carrying the `Housing` (`DetectorTable -> PropagationDistance -> Housing`), on the engineering assumption that moving the rail travels the whole detector. Whether the entire microscope rides the rail, or only part of it moves while the rest stays on the table, is the open world-fact [DET-12](../questions.md#the-microscope-detector); a staff answer that contradicts it would flip the rail back to a housing constituent.
 
 ## Exercised model
 
-The end-to-end model lives in `apps/api/tests/integration/scenarios/test_2bm_microscope_setup.py`: the Housing containment tree, the `Optics` sub-assembly, the `Microscope` Assembly presenting the `Detector` Role, the one Fixture binding eight Assets across six slots, and the objective-selector lookup, end to end against Postgres.
+The end-to-end model lives in `apps/api/tests/integration/scenarios/test_2bm_microscope_setup.py`: the Housing containment tree, the `Optics` sub-assembly, the `Microscope` Assembly presenting the `Detector` Role, the one Fixture binding eight Assets across six slots, the alternate 31 MP camera and its selector registered as Housing Assets outside the Fixture, and the objective-selector lookup, end to end against Postgres.
