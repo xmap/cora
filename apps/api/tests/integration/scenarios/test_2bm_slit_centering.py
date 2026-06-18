@@ -257,7 +257,7 @@ async def test_slit_centering_plays_out_end_to_end(
 
     step_store = _postgres_step_store(db_pool)
 
-    # Phase 1: centre the beam image on the detector via the slit centre.
+    # Centre leg: centre the beam image on the detector via the slit centre.
     centre_steps = (
         _setpoint(
             channel="Hcenter",
@@ -296,7 +296,7 @@ async def test_slit_centering_plays_out_end_to_end(
     )
     assert count_centre == 4
 
-    # Phase 2: close the aperture to the target size, holding the centre.
+    # Close leg: close the aperture to the target size, holding the centre.
     close_steps = (
         _setpoint(
             channel="Hsize",
