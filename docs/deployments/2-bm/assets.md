@@ -46,6 +46,8 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `LaminographyPitch` | `Device` | `TiltStage` | `Hexapod` (Kohzu SA16A goniometer `2bmb:m49`; tomography vs laminography is a tilt setpoint; driven by `SampleStageDrive`) | `2-BM-B` |
 | `PropagationDistanceDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `Timing` | `Device` | `TimingController` | `2-BM` (softGlueZynq trigger box; generates the camera trigger train via PSO, no `controller_id`) | `2-BM-B` |
+| `OpticsFineDrive` | `Device` | `MotionController` | `2-BM` (Jena NV100D piezo controller; drives deferred XY piezo optics axes, PIEZO-1/2) | `2-BM-B` |
+| `SampleFineDrive` | `Device` | `MotionController` | `2-BM` (Jena NV200D piezo controller; FPGA-stepped via `Timing`; drives deferred XY piezo axes, PIEZO-1/2) | `2-BM-B` |
 | `DetectorTable` | `Device` | `Table` | `2-BM` (detector support table `2bmb:table3`; carries the propagation-distance stage and the microscope `Housing`; `detector_z_rail_alignment` targets `.AX` / `.AY`) | `2-BM-B` |
 | `DetectorTable_X` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; translation along X; `2bmb:table3.X`) | `2-BM-B` |
 | `DetectorTable_Y` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; translation along Y; `2bmb:table3.Y`) | `2-BM-B` |
@@ -110,12 +112,14 @@ Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manu
 | `aerotech_tm3a` | Aerotech | `TM3-A-20B VDC-20B VDC / NO SPLIT / PS24-1 / C1ML-06 / C2ML-09 / US-115VAC` | `Housing` | `RotaryDriveChassis` |
 | `oms_vme58` | Oregon Micro Systems | `VME58` | `MotionController` | `SampleStageDrive`, `FrontEndDrive` |
 | `kohzu_cyat070` | Kohzu | `CYAT-070` | `LinearStage` | `SampleTop_X`, `SampleTop_Z` |
+| `piezosystem_jena_nv100d` | Piezosystem Jena | `NV100D` | `MotionController` | `OpticsFineDrive` |
+| `piezosystem_jena_nv200d` | Piezosystem Jena | `NV200D/NET` | `MotionController` | `SampleFineDrive` |
 
 Model ids are derived deterministically from the `(manufacturer, part number)` key, so the same vendor product converges on one id across facilities. `oms_vme58` is that case here: `SampleStageDrive` and `FrontEndDrive` are two physical boards of one product line, so both bind the single `oms_vme58` row. Two drives shipped with `unknown-pending-confirmation` placeholders (a placeholder part number is not a real vendor key, so it falls back to a random id rather than colliding with another unconfirmed drive); both have since re-registered under their derived ids once operator confirmation identified them, the hexapod drive as the Aerotech Automation1-iXR3 (`aerotech_automation1_ixr3`) and the PropagationDistance drive as the Aerotech Ensemble HLe (`aerotech_ensemble_hle`), each replacing its earlier placeholder (DRIVE-4).
 
 Part-number suffixes encode operationally significant variants: Aerotech `HEX300-230HL-E1-PL4-TAS` (`-E1` incremental encoder, `-PL4` ultra-high-accuracy preload, `-TAS` thermally stabilized), `ABRS-250MP-M-AS` (`ABRS` air-bearing rotary series, `-M` mid-precision class, `-AS` air-bearing-stage suffix), and `PRO225SL-1000` (`-1000` mm travel). The full type designation is stored as a single `part_number` string.
 
-All five `MotionController` Assets are named for the equipment they drive; vendor identity lives on the bound `Model` and the EPICS / IOC handle in `alternate_identifiers`, per the [Asset instance names](../../reference/conventions.md#asset-instance-names) convention.
+The five fully-wired `MotionController` Assets in the back-reference table below are each named for the equipment they drive; vendor identity lives on the bound `Model` and the EPICS / IOC handle in `alternate_identifiers`, per the [Asset instance names](../../reference/conventions.md#asset-instance-names) convention. Two further `MotionController` Assets, the Jena piezo controllers `OpticsFineDrive` and `SampleFineDrive`, carry provisional names pending the axes they position and so are not in the back-reference table yet; see [Fine-positioning piezo controllers](#fine-positioning-piezo-controllers-jena-nv100d-nv200d).
 
 | Controller Asset | Drives | Bound Model | Back-reference |
 | --- | --- | --- | --- |
@@ -130,6 +134,23 @@ The two OMS VME58 boards bind the same `oms_vme58` Model row (one product line, 
 The Microscope objective selector (`2bmb:m1`) and camera selector (`2bmb:m5`) are stepper motors, identified on the source page as a Nanotec `ST4118M1404-B` and a Schunk `LPTM 30`, driven through the `SampleStageDrive` OMS VME58 crate rather than through dedicated controller boxes. Whether to register those steppers as distinct controller Assets, or carry them as the selector stages' motors, is a deferred follow-on.
 
 The six `Hexapod_*` DoF facets are PseudoAxis Assets (virtual DoFs over the `2bmHXP` hexapod-kinematics solver) and do not bind to a vendor Model: the Model-binding flow (PIDINST) targets physical commissioned hardware, so the physical `Hexapod` carries the Model binding (`aerotech_hex300`) and the facets inherit vendor identity through the constituent wiring. The full six-DoF surface and its constituent-port wiring are described under [Hexapod DoF model](computed-axes.md#hexapod-dof-model). The Kohzu SA16A-RM goniometer (`LaminographyPitch`, `2bmb:m49`) is a SEPARATE, permanently-installed stage (staff source page `item_020`), not the hexapod's `Hexapod_Pitch` axis; tomography vs laminography is a tilt setpoint on it, not an insert/remove. `LaminographyPitch` is now registered as an Asset in the [Inventory](#inventory) (the `tilt` constituent of the [Sample tower](equipment/sample_tower.md)). Its Model `kohzu_sa16a` is in the [vendor catalog](../../catalog/index.md) and binds when the stack settings/model slice fills it in. The exact model is the operator working value pending confirmation (STAGE-6: the source swivel kit also lists `SA16A-RS` / `SA07A-R2L`).
+
+## Fine-positioning piezo controllers (Jena NV100D / NV200D)
+
+Two Piezosystem Jena piezo nanopositioning controllers are registered as `MotionController` Assets: `OpticsFineDrive` (Jena NV100D, staff item_027) for fine optics positioning reached from the `mct_optics` screen, and `SampleFineDrive` (Jena NV200D/NET, staff item_028) whose two piezo axes step under FPGA trigger control during tomography acquisition. Both run EPICS IOCs on the host `arcturus` (`JenaNV100D` / `JenaNV200D`), drive two piezo axes each (X/Y), and are network-attached through two static IPs per box (recorded once confirmed, PIEZO-4).
+
+Only the controller boxes are modelled in this slice. The driven XY piezo `LinearStage` axes, their containment, and the controllers' final names are deferred: an Asset name must say what it positions, and the item pages do not record which physical element each piezo moves or the scan use-case. That world-fact (PIEZO-1) finalises both the axis Assets (PIEZO-2) and the two provisional controller names. `OpticsFineDrive` is grounded in the `mct_optics` association; `SampleFineDrive` is a best-guess label (the NV200D complements the optics NV100D, so its driven element may be optics- or detector-side rather than the sample) and will be renamed if PIEZO-1 says otherwise.
+
+### NV200D trigger wiring
+
+The NV200D is stepped by the already-modelled softGlueZynq `Timing` box: the FPGA emits a TTL pulse on a camera-readout boundary that advances the piezo to its next preloaded position (up to 1024 positions per axis). The two trigger legs are modelled as ports on the boxes and wires resolved at Plan-bind time, mirroring the [hexapod constituent wiring](computed-axes.md#constituent-port-wiring):
+
+| Asset | Port | Direction | `signal_type` |
+| --- | --- | --- | --- |
+| `Timing` | `out2`, `out3` | OUTPUT | `step_trigger_ttl` |
+| `SampleFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
+
+Two wires carry the trigger: `Timing.out2 -> SampleFineDrive.step_x_in` and `Timing.out3 -> SampleFineDrive.step_y_in` (the JenaX and JenaY coaxial cables land on FPGA `out2` and `out3` per item_028). Each leg has a softGlue gate-delay PV set to the exposure time plus a margin: `2bmbMZ1:SG:GateDly-3_DLY` and `2bmbMZ1:SG:GateDly-2_DLY`. The delay-PV labels read `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses the cable-to-output map above; the apparent cross is recorded verbatim and flagged for confirmation (PIEZO-5). `signal_type = step_trigger_ttl` is a working free-text value (ports are open-vocabulary, up to 50 characters); it is distinct from the camera's `TriggerIn` because this edge advances a motion step rather than starting an exposure. The ports sit on the controller box in this slice; they migrate onto the per-axis Assets when those are registered. `OpticsFineDrive` (NV100D) carries no trigger input: item_027 describes no FPGA stepping for it.
 
 ## Family settings schemas
 

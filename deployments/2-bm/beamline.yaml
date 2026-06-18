@@ -489,11 +489,29 @@ controls:
       protocol: OMS_VME
       axis_count: 91
       note: "a-station crate (ioc2bma); drives the front-end + optics band and also the B-station SampleSlit (2bma:m9-m12). Named for its primary band; the full driven set spans both hutches and lives in the EPICS channel map, not the name."
+    - name: OpticsFineDrive          # PROVISIONAL name; finalizes on PIEZO-1 (what it positions)
+      family: MotionController
+      model: piezosystem_jena_nv100d
+      protocol: EPICS                # arcturus host, IOC JenaNV100D; open-loop V / closed-loop um
+      axis_count: 2
+      note: >-
+        Piezosystem Jena NV100D piezo nanopositioning controller for fine optics positioning
+        (reached from the mct_optics screen). Drives 2 piezo axes (X/Y); the driven XY stages,
+        containment, and final name are deferred (PIEZO-1/2). IPs/PVs: PIEZO-4.
+    - name: SampleFineDrive          # PROVISIONAL name; best-guess element, finalizes on PIEZO-1
+      family: MotionController
+      model: piezosystem_jena_nv200d
+      protocol: EPICS                # arcturus host, IOC JenaNV200D; Xon/Xoff flow control
+      axis_count: 2
+      note: >-
+        Piezosystem Jena NV200D/NET piezo controller; FPGA-triggered step mode for tomography
+        (up to 1024 preloaded positions, one step per TTL edge during camera readout). Complements
+        the NV100D. Driven XY stages + scan use-case deferred (PIEZO-1/2/5).
   triggering:
     - name: Timing
       family: TimingController
       pv: "2bmbMZ1:SG:"
-      path: "PSO -> MUX2-1 -> GateDly1 -> camera Line2"
+      path: "PSO -> MUX2-1 -> GateDly1 -> camera Line2; out2 -> JenaX (GateDly-3_DLY); out3 -> JenaY (GateDly-2_DLY)"
       replaceable: true
       confirm: true
   software_iocs_not_modeled:

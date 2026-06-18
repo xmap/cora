@@ -211,6 +211,14 @@ models:
     manufacturer: { name: "Oregon Micro Systems" }
     part_number: "VME58"
     declared_families: [MotionController]
+  - name: piezosystem_jena_nv100d
+    manufacturer: { name: "Piezosystem Jena" }   # working value; confirm vendor + part number (PIEZO-3)
+    part_number: "NV100D"
+    declared_families: [MotionController]
+  - name: piezosystem_jena_nv200d
+    manufacturer: { name: "Piezosystem Jena" }   # working value; item_028 title says "NV200D/NET" (PIEZO-3)
+    part_number: "NV200D/NET"
+    declared_families: [MotionController]
   - name: kohzu_cyat070
     manufacturer: { name: Kohzu }
     part_number: "CYAT-070"
