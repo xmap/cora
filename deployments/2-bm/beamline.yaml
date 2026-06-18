@@ -419,20 +419,23 @@ detector:
       part_number_reported: "Oryx ORX-10G-51S5M"   # IOC-reported; catalog SKU ORX-10G-51S5M-C is the same class (10G vs 10GS = form factor only)
       replaceable: true
     - name: Camera_HighRes
-      family: Camera             # camera 1 (item_020): FLIR Oryx 31 MP; role-name provisional; CORA Asset build deferred
-      model_reported: "Oryx ORX-10G-310S9M"        # DET-8 (#142): per-unit identity known, recorded for when it graduates from Pending
+      family: Camera             # camera 1 (item_020): FLIR Oryx 31 MP, the alternate detector selected by Camera_Selector
+      model: flir_oryx_31mp
+      model_reported: "Oryx ORX-10G-310S9M"        # DET-8 (#142): per-unit identity confirmed
       pv: "2bmSP2:"
       serial_number: "22150530"
       firmware_version: "1904.0.72.0"
-      new: true
-      confirm: "FLIR Oryx 31 MP; per-unit identity confirmed (DET-8); sensor size/pixel/bit-depth/frame-rate still to record when modeled"
+      pixel_size: 3.45 um        # shared with the 5 MP Oryx (staff 2bm-procedures)
+      note: >
+        Registered identity-only: sensor width/height, bit depth, frame rate,
+        sensor kind, and readout mode are pending staff (DET-13). The validated
+        detector_z_rail_alignment procedure ran on this camera.
     - name: Camera_Selector
       family: LinearStage        # Schunk LPTM 30 translation stage + folding mirrors, selects camera 0/1 (item_020)
       model: schunk_lptm_30
       pv: "2bmb:m5"              # on the ioc2bmb OMS VME58 crate (SampleStageDrive)
       controller: SampleStageDrive
-      new: true
-      confirm: "Schunk LPTM 30; positions Pos.0=20, Pos.1=15"
+      note: "Schunk LPTM 30; saved positions Pos.0=20, Pos.1=15. Registered identity-only; LinearStage settings pending."
     - name: DetectorWindow
       family: Window
       passive: true

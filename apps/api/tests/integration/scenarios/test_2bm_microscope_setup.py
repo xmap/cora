@@ -519,6 +519,38 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
                 correlation_id=_CORRELATION_ID,
             )
 
+    # ----- Alternate camera path (registered, not bound to the Fixture) -----
+    # The 31 MP FLIR Oryx is the ALTERNATE detector: the Camera_Selector (a
+    # Schunk LPTM 30 translation stage + folding mirrors) switches the optical
+    # path between it and the 5 MP camera that holds the Exactly1 `camera` slot.
+    # Both are registered under the housing; neither binds the single-camera
+    # Microscope Fixture. Camera_HighRes is identity-only: only its 3.45 um
+    # pixel pitch is confirmed, and the Camera schema requires
+    # sensor_width/height + pixel_size + bit_depth together, so settings stay
+    # unset pending staff specs (DET-13). The selector is likewise identity-only
+    # (LinearStage settings unknown beyond two saved positions). No settings
+    # means no update_asset_settings call, mirroring the objective_selector.
+    camera_highres_id = await bind_register_asset(deps)(
+        RegisterAsset(name="Camera_HighRes", tier=AssetTier.DEVICE, parent_id=housing_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_add_asset_family(deps)(
+        AddAssetFamily(asset_id=camera_highres_id, family_id=_CAP_CAMERA_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    camera_selector_id = await bind_register_asset(deps)(
+        RegisterAsset(name="Camera_Selector", tier=AssetTier.DEVICE, parent_id=housing_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_add_asset_family(deps)(
+        AddAssetFamily(asset_id=camera_selector_id, family_id=_CAP_LINEAR_STAGE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
     # ----- Re-parent the facility leaf Assets: the camera and scintillator sit
     #       inside the housing; the propagation-distance rail sits on the
     #       DetectorTable and carries the housing (so it parents the table, not
@@ -814,6 +846,17 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     sel_types = [e.event_type for e in sel_events]
     assert "AssetPartitionRuleUpdated" in sel_types
     assert "AssetSettingsUpdated" not in sel_types
+
+    # Alternate camera path: Camera_HighRes + Camera_Selector are registered
+    # under the housing, carry their Family, and are identity-only (no settings,
+    # specs pending DET-13) and unbound (the camera slot is held by the 5 MP).
+    for alt_id in (camera_highres_id, camera_selector_id):
+        alt_events, _ = await deps.event_store.load("Asset", alt_id)
+        alt_types = [e.event_type for e in alt_events]
+        assert alt_events[0].payload["parent_id"] == str(housing_id)
+        assert "AssetFamilyAdded" in alt_types
+        assert "AssetSettingsUpdated" not in alt_types
+        assert "AssetAttachedToFixture" not in alt_types
 
     # 5 Calibrations (4 magnification/thickness + the objective-selector
     # index_position_table), one revision each.

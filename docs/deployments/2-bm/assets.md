@@ -61,6 +61,8 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; writes the MCTOptics `LensSelect` composite; partition rule records lens-to-turret positions, MCTOptics actuates) | `2-BM-B` |
 | `PropagationDistance` | `Device` | `LinearStage` | `DetectorTable` (the sample-to-detector rail mounted on the detector table; carries the `Housing`; bound into Microscope Fixture; driven by `PropagationDistanceDrive`) | `2-BM-B` |
 | `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `Camera_HighRes` | `Device` | `Camera` | `Housing` (the alternate FLIR Oryx 31 MP, selected by `Camera_Selector`; not bound into the Microscope Fixture) | `2-BM-B` |
+| `Camera_Selector` | `Device` | `LinearStage` | `Housing` (Schunk LPTM 30; switches the optical path between the two cameras) | `2-BM-B` |
 | `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 
 ## Family affordances
@@ -401,6 +403,14 @@ The active 5 MP FLIR Oryx, confirmed by 2-BM staff (DET-8): a Sony IMX250 CMOS g
 | `sensor_kind` | `CMOS` |
 | `readout_mode` | `GlobalShutter` |
 
+### `Camera_HighRes`
+
+The alternate FLIR Oryx 31 MP, the camera the validated `detector_z_rail_alignment` ran on. Per-unit identity is confirmed (DET-8): IOC-reported model `Oryx ORX-10G-310S9M`, serial number `22150530`, firmware `1904.0.72.0`, bound to catalog Model `flir_oryx_31mp`; the serial, firmware, and the EPICS prefix `2bmSP2:` live in the Asset's `alternate_identifiers`. The `Camera_Selector` switches the optical path between this camera and the 5 MP `Camera`, so it is registered under the `Housing` but is not bound into the single-camera Microscope Fixture. Its pixel pitch is the same `3.45 um` as the 5 MP unit (staff `2bm-procedures`); the remaining `Camera`-schema settings (`sensor_width`, `sensor_height`, `bit_depth`, and the extended `max_framerate_hz` / `sensor_kind` / `readout_mode`) are not yet on file, so the Asset is registered identity-only with settings pending (DET-13).
+
+### `Camera_Selector`
+
+The Schunk LPTM 30 translation stage with folding mirrors that selects camera 0 / 1 (`2bmb:m5`, on the `SampleStageDrive` crate), bound to catalog Model `schunk_lptm_30`. The two saved positions are Pos.0 = 20 and Pos.1 = 15; the `LinearStage` settings (`min_position`, `max_position`, `max_speed`, `encoder_resolution`) are not yet recorded, so it is registered identity-only with settings pending.
+
 ### `Objective_10x` (10x)
 
 | Setting | Value |
@@ -535,8 +545,6 @@ All three `Table`-Family support tables are registered ([Inventory](#inventory))
 | Asset | Family |
 | --- | --- |
 | `BeamPositionMonitor` | `Diagnostic` |
-| `Camera_HighRes` | `Camera` (second FLIR Oryx, 31 MP, `2bmSP2:`) |
-| `Camera_Selector` | `LinearStage` (Schunk LPTM 30, `2bmb:m5`) |
 | Broader sample-stage motors | `LinearStage` + tilt motors |
 | IOC-hosted EPICS Devices | |
 
