@@ -35,6 +35,7 @@ from typing import Any
 from cora.calibration.quantities import (
     detector_pixel_size,
     effective_thickness,
+    energy_offset,
     energy_position_curve,
     index_position_table,
     magnification,
@@ -61,6 +62,7 @@ class CalibrationQuantity(StrEnum):
     EFFECTIVE_THICKNESS = "effective_thickness"
     ENERGY_POSITION_CURVE = "energy_position_curve"
     INDEX_POSITION_TABLE = "index_position_table"
+    ENERGY_OFFSET = "energy_offset"
 
 
 # Per-quantity schema registry (built at import time)
@@ -88,6 +90,10 @@ _SCHEMAS_BY_QUANTITY: dict[CalibrationQuantity, tuple[dict[str, Any], dict[str, 
     CalibrationQuantity.INDEX_POSITION_TABLE: (
         index_position_table.OPERATING_POINT_SCHEMA,
         index_position_table.VALUE_SCHEMA,
+    ),
+    CalibrationQuantity.ENERGY_OFFSET: (
+        energy_offset.OPERATING_POINT_SCHEMA,
+        energy_offset.VALUE_SCHEMA,
     ),
 }
 

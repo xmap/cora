@@ -1878,7 +1878,8 @@
           "magnification",
           "effective_thickness",
           "energy_position_curve",
-          "index_position_table"
+          "index_position_table",
+          "energy_offset"
         ],
         "title": "CalibrationQuantity",
         "type": "string"
