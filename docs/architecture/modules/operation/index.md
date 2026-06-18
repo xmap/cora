@@ -41,6 +41,8 @@ Out of scope
 
 `Procedure.kind` is a bare `str` (1-50 chars, validated at the decider) rather than a VO, mirroring the `Supply.kind` precedent: pilot vocabulary will settle and the field will graduate to a closed `ProcedureKind` StrEnum later. Documented starter vocabulary: `bakeout`, `characterization`, `alignment`, `recovery`, `beam_mode_change`, `id_maintenance`, `kb_switching`, `optical_alignment`, `vacuum_regeneration`.
 
+When a deployment instantiates a specific operation, the `kind` reads `<subject>_<operation-noun>` with the operation noun LAST (a gerund or a `-tion` / `-ment` form): `motor_homing`, `center_alignment`, `energy_characterization`, `detector_z_rail_alignment`, `slit_centering`, `blade_throw_characterization`. The operation noun is the family tell (the abstract vocabulary above names those operation families), echoing the `Family` noun-LAST rule ([naming](../../../reference/naming.md)). A verb-phrase-first form such as `center_and_close_slits` is the anti-pattern: fold it into one operation noun (`slit_centering`) and let the sub-steps live inside the act. The act/value split also shows in the noun choice: a measuring act is a `*_characterization` (`blade_throw_characterization`) and the value it produces is the Calibration (`blade_throw_scale`), never a procedure named `*_calibration`.
+
 ## FSM
 
 ```mermaid
