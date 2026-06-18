@@ -21,10 +21,11 @@ not the full runtime invariant. The full runtime check belongs in a
 conftest-style event-store interceptor that lands when the trigger
 fires (an actual controller activation attempt).
 
-Future leaves (e.g. `TimingController`, `Lantronix XPort`, IOC compute
-hosts) extend this fitness by adding their Family name to
-`_LEAF_FAMILIES`. Per the design memo's anti-hook, each new addition
-needs its own intentional-design call confirming the leaf shape fits.
+Future leaves (e.g. `TimingController`, `Lantronix XPort`) extend this
+fitness by adding their Family name to `_LEAF_FAMILIES` (the compute
+node host already landed as `ComputeNode`). Per the design memo's
+anti-hook, each new addition needs its own intentional-design call
+confirming the leaf shape fits.
 """
 
 import ast
@@ -34,7 +35,15 @@ import pytest
 
 from tests.architecture.conftest import tracked_python_files, tracked_test_files
 
-_LEAF_FAMILIES: frozenset[str] = frozenset({"MotionController"})
+# ComputeNode (project-compute-modeling-stage0-design L8):
+# the compute-hardware box that a reconstruction Plan binds. An empty-
+# affordance leaf like MotionController, it carries GPU/RAM in its
+# settings_schema and is never activated (define_plan / start_run gate
+# only on Decommissioned, so a Commissioned compute node binds + runs
+# without an activation ceremony). Its intentional-design call: a compute
+# node has no device-affordance command surface; usage in a recon Plan is
+# the hardware-identity fact that earns the Asset.
+_LEAF_FAMILIES: frozenset[str] = frozenset({"MotionController", "ComputeNode"})
 
 
 def _scan_define_family_calls(path: Path) -> list[tuple[int, str, ast.expr | None]]:
