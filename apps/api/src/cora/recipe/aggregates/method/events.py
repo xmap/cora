@@ -38,6 +38,7 @@ from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.recipe.aggregates.method.execution_pattern import ExecutionPattern
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,14 @@ class MethodDefined:
     # cross-BC dependency on Equipment Assemblies (composition
     # blueprints). Defaults empty for additive-state forward-compat.
     needed_assembly_ids: tuple[UUID, ...] = ()
+    # additive evolution (compute classification): the workload-classification
+    # fields. execution_pattern is REQUIRED at define_method but defaults
+    # None here for legacy-stream fold (from_stored returns None for
+    # pre-rollout payloads). monotone_quality / resumable_from_checkpoint
+    # default False. See [[project-compute-modeling-stage0-design]] L3/L5.
+    execution_pattern: ExecutionPattern | None = None
+    monotone_quality: bool = False
+    resumable_from_checkpoint: bool = False
 
 
 @dataclass(frozen=True)
@@ -244,6 +253,9 @@ def to_payload(event: MethodEvent) -> dict[str, Any]:
             needed_supplies=needed_supplies,
             capability_id=capability_id,
             needed_assembly_ids=needed_assembly_ids,
+            execution_pattern=execution_pattern,
+            monotone_quality=monotone_quality,
+            resumable_from_checkpoint=resumable_from_checkpoint,
             occurred_at=occurred_at,
         ):
             return {
@@ -261,6 +273,14 @@ def to_payload(event: MethodEvent) -> dict[str, Any]:
                 # additive: Assembly UUIDs sorted lexically by string
                 # form (matches needed_family_ids convention).
                 "needed_assembly_ids": sorted(str(a) for a in needed_assembly_ids),
+                # additive (compute classification): execution_pattern as the
+                # enum value or None; the two bool claims as-is. from_stored
+                # defaults to None/False for pre-rollout payloads.
+                "execution_pattern": (
+                    execution_pattern.value if execution_pattern is not None else None
+                ),
+                "monotone_quality": monotone_quality,
+                "resumable_from_checkpoint": resumable_from_checkpoint,
                 "occurred_at": occurred_at.isoformat(),
             }
         case MethodVersioned(
@@ -354,6 +374,7 @@ def from_stored(stored: StoredEvent) -> MethodEvent:
 
             def _build_method_defined() -> MethodDefined:
                 capability_raw = payload.get("capability_id")
+                execution_pattern_raw = payload.get("execution_pattern")
                 return MethodDefined(
                     method_id=UUID(payload["method_id"]),
                     name=payload["name"],
@@ -372,6 +393,16 @@ def from_stored(stored: StoredEvent) -> MethodEvent:
                     needed_assembly_ids=tuple(
                         UUID(a) for a in payload.get("needed_assembly_ids", ())
                     ),
+                    # forward-compat (compute classification): pre-rollout payloads
+                    # have no execution_pattern/monotone_quality/resumable
+                    # keys; default to None/False. Additive-evolution pattern.
+                    execution_pattern=(
+                        ExecutionPattern(execution_pattern_raw)
+                        if execution_pattern_raw is not None
+                        else None
+                    ),
+                    monotone_quality=bool(payload.get("monotone_quality", False)),
+                    resumable_from_checkpoint=bool(payload.get("resumable_from_checkpoint", False)),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
 

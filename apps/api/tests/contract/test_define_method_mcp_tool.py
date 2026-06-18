@@ -46,6 +46,7 @@ def test_mcp_define_method_tool_returns_structured_method_id() -> None:
                 "params": {
                     "name": "define_method",
                     "arguments": {
+                        "execution_pattern": "Batch",
                         "name": "XRF Mapping",
                         "capability_id": cap_id,
                         "needed_family_ids": [cap1],
@@ -77,6 +78,7 @@ def test_mcp_define_method_tool_accepts_empty_needed_family_ids() -> None:
                 "params": {
                     "name": "define_method",
                     "arguments": {
+                        "execution_pattern": "Batch",
                         "name": "Sample Cleaning",
                         "capability_id": cap_id,
                         "needed_family_ids": [],
@@ -106,6 +108,7 @@ def test_mcp_define_method_tool_accepts_needed_assembly_ids() -> None:
                 "params": {
                     "name": "define_method",
                     "arguments": {
+                        "execution_pattern": "Batch",
                         "name": "Microscope Tomography",
                         "capability_id": cap_id,
                         "needed_family_ids": [],
@@ -136,6 +139,7 @@ def test_mcp_define_method_tool_returns_iserror_on_invalid_input() -> None:
                 "params": {
                     "name": "define_method",
                     "arguments": {
+                        "execution_pattern": "Batch",
                         "name": "   ",
                         "capability_id": cap_id,
                         "needed_family_ids": [],
@@ -148,6 +152,66 @@ def test_mcp_define_method_tool_returns_iserror_on_invalid_input() -> None:
     result = body["result"]
     assert result["isError"] is True
     assert "Method name" in result["content"][0]["text"]
+
+
+@pytest.mark.contract
+def test_mcp_define_method_tool_returns_iserror_on_monotone_non_iterative() -> None:
+    """L4(b) parity with REST: monotone_quality=True on a non-Iterative
+    Method trips InvalidMethodMonotoneQualityError, which FastMCP wraps
+    as isError: true."""
+    with TestClient(create_app()) as client:
+        cap_id = create_capability_via_api(client)
+        session_headers = open_session(client)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 7,
+                "method": "tools/call",
+                "params": {
+                    "name": "define_method",
+                    "arguments": {
+                        "execution_pattern": "Batch",
+                        "monotone_quality": True,
+                        "name": "X",
+                        "capability_id": cap_id,
+                        "needed_family_ids": [],
+                    },
+                },
+            },
+            headers=session_headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is True
+
+
+@pytest.mark.contract
+def test_mcp_define_method_tool_returns_iserror_when_execution_pattern_omitted() -> None:
+    """execution_pattern is REQUIRED on the MCP tool (no default); a call
+    supplying name + capability_id but omitting execution_pattern is
+    rejected (isError), mirroring the REST 422-on-omit contract."""
+    with TestClient(create_app()) as client:
+        cap_id = create_capability_via_api(client)
+        session_headers = open_session(client)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 8,
+                "method": "tools/call",
+                "params": {
+                    "name": "define_method",
+                    "arguments": {
+                        "name": "X",
+                        "capability_id": cap_id,
+                        "needed_family_ids": [],
+                    },
+                },
+            },
+            headers=session_headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is True
 
 
 @pytest.mark.contract

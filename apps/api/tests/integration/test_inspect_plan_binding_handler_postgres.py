@@ -37,6 +37,7 @@ from cora.equipment.features.degrade_asset import DegradeAsset
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.recipe.aggregates.capability import ExecutorShape
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features import (
     define_capability,
     define_method,
@@ -82,6 +83,7 @@ async def test_inspect_plan_binding_returns_satisfied_against_real_postgres(
     )
     method_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=capability_id,
             name="Test Method",
             needed_family_ids=frozenset({family_id}),
@@ -179,6 +181,7 @@ async def test_inspect_plan_binding_enumerates_candidates_for_missing_affordance
     )
     method_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=capability_id,
             name="Test Method",
             needed_family_ids=frozenset({wired_family_id}),
@@ -309,6 +312,7 @@ async def test_inspect_plan_binding_enumerates_candidates_for_multiple_missing_a
     )
     method_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=capability_id,
             name="Test Method",
             needed_family_ids=frozenset(),
@@ -405,6 +409,7 @@ async def test_inspect_plan_binding_returns_empty_candidates_when_no_facility_fa
     )
     method_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=capability_id,
             name="Test Method",
             needed_family_ids=frozenset({rotary_family_id}),
@@ -482,6 +487,7 @@ async def test_inspect_plan_binding_surfaces_degraded_candidate_state(
     )
     method_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=capability_id,
             name="Test Method",
             needed_family_ids=frozenset(),

@@ -368,4 +368,4 @@ def test_method_content_subset_byte_stable_for_family_id_only_method() -> None:
     digest = hashlib.sha256(canonical_bytes).hexdigest()
     # If this hash changes, the canonical bytes shape changed.
     # Investigate before re-pinning.
-    assert digest == "a3313840c0146f37c7af75de1fa67eb8b4a7416b3a92de36c586994e65fb0ebf"
+    assert digest == "bdb0550167e348297a73323a1fb73a39929721f92417b2fd248de0cb39abae34"

@@ -95,6 +95,7 @@ from cora.equipment.aggregates.asset import (
     PORT_SIGNAL_TYPE_MAX_LENGTH,
     PortDirection,
 )
+from cora.recipe.aggregates.method.execution_pattern import ExecutionPattern
 from cora.shared.bounded_text import bounded_name
 from cora.shared.scope_markers import Annotated, DeferredVocabulary
 
@@ -124,6 +125,17 @@ ROLE_NAME_MAX_LENGTH = 50
 # files.
 ROLE_PORT_NAME_MAX_LENGTH = PORT_NAME_MAX_LENGTH
 ROLE_PORT_SIGNAL_TYPE_MAX_LENGTH = PORT_SIGNAL_TYPE_MAX_LENGTH
+# Stopping-key synonyms an ITERATIVE Method's parameters_schema must
+# declare at least one of (NLopt "one or two": budget OR tolerance;
+# both allowed, neither alone rejected) per
+# [[project-compute-modeling-stage0-design]] L4(a). Matched against the
+# top-level `properties` keys of the schema at
+# update_method_parameters_schema time.
+ITERATIVE_BUDGET_KEYS = frozenset(
+    {"max_iter", "num_iter", "nsteps", "n_trials", "max_epochs", "max_steps"}
+)
+ITERATIVE_TOLERANCE_KEYS = frozenset({"tol", "rtol", "atol", "ftol", "xtol"})
+ITERATIVE_STOPPING_KEYS = ITERATIVE_BUDGET_KEYS | ITERATIVE_TOLERANCE_KEYS
 
 
 class MethodStatus(StrEnum):
@@ -666,6 +678,26 @@ class Method:
     # [[project-equipment-isa-gap-research]] for the Function-aspect
     # gap context.
     required_roles: frozenset[RoleRequirement] = field(default_factory=frozenset[RoleRequirement])
+    # --- compute classification ([[project-compute-modeling-stage0-design]] L3) ---
+    # execution_pattern classifies the Method's WORKLOAD shape. REQUIRED
+    # at define_method (the command type is non-optional ExecutionPattern);
+    # defaults None at the STATE level so pre-rollout MethodDefined streams
+    # fold cleanly (additive-state pattern, same posture as capability_id).
+    # Legacy streams fold to None ("unclassified"), NOT Batch. Participates
+    # in content_subset (renders unconditionally as the enum value or None).
+    execution_pattern: ExecutionPattern | None = None
+    # monotone_quality: anytime-algorithm claim (Zilberstein 1996),
+    # meaningful only for ITERATIVE Methods. True iff a partial result at
+    # any iteration is statistically valid for steering. Default False is
+    # the safe asymmetric default. Cross-field invariant
+    # (monotone_quality=True requires execution_pattern==ITERATIVE) is
+    # enforced at define_method (L4(b)).
+    monotone_quality: bool = False
+    # resumable_from_checkpoint: algorithm-capability claim, INDEPENDENT of
+    # execution_pattern (STREAMING via offset/watermark replay and
+    # self-checkpointing BATCH may also be resumable; do NOT couple to
+    # ITERATIVE). Default False (a Gridrec one-shot cannot resume).
+    resumable_from_checkpoint: bool = False
 
     def content_subset(self) -> dict[str, object]:
         """Canonical content subset hashed into MethodVersioned.content_hash.
@@ -691,6 +723,16 @@ class Method:
             "needed_family_ids": sorted(str(f) for f in self.needed_family_ids),
             "needed_supplies": sorted(self.needed_supplies),
             "needed_assembly_ids": sorted(str(a) for a in self.needed_assembly_ids),
+            # compute classification participates in content identity: two
+            # Methods that differ only in execution_pattern / monotone_quality
+            # / resumable_from_checkpoint are different recipes. Rendered
+            # unconditionally (execution_pattern as enum value or None) per
+            # [[project-compute-modeling-stage0-design]] L5.
+            "execution_pattern": (
+                self.execution_pattern.value if self.execution_pattern is not None else None
+            ),
+            "monotone_quality": self.monotone_quality,
+            "resumable_from_checkpoint": self.resumable_from_checkpoint,
             # required_roles participates in the content hash so a
             # MethodVersioned event attests to the declared role slots
             # alongside parameters_schema / needed_family_ids / etc.
@@ -795,3 +837,47 @@ class MethodParametersNotSubsetError(ValueError):
         self.method_id = method_id
         self.capability_id = capability_id
         self.reason = reason
+
+
+class InvalidMethodMonotoneQualityError(ValueError):
+    """monotone_quality=True was declared on a non-ITERATIVE Method.
+
+    Cross-field invariant from [[project-compute-modeling-stage0-design]]
+    L4(b): the anytime-algorithm claim is only meaningful for
+    execution_pattern == ITERATIVE; BATCH and STREAMING have no concept
+    of monotone improvement. Raised by the define_method decider.
+    Invalid<X> validation family -> HTTP 400.
+    """
+
+    def __init__(self, execution_pattern: ExecutionPattern | None) -> None:
+        pattern = execution_pattern.value if execution_pattern is not None else None
+        super().__init__(
+            "monotone_quality=True requires execution_pattern="
+            f"{ExecutionPattern.ITERATIVE.value} (got: {pattern})"
+        )
+        self.execution_pattern = execution_pattern
+
+
+class InvalidMethodIterativeStoppingFieldError(ValueError):
+    """An ITERATIVE Method's parameters_schema declares no stopping key.
+
+    Invariant from [[project-compute-modeling-stage0-design]] L4(a): an
+    ITERATIVE Method must declare at least one of a max_iter-shape OR a
+    tol-shape property in its parameters_schema (NLopt "one or two";
+    both allowed, neither alone rejected). Enforced at
+    update_method_parameters_schema (where parameters_schema lands), NOT
+    define_method (where the schema does not yet exist). Invalid<X>
+    validation family -> HTTP 400.
+
+    `accepted_keys` lists the recognized stopping-key synonyms so the
+    operator can fix the schema (see ITERATIVE_STOPPING_KEYS).
+    """
+
+    def __init__(self, method_id: UUID, accepted_keys: frozenset[str]) -> None:
+        super().__init__(
+            f"Method {method_id} is {ExecutionPattern.ITERATIVE.value} but its "
+            "parameters_schema declares no stopping key; declare at least one of "
+            f"{', '.join(sorted(accepted_keys))}"
+        )
+        self.method_id = method_id
+        self.accepted_keys = accepted_keys

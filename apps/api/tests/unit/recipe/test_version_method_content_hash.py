@@ -28,6 +28,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
     Method,
     MethodName,
     MethodStatus,
@@ -47,8 +48,8 @@ _FIXED_FAMILY_B = UUID("01900000-0000-7000-8000-000000000222")
 #     event_type_to_payload_type("MethodVersioned"), <content_subset>)`.
 # Pinned here so future Pydantic / canonicalization / payloadType-scheme
 # drift trips a single fixture rather than every consumer test.
-_GOLDEN_EMPTY = "1c9086707d91be0176ae8d5cf36d126cd9afc4c7e1e0635279b1aec789127f91"
-_GOLDEN_POPULATED = "aeff03a82058bddb1430b2ea8c5c3351adb653682ce46bfead4ef36647cea73b"
+_GOLDEN_EMPTY = "1e63a1bc6bfa0167178f340a462ecfca7b60a9412fdc5777f37bd41d093f9e57"
+_GOLDEN_POPULATED = "2dac3c5a4c095fbb3cc94b8bb18c024932d7aea9b0698cef8651f29401ca2efb"
 
 _FIXED_ASM_A = UUID("01900000-0000-7000-8000-0000a0a0a0a1")
 _FIXED_ASM_B = UUID("01900000-0000-7000-8000-0000a0a0a0a2")
@@ -62,6 +63,9 @@ def _method(
     needed_family_ids: frozenset[UUID] = frozenset(),
     needed_supplies: frozenset[str] = frozenset(),
     needed_assembly_ids: frozenset[UUID] = frozenset(),
+    execution_pattern: ExecutionPattern | None = None,
+    monotone_quality: bool = False,
+    resumable_from_checkpoint: bool = False,
     status: MethodStatus = MethodStatus.DEFINED,
     version: str | None = None,
 ) -> Method:
@@ -75,6 +79,9 @@ def _method(
         capability_id=capability_id,
         needed_supplies=needed_supplies,
         needed_assembly_ids=needed_assembly_ids,
+        execution_pattern=execution_pattern,
+        monotone_quality=monotone_quality,
+        resumable_from_checkpoint=resumable_from_checkpoint,
     )
 
 
@@ -155,6 +162,12 @@ def test_decide_content_hash_matches_helper_output_directly() -> None:
             "needed_family_ids": [str(_FIXED_FAMILY_A)],
             "needed_supplies": ["nitrogen"],
             "needed_assembly_ids": [],
+            # compute classification joined the content subset; rendered
+            # unconditionally (execution_pattern as the enum value or
+            # None, the two claims as bools).
+            "execution_pattern": None,
+            "monotone_quality": False,
+            "resumable_from_checkpoint": False,
             # required_roles joined the content subset when the
             # positional role-tagging slice landed; empty list for a
             # Method that hasn't declared any roles.
@@ -265,6 +278,35 @@ def test_decide_hash_sensitive_to_needed_assembly_ids_membership() -> None:
     needed_assembly_ids participates in content identity (anti-hook #10)."""
     a = _decide(_method(needed_assembly_ids=frozenset({_FIXED_ASM_A})))
     b = _decide(_method(needed_assembly_ids=frozenset({_FIXED_ASM_A, _FIXED_ASM_B})))
+    assert a.content_hash != b.content_hash
+
+
+@pytest.mark.unit
+def test_decide_hash_sensitive_to_execution_pattern() -> None:
+    """execution_pattern participates in content identity (L5):
+    two Methods differing only in workload shape are different recipes,
+    and an unclassified (None) Method differs from a classified one."""
+    unclassified = _decide(_method(execution_pattern=None))
+    batch = _decide(_method(execution_pattern=ExecutionPattern.BATCH))
+    iterative = _decide(_method(execution_pattern=ExecutionPattern.ITERATIVE))
+    assert unclassified.content_hash != batch.content_hash
+    assert batch.content_hash != iterative.content_hash
+    assert unclassified.content_hash != iterative.content_hash
+
+
+@pytest.mark.unit
+def test_decide_hash_sensitive_to_monotone_quality() -> None:
+    """The anytime-algorithm claim is part of the recipe's content."""
+    a = _decide(_method(execution_pattern=ExecutionPattern.ITERATIVE, monotone_quality=False))
+    b = _decide(_method(execution_pattern=ExecutionPattern.ITERATIVE, monotone_quality=True))
+    assert a.content_hash != b.content_hash
+
+
+@pytest.mark.unit
+def test_decide_hash_differs_by_resumable_from_checkpoint() -> None:
+    """The checkpoint-resumability claim is part of the recipe's content."""
+    a = _decide(_method(resumable_from_checkpoint=False))
+    b = _decide(_method(resumable_from_checkpoint=True))
     assert a.content_hash != b.content_hash
 
 

@@ -9,6 +9,7 @@ from cora.equipment.aggregates.role import RoleNotFoundError
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.kernel import Kernel
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
     RoleName,
     RoleRequirement,
 )
@@ -39,7 +40,11 @@ def _build_3d_deps(store: InMemoryEventStore) -> Kernel:
 async def _define_helper(deps: Kernel) -> UUID:
     await seed_capability(deps.event_store, _CAPABILITY_ID)
     return await define_method.bind(deps)(
-        DefineMethod(name="Tomography", capability_id=_CAPABILITY_ID),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
+            name="Tomography",
+            capability_id=_CAPABILITY_ID,
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

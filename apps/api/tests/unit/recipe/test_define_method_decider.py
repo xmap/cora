@@ -13,6 +13,8 @@ from cora.recipe.aggregates.capability import (
     ExecutorShape,
 )
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
+    InvalidMethodMonotoneQualityError,
     InvalidMethodNameError,
     Method,
     MethodAlreadyExistsError,
@@ -41,6 +43,32 @@ def _capability(
     )
 
 
+def _cmd(
+    *,
+    name: str = "XRF Mapping",
+    capability_id: UUID,
+    needed_family_ids: frozenset[UUID] = frozenset(),
+    execution_pattern: ExecutionPattern = ExecutionPattern.BATCH,
+    monotone_quality: bool = False,
+    resumable_from_checkpoint: bool = False,
+) -> DefineMethod:
+    """DefineMethod factory defaulting execution_pattern to BATCH.
+
+    execution_pattern became a required command field with the compute
+    classification work. The decider tests that don't exercise the
+    workload-classification axis default it to BATCH here; the
+    dedicated monotone-quality invariant tests pass it explicitly.
+    """
+    return DefineMethod(
+        name=name,
+        capability_id=capability_id,
+        execution_pattern=execution_pattern,
+        needed_family_ids=needed_family_ids,
+        monotone_quality=monotone_quality,
+        resumable_from_checkpoint=resumable_from_checkpoint,
+    )
+
+
 @pytest.mark.unit
 def test_decide_emits_method_defined_when_stream_is_empty() -> None:
     new_id = uuid4()
@@ -48,9 +76,7 @@ def test_decide_emits_method_defined_when_stream_is_empty() -> None:
     cap = _capability()
     events = define_method.decide(
         state=None,
-        command=DefineMethod(
-            name="XRF Mapping", capability_id=cap.id, needed_family_ids=frozenset({cap1})
-        ),
+        command=_cmd(name="XRF Mapping", capability_id=cap.id, needed_family_ids=frozenset({cap1})),
         capability=cap,
         now=_NOW,
         new_id=new_id,
@@ -69,7 +95,7 @@ def test_decide_trims_name_via_value_object() -> None:
     cap = _capability()
     events = define_method.decide(
         state=None,
-        command=DefineMethod(
+        command=_cmd(
             name="  Step Tomography  ", capability_id=cap.id, needed_family_ids=frozenset()
         ),
         capability=cap,
@@ -87,9 +113,7 @@ def test_decide_accepts_empty_needed_family_ids() -> None:
     cap = _capability()
     events = define_method.decide(
         state=None,
-        command=DefineMethod(
-            name="Sample Cleaning", capability_id=cap.id, needed_family_ids=frozenset()
-        ),
+        command=_cmd(name="Sample Cleaning", capability_id=cap.id, needed_family_ids=frozenset()),
         capability=cap,
         now=_NOW,
         new_id=uuid4(),
@@ -107,9 +131,7 @@ def test_decide_does_not_validate_capability_existence() -> None:
     cap = _capability()
     events = define_method.decide(
         state=None,
-        command=DefineMethod(
-            name="X", capability_id=cap.id, needed_family_ids=frozenset({bogus_cap})
-        ),
+        command=_cmd(name="X", capability_id=cap.id, needed_family_ids=frozenset({bogus_cap})),
         capability=cap,
         now=_NOW,
         new_id=uuid4(),
@@ -123,7 +145,7 @@ def test_decide_rejects_invalid_name() -> None:
     with pytest.raises(InvalidMethodNameError):
         define_method.decide(
             state=None,
-            command=DefineMethod(name="", capability_id=cap.id, needed_family_ids=frozenset()),
+            command=_cmd(name="", capability_id=cap.id, needed_family_ids=frozenset()),
             capability=cap,
             now=_NOW,
             new_id=uuid4(),
@@ -141,7 +163,7 @@ def test_decide_rejects_existing_state() -> None:
     with pytest.raises(MethodAlreadyExistsError) as exc_info:
         define_method.decide(
             state=existing,
-            command=DefineMethod(name="Other", capability_id=cap.id, needed_family_ids=frozenset()),
+            command=_cmd(name="Other", capability_id=cap.id, needed_family_ids=frozenset()),
             capability=cap,
             now=_NOW,
             new_id=uuid4(),
@@ -154,9 +176,7 @@ def test_decide_is_pure_same_inputs_same_outputs() -> None:
     new_id = uuid4()
     cap1 = uuid4()
     cap = _capability()
-    command = DefineMethod(
-        name="XRF Mapping", capability_id=cap.id, needed_family_ids=frozenset({cap1})
-    )
+    command = _cmd(name="XRF Mapping", capability_id=cap.id, needed_family_ids=frozenset({cap1}))
     first = define_method.decide(
         state=None, command=command, capability=cap, now=_NOW, new_id=new_id
     )
@@ -183,7 +203,7 @@ def test_decide_raises_capability_not_found_when_stream_missing() -> None:
     with pytest.raises(CapabilityNotFoundError) as exc_info:
         define_method.decide(
             state=None,
-            command=DefineMethod(name="X", capability_id=bogus),
+            command=_cmd(name="X", capability_id=bogus),
             capability=None,
             now=_NOW,
             new_id=uuid4(),
@@ -202,7 +222,7 @@ def test_decide_raises_executor_mismatch_when_capability_excludes_method() -> No
     with pytest.raises(MethodCapabilityExecutorMismatchError) as exc_info:
         define_method.decide(
             state=None,
-            command=DefineMethod(name="X", capability_id=cap.id),
+            command=_cmd(name="X", capability_id=cap.id),
             capability=cap,
             now=_NOW,
             new_id=new_id,
@@ -219,7 +239,7 @@ def test_decide_accepts_method_shaped_capability_and_propagates_id() -> None:
     cap = _capability(shapes=frozenset({ExecutorShape.METHOD, ExecutorShape.PROCEDURE}))
     events = define_method.decide(
         state=None,
-        command=DefineMethod(name="X", capability_id=cap.id),
+        command=_cmd(name="X", capability_id=cap.id),
         capability=cap,
         now=_NOW,
         new_id=uuid4(),
@@ -237,10 +257,84 @@ def test_decide_returns_event_when_command_has_only_required_fields() -> None:
     cap = _capability()
     events = define_method.decide(
         state=None,
-        command=DefineMethod(name="X", capability_id=cap.id),
+        command=_cmd(name="X", capability_id=cap.id),
         capability=cap,
         now=_NOW,
         new_id=uuid4(),
     )
     assert events[0].needed_family_ids == ()
     assert events[0].capability_id == cap.id
+
+
+# ---------- compute classification (L3 / L4(b)) ----------
+
+
+@pytest.mark.unit
+def test_decide_event_carries_compute_classification_fields() -> None:
+    """The decided MethodDefined threads execution_pattern + the two
+    claims through from the command so the fold sees them."""
+    cap = _capability()
+    events = define_method.decide(
+        state=None,
+        command=_cmd(
+            name="Live Reco",
+            capability_id=cap.id,
+            execution_pattern=ExecutionPattern.STREAMING,
+            resumable_from_checkpoint=True,
+        ),
+        capability=cap,
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert events[0].execution_pattern is ExecutionPattern.STREAMING
+    assert events[0].monotone_quality is False
+    assert events[0].resumable_from_checkpoint is True
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "pattern",
+    [ExecutionPattern.BATCH, ExecutionPattern.STREAMING],
+)
+def test_decide_rejects_monotone_quality_on_non_iterative(
+    pattern: ExecutionPattern,
+) -> None:
+    """L4(b): the anytime-algorithm claim is only meaningful for
+    ITERATIVE workloads; monotone_quality=True on BATCH or STREAMING
+    is rejected (Invalid<X> family -> HTTP 400)."""
+    cap = _capability()
+    with pytest.raises(InvalidMethodMonotoneQualityError) as exc_info:
+        define_method.decide(
+            state=None,
+            command=_cmd(
+                name="X",
+                capability_id=cap.id,
+                execution_pattern=pattern,
+                monotone_quality=True,
+            ),
+            capability=cap,
+            now=_NOW,
+            new_id=uuid4(),
+        )
+    assert exc_info.value.execution_pattern is pattern
+
+
+@pytest.mark.unit
+def test_decide_accepts_monotone_quality_on_iterative() -> None:
+    """An ITERATIVE Method may claim monotone_quality; the event carries it."""
+    cap = _capability()
+    events = define_method.decide(
+        state=None,
+        command=_cmd(
+            name="SIRT",
+            capability_id=cap.id,
+            execution_pattern=ExecutionPattern.ITERATIVE,
+            monotone_quality=True,
+        ),
+        capability=cap,
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    assert len(events) == 1
+    assert events[0].execution_pattern is ExecutionPattern.ITERATIVE
+    assert events[0].monotone_quality is True

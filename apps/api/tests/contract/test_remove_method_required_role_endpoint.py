@@ -22,7 +22,12 @@ def _define_method_with_role(
     cap_id = create_capability_via_api(client)
     method_response = client.post(
         "/methods",
-        json={"name": "Tomography", "capability_id": cap_id, "needed_family_ids": []},
+        json={
+            "execution_pattern": "Batch",
+            "name": "Tomography",
+            "capability_id": cap_id,
+            "needed_family_ids": [],
+        },
     )
     assert method_response.status_code == 201, method_response.text
     method_id = UUID(method_response.json()["method_id"])

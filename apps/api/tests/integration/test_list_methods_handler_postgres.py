@@ -19,6 +19,7 @@ import pytest
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.recipe._projections import register_recipe_projections
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define
 from cora.recipe.features.deprecate_method import DeprecateMethod
@@ -60,7 +61,11 @@ async def test_define_emits_defined_status_with_null_version_tag(
     method_id = uuid4()
     deps = await _build_seeded_deps(db_pool, [method_id, uuid4()])
     await bind_define(deps)(
-        DefineMethod(capability_id=_CAPABILITY_ID, name="Continuous Rotation Tomography"),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
+            capability_id=_CAPABILITY_ID,
+            name="Continuous Rotation Tomography",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -85,7 +90,11 @@ async def test_full_lifecycle_define_version_deprecate(db_pool: asyncpg.Pool) ->
     deps = _build_deps(db_pool, [method_id, uuid4(), uuid4(), uuid4()])
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     await bind_define(deps)(
-        DefineMethod(capability_id=_CAPABILITY_ID, name="Powder Diffraction"),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
+            capability_id=_CAPABILITY_ID,
+            name="Powder Diffraction",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -122,12 +131,20 @@ async def test_status_filter_returns_only_matching_rows(db_pool: asyncpg.Pool) -
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     define = bind_define(deps)
     await define(
-        DefineMethod(capability_id=_CAPABILITY_ID, name="DefinedOnly"),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
+            capability_id=_CAPABILITY_ID,
+            name="DefinedOnly",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     await define(
-        DefineMethod(capability_id=_CAPABILITY_ID, name="ToBeVersioned"),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
+            capability_id=_CAPABILITY_ID,
+            name="ToBeVersioned",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -161,7 +178,11 @@ async def test_cursor_walks_pages(db_pool: asyncpg.Pool) -> None:
     define = bind_define(deps)
     for i in range(5):
         await define(
-            DefineMethod(capability_id=_CAPABILITY_ID, name=f"Method{i:02d}"),
+            DefineMethod(
+                execution_pattern=ExecutionPattern.BATCH,
+                capability_id=_CAPABILITY_ID,
+                name=f"Method{i:02d}",
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

@@ -31,7 +31,12 @@ def test_post_methods_returns_201_with_method_id() -> None:
         _cap_id = create_capability_via_api(client)
         response = client.post(
             "/methods",
-            json={"name": "XRF Mapping", "capability_id": _cap_id, "needed_family_ids": [cap1]},
+            json={
+                "execution_pattern": "Batch",
+                "name": "XRF Mapping",
+                "capability_id": _cap_id,
+                "needed_family_ids": [cap1],
+            },
         )
 
     assert response.status_code == 201
@@ -47,7 +52,12 @@ def test_post_methods_accepts_empty_needed_family_ids() -> None:
         _cap_id = create_capability_via_api(client)
         response = client.post(
             "/methods",
-            json={"name": "Sample Cleaning", "capability_id": _cap_id, "needed_family_ids": []},
+            json={
+                "execution_pattern": "Batch",
+                "name": "Sample Cleaning",
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+            },
         )
     assert response.status_code == 201
 
@@ -58,7 +68,12 @@ def test_post_methods_trims_whitespace_in_name() -> None:
         _cap_id = create_capability_via_api(client)
         response = client.post(
             "/methods",
-            json={"name": "  XRF Mapping  ", "capability_id": _cap_id, "needed_family_ids": []},
+            json={
+                "execution_pattern": "Batch",
+                "name": "  XRF Mapping  ",
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+            },
         )
     assert response.status_code == 201
 
@@ -86,7 +101,13 @@ def test_post_methods_rejects_empty_name_with_422() -> None:
     with TestClient(create_app()) as client:
         _cap_id = create_capability_via_api(client)
         response = client.post(
-            "/methods", json={"name": "", "capability_id": _cap_id, "needed_family_ids": []}
+            "/methods",
+            json={
+                "execution_pattern": "Batch",
+                "name": "",
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+            },
         )
     assert response.status_code == 422
 
@@ -97,7 +118,12 @@ def test_post_methods_rejects_too_long_name_with_422() -> None:
         _cap_id = create_capability_via_api(client)
         response = client.post(
             "/methods",
-            json={"name": "a" * 201, "capability_id": _cap_id, "needed_family_ids": []},
+            json={
+                "execution_pattern": "Batch",
+                "name": "a" * 201,
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+            },
         )
     assert response.status_code == 422
 
@@ -109,7 +135,12 @@ def test_post_methods_rejects_whitespace_only_name_with_400() -> None:
         _cap_id = create_capability_via_api(client)
         response = client.post(
             "/methods",
-            json={"name": "   ", "capability_id": _cap_id, "needed_family_ids": []},
+            json={
+                "execution_pattern": "Batch",
+                "name": "   ",
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+            },
         )
     assert response.status_code == 400
     body = response.json()
@@ -128,6 +159,7 @@ def test_post_methods_accepts_needed_assembly_ids() -> None:
         response = client.post(
             "/methods",
             json={
+                "execution_pattern": "Batch",
                 "name": "Microscope Tomography",
                 "capability_id": _cap_id,
                 "needed_family_ids": [],
@@ -145,7 +177,12 @@ def test_post_methods_accepts_omitted_needed_assembly_ids() -> None:
         _cap_id = create_capability_via_api(client)
         response = client.post(
             "/methods",
-            json={"name": "X", "capability_id": _cap_id, "needed_family_ids": []},
+            json={
+                "execution_pattern": "Batch",
+                "name": "X",
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+            },
         )
     assert response.status_code == 201
 
@@ -157,6 +194,7 @@ def test_post_methods_rejects_non_uuid_needed_assembly_with_422() -> None:
         response = client.post(
             "/methods",
             json={
+                "execution_pattern": "Batch",
                 "name": "X",
                 "capability_id": _cap_id,
                 "needed_family_ids": [],
@@ -172,7 +210,12 @@ def test_post_methods_rejects_non_uuid_needed_family_with_422() -> None:
         _cap_id = create_capability_via_api(client)
         response = client.post(
             "/methods",
-            json={"name": "X", "capability_id": _cap_id, "needed_family_ids": ["not-a-uuid"]},
+            json={
+                "execution_pattern": "Batch",
+                "name": "X",
+                "capability_id": _cap_id,
+                "needed_family_ids": ["not-a-uuid"],
+            },
         )
     assert response.status_code == 422
 
@@ -185,6 +228,7 @@ def test_post_methods_uses_max_length_constant_from_domain() -> None:
         response = client.post(
             "/methods",
             json={
+                "execution_pattern": "Batch",
                 "name": "a" * METHOD_NAME_MAX_LENGTH,
                 "capability_id": _cap_id,
                 "needed_family_ids": [],
@@ -203,7 +247,12 @@ def test_post_methods_accepts_family_ids_without_verifying_existence() -> None:
         _cap_id = create_capability_via_api(client)
         response = client.post(
             "/methods",
-            json={"name": "X", "capability_id": _cap_id, "needed_family_ids": [bogus_cap]},
+            json={
+                "execution_pattern": "Batch",
+                "name": "X",
+                "capability_id": _cap_id,
+                "needed_family_ids": [bogus_cap],
+            },
         )
     assert response.status_code == 201
 
@@ -227,7 +276,12 @@ def test_post_methods_returns_409_when_method_already_exists() -> None:
             # well-formed UUID (no Capability stream seeding required).
             response = client.post(
                 "/methods",
-                json={"name": "X", "capability_id": str(uuid4()), "needed_family_ids": []},
+                json={
+                    "execution_pattern": "Batch",
+                    "name": "X",
+                    "capability_id": str(uuid4()),
+                    "needed_family_ids": [],
+                },
             )
     finally:
         app.dependency_overrides.clear()
@@ -258,3 +312,88 @@ def test_post_methods_openapi_schema_marks_capability_id_required() -> None:
         "DefineMethodRequest must expose capability_id at the OpenAPI surface"
     )
     assert "capability_id" in component["required"], "capability_id is REQUIRED at the API boundary"
+
+
+@pytest.mark.contract
+def test_post_methods_without_execution_pattern_returns_422() -> None:
+    """execution_pattern is REQUIRED at the boundary; omitting it fails
+    Pydantic schema validation (422) before reaching the decider."""
+    with TestClient(create_app()) as client:
+        _cap_id = create_capability_via_api(client)
+        response = client.post(
+            "/methods",
+            json={"name": "X", "capability_id": _cap_id, "needed_family_ids": []},
+        )
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_methods_rejects_unknown_execution_pattern_with_422() -> None:
+    """execution_pattern is a closed enum; an unknown value is a 422."""
+    with TestClient(create_app()) as client:
+        _cap_id = create_capability_via_api(client)
+        response = client.post(
+            "/methods",
+            json={
+                "execution_pattern": "Quantum",
+                "name": "X",
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+            },
+        )
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_methods_monotone_quality_on_non_iterative_returns_400() -> None:
+    """L4(b) at the boundary: monotone_quality=True on a non-Iterative
+    Method maps to 400 via the Invalid<X> validation handler (NOT the
+    409 transition handler)."""
+    with TestClient(create_app()) as client:
+        _cap_id = create_capability_via_api(client)
+        response = client.post(
+            "/methods",
+            json={
+                "execution_pattern": "Batch",
+                "monotone_quality": True,
+                "name": "X",
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+            },
+        )
+    assert response.status_code == 400
+
+
+@pytest.mark.contract
+def test_post_methods_accepts_iterative_with_monotone_quality() -> None:
+    """An Iterative Method may claim monotone_quality; boundary returns 201."""
+    with TestClient(create_app()) as client:
+        _cap_id = create_capability_via_api(client)
+        response = client.post(
+            "/methods",
+            json={
+                "execution_pattern": "Iterative",
+                "monotone_quality": True,
+                "name": "SIRT",
+                "capability_id": _cap_id,
+                "needed_family_ids": [],
+            },
+        )
+    assert response.status_code == 201
+
+
+@pytest.mark.contract
+def test_post_methods_openapi_schema_marks_execution_pattern_required() -> None:
+    """OpenAPI surface pin: execution_pattern is REQUIRED, so it must
+    appear in the DefineMethodRequest component's `required` array
+    alongside capability_id."""
+    with TestClient(create_app()) as client:
+        openapi = client.get("/openapi.json").json()
+
+    component = openapi["components"]["schemas"]["DefineMethodRequest"]
+    assert "execution_pattern" in component["properties"], (
+        "DefineMethodRequest must expose execution_pattern at the OpenAPI surface"
+    )
+    assert "execution_pattern" in component["required"], (
+        "execution_pattern is REQUIRED at the API boundary"
+    )

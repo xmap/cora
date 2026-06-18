@@ -32,6 +32,9 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from cora.recipe.aggregates.method import (
+    ITERATIVE_STOPPING_KEYS,
+    ExecutionPattern,
+    InvalidMethodIterativeStoppingFieldError,
     Method,
     MethodName,
     MethodNotFoundError,
@@ -58,13 +61,24 @@ def _method(
     method_id: UUID,
     status: MethodStatus = MethodStatus.DEFINED,
     parameters_schema: dict[str, Any] | None = None,
+    execution_pattern: ExecutionPattern | None = None,
 ) -> Method:
     return Method(
         id=method_id,
         name=MethodName("Continuous Rotation Tomography"),
         status=status,
         parameters_schema=parameters_schema,
+        execution_pattern=execution_pattern,
     )
+
+
+def _schema_with_property(prop: str) -> dict[str, Any]:
+    """A valid parameters_schema declaring a single named property."""
+    return {
+        "$schema": _DRAFT,
+        "type": "object",
+        "properties": {prop: {"type": "number"}},
+    }
 
 
 def _valid_schema(min_val: int = 5) -> dict[str, Any]:
@@ -205,3 +219,48 @@ def test_update_is_pure_same_input_same_output(
     first = update_method_parameters_schema.decide(state=state, command=command, now=now)
     second = update_method_parameters_schema.decide(state=state, command=command, now=now)
     assert first == second
+
+
+@pytest.mark.unit
+@given(
+    method_id=st.uuids(),
+    non_stopping=st.sampled_from(["energy", "exposure", "angle", "step_size"]),
+    now=aware_datetimes(),
+)
+def test_update_iterative_without_stopping_key_always_raises(
+    method_id: UUID,
+    non_stopping: str,
+    now: datetime,
+) -> None:
+    """L4(a): an ITERATIVE Method whose proposed schema declares only a
+    non-stopping property always raises InvalidMethodIterativeStoppingFieldError."""
+    with pytest.raises(InvalidMethodIterativeStoppingFieldError):
+        update_method_parameters_schema.decide(
+            state=_method(method_id=method_id, execution_pattern=ExecutionPattern.ITERATIVE),
+            command=UpdateMethodParametersSchema(
+                method_id=method_id, parameters_schema=_schema_with_property(non_stopping)
+            ),
+            now=now,
+        )
+
+
+@pytest.mark.unit
+@given(
+    method_id=st.uuids(),
+    stopping=st.sampled_from(sorted(ITERATIVE_STOPPING_KEYS)),
+    now=aware_datetimes(),
+)
+def test_update_iterative_with_any_stopping_key_emits_event(
+    method_id: UUID,
+    stopping: str,
+    now: datetime,
+) -> None:
+    """Any recognized stopping-key synonym satisfies L4(a) and emits one event."""
+    events = update_method_parameters_schema.decide(
+        state=_method(method_id=method_id, execution_pattern=ExecutionPattern.ITERATIVE),
+        command=UpdateMethodParametersSchema(
+            method_id=method_id, parameters_schema=_schema_with_property(stopping)
+        ),
+        now=now,
+    )
+    assert len(events) == 1

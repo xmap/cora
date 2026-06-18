@@ -50,6 +50,7 @@ from cora.operation.features import (
 )
 from cora.operation.features.conduct_procedure import ConductProcedure
 from cora.operation.features.register_procedure import RegisterProcedure
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features import add_plan_wire, define_method, define_plan, define_practice
 from cora.recipe.features.add_plan_wire import AddPlanWire
 from cora.recipe.features.define_method import DefineMethod
@@ -168,6 +169,7 @@ async def test_conduct_resolves_constituents_from_run_plan_wires_postgres(
     )
     method_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
             name="wired_move",
             needed_family_ids=frozenset({family_id}),
@@ -326,6 +328,7 @@ async def test_conduct_multi_constituent_orders_constituents_by_wire_port_postgr
     )
     method_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=capability_id,
             name="wired_diff",
             needed_family_ids=frozenset({family_id}),

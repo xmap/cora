@@ -16,6 +16,7 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.kernel import Kernel
 from cora.recipe import wire_recipe
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
     MethodCannotMutateRequiredRolesError,
     MethodNotFoundError,
     MethodRoleNameAlreadyDeclaredError,
@@ -56,7 +57,11 @@ async def _define_method_helper(deps: Kernel) -> UUID:
     """Seed bound Capability + invoke define_method."""
     await seed_capability(deps.event_store, _CAPABILITY_ID)
     return await define_method.bind(deps)(
-        DefineMethod(name="Tomography", capability_id=_CAPABILITY_ID),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
+            name="Tomography",
+            capability_id=_CAPABILITY_ID,
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

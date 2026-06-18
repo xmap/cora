@@ -34,7 +34,12 @@ def _setup_chain(client: TestClient) -> tuple[str, str, str]:
     ]
     method_id = client.post(
         "/methods",
-        json={"name": "Test Method", "capability_id": _cap_id, "needed_family_ids": [cap_id]},
+        json={
+            "execution_pattern": "Batch",
+            "name": "Test Method",
+            "capability_id": _cap_id,
+            "needed_family_ids": [cap_id],
+        },
     ).json()["method_id"]
     practice_id = client.post(
         "/practices",
@@ -243,7 +248,12 @@ def test_post_plans_returns_409_when_method_is_deprecated() -> None:
         ]
         method_id = client.post(
             "/methods",
-            json={"name": "Test Method", "capability_id": _cap_id, "needed_family_ids": [cap_id]},
+            json={
+                "execution_pattern": "Batch",
+                "name": "Test Method",
+                "capability_id": _cap_id,
+                "needed_family_ids": [cap_id],
+            },
         ).json()["method_id"]
         practice_id = client.post(
             "/practices",
@@ -306,6 +316,7 @@ def test_post_plans_returns_409_when_capabilities_not_satisfied() -> None:
         method_id = client.post(
             "/methods",
             json={
+                "execution_pattern": "Batch",
                 "name": "Test Method",
                 "capability_id": _cap_id,
                 "needed_family_ids": [needed_cap],

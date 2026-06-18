@@ -19,7 +19,12 @@ def _define_method(client: TestClient, name: str = "XRF Mapping") -> UUID:
     cap_id = create_capability_via_api(client)
     response = client.post(
         "/methods",
-        json={"name": name, "capability_id": cap_id, "needed_family_ids": []},
+        json={
+            "execution_pattern": "Batch",
+            "name": name,
+            "capability_id": cap_id,
+            "needed_family_ids": [],
+        },
     )
     assert response.status_code == 201
     return UUID(response.json()["method_id"])

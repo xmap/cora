@@ -128,6 +128,7 @@ from cora.operation.features.start_iteration import StartProcedureIteration
 from cora.operation.features.start_iteration import bind as bind_start_iteration
 from cora.operation.features.start_procedure import StartProcedure
 from cora.operation.features.start_procedure import bind as bind_start
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_plan import DefinePlan
@@ -386,6 +387,7 @@ async def test_focus_alignment_plays_out_end_to_end(
 
     await bind_define_method(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
             name="focus_alignment",
             needed_family_ids=frozenset(

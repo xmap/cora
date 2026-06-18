@@ -21,6 +21,8 @@ from uuid import uuid4
 import pytest
 
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
+    InvalidMethodIterativeStoppingFieldError,
     InvalidMethodParametersSchemaError,
     Method,
     MethodName,
@@ -41,12 +43,14 @@ def _method(
     *,
     status: MethodStatus = MethodStatus.DEFINED,
     parameters_schema: dict[str, Any] | None = None,
+    execution_pattern: ExecutionPattern | None = None,
 ) -> Method:
     return Method(
         id=uuid4(),
         name=MethodName("Continuous Rotation Tomography"),
         status=status,
         parameters_schema=parameters_schema,
+        execution_pattern=execution_pattern,
     )
 
 
@@ -61,6 +65,15 @@ def _valid_schema(min_val: int = 5) -> dict[str, Any]:
                 "unit": {"system": "udunits", "code": "keV"},
             }
         },
+    }
+
+
+def _schema_with_property(prop: str) -> dict[str, Any]:
+    """A valid parameters_schema declaring a single named property."""
+    return {
+        "$schema": _DRAFT,
+        "type": "object",
+        "properties": {prop: {"type": "number"}},
     }
 
 
@@ -195,3 +208,87 @@ def test_decide_accepts_schema_update_in_any_lifecycle_state(
         now=_NOW,
     )
     assert len(events) == 1
+
+
+# ---------- compute classification: ITERATIVE stopping key (L4(a)) ----------
+
+
+@pytest.mark.unit
+def test_decide_rejects_iterative_schema_without_stopping_key() -> None:
+    """L4(a): an ITERATIVE Method's parameters_schema, once set, MUST
+    declare a budget (max_iter-shape) or tolerance (tol-shape) key.
+    A schema with neither is rejected (Invalid<X> family -> HTTP 400)."""
+    state = _method(execution_pattern=ExecutionPattern.ITERATIVE)
+    with pytest.raises(InvalidMethodIterativeStoppingFieldError) as exc_info:
+        update_method_parameters_schema.decide(
+            state=state,
+            command=UpdateMethodParametersSchema(
+                method_id=state.id, parameters_schema=_valid_schema()
+            ),
+            now=_NOW,
+        )
+    assert exc_info.value.method_id == state.id
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("stopping_key", ["max_iter", "num_iter", "nsteps"])
+def test_decide_accepts_iterative_schema_with_budget_key(stopping_key: str) -> None:
+    """A budget-shaped stopping key satisfies L4(a)."""
+    state = _method(execution_pattern=ExecutionPattern.ITERATIVE)
+    events = update_method_parameters_schema.decide(
+        state=state,
+        command=UpdateMethodParametersSchema(
+            method_id=state.id, parameters_schema=_schema_with_property(stopping_key)
+        ),
+        now=_NOW,
+    )
+    assert len(events) == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("stopping_key", ["tol", "rtol", "atol"])
+def test_decide_accepts_iterative_schema_with_tolerance_key(stopping_key: str) -> None:
+    """A tolerance-shaped stopping key satisfies L4(a)."""
+    state = _method(execution_pattern=ExecutionPattern.ITERATIVE)
+    events = update_method_parameters_schema.decide(
+        state=state,
+        command=UpdateMethodParametersSchema(
+            method_id=state.id, parameters_schema=_schema_with_property(stopping_key)
+        ),
+        now=_NOW,
+    )
+    assert len(events) == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "pattern",
+    [ExecutionPattern.BATCH, ExecutionPattern.STREAMING, None],
+)
+def test_decide_does_not_enforce_stopping_key_on_non_iterative(
+    pattern: ExecutionPattern | None,
+) -> None:
+    """L4(a) is ITERATIVE-only: a BATCH or STREAMING Method, and an
+    unclassified (None) Method, may declare a schema with no stopping
+    key; all skip the check."""
+    state = _method(execution_pattern=pattern)
+    events = update_method_parameters_schema.decide(
+        state=state,
+        command=UpdateMethodParametersSchema(method_id=state.id, parameters_schema=_valid_schema()),
+        now=_NOW,
+    )
+    assert len(events) == 1
+
+
+@pytest.mark.unit
+def test_decide_iterative_with_none_schema_stays_unconstrained() -> None:
+    """A freshly-defined ITERATIVE Method with no schema is in a
+    transient unconstrained state: clearing/leaving the schema None
+    raises nothing (L4(a) fires only when a schema is being set)."""
+    state = _method(execution_pattern=ExecutionPattern.ITERATIVE, parameters_schema=None)
+    events = update_method_parameters_schema.decide(
+        state=state,
+        command=UpdateMethodParametersSchema(method_id=state.id, parameters_schema=None),
+        now=_NOW,
+    )
+    assert events == []

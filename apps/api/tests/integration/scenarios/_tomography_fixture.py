@@ -97,6 +97,7 @@ from cora.access.aggregates.actor import ProfileStore
 from cora.equipment.features.activate_asset import ActivateAsset
 from cora.equipment.features.activate_asset import bind as bind_activate_asset
 from cora.infrastructure.kernel import Kernel
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_plan import DefinePlan
@@ -292,6 +293,7 @@ async def define_recipe_ladder(
     )
     await bind_define_method(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name=spec.method_name,
             capability_id=spec.capability_id,
             needed_family_ids=spec.needed_family_ids,

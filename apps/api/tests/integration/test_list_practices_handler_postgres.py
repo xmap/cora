@@ -16,6 +16,7 @@ import pytest
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.recipe._projections import register_recipe_projections
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_practice import DefinePractice
@@ -50,7 +51,9 @@ async def _seed_method(deps: Kernel, name: str = "Tomography") -> UUID:
     stance), but the integration test still seeds one for realism."""
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     return await bind_define_method(deps)(
-        DefineMethod(capability_id=_CAPABILITY_ID, name=name),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH, capability_id=_CAPABILITY_ID, name=name
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

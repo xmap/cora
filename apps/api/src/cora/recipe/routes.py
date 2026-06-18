@@ -44,6 +44,8 @@ from cora.recipe.aggregates.capability import (
     InvalidExecutorShapesError,
 )
 from cora.recipe.aggregates.method import (
+    InvalidMethodIterativeStoppingFieldError,
+    InvalidMethodMonotoneQualityError,
     InvalidMethodNameError,
     InvalidMethodNeededSuppliesError,
     InvalidMethodParametersSchemaError,
@@ -278,6 +280,14 @@ def register_recipe_routes(app: FastAPI) -> None:
         InvalidMethodNeededSuppliesError,
         InvalidMethodParametersSchemaError,
         InvalidMethodVersionTagError,
+        # compute cross-field invariants (L4): monotone_quality
+        # on a non-Iterative Method (define_method), and an Iterative
+        # Method whose parameters_schema declares no stopping key
+        # (update_method_parameters_schema). Both are Invalid<X>
+        # validation-family ValueErrors -> 400 (NOT the 409 transition
+        # family), per project-compute-modeling-stage0-design.
+        InvalidMethodMonotoneQualityError,
+        InvalidMethodIterativeStoppingFieldError,
         # Positional role-tagging VO constructor failures
         # (RoleName empty/too-long, PortRequirement empty/too-long port
         # name or signal_type). Mapped to 400.

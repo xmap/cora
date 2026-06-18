@@ -33,6 +33,7 @@ from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features import define_method, define_plan, define_practice
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_plan import DefinePlan
@@ -182,7 +183,10 @@ async def _seed_upstream_chain(
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     await define_method.bind(deps)(
         DefineMethod(
-            capability_id=_CAPABILITY_ID, name="XRF Fly Scan", needed_family_ids=frozenset({cap_id})
+            execution_pattern=ExecutionPattern.BATCH,
+            capability_id=_CAPABILITY_ID,
+            name="XRF Fly Scan",
+            needed_family_ids=frozenset({cap_id}),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -456,6 +460,7 @@ async def test_run_start_succeeds_when_clearance_binds_controller_via_controller
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
             name="StageScan",
             needed_family_ids=frozenset({stage_family_id}),

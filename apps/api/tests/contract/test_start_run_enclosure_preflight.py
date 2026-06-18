@@ -61,7 +61,13 @@ def _setup_chain(client: TestClient) -> tuple[str, str, str]:
         "family_id"
     ]
     method_id = client.post(
-        "/methods", json={"name": "M", "capability_id": _cap_id, "needed_family_ids": [cap_id]}
+        "/methods",
+        json={
+            "execution_pattern": "Batch",
+            "name": "M",
+            "capability_id": _cap_id,
+            "needed_family_ids": [cap_id],
+        },
     ).json()["method_id"]
     practice_id = client.post(
         "/practices",

@@ -31,6 +31,8 @@ from cora.recipe.aggregates.capability import (
 )
 from cora.recipe.aggregates.method import (
     METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH,
+    ExecutionPattern,
+    InvalidMethodMonotoneQualityError,
     InvalidMethodNeededSuppliesError,
     Method,
     MethodAlreadyExistsError,
@@ -61,6 +63,8 @@ def decide(
         (via MethodName VO)
       - Each needed_supplies kind must be valid
         -> InvalidMethodNeededSuppliesError
+      - monotone_quality=True requires execution_pattern == ITERATIVE
+        -> InvalidMethodMonotoneQualityError
 
     `capability` is REQUIRED at the call boundary (the command's
     `capability_id` is REQUIRED per Pattern P, so the handler always
@@ -80,6 +84,10 @@ def decide(
         raise CapabilityNotFoundError(command.capability_id)
     if ExecutorShape.METHOD not in capability.executor_shapes:
         raise MethodCapabilityExecutorMismatchError(new_id, command.capability_id)
+    # compute classification cross-field invariant (L4(b)): the
+    # anytime-algorithm claim is only meaningful for ITERATIVE workloads.
+    if command.monotone_quality and command.execution_pattern != ExecutionPattern.ITERATIVE:
+        raise InvalidMethodMonotoneQualityError(command.execution_pattern)
     name = MethodName(command.name)  # validates + trims; raises InvalidMethodNameError
     # defensive per-element validation for needed_supplies
     # kind strings. Pydantic catches this at the API; this defensive
@@ -102,6 +110,9 @@ def decide(
             needed_supplies=tuple(trimmed_supplies),
             capability_id=command.capability_id,
             needed_assembly_ids=tuple(command.needed_assembly_ids),
+            execution_pattern=command.execution_pattern,
+            monotone_quality=command.monotone_quality,
+            resumable_from_checkpoint=command.resumable_from_checkpoint,
             occurred_at=now,
         )
     ]

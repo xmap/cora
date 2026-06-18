@@ -105,6 +105,7 @@ def seed_method_chain(
         json={
             "name": "M",
             "capability_id": capability_id,
+            "execution_pattern": "Batch",
             "needed_family_ids": [family_id],
         },
     ).json()["method_id"]

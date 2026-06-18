@@ -37,6 +37,7 @@ def setup_plan_with_role(client: TestClient) -> dict[str, Any]:
     method_id = client.post(
         "/methods",
         json={
+            "execution_pattern": "Batch",
             "name": "Tomography",
             "capability_id": cap_id,
             "needed_family_ids": [],
@@ -224,7 +225,12 @@ def setup_plan_with_role_kind(
 
     method_id = client.post(
         "/methods",
-        json={"name": "Tomography", "capability_id": cap_id, "needed_family_ids": []},
+        json={
+            "execution_pattern": "Batch",
+            "name": "Tomography",
+            "capability_id": cap_id,
+            "needed_family_ids": [],
+        },
     ).json()["method_id"]
     r = client.post(
         f"/methods/{method_id}/add-required-role",
@@ -292,7 +298,12 @@ def test_post_add_required_role_kind_returns_404_when_role_unresolved() -> None:
         cap_id = create_capability_via_api(client)
         method_id = client.post(
             "/methods",
-            json={"name": "Tomography", "capability_id": cap_id, "needed_family_ids": []},
+            json={
+                "execution_pattern": "Batch",
+                "name": "Tomography",
+                "capability_id": cap_id,
+                "needed_family_ids": [],
+            },
         ).json()["method_id"]
         response = client.post(
             f"/methods/{method_id}/add-required-role",

@@ -80,6 +80,7 @@ from cora.operation.features.register_procedure import bind as bind_register_pro
 from cora.operation.features.start_procedure import StartProcedure
 from cora.operation.features.start_procedure import bind as bind_start
 from cora.recipe.aggregates.capability import ExecutorShape
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.update_method_parameters_schema import UpdateMethodParametersSchema
@@ -272,6 +273,7 @@ async def test_energy_setting_records_a_coordinated_move(db_pool: asyncpg.Pool) 
     )
     method_id = await bind_define_method(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ENERGY_CHANGE_ID,
             name="beamline_energy_change",
             needed_family_ids=frozenset({_CAP_MONOCHROMATOR_ID, _CAP_SLIT_ID, _CAP_PSEUDO_AXIS_ID}),

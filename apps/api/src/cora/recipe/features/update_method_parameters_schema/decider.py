@@ -29,6 +29,9 @@ Invariants:
     -> CapabilityNotFoundError
   - parameters_schema (if non-None) must be a valid in-subset
     JSON Schema -> InvalidMethodParametersSchemaError
+  - parameters_schema (if non-None) on an ITERATIVE Method MUST declare
+    a max_iter-shape or tol-shape stopping key (a top-level property in
+    ITERATIVE_STOPPING_KEYS) -> InvalidMethodIterativeStoppingFieldError
   - parameters_schema (if non-None AND Method.capability_id is set
     AND the loaded Capability has a parameters_schema) MUST be a
     structural subset of Capability.parameters_schema ->
@@ -40,6 +43,9 @@ from datetime import datetime
 
 from cora.recipe.aggregates.capability import Capability, CapabilityNotFoundError
 from cora.recipe.aggregates.method import (
+    ITERATIVE_STOPPING_KEYS,
+    ExecutionPattern,
+    InvalidMethodIterativeStoppingFieldError,
     Method,
     MethodNotFoundError,
     MethodParametersNotSubsetError,
@@ -81,6 +87,15 @@ def decide(
 
     if command.parameters_schema is not None:
         validate_parameters_schema(command.parameters_schema)
+        # compute classification invariant (L4(a)): an ITERATIVE Method's
+        # schema, once set, must declare a stopping budget or tolerance.
+        # A freshly-defined ITERATIVE Method with no schema yet stays in a
+        # transient unconstrained state; this fires only when a schema is
+        # being set (command.parameters_schema is not None).
+        if state.execution_pattern == ExecutionPattern.ITERATIVE:
+            declared_properties = set(command.parameters_schema.get("properties", {}))
+            if ITERATIVE_STOPPING_KEYS.isdisjoint(declared_properties):
+                raise InvalidMethodIterativeStoppingFieldError(state.id, ITERATIVE_STOPPING_KEYS)
         # subset guard. Only when BOTH schemas are
         # present do we have something to compare; either side being
         # None means "no contract on that side".

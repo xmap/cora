@@ -27,6 +27,7 @@ def _define_method_via_tool(
             "params": {
                 "name": "define_method",
                 "arguments": {
+                    "execution_pattern": "Batch",
                     "name": name,
                     "capability_id": cap_id,
                     "needed_family_ids": [],

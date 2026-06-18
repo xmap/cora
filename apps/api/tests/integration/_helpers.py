@@ -253,6 +253,7 @@ async def seed_run_upstream_chain_postgres(
     from cora.equipment.features.add_asset_family import AddAssetFamily
     from cora.equipment.features.define_family import DefineFamily
     from cora.equipment.features.register_asset import RegisterAsset
+    from cora.recipe.aggregates.method import ExecutionPattern
     from cora.recipe.features import (
         define_method,
         define_plan,
@@ -286,6 +287,7 @@ async def seed_run_upstream_chain_postgres(
     await seed_capability_postgres(deps.event_store, capability_id, now=now)
     method_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=capability_id,
             name="Test Method",
             needed_family_ids=frozenset({family_id}),

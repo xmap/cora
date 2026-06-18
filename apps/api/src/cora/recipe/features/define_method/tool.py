@@ -16,6 +16,7 @@ from cora.infrastructure.routing import get_mcp_surface_id
 from cora.recipe.aggregates.method import (
     METHOD_NAME_MAX_LENGTH,
     METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH,
+    ExecutionPattern,
 )
 from cora.recipe.features.define_method.command import DefineMethod
 from cora.recipe.features.define_method.handler import IdempotentHandler
@@ -61,6 +62,17 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 ),
             ),
         ],
+        execution_pattern: Annotated[
+            ExecutionPattern,
+            Field(
+                description=(
+                    "Workload-execution shape (Batch, Iterative, or "
+                    "Streaming). REQUIRED. An Iterative Method must later "
+                    "declare a max_iter-shape or tol-shape stopping key in "
+                    "its parameters_schema."
+                ),
+            ),
+        ],
         needed_family_ids: Annotated[
             list[UUID],
             Field(
@@ -102,15 +114,38 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             ),
         ]
         | None = None,
+        monotone_quality: Annotated[
+            bool,
+            Field(
+                description=(
+                    "Anytime-algorithm claim; meaningful only for "
+                    "Iterative Methods. True on a non-Iterative Method "
+                    "is rejected (400)."
+                ),
+            ),
+        ] = False,
+        resumable_from_checkpoint: Annotated[
+            bool,
+            Field(
+                description=(
+                    "Executor can resume from a checkpoint. Independent of "
+                    "execution_pattern (streaming replay and self-checkpointing "
+                    "batch may also resume)."
+                ),
+            ),
+        ] = False,
     ) -> DefineMethodOutput:
         handler = get_handler()
         method_id = await handler(
             DefineMethod(
                 name=name,
                 capability_id=capability_id,
+                execution_pattern=execution_pattern,
                 needed_family_ids=frozenset(needed_family_ids),
                 needed_supplies=frozenset(needed_supplies or []),
                 needed_assembly_ids=frozenset(needed_assembly_ids or []),
+                monotone_quality=monotone_quality,
+                resumable_from_checkpoint=resumable_from_checkpoint,
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

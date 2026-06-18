@@ -23,7 +23,7 @@ import pytest
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.recipe._projections import register_recipe_projections
-from cora.recipe.aggregates.method import load_method
+from cora.recipe.aggregates.method import ExecutionPattern, load_method
 from cora.recipe.features import define_method, update_method_parameters_schema
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.update_method_parameters_schema import (
@@ -77,6 +77,7 @@ async def test_update_method_parameters_schema_round_trips_through_event_store_a
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
             name="Phase-Contrast Micro-CT",
             needed_family_ids=frozenset(),
@@ -121,6 +122,7 @@ async def test_clearing_schema_flips_projection_present_back_to_false(
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
             name="Phase-Contrast Micro-CT",
             needed_family_ids=frozenset(),
@@ -164,6 +166,7 @@ async def test_no_op_on_unchanged_schema_does_not_emit_event(
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
             name="Phase-Contrast Micro-CT",
             needed_family_ids=frozenset(),

@@ -44,6 +44,7 @@ from cora.equipment.features.register_asset import RegisterAsset
 from cora.operation.features import register_procedure
 from cora.operation.features.register_procedure import RegisterProcedure
 from cora.recipe.aggregates.capability import ExecutorShape
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.aggregates.plan import PlanStatus, load_plan
 from cora.recipe.features import (
     define_capability,
@@ -146,6 +147,7 @@ async def test_capability_bound_full_lane_postgres(db_pool: asyncpg.Pool) -> Non
     # 4. Method bound to the Capability (Method-shaped executor).
     await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="EndToEndMethod",
             capability_id=cap_id,
             needed_family_ids=frozenset({family_id}),

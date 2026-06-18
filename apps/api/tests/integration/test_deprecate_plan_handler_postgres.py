@@ -21,6 +21,7 @@ from cora.equipment.features import (
 from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.register_asset import RegisterAsset
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.aggregates.plan import PlanStatus, load_plan
 from cora.recipe.features import (
     define_method,
@@ -103,7 +104,10 @@ async def test_deprecate_plan_persists_and_preserves_version_through_fold(
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     await define_method.bind(deps)(
         DefineMethod(
-            capability_id=_CAPABILITY_ID, name="XRF Fly Scan", needed_family_ids=frozenset({cap_id})
+            execution_pattern=ExecutionPattern.BATCH,
+            capability_id=_CAPABILITY_ID,
+            name="XRF Fly Scan",
+            needed_family_ids=frozenset({cap_id}),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

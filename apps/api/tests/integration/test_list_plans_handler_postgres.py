@@ -32,6 +32,7 @@ from cora.equipment.features.register_asset import bind as bind_register_asset
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.recipe._projections import register_recipe_projections
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_plan import DefinePlan
@@ -97,7 +98,10 @@ async def _seed_chain(deps: Kernel, family_name: str = "Tomography") -> tuple[UU
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     method_id = await bind_define_method(deps)(
         DefineMethod(
-            capability_id=_CAPABILITY_ID, name="Tomography", needed_family_ids=frozenset({cap_id})
+            execution_pattern=ExecutionPattern.BATCH,
+            capability_id=_CAPABILITY_ID,
+            name="Tomography",
+            needed_family_ids=frozenset({cap_id}),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

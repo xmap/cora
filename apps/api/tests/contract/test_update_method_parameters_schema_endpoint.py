@@ -22,7 +22,12 @@ def _define_method(client: TestClient, name: str = "XRF Mapping") -> UUID:
     cap_id = create_capability_via_api(client)
     response = client.post(
         "/methods",
-        json={"name": name, "capability_id": cap_id, "needed_family_ids": []},
+        json={
+            "execution_pattern": "Batch",
+            "name": name,
+            "capability_id": cap_id,
+            "needed_family_ids": [],
+        },
     )
     assert response.status_code == 201, response.text
     return UUID(response.json()["method_id"])
@@ -124,3 +129,65 @@ def test_post_update_method_parameters_schema_returns_422_for_malformed_path() -
             json={"parameters_schema": None},
         )
     assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_update_method_parameters_schema_iterative_without_stopping_key_returns_400() -> None:
+    """L4(a) end-to-end: an Iterative Method whose schema declares no
+    max_iter-shape or tol-shape stopping key is rejected with 400 via
+    the Invalid<X> validation handler (parity with the L4(b) 400 test
+    on POST /methods)."""
+    with TestClient(create_app()) as client:
+        cap_id = create_capability_via_api(client)
+        method_id = UUID(
+            client.post(
+                "/methods",
+                json={
+                    "execution_pattern": "Iterative",
+                    "name": "SIRT",
+                    "capability_id": cap_id,
+                    "needed_family_ids": [],
+                },
+            ).json()["method_id"]
+        )
+        response = client.post(
+            f"/methods/{method_id}/parameters-schema",
+            json={
+                "parameters_schema": {
+                    "$schema": _DRAFT,
+                    "type": "object",
+                    "properties": {"energy": {"type": "number"}},
+                }
+            },
+        )
+    assert response.status_code == 400
+
+
+@pytest.mark.contract
+def test_post_update_method_parameters_schema_iterative_with_stopping_key_returns_204() -> None:
+    """An Iterative Method whose schema declares a budget stopping key
+    (num_iter) satisfies L4(a) and the update succeeds (204)."""
+    with TestClient(create_app()) as client:
+        cap_id = create_capability_via_api(client)
+        method_id = UUID(
+            client.post(
+                "/methods",
+                json={
+                    "execution_pattern": "Iterative",
+                    "name": "SIRT",
+                    "capability_id": cap_id,
+                    "needed_family_ids": [],
+                },
+            ).json()["method_id"]
+        )
+        response = client.post(
+            f"/methods/{method_id}/parameters-schema",
+            json={
+                "parameters_schema": {
+                    "$schema": _DRAFT,
+                    "type": "object",
+                    "properties": {"num_iter": {"type": "integer"}},
+                }
+            },
+        )
+    assert response.status_code == 204

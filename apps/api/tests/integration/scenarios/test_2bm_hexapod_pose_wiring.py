@@ -79,6 +79,7 @@ from cora.equipment.features.update_asset_partition_rule import UpdateAssetParti
 from cora.equipment.features.update_asset_partition_rule import (
     bind as bind_update_asset_partition_rule,
 )
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.add_plan_wire import AddPlanWire
 from cora.recipe.features.add_plan_wire import bind as bind_add_plan_wire
 from cora.recipe.features.define_method import DefineMethod
@@ -344,6 +345,7 @@ async def test_hexapod_six_dof_wiring_validates_end_to_end(
     )
     await bind_define_method(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_RECIPE_ID,
             name="hexapod_pose",
             needed_family_ids=frozenset({_CAP_HEXAPOD_ID, _CAP_PSEUDO_AXIS_ID}),

@@ -33,7 +33,12 @@ async def test_define_then_get_then_list_method(
 
     define = await e2e_client.post(
         "/methods",
-        json={"name": "XRF Mapping", "capability_id": capability_id, "needed_family_ids": []},
+        json={
+            "execution_pattern": "Batch",
+            "name": "XRF Mapping",
+            "capability_id": capability_id,
+            "needed_family_ids": [],
+        },
     )
     assert define.status_code == 201
     method_id = UUID(define.json()["method_id"])

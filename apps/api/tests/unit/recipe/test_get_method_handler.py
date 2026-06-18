@@ -12,6 +12,7 @@ import pytest
 
 from cora.recipe import RecipeHandlers, UnauthorizedError, wire_recipe
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
     Method,
     MethodName,
     MethodStatus,
@@ -38,6 +39,7 @@ async def test_handler_returns_method_for_known_id() -> None:
     await seed_capability(deps.event_store, _CAPABILITY_ID)
     await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="XRF Fly Mapping",
             capability_id=_CAPABILITY_ID,
             needed_family_ids=frozenset({_CAP1, _CAP2}),
@@ -60,6 +62,7 @@ async def test_handler_returns_method_for_known_id() -> None:
         needed_family_ids=frozenset({_CAP1, _CAP2}),
         capability_id=_CAPABILITY_ID,
         status=MethodStatus.DEFINED,
+        execution_pattern=ExecutionPattern.BATCH,
     )
     # In-memory deps have no pool, so projection-sourced timestamps are
     # absent (Path C handler behavior; Postgres integration suite
@@ -74,7 +77,11 @@ async def test_handler_returns_method_with_empty_needed_family_ids() -> None:
     deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW)
     await seed_capability(deps.event_store, _CAPABILITY_ID)
     await define_method.bind(deps)(
-        DefineMethod(name="Sample Cleaning", capability_id=_CAPABILITY_ID),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
+            name="Sample Cleaning",
+            capability_id=_CAPABILITY_ID,
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

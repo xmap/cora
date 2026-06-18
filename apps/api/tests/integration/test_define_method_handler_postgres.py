@@ -17,6 +17,7 @@ import asyncpg
 import pytest
 
 from cora.recipe.aggregates.capability import ExecutorShape
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features import define_method
 from cora.recipe.features.define_method import DefineMethod
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
@@ -43,6 +44,7 @@ async def test_define_method_persists_event_to_postgres_with_capabilities(
 
     returned_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="XRF Fly Mapping",
             capability_id=capability_id,
             needed_family_ids=frozenset({cap2, cap1}),  # unsorted input
@@ -69,6 +71,11 @@ async def test_define_method_persists_event_to_postgres_with_capabilities(
         "capability_id": str(capability_id),
         # needed_assembly_ids. Pinned by tests/unit/recipe/test_method_needed_assembly_ids.py.
         "needed_assembly_ids": [],
+        # compute classification: execution_pattern as the enum value;
+        # the two claims as bools.
+        "execution_pattern": "Batch",
+        "monotone_quality": False,
+        "resumable_from_checkpoint": False,
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.correlation_id == _CORRELATION_ID
@@ -95,7 +102,10 @@ async def test_define_method_persists_procedural_method_with_empty_capabilities(
 
     await define_method.bind(deps)(
         DefineMethod(
-            name="Sample Cleaning", capability_id=capability_id, needed_family_ids=frozenset()
+            execution_pattern=ExecutionPattern.BATCH,
+            name="Sample Cleaning",
+            capability_id=capability_id,
+            needed_family_ids=frozenset(),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -125,6 +135,7 @@ async def test_define_method_persists_needed_assembly_ids_to_postgres(
 
     await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="Microscope Tomography",
             capability_id=capability_id,
             needed_family_ids=frozenset(),
@@ -158,7 +169,9 @@ async def test_define_method_persists_bound_capability_id_to_postgres(
     )
 
     await define_method.bind(deps)(
-        DefineMethod(name="X", capability_id=capability_id),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH, name="X", capability_id=capability_id
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

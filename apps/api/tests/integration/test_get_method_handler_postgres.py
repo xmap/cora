@@ -16,7 +16,7 @@ import pytest
 
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.recipe._projections import register_recipe_projections
-from cora.recipe.aggregates.method import MethodName, MethodStatus
+from cora.recipe.aggregates.method import ExecutionPattern, MethodName, MethodStatus
 from cora.recipe.features import define_method, get_method
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.get_method import GetMethod
@@ -42,6 +42,7 @@ async def test_get_method_loads_state_from_real_postgres(
 
     await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="XRF Fly Mapping",
             capability_id=_CAPABILITY_ID,
             needed_family_ids=frozenset({cap1, cap2}),

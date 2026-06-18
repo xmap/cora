@@ -26,6 +26,7 @@ from cora.infrastructure.routing import (
 from cora.recipe.aggregates.method import (
     METHOD_NAME_MAX_LENGTH,
     METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH,
+    ExecutionPattern,
 )
 from cora.recipe.features.define_method.command import DefineMethod
 from cora.recipe.features.define_method.handler import IdempotentHandler
@@ -68,6 +69,17 @@ class DefineMethodRequest(BaseModel):
             "surfaces as 404 via CapabilityNotFoundError."
         ),
     )
+    execution_pattern: ExecutionPattern = Field(
+        ...,
+        description=(
+            "Workload-execution shape of this Method (Batch, Iterative, "
+            "or Streaming). REQUIRED. Classifies how the Method's "
+            "executor consumes work: a one-shot batch reconstruction, an "
+            "iterative solver, or a streaming consumer. An Iterative "
+            "Method must later declare a max_iter-shape or tol-shape "
+            "stopping key in its parameters_schema."
+        ),
+    )
     needed_family_ids: list[UUID] = Field(
         ...,
         description=(
@@ -106,6 +118,23 @@ class DefineMethodRequest(BaseModel):
             "Assembly stream at decide time; mismatch surfaces at Plan "
             "binding when the picked Assets must include Fixtures "
             "whose assembly_id covers this set."
+        ),
+    )
+    monotone_quality: bool = Field(
+        default=False,
+        description=(
+            "Anytime-algorithm claim: a partial result at any iteration "
+            "is statistically valid for steering. Meaningful only for "
+            "Iterative Methods; setting True on a non-Iterative Method "
+            "is rejected (400)."
+        ),
+    )
+    resumable_from_checkpoint: bool = Field(
+        default=False,
+        description=(
+            "The Method's executor can resume from a checkpoint. "
+            "Independent of execution_pattern (streaming replay and "
+            "self-checkpointing batch may also resume)."
         ),
     )
 
@@ -168,9 +197,12 @@ async def post_methods(
         DefineMethod(
             name=body.name,
             capability_id=body.capability_id,
+            execution_pattern=body.execution_pattern,
             needed_family_ids=frozenset(body.needed_family_ids),
             needed_supplies=frozenset(body.needed_supplies),
             needed_assembly_ids=frozenset(body.needed_assembly_ids),
+            monotone_quality=body.monotone_quality,
+            resumable_from_checkpoint=body.resumable_from_checkpoint,
         ),
         principal_id=principal_id,
         correlation_id=cid,

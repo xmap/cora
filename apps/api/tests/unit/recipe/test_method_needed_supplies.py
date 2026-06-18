@@ -30,6 +30,7 @@ from cora.recipe.aggregates.capability import (
     ExecutorShape,
 )
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
     InvalidMethodNeededSuppliesError,
     Method,
     MethodDefined,
@@ -98,6 +99,7 @@ def test_decider_accepts_empty_needed_supplies() -> None:
     events = define_method.decide(
         state=None,
         command=DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAP.id,
             name="Sample Cleaning",
             needed_family_ids=frozenset(),
@@ -115,6 +117,7 @@ def test_decider_accepts_populated_needed_supplies() -> None:
     events = define_method.decide(
         state=None,
         command=DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAP.id,
             name="Tomography",
             needed_family_ids=frozenset(),
@@ -134,6 +137,7 @@ def test_decider_trims_each_kind_string() -> None:
     events = define_method.decide(
         state=None,
         command=DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAP.id,
             name="X",
             needed_family_ids=frozenset(),
@@ -153,6 +157,7 @@ def test_decider_rejects_whitespace_only_kind() -> None:
         define_method.decide(
             state=None,
             command=DefineMethod(
+                execution_pattern=ExecutionPattern.BATCH,
                 capability_id=_CAP.id,
                 name="X",
                 needed_family_ids=frozenset(),
@@ -170,6 +175,7 @@ def test_decider_rejects_empty_kind() -> None:
         define_method.decide(
             state=None,
             command=DefineMethod(
+                execution_pattern=ExecutionPattern.BATCH,
                 capability_id=_CAP.id,
                 name="X",
                 needed_family_ids=frozenset(),
@@ -188,6 +194,7 @@ def test_decider_rejects_oversized_kind() -> None:
         define_method.decide(
             state=None,
             command=DefineMethod(
+                execution_pattern=ExecutionPattern.BATCH,
                 capability_id=_CAP.id,
                 name="X",
                 needed_family_ids=frozenset(),
@@ -205,6 +212,7 @@ def test_decider_accepts_max_length_kind() -> None:
     events = define_method.decide(
         state=None,
         command=DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAP.id,
             name="X",
             needed_family_ids=frozenset(),

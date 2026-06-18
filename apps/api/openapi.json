@@ -5074,6 +5074,16 @@
             "title": "Capability Id",
             "type": "string"
           },
+          "execution_pattern": {
+            "$ref": "#/components/schemas/ExecutionPattern",
+            "description": "Workload-execution shape of this Method (Batch, Iterative, or Streaming). REQUIRED. Classifies how the Method's executor consumes work: a one-shot batch reconstruction, an iterative solver, or a streaming consumer. An Iterative Method must later declare a max_iter-shape or tol-shape stopping key in its parameters_schema."
+          },
+          "monotone_quality": {
+            "default": false,
+            "description": "Anytime-algorithm claim: a partial result at any iteration is statistically valid for steering. Meaningful only for Iterative Methods; setting True on a non-Iterative Method is rejected (400).",
+            "title": "Monotone Quality",
+            "type": "boolean"
+          },
           "name": {
             "description": "Display name for the new method.",
             "maxLength": 200,
@@ -5108,11 +5118,18 @@
             },
             "title": "Needed Supplies",
             "type": "array"
+          },
+          "resumable_from_checkpoint": {
+            "default": false,
+            "description": "The Method's executor can resume from a checkpoint. Independent of execution_pattern (streaming replay and self-checkpointing batch may also resume).",
+            "title": "Resumable From Checkpoint",
+            "type": "boolean"
           }
         },
         "required": [
           "name",
           "capability_id",
+          "execution_pattern",
           "needed_family_ids"
         ],
         "title": "DefineMethodRequest",
@@ -6176,6 +6193,16 @@
         ],
         "title": "EvaluatePolicyResponse",
         "type": "object"
+      },
+      "ExecutionPattern": {
+        "description": "Closed v1 enum of Method workload-execution shapes.",
+        "enum": [
+          "Batch",
+          "Iterative",
+          "Streaming"
+        ],
+        "title": "ExecutionPattern",
+        "type": "string"
       },
       "ExecutorShape": {
         "description": "Closed v1 enum of executor kinds that may implement a Capability.",

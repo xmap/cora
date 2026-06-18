@@ -10,7 +10,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from cora.recipe.aggregates.method import MethodStatus, load_method
+from cora.recipe.aggregates.method import ExecutionPattern, MethodStatus, load_method
 from cora.recipe.features import define_method, deprecate_method, version_method
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.deprecate_method import DeprecateMethod
@@ -40,7 +40,11 @@ async def test_deprecate_method_persists_and_preserves_version_through_fold(
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
 
     await define_method.bind(deps)(
-        DefineMethod(name="XRF Fly Mapping", capability_id=_CAPABILITY_ID),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
+            name="XRF Fly Mapping",
+            capability_id=_CAPABILITY_ID,
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

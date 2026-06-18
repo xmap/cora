@@ -54,6 +54,7 @@ from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features import define_method, define_plan, define_practice
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_plan import DefinePlan
@@ -172,6 +173,7 @@ async def _seed_two_hutch_topology(
     await seed_capability_postgres(deps.event_store, _CAPABILITY_ID)
     method_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
             name="XRF Fly Scan",
             needed_family_ids=frozenset({family_id}),

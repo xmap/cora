@@ -10,9 +10,12 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
     Method,
     MethodName,
     MethodStatus,
+    RoleName,
+    RoleRequirement,
     evolve,
     fold,
 )
@@ -20,6 +23,8 @@ from cora.recipe.aggregates.method.events import (
     MethodDefined,
     MethodDeprecated,
     MethodParametersSchemaUpdated,
+    MethodRequiredRoleAdded,
+    MethodRequiredRoleRemoved,
     MethodVersioned,
 )
 from cora.recipe.features import define_method
@@ -159,6 +164,7 @@ def test_decider_and_evolver_round_trip() -> None:
     command = DefineMethod(
         name="  XRF Fly Mapping  ",
         capability_id=capability.id,
+        execution_pattern=ExecutionPattern.BATCH,
         needed_family_ids=frozenset({cap1, cap2}),
     )
     events = define_method.decide(
@@ -171,6 +177,7 @@ def test_decider_and_evolver_round_trip() -> None:
         needed_family_ids=frozenset({cap1, cap2}),
         capability_id=capability.id,
         status=MethodStatus.DEFINED,
+        execution_pattern=ExecutionPattern.BATCH,
     )
 
 
@@ -612,3 +619,140 @@ def test_fold_define_update_schema_version_carries_schema_through_versioning() -
     assert state.parameters_schema == _SCHEMA_A
     assert state.version == "v2"
     assert state.status is MethodStatus.VERSIONED
+
+
+# ---------- compute classification ----------
+
+
+@pytest.mark.unit
+def test_evolve_method_defined_carries_compute_classification() -> None:
+    """Genesis folds the three compute fields onto state (None/False
+    defaults for legacy streams; explicit values when set)."""
+    method_id = uuid4()
+    state = evolve(
+        None,
+        MethodDefined(
+            method_id=method_id,
+            name="Iterative Reconstruction",
+            needed_family_ids=(),
+            occurred_at=_NOW,
+            execution_pattern=ExecutionPattern.ITERATIVE,
+            monotone_quality=True,
+            resumable_from_checkpoint=True,
+        ),
+    )
+    assert state.execution_pattern is ExecutionPattern.ITERATIVE
+    assert state.monotone_quality is True
+    assert state.resumable_from_checkpoint is True
+
+
+@pytest.mark.unit
+def test_evolve_method_defined_defaults_compute_classification_for_legacy_stream() -> None:
+    """Genesis without the fields folds to None/False (unclassified, not Batch)."""
+    state = evolve(
+        None,
+        MethodDefined(method_id=uuid4(), name="X", needed_family_ids=(), occurred_at=_NOW),
+    )
+    assert state.execution_pattern is None
+    assert state.monotone_quality is False
+    assert state.resumable_from_checkpoint is False
+
+
+def _defined_with_compute(method_id: UUID, *, status: MethodStatus, version: str | None) -> Method:
+    return Method(
+        id=method_id,
+        name=MethodName("Iterative Reconstruction"),
+        needed_family_ids=frozenset(),
+        status=status,
+        version=version,
+        execution_pattern=ExecutionPattern.ITERATIVE,
+        monotone_quality=True,
+        resumable_from_checkpoint=True,
+    )
+
+
+@pytest.mark.unit
+def test_evolve_method_versioned_preserves_compute_classification() -> None:
+    """Critical pin: the three compute fields MUST carry through the
+    version transition (part of content identity; omitting them in the
+    evolver arm would silently wipe them to defaults)."""
+    method_id = uuid4()
+    prior = _defined_with_compute(method_id, status=MethodStatus.DEFINED, version=None)
+    versioned = evolve(
+        prior, MethodVersioned(method_id=method_id, version_tag="v2", occurred_at=_NOW)
+    )
+    assert versioned.execution_pattern is ExecutionPattern.ITERATIVE
+    assert versioned.monotone_quality is True
+    assert versioned.resumable_from_checkpoint is True
+
+
+@pytest.mark.unit
+def test_evolve_method_deprecated_preserves_compute_classification() -> None:
+    method_id = uuid4()
+    prior = _defined_with_compute(method_id, status=MethodStatus.VERSIONED, version="v1")
+    deprecated = evolve(prior, MethodDeprecated(method_id=method_id, occurred_at=_NOW))
+    assert deprecated.execution_pattern is ExecutionPattern.ITERATIVE
+    assert deprecated.monotone_quality is True
+    assert deprecated.resumable_from_checkpoint is True
+
+
+@pytest.mark.unit
+def test_evolve_method_parameters_schema_updated_preserves_compute_classification() -> None:
+    method_id = uuid4()
+    prior = _defined_with_compute(method_id, status=MethodStatus.DEFINED, version=None)
+    updated = evolve(
+        prior,
+        MethodParametersSchemaUpdated(
+            method_id=method_id, parameters_schema=_SCHEMA_A, occurred_at=_NOW
+        ),
+    )
+    assert updated.execution_pattern is ExecutionPattern.ITERATIVE
+    assert updated.monotone_quality is True
+    assert updated.resumable_from_checkpoint is True
+
+
+@pytest.mark.unit
+def test_evolve_method_required_role_added_preserves_compute_classification() -> None:
+    """Role-add arm must carry the 3 compute fields through; omitting them
+    in this evolver arm would silently wipe them to defaults."""
+    method_id = uuid4()
+    prior = _defined_with_compute(method_id, status=MethodStatus.DEFINED, version=None)
+    with_role = evolve(
+        prior,
+        MethodRequiredRoleAdded(
+            method_id=method_id,
+            role_name="detector",
+            family_id=uuid4(),
+            required_ports=(),
+            optional=False,
+            occurred_at=_NOW,
+        ),
+    )
+    assert with_role.execution_pattern is ExecutionPattern.ITERATIVE
+    assert with_role.monotone_quality is True
+    assert with_role.resumable_from_checkpoint is True
+
+
+@pytest.mark.unit
+def test_evolve_method_required_role_removed_preserves_compute_classification() -> None:
+    """Role-remove arm must carry the 3 compute fields through."""
+    method_id = uuid4()
+    role = RoleRequirement(role_name=RoleName("detector"), family_id=uuid4())
+    prior = Method(
+        id=method_id,
+        name=MethodName("Iterative Reconstruction"),
+        needed_family_ids=frozenset(),
+        status=MethodStatus.DEFINED,
+        execution_pattern=ExecutionPattern.ITERATIVE,
+        monotone_quality=True,
+        resumable_from_checkpoint=True,
+        required_roles=frozenset({role}),
+    )
+    without_role = evolve(
+        prior,
+        MethodRequiredRoleRemoved(method_id=method_id, role_name="detector", occurred_at=_NOW),
+    )
+    assert without_role.required_roles == frozenset()
+    assert without_role.execution_pattern is ExecutionPattern.ITERATIVE
+    assert without_role.monotone_quality is True
+    assert without_role.resumable_from_checkpoint is True

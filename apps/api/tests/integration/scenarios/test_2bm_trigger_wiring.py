@@ -69,6 +69,7 @@ from cora.equipment.aggregates.asset import PortDirection
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.features.add_asset_port import AddAssetPort
 from cora.equipment.features.add_asset_port import bind as bind_add_asset_port
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.add_plan_wire import AddPlanWire
 from cora.recipe.features.add_plan_wire import bind as bind_add_plan_wire
 from cora.recipe.features.define_method import DefineMethod
@@ -216,6 +217,7 @@ async def test_trigger_wiring_validates_end_to_end(
     )
     await bind_define_method(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
             name="trigger_routing",
             needed_family_ids=frozenset(

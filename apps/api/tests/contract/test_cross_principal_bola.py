@@ -413,6 +413,7 @@ def _seed_recipe_chain(client: TestClient, principal: UUID) -> UUID:
     method_response = client.post(
         "/methods",
         json={
+            "execution_pattern": "Batch",
             "name": "BOLA test method",
             "capability_id": str(capability_id),
             "needed_family_ids": [],
@@ -469,6 +470,7 @@ def _create_method_as(client: TestClient, principal: UUID) -> UUID:
     response = client.post(
         "/methods",
         json={
+            "execution_pattern": "Batch",
             "name": "P1's method",
             "capability_id": str(capability_id),
             "needed_family_ids": [],

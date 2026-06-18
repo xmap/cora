@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.aggregates.method.events import (
     MethodDefined,
     MethodDeprecated,
@@ -82,6 +83,12 @@ def test_to_payload_serializes_method_defined_to_primitives() -> None:
         # needed_assembly_ids (default factory). Sorted by UUID string when
         # populated; pinned by tests/unit/recipe/test_method_needed_assembly_ids.py.
         "needed_assembly_ids": [],
+        # compute classification. execution_pattern serializes
+        # as None when unclassified (the event default); the two claims
+        # default False. Keys always present (additive-evolution).
+        "execution_pattern": None,
+        "monotone_quality": False,
+        "resumable_from_checkpoint": False,
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -192,6 +199,93 @@ def test_from_stored_raises_on_unknown_event_type() -> None:
     stored = _stored("FamilyDefined", {})
     with pytest.raises(ValueError, match="Unknown MethodEvent event_type"):
         from_stored(stored)
+
+
+# ---------- MethodDefined: compute classification ----------
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_compute_classification_fields() -> None:
+    """execution_pattern serializes as the enum value; the two claims
+    as bools. Pinned so a future change can't silently drop a key."""
+    method_id = uuid4()
+    event = MethodDefined(
+        method_id=method_id,
+        name="Iterative Reconstruction",
+        needed_family_ids=(),
+        occurred_at=_NOW,
+        execution_pattern=ExecutionPattern.ITERATIVE,
+        monotone_quality=True,
+        resumable_from_checkpoint=True,
+    )
+    payload = to_payload(event)
+    assert payload["execution_pattern"] == "Iterative"
+    assert payload["monotone_quality"] is True
+    assert payload["resumable_from_checkpoint"] is True
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_compute_classification_fields() -> None:
+    method_id = uuid4()
+    stored = _stored(
+        "MethodDefined",
+        {
+            "method_id": str(method_id),
+            "name": "Iterative Reconstruction",
+            "needed_family_ids": [],
+            "execution_pattern": "Iterative",
+            "monotone_quality": True,
+            "resumable_from_checkpoint": True,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, MethodDefined)
+    assert rebuilt.execution_pattern is ExecutionPattern.ITERATIVE
+    assert rebuilt.monotone_quality is True
+    assert rebuilt.resumable_from_checkpoint is True
+
+
+@pytest.mark.unit
+def test_from_stored_defaults_compute_classification_for_pre_rollout_payload() -> None:
+    """Pre-rollout MethodDefined events have no execution_pattern /
+    monotone_quality / resumable_from_checkpoint keys; from_stored folds
+    them to None / False / False (unclassified, NOT Batch).
+    Additive-evolution pattern."""
+    method_id = uuid4()
+    stored = _stored(
+        "MethodDefined",
+        {
+            "method_id": str(method_id),
+            "name": "Legacy Acquisition",
+            "needed_family_ids": [],
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, MethodDefined)
+    assert rebuilt.execution_pattern is None
+    assert rebuilt.monotone_quality is False
+    assert rebuilt.resumable_from_checkpoint is False
+
+
+@pytest.mark.unit
+def test_to_payload_then_from_stored_round_trips_compute_classification() -> None:
+    original = MethodDefined(
+        method_id=uuid4(),
+        name="Batch Gridrec",
+        needed_family_ids=(),
+        occurred_at=_NOW,
+        execution_pattern=ExecutionPattern.BATCH,
+        monotone_quality=False,
+        resumable_from_checkpoint=False,
+    )
+    stored = _stored("MethodDefined", to_payload(original))
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, MethodDefined)
+    assert rebuilt.execution_pattern is ExecutionPattern.BATCH
+    assert rebuilt.monotone_quality is False
+    assert rebuilt.resumable_from_checkpoint is False
 
 
 # ---------- MethodVersioned ----------

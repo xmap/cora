@@ -24,6 +24,7 @@ from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.recipe._projections import register_recipe_projections
 from cora.recipe.aggregates.capability import ExecutorShape
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
     PortRequirement,
     RoleName,
     RoleRequirement,
@@ -108,6 +109,7 @@ async def _seed_plan_with_required_role(db_pool: asyncpg.Pool) -> tuple[UUID, UU
     # Method + required role
     method_id = await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="Tomography",
             capability_id=cap_id,
             needed_family_ids=frozenset(),

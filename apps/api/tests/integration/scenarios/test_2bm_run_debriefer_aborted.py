@@ -104,6 +104,7 @@ from cora.equipment.features.fault_asset import FaultAsset
 from cora.equipment.features.fault_asset import bind as bind_fault_asset
 from cora.infrastructure.ports import FakeLLM, FakeLLMResponse
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_plan import DefinePlan
@@ -309,6 +310,7 @@ async def test_run_debrief_agent_fires_on_equipment_abort(
 
     await bind_define_method(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
             name="tomography",
             needed_family_ids=frozenset(

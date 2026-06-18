@@ -24,6 +24,8 @@ deterministic hashing across worker processes.
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from cora.recipe.aggregates.method import ExecutionPattern
+
 
 @dataclass(frozen=True)
 class DefineMethod:
@@ -55,6 +57,10 @@ class DefineMethod:
 
     name: str
     capability_id: UUID
+    # execution_pattern classifies the Method's workload shape. REQUIRED
+    # (no default) per [[project-compute-modeling-stage0-design]] L3, so it
+    # sits with capability_id before the default-factory collections.
+    execution_pattern: ExecutionPattern
     needed_family_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
     needed_supplies: frozenset[str] = field(default_factory=frozenset[str])
     # needed_assembly_ids declares the Method's cross-BC dependency on
@@ -65,3 +71,8 @@ class DefineMethod:
     # Plan binding. Same hashability + `_normalize_for_hash` story as
     # needed_family_ids.
     needed_assembly_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
+    # monotone_quality (anytime-algorithm claim) + resumable_from_checkpoint
+    # are optional refinements; both default False. monotone_quality=True is
+    # rejected unless execution_pattern == ITERATIVE (decider invariant).
+    monotone_quality: bool = False
+    resumable_from_checkpoint: bool = False

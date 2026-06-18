@@ -13,6 +13,7 @@ from cora.recipe.aggregates.capability import (
     ExecutorShape,
 )
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
     InvalidMethodNameError,
     MethodCapabilityExecutorMismatchError,
 )
@@ -54,7 +55,11 @@ async def test_handler_returns_generated_method_id() -> None:
     handler = define_method.bind(deps)
 
     result = await handler(
-        DefineMethod(name="XRF Mapping", capability_id=_CAPABILITY_ID),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
+            name="XRF Mapping",
+            capability_id=_CAPABILITY_ID,
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -69,6 +74,7 @@ async def test_handler_appends_method_defined_event_to_store() -> None:
 
     await handler(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="XRF Fly Mapping",
             capability_id=_CAPABILITY_ID,
             needed_family_ids=frozenset({_CAP1, _CAP2}),
@@ -95,6 +101,11 @@ async def test_handler_appends_method_defined_event_to_store() -> None:
         "needed_assembly_ids": [],
         # and round-trips through MethodDefined as a UUID string.
         "capability_id": str(_CAPABILITY_ID),
+        # compute classification: execution_pattern serialized
+        # as the enum value; the two claims as bools.
+        "execution_pattern": "Batch",
+        "monotone_quality": False,
+        "resumable_from_checkpoint": False,
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.correlation_id == _CORRELATION_ID
@@ -113,7 +124,10 @@ async def test_handler_handles_empty_needed_family_ids() -> None:
 
     await handler(
         DefineMethod(
-            name="Sample Cleaning", capability_id=_CAPABILITY_ID, needed_family_ids=frozenset()
+            execution_pattern=ExecutionPattern.BATCH,
+            name="Sample Cleaning",
+            capability_id=_CAPABILITY_ID,
+            needed_family_ids=frozenset(),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -129,7 +143,11 @@ async def test_handler_trims_method_name_via_value_object() -> None:
     handler = define_method.bind(deps)
 
     await handler(
-        DefineMethod(name="  XRF Mapping  ", capability_id=_CAPABILITY_ID),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
+            name="  XRF Mapping  ",
+            capability_id=_CAPABILITY_ID,
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -145,7 +163,9 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
 
     with pytest.raises(UnauthorizedError) as exc_info:
         await handler(
-            DefineMethod(name="X", capability_id=_CAPABILITY_ID),
+            DefineMethod(
+                execution_pattern=ExecutionPattern.BATCH, name="X", capability_id=_CAPABILITY_ID
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -159,7 +179,9 @@ async def test_handler_does_not_append_when_denied() -> None:
 
     with pytest.raises(UnauthorizedError):
         await handler(
-            DefineMethod(name="X", capability_id=_CAPABILITY_ID),
+            DefineMethod(
+                execution_pattern=ExecutionPattern.BATCH, name="X", capability_id=_CAPABILITY_ID
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -176,7 +198,9 @@ async def test_handler_propagates_invalid_method_name_error() -> None:
 
     with pytest.raises(InvalidMethodNameError):
         await handler(
-            DefineMethod(name="   ", capability_id=_CAPABILITY_ID),
+            DefineMethod(
+                execution_pattern=ExecutionPattern.BATCH, name="   ", capability_id=_CAPABILITY_ID
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -195,6 +219,7 @@ async def test_handler_emits_byte_identical_payload_for_same_capability_id() -> 
     store_a, deps_a = await _build_seeded_deps()
     await define_method.bind(deps_a)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="XRF Fly Mapping",
             capability_id=_CAPABILITY_ID,
             needed_family_ids=needed_family_ids,
@@ -208,6 +233,7 @@ async def test_handler_emits_byte_identical_payload_for_same_capability_id() -> 
     store_b, deps_b = await _build_seeded_deps()
     await define_method.bind(deps_b)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="XRF Fly Mapping",
             capability_id=_CAPABILITY_ID,
             needed_family_ids=needed_family_ids,
@@ -230,7 +256,9 @@ async def test_handler_loads_and_validates_bound_capability_when_set() -> None:
     handler = define_method.bind(deps)
 
     await handler(
-        DefineMethod(name="X", capability_id=_CAPABILITY_ID),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH, name="X", capability_id=_CAPABILITY_ID
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -251,7 +279,7 @@ async def test_handler_raises_capability_not_found_when_stream_missing() -> None
 
     with pytest.raises(CapabilityNotFoundError):
         await handler(
-            DefineMethod(name="X", capability_id=bogus),
+            DefineMethod(execution_pattern=ExecutionPattern.BATCH, name="X", capability_id=bogus),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -276,7 +304,9 @@ async def test_handler_raises_executor_mismatch_when_capability_excludes_method(
 
     with pytest.raises(MethodCapabilityExecutorMismatchError) as exc_info:
         await handler(
-            DefineMethod(name="X", capability_id=capability_id),
+            DefineMethod(
+                execution_pattern=ExecutionPattern.BATCH, name="X", capability_id=capability_id
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -303,7 +333,9 @@ async def test_wired_handler_propagates_causation_id_through_full_composition() 
     handlers = wire_recipe(deps)
 
     await handlers.define_method(
-        DefineMethod(name="X", capability_id=_CAPABILITY_ID),
+        DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH, name="X", capability_id=_CAPABILITY_ID
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         causation_id=causation,

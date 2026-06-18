@@ -37,6 +37,8 @@ from cora.recipe.aggregates.capability import (
     ExecutorShape,
 )
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
+    InvalidMethodMonotoneQualityError,
     Method,
     MethodAlreadyExistsError,
     MethodName,
@@ -69,6 +71,30 @@ def _capability(
     )
 
 
+def _cmd(
+    *,
+    name: str,
+    capability_id: UUID,
+    needed_family_ids: frozenset[UUID] = frozenset(),
+    execution_pattern: ExecutionPattern = ExecutionPattern.BATCH,
+    monotone_quality: bool = False,
+) -> DefineMethod:
+    """DefineMethod factory defaulting execution_pattern to BATCH.
+
+    execution_pattern is a required command field; the properties that
+    don't exercise the workload-classification axis default it to
+    BATCH. The dedicated monotone-invariant property passes it
+    explicitly via a sampled strategy.
+    """
+    return DefineMethod(
+        name=name,
+        capability_id=capability_id,
+        execution_pattern=execution_pattern,
+        needed_family_ids=needed_family_ids,
+        monotone_quality=monotone_quality,
+    )
+
+
 @pytest.mark.unit
 @given(
     existing_id=st.uuids(),
@@ -94,7 +120,7 @@ def test_define_method_on_existing_state_raises_already_exists(
     with pytest.raises(MethodAlreadyExistsError) as exc:
         define_method.decide(
             state=existing,
-            command=DefineMethod(name=name, capability_id=cap.id),
+            command=_cmd(name=name, capability_id=cap.id),
             capability=cap,
             now=now,
             new_id=new_id,
@@ -119,7 +145,7 @@ def test_define_method_with_missing_capability_raises_not_found(
     with pytest.raises(CapabilityNotFoundError) as exc:
         define_method.decide(
             state=None,
-            command=DefineMethod(name=name, capability_id=capability_uuid),
+            command=_cmd(name=name, capability_id=capability_uuid),
             capability=None,
             now=now,
             new_id=new_id,
@@ -148,7 +174,7 @@ def test_define_method_with_non_method_capability_raises_executor_mismatch(
     with pytest.raises(MethodCapabilityExecutorMismatchError) as exc:
         define_method.decide(
             state=None,
-            command=DefineMethod(name=name, capability_id=cap.id),
+            command=_cmd(name=name, capability_id=cap.id),
             capability=cap,
             now=now,
             new_id=new_id,
@@ -176,7 +202,7 @@ def test_define_method_on_empty_stream_emits_event_with_injected_fields(
     cap = _capability(capability_id=capability_uuid)
     events = define_method.decide(
         state=None,
-        command=DefineMethod(
+        command=_cmd(
             name=name,
             capability_id=cap.id,
             needed_family_ids=frozenset({family_id}),
@@ -211,7 +237,7 @@ def test_define_method_with_identical_inputs_returns_equal_events(
 ) -> None:
     """Two calls with identical args return equal events (no clock/id leakage)."""
     cap = _capability(capability_id=capability_uuid)
-    command = DefineMethod(
+    command = _cmd(
         name=name,
         capability_id=cap.id,
         needed_family_ids=frozenset({family_id}),
@@ -223,3 +249,65 @@ def test_define_method_with_identical_inputs_returns_equal_events(
         state=None, command=command, capability=cap, now=now, new_id=new_id
     )
     assert first == second
+
+
+@pytest.mark.unit
+@given(
+    capability_uuid=st.uuids(),
+    name=_NAME,
+    pattern=st.sampled_from([ExecutionPattern.BATCH, ExecutionPattern.STREAMING]),
+    now=aware_datetimes(),
+    new_id=st.uuids(),
+)
+def test_define_method_monotone_on_non_iterative_always_raises(
+    capability_uuid: UUID,
+    name: str,
+    pattern: ExecutionPattern,
+    now: datetime,
+    new_id: UUID,
+) -> None:
+    """L4(b): monotone_quality=True on any non-ITERATIVE pattern always
+    raises InvalidMethodMonotoneQualityError, regardless of name."""
+    cap = _capability(capability_id=capability_uuid)
+    with pytest.raises(InvalidMethodMonotoneQualityError):
+        define_method.decide(
+            state=None,
+            command=_cmd(
+                name=name,
+                capability_id=cap.id,
+                execution_pattern=pattern,
+                monotone_quality=True,
+            ),
+            capability=cap,
+            now=now,
+            new_id=new_id,
+        )
+
+
+@pytest.mark.unit
+@given(
+    capability_uuid=st.uuids(),
+    name=_NAME,
+    pattern=st.sampled_from(list(ExecutionPattern)),
+    now=aware_datetimes(),
+    new_id=st.uuids(),
+)
+def test_define_method_event_carries_execution_pattern(
+    capability_uuid: UUID,
+    name: str,
+    pattern: ExecutionPattern,
+    now: datetime,
+    new_id: UUID,
+) -> None:
+    """The emitted MethodDefined always carries the command's
+    execution_pattern (monotone_quality False keeps the L4(b)
+    invariant satisfied across all three patterns)."""
+    cap = _capability(capability_id=capability_uuid)
+    events = define_method.decide(
+        state=None,
+        command=_cmd(name=name, capability_id=cap.id, execution_pattern=pattern),
+        capability=cap,
+        now=now,
+        new_id=new_id,
+    )
+    assert events[0].execution_pattern is pattern

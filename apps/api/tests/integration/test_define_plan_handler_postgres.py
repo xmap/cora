@@ -27,6 +27,7 @@ from cora.equipment.features.add_asset_family import AddAssetFamily
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.recipe.aggregates.capability import ExecutorShape
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.aggregates.plan import (
     PlanAffordancesNotSatisfiedError,
     PlanName,
@@ -114,6 +115,7 @@ async def test_define_plan_persists_event_with_audit_snapshots_to_postgres(
     )
     await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="XRF Fly Scan Mapping",
             capability_id=method_capability_id,
             needed_family_ids=frozenset({cap_id}),
@@ -254,6 +256,7 @@ async def test_define_plan_affordance_cover_guard_against_postgres(
     )
     await define_method.bind(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             name="FlyScan Method",
             needed_family_ids=frozenset({family_id}),
             capability_id=cap_template_id,

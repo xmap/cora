@@ -22,6 +22,7 @@ def _define_method(
     needed_supplies: list[str] | None = None,
 ) -> UUID:
     body: dict[str, object] = {
+        "execution_pattern": "Batch",
         "name": name,
         # Capability per call so tests stay isolated.
         "capability_id": create_capability_via_api(client),
@@ -110,6 +111,7 @@ def test_define_method_returns_422_for_oversized_supply_kind() -> None:
         response = client.post(
             "/methods",
             json={
+                "execution_pattern": "Batch",
                 "name": "X",
                 "capability_id": _cap_id,
                 "needed_family_ids": [],
@@ -127,6 +129,7 @@ def test_define_method_returns_422_for_empty_supply_kind() -> None:
         response = client.post(
             "/methods",
             json={
+                "execution_pattern": "Batch",
                 "name": "X",
                 "capability_id": _cap_id,
                 "needed_family_ids": [],

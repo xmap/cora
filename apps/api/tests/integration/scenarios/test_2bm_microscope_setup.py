@@ -121,6 +121,7 @@ from cora.equipment.features.update_family_settings_schema import (
     bind as bind_update_family_settings_schema,
 )
 from cora.infrastructure.adapters.in_memory_role_lookup import InMemoryRoleLookup
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_plan import DefinePlan
@@ -757,6 +758,7 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     )
     method_id = await bind_define_method(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_RECIPE_ID,
             name="microscope_image_acquisition",
             # The imaging (Detector Role) capability comes from the

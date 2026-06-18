@@ -64,6 +64,7 @@ from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_family import bind as bind_define_family
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_asset import bind as bind_register_asset
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_practice import DefinePractice
@@ -226,6 +227,7 @@ async def test_facility_install_plays_out_end_to_end(
     )
     await bind_define_method(deps)(
         DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
             name="dark_baseline",
             needed_family_ids=frozenset({_CAP_GENERIC_PROBE_ID}),

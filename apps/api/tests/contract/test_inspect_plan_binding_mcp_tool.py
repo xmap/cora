@@ -28,6 +28,7 @@ def _seed_practice_with_capability(
     method_id = client.post(
         "/methods",
         json={
+            "execution_pattern": "Batch",
             "name": "Test Method",
             "capability_id": cap_id,
             "needed_family_ids": [family_id],

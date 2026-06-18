@@ -53,7 +53,13 @@ def _setup_full_run(
         "family_id"
     ]
     method_id = client.post(
-        "/methods", json={"name": "M", "capability_id": _cap_id, "needed_family_ids": [cap_id]}
+        "/methods",
+        json={
+            "execution_pattern": "Batch",
+            "name": "M",
+            "capability_id": _cap_id,
+            "needed_family_ids": [cap_id],
+        },
     ).json()["method_id"]
     if method_schema is not None:
         r = client.post(

@@ -34,6 +34,7 @@ from cora.recipe.aggregates.capability import (
     ExecutorShape,
 )
 from cora.recipe.aggregates.method import (
+    ExecutionPattern,
     Method,
     MethodDefined,
     MethodDeprecated,
@@ -99,6 +100,7 @@ def test_decider_accepts_empty_needed_assembly_ids() -> None:
     events = define_method.decide(
         state=None,
         command=DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAP.id,
             name="Sample Cleaning",
             needed_family_ids=frozenset(),
@@ -116,6 +118,7 @@ def test_decider_accepts_populated_needed_assembly_ids() -> None:
     events = define_method.decide(
         state=None,
         command=DefineMethod(
+            execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAP.id,
             name="Tomography",
             needed_family_ids=frozenset(),

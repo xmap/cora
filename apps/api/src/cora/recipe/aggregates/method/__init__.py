@@ -18,6 +18,7 @@ from cora.recipe.aggregates.method.events import (
     to_payload,
 )
 from cora.recipe.aggregates.method.evolver import evolve, fold
+from cora.recipe.aggregates.method.execution_pattern import ExecutionPattern
 from cora.recipe.aggregates.method.parameters_validation import (
     InvalidMethodParametersSchemaError,
     validate_parameters_schema,
@@ -28,12 +29,15 @@ from cora.recipe.aggregates.method.read import (
     load_method_timestamps,
 )
 from cora.recipe.aggregates.method.state import (
+    ITERATIVE_STOPPING_KEYS,
     METHOD_NAME_MAX_LENGTH,
     METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH,
     METHOD_VERSION_TAG_MAX_LENGTH,
     ROLE_NAME_MAX_LENGTH,
     ROLE_PORT_NAME_MAX_LENGTH,
     ROLE_PORT_SIGNAL_TYPE_MAX_LENGTH,
+    InvalidMethodIterativeStoppingFieldError,
+    InvalidMethodMonotoneQualityError,
     InvalidMethodNameError,
     InvalidMethodNeededSuppliesError,
     InvalidMethodVersionTagError,
@@ -59,12 +63,16 @@ from cora.recipe.aggregates.method.state import (
 )
 
 __all__ = [
+    "ITERATIVE_STOPPING_KEYS",
     "METHOD_NAME_MAX_LENGTH",
     "METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH",
     "METHOD_VERSION_TAG_MAX_LENGTH",
     "ROLE_NAME_MAX_LENGTH",
     "ROLE_PORT_NAME_MAX_LENGTH",
     "ROLE_PORT_SIGNAL_TYPE_MAX_LENGTH",
+    "ExecutionPattern",
+    "InvalidMethodIterativeStoppingFieldError",
+    "InvalidMethodMonotoneQualityError",
     "InvalidMethodNameError",
     "InvalidMethodNeededSuppliesError",
     "InvalidMethodParametersSchemaError",
