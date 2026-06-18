@@ -17,9 +17,10 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+import yaml
 
 from cora.equipment.aggregates._drawing import DrawingSystem
 
@@ -30,8 +31,16 @@ pytestmark = pytest.mark.unit
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
-_DESCRIPTOR = _REPO_ROOT / "deployments" / "2-bm" / "beamline.yaml"
+_DEPLOYMENTS = _REPO_ROOT / "deployments"
+_DESCRIPTOR = _DEPLOYMENTS / "2-bm" / "beamline.yaml"
 _CATALOG = _REPO_ROOT / "catalog" / "catalog.yaml"
+
+
+def _beamline_descriptors() -> list[Path]:
+    # Every deployment's beamline descriptor. The catalog cross-checks run per
+    # descriptor so a second beamline cannot drift its model/family bindings
+    # unguarded; the 2-BM-only _DESCRIPTOR is kept for 2-BM-specific content.
+    return sorted(_DEPLOYMENTS.glob("*/beamline.yaml"))
 
 
 def _load(name: str) -> ModuleType:
@@ -192,34 +201,162 @@ def test_drawings_and_calibrations_loaded() -> None:
     assert devices["Hexapod"].drawing is not None
 
 
-def test_device_model_references_resolve_in_catalog() -> None:
-    descriptor = bd.load(_DESCRIPTOR)
+def test_at_least_one_beamline_descriptor_found() -> None:
+    # The catalog cross-checks below are parametrized over discovered
+    # descriptors; an empty glob would make them all vanish and pass vacuously.
+    assert _beamline_descriptors(), "no deployments/*/beamline.yaml found"
+
+
+def test_walk_reaches_2bm_devices_across_sections() -> None:
+    # Anchor the device walk to known 2-BM content so it cannot silently
+    # regress to empty (which would make the resolution checks vacuous): the
+    # walk must reach a beam-path device, a nested constituent, and a controls
+    # device.
+    devices = _walk_devices(bd.load(_DESCRIPTOR))
+    names = {d.name for d in devices}
+    assert {"Turret", "StationShutter", "RotaryDrive"} <= names
+    assert sum(1 for d in devices if d.model) >= 5
+
+
+@pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
+def test_device_model_references_resolve_in_catalog(descriptor_path: Path) -> None:
+    descriptor = bd.load(descriptor_path)
     catalog = cd.load(_CATALOG)
     model_names = {m.name for m in catalog.models}
-    devices = _walk_devices(descriptor)
-    # guard against a vacuous pass if the walk ever regresses to empty
-    assert sum(1 for d in devices if d.model) >= 5
     dangling = sorted(
-        f"{d.name} -> {d.model}" for d in devices if d.model and d.model not in model_names
+        f"{d.name} -> {d.model}"
+        for d in _walk_devices(descriptor)
+        if d.model and d.model not in model_names
     )
-    assert not dangling, f"beamline devices bind catalog models that do not exist: {dangling}"
+    assert not dangling, (
+        f"{descriptor_path.parent.name}: devices bind catalog models that do not exist: {dangling}"
+    )
 
 
-def test_device_family_is_declared_by_its_bound_model() -> None:
-    descriptor = bd.load(_DESCRIPTOR)
+@pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
+def test_device_family_is_declared_by_its_bound_model(descriptor_path: Path) -> None:
+    descriptor = bd.load(descriptor_path)
     catalog = cd.load(_CATALOG)
     declared = {m.name: set(m.declared_families) for m in catalog.models}
-    devices = _walk_devices(descriptor)
-    # guard against a vacuous pass if the walk ever regresses to empty
-    assert sum(1 for d in devices if d.model and d.family) >= 5
     mismatched = sorted(
         f"{d.name}: family {d.family} not in {sorted(declared[d.model])} (model {d.model})"
-        for d in devices
+        for d in _walk_devices(descriptor)
         if d.model and d.family and d.model in declared and d.family not in declared[d.model]
     )
     assert not mismatched, (
-        f"device family disagrees with its bound model's declared_families: {mismatched}"
+        f"{descriptor_path.parent.name}: device family disagrees with bound model's "
+        f"declared_families: {mismatched}"
     )
+
+
+# Catalog models bound by no deployment device today. Each is a rename-trap
+# landing pad, so a NEW orphan must be bound, removed, or added here with a
+# reason. The two non-kit entries are catalog models whose 2-BM devices are not
+# yet model-bound (a descriptor follow-up, distinct from the kit alternatives).
+_ALLOWED_ORPHAN_MODELS = {
+    "aerotech_abrs150mp": "rotary swap-kit alternative; installed rotary is ABRS-250MP",
+    "aerotech_abs2000": "rotary swap-kit alternative; installed rotary is ABRS-250MP",
+    "mitutoyo_plan_apo": "objective product-line model; Objective_* devices not yet model-bound",
+    "crytur_luag": "scintillator model; Scintillator device not yet model-bound",
+}
+
+
+def _count_binding_keys(node: Any) -> dict[str, int]:
+    # Count mappings carrying a non-null model:/family: anywhere in the raw YAML.
+    # Compared against the typed walk to catch a binding hidden under an untyped
+    # extra= key (e.g. a device-dict in a stray group key) that the walk misses.
+    counts = {"model": 0, "family": 0}
+
+    def visit(n: Any) -> None:
+        if isinstance(n, dict):
+            mapping = cast("dict[str, Any]", n)
+            for key in counts:
+                if mapping.get(key) is not None:
+                    counts[key] += 1
+            for value in mapping.values():
+                visit(value)
+        elif isinstance(n, list):
+            for value in cast("list[Any]", n):
+                visit(value)
+
+    visit(node)
+    return counts
+
+
+def _model_column_cells(md_path: Path) -> list[str]:
+    # First-column ids of every hand-authored "| Model | ... |" vendor table.
+    cells: list[str] = []
+    in_table = False
+    for line in md_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("| Model |"):
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if not stripped.startswith("|"):
+            in_table = False
+            continue
+        if not stripped.replace("|", "").replace("-", "").strip():
+            continue  # the header separator row
+        cell = stripped.split("|")[1].strip().strip("`")
+        if cell:
+            cells.append(cell)
+    return cells
+
+
+def test_no_unexpected_orphan_catalog_models() -> None:
+    catalog = cd.load(_CATALOG)
+    bound = {
+        device.model
+        for path in _beamline_descriptors()
+        for device in _walk_devices(bd.load(path))
+        if device.model
+    }
+    orphans = {m.name for m in catalog.models} - bound
+    unexpected = orphans - set(_ALLOWED_ORPHAN_MODELS)
+    assert not unexpected, (
+        "catalog models bound by no deployment device (rename-trap landing pads); "
+        f"bind, remove, or allowlist with a reason: {sorted(unexpected)}"
+    )
+    stale_allowlist = set(_ALLOWED_ORPHAN_MODELS) - orphans
+    assert not stale_allowlist, (
+        f"bound or removed; drop from _ALLOWED_ORPHAN_MODELS: {sorted(stale_allowlist)}"
+    )
+
+
+@pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
+def test_no_model_or_family_binding_escapes_the_walk(descriptor_path: Path) -> None:
+    raw = yaml.safe_load(descriptor_path.read_text(encoding="utf-8"))
+    raw_counts = _count_binding_keys(raw)
+    walked = _walk_devices(bd.load(descriptor_path))
+    walked_counts = {
+        "model": sum(1 for d in walked if d.model),
+        "family": sum(1 for d in walked if d.family),
+    }
+    assert raw_counts == walked_counts, (
+        f"{descriptor_path.parent.name}: a model/family binding sits off the device walk "
+        f"(raw {raw_counts} vs walked {walked_counts}); it would escape the catalog checks"
+    )
+
+
+def test_doc_vendor_tables_reference_real_catalog_models() -> None:
+    catalog = cd.load(_CATALOG)
+    model_names = {m.name for m in catalog.models}
+    docs_deployments = _REPO_ROOT / "docs" / "deployments"
+    stale: list[str] = []
+    tables_seen = 0
+    for md_path in sorted(docs_deployments.rglob("*.md")):
+        cells = _model_column_cells(md_path)
+        if cells:
+            tables_seen += 1
+        stale.extend(
+            f"{md_path.relative_to(_REPO_ROOT)}: {cell}"
+            for cell in cells
+            if cell not in model_names
+        )
+    assert tables_seen >= 1, "no hand-authored Model-column vendor tables found to check"
+    assert not stale, f"doc vendor tables reference catalog models that do not exist: {stale}"
 
 
 def test_malformed_descriptor_raises(tmp_path: Path) -> None:

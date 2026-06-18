@@ -207,9 +207,8 @@ def _render_group(name: str, group: Group) -> str:
                 blocks.append(f"**{device.name} constituents**")
                 blocks.append(_device_table(device.constituents))
 
-    decommissioned = extra.get("decommissioned")
-    if isinstance(decommissioned, list) and decommissioned:
-        joined = ", ".join(str(item) for item in decommissioned)
+    if group.decommissioned:
+        joined = ", ".join(group.decommissioned)
         blocks.append(f"**Decommissioned (provenance):** {joined}")
 
     return "\n\n".join(blocks)

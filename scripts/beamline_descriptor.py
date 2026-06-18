@@ -109,6 +109,7 @@ class Group(BaseModel):
     intro: str | None = None
     note: str | None = None
     devices: list[Device] = []
+    decommissioned: list[str] = []  # provenance only; typed list[str] forbids a device-dict here
 
 
 class Enclosure(BaseModel):

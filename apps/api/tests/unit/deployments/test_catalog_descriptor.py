@@ -74,6 +74,34 @@ def test_catalog_loads_and_validates() -> None:
         assert m.capability in codes, f"{m.name} -> unknown capability {m.capability}"
 
 
+def test_catalog_model_identity_is_well_formed() -> None:
+    cat = cd.load(_CATALOG)
+    blanks = sorted(
+        m.name or "<unnamed>"
+        for m in cat.models
+        if not m.name.strip() or not m.part_number.strip() or not m.manufacturer.name.strip()
+    )
+    assert not blanks, f"catalog models with a blank name/part_number/manufacturer: {blanks}"
+
+    names = [m.name for m in cat.models]
+    duplicate_names = sorted({n for n in names if names.count(n) > 1})
+    assert not duplicate_names, f"duplicate catalog model names: {duplicate_names}"
+
+    # The federation Model id is uuid5(manufacturer, part_number); two rows with
+    # one such key are a single identity wearing two names. The not-yet-confirmed
+    # sentinel part number is exempt (the code mints a random id for it).
+    sentinel = "unknown-pending-confirmation"
+    keys = [
+        (m.manufacturer.name.strip().lower(), m.part_number.strip())
+        for m in cat.models
+        if m.part_number.strip().lower() != sentinel
+    ]
+    duplicate_keys = sorted({k for k in keys if keys.count(k) > 1})
+    assert not duplicate_keys, (
+        f"catalog models sharing one (manufacturer, part_number) identity: {duplicate_keys}"
+    )
+
+
 def test_affordance_mirror_matches_code() -> None:
     assert {a.value for a in Affordance} == cd.AFFORDANCES
 
