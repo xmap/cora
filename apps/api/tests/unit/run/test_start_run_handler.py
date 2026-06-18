@@ -12,6 +12,7 @@ test_define_plan_handler.py's seeding approach. Keeps the test
 focus on start_run handler behavior, not upstream BC behavior.
 """
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -33,6 +34,7 @@ from cora.equipment.aggregates.asset.events import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
+from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.recipe.aggregates.method import MethodNotFoundError
 from cora.recipe.aggregates.method.events import MethodDefined
 from cora.recipe.aggregates.method.events import (
@@ -55,9 +57,11 @@ from cora.recipe.aggregates.practice.events import (
 )
 from cora.run import RunHandlers, UnauthorizedError, wire_run
 from cora.run.aggregates.run import (
+    RunBeamAvailabilityUnknownError,
     RunBoundPlanDeprecatedError,
     RunCapabilitiesNotSatisfiedError,
     RunPlanAssetDecommissionedError,
+    RunRequiresOpenBeamShuttersError,
     RunSubjectNotMountableError,
 )
 from cora.run.features import start_run
@@ -879,3 +883,92 @@ async def test_handler_without_campaign_id_uses_single_stream_append() -> None:
     assert result == _NEW_ID
     run_events, _ = await store.load("Run", _NEW_ID)
     assert run_events[0].payload.get("campaign_id") is None
+
+
+# ---------- BEAM-1 beam-availability gate (handler threads the lookup) ----------
+
+
+class _FixedBeamLookup:
+    """Test BeamAvailabilityLookup returning a fixed reading.
+
+    Proves the handler reads `deps.beam_availability_lookup` and threads
+    its result into the decider's beam gate (the gate logic itself is
+    covered by test_start_run_beam_gate_decider).
+    """
+
+    def __init__(self, reading: BeamAvailabilityLookupResult) -> None:
+        self._reading = reading
+
+    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+        return self._reading
+
+
+@pytest.mark.unit
+async def test_handler_raises_requires_open_beam_when_lookup_reports_closed_shutter() -> None:
+    store = InMemoryEventStore()
+    _, _, _, _, plan_id, subject_id = await seed_full_chain(store)
+    deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
+    deps = replace(
+        deps,
+        beam_availability_lookup=_FixedBeamLookup(
+            BeamAvailabilityLookupResult(
+                fes_open=False, sbs_open=True, fes_permit=True, quality_ok=True
+            )
+        ),
+    )
+    handler = start_run.bind(deps)
+
+    with pytest.raises(RunRequiresOpenBeamShuttersError) as exc_info:
+        await handler(
+            StartRun(name="Run-A", plan_id=plan_id, subject_id=subject_id),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.blocking == frozenset({"fes_open"})
+
+
+@pytest.mark.unit
+async def test_handler_raises_beam_unknown_when_lookup_reports_bad_quality() -> None:
+    store = InMemoryEventStore()
+    _, _, _, _, plan_id, subject_id = await seed_full_chain(store)
+    deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
+    deps = replace(
+        deps,
+        beam_availability_lookup=_FixedBeamLookup(
+            BeamAvailabilityLookupResult(
+                fes_open=True, sbs_open=True, fes_permit=True, quality_ok=False
+            )
+        ),
+    )
+    handler = start_run.bind(deps)
+
+    with pytest.raises(RunBeamAvailabilityUnknownError):
+        await handler(
+            StartRun(name="Run-A", plan_id=plan_id, subject_id=subject_id),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+
+@pytest.mark.unit
+async def test_handler_starts_when_lookup_reports_all_open() -> None:
+    """Explicit open reading (not the default stub) passes the gate."""
+    store = InMemoryEventStore()
+    _, _, _, _, plan_id, subject_id = await seed_full_chain(store)
+    deps = build_deps(ids=[_NEW_ID, _EVENT_ID], now=_NOW, event_store=store)
+    deps = replace(
+        deps,
+        beam_availability_lookup=_FixedBeamLookup(
+            BeamAvailabilityLookupResult(
+                fes_open=True, sbs_open=True, fes_permit=True, quality_ok=True
+            )
+        ),
+    )
+    handler = start_run.bind(deps)
+
+    result = await handler(
+        StartRun(name="Run-A", plan_id=plan_id, subject_id=subject_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert result == _NEW_ID

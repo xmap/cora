@@ -611,6 +611,57 @@ class RunEnclosureCoverageMismatchError(Exception):
         self.enclosure_status_summary = enclosure_status_summary
 
 
+class RunRequiresOpenBeamShuttersError(Exception):
+    """Beam is not available at Run-start: a shutter is closed or the
+    upstream FES permit is denied.
+
+    Cross-BC pre-flight gate per BEAM-1: when the deployment configures
+    beam PVs, `start_run` reads the live beam-availability state (the
+    front-end + station `BeamBlockingM` shutters, inverted polarity, plus
+    the ACIS `FesPermit` composite) via `BeamAvailabilityLookup` at the
+    start instant and refuses the Run unless beam can reach the sample.
+    This fires when the read SUCCEEDED (quality good) but at least one of
+    `fes_open` / `sbs_open` / `fes_permit` is False. The sibling
+    `RunBeamAvailabilityUnknownError` covers the could-not-read
+    (fail-closed) branch; an unconfigured deployment skips both gates
+    (beam-by-default).
+
+    `blocking` names each failing flag so the 409 message tells the
+    operator exactly what to open. Mapped to HTTP 409.
+    """
+
+    def __init__(self, run_id: UUID, blocking: frozenset[str]) -> None:
+        blocking_sorted = sorted(blocking)
+        super().__init__(
+            f"Run {run_id} cannot start: beam is not available. "
+            f"Blocking: {blocking_sorted}. Open the front-end and station "
+            f"shutters (and clear the upstream FES permit) before starting."
+        )
+        self.run_id = run_id
+        self.blocking = blocking
+
+
+class RunBeamAvailabilityUnknownError(Exception):
+    """Beam-availability state could not be determined at Run-start.
+
+    Cross-BC pre-flight gate per BEAM-1, fail-closed branch: at least one
+    contributing beam PV read had non-Good quality (disconnected / bad /
+    timed out), so `BeamAvailabilityLookupResult.quality_ok` is False. The
+    decider refuses the Run rather than assume beam is open: a dead
+    gateway must never read as "beam available". The sibling
+    `RunRequiresOpenBeamShuttersError` covers the determined-but-closed
+    branch. Mapped to HTTP 409.
+    """
+
+    def __init__(self, run_id: UUID) -> None:
+        super().__init__(
+            f"Run {run_id} cannot start: beam-availability state is unknown "
+            f"(a shutter / permit PV could not be read). Restore the control "
+            f"link and retry; CORA fails closed rather than assume open beam."
+        )
+        self.run_id = run_id
+
+
 class RunCannotCompleteError(Exception):
     """Attempted to complete a Run not in `Running`.
 

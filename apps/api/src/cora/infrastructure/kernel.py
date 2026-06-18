@@ -33,7 +33,7 @@ more BCs adopt the logbook-and-entries pattern.
 """
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import asyncpg
 
@@ -44,9 +44,11 @@ from cora.infrastructure.adapters.signing_registry import SigningRegistry
 from cora.infrastructure.config import Settings
 from cora.infrastructure.ports import (
     LLM,
+    AllBeamOpenLookup,
     AssemblyLookup,
     AssetLookup,
     Authorize,
+    BeamAvailabilityLookup,
     CapabilityLookup,
     CautionLookup,
     ClearanceLookup,
@@ -302,6 +304,23 @@ class Kernel:
     publish_port: PublishPort | None = None
     signature_port: SignaturePort | None = None
     permit_lookup: PermitLookup | None = None
+    beam_availability_lookup: BeamAvailabilityLookup = field(default_factory=AllBeamOpenLookup)
+    """Cross-BC port consumed by Run BC's `start_run` and Operation
+    BC's `start_procedure` to read live beam-availability state (the
+    front-end + station `BeamBlockingM` shutters and the ACIS FES-permit
+    composite) at the start instant and gate the start (BEAM-1).
+
+    UNIQUE among the cross-BC lookups in carrying a default: every other
+    lookup reads a projection and is built at Kernel-construction time,
+    but the production beam adapter (`ControlPortBeamAvailabilityLookup`)
+    reads LIVE through the Operation BC's `ControlPort`, which is not on
+    the Kernel and is only materialised during wiring. So the Kernel
+    defaults to the always-open `AllBeamOpenLookup` stub (preserving the
+    pre-BEAM-1 no-gate behavior + the test default) and the composition
+    root overrides it post-construction via `dataclasses.replace` with a
+    `ControlPortBeamAvailabilityLookup` over the shared ControlPort when
+    `BEAM_AVAILABILITY_PVS` is configured. Gate-specific tests likewise
+    `replace` it with a stub returning the reading under test."""
 
 
 Teardown = Callable[[], Awaitable[None]]

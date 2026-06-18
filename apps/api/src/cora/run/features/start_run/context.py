@@ -56,6 +56,7 @@ from uuid import UUID
 
 from cora.campaign.aggregates.campaign import Campaign
 from cora.equipment.aggregates.asset import Asset
+from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.infrastructure.ports.caution_lookup import CautionLookupResult
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
 from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
@@ -122,3 +123,15 @@ class RunStartContext:
     Asset-chain). Methods do NOT declare a `needed_enclosure_permits`
     field; the located-in chain IS the declaration."""
     campaign: Campaign | None = None
+    beam_availability: BeamAvailabilityLookupResult | None = None
+    """Live beam-availability reading at the Run-start instant (BEAM-1),
+    or None when the deployment configured no beam PVs (gate skipped,
+    beam-by-default). The handler calls
+    `deps.beam_availability_lookup.read_beam_availability()` and threads
+    the result here; the decider gates on it (fail-closed when
+    `quality_ok` is False; refuse when any of `fes_open` / `sbs_open` /
+    `fes_permit` is False). The reading is consumed only by the gate and
+    is intentionally NOT persisted on `RunStarted` (a started Run always
+    passed the gate, so a stored snapshot would be all-open). Distinct
+    axis from the Enclosure SecureM permit: beam-open is per-scan, the
+    enclosure permit is access-state."""

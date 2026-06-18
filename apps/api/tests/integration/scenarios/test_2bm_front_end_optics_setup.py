@@ -24,16 +24,19 @@ mirrors test_2bm_motor_homing.py.
 ```
 2-BM (Unit)
 +-- FrontEndDrive (Device)        Family: MotionController   a-station OMS VME58
-    +-- Mirror (Device)           Family: Mirror             (controller_id -> FrontEndDrive)
-    +-- Monochromator (Device)    Family: Monochromator      (controller_id -> FrontEndDrive)
-    +-- ConditioningSlit (Device) Family: Slit               (controller_id -> FrontEndDrive)
-    +-- SampleSlit (Device)       Family: Slit               (controller_id -> FrontEndDrive)
-    +-- Filter (Device)           Family: Filter             (controller_id -> FrontEndDrive)
++-- MirrorTable (Device)          Family: Table              front-end support table
+|   +-- Mirror (Device)           Family: Mirror             (controller_id -> FrontEndDrive)
++-- Monochromator (Device)        Family: Monochromator      (controller_id -> FrontEndDrive)
++-- ConditioningSlit (Device)     Family: Slit               (controller_id -> FrontEndDrive)
++-- SampleSlit (Device)           Family: Slit               (controller_id -> FrontEndDrive)
++-- Filter (Device)               Family: Filter             (controller_id -> FrontEndDrive)
 ```
 
-The driven stages are siblings of the controller under the Unit (the
-`controller_id` back-reference, not `parent_id`, records what drives them),
-exactly as in the motor-homing scenario.
+Containment (`parent_id`) and drive (`controller_id`) are orthogonal: each optic
+records `controller_id -> FrontEndDrive` for what moves it, while `parent_id`
+records what it sits on. The Mirror sits on the `MirrorTable` (relocated there
+after the facility install), the rest sit on the Unit; none of that changes the
+controller back-reference, exactly as in the motor-homing scenario.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -44,7 +47,16 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
+from cora.equipment.features.add_asset_family import AddAssetFamily
+from cora.equipment.features.add_asset_family import bind as bind_add_asset_family
+from cora.equipment.features.define_family import DefineFamily
+from cora.equipment.features.define_family import bind as bind_define_family
+from cora.equipment.features.register_asset import RegisterAsset
+from cora.equipment.features.register_asset import bind as bind_register_asset
+from cora.equipment.features.relocate_asset import RelocateAsset
+from cora.equipment.features.relocate_asset import bind as bind_relocate_asset
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 from tests.integration.scenarios._facility_fixture import (
     DeviceSpec,
@@ -69,6 +81,7 @@ _CAP_MIRROR_ID = family_stream_id(FamilyName("Mirror"))
 _CAP_MONOCHROMATOR_ID = family_stream_id(FamilyName("Monochromator"))
 _CAP_SLIT_ID = family_stream_id(FamilyName("Slit"))
 _CAP_FILTER_ID = family_stream_id(FamilyName("Filter"))
+_CAP_TABLE_ID = family_stream_id(FamilyName("Table"))
 
 # Controller registered first so each optic's controller_id back-reference
 # targets an already-registered Asset stream.
@@ -118,7 +131,7 @@ def _id_queue() -> list[UUID]:
     of the controller + five optics + their Families) plus a small slack tail."""
     return [
         *facility_id_prefix(unit_id=_2BM_UNIT_ID, devices=_DEVICES),
-        *[uuid4() for _ in range(10)],
+        *[uuid4() for _ in range(20)],
     ]
 
 
@@ -137,20 +150,63 @@ async def test_front_end_optics_register_under_frontenddrive(db_pool: asyncpg.Po
         devices=_DEVICES,
     )
 
-    # ----- Each optic: genesis + Family, parented to the Unit, with a
-    #       controller_id back-reference to FrontEndDrive. -----
+    # ----- MirrorTable + relocate the Mirror onto it. The Mirror is registered
+    #       by the facility install (genesis parent = Unit, via DeviceSpec), so
+    #       its containment is corrected with a relocate, exactly as the
+    #       microscope scenario relocates its facility-installed leaves onto the
+    #       Housing. Genesis stays Unit; the relocate records the true support. -----
+    await bind_define_family(deps)(
+        DefineFamily(name="Table", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    mirror_table_id = await bind_register_asset(deps)(
+        RegisterAsset(name="MirrorTable", tier=AssetTier.DEVICE, parent_id=_2BM_UNIT_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_add_asset_family(deps)(
+        AddAssetFamily(asset_id=mirror_table_id, family_id=_CAP_TABLE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_relocate_asset(deps)(
+        RelocateAsset(
+            asset_id=_MIRROR_ID,
+            to_parent_id=mirror_table_id,
+            reason="Mirror sits on the front-end optical table (MirrorTable)",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # ----- Each optic: genesis + Family, genesis-parented to the Unit, with a
+    #       controller_id back-reference to FrontEndDrive. The Mirror additionally
+    #       carries an AssetRelocated onto MirrorTable (asserted below). -----
     for name, asset_id, cap_id in _OPTICS:
         events, _ = await deps.event_store.load("Asset", asset_id)
-        assert [e.event_type for e in events] == [
-            "AssetRegistered",
-            "AssetFamilyAdded",
-        ], f"{name}: unexpected event sequence {[e.event_type for e in events]}"
+        expected_types = ["AssetRegistered", "AssetFamilyAdded"]
+        if name == "Mirror":
+            expected_types.append("AssetRelocated")
+        assert [e.event_type for e in events] == expected_types, (
+            f"{name}: unexpected event sequence {[e.event_type for e in events]}"
+        )
         genesis = events[0].payload
-        assert genesis["parent_id"] == str(_2BM_UNIT_ID), f"{name}: expected Unit parent"
+        assert genesis["parent_id"] == str(_2BM_UNIT_ID), f"{name}: expected Unit genesis parent"
         assert genesis["controller_id"] == str(_FRONTENDDRIVE_ID), (
             f"{name}: expected controller_id back-reference to FrontEndDrive"
         )
         assert events[1].payload["family_id"] == str(cap_id), f"{name}: wrong Family bound"
+
+    # ----- MirrorTable parents the Unit; the Mirror is relocated onto it
+    #       (2-BM -> MirrorTable -> Mirror), matching the assets.md containment. -----
+    mirror_table_events, _ = await deps.event_store.load("Asset", mirror_table_id)
+    assert mirror_table_events[0].payload["name"] == "MirrorTable"
+    assert mirror_table_events[0].payload["parent_id"] == str(_2BM_UNIT_ID)
+    mirror_events, _ = await deps.event_store.load("Asset", _MIRROR_ID)
+    relocated = [e for e in mirror_events if e.event_type == "AssetRelocated"]
+    assert len(relocated) == 1, "Mirror should be relocated onto MirrorTable"
+    assert relocated[0].payload["to_parent_id"] == str(mirror_table_id)
 
     # ----- FrontEndDrive: a controller, so it carries no controller_id. -----
     controller_events, _ = await deps.event_store.load("Asset", _FRONTENDDRIVE_ID)

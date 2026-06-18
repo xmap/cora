@@ -90,6 +90,7 @@ from cora.run.aggregates.run import (
     CautionAcknowledgement,
     Run,
     RunAlreadyExistsError,
+    RunBeamAvailabilityUnknownError,
     RunBoundPlanDeprecatedError,
     RunCannotJoinCampaignError,
     RunCapabilitiesNotSatisfiedError,
@@ -99,6 +100,7 @@ from cora.run.aggregates.run import (
     RunPlanAssetDecommissionedError,
     RunRequiresActiveClearanceError,
     RunRequiresAvailableSupplyError,
+    RunRequiresOpenBeamShuttersError,
     RunRequiresPermittedEnclosureError,
     RunStarted,
     RunSubjectNotMountableError,
@@ -170,6 +172,12 @@ def decide(
         fails the check -> RunRequiresPermittedEnclosureError;
         when some rows pass and some fail ->
         RunEnclosureCoverageMismatchError
+      - When beam_availability is present (deployment configures beam
+        PVs), the read quality must be Good (else fail-closed
+        -> RunBeamAvailabilityUnknownError) and the front-end + station
+        shutters must be open and the FES permit clear (else
+        -> RunRequiresOpenBeamShuttersError). None skips the gate
+        (beam-by-default).
       - Plan must not be Deprecated -> RunBoundPlanDeprecatedError
       - Subject (when set) must be Mounted or Measured
         -> RunSubjectNotMountableError
@@ -285,6 +293,37 @@ def decide(
             raise RunRequiresPermittedEnclosureError(new_id, failing_summary)
         # Mixed: at least one passed, at least one failed.
         raise RunEnclosureCoverageMismatchError(new_id, failing_summary)
+
+    # cross-BC beam-availability gate per BEAM-1: when the deployment
+    # configures beam PVs the handler reads the live front-end + station
+    # shutter states (BeamBlockingM, inverted polarity: 0 == open) and
+    # the ACIS FES-permit composite at the start instant and threads the
+    # BeamAvailabilityLookupResult here. None means the deployment configures
+    # no beam PVs (beam-by-default; generic deployments + the pre-BEAM-1
+    # behavior). Fail-closed: a read whose quality is not Good
+    # (disconnected / bad PV) refuses the Run rather than assume beam is
+    # open. Distinct axis from the Enclosure SecureM permit above:
+    # beam-open cycles per-scan, the enclosure permit is access-state.
+    # The reading is consumed ONLY by this gate and intentionally NOT
+    # persisted: a started Run necessarily passed the gate, so a stored
+    # snapshot would always be all-open and carry no information beyond
+    # the RunStarted event's existence; BEAM-1 also forbids recording the
+    # per-scan shutter cycling.
+    if context.beam_availability is not None:
+        beam = context.beam_availability
+        if not beam.quality_ok:
+            raise RunBeamAvailabilityUnknownError(new_id)
+        blocking = frozenset(
+            flag
+            for flag, ok in (
+                ("fes_open", beam.fes_open),
+                ("sbs_open", beam.sbs_open),
+                ("fes_permit", beam.fes_permit),
+            )
+            if not ok
+        )
+        if blocking:
+            raise RunRequiresOpenBeamShuttersError(new_id, blocking)
 
     if context.plan.status is PlanStatus.DEPRECATED:
         raise RunBoundPlanDeprecatedError(context.plan.id)

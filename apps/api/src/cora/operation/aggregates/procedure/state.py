@@ -656,6 +656,57 @@ class ProcedureEnclosureCoverageMismatchError(Exception):
         self.enclosure_status_summary = enclosure_status_summary
 
 
+class ProcedureRequiresOpenBeamShuttersError(Exception):
+    """Beam is not available at Procedure-start: a shutter is closed or
+    the upstream FES permit is denied.
+
+    Cross-BC pre-flight gate per BEAM-1, mirror of
+    `RunRequiresOpenBeamShuttersError`: when the deployment configures
+    beam PVs, `start_procedure` reads the live front-end + station
+    `BeamBlockingM` shutters (inverted polarity) and the ACIS
+    `FesPermit` composite via `BeamAvailabilityLookup` at the start
+    instant. This fires when the read SUCCEEDED (quality good) but at
+    least one of `fes_open` / `sbs_open` / `fes_permit` is False. The
+    sibling `ProcedureBeamAvailabilityUnknownError` covers the
+    could-not-read (fail-closed) branch; an unconfigured deployment
+    skips both gates (beam-by-default).
+
+    `blocking` names each failing flag. Mapped to HTTP 409.
+    """
+
+    def __init__(self, procedure_id: UUID, blocking: frozenset[str]) -> None:
+        blocking_sorted = sorted(blocking)
+        super().__init__(
+            f"Procedure {procedure_id} cannot start: beam is not available. "
+            f"Blocking: {blocking_sorted}. Open the front-end and station "
+            f"shutters (and clear the upstream FES permit) before starting."
+        )
+        self.procedure_id = procedure_id
+        self.blocking = blocking
+
+
+class ProcedureBeamAvailabilityUnknownError(Exception):
+    """Beam-availability state could not be determined at Procedure-start.
+
+    Cross-BC pre-flight gate per BEAM-1, fail-closed branch and mirror
+    of `RunBeamAvailabilityUnknownError`: at least one contributing beam
+    PV read had non-Good quality (disconnected / bad / timed out), so
+    `BeamAvailabilityLookupResult.quality_ok` is False. The decider refuses
+    the start rather than assume beam is open. The sibling
+    `ProcedureRequiresOpenBeamShuttersError` covers the
+    determined-but-closed branch. Mapped to HTTP 409.
+    """
+
+    def __init__(self, procedure_id: UUID) -> None:
+        super().__init__(
+            f"Procedure {procedure_id} cannot start: beam-availability state "
+            f"is unknown (a shutter / permit PV could not be read). Restore the "
+            f"control link and retry; CORA fails closed rather than assume open "
+            f"beam."
+        )
+        self.procedure_id = procedure_id
+
+
 class ProcedureCannotStartError(Exception):
     """Attempted to start a Procedure not in `Defined`.
 

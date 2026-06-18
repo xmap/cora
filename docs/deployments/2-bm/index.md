@@ -20,7 +20,7 @@ The systems you operate, and the devices they are built from.
 
 **Fixtures**, the composed units: a Fixture materializes a cross-facility [Assembly](../../catalog/assemblies.md) blueprint into this beamline's specific hardware, the same portable-to-bound move as a Recipe materializing a Method (an Assembly is to a Fixture as a Method is to a Recipe). These are the Assemblies 2-BM materializes:
 
-- [Microscope](equipment/microscope.md): the Optique Peter detector, a `Microscope` Assembly over a reusable `Optics` sub-assembly in one `Housing`, presenting the `Detector` Role.
+- [Microscope](equipment/microscope.md): the Optique Peter detector, a `Microscope` Assembly over a reusable `Optics` sub-assembly, presenting the `Detector` Role.
 - [Sample tower](equipment/sample_tower.md): the sample positioning stack, a `SampleTower` Assembly presenting the `Positioner` Role, with the stages held in a containment chain.
 
 **Devices**, the hardware behind them:

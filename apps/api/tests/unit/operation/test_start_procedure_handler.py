@@ -28,12 +28,15 @@ from cora.infrastructure.ports.asset_lookup import (
     AncestorWalkDepthExceededError,
     AssetLookupResult,
 )
+from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 from cora.operation.aggregates.procedure import (
+    ProcedureBeamAvailabilityUnknownError,
     ProcedureCannotStartError,
     ProcedureNotFoundError,
     ProcedurePlanAssetDecommissionedError,
     ProcedureRegistered,
+    ProcedureRequiresOpenBeamShuttersError,
 )
 from cora.operation.aggregates.procedure import event_type_name as procedure_event_type_name
 from cora.operation.aggregates.procedure import to_payload as procedure_to_payload
@@ -469,3 +472,95 @@ async def test_procedure_ancestor_walk_failure_propagates_and_refuses() -> None:
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
+
+
+# ---------- BEAM-1 beam-availability gate (handler threads the lookup) ----------
+
+
+class _FixedBeamLookup:
+    """Test BeamAvailabilityLookup returning a fixed reading.
+
+    Proves the start_procedure handler reads
+    `deps.beam_availability_lookup` and threads its result into the
+    decider's beam gate (mirror of the start_run handler tests).
+    """
+
+    def __init__(self, reading: BeamAvailabilityLookupResult) -> None:
+        self._reading = reading
+
+    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+        return self._reading
+
+
+@pytest.mark.unit
+async def test_handler_raises_requires_open_beam_when_lookup_reports_closed_shutter() -> None:
+    store = InMemoryEventStore()
+    await _seed_procedure(store)
+    deps = _build_deps_shared(ids=[_TRANSITION_EVENT_ID], now=_NOW, event_store=store)
+    deps = dataclasses.replace(
+        deps,
+        beam_availability_lookup=_FixedBeamLookup(
+            BeamAvailabilityLookupResult(
+                fes_open=False, sbs_open=True, fes_permit=True, quality_ok=True
+            )
+        ),
+    )
+    handler = start_procedure.bind(deps)
+
+    with pytest.raises(ProcedureRequiresOpenBeamShuttersError) as exc_info:
+        await handler(
+            StartProcedure(procedure_id=_PROCEDURE_ID),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.blocking == frozenset({"fes_open"})
+
+
+@pytest.mark.unit
+async def test_handler_raises_beam_unknown_when_lookup_reports_bad_quality() -> None:
+    store = InMemoryEventStore()
+    await _seed_procedure(store)
+    deps = _build_deps_shared(ids=[_TRANSITION_EVENT_ID], now=_NOW, event_store=store)
+    deps = dataclasses.replace(
+        deps,
+        beam_availability_lookup=_FixedBeamLookup(
+            BeamAvailabilityLookupResult(
+                fes_open=True, sbs_open=True, fes_permit=True, quality_ok=False
+            )
+        ),
+    )
+    handler = start_procedure.bind(deps)
+
+    with pytest.raises(ProcedureBeamAvailabilityUnknownError):
+        await handler(
+            StartProcedure(procedure_id=_PROCEDURE_ID),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+
+@pytest.mark.unit
+async def test_handler_starts_when_lookup_reports_all_open() -> None:
+    """Explicit open reading (not the default stub) passes the gate."""
+    store = InMemoryEventStore()
+    await _seed_procedure(store)
+    deps = _build_deps_shared(ids=[_TRANSITION_EVENT_ID], now=_NOW, event_store=store)
+    deps = dataclasses.replace(
+        deps,
+        beam_availability_lookup=_FixedBeamLookup(
+            BeamAvailabilityLookupResult(
+                fes_open=True, sbs_open=True, fes_permit=True, quality_ok=True
+            )
+        ),
+    )
+    handler = start_procedure.bind(deps)
+
+    await handler(
+        StartProcedure(procedure_id=_PROCEDURE_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    events, version = await store.load("Procedure", _PROCEDURE_ID)
+    assert version == 2
+    assert events[1].event_type == "ProcedureStarted"

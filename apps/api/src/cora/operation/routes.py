@@ -45,6 +45,7 @@ from cora.operation.aggregates.procedure import (
     InvalidRecipeBindingsError,
     InvalidStepKindError,
     ProcedureAlreadyExistsError,
+    ProcedureBeamAvailabilityUnknownError,
     ProcedureBoundCapabilityDeprecatedError,
     ProcedureCannotAbortError,
     ProcedureCannotCompleteError,
@@ -58,6 +59,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureNotFoundError,
     ProcedurePlanAssetDecommissionedError,
     ProcedureRequiresAvailableSupplyError,
+    ProcedureRequiresOpenBeamShuttersError,
     ProcedureRequiresPermittedEnclosureError,
     ProcedureStepsForbiddenForRecipeDrivenError,
     ProcedureStepsLogbookClosedError,
@@ -291,6 +293,11 @@ def register_operation_routes(app: FastAPI) -> None:
         # [[project_enclosure_stage1_design]] L-pre-1.
         ProcedureRequiresPermittedEnclosureError,
         ProcedureEnclosureCoverageMismatchError,
+        # cross-BC beam-availability pre-flight gate (BEAM-1):
+        # closed shutters / denied permit, and the fail-closed
+        # unknown branch when a beam PV could not be read.
+        ProcedureRequiresOpenBeamShuttersError,
+        ProcedureBeamAvailabilityUnknownError,
         # PseudoAxis pre-Conductor expansion ([[project-pseudoaxis-design]]
         # v3): the routing layer dispatched a virtual-axis setpoint
         # into the evaluator for an Asset whose Family is not PseudoAxis

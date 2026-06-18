@@ -199,6 +199,10 @@ models:
     manufacturer: { name: Aerotech }
     part_number: "EnsembleHLe10-40-A-IO-MXH"   # 2bmbAERO IOC drive; resolved from placeholder (#162 DRIVE-4)
     declared_families: [MotionController]
+  - name: aerotech_tm3a
+    manufacturer: { name: Aerotech }
+    part_number: "TM3-A-20B VDC-20B VDC / NO SPLIT / PS24-1 / C1ML-06 / C2ML-09 / US-115VAC"   # power/distribution chassis housing the RotaryDrive ML card (#162 DRIVE-4); verbatim operator string is the uuid5 key
+    declared_families: [Housing]
   - name: aerotech_pro225sl
     manufacturer: { name: Aerotech }
     part_number: "PRO225SL-1000"

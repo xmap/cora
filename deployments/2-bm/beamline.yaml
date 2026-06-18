@@ -457,6 +457,14 @@ controls:
       protocol: Aerotech_Native
       axis_count: 1
       serial_number: "730792/1"            # operator-confirmed (#161); firmware still pending (DRIVE-2)
+      chassis: RotaryDriveChassis          # the ML drive card sits in this chassis (#162 DRIVE-4)
+    - name: RotaryDriveChassis
+      family: Housing
+      model: aerotech_tm3a
+      serial_number: "160591-A-1-1"        # operator-confirmed (#162 DRIVE-4)
+      order_number: "730578"
+      drawing: { system: EDMS, number: 630D2079, revision: H }   # operator label "630D2079 REV-H"; "REV" stripped per the Rotary 630C2125 precedent
+      note: "Aerotech TM3-A power/distribution chassis: DC bus (two 20V segments) + integrated 24V PS24-1 supply, US 115VAC input, Aeronet distribution to the ML drive cards via slots C1ML/C2ML. Houses the RotaryDrive card."
     - name: HexapodDrive
       family: MotionController
       model: aerotech_automation1_ixr3   # Aerotech Automation1-iXR3, separate rack (#156)
