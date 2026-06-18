@@ -2370,8 +2370,15 @@
             "type": "string"
           },
           "condition": {
-            "title": "Condition",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
           },
           "contributing_family_ids": {
             "description": "Subset of the candidate's Families that declare the parent missing affordance, NOT the candidate's full Family set. Naming distinguishes this from WiredAssetItem.family_ids (the full set) so SDK consumers don't naively union the two.",
@@ -14713,8 +14720,15 @@
             "type": "string"
           },
           "condition": {
-            "title": "Condition",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
           },
           "contributed_affordances": {
             "items": {

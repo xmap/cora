@@ -162,7 +162,11 @@ def bind(deps: Kernel) -> Handler:
             WiredAsset(
                 asset_id=asset_id,
                 asset_name=assets[asset_id].name.value,
-                condition=assets[asset_id].condition,
+                condition=(
+                    None
+                    if assets[asset_id].partition_rule is not None
+                    else assets[asset_id].condition
+                ),
                 lifecycle=assets[asset_id].lifecycle,
                 family_ids=assets[asset_id].family_ids,
                 contributed_affordances=frozenset(
@@ -293,7 +297,7 @@ async def _load_candidates(
                     CandidateAsset(
                         asset_id=asset_id,
                         asset_name=asset.name.value,
-                        condition=asset.condition,
+                        condition=(None if asset.partition_rule is not None else asset.condition),
                         lifecycle=asset.lifecycle,
                         contributing_family_ids=frozenset(contributing_subset),
                     )

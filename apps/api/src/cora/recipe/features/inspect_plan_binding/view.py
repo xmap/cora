@@ -38,11 +38,18 @@ class WiredAsset:
     lifecycle state at preview time. `family_ids` is the Asset's
     bound Family set. `contributed_affordances` is the union of
     affordances declared by those Families.
+
+    `condition` is None for a virtual axis (an Asset carrying a
+    `partition_rule`): a virtual axis has no hardware that can be
+    Degraded or Faulted, so reporting `Nominal` for it would be
+    misleading. The condition of its constituent motors is what
+    matters, and those appear as their own wired Assets. Mirrors
+    the virtual-axis self-gate in `get_asset_pidinst`.
     """
 
     asset_id: UUID
     asset_name: str
-    condition: AssetCondition
+    condition: AssetCondition | None
     lifecycle: AssetLifecycle
     family_ids: frozenset[UUID]
     contributed_affordances: frozenset[Affordance]
@@ -63,12 +70,13 @@ class CandidateAsset:
     union of wired-asset and candidate Family ids doesn't produce
     a misleading aggregate. Other state (condition, lifecycle) is
     unfiltered so the operator can see Decommissioned/Faulted
-    candidates and decide whether to swap.
+    candidates and decide whether to swap. `condition` is None for a
+    virtual-axis candidate, same reason as `WiredAsset.condition`.
     """
 
     asset_id: UUID
     asset_name: str
-    condition: AssetCondition
+    condition: AssetCondition | None
     lifecycle: AssetLifecycle
     contributing_family_ids: frozenset[UUID]
 

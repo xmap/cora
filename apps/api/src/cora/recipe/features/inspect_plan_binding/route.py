@@ -42,7 +42,7 @@ class WiredAssetItem(BaseModel):
 
     asset_id: UUID
     asset_name: str
-    condition: str
+    condition: str | None
     lifecycle: str
     family_ids: list[UUID]
     contributed_affordances: list[str]
@@ -61,7 +61,7 @@ class CandidateAssetItem(BaseModel):
 
     asset_id: UUID
     asset_name: str
-    condition: str
+    condition: str | None
     lifecycle: str
     contributing_family_ids: list[UUID] = Field(
         ...,
@@ -165,7 +165,7 @@ async def inspect_plan_binding(
             WiredAssetItem(
                 asset_id=item.asset_id,
                 asset_name=item.asset_name,
-                condition=item.condition.value,
+                condition=item.condition.value if item.condition is not None else None,
                 lifecycle=item.lifecycle.value,
                 family_ids=sorted(item.family_ids, key=str),
                 contributed_affordances=sorted(a.value for a in item.contributed_affordances),
@@ -181,7 +181,9 @@ async def inspect_plan_binding(
                     CandidateAssetItem(
                         asset_id=candidate.asset_id,
                         asset_name=candidate.asset_name,
-                        condition=candidate.condition.value,
+                        condition=(
+                            candidate.condition.value if candidate.condition is not None else None
+                        ),
                         lifecycle=candidate.lifecycle.value,
                         contributing_family_ids=sorted(candidate.contributing_family_ids, key=str),
                     )

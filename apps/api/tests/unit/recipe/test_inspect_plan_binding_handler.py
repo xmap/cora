@@ -22,6 +22,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from cora.equipment.aggregates._partition_rule import Affine, PartitionRule
 from cora.equipment.aggregates.asset import (
     AssetCondition,
     AssetLifecycle,
@@ -35,6 +36,7 @@ from cora.equipment.aggregates.asset.events import (
     AssetFamilyAdded,
     AssetFaulted,
     AssetMaintenanceEntered,
+    AssetPartitionRuleUpdated,
     AssetRegistered,
 )
 from cora.equipment.aggregates.asset.events import (
@@ -237,6 +239,7 @@ async def _seed_asset(
     *,
     name: str = "TestAsset",
     family_ids: frozenset[UUID] = frozenset(),
+    partition_rule: PartitionRule | None = None,
     degraded: bool = False,
     faulted: bool = False,
     decommissioned: bool = False,
@@ -260,6 +263,20 @@ async def _seed_asset(
         command_name="RegisterAsset",
     )
     version = 1
+    if partition_rule is not None:
+        rule_event = AssetPartitionRuleUpdated(
+            asset_id=asset_id, partition_rule=partition_rule, occurred_at=_NOW
+        )
+        await _append(
+            store,
+            stream_type="Asset",
+            stream_id=asset_id,
+            expected_version=version,
+            event_type=asset_event_type_name(rule_event),
+            payload=asset_to_payload(rule_event),
+            command_name="UpdateAssetPartitionRule",
+        )
+        version += 1
     for family_id in sorted(family_ids, key=str):
         family_event = AssetFamilyAdded(asset_id=asset_id, family_id=family_id, occurred_at=_NOW)
         await _append(
@@ -523,6 +540,39 @@ async def test_handler_surfaces_asset_condition_and_lifecycle() -> None:
     assert by_id[_ASSET_A_ID].lifecycle is AssetLifecycle.COMMISSIONED
     assert by_id[_ASSET_B_ID].condition is AssetCondition.NOMINAL
     assert by_id[_ASSET_B_ID].lifecycle is AssetLifecycle.DECOMMISSIONED
+
+
+@pytest.mark.unit
+async def test_handler_nulls_virtual_axis_condition() -> None:
+    """A virtual axis (Asset carrying a partition_rule) reports condition
+    None: it has no hardware that can be Degraded or Faulted, so surfacing
+    a health verdict would mislead. A sibling physical Asset still reports
+    its real condition. Mirrors the virtual-axis self-gate in
+    get_asset_pidinst. The virtual axis is seeded Degraded to prove the
+    gate nulls the field rather than just happening to pass through Nominal.
+    """
+    store = InMemoryEventStore()
+    await _seed_method(store, _METHOD_ID, capability_id=None)
+    await _seed_practice(store, _PRACTICE_ID, method_id=_METHOD_ID)
+    await _seed_asset(
+        store, _ASSET_A_ID, name="Objective_Selector", partition_rule=Affine(), degraded=True
+    )
+    await _seed_asset(store, _ASSET_B_ID, name="Camera-04", degraded=True)
+    deps = build_deps(now=_NOW, event_store=store)
+    handler = inspect_plan_binding.bind(deps)
+
+    view = await handler(
+        InspectPlanBinding(
+            practice_id=_PRACTICE_ID,
+            asset_ids=frozenset({_ASSET_A_ID, _ASSET_B_ID}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    by_id = {wa.asset_id: wa for wa in view.wired_assets}
+    assert by_id[_ASSET_A_ID].condition is None
+    assert by_id[_ASSET_B_ID].condition is AssetCondition.DEGRADED
 
 
 @pytest.mark.unit
