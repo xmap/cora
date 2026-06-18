@@ -97,6 +97,7 @@ nav:
         - Sample tower: deployments/2-bm/equipment/sample_tower.md
         - Assets: deployments/2-bm/assets.md
         - Computed axes: deployments/2-bm/computed-axes.md
+      - Techniques: deployments/2-bm/techniques.md
       - Operations:
         - deployments/2-bm/operations.md
         - Procedures: deployments/2-bm/procedures.md
