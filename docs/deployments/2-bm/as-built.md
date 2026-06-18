@@ -5,11 +5,12 @@ distinct from the cross-facility types it instantiates.*
 
 This is where the deployment carries its densest, most beamline-specific content: which vendor Model and serial is
 installed, the measured calibration values with their source and status, the containment tree, and any deviation
-from the catalog type. Each thing here names the reusable [Catalog](../../catalog/index.md) type it instantiates
-and records only this beamline's specifics, so the catalog stays the single source of the generic shape and this
-zone stays the single source of the as-built fact. An Asset binds a vendor [Model](../../catalog/models.md) to
-fill a [Family](../../catalog/families.md); a Fixture materializes an [Assembly](../../catalog/assemblies.md)
-blueprint into specific Assets, the same portable-to-bound move as a Recipe materializing a Method.
+from the catalog type. Each entry names the reusable [Catalog](../../catalog/index.md) type it instantiates and
+records only this beamline's specifics. So the catalog stays the single source of the generic shape, and this
+zone stays the single source of the as-built fact. Two bindings connect them: an Asset binds a vendor
+[Model](../../catalog/models.md) to fill a [Family](../../catalog/families.md), and a Fixture materializes an
+[Assembly](../../catalog/assemblies.md) blueprint into specific Assets (just as a Recipe turns a Method into a
+runnable sequence).
 
 ## The walk
 

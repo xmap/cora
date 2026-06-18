@@ -21,9 +21,9 @@ review board, the beamline scientist acting in a review-chain capacity) are faci
 
 ## The trust boundary
 
-Three aggregates per ISA-99 shape the boundary: a Zone (a trust grouping), a Conduit (a governed comms path
-between Zones), and a Policy (an authorization rule attached to a Conduit). The Zone is orthogonal to the
-Equipment hierarchy: it groups assets by homogeneous trust requirement, not by where they sit in the asset tree.
+2-BM's boundary is shaped by the Trust BC aggregates (Zone, Conduit, Policy); the
+[Trust module](../../architecture/modules/trust/index.md) defines what each one is. This page records only the
+2-BM instances:
 
 | Zone | Conduit | Endpoints |
 | --- | --- | --- |
