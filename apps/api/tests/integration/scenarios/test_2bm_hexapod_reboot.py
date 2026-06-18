@@ -7,7 +7,7 @@ bc_touches: Caution, Equipment, Operation, Recipe
 
 Scenario test for the canonical hexapod-recovery routine: the
 PI-Hexapod sample-positioning controller locks up (HexapodAllEnabled
-PV stuck at 0), operator power-cycles outlet 4 on the network PDU
+PV stuck at 0), operator power-cycles outlet 5 on the network PDU
 + restarts the hexapod EPICS IOC + verifies the controller comes
 back enabled. Sourced directly from `2bmb-bin/hexapod_reboot.py`
 (the best-documented script in that repo).
@@ -44,10 +44,11 @@ The scenario also unlocks four firsts in CORA's 2-BM doc tree:
 Seven-step reboot ceremony with two power-settling sleeps:
 
   1. Stop hexapod IOC via `hexapod_IOC_stop.sh`.
-  2. Power OFF outlet 4 on the network PDU (HTTP POST to NetBooter
-     `/cmd.cgi?rly=3`; verify state via `GET /status.xml`).
+  2. Power OFF outlet 5 on the network PDU (HTTP POST to NetBooter
+     `/cmd.cgi?rly=4`; the relay index is zero-based, so outlet 5 is
+     `rly=4`; verify state via `GET /status.xml`).
   3. Sleep 10 s for controller de-energization.
-  4. Power ON outlet 4.
+  4. Power ON outlet 5.
   5. Sleep 10 s for controller boot.
   6. Start hexapod IOC via `hexapod_IOC.sh`.
   7. Poll `2bmHXP:HexapodAllEnabled.VAL` for value `1` (180 s
@@ -413,7 +414,7 @@ async def test_hexapod_reboot_plays_out_end_to_end(
 
     await bind_register_procedure(deps)(
         RegisterProcedure(
-            name="2-BM hexapod reboot (PDU outlet 4 power-cycle + IOC restart)",
+            name="2-BM hexapod reboot (PDU outlet 5 power-cycle + IOC restart)",
             kind="hexapod_reboot",
             target_asset_ids=frozenset({_ASSET_HEXAPOD_ID}),
         ),
@@ -455,9 +456,9 @@ async def test_hexapod_reboot_plays_out_end_to_end(
                     note="hexapod_IOC_stop.sh returned 0",
                     sampled_at=t,
                 ),
-                # 2. Power OFF outlet 4 on PDU
+                # 2. Power OFF outlet 5 on PDU
                 _setpoint(
-                    channel="pdu_a.outlet_4",
+                    channel="pdu_a.outlet_5",
                     target_value="off",
                     role="power_cycle_off",
                     sampled_at=t,
@@ -465,18 +466,18 @@ async def test_hexapod_reboot_plays_out_end_to_end(
                 _action(
                     action_name="pdu_power_toggle",
                     pdu="a",
-                    outlet=4,
+                    outlet=5,
                     direction="off",
                     method="netbooter_http",
                     sampled_at=t,
                 ),
                 _check(
-                    channel="pdu_a.outlet_4.state",
+                    channel="pdu_a.outlet_5.state",
                     passed=True,
                     source="netbooter_status_xml",
                     expected="off",
                     actual="off",
-                    note="GET /status.xml: <rly3>0</rly3>",
+                    note="GET /status.xml: <rly4>0</rly4>",
                     sampled_at=t,
                 ),
                 # 3. Wait for power to settle (10s default)
@@ -486,9 +487,9 @@ async def test_hexapod_reboot_plays_out_end_to_end(
                     role="power_settling",
                     sampled_at=t,
                 ),
-                # 4. Power ON outlet 4 on PDU
+                # 4. Power ON outlet 5 on PDU
                 _setpoint(
-                    channel="pdu_a.outlet_4",
+                    channel="pdu_a.outlet_5",
                     target_value="on",
                     role="power_cycle_on",
                     sampled_at=t,
@@ -496,18 +497,18 @@ async def test_hexapod_reboot_plays_out_end_to_end(
                 _action(
                     action_name="pdu_power_toggle",
                     pdu="a",
-                    outlet=4,
+                    outlet=5,
                     direction="on",
                     method="netbooter_http",
                     sampled_at=t,
                 ),
                 _check(
-                    channel="pdu_a.outlet_4.state",
+                    channel="pdu_a.outlet_5.state",
                     passed=True,
                     source="netbooter_status_xml",
                     expected="on",
                     actual="on",
-                    note="GET /status.xml: <rly3>1</rly3>",
+                    note="GET /status.xml: <rly4>1</rly4>",
                     sampled_at=t,
                 ),
                 # 5. Wait for controller boot (10s default)
@@ -605,14 +606,17 @@ async def test_hexapod_reboot_plays_out_end_to_end(
             text=(
                 "Hexapod controller occasionally locks up under sustained load: "
                 "2bmHXP:HexapodAllEnabled stuck at 0 while motion commands return no error. "
+                "Same recovery also clears the over-travel drive error (driving past the "
+                "travel range disconnects the axis drivers; item_050). "
                 "Symptom observed 2026-05-17 during 2-BM operations."
             ),
             workaround=(
-                "Run hexapod_reboot.py (in 2bmb-bin): stops hexapod IOC, power-cycles "
-                "PDU outlet 4 with 10s settling each way, restarts IOC, polls "
-                "HexapodAllEnabled. If still 0 after 180s, caput EnableWork.PROC=1 to "
-                "force enable, then re-poll. Manual checks: verify outlet state via "
-                "NetBooter /status.xml; SSH 2bmb@arcturus for IOC log inspection."
+                "Run hexapod_reboot.py (in decarlof/2bmb-bin): stops hexapod IOC, "
+                "power-cycles PDU outlet 5 (NetBooter relay rly=4, zero-based) with "
+                "10s off / 30s on settling, restarts IOC, polls HexapodAllEnabled. "
+                "If still 0 after 180s, caput EnableWork.PROC=1 to force enable, then "
+                "re-poll. Manual checks: verify outlet state via NetBooter /status.xml; "
+                "SSH 2bmb@arcturus for IOC log inspection."
             ),
             tags=frozenset({"hexapod", "controller_lockup", "pdu_power_cycle", "ioc_restart"}),
         ),

@@ -62,7 +62,7 @@ Phase 1, stop the IOC:
 - action `run_shell_script { script: "hexapod_IOC_stop.sh" }`
 - check the IOC is stopped
 
-Phase 2, power-cycle the PDU outlet (NetBooter PDU, **outlet 5**, over HTTP: `/cmd.cgi?rly=N` to toggle, `/status.xml` to read):
+Phase 2, power-cycle the PDU outlet (NetBooter PDU, **outlet 5**, over HTTP: `/cmd.cgi?rly=N` to toggle, `/status.xml` to read; the NetBooter relay index is zero-based, so the operator-facing outlet 5 is the wire call `rly=4` and the status element `<rly4>`):
 
 - action `pdu_power_toggle { outlet: 5, state: "off" }`, then check the outlet is off
 - action `sleep { seconds: <<off_wait>> }` (power discharge, default 10 s)
@@ -82,6 +82,8 @@ Phase 4, confirm enabled:
 The PVs (`2bmHXP:HexapodAllEnabled.VAL` read, `2bmHXP:EnableWork.PROC` force-enable), the IOC scripts, the host (`arcturus`), the NetBooter endpoints, outlet 5, and the timings are all confirmed from the reboot script (tracked as [HXP-3 through HXP-6](questions.md#the-hexapod)). What is NOT in the repo: the script selects one of two PDUs (`a` default, or `b`), and that choice plus the PDU IP live in the operator's `~/access.json`, so they remain a deployment secret to confirm. The script also runs an optional TCP controller-readiness check (port 5001) between power-on and IOC restart, gated on a configured controller IP; its applicability to the Aerotech hexapod ties to the open drive identity (`DRIVE-4`).
 
 This recipe captures the **happy path only** (controller enabled on the first check). The script's real flow is conditional: if `HexapodAllEnabled` is not `1`, it rechecks after 3 s, then issues `caput 2bmHXP:EnableWork.PROC 1` and polls every 1 s up to 180 s. That branch is a conditional the v1 body cannot express, so it stays an operator decision and is the v2 conditional-branch trigger. The Equipment-BC fault and restore that bracket the ceremony, and the Caution registered against the controller, are separate commands in their own BCs, not recipe steps.
+
+One manual step follows a reboot but sits outside this controller-side sequence: per the staff [sample motor stack page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_050.html) (`item_050`), the hexapod Y stage does not reset its dial correctly after a reboot (the Y dial reads 0 while the encoder reads 350), and the first Y move in that state raises a drive error. The operator must manually set the Y dial to 350 before any Y motion. Because it acts on the stage rather than the controller and is a manual correction, it is captured as the [Y-stage dial-misreset Caution](cautions.md#hexapod-y-stage-dial-misreset-after-reboot), not a recipe step.
 
 **To run, needs:** action bodies that are not registered today (`run_shell_script`, `pdu_power_toggle` over the NetBooter HTTP API, `sleep`, `caget_poll`, plus `caput` for the force-enable branch) and their substrate adapters (a shell or SSH execution port, an HTTP port for the PDU, a channel-access read/write port). The records themselves are now confirmed from the reboot script; only the PDU selection (`a` / `b`) and its IP remain a deployment secret.
 

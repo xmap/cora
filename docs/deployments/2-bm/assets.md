@@ -339,12 +339,14 @@ The detailed trigger routing (the softGlue logic-block wiring) is per-Run / per-
 
 Bound to Model `aerotech_abrs250mp`. Aerotech ABRS-250MP-M-AS air-bearing direct-drive rotary stage (250 mm aperture, mid-precision class), driven by `RotaryDrive` (referenced via `Rotary.controller_id`). Operator confirmation (2026-06-15, issue #156) corrected the part number from the catalog typo `ABS250MP-M-AS` to the hardware-label value `ABRS-250MP-M-AS` (the ABRS air-bearing-rotary series), which re-mints the deterministic Model id. Per-unit identity is now on record: serial number `146853-A-1-1-X` in `alternate_identifiers`, and the vendor engineering drawing `630C2125 REV (-)` (see [Engineering drawings](#engineering-drawings)).
 
+The `encoder_resolution` below is taken from the Ensemble encoder table on the staff [sample motor stack page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_050.html) (`item_050`): the stage reports 532800 encoder pulses per revolution (11840 lines/rev x 45 scale factor), so 360 deg / 532800 = 0.000676 deg per count. This replaces an earlier unsourced `0.0001 deg` value; operator confirmation is tracked as STAGE-10.
+
 | Setting | Value |
 | --- | --- |
 | `min_position` | `−360 deg` |
 | `max_position` | `360 deg` |
 | `max_speed` | `720 deg/s` |
-| `encoder_resolution` | `0.0001 deg` |
+| `encoder_resolution` | `0.000676 deg` |
 | `homing_offset` | `0 deg` |
 
 ### `SampleTop_X`
