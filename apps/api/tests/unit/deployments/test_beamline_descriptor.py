@@ -141,36 +141,31 @@ def test_renders_enclosures_table_facility_and_permit_columns() -> None:
     assert "`S02BM-PSS:StaB:SecureM`" in markdown
 
 
-def test_renders_three_stage_walk_and_no_em_dash() -> None:
+def test_renders_source_walk_and_no_em_dash() -> None:
     descriptor = bd.load(_DESCRIPTOR)
     markdown = _render_with_catalog()
 
-    assert markdown.startswith("# 2-BM hardware")
-    # the three beam-path stages render as H2, in source -> sample -> detection order
-    for stage in ("## Source", "## Sample", "## Detection"):
-        assert stage in markdown
-    assert (
-        markdown.index("## Source") < markdown.index("## Sample") < markdown.index("## Detection")
-    )
-    # the multi-subsystem source stage renders each subsystem as H3
+    # the generated walk is the Source stage; the sample and detection stages are the
+    # composed-fixture pages (equipment/sample_tower.md, equipment/microscope.md)
+    assert markdown.startswith("# Source")
     source_groups = [name for name, group in descriptor.groups if group.stage == "source"]
     assert len(source_groups) >= 2
     for sub_key in source_groups:
-        assert f"### {_humanize(sub_key)}" in markdown
+        assert f"## {_humanize(sub_key)}" in markdown
+    # downstream-stage devices are NOT on this page; they live on the fixture pages
+    assert "`SampleTop_X`" not in markdown
+    assert "`Objective_Selector`" not in markdown
     assert "## Controls" in markdown
     assert "## Resources" in markdown
-    # a known CORA-modeled device and a promoted marker tag both render
-    assert "`SampleTop_X`" in markdown
+    # a promoted marker tag renders; the P6-50 nested constituents get their own sub-table
     assert "`new`" in markdown
-    # the P6-50 nested constituents render as their own sub-table
     assert "**SafetyStack constituents**" in markdown
-    # a family present in the Catalog links up; a pending one renders plain (no fake link)
-    assert "[`RotaryStage`](../../catalog/families.md)" in markdown
+    # a source family present in the Catalog links up; a pending one (Mask) renders plain
+    assert "](../../catalog/families.md)" in markdown
     assert "`Mask`" in markdown
     assert "[`Mask`](../../catalog/families.md)" not in markdown
-    # drawings + calibrations (with status) + the confirm note all render
+    # drawings (with system) and the confirm note render
     assert "drawing: EDMS" in markdown
-    assert "calibration: magnification = 9.83 (Provisional" in markdown
     assert "confirm: count and thickness" in markdown
     # repo style: no em dashes in generated prose (chr() keeps the literal out of source)
     assert chr(0x2014) not in markdown

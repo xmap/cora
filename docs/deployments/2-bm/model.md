@@ -8,7 +8,7 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 | Aggregate (BC) | Where at 2-BM |
 | --- | --- |
 | Asset (Equipment) | [Assets](assets.md) (in this zone) |
-| Fixture / Assembly (Equipment / Recipe) | [Microscope](equipment/microscope.md), [Sample tower](equipment/sample_tower.md) (in this zone) |
+| Fixture / Assembly (Equipment / Recipe) | [Hardware > Sample](equipment/sample_tower.md), [Detection](equipment/microscope.md) |
 | Computed / virtual axes (Equipment) | [Computed axes](computed-axes.md) (in this zone) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
 | Procedure (Operation) | [Operations > Procedures](procedures.md) |
