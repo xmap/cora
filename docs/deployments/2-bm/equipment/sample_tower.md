@@ -1,4 +1,4 @@
-# Sample
+# Sample tower
 
 *The 2-BM Fixture that materializes the cross-facility `SampleTower` Assembly: the sample positioning stack, binding the installed stages, presenting the `Positioner` Role, with the kinematic order carried as a containment chain.*
 

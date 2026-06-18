@@ -90,10 +90,7 @@ nav:
     - 2-BM:
       - deployments/2-bm/index.md
       - Open questions: deployments/2-bm/questions.md
-      - Hardware:
-        - deployments/2-bm/beamline.md
-        - Sample: deployments/2-bm/equipment/sample_tower.md
-        - Detection: deployments/2-bm/equipment/microscope.md
+      - Hardware: deployments/2-bm/beamline.md
       - Techniques: deployments/2-bm/techniques.md
       - Operations:
         - deployments/2-bm/operations.md
@@ -107,6 +104,8 @@ nav:
         - deployments/2-bm/model.md
         - Assets: deployments/2-bm/assets.md
         - Computed axes: deployments/2-bm/computed-axes.md
+        - Microscope: deployments/2-bm/equipment/microscope.md
+        - Sample tower: deployments/2-bm/equipment/sample_tower.md
     - Facility envelope:
       - APS (Site):
         - deployments/aps/index.md

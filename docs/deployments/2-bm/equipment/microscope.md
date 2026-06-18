@@ -1,4 +1,4 @@
-# Detection
+# Microscope
 
 *The 2-BM Fixture that materializes the cross-facility `Microscope` Assembly: the Optique Peter detector, binding eight Assets across six slots over a reusable `Optics` sub-assembly, the optics in one `Housing` that rides the `PropagationDistance` rail, presenting the `Detector` Role.*
 
