@@ -883,7 +883,7 @@
 | src/cora/equipment/features/list\_fixtures/tool.py                                       |       20 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/mint\_missing\_asset\_persistent\_ids/\_\_init\_\_.py        |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/mint\_missing\_asset\_persistent\_ids/command.py             |       18 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/equipment/features/mint\_missing\_asset\_persistent\_ids/handler.py             |       54 |        2 |        8 |        1 |     95.2% |   175-176 |
+| src/cora/equipment/features/mint\_missing\_asset\_persistent\_ids/handler.py             |       55 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/equipment/features/mint\_missing\_asset\_persistent\_ids/route.py               |       28 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/mint\_missing\_asset\_persistent\_ids/tool.py                |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/register\_asset/\_\_init\_\_.py                              |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -2269,7 +2269,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **45236** |  **978** | **6248** |  **255** | **97.3%** |           |
+| **TOTAL**                                                                                | **45237** |  **976** | **6248** |  **254** | **97.3%** |           |
 
 
 ## Setup coverage badge
