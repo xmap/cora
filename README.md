@@ -201,9 +201,10 @@
 | src/cora/calibration/features/publish\_revision/tool.py                                  |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/projections/\_\_init\_\_.py                                         |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/projections/calibration.py                                          |       32 |        6 |       10 |        2 |     71.4% |91-97, 155 |
-| src/cora/calibration/quantities/\_\_init\_\_.py                                          |       16 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/calibration/quantities/\_\_init\_\_.py                                          |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/detector\_pixel\_size.py                                 |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/effective\_thickness.py                                  |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/calibration/quantities/energy\_offset.py                                        |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/energy\_position\_curve.py                               |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/index\_position\_table.py                                |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/calibration/quantities/magnification.py                                         |        5 |        0 |        0 |        0 |    100.0% |           |
@@ -2267,7 +2268,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **45224** |  **978** | **6248** |  **255** | **97.3%** |           |
+| **TOTAL**                                                                                | **45230** |  **978** | **6248** |  **255** | **97.3%** |           |
 
 
 ## Setup coverage badge
