@@ -26,5 +26,4 @@ A Run is the operator-started execution of a Plan: the measurement batch (ISA-88
 | --- | --- | --- |
 | Operator-decision `Aborted` Run | | |
 | Alignment-chain composed Runs | | alignment-chain Coordinated Campaign |
-| Energy-characterization Run | | |
 | Vibration-baseline Run ([item_070](https://docs2bm.readthedocs.io/en/latest/source/ops/item_070.html)) | | |

@@ -20,12 +20,15 @@ An operation can also be authored as a [Recipe](recipes.md): a reusable, paramet
 | `sensitivity_characterization` | `Hexapod_Roll`, `Hexapod_Pitch` |
 | `hexapod_reboot` | `Hexapod` |
 | `set_energy` | the energy-tracking facets (`Monochromator` Bragg arms + M2 offset, `SampleSlit` vertical pair) |
+| `energy_characterization` | `Monochromator` (measured with the channel-cut-crystal [Subject](subjects.md)) |
 
 Image chain = `Camera`, `Scintillator`.
 
 When `center_alignment` converges, the operator records the result as a `rotation_center` [Calibration](../../architecture/modules/calibration/index.md) on the rotary stage, appended with a `MeasuredSource` citing the Procedure. The alignment is the act; the Calibration stores the value.
 
 `set_energy` is the coordinating energy-change operation (the Procedure kind names the specific operation, distinct from the `cora.capability.energy_change` Capability code it realizes, as `motor_homing` sits under `maintenance`): given a target energy (a free keV value), it drives the energy-tracking optic axes together to their per-energy positions, reading each axis's [energy curve](computed-axes.md#energy-tracking-optic-axes). A Method declares the free-keV parameter; the Procedure expresses the coordinated move. It satisfies the `energy_configured` precondition stub listed under [From the 2-BM procedures source](#from-the-2-bm-procedures-source). Because the curves interpolate, an operator can request an energy between the configured saved points, not just the menu. The operator's `EnergyChange` Decision (modeled in the energy-change scenario) is the forward-looking justification; this Procedure is the motion record. The per-axis curve evaluation is now wired: the runtime interpolates a position for any requested energy (including a value between the saved points), and refuses an energy outside the calibrated range rather than clamping. Executing the coordinated move at the beamline still needs three things, so today the Procedure records the move rather than driving it: the real saved positions (the seeded curves are provisional pending staff), the per-facet constituent wiring that names each physical motor, and live EPICS dispatch.
+
+`energy_characterization` is the channel-cut-crystal energy calibration (staff-documented on the [docs2bm energy-calibration page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_022.html)): rock a crystal of known lattice spacing through its Bragg peak, fit the peak angle, and apply Bragg's law to recover the true beam energy. When it completes, the operator records the result as an `energy_offset` [Calibration](../../architecture/modules/calibration/index.md) on the `Monochromator`, appended with a `MeasuredSource` citing the Procedure: the signed correction (true minus commanded energy) at the measured energy. The characterization is the act; the Calibration stores the value, mirroring `center_alignment` to `rotation_center` above. This is distinct from `set_energy`: that operation *sets* the energy by driving the optic curves; this one *measures* whether the delivered energy matches the command. The offset is recorded in the energy domain and does not modify the [energy curves](computed-axes.md#energy-tracking-optic-axes); whether the energy-change IOC already folds it into the saved `store_0` table is the open question `ENERGY-8`, and whether the channel-cut crystal is current 2-BM practice is `ENERGY-7`. The channel-cut crystal is the measuring tool, modeled as a calibration [Subject](subjects.md) like the resolution phantom, not a target Asset.
 
 A sibling coordinated operation, `switch_to_mono` / `switch_to_pink`, is design-locked but deferred. 2-BM runs two beam modes (the monochromator inserted vs bypassed, see [Beam modes](#beam-modes-mono-pink)), and switching is one coordinated multi-device move (DMM in/out, the mirror coating stripe with its table-X, downstream tracking) of the same Method + Procedure shape as `set_energy`, paired with a `BeamModeChange` Decision for the operator's choice. It is gated on the staff facts `MODE-1` / `MODE-2` / `MODE-3` and `MIRROR-1` before it can carry real positions or drive hardware. Aligning the beam within each mode is the related deferred [`beam_alignment` family](#beam-alignment-item_012).
 
@@ -72,7 +75,6 @@ The source also defines eight stub procedures as named targets for a preconditio
 | Procedure | Target Assets |
 | --- | --- |
 | `alignment_auto_chain` | alignment Assets (characterization + Step1..4) |
-| `energy_characterization` | channel-cut crystal + DMM |
 | `ioc_restart` | EPICS IOC-hosted Assets |
 | `vibration_baseline` | `Camera` (run at high frame rate) |
 | `mirror_recoat_return` | `Mirror` |
