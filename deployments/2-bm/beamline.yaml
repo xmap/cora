@@ -438,9 +438,11 @@ detector:
       firmware_version: "1904.0.72.0"
       pixel_size: 3.45 um        # shared with the 5 MP Oryx (staff 2bm-procedures)
       note: >
-        Registered identity-only: sensor width/height, bit depth, frame rate,
-        sensor kind, and readout mode are pending staff (DET-13). The validated
-        detector_z_rail_alignment procedure ran on this camera.
+        Registered identity-only. item_020 (Detection) confirms the sensor as
+        6464 x 4852 px at 26 fps (3.45 um pitch, mono); bit depth, sensor kind,
+        and readout mode remain pending (DET-13). The Camera schema requires
+        bit_depth with the sensor group, so settings stay unapplied until that
+        lands. The validated detector_z_rail_alignment procedure ran on this camera.
     - name: Camera_Selector
       family: LinearStage        # Schunk LPTM 30 translation stage + folding mirrors, selects camera 0/1 (item_020)
       model: schunk_lptm_30
