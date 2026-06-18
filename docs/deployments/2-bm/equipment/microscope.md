@@ -82,7 +82,7 @@ The Microscope carries **zero `required_wires`**: lens selection is the `Objecti
 | Model | Manufacturer | Part number | Declared Families |
 | --- | --- | --- | --- |
 | `optique_peter_micrx080` | Optique Peter | `MICRX080` | `Housing` |
-| `nanotec_st4118m1404_b` | Nanotec | `ST4118M1404-B` | `LinearStage` |
+| `nanotec_st4118` | Nanotec | `ST4118M1404-B` | `LinearStage` |
 | `mitutoyo_plan_apo` | Mitutoyo | `Plan-Apo-NIR` | `Objective` |
 | `flir_oryx` | FLIR | `ORX-10G-51S5M-C` | `Camera` |
 | `flir_oryx_31mp` | FLIR | `ORX-10G-310S9M` | `Camera` |

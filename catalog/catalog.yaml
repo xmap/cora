@@ -47,6 +47,8 @@ families:
   # Defined families today. Affordances intentionally empty (a Role concern).
   - name: RotaryStage
   - name: LinearStage
+  - name: TiltStage
+    note: "Limited-range rotational tilt-stage Family (a goniometer). Distinct from RotaryStage (it carries no PSO Following/Marking for fly-scans) and from LinearStage (the motion is rotational, not translation). 2-BM: the LaminographyPitch Kohzu goniometer, modelled in the SampleTower Assembly."
   - name: Camera
   - name: Scintillator
   - name: Shutter
@@ -226,11 +228,11 @@ models:
   - name: kohzu_sa16a
     manufacturer: { name: Kohzu }
     part_number: "SA16A-RM"   # operator working value; confirm (questions STAGE-6): sources also list SA16A-RS / SA07A-R2L
+    declared_families: [TiltStage]
+  - name: nanotec_st4118
+    manufacturer: { name: Nanotec }
+    part_number: "ST4118M1404-B"   # objective-selector stepper (item_020), ball-screw 2 mm/rev; drives the Turret as a sliding LinearStage, not a rotating turret
     declared_families: [LinearStage]
-  - name: optique_peter_lens_turret_motor
-    manufacturer: { name: "Optique Peter" }
-    part_number: "TripleObj-MCT-turret"
-    declared_families: [RotaryStage]
   - name: optique_peter_micrx080
     manufacturer: { name: "Optique Peter" }
     part_number: "MICRX080"

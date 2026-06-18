@@ -17,7 +17,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -62,6 +62,30 @@ def _render_with_catalog() -> str:
 
 def _humanize(name: str) -> str:
     return name.replace("-", " ").replace("_", " ").strip().capitalize()
+
+
+def _walk_devices(descriptor: Any) -> list[Any]:
+    # Every modelled device in the descriptor: the beam-walk groups plus the
+    # cross-cutting controls section (motion controllers, triggering), recursing
+    # into nested constituents (the P6-50 SafetyStack, the Microscope chain) so a
+    # drift on a controls device or a nested constituent cannot hide from the
+    # catalog cross-checks below.
+    found: list[Any] = []
+
+    def visit(device: Any) -> None:
+        found.append(device)
+        constituents: list[Any] = device.constituents or []
+        for constituent in constituents:
+            visit(constituent)
+
+    for _name, group in descriptor.groups:
+        for device in group.devices:
+            visit(device)
+    controls = descriptor.controls
+    if controls is not None:
+        for device in (*controls.motion_controllers, *controls.triggering):
+            visit(device)
+    return found
 
 
 def test_descriptor_loads_and_validates() -> None:
@@ -166,6 +190,36 @@ def test_drawings_and_calibrations_loaded() -> None:
     assert obj0.calibrations
     assert obj0.calibrations[0].quantity == "magnification"
     assert devices["Hexapod"].drawing is not None
+
+
+def test_device_model_references_resolve_in_catalog() -> None:
+    descriptor = bd.load(_DESCRIPTOR)
+    catalog = cd.load(_CATALOG)
+    model_names = {m.name for m in catalog.models}
+    devices = _walk_devices(descriptor)
+    # guard against a vacuous pass if the walk ever regresses to empty
+    assert sum(1 for d in devices if d.model) >= 5
+    dangling = sorted(
+        f"{d.name} -> {d.model}" for d in devices if d.model and d.model not in model_names
+    )
+    assert not dangling, f"beamline devices bind catalog models that do not exist: {dangling}"
+
+
+def test_device_family_is_declared_by_its_bound_model() -> None:
+    descriptor = bd.load(_DESCRIPTOR)
+    catalog = cd.load(_CATALOG)
+    declared = {m.name: set(m.declared_families) for m in catalog.models}
+    devices = _walk_devices(descriptor)
+    # guard against a vacuous pass if the walk ever regresses to empty
+    assert sum(1 for d in devices if d.model and d.family) >= 5
+    mismatched = sorted(
+        f"{d.name}: family {d.family} not in {sorted(declared[d.model])} (model {d.model})"
+        for d in devices
+        if d.model and d.family and d.model in declared and d.family not in declared[d.model]
+    )
+    assert not mismatched, (
+        f"device family disagrees with its bound model's declared_families: {mismatched}"
+    )
 
 
 def test_malformed_descriptor_raises(tmp_path: Path) -> None:

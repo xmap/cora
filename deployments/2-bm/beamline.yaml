@@ -340,7 +340,7 @@ detector:
       new: true
     - name: Turret
       family: LinearStage         # sliding ball-screw objective selector (item_020), not a rotating turret
-      model: nanotec_st4118m1404_b  # motor is a Nanotec stepper (item_020), not Optique Peter; ball-screw 2 mm/rev
+      model: nanotec_st4118  # motor is a Nanotec stepper (item_020, ST4118M1404-B), not Optique Peter; ball-screw 2 mm/rev
       pv: "2bmb:m1"               # on the ioc2bmb OMS VME58 crate (SampleStageDrive); MCTOptics commands it via LensSelect, not driven directly (DET-2)
       controller: SampleStageDrive
       range: -60.030..58.64 mm     # selector positions in mm
