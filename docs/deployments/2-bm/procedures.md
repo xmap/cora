@@ -60,5 +60,7 @@ The source also defines eight stub procedures as named targets for a preconditio
 | --- | --- |
 | `alignment_auto_chain` | alignment Assets (characterization + Step1..4) |
 | `ioc_restart` | EPICS IOC-hosted Assets |
-| `vibration_baseline` | high-speed camera |
+| `vibration_baseline` | `Camera` (run at high frame rate) |
 | `mirror_recoat_return` | `Mirror` |
+
+`vibration_baseline` is the high-speed vibration characterization on the staff-authored [docs2bm item_070 page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_070.html): the active FLIR Oryx (serial `19173710`, the same microscope detector) runs at about 99 fps watching the scintillator image, and the per-frame vertical shift is analyzed for vibration peaks. The capture reuses the `collect` action body like the dark and flat baselines, so it is conductible today; the FFT analysis is downstream of CORA, and the captured stack becomes the [vibration-baseline Dataset](datasets.md). Performance class ("high-speed") is the `Camera` `max_framerate_hz` settings axis, not a separate Asset (`VIB-1`). It stays in Pending until staff confirm whether vibration baselining is recurring practice (`VIB-2`). The companion air-handler-shutdown finding and the multi-hour flat-field stability study on the same page are not procedures: their operator takeaways are [Cautions](cautions.md) (vibration after an air-handler shutdown, and acquiring flats close to scan time), and their distinctive mechanics (per-air-handler EPICS-triggered capture, the live beam-current stop loop) are deferred edge concerns, not modelled here.
