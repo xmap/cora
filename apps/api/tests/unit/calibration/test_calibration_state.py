@@ -82,8 +82,9 @@ def test_calibration_quantity_value_set_is_locked() -> None:
         "energy_position_curve",
         "index_position_table",
         "energy_offset",
+        "blade_throw_scale",
     }
-    assert len(list(CalibrationQuantity)) == 7
+    assert len(list(CalibrationQuantity)) == 8
 
 
 # ---------- Error-class instantiation + attribute pins ----------

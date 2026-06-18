@@ -224,6 +224,31 @@ def test_energy_offset_value_shape() -> None:
 
 
 @pytest.mark.unit
+def test_blade_throw_scale_operating_point_shape() -> None:
+    """The blade-throw scale is keyed by the optics config that sets the
+    pixels-per-mm imaging magnification; it carries NO energy key (the
+    scale is geometric, not energy-dependent)."""
+    schema = get_operating_point_schema(CalibrationQuantity.BLADE_THROW_SCALE)
+    properties: dict[str, Any] = schema.get("properties", {})
+    assert set(properties.keys()) == {"optics_config"}
+    assert "optics_config" in schema["required"]
+    assert "energy" not in properties
+
+
+@pytest.mark.unit
+def test_blade_throw_scale_value_shape() -> None:
+    """The value carries one entry per driven blade, each with a name and
+    a positive pixels-per-mm scale."""
+    schema = get_value_schema(CalibrationQuantity.BLADE_THROW_SCALE)
+    properties: dict[str, Any] = schema.get("properties", {})
+    assert "blades" in properties
+    assert "blades" in schema["required"]
+    item_schema: dict[str, Any] = properties["blades"]["items"]
+    assert set(item_schema["required"]) == {"blade", "scale"}
+    assert item_schema["properties"]["scale"].get("exclusiveMinimum") == 0
+
+
+@pytest.mark.unit
 def test_energy_bounds_consistent_across_quantities() -> None:
     """Every quantity that carries an `energy` operating_point key
     must declare the same bounds (1-100 keV, multipleOf 0.001) and the

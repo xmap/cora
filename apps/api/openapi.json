@@ -1879,7 +1879,8 @@
           "effective_thickness",
           "energy_position_curve",
           "index_position_table",
-          "energy_offset"
+          "energy_offset",
+          "blade_throw_scale"
         ],
         "title": "CalibrationQuantity",
         "type": "string"
