@@ -57,8 +57,15 @@ enclosures:
 # ===========================================================================
 
 front-end:
+  stage: source
   enclosure: 2-BM-A
   intro: Where the beam enters and first gets gated.
+  note: >
+    The source devices are modelled as a flat set of Device Assets on the 2-BM
+    Unit, not a Fixture: no Conditioner Role earns its place here (a mirror, a
+    slit, and a filter share no common primitive verb), so unlike the Sample and
+    Detector stages there is no Assembly to present a Role. See
+    [the Catalog](../../catalog/index.md) on Roles and Affordances.
   devices:
     - name: source
       family: Beam              # Supply(kind=PhotonBeam); accelerator-side, provenance only
@@ -91,6 +98,7 @@ front-end:
       note: valve open or closed state read as Supply status
 
 conditioning-optics:
+  stage: source
   enclosure: 2-BM-A
   intro: Shape the beam and pick its energy.
   devices:
@@ -177,6 +185,7 @@ conditioning-optics:
         Source: docs2bm item_020.
 
 beam-defining-and-safety:
+  stage: source
   enclosure: 2-BM-B
   intro: Admit the beam to the experiment hutch and reshape it.
   note: >
@@ -241,6 +250,7 @@ beam-defining-and-safety:
       note: mono-mode only, held out of beam in pink mode
 
 sample-environment:
+  stage: sample
   enclosure: 2-BM-B
   intro: Hold and rotate the sample. Listed bottom to top (the kinematic stack).
   devices:
@@ -314,6 +324,7 @@ sample-environment:
       family: PseudoAxis
 
 detector:
+  stage: detection
   enclosure: 2-BM-B
   intro: Convert the transmitted beam to light and record it (the Microscope detector, a scintillator-relay-camera assembly).
   cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (turret, objectives, objective selector, propagation distance) plus camera and scintillator leaf slots, anchored to a Housing. Fixture(microscope_at_2bm) presents as a Detector

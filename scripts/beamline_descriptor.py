@@ -33,6 +33,11 @@ KNOWN_TOP_KEYS: frozenset[str] = frozenset({"beamline", "enclosures", "controls"
 # Mirror of the code's DrawingSystem enum; guarded by an enum-equality test.
 DRAWING_SYSTEMS: frozenset[str] = frozenset({"ICMS", "EDMS", "DOI"})
 
+# The beam-path stages every subsystem group declares. Closed and generalizable
+# across beamlines: the source delivers the incident beam, the sample holds the
+# specimen, detection records the signal. Each group maps to exactly one.
+BEAM_PATH_STAGES: tuple[str, ...] = ("source", "sample", "detection")
+
 _MODEL_CONFIG = ConfigDict(extra="allow", protected_namespaces=())
 
 
@@ -101,15 +106,27 @@ class Device(BaseModel):
 
 
 class Group(BaseModel):
-    """A subsystem stop on the beam walk: a list of devices plus framing."""
+    """A subsystem stop on the beam walk: a list of devices plus framing.
+
+    Every group declares its `stage` (source, sample, or detection), the
+    generalizable three-act decomposition the Hardware page renders around.
+    """
 
     model_config = _MODEL_CONFIG
 
+    stage: str
     enclosure: str | None = None
     intro: str | None = None
     note: str | None = None
     devices: list[Device] = []
     decommissioned: list[str] = []  # provenance only; typed list[str] forbids a device-dict here
+
+    @field_validator("stage")
+    @classmethod
+    def _known_stage(cls, value: str) -> str:
+        if value not in BEAM_PATH_STAGES:
+            raise ValueError(f"unknown stage {value!r}; expected one of {list(BEAM_PATH_STAGES)}")
+        return value
 
 
 class Enclosure(BaseModel):

@@ -92,12 +92,11 @@ nav:
       - Open questions: deployments/2-bm/questions.md
       - The beamline:
         - deployments/2-bm/equipment/index.md
-        - Source: deployments/2-bm/equipment/source.md
+        - Source: deployments/2-bm/beamline.md
         - Sample (tower): deployments/2-bm/equipment/sample_tower.md
         - Detector (microscope): deployments/2-bm/equipment/microscope.md
         - Controls: deployments/2-bm/equipment/controls.md
         - Reference:
-          - Layout: deployments/2-bm/beamline.md
           - Assets: deployments/2-bm/assets.md
           - Computed axes: deployments/2-bm/computed-axes.md
       - Techniques: deployments/2-bm/techniques.md

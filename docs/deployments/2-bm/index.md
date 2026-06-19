@@ -18,7 +18,7 @@ The systems you operate, in five areas: the three stations the beam passes throu
 
 Along the beam, in order:
 
-- [Source](equipment/source.md): the front-end optics that deliver and condition the beam (mirror, monochromator, slits, filters).
+- [Source](beamline.md): the front-end optics that deliver and condition the beam (mirror, monochromator, slits, filters), rendered as the generated source-stage device walk.
 - [Sample](equipment/sample_tower.md): the positioning stack that places the specimen, a `SampleTower` [Assembly](../../catalog/assemblies.md) presenting the `Positioner` Role.
 - [Detector](equipment/microscope.md): the imaging system, a `Microscope` Assembly over a reusable `Optics` sub-assembly, presenting the `Detector` Role.
 
@@ -27,7 +27,7 @@ Cutting across all three:
 - [Controls](equipment/controls.md): the controllers and drive crates, related to the hardware by `controller_id`, with the trigger wiring that links them.
 - Resources: the continuously-available supplies a run needs (beam, cooling, vacuum), tracked under [Operations > Supplies](operations.md#supplies).
 
-The cross-cutting reference views: the [Layout](beamline.md) walk generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor, the [Assets](assets.md) inventory (the flat tree by `parent_id`, Family affordances, vendor Models, settings), and the [Computed axes](computed-axes.md).
+The cross-cutting reference views: the [Assets](assets.md) inventory (the flat tree by `parent_id`, Family affordances, vendor Models, settings) and the [Computed axes](computed-axes.md). The [Source](beamline.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
 
 ## Techniques
 

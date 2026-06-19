@@ -150,27 +150,36 @@ def test_renders_enclosures_table_facility_and_permit_columns() -> None:
     assert "`S02BM-PSS:StaB:SecureM`" in markdown
 
 
-def test_renders_one_h2_per_group_and_no_em_dash() -> None:
+def test_renders_source_stage_walk_and_no_em_dash() -> None:
     descriptor = bd.load(_DESCRIPTOR)
     markdown = _render_with_catalog()
 
-    assert markdown.startswith("# 2-BM layout")
-    for name, _group in descriptor.groups:
+    # The generated page is the Source stage; the sample and detection stages are
+    # the composed-fixture pages (equipment/sample_tower.md, equipment/microscope.md).
+    assert markdown.startswith("# Source")
+    source_groups = [name for name, group in descriptor.groups if group.stage == "source"]
+    downstream_groups = [name for name, group in descriptor.groups if group.stage != "source"]
+    assert len(source_groups) >= 2
+    for name in source_groups:
         assert f"## {_humanize(name)}" in markdown
+    for name in downstream_groups:
+        assert f"## {_humanize(name)}" not in markdown
     assert "## Controls" in markdown
     assert "## Resources" in markdown
-    # a known CORA-modeled device and a promoted marker tag both render
-    assert "`SampleTop_X`" in markdown
+    # a source device and a promoted marker tag render; downstream-stage devices do
+    # not (they live on the fixture pages)
+    assert "`FrontEndShutter`" in markdown
+    assert "`SampleTop_X`" not in markdown
+    assert "`Objective_Selector`" not in markdown
     assert "`new`" in markdown
-    # the P6-50 nested constituents render as their own sub-table
+    # the P6-50 nested constituents (a source-stage device) render as their own sub-table
     assert "**SafetyStack constituents**" in markdown
-    # a family present in the Catalog links up; a pending one renders plain (no fake link)
-    assert "[`RotaryStage`](../../catalog/families.md)" in markdown
+    # a source family present in the Catalog links up; a pending one renders plain (no fake link)
+    assert "](../../catalog/families.md)" in markdown
     assert "`Mask`" in markdown
     assert "[`Mask`](../../catalog/families.md)" not in markdown
-    # drawings + calibrations (with status) + the confirm note all render
-    assert "drawing: EDMS" in markdown
-    assert "calibration: magnification = 9.83 (Provisional" in markdown
+    # the folded source-area modelling note and a confirm note render
+    assert "no Conditioner Role" in markdown
     assert "confirm: count and thickness" in markdown
     # repo style: no em dashes in generated prose (chr() keeps the literal out of source)
     assert chr(0x2014) not in markdown
