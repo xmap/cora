@@ -108,7 +108,7 @@ nav:
       - Governance: deployments/2-bm/governance.md
       - Model: deployments/2-bm/model.md
     - Facility envelope:
-      - APS (Site):
+      - APS:
         - deployments/aps/index.md
         - Assets: deployments/aps/assets.md
   - Catalog:
