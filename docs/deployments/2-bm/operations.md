@@ -18,12 +18,23 @@ are Permitted and its resources are available.
 
 ## Supplies
 
-A Supply is a continuously-available resource tracked at beamline scope; facility-scope Supplies live at
-[APS](../aps/index.md#the-resources-you-draw-on).
+A Supply is a continuously-available resource a run draws on. Beamline-scope Supplies are tracked here;
+facility-scope utilities live at [APS](../aps/index.md#the-resources-you-draw-on).
 
 | Supply | Scope | Kind |
 | --- | --- | --- |
 | `2-BM detector LN2 dewar` | `Beamline` | `LiquidNitrogen` |
 
-Pending Supplies: a sample-environment gas mix (`ProcessGas`, `SUP-1`) and a compressed-air supply (`CompressedAir`, `SUP-2`); storage tiers and BLEPS utilities are tracked on
-[Open questions](questions.md).
+Pending beamline Supplies: a sample-environment gas mix (`ProcessGas`, `SUP-1`) and a compressed-air supply
+(`CompressedAir`, `SUP-2`).
+
+The photon beam, cooling water, vacuum, and electrical power are facility-scope utilities, observed through
+BLEPS and recorded at the [APS](../aps/index.md#the-resources-you-draw-on) level rather than as beamline
+Supplies; the BLEPS-to-Supply mapping is tracked on
+[Open questions](questions.md#equipment-protection-bleps).
+
+Beyond the physical utilities, a run also draws on a compute pool (for reconstruction) and on data-transfer and
+storage tiers. These are modelled through the `ComputePort` and `TransferPort` (a Method plus a port, not a new
+deployment aggregate); the real systems and paths are tracked on
+[Open questions](questions.md#data-storage-and-transfer), and the reconstruction compute resource itself is not
+yet pinned to a specific host or pool.
