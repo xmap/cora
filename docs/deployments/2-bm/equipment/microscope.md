@@ -6,57 +6,38 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 
 ## The model in one picture
 
-<div class="dtree" markdown="0">
-<ul>
-<li><span class="node">2-BM</span> <span class="meta">Unit, Asset</span>
-<ul>
-<li><span class="node">Frame: 2BM_hutch_frame</span>
-<ul>
-<li><span class="node">Mount: optics_mount</span> <span class="meta">6-DoF placement</span> <span class="rel">holds &rarr; Housing</span></li>
-</ul>
-</li>
-<li><span class="node">DetectorTable</span> <span class="meta">Device, Family Table</span> <span class="rel">carries &rarr; PropagationDistance</span>
-<ul>
-<li><span class="node">PropagationDistance</span> <span class="meta">Device, LinearStage; sample-to-detector rail</span> <span class="rel">carries &rarr; Housing</span>
-<ul>
-<li><span class="node">Housing</span> <span class="meta">Component, Family Housing</span> <span class="rel">containment parent (Asset.parent_id)</span>
-<ul>
-<li><span class="node">Turret</span> <span class="meta">Device, LinearStage, sliding ball-screw objective selector</span></li>
-<li><span class="node">Objective_10x</span> <span class="meta">Device, Objective, 10x</span></li>
-<li><span class="node">Objective_2x</span> <span class="meta">Device, Objective, 2x</span></li>
-<li><span class="node">Objective_1.1x</span> <span class="meta">Device, Objective, 1.1x</span></li>
-<li><span class="node">Objective_Selector</span> <span class="meta">Device, PseudoAxis</span></li>
-<li><span class="node">Camera</span> <span class="meta">Device, Camera</span></li>
-<li><span class="node">Scintillator</span> <span class="meta">Device, Scintillator</span></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><span class="node">Fixture: microscope_at_2bm</span> <span class="meta">surface_id = 2-BM Trust Surface</span>
-<ul>
-<li><span class="node">materializes Assembly = Microscope</span> <span class="meta">presents_as the Detector Role</span>
-<ul>
-<li><span class="node">sub-assembly optics</span> <span class="rel">&rarr; Assembly = Optics (content-hash pinned)</span></li>
-<li><span class="node">leaf slot camera</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; Camera</span></li>
-<li><span class="node">leaf slot scintillator</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; Scintillator</span></li>
-</ul>
-</li>
-<li><span class="node">Optics sub-assembly slots</span> <span class="meta">bound in this Fixture</span>
-<ul>
-<li><span class="node">turret</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; Turret</span></li>
-<li><span class="node">objectives</span> <span class="meta">OneOrMore</span> <span class="rel">&rarr; Objective_10x, Objective_2x, Objective_1.1x</span></li>
-<li><span class="node">propagation_distance</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; PropagationDistance</span></li>
-<li><span class="node">objective_selector</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; Objective_Selector</span></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</div>
+What physically holds what, hutch frame and detector table down to the optics (containment, `Asset.parent_id`):
+
+```
+2-BM  (Unit, Asset)
+├── Frame: 2BM_hutch_frame
+│   └── Mount: optics_mount  (6-DoF placement; holds -> Housing)
+└── DetectorTable  (Device, Family Table; carries -> PropagationDistance)
+    └── PropagationDistance  (Device, LinearStage; sample-to-detector rail; carries -> Housing)
+        └── Housing  (Component, Family Housing; containment parent, Asset.parent_id)
+            ├── Turret  (Device, LinearStage; sliding ball-screw objective selector)
+            ├── Objective_10x  (Device, Objective, 10x)
+            ├── Objective_2x  (Device, Objective, 2x)
+            ├── Objective_1.1x  (Device, Objective, 1.1x)
+            ├── Objective_Selector  (Device, PseudoAxis)
+            ├── Camera  (Device, Camera)
+            └── Scintillator  (Device, Scintillator)
+```
+
+The composition the Fixture materializes (Assembly to Fixture):
+
+```
+Fixture: microscope_at_2bm  (surface_id = 2-BM Trust Surface)
+├── materializes Assembly = Microscope  (presents_as the Detector Role)
+│   ├── sub-assembly optics       -> Assembly = Optics (content-hash pinned)
+│   ├── leaf slot camera          (Exactly1)   -> Camera
+│   └── leaf slot scintillator    (Exactly1)   -> Scintillator
+└── Optics sub-assembly slots  (bound in this Fixture)
+    ├── turret                 (Exactly1)   -> Turret
+    ├── objectives             (OneOrMore)  -> Objective_10x, Objective_2x, Objective_1.1x
+    ├── propagation_distance   (Exactly1)   -> PropagationDistance
+    └── objective_selector     (Exactly1)   -> Objective_Selector
+```
 
 `Microscope` is the Assembly (the blueprint) and, with `microscope_at_2bm`, the Fixture (the materialization). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical chassis; it parents seven of the eight functional constituents. The eighth, the `PropagationDistance` rail, is the part the housing itself rides on, so it parents the housing rather than sitting inside it.
 

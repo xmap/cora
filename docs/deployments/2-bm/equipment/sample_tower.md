@@ -8,55 +8,27 @@ The sample tower sits in the 2-BM experiment hutch (Enclosure `2-BM-B`). It is t
 
 The kinematic stack, floor to sample (containment, `Asset.parent_id`):
 
-<div class="dtree" markdown="0">
-<ul>
-<li><span class="node">2-BM</span> <span class="meta">Unit, Asset</span>
-<ul>
-<li><span class="node">SampleTable</span> <span class="meta">Device, Family Table; base, floor-referenced</span>
-<ul>
-<li><span class="node">Hexapod</span> <span class="meta">Device, Family Hexapod; coarse 6-DoF pose</span>
-<ul>
-<li><span class="node">LaminographyPitch</span> <span class="meta">Device, Family TiltStage; Kohzu goniometer</span>
-<ul>
-<li><span class="node">Rotary</span> <span class="meta">Device, Family RotaryStage; theta air-bearing</span>
-<ul>
-<li><span class="node">SampleTop_X</span> <span class="meta">Device, Family LinearStage; co-rotates with theta</span>
-<ul>
-<li><span class="node">SampleTop_Z</span> <span class="meta">Device, Family LinearStage; co-rotates with theta</span></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</div>
+```
+2-BM  (Unit, Asset)
+└── SampleTable  (Device, Family Table; base, floor-referenced)
+    └── Hexapod  (Device, Family Hexapod; coarse 6-DoF pose)
+        └── LaminographyPitch  (Device, Family TiltStage; Kohzu goniometer)
+            └── Rotary  (Device, Family RotaryStage; theta air-bearing)
+                └── SampleTop_X  (Device, Family LinearStage; co-rotates with theta)
+                    └── SampleTop_Z  (Device, Family LinearStage; co-rotates with theta)
+```
 
 The composition the Fixture materializes (Assembly to Fixture):
 
-<div class="dtree" markdown="0">
-<ul>
-<li><span class="node">Fixture: sample_tower_at_2bm</span>
-<ul>
-<li><span class="node">materializes Assembly = SampleTower</span> <span class="meta">presents_as the Positioner Role</span>
-<ul>
-<li><span class="node">slot table</span> <span class="rel">&rarr; SampleTable</span></li>
-<li><span class="node">slot coarse_pose</span> <span class="rel">&rarr; Hexapod</span></li>
-<li><span class="node">slot tilt</span> <span class="rel">&rarr; LaminographyPitch</span></li>
-<li><span class="node">slot rotation</span> <span class="rel">&rarr; Rotary</span></li>
-<li><span class="node">slot sample_top</span> <span class="meta">OneOrMore</span> <span class="rel">&rarr; SampleTop_X | SampleTop_Z</span></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</div>
+```
+Fixture: sample_tower_at_2bm
+└── materializes Assembly = SampleTower  (presents_as the Positioner Role)
+    ├── slot table         -> SampleTable
+    ├── slot coarse_pose   -> Hexapod
+    ├── slot tilt          -> LaminographyPitch
+    ├── slot rotation      -> Rotary
+    └── slot sample_top    (OneOrMore)  -> SampleTop_X | SampleTop_Z
+```
 
 `SampleTower` is the name of the Assembly (the blueprint). The conceptual tower-the-thing IS the Assembly plus its Fixture; there is no single physical chassis Asset (unlike the Microscope's `Housing`), because the tower is a kinematic stack where each stage is bolted to the one below.
 
