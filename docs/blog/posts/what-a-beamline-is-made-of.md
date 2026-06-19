@@ -16,7 +16,7 @@ links:
   - How CORA Remembers: blog/posts/how-cora-remembers.md
   - Equipment module: architecture/modules/equipment/index.md
   - Domain model: architecture/model.md
-  - 2-BM assets: deployments/2-bm/assets.md
+  - 2-BM assets: deployments/2-bm/inventory.md
 ---
 
 # What a Beamline Is Made Of: kinds, instances, and an inventory that stays honest

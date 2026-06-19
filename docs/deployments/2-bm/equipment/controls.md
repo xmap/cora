@@ -16,4 +16,4 @@ A controller is an `Asset` like any other, but it relates to the hardware it mov
 
 ## Where the detail lives
 
-The full controller back-reference table (which crate drives which Assets, the bound vendor Model, the EPICS handle) and the trigger-wiring port maps are on the [Assets](../assets.md) page, the source of truth until this view graduates to carry them. Family-level affordances for `MotionController` and `TimingController` are on the same page.
+The full controller back-reference table (which crate drives which Assets, the bound vendor Model, the EPICS handle) and the trigger-wiring port maps are on the [Assets](../inventory.md) page, the source of truth until this view graduates to carry them. Family-level affordances for `MotionController` and `TimingController` are on the same page.

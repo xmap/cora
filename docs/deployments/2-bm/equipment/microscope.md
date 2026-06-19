@@ -116,7 +116,7 @@ Writing `Objective_Selector = 1` writes lens index 1 to `2bm:MCTOptics:LensSelec
 ## Calibration, drawings, and citation
 
 - **Calibrations (4):** three `magnification` revisions (9.83x / ~2x / 1.10x effective; the 2x figure is nominal, pending re-measurement) and one `effective_thickness` on the LuAG scintillator (100 micrometers). All start `AssertedSource` / `Provisional` and are superseded by `MeasuredSource` revisions when the characterization Procedure runs.
-- **Drawings:** the Optique Peter MICRX080 manual `(EDMS, MAN-11863, 0521-0465-A)` is the canonical reference for the Assembly, Housing, and Mount; per-Asset drawings are listed on the [Assets inventory](../assets.md#engineering-drawings).
+- **Drawings:** the Optique Peter MICRX080 manual `(EDMS, MAN-11863, 0521-0465-A)` is the canonical reference for the Assembly, Housing, and Mount; per-Asset drawings are listed on the [Assets inventory](../inventory.md#engineering-drawings).
 - **PIDINST:** the Fixture earns one DOI as a citable station (HZB PEAXIS precedent), and each physical Asset plus the Housing earns its own, linked via `HasComponent` / `IsComponentOf`. `Objective_Selector` is not minted (a virtual axis has no Manufacturer or Owner). DOIs are stub-minted until 2-BM has facility DataCite credentials.
 
 ## Operating and swapping

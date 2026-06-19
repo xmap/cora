@@ -176,7 +176,7 @@ A useful cross-check on Family naming and gap detection: the function-and-anatom
 | **Controlling** | -                                          | -                                                  | MotionController, TimingController, `<Domain>Controller` siblings | - |
 | **Containing** | Window                                       | BeamPipe, Housing                                  | -                                       | -                        |
 
-`Window` straddles Modifying + Containing (attenuates AND bounds vacuum); `Shutter` straddles Electronic + Mechanical (electromechanical). Both are intentional single-Family typings today; either may split if a future use case forces it. The matrix is the operator-side companion to the beam-path inventory in `docs/deployments/<id>/assets.md`.
+`Window` straddles Modifying + Containing (attenuates AND bounds vacuum); `Shutter` straddles Electronic + Mechanical (electromechanical). Both are intentional single-Family typings today; either may split if a future use case forces it. The matrix is the operator-side companion to the beam-path inventory in `docs/deployments/<id>/inventory.md`.
 
 ## FSM
 

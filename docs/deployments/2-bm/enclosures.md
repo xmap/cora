@@ -11,7 +11,7 @@ An Enclosure models the observed permit status of an access-gated volume: a phys
 | `2-BM-A` | optics hutch | `aps` Site (`facility_code`) | the `front-end` and `conditioning-optics` Devices and their descendants |
 | `2-BM-B` | experiment hutch | `aps` Site (`facility_code`) | the `beam-defining-and-safety`, `sample-environment`, and `detector` Devices and their descendants |
 
-Each Device declares which hutch it sits in via `located_in_enclosure_id`. The optics band (`FrontEndDrive` and the mirror, monochromator, conditioning-slit, filter, and diagnostic-flag chain) is in `2-BM-A`; the beam-defining-and-safety stack (including the P6-50 safety stack and its SBS shutter), the sample environment, and the detector are in `2-BM-B`. The Located-in column on [Assets](assets.md) is the per-Device source of truth.
+Each Device declares which hutch it sits in via `located_in_enclosure_id`. The optics band (`FrontEndDrive` and the mirror, monochromator, conditioning-slit, filter, and diagnostic-flag chain) is in `2-BM-A`; the beam-defining-and-safety stack (including the P6-50 safety stack and its SBS shutter), the sample environment, and the detector are in `2-BM-B`. The Located-in column on [Assets](inventory.md) is the per-Device source of truth.
 
 ## Permit signal and gate
 

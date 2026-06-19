@@ -15,7 +15,7 @@ links:
   - Derive, Don't Stamp: blog/posts/derive-dont-stamp.md
   - Where CORA Fits: blog/posts/where-cora-fits.md
   - How CORA Remembers: blog/posts/how-cora-remembers.md
-  - 2-BM assets: deployments/2-bm/assets.md
+  - 2-BM assets: deployments/2-bm/inventory.md
 ---
 
 # The Metadata Problem, From the Other End: record the work, and let the labels be a read

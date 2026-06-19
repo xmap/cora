@@ -270,7 +270,8 @@ def _render_page(descriptor: BeamlineDescriptor) -> str:
             f"This page is generated from the descriptor at "
             f"[`deployments/2-bm/beamline.yaml`]({DESCRIPTOR_BLOB_URL}). "
             "Edit the descriptor, not this page. For the CORA Asset model, "
-            "affordances, and vendor catalog, see [Assets](assets.md).",
+            "settings, vendor catalog, drawings, and wiring, see "
+            "[Inventory](inventory.md).",
             kind="info",
             title="Generated from the descriptor",
         )

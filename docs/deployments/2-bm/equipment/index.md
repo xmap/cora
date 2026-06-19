@@ -19,7 +19,6 @@ The stations are containment trees of apparatus (`Asset.parent_id`); controls re
 
 ## Reference
 
-The cross-cutting views that span every area:
+The cross-cutting view that spans every area:
 
-- [Assets](../assets.md): the full CORA Asset model view, every device as a flat tree by `parent_id`.
-- [Computed axes](../computed-axes.md): the virtual axes that compute their position from the motors underneath.
+- [Inventory](../inventory.md): the full CORA Asset model view (every device as a flat tree by `parent_id`, with settings, vendor Models, drawings, and signal wiring) and the computed axes.

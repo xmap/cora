@@ -27,7 +27,7 @@ Cutting across all three:
 - [Controls](equipment/controls.md): the controllers and drive crates, related to the hardware by `controller_id`, with the trigger wiring that links them.
 - Resources: the continuously-available supplies a run needs (beam, cooling, vacuum), tracked under [Operations > Supplies](operations.md#supplies).
 
-The cross-cutting reference views: the [Assets](assets.md) inventory (the flat tree by `parent_id`, Family affordances, vendor Models, settings) and the [Computed axes](computed-axes.md). The [Source](beamline.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
+The cross-cutting reference view is the [Inventory](inventory.md): the flat Asset tree by `parent_id` with vendor Models, settings, drawings, and signal wiring, plus the computed axes. The [Source](beamline.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
 
 ## Techniques
 
