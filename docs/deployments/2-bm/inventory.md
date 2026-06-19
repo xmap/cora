@@ -232,4 +232,4 @@ Downstream-paddle slot positions (REAL, staff-published):
 | 80 | `50 um C` | 80 |
 | 106 | `None` | 106 |
 
-Open item: the position unit, reported as the motor record EGU, "consistent with mm" but not definitively confirmed (`FOIL-1`). Foil ATTENUATION (`Attenuable`) and the energy-dependent mirror coating stripe (`2bma:m3`) are deliberately out of scope here (the stripe is modelled with the [beam-mode work](procedures.md#beam-modes)).
+The position unit is reported as the motor record EGU ("consistent with mm" but not definitively confirmed, `FOIL-1`). Foil ATTENUATION (`Attenuable`) and the energy-dependent mirror coating stripe (`2bma:m3`) are deliberately out of scope here (the stripe is modelled with the [beam-mode work](procedures.md#beam-modes)).
