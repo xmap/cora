@@ -1,16 +1,10 @@
 # Assets
 
-*Equipment BC Assets registered under the 2-BM Unit.*
-
-The Devices that hang off 2-BM. The 2-BM Asset itself is a root Asset with `tier = Unit` (bound to its Site Facility via `facility_code`) and is declared on the [2-BM index](index.md). See [Model](../../architecture/model.md) for the aggregate shape.
-
-The Microscope detector is modelled as an Assembly + Fixture pair over a reusable Optics sub-assembly, with the constituents contained in one `Housing` Asset. The constituent Assets appear in the inventory below; the composition, containment, and wiring story lives on the dedicated [Microscope deployment](equipment/microscope.md) page.
-
-The sample positioning stack is modelled as a `SampleTower` Assembly + Fixture presenting as the `Positioner` Role, with the stages held in a literal-deep containment chain (each stage parents the one above). The composition, the containment chain, and the experiment-vs-loadout boundary (tomography, laminography, and mosaic are all Recipe Methods/Plans over one Fixture) live on the dedicated [Sample tower deployment](equipment/sample_tower.md) page.
-
-Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A` or the experiment hutch `2-BM-B`, declared per Device via `located_in_enclosure_id`. The Located-in column below records where each Device sits; the two hutches and the pre-flight gate they drive are on the [Enclosures](enclosures.md) page. The hutches are Enclosures, not Assets, so they do not appear as inventory rows.
+*The CORA Asset model for 2-BM: the flat `parent_id` device tree, each Family's affordances, the vendor Models behind the Assets, their settings, and engineering drawings.*
 
 ## Inventory
+
+The flat device tree under the `2-BM` root Asset (`tier = Unit`, bound to its Site Facility via `facility_code`; see [Model](../../architecture/model.md) for the aggregate shape). The Located-in column records each Device's hutch via `located_in_enclosure_id`, the optics hutch `2-BM-A` or the experiment hutch `2-BM-B`; the hutches are [Enclosures](enclosures.md), not Assets, so they are not rows. Two composed units appear as their constituent Assets, with the composition stories on their own pages: the [Microscope](equipment/microscope.md) detector (an Assembly + Fixture over an Optics sub-assembly, contained in one `Housing`) and the [Sample tower](equipment/sample_tower.md) positioning stack (a `SampleTower` Assembly + Fixture in a literal-deep containment chain).
 
 | Asset | Tier | Family | Parent | Located in |
 | --- | --- | --- | --- | --- |
