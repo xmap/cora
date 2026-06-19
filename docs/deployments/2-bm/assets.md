@@ -132,36 +132,6 @@ The Microscope objective selector (`2bmb:m1`) and camera selector (`2bmb:m5`) ar
 
 The six `Hexapod_*` DoF facets are PseudoAxis Assets and bind no vendor Model: PIDINST targets physical commissioned hardware, so the physical `Hexapod` carries the binding (`aerotech_hex300`) and the facets inherit vendor identity through the constituent wiring (see [Hexapod DoF model](computed-axes.md#hexapod-dof-model)). `LaminographyPitch` is a separate permanently-installed Kohzu goniometer, not a hexapod DoF; its composition and the working `kohzu_sa16a` model binding are on the [Sample tower](equipment/sample_tower.md) page.
 
-## Fine-positioning piezo controllers (Jena NV100D / NV200D)
-
-Two Piezosystem Jena piezo nanopositioning controllers are registered as `MotionController` Assets: `OpticsFineDrive` (Jena NV100D, staff item_027) for fine optics positioning reached from the `mct_optics` screen, and `SampleFineDrive` (Jena NV200D/NET, staff item_028) whose two piezo axes step under FPGA trigger control during tomography acquisition. Both run EPICS IOCs on the host `arcturus` (`JenaNV100D` / `JenaNV200D`), drive two piezo axes each (X/Y), and are network-attached through two static IPs per box (recorded once confirmed, PIEZO-4).
-
-Only the controller boxes are modelled in this slice. The driven XY piezo `LinearStage` axes, their containment, and the controllers' final names are deferred: an Asset name must say what it positions, and the item pages do not record which physical element each piezo moves or the scan use-case. That world-fact (PIEZO-1) finalises both the axis Assets (PIEZO-2) and the two provisional controller names. `OpticsFineDrive` is grounded in the `mct_optics` association; `SampleFineDrive` is a best-guess label (the NV200D complements the optics NV100D, so its driven element may be optics- or detector-side rather than the sample) and will be renamed if PIEZO-1 says otherwise.
-
-### NV200D trigger wiring
-
-The NV200D is stepped by the already-modelled softGlueZynq `Timing` box: the FPGA emits a TTL pulse on a camera-readout boundary that advances the piezo to its next preloaded position (up to 1024 positions per axis). The two trigger legs are modelled as ports on the boxes and wires resolved at Plan-bind time, mirroring the [hexapod constituent wiring](computed-axes.md#constituent-port-wiring):
-
-| Asset | Port | Direction | `signal_type` |
-| --- | --- | --- | --- |
-| `Timing` | `out2`, `out3` | OUTPUT | `step_trigger_ttl` |
-| `SampleFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
-
-Two wires carry the trigger: `Timing.out2 -> SampleFineDrive.step_x_in` and `Timing.out3 -> SampleFineDrive.step_y_in` (the JenaX and JenaY coaxial cables land on FPGA `out2` and `out3` per item_028). Each leg has a softGlue gate-delay PV set to the exposure time plus a margin: `2bmbMZ1:SG:GateDly-3_DLY` and `2bmbMZ1:SG:GateDly-2_DLY`. The delay-PV labels read `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses the cable-to-output map above; the apparent cross is recorded verbatim and flagged for confirmation (PIEZO-5). `signal_type = step_trigger_ttl` is a working free-text value (ports are open-vocabulary, up to 50 characters); it is distinct from the camera's `TriggerIn` because this edge advances a motion step rather than starting an exposure. The ports sit on the controller box in this slice; they migrate onto the per-axis Assets when those are registered. `OpticsFineDrive` (NV100D) carries no trigger input: item_027 describes no FPGA stepping for it.
-
-### Camera trigger wiring
-
-The camera trigger is the headline path of [item_060](https://docs2bm.readthedocs.io/en/latest/source/ops/item_060.html): the `Timing` box generates the trigger pulse train and routes it (the raw PSO train, or the `trigILF` subset selected by `MUX2-1`) through to the camera, where each edge starts an exposure. The durable leg is modelled as ports plus a wire resolved at Plan-bind time, the same idiom as the [NV200D legs](#nv200d-trigger-wiring) above; the [Microscope](equipment/microscope.md) carries no blueprint wire for it, because the camera trigger arrives from an external timing source wired at the Plan level:
-
-| Asset | Port | Direction | `signal_type` |
-| --- | --- | --- | --- |
-| `Timing` | `camera_trigger_out` | OUTPUT | `frame_trigger_ttl` |
-| `Camera` | `trigger_in` | INPUT | `frame_trigger_ttl` |
-
-One wire carries the trigger: `Timing.camera_trigger_out -> Camera.trigger_in`. `signal_type = frame_trigger_ttl` is deliberately distinct from the piezo legs' `step_trigger_ttl`: this edge starts an exposure, not a motion step. The `Camera` carries the `Triggerable` affordance, so `trigger_in` is its consumed `TriggerIn` signal. The executable model is `apps/api/tests/integration/scenarios/test_2bm_trigger_wiring.py`, which wires this leg alongside the two piezo legs and validates all three at Plan-bind time.
-
-Two labels on this leg stay open for 2-BM staff (`TIME-2`): the exact FPGA output channel feeding the camera (the path string ends at the camera's `Line2` input but names no box-side output, so `camera_trigger_out` is the CORA-side port name pending that number), and the `GateDly1` block name (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028, whereas `GateDly1` is so far unconfirmed). softGlue gate-delay `Width` and `DLY` are counted in 10 MHz clock cycles (100 ns per count, so `Width = 100` is a 10 us pulse, item_060); the concrete per-scan values are Method / Plan configuration, not Asset state.
-
 ## Family settings schemas
 
 NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: 2-BM runs two live `Camera`-Family Assets, the 5 MP FLIR Oryx (`Camera`) and the 31 MP FLIR Oryx (`Camera_HighRes`), which differ along settings axes (sensor size, frame rate), not Family axes, so a detector variant stays a `Camera` rather than a separate Family. `PseudoAxis` carries no settings schema (it is a facet Family).
@@ -566,6 +536,40 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 | `system` | `EDMS` |
 | `number` | `MAN-11863` |
 | `revision` | `0521-0465-A` |
+
+## Signal wiring (ports and Plan wires)
+
+Trigger and step signals between Assets are modelled as typed ports plus wires resolved at Plan-bind time, the same idiom as the [hexapod constituent wiring](computed-axes.md#constituent-port-wiring). The executable model is `apps/api/tests/integration/scenarios/test_2bm_trigger_wiring.py`, which wires the camera and piezo legs and validates them at Plan-bind time.
+
+### Fine-positioning piezo controllers (Jena NV100D / NV200D)
+
+Two Piezosystem Jena piezo nanopositioning controllers are registered as `MotionController` Assets: `OpticsFineDrive` (Jena NV100D, staff item_027) for fine optics positioning reached from the `mct_optics` screen, and `SampleFineDrive` (Jena NV200D/NET, staff item_028) whose two piezo axes step under FPGA trigger control during tomography acquisition. Both run EPICS IOCs on the host `arcturus` (`JenaNV100D` / `JenaNV200D`), drive two piezo axes each (X/Y), and are network-attached through two static IPs per box (recorded once confirmed, PIEZO-4).
+
+Only the controller boxes are modelled today; the driven XY piezo axes and the controllers' final names are deferred pending the world-fact of what each piezo positions (PIEZO-1, PIEZO-2).
+
+### NV200D trigger wiring
+
+The NV200D is stepped by the already-modelled softGlueZynq `Timing` box: the FPGA emits a TTL pulse on a camera-readout boundary that advances the piezo to its next preloaded position (up to 1024 positions per axis). The two trigger legs are modelled as ports on the boxes and wires resolved at Plan-bind time:
+
+| Asset | Port | Direction | `signal_type` |
+| --- | --- | --- | --- |
+| `Timing` | `out2`, `out3` | OUTPUT | `step_trigger_ttl` |
+| `SampleFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
+
+Two wires carry the trigger: `Timing.out2 -> SampleFineDrive.step_x_in` and `Timing.out3 -> SampleFineDrive.step_y_in` (the JenaX and JenaY coaxial cables land on FPGA `out2` and `out3` per item_028). Each leg has a softGlue gate-delay PV set to the exposure time plus a margin: `2bmbMZ1:SG:GateDly-3_DLY` and `2bmbMZ1:SG:GateDly-2_DLY`. The delay-PV labels read `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses the cable-to-output map above; the apparent cross is recorded verbatim and flagged for confirmation (PIEZO-5). `signal_type = step_trigger_ttl` is a working free-text value (ports are open-vocabulary, up to 50 characters); it is distinct from the camera's `TriggerIn` because this edge advances a motion step rather than starting an exposure. The ports sit on the controller box today; they migrate onto the per-axis Assets when those are registered. `OpticsFineDrive` (NV100D) carries no trigger input: item_027 describes no FPGA stepping for it.
+
+### Camera trigger wiring
+
+The camera trigger is the headline path of [item_060](https://docs2bm.readthedocs.io/en/latest/source/ops/item_060.html): the `Timing` box generates the trigger pulse train and routes it (the raw PSO train, or the `trigILF` subset selected by `MUX2-1`) through to the camera, where each edge starts an exposure. The durable leg is modelled as ports plus a wire resolved at Plan-bind time, the same idiom as the [NV200D legs](#nv200d-trigger-wiring) above; the [Microscope](equipment/microscope.md) carries no blueprint wire for it, because the camera trigger arrives from an external timing source wired at the Plan level:
+
+| Asset | Port | Direction | `signal_type` |
+| --- | --- | --- | --- |
+| `Timing` | `camera_trigger_out` | OUTPUT | `frame_trigger_ttl` |
+| `Camera` | `trigger_in` | INPUT | `frame_trigger_ttl` |
+
+One wire carries the trigger: `Timing.camera_trigger_out -> Camera.trigger_in`. `signal_type = frame_trigger_ttl` is deliberately distinct from the piezo legs' `step_trigger_ttl`: this edge starts an exposure, not a motion step. The `Camera` carries the `Triggerable` affordance, so `trigger_in` is its consumed `TriggerIn` signal.
+
+Two labels on the camera leg stay open for 2-BM staff (`TIME-2`): the exact FPGA output channel feeding the camera (the path string ends at the camera's `Line2` input but names no box-side output, so `camera_trigger_out` is the CORA-side port name pending that number), and the `GateDly1` block name (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028, whereas `GateDly1` is so far unconfirmed). softGlue gate-delay `Width` and `DLY` are counted in 10 MHz clock cycles (100 ns per count, so `Width = 100` is a 10 us pulse, item_060); the concrete per-scan values are Method / Plan configuration, not Asset state.
 
 ## Pending
 
