@@ -395,12 +395,17 @@ depends_on = [
     "cora.infrastructure",
     "cora.shared",
     "cora.access",
+    # RunSupervisor runtime gates on Actor.active (operator-revocation) via load_actor.
+    "cora.access.aggregates",
     "cora.agent",
     "cora.calibration",
     "cora.campaign",
     "cora.caution",
     "cora.data",
     "cora.decision",
+    # RunSupervisor runtime (cora.api._run_supervisor) composes Decision events
+    # the same way the agent subscribers do (blessed cross-BC aggregate access).
+    "cora.decision.aggregates",
     "cora.enclosure",
     "cora.enclosure.adapters",
     "cora.equipment",
@@ -409,6 +414,9 @@ depends_on = [
     "cora.operation",
     "cora.recipe",
     "cora.run",
+    # RunSupervisor runtime catches Run lifecycle errors (RunCannotHoldError /
+    # RunNotFoundError) when a Run changes state under it between read and issue.
+    "cora.run.aggregates",
     "cora.safety",
     "cora.subject",
     "cora.supply",

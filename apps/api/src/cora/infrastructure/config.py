@@ -154,6 +154,12 @@ class Settings(BaseSettings):
     # locked rows recover within a minute.
     idempotency_lock_stale_seconds: int = 60
 
+    # `run_supervisor_enabled` gates the RunSupervisor background runtime (the
+    # first ACTIVE in-loop agent). Default off: deployments opt in explicitly.
+    # `run_supervisor_tick_seconds` is the supervision cadence (>= 0.1s).
+    run_supervisor_enabled: bool = False
+    run_supervisor_tick_seconds: float = 30.0
+
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
     # from. Empty (default) keeps the legacy X-Principal-Id-with-
@@ -330,6 +336,18 @@ class Settings(BaseSettings):
             msg = (
                 f"idempotency_lock_stale_seconds must be >= 1, got {value}; "
                 "values below 1s would treat every concurrent claim as stale"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_supervisor_tick_seconds")
+    @classmethod
+    def _validate_run_supervisor_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight supervision loop."""
+        if value < 0.1:
+            msg = (
+                f"run_supervisor_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the supervisor"
             )
             raise ValueError(msg)
         return value
