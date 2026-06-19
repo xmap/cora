@@ -20,6 +20,10 @@ A Run is the operator-started execution of a Plan: the measurement batch (ISA-88
 | `Proposal 2026-1237 low-energy tomography (25 keV)` | [iron-bearing core](subjects.md) | [1237 multi-energy](campaigns.md) |
 | `Proposal 2026-1237 high-energy tomography (30 keV)` | iron-bearing core | 1237 multi-energy |
 
+## Shutter state at run start
+
+Both 2-BM safety shutters are open before a tomography run begins, opened by the operator at session start. The front-end `FrontEndShutter` (FES) is then kept open continuously for the thermal stability of the beamline optics and is not toggled per scan. The B-station `StationShutter` (the P6-50 SBS) is what 2-BM operators and TomoScan call the "fast shutter": there is no separate fast actuator at 2-BM-B today, so TomoScan cycles this same shutter closed for dark-field and white (flat) field acquisition and open for projections, many times per scan. CORA's run-start gate therefore expects both shutters open (the open predicate `BeamBlockingM == 0` is defined on [Enclosures](enclosures.md)), and should treat `StationShutter` close events during a run as normal dark / flat sequencing rather than anomalies. No separate `FastShutter` Asset is modelled. Confirmed by 2-BM staff (BEAM-1).
+
 ## Pending
 
 | Run | Subject | Campaign |
