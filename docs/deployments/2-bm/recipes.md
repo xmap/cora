@@ -8,7 +8,7 @@ Each recipe below realizes one [Capability](../../catalog/capabilities.md) as a 
 
 ## Runnable today
 
-These two reuse the registered `collect` action body (acquire a frame stack, poll until done), so they can be conducted without new executor code. The pixel-wise baseline math (mean / std) is downstream data reduction, not a recipe step (per the catalog convention that reduction lives in pipelines, not in CORA); the captured stack becomes a baseline [Dataset](datasets.md). These same captures are also modeled as subject-less calibration [Runs](runs.md); a recipe is the as-data form of the capture sequence (it expands into a Procedure).
+These two reuse the registered `collect` action body (acquire a frame stack, poll until done), so they can be conducted without new executor code. The pixel-wise baseline math (mean / std) is downstream data reduction, not a recipe step (per the catalog convention: pixel-wise baseline reduction stays in external pipelines, while a heavier compute step like reconstruction is a recorded compute Method); the captured stack becomes a baseline [Dataset](datasets.md). These same captures are also modeled as subject-less calibration [Runs](runs.md); a recipe is the as-data form of the capture sequence (it expands into a Procedure).
 
 ### `dark_baseline`
 
@@ -89,6 +89,6 @@ One manual step follows a reboot but sits outside this controller-side sequence:
 
 ## Status
 
-`dark_baseline` and `flat_baseline` are conductible today (they reuse `collect`); the baseline reduction that follows the capture is downstream of the recipe. `energy_setting` and `hexapod_reboot` are valid Recipe v1 data but not yet runnable: conducting either would fail at the first unregistered action body. They are recorded here so the step order, addresses, and tunable values are captured as reviewable data ahead of the executor work, which sits in the same deferred-runtime bucket as live motion.
+`dark_baseline` and `flat_baseline` are conductible today (they reuse `collect`); the baseline reduction that follows the capture is downstream of the recipe (reconstruction, unlike baseline reduction, is itself a recorded compute Method). `energy_setting` and `hexapod_reboot` are valid Recipe v1 data but not yet runnable: conducting either would fail at the first unregistered action body. They are recorded here so the step order, addresses, and tunable values are captured as reviewable data ahead of the executor work, which sits in the same deferred-runtime bucket as live motion.
 
 The deterministic legs of the three newly modeled [Procedures](procedures.md) are candidate recipes for the same future executor work: the close-to-target aperture of `slit_centering` and the per-blade sweep of `blade_throw_characterization` are flat setpoint / action sequences, while their centring and edge-fit legs (and the whole `detector_z_rail_alignment` search) stay at the edge because recipes carry no feedback loop. They are not authored as recipes yet; the procedures above model the act today.
