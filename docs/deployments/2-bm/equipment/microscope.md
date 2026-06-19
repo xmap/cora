@@ -28,6 +28,8 @@ The detector sits about 55 m from the source in the 2-BM experiment hutch (Enclo
 <li><span class="node">Objective_Selector</span> <span class="meta">Device, PseudoAxis</span></li>
 <li><span class="node">Camera</span> <span class="meta">Device, Camera</span></li>
 <li><span class="node">Scintillator</span> <span class="meta">Device, Scintillator</span></li>
+<li><span class="node">Camera_HighRes</span> <span class="meta">Device, Camera; alternate 31 MP, outside the Fixture</span></li>
+<li><span class="node">Camera_Selector</span> <span class="meta">Device, LinearStage; switches the camera path, outside the Fixture</span></li>
 </ul>
 </li>
 </ul>
@@ -58,14 +60,14 @@ The detector sits about 55 m from the source in the 2-BM experiment hutch (Enclo
 </ul>
 </div>
 
-`Microscope` is the Assembly (the blueprint) and, with `microscope_at_2bm`, the Fixture (the materialization). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical chassis; it parents seven of the eight functional constituents. The eighth, the `PropagationDistance` rail, is the part the housing itself rides on, so it parents the housing rather than sitting inside it.
+`Microscope` is the Assembly (the blueprint) and, with `microscope_at_2bm`, the Fixture (the materialization). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical chassis; it parents seven of the eight functional constituents (the eighth, the `PropagationDistance` rail, is the part the housing rides on, so it parents the housing instead). It also parents the alternate `Camera_HighRes` and its `Camera_Selector`, which sit under the housing but outside the Fixture (see [Open items](#open-items)).
 
 ## Two axes: composition and containment
 
 Like the [sample tower](sample_tower.md), the detector uses both of CORA's structural axes (the general mechanisms are defined in the [equipment module](../../../architecture/modules/equipment/index.md#composition-axes); this section is 2-BM's use of them).
 
 - **Composition** (Assembly to Fixture, flat) answers *what logical cluster presents for binding*. The `Microscope` Assembly composes the `Optics` sub-assembly plus two leaf slots (`camera`, `scintillator`); the Fixture `microscope_at_2bm` binds eight Assets across six leaf slots on the 2-BM Trust Surface. The Assembly `presents_as` the `Detector` Role, so a Method can require a 2D imaging device without pinning a Family.
-- **Containment** (`Asset.parent_id`) answers *what physically holds what*. The `Housing` parents seven constituents, the housing rides on the `PropagationDistance` rail (the sample-to-detector stage, so moving it travels the whole detector), and the rail sits on the `DetectorTable`, so the chain is `2-BM -> DetectorTable -> PropagationDistance -> Housing -> constituents`. The housing is the one part installed into a Mount (`optics_mount` on `2BM_hutch_frame`, 6-DoF), and the constituents inherit position from its known internal layout; the Mount records where it sits in space, the `parent_id` what it rests on (orthogonal axes). The rail-carries-housing mounting is an engineering assumption pending staff confirmation (see [Open items](#open-items)). This is an approximation: tomography reconstruction calibrates the rotation center separately, so per-constituent Mounts are not pinned (pixel-accurate beam-propagation modelling would add them).
+- **Containment** (`Asset.parent_id`) answers *what physically holds what*. The `Housing` parents seven Fixture constituents (plus the alternate camera and its selector, outside the Fixture), the housing rides on the `PropagationDistance` rail (the sample-to-detector stage, so moving it travels the whole detector), and the rail sits on the `DetectorTable`, so the chain is `2-BM -> DetectorTable -> PropagationDistance -> Housing -> constituents`. The housing is the one part installed into a Mount (`optics_mount` on `2BM_hutch_frame`, 6-DoF), and the constituents inherit position from its known internal layout; the Mount records where it sits in space, the `parent_id` what it rests on (orthogonal axes). The rail-carries-housing mounting is an engineering assumption pending staff confirmation (see [Open items](#open-items)). This is an approximation: tomography reconstruction calibrates the rotation center separately, so per-constituent Mounts are not pinned (pixel-accurate beam-propagation modelling would add them).
 
 The two axes are orthogonal: the same eight Assets sit on both at once.
 
