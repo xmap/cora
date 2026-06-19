@@ -11,8 +11,27 @@ BC-tier port location per [[project_adapter_naming_design]]: stays
 here until rule-of-three promotes to `cora.infrastructure.ports`.
 Sibling ports `CommandPort` (RPC) and `EventPort` (typed events) are
 deferred to first concrete consumer per adapter-first discipline.
+
+`ComputePort` is the CONDUCT sibling: domain-shaped compute-job
+submission (submit / await / fetch artifact), distilled from a single
+local-process adapter. A routing registry is deferred to the second
+real substrate, exactly as ControlPort earned its registry.
 """
 
+from cora.operation.ports.compute_port import (
+    ArtifactNotFoundError,
+    ArtifactRef,
+    ComputeJobFailedError,
+    ComputeNotAvailableError,
+    ComputePort,
+    ComputeProvenance,
+    ComputeResources,
+    ComputeStatus,
+    ComputeSubmitRejectedError,
+    ComputeTimeoutError,
+    JobId,
+    JobSpec,
+)
 from cora.operation.ports.control_port import (
     ControlAccessDeniedError,
     ControlNotConnectedError,
@@ -27,12 +46,24 @@ from cora.operation.ports.control_port import (
 )
 
 __all__ = [
+    "ArtifactNotFoundError",
+    "ArtifactRef",
+    "ComputeJobFailedError",
+    "ComputeNotAvailableError",
+    "ComputePort",
+    "ComputeProvenance",
+    "ComputeResources",
+    "ComputeStatus",
+    "ComputeSubmitRejectedError",
+    "ComputeTimeoutError",
     "ControlAccessDeniedError",
     "ControlNotConnectedError",
     "ControlPort",
     "ControlTimeoutError",
     "ControlValueCoercionError",
     "ControlWriteRejectedError",
+    "JobId",
+    "JobSpec",
     "NoAdapterForAddressError",
     "Quality",
     "Reading",

@@ -56,6 +56,7 @@ input/output data lineage, without conducting the job itself.
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -63,6 +64,10 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
+from cora.api._compute_runtime import ComputeRuntime
+from cora.data.aggregates.dataset import DatasetCannotPromoteError
+from cora.data.features.promote_dataset import PromoteDataset
+from cora.data.features.promote_dataset import bind as bind_promote_dataset
 from cora.data.features.register_dataset import RegisterDataset
 from cora.data.features.register_dataset import bind as bind_register_dataset
 from cora.equipment.aggregates.asset import AssetTier
@@ -79,6 +84,8 @@ from cora.equipment.features.update_family_settings_schema import UpdateFamilySe
 from cora.equipment.features.update_family_settings_schema import (
     bind as bind_update_family_settings_schema,
 )
+from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
+from cora.operation.ports.compute_port import JobSpec
 from cora.recipe.aggregates.capability import ExecutorShape
 from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.features.define_method import DefineMethod
@@ -89,6 +96,7 @@ from cora.recipe.features.define_practice import DefinePractice
 from cora.recipe.features.define_practice import bind as bind_define_practice
 from cora.recipe.features.update_method_parameters_schema import UpdateMethodParametersSchema
 from cora.recipe.features.update_method_parameters_schema import bind as bind_update_method_schema
+from cora.run.features.abort_run import bind as bind_abort_run
 from cora.run.features.complete_run import CompleteRun
 from cora.run.features.complete_run import bind as bind_complete_run
 from cora.run.features.start_run import StartRun
@@ -139,22 +147,23 @@ def _compute_node_settings_schema() -> dict[str, Any]:
     }
 
 
-@pytest.mark.integration
-async def test_reconstruction_records_recipe_run_and_lineage(
-    db_pool: asyncpg.Pool,
-) -> None:
-    """End-to-end RECORD-the-recon: define a ComputeNode Family + Asset and
-    an ITERATIVE reconstruction Method/Capability, bind them in a Plan,
-    register the raw projection Dataset, run the (record-only) recon Run,
-    and register the reconstructed Dataset with derived_from lineage back
-    to the raw one. Assert the Method's execution_pattern, the node
-    binding, and the Dataset lineage."""
-    # Generous fresh id queue; FixedIdGenerator tolerates leftovers and we
-    # capture every aggregate id from its handler's return value.
-    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
+@dataclass(frozen=True)
+class _ReconFixture:
+    """Ids produced by `_seed_recon_recipe`, shared by the RECORD and
+    CONDUCT scenarios."""
 
-    # ----- Recipe BC: the no-affordance compute Capability -----
+    method_id: UUID
+    plan_id: UUID
+    subject_id: UUID
+    raw_dataset_id: UUID
+    node_asset_id: UUID
 
+
+async def _seed_recon_recipe(deps: Any) -> _ReconFixture:
+    """Seed the shared recon recipe: the no-affordance compute Capability,
+    the ComputeNode Family + Asset, the ITERATIVE Method + schema +
+    Practice + Plan, the Subject, and the raw projection Dataset. Stops
+    before start_run so each scenario drives its own Run lifecycle."""
     await seed_capability_postgres(
         deps.event_store,
         _CAPABILITY_RECON_ID,
@@ -162,8 +171,6 @@ async def test_reconstruction_records_recipe_run_and_lineage(
         name="Reconstruction",
         shapes=frozenset({ExecutorShape.METHOD}),
     )
-
-    # ----- Equipment BC: ComputeNode Family (empty-affordance leaf) + Asset -----
 
     await bind_define_family(deps)(
         DefineFamily(name="ComputeNode", affordances=frozenset()),
@@ -204,11 +211,6 @@ async def test_reconstruction_records_recipe_run_and_lineage(
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    # The ComputeNode Asset is NOT activated: an empty-affordance leaf has
-    # no command surface for Active to mean anything, and define_plan /
-    # start_run gate only on Decommissioned.
-
-    # ----- Recipe BC: ITERATIVE recon Method + schema + Practice + Plan -----
 
     method_id = await bind_define_method(deps)(
         DefineMethod(
@@ -246,8 +248,6 @@ async def test_reconstruction_records_recipe_run_and_lineage(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Subject + raw projection Dataset (the recon input) -----
-
     subject_id = await bind_register_subject(deps)(
         RegisterSubject(name="iron-bearing sandstone core (recon study)"),
         principal_id=_PRINCIPAL_ID,
@@ -269,13 +269,40 @@ async def test_reconstruction_records_recipe_run_and_lineage(
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
+    return _ReconFixture(
+        method_id=method_id,
+        plan_id=plan_id,
+        subject_id=subject_id,
+        raw_dataset_id=raw_dataset_id,
+        node_asset_id=node_asset_id,
+    )
+
+
+@pytest.mark.integration
+async def test_reconstruction_records_recipe_run_and_lineage(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """End-to-end RECORD-the-recon: define a ComputeNode Family + Asset and
+    an ITERATIVE reconstruction Method/Capability, bind them in a Plan,
+    register the raw projection Dataset, run the (record-only) recon Run,
+    and register the reconstructed Dataset with derived_from lineage back
+    to the raw one. Assert the Method's execution_pattern, the node
+    binding, and the Dataset lineage."""
+    # Generous fresh id queue; FixedIdGenerator tolerates leftovers and we
+    # capture every aggregate id from its handler's return value.
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
+    fixture = await _seed_recon_recipe(deps)
+    method_id = fixture.method_id
+    node_asset_id = fixture.node_asset_id
+    subject_id = fixture.subject_id
+    raw_dataset_id = fixture.raw_dataset_id
 
     # ----- Run BC: the record-only reconstruction Run -----
 
     run_id = await bind_start_run(deps)(
         StartRun(
             name="SIRT reconstruction of Proposal 2026-1241 sandstone core",
-            plan_id=plan_id,
+            plan_id=fixture.plan_id,
             subject_id=None,
             override_parameters={"num_iter": 200, "tol": 0.0005},
             trigger_source="operator-manual; offline reconstruction on gpu-recon-01",
@@ -353,3 +380,110 @@ async def test_reconstruction_records_recipe_run_and_lineage(
     assert recon_payload["derived_from"] == [str(raw_dataset_id)]
     assert UUID(recon_payload["producing_run_id"]) == run_id
     assert UUID(recon_payload["subject_id"]) == subject_id
+    # A record-only Run was never conducted, so no actuation kind taints it.
+    assert recon_payload["producing_actuation_kind"] is None
+
+
+@pytest.mark.integration
+async def test_reconstruction_conducts_via_compute_runtime_and_gates_promotion(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """End-to-end CONDUCT-the-recon: the ComputeRuntime submits the recon
+    job to a (Simulated) ComputePort, awaits its terminal state, and
+    completes the Run carrying the observed actuation kind. The recon
+    Dataset registered against that conducted Run inherits
+    producing_actuation_kind = Simulated, so the simulator-origin gate
+    bars its promotion to Production even after its inputs are promoted."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
+    fixture = await _seed_recon_recipe(deps)
+
+    run_id = await bind_start_run(deps)(
+        StartRun(
+            name="SIRT reconstruction (conducted) of Proposal 2026-1241",
+            plan_id=fixture.plan_id,
+            subject_id=None,
+            override_parameters={"num_iter": 200, "tol": 0.0005},
+            trigger_source="compute-runtime; in-memory executor",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # The ComputeRuntime drives submit -> await -> complete via the
+    # in-memory (Simulated) ComputePort. The default seed is Succeeded
+    # with an artifact synthesised from the job spec's output_uri.
+    runtime = ComputeRuntime(
+        compute_port=InMemoryComputePort(),
+        complete_run=bind_complete_run(deps),
+        abort_run=bind_abort_run(deps),
+    )
+    result = await runtime.conduct(
+        run_id=run_id,
+        job_spec=JobSpec(
+            command=("tomopy", "recon", "--algorithm", "sirt"),
+            input_uris=("file:///data/2bm/2026-05/proj_raw.h5",),
+            output_uri="file:///data/2bm/2026-05/recon_sirt.h5",
+            parameters={"num_iter": 200, "tol": 0.0005},
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert result.succeeded
+    assert result.artifact_ref is not None
+
+    # ----- Assert: the conduct completed the Run carrying provenance -----
+
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert [e.event_type for e in run_events] == ["RunStarted", "RunCompleted"]
+    completed = run_events[1].payload
+    assert completed["actuation_kind"] == "Simulated"
+    assert completed["producing_job_id"] is not None
+    assert completed["artifact_uri"] == "file:///data/2bm/2026-05/recon_sirt.h5"
+
+    # ----- Data BC: the reconstructed Dataset off the conducted Run -----
+
+    recon_dataset_id = await bind_register_dataset(deps)(
+        RegisterDataset(
+            name="2BM_recon_2026-05-20_sirt_conducted",
+            uri=result.artifact_ref.uri,
+            checksum_algorithm=result.artifact_ref.checksum_algorithm,
+            checksum_value=result.artifact_ref.checksum_value,
+            byte_size=96_000_000_000,
+            media_type="application/x-hdf5",
+            conforms_to=frozenset({"https://www.nexusformat.org/NXtomoproc"}),
+            producing_run_id=run_id,
+            subject_id=fixture.subject_id,
+            derived_from=frozenset({fixture.raw_dataset_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Central claim: the actuation kind flowed conducted-Run -> Dataset.
+    recon_events, _ = await deps.event_store.load("Dataset", recon_dataset_id)
+    assert recon_events[0].payload["producing_actuation_kind"] == "Simulated"
+    assert recon_events[0].payload["derived_from"] == [str(fixture.raw_dataset_id)]
+
+    # Promote the raw input so the lineage-must-be-Production guard passes;
+    # the raw Dataset is an external upload (no producing conduct), so its
+    # actuation kind is None and the simulator gate does not bar it.
+    await bind_promote_dataset(deps)(
+        PromoteDataset(dataset_id=fixture.raw_dataset_id, reason="raw projections peer-reviewed"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # ----- Assert: simulator-origin recon cannot be promoted to Production -----
+
+    with pytest.raises(DatasetCannotPromoteError) as exc_info:
+        await bind_promote_dataset(deps)(
+            PromoteDataset(
+                dataset_id=recon_dataset_id,
+                reason="attempt to promote rehearsal recon",
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    # It is specifically the simulator-origin gate that blocks it (not the
+    # lineage guard, which now passes): the message names the actuation.
+    assert "actuation" in str(exc_info.value)

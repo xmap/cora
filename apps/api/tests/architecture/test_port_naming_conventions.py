@@ -52,6 +52,11 @@ from tests.architecture.conftest import CORA_ROOT, tracked_python_files
 # names why no bare role noun fits.
 _PORT_SUFFIX_ALLOWLIST: dict[str, str] = {
     "ControlPort": "value-IO seam; 'Control' alone is a bare verb, no role noun fits",
+    "ComputePort": (
+        "compute-job submission seam; 'Compute' is a bare verb and the "
+        "graceful role noun 'JobRunner' is reserved for the multi-substrate "
+        "registry hoist, so it stays ComputePort (sibling of ControlPort)"
+    ),
     "SignaturePort": "stripping to 'Signature' collides with the Signature value object",
     "PublishPort": "federation publish seam; 'Publish' is a bare verb, no graceful agent noun",
     "PullPort": "federation pull seam; 'Pull' is a bare verb, no graceful agent noun",

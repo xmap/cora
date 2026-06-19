@@ -453,6 +453,29 @@ def test_to_payload_serializes_run_completed_to_primitives() -> None:
     event = RunCompleted(run_id=run_id, occurred_at=_NOW)
     assert to_payload(event) == {
         "run_id": str(run_id),
+        # compute-conduct provenance: None for a non-conducted complete.
+        "actuation_kind": None,
+        "producing_job_id": None,
+        "artifact_uri": None,
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_run_completed_with_conduct_provenance() -> None:
+    run_id = uuid4()
+    event = RunCompleted(
+        run_id=run_id,
+        actuation_kind="Simulated",
+        producing_job_id="inmem-job-1",
+        artifact_uri="file:///data/recon.h5",
+        occurred_at=_NOW,
+    )
+    assert to_payload(event) == {
+        "run_id": str(run_id),
+        "actuation_kind": "Simulated",
+        "producing_job_id": "inmem-job-1",
+        "artifact_uri": "file:///data/recon.h5",
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -478,6 +501,36 @@ def test_run_completed_round_trips() -> None:
     assert from_stored(stored) == original
 
 
+@pytest.mark.unit
+def test_run_completed_round_trips_with_conduct_provenance() -> None:
+    original = RunCompleted(
+        run_id=uuid4(),
+        actuation_kind="Simulated",
+        producing_job_id="inmem-job-1",
+        artifact_uri="file:///data/recon.h5",
+        occurred_at=_NOW,
+    )
+    stored = _stored("RunCompleted", to_payload(original))
+    assert from_stored(stored) == original
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_run_completed_without_conduct_keys() -> None:
+    """Pre-compute-conduct RunCompleted streams replay with the new keys
+    absent, folding to None via the `.get(...)` forward-compat path."""
+    run_id = uuid4()
+    stored = _stored(
+        "RunCompleted",
+        {"run_id": str(run_id), "occurred_at": _NOW.isoformat()},
+    )
+    rebuilt = from_stored(stored)
+    assert rebuilt == RunCompleted(run_id=run_id, occurred_at=_NOW)
+    assert isinstance(rebuilt, RunCompleted)
+    assert rebuilt.actuation_kind is None
+    assert rebuilt.producing_job_id is None
+    assert rebuilt.artifact_uri is None
+
+
 # ---------- RunAborted ----------
 
 
@@ -497,6 +550,9 @@ def test_to_payload_serializes_run_aborted_to_primitives() -> None:
         # when not supplied. Forward-compat via
         # `payload.get("decided_by_decision_id")`.
         "decided_by_decision_id": None,
+        # compute-conduct provenance: None for an operator abort.
+        "actuation_kind": None,
+        "producing_job_id": None,
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -523,6 +579,22 @@ def test_from_stored_rebuilds_run_aborted() -> None:
     )
     assert isinstance(rebuilt, RunAborted)
     assert rebuilt.decided_by_decision_id is None
+    # Pre-compute-conduct streams fold the conduct-provenance keys to None.
+    assert rebuilt.actuation_kind is None
+    assert rebuilt.producing_job_id is None
+
+
+@pytest.mark.unit
+def test_run_aborted_round_trips_with_conduct_provenance() -> None:
+    original = RunAborted(
+        run_id=uuid4(),
+        reason="compute job failed",
+        actuation_kind="Simulated",
+        producing_job_id="inmem-job-1",
+        occurred_at=_NOW,
+    )
+    stored = _stored("RunAborted", to_payload(original))
+    assert from_stored(stored) == original
 
 
 @pytest.mark.unit

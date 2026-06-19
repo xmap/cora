@@ -34,11 +34,18 @@ principle, gate-review 6f-3 L9 lock).
 `name`, `plan_id`, `subject_id`, `raid`, `override_parameters`,
 `effective_parameters`, `trigger_source`, `observation_logbook_id`,
 `external_refs`, `campaign_id`, `last_adjusted_at`,
-`last_adjusted_by`, AND `adjustment_count` through from prior state.
-Constructing `Run(id=..., name=..., plan_id=..., subject_id=...,
-status=...)` without explicitly passing the additive fields would
-silently WIPE them to defaults (empty dict / None / empty frozenset
-/ 0). Pinned by the per-transition preserve-fields tests.
+`last_adjusted_by`, `adjustment_count`, AND `actuation_kind` through
+from prior state. Constructing `Run(id=..., name=..., plan_id=...,
+subject_id=..., status=...)` without explicitly passing the additive
+fields would silently WIPE them to defaults (empty dict / None / empty
+frozenset / 0). Pinned by the per-transition preserve-fields tests.
+
+`actuation_kind` is None at genesis (RunStarted) and is set ONLY by
+the `RunCompleted` / `RunAborted` arms from the terminal event's
+conduct-observed kind (None for completes/aborts issued outside a
+compute conduct). All other arms preserve prior state's value. The
+compute-specific `producing_job_id` / `artifact_uri` ride the terminal
+event for audit but are deliberately NOT folded onto Run state.
 
 `observation_logbook_id` is set by the
 `RunObservationLogbookOpened` arm (lazy open-on-first-write triggered
@@ -142,6 +149,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 # memory equality semantics; the event carries a tuple for
                 # deterministic wire byte ordering).
                 pinned_calibration_ids=frozenset(pinned_calibration_ids),
+                # No conduct provenance at genesis; a terminal event sets it.
+                actuation_kind=None,
             )
         case RunHeld():
             prior = require_state(state, "RunHeld")
@@ -163,6 +172,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Conduct provenance preserved across non-terminal arms.
+                actuation_kind=prior.actuation_kind,
             )
         case RunResumed():
             prior = require_state(state, "RunResumed")
@@ -184,8 +195,10 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Conduct provenance preserved across non-terminal arms.
+                actuation_kind=prior.actuation_kind,
             )
-        case RunCompleted():
+        case RunCompleted(actuation_kind=actuation_kind):
             prior = require_state(state, "RunCompleted")
             return Run(
                 id=prior.id,
@@ -205,8 +218,12 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Conduct provenance: the terminal event carries the
+                # observed kind for a conducted Run; None for a normal
+                # complete issued outside a conduct.
+                actuation_kind=actuation_kind,
             )
-        case RunAborted():
+        case RunAborted(actuation_kind=actuation_kind):
             prior = require_state(state, "RunAborted")
             return Run(
                 id=prior.id,
@@ -226,6 +243,10 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Conduct provenance: a failed conduct still taints
+                # (the kind rides the abort event); None for operator
+                # aborts.
+                actuation_kind=actuation_kind,
             )
         case RunStopped():
             prior = require_state(state, "RunStopped")
@@ -247,6 +268,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Conduct provenance preserved across non-terminal arms.
+                actuation_kind=prior.actuation_kind,
             )
         case RunTruncated():
             prior = require_state(state, "RunTruncated")
@@ -268,6 +291,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Conduct provenance preserved across non-terminal arms.
+                actuation_kind=prior.actuation_kind,
             )
         case RunAdjusted(
             effective_parameters=effective_parameters,
@@ -303,6 +328,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 # form of the AsShot rule (even mid-flight steering can't
                 # change what calibration the Run was acquired against).
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Conduct provenance preserved across mid-flight steering.
+                actuation_kind=prior.actuation_kind,
             )
         case RunObservationLogbookOpened(logbook_id=logbook_id):
             # Lazy open-on-first-write: preserve all
@@ -327,6 +354,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Conduct provenance preserved across non-terminal arms.
+                actuation_kind=prior.actuation_kind,
             )
         case RunAddedToCampaign(campaign_id=campaign_id):
             # post-hoc membership assignment from
@@ -353,6 +382,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Conduct provenance preserved across non-terminal arms.
+                actuation_kind=prior.actuation_kind,
             )
         case RunRemovedFromCampaign():
             # post-hoc membership removal from
@@ -379,6 +410,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Conduct provenance preserved across non-terminal arms.
+                actuation_kind=prior.actuation_kind,
             )
         case DecisionDebriefRequested():
             # Audit-only lease marker appended by an Agent BC subscriber

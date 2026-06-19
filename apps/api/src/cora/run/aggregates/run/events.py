@@ -322,16 +322,36 @@ class RunResumed:
 class RunCompleted:
     """A Run reached its happy-path terminal (Running → Completed).
 
-    Slim payload by design (gate-review Q3): substantive run
-    summary lands later once DAQ-channel integration is in
-    place to source it. Today, downstream consumers needing
-    aggregate read state should fold the Run stream — the stream
-    is short for terminal-by-design Lifecycle Aggregates (a
-    handful of lifecycle events, not per-frame data).
+    Was slim by design (gate-review Q3): substantive run summary was
+    deferred only because nothing could source it yet. The compute
+    CONDUCT runtime (`ComputeRuntime`) is now that source for a
+    conducted Run, which is exactly the condition Q3 named, so the
+    conduct-observed provenance lands here. The payload stays slim for
+    a normal acquisition Run (every compute field is None); only a
+    conducted Run populates them. DAQ-channel summary remains future.
+
+    Compute-conduct provenance (all None for non-conducted Runs;
+    server-supplied by the runtime, never operator input):
+
+      - `actuation_kind` is the raw `ActuationKind` value (Physical /
+        Simulated / Hybrid) the runtime observed from the compute
+        adapter, folded onto `Run.actuation_kind` and read back by the
+        Data BC at Dataset registration to gate promotion. Mirrors
+        `ProcedureCompleted.actuation_kind`. Forward-compat additive:
+        legacy streams fold via `payload.get("actuation_kind")` -> None.
+      - `producing_job_id` is the compute substrate's opaque job
+        handle, an audit breadcrumb on the event stream (not folded
+        onto state).
+      - `artifact_uri` is where the conducted job wrote its output, the
+        handoff a later `register_dataset` uses as the Dataset uri
+        (not folded onto state).
     """
 
     run_id: UUID
     occurred_at: datetime
+    actuation_kind: str | None = None
+    producing_job_id: str | None = None
+    artifact_uri: str | None = None
 
 
 @dataclass(frozen=True)
@@ -356,12 +376,23 @@ class RunAborted:
     per the cross-BC eventual-consistency stance. Forward-compat via
     `payload.get("decided_by_decision_id")` returning None for legacy
     pre-Phase-1 streams.
+
+    Compute-conduct provenance (None for operator aborts; populated
+    when `ComputeRuntime` aborts a Run after a failed / cancelled /
+    timed-out compute job): `actuation_kind` is the raw `ActuationKind`
+    the runtime observed (folded onto `Run.actuation_kind`, so even a
+    failed conduct taints any Dataset that references the Run);
+    `producing_job_id` is the failed job's handle, an audit breadcrumb
+    on the stream (not folded onto state). Both forward-compat additive
+    via `payload.get(...)` -> None.
     """
 
     run_id: UUID
     reason: str
     occurred_at: datetime
     decided_by_decision_id: UUID | None = None
+    actuation_kind: str | None = None
+    producing_job_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -612,15 +643,26 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "run_id": str(run_id),
                 "occurred_at": occurred_at.isoformat(),
             }
-        case RunCompleted(run_id=run_id, occurred_at=occurred_at):
+        case RunCompleted(
+            run_id=run_id,
+            actuation_kind=actuation_kind,
+            producing_job_id=producing_job_id,
+            artifact_uri=artifact_uri,
+            occurred_at=occurred_at,
+        ):
             return {
                 "run_id": str(run_id),
+                "actuation_kind": actuation_kind,
+                "producing_job_id": producing_job_id,
+                "artifact_uri": artifact_uri,
                 "occurred_at": occurred_at.isoformat(),
             }
         case RunAborted(
             run_id=run_id,
             reason=reason,
             decided_by_decision_id=decided_by_decision_id,
+            actuation_kind=actuation_kind,
+            producing_job_id=producing_job_id,
             occurred_at=occurred_at,
         ):
             return {
@@ -629,6 +671,8 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "decided_by_decision_id": (
                     str(decided_by_decision_id) if decided_by_decision_id is not None else None
                 ),
+                "actuation_kind": actuation_kind,
+                "producing_job_id": producing_job_id,
                 "occurred_at": occurred_at.isoformat(),
             }
         case RunStopped(run_id=run_id, reason=reason, occurred_at=occurred_at):
@@ -800,6 +844,12 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                 "RunCompleted",
                 lambda: RunCompleted(
                     run_id=UUID(payload["run_id"]),
+                    # Compute-conduct provenance added additively; legacy
+                    # (non-conducted) streams replay with these absent ->
+                    # None via `.get(...)`.
+                    actuation_kind=payload.get("actuation_kind"),
+                    producing_job_id=payload.get("producing_job_id"),
+                    artifact_uri=payload.get("artifact_uri"),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
@@ -808,7 +858,9 @@ def from_stored(stored: StoredEvent) -> RunEvent:
             def _build_run_aborted() -> RunAborted:
                 # `decided_by_decision_id` optional. Forward-compat
                 # additive evolution: pre-existing streams replay without the
-                # key via `.get(..., None)`.
+                # key via `.get(..., None)`. `actuation_kind` /
+                # `producing_job_id` are the same additive shape for
+                # conduct-failed aborts.
                 raw_decided_by_abort = payload.get("decided_by_decision_id")
                 return RunAborted(
                     run_id=UUID(payload["run_id"]),
@@ -816,6 +868,8 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                     decided_by_decision_id=(
                         UUID(raw_decided_by_abort) if raw_decided_by_abort is not None else None
                     ),
+                    actuation_kind=payload.get("actuation_kind"),
+                    producing_job_id=payload.get("producing_job_id"),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
 

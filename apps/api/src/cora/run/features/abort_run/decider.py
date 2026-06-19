@@ -51,6 +51,8 @@ def decide(
             run_id=state.id,
             reason=reason.value,
             decided_by_decision_id=command.decided_by_decision_id,
+            actuation_kind=command.actuation_kind,
+            producing_job_id=command.producing_job_id,
             occurred_at=now,
         )
     ]

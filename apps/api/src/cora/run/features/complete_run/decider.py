@@ -39,4 +39,12 @@ def decide(
         raise RunNotFoundError(command.run_id)
     if state.status not in _COMPLETABLE_STATUSES:
         raise RunCannotCompleteError(state.id, current_status=state.status)
-    return [RunCompleted(run_id=state.id, occurred_at=now)]
+    return [
+        RunCompleted(
+            run_id=state.id,
+            actuation_kind=command.actuation_kind,
+            producing_job_id=command.producing_job_id,
+            artifact_uri=command.artifact_uri,
+            occurred_at=now,
+        )
+    ]

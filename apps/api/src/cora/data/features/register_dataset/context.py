@@ -17,7 +17,13 @@ CONTRIBUTING.md).
 
   - `producing_run`: the Run that produced this Dataset. None
     when the command's `producing_run_id` is None (standalone
-    upload, externally-sourced data).
+    upload, externally-sourced data). The decider reads its `status`
+    (to derive `producing_run_end_state`) and, for a compute-conducted
+    Run, its `actuation_kind` (the fallback source of
+    `producing_actuation_kind` when there is no producing Procedure).
+    Both are server-observed terminal facts (recorded by the
+    ComputeRuntime on the Run stream), so deriving them here keeps the
+    gate unforgeable.
   - `producing_procedure`: the conducted Procedure that produced
     this Dataset. None when the command's `producing_procedure_id`
     is None. Unlike the other refs, the decider DOES read one field
@@ -25,7 +31,8 @@ CONTRIBUTING.md).
     mirroring how `producing_run.status` derives
     `producing_run_end_state`. The terminal kind is server-observed
     (recorded by the Conductor on the Procedure stream), so deriving
-    it here keeps the gate unforgeable.
+    it here keeps the gate unforgeable. Takes precedence over the
+    producing Run's kind when both are present.
   - `subject`: the Subject the Dataset is about. None when the
     command's `subject_id` is None (calibration / dark-field /
     synthetic data).
@@ -55,10 +62,10 @@ class DatasetRegistrationContext:
 
     All fields are optional / possibly-empty; the handler populates
     each only when the corresponding command field is set. The decider
-    uses `producing_run`, `subject`, and `derived_from` purely as proof
-    of existence (never inspects state) and reads exactly one field off
-    each of `producing_run` (status) and `producing_procedure`
-    (actuation_kind) to snapshot provenance.
+    uses `subject` and `derived_from` purely as proof of existence
+    (never inspects state); it reads `producing_run` (`status` always,
+    and `actuation_kind` for a compute-conducted Run) and
+    `producing_procedure` (`actuation_kind`) to snapshot provenance.
     """
 
     producing_run: Run | None = None

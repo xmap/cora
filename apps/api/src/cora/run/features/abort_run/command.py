@@ -28,8 +28,16 @@ class AbortRun:
     without a Decision; not every abort needs formal justification.
     NO existence check at the decider per the cross-BC eventual-
     consistency stance.
+
+    `actuation_kind` / `producing_job_id` are server-supplied by the
+    compute CONDUCT runtime when it aborts a Run after a failed /
+    cancelled / timed-out job (None for operator aborts). The kind is
+    folded onto `Run.actuation_kind` so even a failed conduct taints
+    any Dataset that references the Run.
     """
 
     run_id: UUID
     reason: str
     decided_by_decision_id: UUID | None = None
+    actuation_kind: str | None = None
+    producing_job_id: str | None = None

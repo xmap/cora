@@ -189,18 +189,32 @@ def decide(
         context.producing_run.status.value if context.producing_run is not None else None
     )
 
-    # derive the actuation-kind provenance from the producing Procedure's
+    # derive the actuation-kind provenance from the producing conduct's
     # terminal state (per non-determinism principle: capture, don't recompute;
-    # mirrors producing_run_end_state). The Conductor recorded the observed
-    # kind on the Procedure terminal event; here it is snapshotted onto the
-    # Dataset, where promote_dataset's guard blocks Simulated / Hybrid. None
-    # when no producing Procedure (external / non-conducted Datasets) or when
-    # the conduct observed nothing. Server-derived, never caller-asserted.
-    producing_actuation_kind: str | None = (
-        context.producing_procedure.actuation_kind
-        if context.producing_procedure is not None
-        else None
-    )
+    # mirrors producing_run_end_state). Two conduct sources carry the
+    # observed kind on their terminal event: a Procedure (Conductor-driven
+    # hardware actuation) and a Run (ComputeRuntime-driven compute job).
+    # Prefer the Procedure when both are present; fall back to the Run's
+    # `actuation_kind` for compute-conducted Datasets. None when neither
+    # was conducted (external / non-conducted Datasets) or the conduct
+    # observed nothing. Snapshotted onto the Dataset where promote_dataset's
+    # guard blocks Simulated / Hybrid. Server-derived, never caller-asserted.
+    #
+    # Asymmetry note: the Procedure path is structurally guarded (a still-
+    # Running Procedure is rejected upstream so its kind is final), but the
+    # Run path is not (register_dataset accepts any Run state for in-situ
+    # measurements). `Run.actuation_kind` is None until the terminal event,
+    # so a Dataset registered against a still-Running compute conduct would
+    # snapshot None and slip past promote_dataset's simulator gate. The
+    # compute gate therefore relies on the conduct ordering: the runtime
+    # registers the output Dataset only AFTER completing the Run (the Run
+    # terminal sets the kind first). None here legitimately means "not a
+    # conducted compute Run" for the common acquisition case.
+    producing_actuation_kind: str | None = None
+    if context.producing_procedure is not None:
+        producing_actuation_kind = context.producing_procedure.actuation_kind
+    elif context.producing_run is not None:
+        producing_actuation_kind = context.producing_run.actuation_kind
 
     return [
         DatasetRegistered(

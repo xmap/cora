@@ -1199,6 +1199,19 @@ class Run:
     # (Q5/Q6 research). Defaults to empty frozenset so legacy streams
     # without the field fold cleanly via `payload.get("pinned_calibration_ids", [])`.
     pinned_calibration_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
+    # conduct-observed actuation provenance. None until a terminal
+    # event sets it: only RunCompleted / RunAborted issued by the
+    # compute CONDUCT runtime (`ComputeRuntime`) carry a non-None
+    # `actuation_kind` (the raw `ActuationKind` value Physical /
+    # Simulated / Hybrid). A normal acquisition Run and any non-
+    # conducted Run fold to None. Read back by the Data BC at Dataset
+    # registration to gate simulator-origin promotion, exactly as
+    # `Procedure.actuation_kind` is. The compute-specific job id and
+    # artifact uri ride the terminal EVENT (audit breadcrumbs) but are
+    # NOT folded here: the generic Run aggregate carries only the
+    # promotion-gate-relevant kind. Defaults to None so legacy streams
+    # fold cleanly via `payload.get("actuation_kind")`.
+    actuation_kind: str | None = None
 
 
 class InvalidRunParametersError(ValueError):
