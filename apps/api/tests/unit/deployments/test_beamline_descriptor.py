@@ -164,8 +164,10 @@ def test_renders_source_stage_walk_and_no_em_dash() -> None:
         assert f"## {_humanize(name)}" in markdown
     for name in downstream_groups:
         assert f"## {_humanize(name)}" not in markdown
-    assert "## Controls" in markdown
-    assert "## Resources" in markdown
+    # the generated Source page is beam-devices-only: controllers live on the
+    # Controls page and supplies in Operations, so neither section renders here
+    assert "## Controls" not in markdown
+    assert "## Resources" not in markdown
     # a source device and a promoted marker tag render; downstream-stage devices do
     # not (they live on the fixture pages)
     assert "`FrontEndShutter`" in markdown

@@ -2,8 +2,11 @@
 
 `render_all(descriptor)` returns a {src_uri: markdown} dict (mirroring the
 contract scripts/scenarios_pages.render_all used) with a single generated page,
-deployments/2-bm/beamline.md: the layout walk source to detector, one section
-per subsystem, a device table per group, then the cross-cutting controls and resources.
+deployments/2-bm/beamline.md: the Source page, a walk along the source-stage
+devices (front-end optics to the sample), one section per subsystem with a device
+table per group. The cross-cutting controllers and supplies are their own pages
+(equipment/controls.md, operations.md); the descriptor still carries them for the
+tests and the future seeder.
 
 The mkdocs on_files hook in scripts/mkdocs_hooks.py injects these as virtual
 files at build time; nothing is written to disk.
@@ -214,45 +217,6 @@ def _render_group(name: str, group: Group) -> str:
     return "\n\n".join(blocks)
 
 
-def _render_controls(controls: Any) -> str:
-    blocks: list[str] = ["## Controls"]
-    if controls.intro:
-        blocks.append(controls.intro.strip())
-    if controls.motion_controllers:
-        blocks.append("### Motion controllers")
-        blocks.append(_device_table(controls.motion_controllers))
-    if controls.triggering:
-        blocks.append("### Triggering")
-        blocks.append(_device_table(controls.triggering))
-    if controls.software_iocs_not_modeled:
-        joined = ", ".join(controls.software_iocs_not_modeled)
-        blocks.append(
-            _admonition(
-                f"{joined}\n\nThese are software processes, referenced by PV "
-                "prefix in the Plan and Method wiring layer, never registered "
-                "as Assets.",
-                title="Software IOCs (not modeled as Assets)",
-            )
-        )
-    return "\n\n".join(blocks)
-
-
-def _render_resources(resources: Any) -> str:
-    blocks: list[str] = ["## Resources"]
-    if resources.intro:
-        blocks.append(resources.intro.strip())
-    if resources.supplies:
-        blocks.append("### Supplies")
-        kinds = [str(item.get("kind", item)) for item in resources.supplies]
-        blocks.append("\n".join(f"- {kind}" for kind in kinds))
-    if resources.replaceable_parts:
-        blocks.append("### Replaceable parts")
-        for key, values in resources.replaceable_parts.items():
-            joined = ", ".join(str(item) for item in values)
-            blocks.append(f"**{_humanize(key)}:** {joined}")
-    return "\n\n".join(blocks)
-
-
 def _render_page(descriptor: BeamlineDescriptor) -> str:
     beamline = descriptor.beamline
     blocks: list[str] = ["# Source"]
@@ -260,10 +224,12 @@ def _render_page(descriptor: BeamlineDescriptor) -> str:
     blocks.append(
         "The incident beam, produced, conditioned, and defined before the sample. "
         "A walk along the source-stage devices; the sample and detection stages are "
-        "documented as their own composed-fixture pages. Each device pairs its human "
-        "name with the EPICS handle, its key specs, and whether it is field "
-        "replaceable. `new` marks a device not yet modeled in CORA; `confirm` "
-        "marks a value taken from the docs that staff have not yet verified."
+        "documented as their own composed-fixture pages, the controllers that drive "
+        "these devices are on the Controls page, and the supplies they draw on are in "
+        "Operations. Each device pairs its human name with the EPICS handle, its key "
+        "specs, and whether it is field replaceable. `new` marks a device not yet "
+        "modeled in CORA; `confirm` marks a value taken from the docs that staff have "
+        "not yet verified."
     )
     blocks.append(
         _admonition(
@@ -319,10 +285,5 @@ def _render_page(descriptor: BeamlineDescriptor) -> str:
         if group.stage != "source":
             continue
         blocks.append(_render_group(name, group))
-
-    if descriptor.controls is not None:
-        blocks.append(_render_controls(descriptor.controls))
-    if descriptor.resources is not None:
-        blocks.append(_render_resources(descriptor.resources))
 
     return "\n\n".join(blocks) + "\n"
