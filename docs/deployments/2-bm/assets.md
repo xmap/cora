@@ -16,7 +16,7 @@ The flat device tree under the `2-BM` root Asset (`tier = Unit`, bound to its Si
 | `SampleStageDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `FrontEndDrive` | `Device` | `MotionController` | `2-BM` (a-station OMS VME58; drives the front-end optics band) | `2-BM-A` |
 | `Mirror` | `Device` | `Mirror` | `MirrorTable` (sits on the mirror table; driven by `FrontEndDrive`) | `2-BM-A` |
-| `MirrorTable` | `Device` | `Table` | `2-BM` (front-end support table `2bma:table1`; carries the `Mirror`; X axes driven by the energy-change IOC for stripe selection, bind X-surface only pending 2bm-docs#171) | `2-BM-A` |
+| `MirrorTable` | `Device` | `Table` | `2-BM` (front-end support table `2bma:table1`; carries the `Mirror`; X axes driven by the energy-change IOC for stripe selection) | `2-BM-A` |
 | `Monochromator` | `Device` | `Monochromator` | `2-BM` (driven by `FrontEndDrive`) | `2-BM-A` |
 | `Monochromator_BraggArmUpstream` | `Device` | `PseudoAxis` | `Monochromator` (energy-driven; LookupTable converts energy in keV to the upstream Bragg-arm angle in deg) | `2-BM-A` |
 | `Monochromator_BraggArmDownstream` | `Device` | `PseudoAxis` | `Monochromator` (energy-driven; downstream Bragg-arm angle in deg) | `2-BM-A` |
@@ -41,8 +41,8 @@ The flat device tree under the `2-BM` root Asset (`tier = Unit`, bound to its Si
 | `LaminographyPitch` | `Device` | `TiltStage` | `Hexapod` (Kohzu SA16A goniometer `2bmb:m49`; tomography vs laminography is a tilt setpoint; driven by `SampleStageDrive`) | `2-BM-B` |
 | `PropagationDistanceDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `Timing` | `Device` | `TimingController` | `2-BM` (softGlueZynq trigger box; generates the camera trigger train via PSO, no `controller_id`) | `2-BM-B` |
-| `OpticsFineDrive` | `Device` | `MotionController` | `2-BM` (Jena NV100D piezo controller; drives deferred XY piezo optics axes, PIEZO-1/2) | `2-BM-B` |
-| `SampleFineDrive` | `Device` | `MotionController` | `2-BM` (Jena NV200D piezo controller; FPGA-stepped via `Timing`; drives deferred XY piezo axes, PIEZO-1/2) | `2-BM-B` |
+| `OpticsFineDrive` | `Device` | `MotionController` | `2-BM` (Jena NV100D piezo controller; drives deferred XY piezo optics axes) | `2-BM-B` |
+| `SampleFineDrive` | `Device` | `MotionController` | `2-BM` (Jena NV200D piezo controller; FPGA-stepped via `Timing`; drives deferred XY piezo axes) | `2-BM-B` |
 | `DetectorTable` | `Device` | `Table` | `2-BM` (detector support table `2bmb:table3`; carries the propagation-distance stage and the microscope `Housing`; `detector_z_rail_alignment` targets `.AX` / `.AY`) | `2-BM-B` |
 | `DetectorTable_X` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; translation along X; `2bmb:table3.X`) | `2-BM-B` |
 | `DetectorTable_Y` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; translation along Y; `2bmb:table3.Y`) | `2-BM-B` |
@@ -187,7 +187,7 @@ Identity, configuration, and connectivity of a separately-modelled drive-electro
 
 ### `TimingController`
 
-Identity, configuration, and connectivity of a separately-modelled timing-signal box. The driven device (the camera) carries the `Triggerable` affordance; the timing box carries `Pulsing` (via the `Controller` Role) because it is the active generator of the trigger pulse train. This schema backs the registered `Timing` Asset ([Settings](#timing)); the per-box values land via `update_asset_settings` once 2-BM staff confirms the physical softGlueZynq box (`TIME-1`).
+Identity, configuration, and connectivity of a separately-modelled timing-signal box. The driven device (the camera) carries the `Triggerable` affordance; the timing box carries `Pulsing` (via the `Controller` Role) because it is the active generator of the trigger pulse train. This schema backs the registered `Timing` Asset ([Settings](#timing)); the per-box values land via `update_asset_settings` once 2-BM staff confirms the physical softGlueZynq box.
 
 | Setting | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -247,7 +247,7 @@ The detector optical table (six virtual axes on record `2bmb:table3`, computed f
 
 ### `MirrorTable`
 
-The front-end mirror optical table (record `2bma:table1`). `axis_layout = virtual_pose`; its X axes (`M0X` / `M2X`) are driven by the energy-change IOC for stripe selection. Bind the table-X surface only until the `M1Y = 2bma:m3` IOC substitution error (2bm-docs#171) is fixed.
+The front-end mirror optical table (record `2bma:table1`). `axis_layout = virtual_pose`; its X axes (`M0X` / `M2X`) are driven by the energy-change IOC for stripe selection. Bind the table-X surface only until the `M1Y = 2bma:m3` IOC substitution error is fixed.
 
 | Setting | Value |
 | --- | --- |
@@ -257,7 +257,7 @@ The front-end mirror optical table (record `2bma:table1`). `axis_layout = virtua
 
 ### `RotaryDrive`
 
-Bound to Model `aerotech_ensemble_ml` (Aerotech Ensemble ML 10-40-IO-MXH digital drive; Multi-Loop subseries, with the `-IO-` option, corrected from the catalog Ensemble HLe by operator confirmation, #162), drives `Rotary` (back-reference on `Rotary.controller_id`). The serial number below was confirmed by operator hardware-label readings (#161 DRIVE-1); the `firmware_version` placeholder lands via `update_asset_settings` once a vendor-utility session confirms it (DRIVE-2), as for the other drives.
+Bound to Model `aerotech_ensemble_ml` (Aerotech Ensemble ML 10-40-IO-MXH digital drive; Multi-Loop subseries, with the `-IO-` option, corrected from the catalog Ensemble HLe by operator confirmation), drives `Rotary` (back-reference on `Rotary.controller_id`). The serial number below was confirmed by operator hardware-label readings; the `firmware_version` placeholder lands via `update_asset_settings` once a vendor-utility session confirms it, as for the other drives.
 
 The drive card is installed in `RotaryDriveChassis` (see below): `RotaryDrive.parent_id` points at that chassis. The chassis identity (its own serial number, order number, and drawing) lives on that Asset, not overloaded onto this drive.
 
@@ -270,7 +270,7 @@ The drive card is installed in `RotaryDriveChassis` (see below): `RotaryDrive.pa
 
 ### `RotaryDriveChassis`
 
-Bound to Model `aerotech_tm3a` (Aerotech TM3-A power and distribution chassis), Family `Housing` (the containment-chassis Family). This is the chassis the `RotaryDrive` Ensemble ML card is installed in: it provides the DC bus (two 20 V segments), the integrated 24 V PS24-1 supply, US 115 VAC input, and Aeronet distribution to the ML drive cards via slots C1ML and C2ML. It is inventory-only (no command surface), and it parents `RotaryDrive` via `parent_id`. The chassis is a separate physical thing from the drive card, so its identity lives here rather than as cross-references on the drive: the per-unit serial number and the vendor order number are carried in `alternate_identifiers`, and the build-to document `630D2079 REV-H` is the canonical [Drawing](#engineering-drawings). Recording the chassis as its own Asset (rather than folding its identifiers onto `RotaryDrive`) follows the identity-bearing-component convention; see [issue #162](https://github.com/xmap/cora/issues/162).
+Bound to Model `aerotech_tm3a` (Aerotech TM3-A power and distribution chassis), Family `Housing` (the containment-chassis Family). This is the chassis the `RotaryDrive` Ensemble ML card is installed in: it provides the DC bus (two 20 V segments), the integrated 24 V PS24-1 supply, US 115 VAC input, and Aeronet distribution to the ML drive cards via slots C1ML and C2ML. It is inventory-only (no command surface), and it parents `RotaryDrive` via `parent_id`. The chassis is a separate physical thing from the drive card, so its identity lives here rather than as cross-references on the drive: the per-unit serial number and the vendor order number are carried in `alternate_identifiers`, and the build-to document `630D2079 REV-H` is the canonical [Drawing](#engineering-drawings). Recording the chassis as its own Asset (rather than folding its identifiers onto `RotaryDrive`) follows the identity-bearing-component convention.
 
 | Alternate identifier | Kind | Value |
 | --- | --- | --- |
@@ -279,7 +279,7 @@ Bound to Model `aerotech_tm3a` (Aerotech TM3-A power and distribution chassis), 
 
 ### `PropagationDistanceDrive`
 
-Bound to Model `aerotech_ensemble_hle` (Aerotech Ensemble HLe 10-40-A-IO-MXH digital drive; resolved from the `unknown-pending-confirmation` placeholder by operator confirmation 2026-06-16, #162), drives `PropagationDistance` (back-reference on `PropagationDistance.controller_id`). Operators address the propagation-distance stage via `2bmbAERO:m1` (IOC name + channel). The IOC is software (an EPICS process); the Asset modelled here is the hardware drive box behind it, so the IOC handle `2bmbAERO` lives in `alternate_identifiers` (kind `EPICS_PV`), not in the name. `axis_count=1` reflects the 1:1 binding to the single propagation-distance stage; `protocol=Aerotech_Native` matches the other Aerotech drives. The serial number below was confirmed by operator hardware-label readings (#161 DRIVE-1); `firmware_version` is still pending a vendor-utility session (DRIVE-2).
+Bound to Model `aerotech_ensemble_hle` (Aerotech Ensemble HLe 10-40-A-IO-MXH digital drive; resolved from the `unknown-pending-confirmation` placeholder by operator confirmation 2026-06-16), drives `PropagationDistance` (back-reference on `PropagationDistance.controller_id`). Operators address the propagation-distance stage via `2bmbAERO:m1` (IOC name + channel). The IOC is software (an EPICS process); the Asset modelled here is the hardware drive box behind it, so the IOC handle `2bmbAERO` lives in `alternate_identifiers` (kind `EPICS_PV`), not in the name. `axis_count=1` reflects the 1:1 binding to the single propagation-distance stage; `protocol=Aerotech_Native` matches the other Aerotech drives. The serial number below was confirmed by operator hardware-label readings; `firmware_version` is still pending a vendor-utility session.
 
 | Setting | Value |
 | --- | --- |
@@ -312,7 +312,7 @@ Bound to Model `oms_vme58` (same product line as `SampleStageDrive`; one Model r
 
 ### `HexapodDrive`
 
-Bound to Model `aerotech_automation1_ixr3`, drives `Hexapod` (back-reference on `Hexapod.controller_id`). Operator confirmation (2026-06-15, issue #156) identified the drive as an Aerotech Automation1-iXR3 in a separate rack (not sealed into the HexGen 300 housing), serial number `486125-01`, resolving the `unknown-pending-confirmation` placeholder; the real vendor key re-mints the deterministic Model id. The "native Aerotech Ensemble" EPICS interface handle lives in `alternate_identifiers`. `axis_count=6` reflects the hexapod's six degrees of freedom; the firmware version is still pending (DRIVE-2).
+Bound to Model `aerotech_automation1_ixr3`, drives `Hexapod` (back-reference on `Hexapod.controller_id`). Operator confirmation (2026-06-15) identified the drive as an Aerotech Automation1-iXR3 in a separate rack (not sealed into the HexGen 300 housing), serial number `486125-01`, resolving the `unknown-pending-confirmation` placeholder; the real vendor key re-mints the deterministic Model id. The "native Aerotech Ensemble" EPICS interface handle lives in `alternate_identifiers`. `axis_count=6` reflects the hexapod's six degrees of freedom; the firmware version is still pending.
 
 | Setting | Value |
 | --- | --- |
@@ -325,7 +325,7 @@ Bound to Model `aerotech_automation1_ixr3`, drives `Hexapod` (back-reference on 
 
 The softGlueZynq FPGA timing box (`2bmbMZ1:SG:`) that generates the camera trigger pulse train (`{PSO, trigILF} -> MUX2-1 -> GateDly1 -> camera Line2`, where `MUX2-1` is a 2:1 selector routing either the raw PSO train or the `trigILF` subset of PSO pulses to the camera, set per scan via `MUX2-1_SEL_Signal`, item_060). It carries the `Pulsing` affordance via the `Controller` Role and, unlike a `MotionController`, is itself the actor (the pulse generator), not a driven device, so it carries no `controller_id`. Substrate ("FPGA") is not a Family axis: the box is a `TimingController` whose identity and gateware (bitstream) version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
 
-The placeholders below land via `update_asset_settings` once 2-BM staff confirm the physical box (`TIME-1`). For an FPGA box the gateware/bitstream version is the reproducibility-critical field: the trigger logic can change between Runs, so a Run cannot answer "did the timing change between Run X and Run Y" without it.
+The placeholders below land via `update_asset_settings` once 2-BM staff confirm the physical box. For an FPGA box the gateware/bitstream version is the reproducibility-critical field: the trigger logic can change between Runs, so a Run cannot answer "did the timing change between Run X and Run Y" without it.
 
 | Setting | Value |
 | --- | --- |
@@ -338,9 +338,9 @@ The durable trigger wiring is modelled as ports plus Plan wires ([Camera trigger
 
 ### `Rotary`
 
-Bound to Model `aerotech_abrs250mp`. Aerotech ABRS-250MP-M-AS air-bearing direct-drive rotary stage (250 mm aperture, mid-precision class), driven by `RotaryDrive` (referenced via `Rotary.controller_id`). Operator confirmation (2026-06-15, issue #156) corrected the part number from the catalog typo `ABS250MP-M-AS` to the hardware-label value `ABRS-250MP-M-AS` (the ABRS air-bearing-rotary series), which re-mints the deterministic Model id. Per-unit identity is now on record: serial number `146853-A-1-1-X` in `alternate_identifiers`, and the vendor engineering drawing `630C2125 REV (-)` (see [Engineering drawings](#engineering-drawings)).
+Bound to Model `aerotech_abrs250mp`. Aerotech ABRS-250MP-M-AS air-bearing direct-drive rotary stage (250 mm aperture, mid-precision class), driven by `RotaryDrive` (referenced via `Rotary.controller_id`). Operator confirmation (2026-06-15) corrected the part number from the catalog typo `ABS250MP-M-AS` to the hardware-label value `ABRS-250MP-M-AS` (the ABRS air-bearing-rotary series), which re-mints the deterministic Model id. Per-unit identity is now on record: serial number `146853-A-1-1-X` in `alternate_identifiers`, and the vendor engineering drawing `630C2125 REV (-)` (see [Engineering drawings](#engineering-drawings)).
 
-The `encoder_resolution` below is taken from the Ensemble encoder table on the staff [sample motor stack page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_050.html) (`item_050`): the stage reports 532800 encoder pulses per revolution (11840 lines/rev x 45 scale factor), so 360 deg / 532800 = 0.000676 deg per count. This replaces an earlier unsourced `0.0001 deg` value; operator confirmation is tracked as STAGE-10.
+The `encoder_resolution` below is taken from the Ensemble encoder table on the staff [sample motor stack page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_050.html) (`item_050`): the stage reports 532800 encoder pulses per revolution (11840 lines/rev x 45 scale factor), so 360 deg / 532800 = 0.000676 deg per count. This replaces an earlier unsourced `0.0001 deg` value, pending operator confirmation.
 
 | Setting | Value |
 | --- | --- |
@@ -363,7 +363,7 @@ Bound to Model `kohzu_cyat070`, driven by `SampleStageDrive` (referenced via `Sa
 
 ### `Hexapod`
 
-Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexapod.controller_id`). The physical unit's serial number is `486060-01` (operator-confirmed 2026-06-15, issue #156; carried in `alternate_identifiers`). Values from the Aerotech HEX300-230HL product datasheet (Hex300-Data-Sheet-D20250203). Per-DoF figures collapse to the dominant axis where the vendor's range across DoFs fits within a faithful envelope (e.g., translation accuracy reported as the laxest of X / Y / Z).
+Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexapod.controller_id`). The physical unit's serial number is `486060-01` (operator-confirmed 2026-06-15; carried in `alternate_identifiers`). Values from the Aerotech HEX300-230HL product datasheet (Hex300-Data-Sheet-D20250203). Per-DoF figures collapse to the dominant axis where the vendor's range across DoFs fits within a faithful envelope (e.g., translation accuracy reported as the laxest of X / Y / Z).
 
 | Setting | Value |
 | --- | --- |
@@ -406,7 +406,7 @@ The active 5 MP FLIR Oryx, confirmed by 2-BM staff: a Sony IMX250 CMOS global-sh
 
 ### `Camera_HighRes`
 
-The alternate FLIR Oryx 31 MP, the camera the validated `detector_z_rail_alignment` ran on. Per-unit identity is confirmed: IOC-reported model `Oryx ORX-10G-310S9M`, serial number `22150530`, firmware `1904.0.72.0`, bound to catalog Model `flir_oryx_31mp`; the serial, firmware, and the EPICS prefix `2bmSP2:` live in the Asset's `alternate_identifiers`. The `Camera_Selector` switches the optical path between this camera and the 5 MP `Camera`, so it is registered under the `Housing` but is not bound into the single-camera Microscope Fixture. Its pixel pitch is the same `3.45 um` as the 5 MP unit (staff `2bm-procedures`); the remaining `Camera`-schema settings (`sensor_width`, `sensor_height`, `bit_depth`, and the extended `max_framerate_hz` / `sensor_kind` / `readout_mode`) are not yet on file, so the Asset is registered identity-only with settings pending (DET-13).
+The alternate FLIR Oryx 31 MP, the camera the validated `detector_z_rail_alignment` ran on. Per-unit identity is confirmed: IOC-reported model `Oryx ORX-10G-310S9M`, serial number `22150530`, firmware `1904.0.72.0`, bound to catalog Model `flir_oryx_31mp`; the serial, firmware, and the EPICS prefix `2bmSP2:` live in the Asset's `alternate_identifiers`. The `Camera_Selector` switches the optical path between this camera and the 5 MP `Camera`, so it is registered under the `Housing` but is not bound into the single-camera Microscope Fixture. Its pixel pitch is the same `3.45 um` as the 5 MP unit (staff `2bm-procedures`); the remaining `Camera`-schema settings (`sensor_width`, `sensor_height`, `bit_depth`, and the extended `max_framerate_hz` / `sensor_kind` / `readout_mode`) are not yet on file, so the Asset is registered identity-only with settings pending.
 
 ### `Camera_Selector`
 
@@ -473,7 +473,7 @@ Aerotech HEX300-230HL hexapod product datasheet (Hex300-Data-Sheet-D20250203.pdf
 | `number` | `630C2125` |
 | `revision` | `(-)` |
 
-Aerotech vendor-issued engineering drawing for the `ABRS-250MP-M-AS` rotary stage (operator-confirmed 2026-06-15, issue #156). Serves as the canonical reference until an `ABRS-250MP` datasheet PDF is also obtained.
+Aerotech vendor-issued engineering drawing for the `ABRS-250MP-M-AS` rotary stage (operator-confirmed 2026-06-15). Serves as the canonical reference until an `ABRS-250MP` datasheet PDF is also obtained.
 
 ### `RotaryDriveChassis`
 
@@ -483,7 +483,7 @@ Aerotech vendor-issued engineering drawing for the `ABRS-250MP-M-AS` rotary stag
 | `number` | `630D2079` |
 | `revision` | `H` |
 
-Aerotech build-to drawing for the TM3-A chassis that houses the `RotaryDrive` Ensemble ML card (operator label `630D2079 REV-H`, operator-confirmed, #162).
+Aerotech build-to drawing for the TM3-A chassis that houses the `RotaryDrive` Ensemble ML card (operator label `630D2079 REV-H`, operator-confirmed).
 
 ### `PropagationDistance`
 
@@ -543,9 +543,9 @@ Trigger and step signals between Assets are modelled as typed ports plus wires r
 
 ### Fine-positioning piezo controllers (Jena NV100D / NV200D)
 
-Two Piezosystem Jena piezo nanopositioning controllers are registered as `MotionController` Assets: `OpticsFineDrive` (Jena NV100D, staff item_027) for fine optics positioning reached from the `mct_optics` screen, and `SampleFineDrive` (Jena NV200D/NET, staff item_028) whose two piezo axes step under FPGA trigger control during tomography acquisition. Both run EPICS IOCs on the host `arcturus` (`JenaNV100D` / `JenaNV200D`), drive two piezo axes each (X/Y), and are network-attached through two static IPs per box (recorded once confirmed, PIEZO-4).
+Two Piezosystem Jena piezo nanopositioning controllers are registered as `MotionController` Assets: `OpticsFineDrive` (Jena NV100D, staff item_027) for fine optics positioning reached from the `mct_optics` screen, and `SampleFineDrive` (Jena NV200D/NET, staff item_028) whose two piezo axes step under FPGA trigger control during tomography acquisition. Both run EPICS IOCs on the host `arcturus` (`JenaNV100D` / `JenaNV200D`), drive two piezo axes each (X/Y), and are network-attached through two static IPs per box (recorded once confirmed).
 
-Only the controller boxes are modelled today; the driven XY piezo axes and the controllers' final names are deferred pending the world-fact of what each piezo positions (PIEZO-1, PIEZO-2).
+Only the controller boxes are modelled today; the driven XY piezo axes and the controllers' final names are deferred pending the world-fact of what each piezo positions.
 
 ### NV200D trigger wiring
 
@@ -556,7 +556,7 @@ The NV200D is stepped by the already-modelled softGlueZynq `Timing` box: the FPG
 | `Timing` | `out2`, `out3` | OUTPUT | `step_trigger_ttl` |
 | `SampleFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
 
-Two wires carry the trigger: `Timing.out2 -> SampleFineDrive.step_x_in` and `Timing.out3 -> SampleFineDrive.step_y_in` (the JenaX and JenaY coaxial cables land on FPGA `out2` and `out3` per item_028). Each leg has a softGlue gate-delay PV set to the exposure time plus a margin: `2bmbMZ1:SG:GateDly-3_DLY` and `2bmbMZ1:SG:GateDly-2_DLY`. The delay-PV labels read `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses the cable-to-output map above; the apparent cross is recorded verbatim and flagged for confirmation (PIEZO-5). `signal_type = step_trigger_ttl` is a working free-text value (ports are open-vocabulary, up to 50 characters); it is distinct from the camera's `TriggerIn` because this edge advances a motion step rather than starting an exposure. The ports sit on the controller box today; they migrate onto the per-axis Assets when those are registered. `OpticsFineDrive` (NV100D) carries no trigger input: item_027 describes no FPGA stepping for it.
+Two wires carry the trigger: `Timing.out2 -> SampleFineDrive.step_x_in` and `Timing.out3 -> SampleFineDrive.step_y_in` (the JenaX and JenaY coaxial cables land on FPGA `out2` and `out3` per item_028). Each leg has a softGlue gate-delay PV set to the exposure time plus a margin: `2bmbMZ1:SG:GateDly-3_DLY` and `2bmbMZ1:SG:GateDly-2_DLY`. The delay-PV labels read `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses the cable-to-output map above; the apparent cross is recorded verbatim and flagged for confirmation. `signal_type = step_trigger_ttl` is a working free-text value (ports are open-vocabulary, up to 50 characters); it is distinct from the camera's `TriggerIn` because this edge advances a motion step rather than starting an exposure. The ports sit on the controller box today; they migrate onto the per-axis Assets when those are registered. `OpticsFineDrive` (NV100D) carries no trigger input: item_027 describes no FPGA stepping for it.
 
 ### Camera trigger wiring
 
@@ -569,7 +569,7 @@ The camera trigger is the headline path of [item_060](https://docs2bm.readthedoc
 
 One wire carries the trigger: `Timing.camera_trigger_out -> Camera.trigger_in`. `signal_type = frame_trigger_ttl` is deliberately distinct from the piezo legs' `step_trigger_ttl`: this edge starts an exposure, not a motion step. The `Camera` carries the `Triggerable` affordance, so `trigger_in` is its consumed `TriggerIn` signal.
 
-Two labels on the camera leg stay open for 2-BM staff (`TIME-2`): the exact FPGA output channel feeding the camera (the path string ends at the camera's `Line2` input but names no box-side output, so `camera_trigger_out` is the CORA-side port name pending that number), and the `GateDly1` block name (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028, whereas `GateDly1` is so far unconfirmed). softGlue gate-delay `Width` and `DLY` are counted in 10 MHz clock cycles (100 ns per count, so `Width = 100` is a 10 us pulse, item_060); the concrete per-scan values are Method / Plan configuration, not Asset state.
+Two labels on the camera leg stay open for 2-BM staff: the exact FPGA output channel feeding the camera (the path string ends at the camera's `Line2` input but names no box-side output, so `camera_trigger_out` is the CORA-side port name pending that number), and the `GateDly1` block name (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028, whereas `GateDly1` is so far unconfirmed). softGlue gate-delay `Width` and `DLY` are counted in 10 MHz clock cycles (100 ns per count, so `Width = 100` is a 10 us pulse, item_060); the concrete per-scan values are Method / Plan configuration, not Asset state.
 
 ## Pending
 
