@@ -170,7 +170,7 @@ Two labels on this leg stay open for 2-BM staff (`TIME-2`): the exact FPGA outpu
 
 ## Family settings schemas
 
-NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: the 2-BM detector classes (the active FLIR Oryx and the decommissioned PCO Dimax) differ along settings axes (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not Family axes, so the high-framerate variant stays a `Camera` rather than a separate Family. `PseudoAxis` carries no settings schema (it is a facet Family).
+NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: 2-BM runs two live `Camera`-Family Assets, the 5 MP FLIR Oryx (`Camera`) and the 31 MP FLIR Oryx (`Camera_HighRes`), which differ along settings axes (sensor size, frame rate), not Family axes, so a detector variant stays a `Camera` rather than a separate Family. `PseudoAxis` carries no settings schema (it is a facet Family).
 
 ### `Objective`
 
@@ -185,7 +185,7 @@ Intrinsic per-lens properties. Motion is via the lens turret motor wired into th
 
 ### `Hexapod`
 
-Operational envelope of a 6-DoF parallel-kinematic positioner. The schema captures the vendor-published envelope (per-DoF travel, speed, resolution, accuracy, load capacity) without exploding the legs as sub-Assets (vendor-sealed unit; inverse kinematics runs in controller firmware, not in CORA). DoF-level addressability is realized by six per-DoF PseudoAxis sub-modules (`Hexapod_X` ... `Hexapod_Yaw`) parented to this Hexapod, each carrying a `SolverReference` partition rule and wired to a hexapod feedback port; see [Constituent-port wiring](computed-axes.md#constituent-port-wiring). The envelope below stays the single contract for the physical unit; the DoF facets carry no settings of their own.
+Operational envelope of a 6-DoF parallel-kinematic positioner. The schema captures the vendor-published envelope (per-DoF travel, speed, resolution, accuracy, load capacity) without exploding the legs as sub-Assets (vendor-sealed unit; inverse kinematics runs in controller firmware, not in CORA). DoF-level addressability is realized by six per-DoF PseudoAxis sub-modules (`Hexapod_X` ... `Hexapod_Yaw`) parented to this Hexapod, each carrying a `SolverReference` partition rule and wired to a hexapod feedback port; see [Constituent-port wiring](computed-axes.md#constituent-port-wiring). Today only four of the six are exposed as 2-BM operator channels: `Hexapod_Z` and `Hexapod_Yaw` are modelled but not wired in the current EPICS, a deployment-configuration limit, not a device one (see [Hexapod DoF model](computed-axes.md#hexapod-dof-model)). The envelope below stays the single contract for the physical unit; the DoF facets carry no settings of their own.
 
 | Setting | Type | Unit | Notes |
 | --- | --- | --- | --- |
@@ -237,7 +237,7 @@ The durable trigger wiring (the box's output ports and the Plan wires routing th
 
 ### `Camera`
 
-Intrinsic detector properties, made explicit at 2-BM because a second detector class (the high-framerate PCO Dimax) shares the `Camera` Family with the FLIR Oryx and differs only along settings axes. The first four fields formalize what the per-Asset Settings already carry; the last three are the extension that lets one `Camera` Family span both detectors (variant-as-settings, not variant-as-subtype).
+Intrinsic detector properties, made explicit at 2-BM because more than one detector shares the `Camera` Family and they differ only along settings axes: two live FLIR Oryx Assets (the 5 MP `Camera` and the 31 MP `Camera_HighRes`) plus, in provenance, the decommissioned high-speed PCO Dimax. The first four fields formalize what the per-Asset Settings already carry; the last three are the extension that lets one `Camera` Family span these variants (variant-as-settings, not variant-as-subtype).
 
 | Setting | Type | Unit | Notes |
 | --- | --- | --- | --- |
@@ -245,7 +245,7 @@ Intrinsic detector properties, made explicit at 2-BM because a second detector c
 | `sensor_height` | integer > 0 | pixel | Active sensor rows. |
 | `pixel_size` | number > 0 | um | Physical sensor pixel pitch (before optical magnification). |
 | `bit_depth` | integer > 0 | bit | ADC bit depth per pixel. |
-| `max_framerate_hz` | number > 0 | Hz | Full-frame maximum frame rate; the axis that distinguishes a high-speed PCO Dimax from a general-purpose Oryx without a separate Family. |
+| `max_framerate_hz` | number > 0 | Hz | Full-frame maximum frame rate; the axis that distinguishes a high-frame-rate detector (such as the decommissioned PCO Dimax) from a general-purpose Oryx without a separate Family. |
 | `sensor_kind` | closed enum: `CMOS \| sCMOS \| CCD \| EMCCD` | | Sensor architecture. Four known values; add-only enum. |
 | `readout_mode` | closed enum: `RollingShutter \| GlobalShutter` | | Shutter / readout architecture; governs motion-blur behaviour under triggered fly-scans. |
 
@@ -489,7 +489,7 @@ The Schunk LPTM 30 translation stage with folding mirrors that selects camera 0 
 
 Each Asset may carry one canonical engineering reference as a `(system, number, revision)` triple per the [Drawing VO](../../architecture/modules/equipment/index.md). The carrier holds the build-to document for the physical specimen; the [Mount drawing](equipment/microscope.md#calibration-drawings-and-citation) on the slot is a separate document (where the slot lives in the beamline).
 
-Assets not listed below have no canonical document cited on the 2-BM source page yet (Kohzu `CYAT-070` datasheet for the four `SampleTop_*` stages, an APS shutter drawing for `StationShutter`, and a FLIR Oryx datasheet for `Camera`). These populate when the operator confirms the canonical reference.
+Assets not listed below have no canonical document cited on the 2-BM source page yet (Kohzu `CYAT-070` datasheet for the two `SampleTop_*` stages, an APS shutter drawing for `StationShutter`, and a FLIR Oryx datasheet for `Camera`). These populate when the operator confirms the canonical reference.
 
 ### `Hexapod`
 
@@ -575,7 +575,7 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 
 ## Pending
 
-Devices that physically exist at 2-BM but are not yet registered as CORA Assets; each carries `new: true` in the 2-BM descriptor (`deployments/2-bm/beamline.yaml`). The five front-end / beam-conditioning optics driven by `FrontEndDrive` are now registered (see the [Inventory](#inventory)); `BeamPositionMonitor` remains an unmodelled front-end device, but a diagnostic, not a motor: the descriptor records no PV or controller for it.
+Devices that physically exist at 2-BM but are not yet registered as CORA Assets. The named device below carries `new: true` in the 2-BM descriptor (`deployments/2-bm/beamline.yaml`); the broader rows are device categories that exist physically but are not yet itemized in the descriptor. The five front-end / beam-conditioning optics driven by `FrontEndDrive` are now registered (see the [Inventory](#inventory)); `BeamPositionMonitor` remains an unmodelled front-end device, but a diagnostic, not a motor: the descriptor records no PV or controller for it.
 
 All three `Table`-Family support tables are registered ([Inventory](#inventory)): `SampleTable` (the sample-tower base), `DetectorTable`, and `MirrorTable`. Their `Table` settings schema is enforced (each carries a validated `axis_layout`; see [Settings](#settings)). `DetectorTable`'s six virtual axes are modelled as PseudoAxis sub-Assets ([Detector table axes](computed-axes.md#detector-table-axes)); `MirrorTable`'s axes remain deferred (X-surface-only pending 2bm-docs#171).
 
@@ -587,7 +587,7 @@ All three `Table`-Family support tables are registered ([Inventory](#inventory))
 
 ## Decommissioned (provenance only)
 
-Detectors 2-BM ran in the past. They are neither active Assets nor awaiting registration; [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) records them under `decommissioned` for provenance. When modelled they are `Camera` Assets in a terminal lifecycle state: the `Camera` Family spans them and the active FLIR Oryx, because performance class ("high-speed") is a settings axis, not a separate Family, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
+Detectors 2-BM ran in the past. They are neither active Assets nor awaiting registration; [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) records them under `decommissioned` for provenance. When modelled they are `Camera` Assets in a terminal lifecycle state, spanned by the same `Camera` Family as the active detectors (performance class is a settings axis, not a separate Family; see [Camera schema](#camera)).
 
 | Asset | Family | Note |
 | --- | --- | --- |

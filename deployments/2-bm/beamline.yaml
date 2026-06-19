@@ -286,7 +286,7 @@ sample-environment:
       drawing: { system: EDMS, number: 630C2125, revision: "(-)" }   # Aerotech vendor drawing (#156)
       range: -360..360 deg
       max_speed: 720 deg/s
-      encoder_resolution: 0.0001 deg
+      encoder_resolution: 0.000676 deg   # item_050 Ensemble encoder table: 532800 pulses/rev (11840 lines/rev x 45) = 360/532800 deg/count; replaces an earlier unsourced 0.0001 deg (questions STAGE-10)
       # Rotary kit per 2-BM staff source (pre-APSU ops/item_100 "Rotary Stages"). ABRS-250MP-M-AS is the
       # currently-installed 2-BM-B rotary (manual/item_020). Mode/station labels ("fast tomo"/"mona tomo"/
       # "spindle") and whether the swap is a live loadout variant conflict pre vs post APSU; confirm (questions STAGE-5).
