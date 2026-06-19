@@ -2,7 +2,7 @@
 
 *The 2-BM Fixture that materializes the cross-facility `Microscope` Assembly: the Optique Peter detector, binding eight Assets across six slots over a reusable `Optics` sub-assembly, the optics in one `Housing` that rides the `PropagationDistance` rail, presenting the `Detector` Role.*
 
-The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch (Enclosure `2-BM-B`). It is the operator-facing imaging system: a vendor housing carrying three swappable objectives on a sliding ball-screw selector, a linear propagation-distance stage (the sample-to-detector rail), a FLIR Oryx camera, and a LuAG scintillator. (A second, higher-resolution Oryx camera and its `Camera_Selector` are also modelled; only the 31 MP sensor settings remain pending, see [Open items](#open-items).) The whole unit is driven by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC process name, not the CORA model name). This page explains how CORA models it.
+The Microscope detector sits about 55 m from the source in the 2-BM experiment hutch (Enclosure `2-BM-B`). It is the operator-facing imaging system: a vendor housing carrying three swappable objectives on a sliding ball-screw selector, a linear propagation-distance stage (the sample-to-detector rail), a FLIR Oryx camera, and a LuAG scintillator. (A second, higher-resolution Oryx camera and its `Camera_Selector` are also modelled; only the 31 MP sensor settings remain pending, see [DET-13](../questions.md#the-microscope-detector).) The whole unit is driven by the [BCDA-APS MCTOptics IOC](https://github.com/BCDA-APS/tomo-bits/blob/main/src/tomo_instrument/devices/mct_optics.py) (MCTOptics is the IOC process name, not the CORA model name). This page explains how CORA models it.
 
 ## The model in one picture
 
@@ -65,7 +65,7 @@ The Microscope detector sits about 55 m from the source in the 2-BM experiment h
 Like the [sample tower](sample_tower.md), the detector uses both of CORA's structural axes.
 
 - **Composition** (Assembly to Fixture, flat) answers *what logical cluster presents for binding*. The `Microscope` Assembly composes the `Optics` sub-assembly plus two leaf slots (`camera`, `scintillator`); the Fixture `microscope_at_2bm` binds eight Assets across six leaf slots on the 2-BM Trust Surface. The Assembly `presents_as` the `Detector` Role, so a Method can require a 2D imaging device without pinning a Family.
-- **Containment** (`Asset.parent_id`) answers *what physically holds what*. The `Housing` parents seven constituents, the housing rides on the `PropagationDistance` rail (the sample-to-detector stage, so moving it travels the whole detector), and the rail sits on the `DetectorTable`, so the chain is `2-BM -> DetectorTable -> PropagationDistance -> Housing -> constituents`. The housing is the one part installed into a Mount (`optics_mount` on `2BM_hutch_frame`, 6-DoF), and the constituents inherit position from its known internal layout; the Mount records where it sits in space, the `parent_id` what it rests on (orthogonal axes). The rail-carries-housing mounting is an engineering assumption pending staff confirmation (see [Open items](#open-items)). This is an approximation: tomography reconstruction calibrates the rotation center separately, so per-constituent Mounts are not pinned (pixel-accurate beam-propagation modelling would add them).
+- **Containment** (`Asset.parent_id`) answers *what physically holds what*. The `Housing` parents seven constituents, the housing rides on the `PropagationDistance` rail (the sample-to-detector stage, so moving it travels the whole detector), and the rail sits on the `DetectorTable`, so the chain is `2-BM -> DetectorTable -> PropagationDistance -> Housing -> constituents`. The housing is the one part installed into a Mount (`optics_mount` on `2BM_hutch_frame`, 6-DoF), and the constituents inherit position from its known internal layout; the Mount records where it sits in space, the `parent_id` what it rests on (orthogonal axes). The rail-carries-housing mounting is an engineering assumption pending staff confirmation (see [DET-12](../questions.md#the-microscope-detector)). This is an approximation: tomography reconstruction calibrates the rotation center separately, so per-constituent Mounts are not pinned (pixel-accurate beam-propagation modelling would add them).
 
 The two axes are orthogonal: the same eight Assets sit on both at once.
 
@@ -77,7 +77,7 @@ The Fixture `microscope_at_2bm` binds eight Assets across six leaf slots on the 
 
 The Microscope carries **zero `required_wires`**: lens selection is the `Objective_Selector` PseudoAxis handing the lens index to the MCTOptics composite (`LensSelect`, below), propagation distance and other setpoints go through the Conductor / ControlPort layer, and the camera trigger arrives from an external timing source wired at Plan level. None of these is intrinsic to the composition, so none is a blueprint wire.
 
-## Vendor catalog (Models)
+## Vendor catalog
 
 | Model | Manufacturer | Part number | Declared Families |
 | --- | --- | --- | --- |
@@ -122,14 +122,6 @@ Writing `Objective_Selector = 1` writes lens index 1 to `2bm:MCTOptics:LensSelec
 ## Operating and swapping
 
 Switch the active objective by writing the `Objective_Selector` index (0/1/2); the execution layer writes that index to the MCTOptics composite (`2bm:MCTOptics:LensSelect`), and MCTOptics moves the turret and applies the per-lens focus and rotation offsets. Pulling a detector for cleaning or recalibration and returning the same one is the light, reversible path (`detach_asset_from_fixture` then `attach_asset_to_fixture`; the Asset stays `Active` with `fixture_id` cleared). Bringing in a *different* camera or scintillator, or retiring one, is heavier: decommission the old Asset if it is leaving, register the replacement, register a new Fixture against the same Assembly with the updated slot map, then move the surviving Assets across. Methods that bind at Assembly level (`needed_assembly_ids`) are unaffected; Plans that enumerate `asset_ids` need the new id only on a retirement.
-
-## Open items
-
-- The `Objective_Selector` `partition_rule` references the turret motor by Asset id, but nothing enforces that this is the same motor bound into the `turret` slot; there is no cross-slot constraint primitive today.
-- `register_fixture` requires every bound constituent to be installed in some Mount, so a pool-backed deployment gives each a lightweight Mount even though the housing approximates its placement.
-- Plan-binding does not yet enforce `needed_assembly_ids` satisfaction: a Plan that omits a Fixture materializing the required Assembly passes silently today.
-- The alternate 31 MP camera (`Camera_HighRes`) and the `Camera_Selector` (Schunk LPTM 30, `2bmb:m5`, rotation motors `2bmb:m7`/`m8`) are now registered Assets under the `Housing`: the selector switches the optical path between the 5 MP `Camera` (bound into the Fixture) and the 31 MP. `Camera_HighRes` is registered identity-only; item_020 confirms its sensor (6464 x 4852 px, 26 fps), leaving only bit depth, sensor kind, and readout mode pending ([DET-13](../questions.md#the-microscope-detector)), which the `Camera` schema needs before the settings group can be applied.
-- Containment models `PropagationDistance` (the sample-to-detector rail, `2bmbAERO:m1`) as carrying the `Housing` (`DetectorTable -> PropagationDistance -> Housing`), on the engineering assumption that moving the rail travels the whole detector. Whether the entire microscope rides the rail, or only part of it moves while the rest stays on the table, is the open world-fact [DET-12](../questions.md#the-microscope-detector); a staff answer that contradicts it would flip the rail back to a housing constituent.
 
 ## Exercised model
 

@@ -31,10 +31,3 @@ A Policy governs who may issue which command across a Conduit.
 | --- | --- | --- |
 | `2-BM Operations Policy` | `2-BM Operator 1..3` (above) | Operator-driven commands (Equipment, Recipe, Operation, Run, Subject, Dataset, Caution, Clearance, Supply, Campaign) |
 | `2-BM Agent Policy` | `Run Debrief` (see [APS principals](../aps/index.md#who-acts-here)) | Decision family: `RegisterDecision`, `RateDecision`, `AppendInferences` |
-
-## Pending
-
-- A second Zone (Storage Zone, Control Zone).
-- Policy enforcement (switch to `TrustAuthorize`).
-- Policy status lifecycle (`Drafted -> Approved -> Active -> Superseded`).
-- Per-beamline named staff rosters (Actors).

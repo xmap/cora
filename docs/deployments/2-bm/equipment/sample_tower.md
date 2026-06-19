@@ -84,13 +84,6 @@ The tower introduces one new Family and reuses the rest.
 - **`Table`** (the base): the bare role-noun for the sample optical table, following the `OpticalHousing` to `Housing` precedent (the qualifier names the contents, not the chassis kind). The Asset instance is `SampleTable`.
 - **`Hexapod`, `RotaryStage`, `LinearStage`** are reused unchanged.
 
-## Open items
-
-- **STAGE-5** (operator): the rotary kit's mode/station labels (`fast tomo` / `mona tomo` / `spindle`) conflict pre vs post APS-U, and whether the b-station stack actively swaps among the kit today (the model assumes one installed ABRS-250MP, not swapped).
-- **STAGE-6** (operator): the exact Kohzu model of `LaminographyPitch` (working value `SA16A-RM`; the source swivel kit also lists `SA16A-RS` / `SA07A-R2L`).
-- **Deferred:** the fixed laminography wedge (a passive part, not a slotted Asset), the hexapod's six DoF facets (`PseudoAxis`), and the lamino pitch-tracks-theta coupling (a conduct-time PseudoAxis / Plan concern, not an Assembly template wire).
-- **Operational, not loadout:** the hexapod recovery routines from `item_050` (the over-travel / sustained-load controller lockup, and the post-reboot Y-stage dial misreset) are not Fixture or Assembly concerns. They live as [Cautions](../cautions.md#controller-lockup) on the hexapod and its drive, and as the [`hexapod_reboot` recipe](../recipes.md#hexapod_reboot).
-
 ## Exercised model
 
 The end-to-end model lives in `apps/api/tests/integration/scenarios/test_2bm_sample_tower_setup.py`: the Unit install, the five Families, the six stack Assets in the deep `parent_id` chain, the per-constituent Mount/install, the `SampleTower` Assembly presenting as the `Positioner` Role, the one Fixture binding the five-slot stack, the attaches, and a positioning Method/Practice/Plan that requires the tower as a unit (`needed_assembly_ids`). The scenario also asserts the experiment-vs-loadout boundary (the Fixture carries no scan-strategy override).

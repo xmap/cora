@@ -62,7 +62,7 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `Camera_Selector` | `LinearStage` | `schunk_lptm_30` | `Housing` | Schunk LPTM 30; Pos.0=20, Pos.1=15; stage settings pending | live (settings pending) |
 | `Scintillator` | `Scintillator` | (microscope catalog) | `Housing` | thickness 100 um, decay 0.07 us | live |
 
-Microscope-bound Models (turret motor, Mitutoyo MPLAPO kit, FLIR Oryx, Crytur LuAG) live on the [Microscope deployment](equipment/microscope.md#vendor-catalog-models) page. The `kohzu_sa16a` binding for `LaminographyPitch` is on the [Sample tower](equipment/sample_tower.md) page.
+Microscope-bound Models (turret motor, Mitutoyo MPLAPO kit, FLIR Oryx, Crytur LuAG) live on the [Microscope deployment](equipment/microscope.md#vendor-catalog) page. The `kohzu_sa16a` binding for `LaminographyPitch` is on the [Sample tower](equipment/sample_tower.md) page.
 
 ## Settings
 
@@ -93,9 +93,9 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 | `Objective_2x` | `magnification=2.0`; `numerical_aperture=0.055`; `focal_length=100 mm`; `working_distance=34 mm` |
 | `Objective_1.1x` | `magnification=1.1`; `numerical_aperture=0.03`; `focal_length=200 mm`; `working_distance=50 mm` |
 
-## Vendor catalog (Models)
+## Vendor catalog
 
-Models bound to non-microscope 2-BM Assets. Model ids are derived from `(manufacturer, part number)`, so one vendor product converges on one id. Microscope-housing Models are on the [Microscope deployment](equipment/microscope.md#vendor-catalog-models) page.
+Models bound to non-microscope 2-BM Assets. Model ids are derived from `(manufacturer, part number)`, so one vendor product converges on one id. Microscope-housing Models are on the [Microscope deployment](equipment/microscope.md#vendor-catalog) page.
 
 | Model | Vendor | Part number | Drives / used by |
 | --- | --- | --- | --- |
@@ -131,11 +131,11 @@ One canonical `(system, number, revision)` triple per Asset. Optique Peter `MAN-
 
 Not yet cited: Kohzu `CYAT-070` datasheet (`SampleTop_*`), an APS shutter drawing (`StationShutter`), a FLIR Oryx datasheet (`Camera`).
 
-## Signal wiring (ports and Plan wires)
+## Signal wiring
 
 Trigger and step signals are modelled as typed ports plus wires resolved at Plan-bind time. Executable model: `apps/api/tests/integration/scenarios/test_2bm_trigger_wiring.py`.
 
-### Fine-positioning piezo controllers (Jena NV100D / NV200D)
+### Fine-positioning piezo controllers
 
 - `OpticsFineDrive` = Jena NV100D (staff item_027), fine optics positioning from the `mct_optics` screen; carries no trigger input (no FPGA stepping).
 - `SampleFineDrive` = Jena NV200D/NET (staff item_028), two piezo axes step under FPGA trigger during tomography.
@@ -203,7 +203,7 @@ Angular mapping (`AX`=pitch, `AY`=yaw, `AZ`=roll) is staff-confirmed (STAGE-9).
 
 Setting energy is a discrete coordinated move. The staff energy-change IOC stores per-energy positions (`store_0` saved table) and drives ~15 motors. Each per-axis relationship is modelled as a continuous curve: a `PseudoAxis` carrying a `LookupTable` partition rule converting energy (`unit_in=keV`) to axis position, pinning a `Calibration` revision by id (`energy_position_curve` quantity, `beam_mode=mono`). `invertible=True` (Bragg geometry monotonic; no constituent wiring needed). Coordinating operation = the `energy_setting` Procedure, which accepts a free keV value between saved points. Models: `test_2bm_energy_curves_setup.py` (curves) + `test_2bm_energy_setting.py` (operation).
 
-Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0, 25.0, 25.584 keV. Pink mode bypasses the monochromator. Beam-mode switching itself is on the [Procedures](procedures.md#beam-modes-mono-pink) page, not a virtual axis.
+Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0, 25.0, 25.584 keV. Pink mode bypasses the monochromator. Beam-mode switching itself is on the [Procedures](procedures.md#beam-modes) page, not a virtual axis.
 
 | Axis Asset | Motors / handle | Curve | unit_out |
 | --- | --- | --- | --- |
@@ -232,23 +232,4 @@ Downstream-paddle slot positions (REAL, staff-published):
 | 80 | `50 um C` | 80 |
 | 106 | `None` | 106 |
 
-Open item: the position unit, reported as the motor record EGU, "consistent with mm" but not definitively confirmed (`FOIL-1`). Foil ATTENUATION (`Attenuable`) and the energy-dependent mirror coating stripe (`2bma:m3`) are deliberately out of scope here (the stripe is modelled with the [beam-mode work](procedures.md#beam-modes-mono-pink)).
-
-## Pending
-
-Devices that physically exist at 2-BM but are not yet registered as Assets. `BeamPositionMonitor` carries `new: true` in the descriptor; the broader rows are categories not yet itemized. The five `FrontEndDrive` optics are now registered; `BeamPositionMonitor` remains an unmodelled front-end diagnostic (no PV or controller recorded).
-
-| Asset | Family |
-| --- | --- |
-| `BeamPositionMonitor` | `Diagnostic` |
-| Broader sample-stage motors | `LinearStage` + tilt motors |
-| IOC-hosted EPICS Devices | |
-
-## Decommissioned (provenance only)
-
-Detectors 2-BM ran in the past; neither active Assets nor awaiting registration, recorded under `decommissioned` in [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) for provenance. When modelled they are `Camera` Assets in a terminal lifecycle state (performance class is a settings axis, not a separate Family; see [Camera schema](#assets)).
-
-| Asset | Family | Note |
-| --- | --- | --- |
-| `PCO_Dimax_HS` | `Camera` | High-speed CMOS camera; superseded by the FLIR Oryx detector chain. |
-| `Adimec_Quartz_Q-12A180` | `Camera` | Earlier 2-BM CoaXPress camera. |
+Open item: the position unit, reported as the motor record EGU, "consistent with mm" but not definitively confirmed (`FOIL-1`). Foil ATTENUATION (`Attenuable`) and the energy-dependent mirror coating stripe (`2bma:m3`) are deliberately out of scope here (the stripe is modelled with the [beam-mode work](procedures.md#beam-modes)).

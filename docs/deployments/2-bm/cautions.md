@@ -31,15 +31,3 @@ The hexapod controller occasionally stops responding while reporting no fault: i
 `Wear` / `Caution`, filed against `Hexapod`. This is a homing artifact of the stage, not a drive fault, so the caution sits on the stage. Tags: `hexapod`, `y_axis`, `post_reboot`, `dial_reset`.
 
 After any hexapod reboot, every axis homes correctly except Y: the Y dial resets to 0 while the encoder reads 350, and the first Y move in that state faults. Set the Y dial to 350 so it agrees with the encoder before commanding any Y motion. This is a required post-reboot step, not an optional one: skipping it faults the move and forces another reboot.
-
-## Pending
-
-Cautions seen in the field but not yet written up:
-
-| Target | Text |
-| --- | --- |
-| `2-BM` | Vibration threshold exceeded after air-handler shutdown |
-| `Camera` | Detector dark-frame drift after long beam-off periods |
-| `Scintillator` | Scintillator browning under prolonged white-beam exposure |
-| `SampleTop_X` | Sample-stage backlash after manual handling |
-| `Monochromator` | Flat-field stripe pattern drifts over hours (DMM optics) |

@@ -9,10 +9,3 @@ APS itself is not an Asset: it is a Federation `Facility` with `FacilityKind = S
 | `2-BM` | `Unit` | `aps` | [2-BM](../2-bm/index.md) |
 
 Sub-systems and devices nested under a beamline are Assets with `tier = Component` or `tier = Device`, linked via `parent_id`. Being non-root, they do not carry `facility_code`; they inherit facility scope through the `parent_id` tree.
-
-## Pending
-
-| Asset | Tier | facility_code | Notes |
-| --- | --- | --- | --- |
-| Other beamlines | `Unit` | `aps` | root Assets bound to the APS Site |
-| Storage ring, beam transport, front-end optics | `Unit` | `aps` | facility-wide infrastructure |

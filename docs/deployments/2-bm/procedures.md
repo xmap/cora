@@ -8,7 +8,7 @@ The split between a Run and a Procedure is the lens, not the data product: a Run
 
 An operation can also be authored as a [Recipe](recipes.md): a reusable, parameterized step sequence (setpoint / check / action) that expands into a Procedure once an operator binds its tunable values.
 
-This page is organized by modeling status: the Procedures CORA [models today](#modeled-today), the [deferred](#deferred) ones still gated on staff facts or hardware, and the [pending](#pending) ones not yet modeled. Two reference sections close it: the [beam-mode context](#beam-modes-mono-pink) the coordinated optic moves depend on, and the [staff procedures source](#from-the-2-bm-procedures-source) this page adopts from.
+This page is organized by modeling status: the Procedures CORA [models today](#modeled-today), the [deferred](#deferred) ones still gated on staff facts or hardware. Two reference sections close it: the [beam-mode context](#beam-modes) the coordinated optic moves depend on, and the [staff procedures source](#from-the-2-bm-procedures-source) this page adopts from.
 
 ## Modeled today
 
@@ -61,9 +61,9 @@ Two coordinated operations are design-locked but not yet conductible: each is ga
 
 ### Beam mode change
 
-`beam_mode_change` is a sibling of `energy_setting`. 2-BM runs two beam modes (the monochromator inserted vs bypassed, see [Beam modes](#beam-modes-mono-pink)), and switching between them is one coordinated multi-device move (DMM in/out, the mirror coating stripe with its table-X, downstream tracking) of the same Method + Procedure shape, with the target mode (mono or pink) as a parameter rather than two verb-first kinds, paired with a `BeamModeChange` Decision for the operator's choice. It is gated on the staff facts `MODE-1` / `MODE-2` / `MODE-3` and `MIRROR-1` before it can carry real positions or drive hardware.
+`beam_mode_change` is a sibling of `energy_setting`. 2-BM runs two beam modes (the monochromator inserted vs bypassed, see [Beam modes](#beam-modes)), and switching between them is one coordinated multi-device move (DMM in/out, the mirror coating stripe with its table-X, downstream tracking) of the same Method + Procedure shape, with the target mode (mono or pink) as a parameter rather than two verb-first kinds, paired with a `BeamModeChange` Decision for the operator's choice. It is gated on the staff facts `MODE-1` / `MODE-2` / `MODE-3` and `MIRROR-1` before it can carry real positions or drive hardware.
 
-### Beam alignment (item_012)
+### Beam alignment
 
 Aligning the beam within each mode is a separate task from the sample and detector alignments [modeled above](#modeled-today): the `*_alignment` Procedures position the *sample* on the rotary stage against a beam that is already there, and `detector_z_rail_alignment` positions the *detector table*, while beam alignment positions the *beam itself*, walking it through the mask, mirror, and monochromator until it is centered and vertically symmetric on the viewing camera. The staff routine is the white-then-pink-then-mono sequence on the [docs2bm beamline-alignment page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_012.html).
 
@@ -77,26 +77,13 @@ CORA models this as a deferred `beam_alignment` Procedure family, one Procedure 
 
 Each one builds on the deferred `beam_mode_change` move above and then records the per-mode beam-finding steps. Most of the body is manual operator tuning: centering the beam, judging the vertical-intensity symmetry, requesting accelerator beam-steering corrections in small (about 10 microradian) steps, and re-optimizing the second crystal. That tuning lives at the edge; CORA's part is to record the act, its target Assets, and any resulting [Calibration](../../architecture/modules/calibration/index.md) (a mono alignment that settles on a measured crystal separation is the natural counterpart of `center_alignment` to `rotation_center`), not to drive the search. This is the intentional-modeling line: capture the durable structure of the task, do not mirror the staff's step-by-step ritual.
 
-The family stays deferred for the same reasons as `beam_mode_change`: the DMM insert and bypass ceremony (`MODE-2`), the Pink saved positions and stripe map (`MODE-3` / `MIRROR-1`), and the two pieces this routine relies on that are not yet on file (the alignment camera `ALIGN-1` and the fixed mask `ALIGN-2`) all have to land first. It carries no steps or positions until then; see [Open questions](questions.md#beamline-alignment-item_012).
+The family stays deferred for the same reasons as `beam_mode_change`: the DMM insert and bypass ceremony (`MODE-2`), the Pink saved positions and stripe map (`MODE-3` / `MIRROR-1`), and the two pieces this routine relies on that are not yet on file (the alignment camera `ALIGN-1` and the fixed mask `ALIGN-2`) all have to land first. It carries no steps or positions until then; see [Open questions](questions.md#beamline-alignment).
 
-## Pending
-
-Tasks identified for 2-BM but not yet modeled as Procedures.
-
-| Procedure | Target Assets |
-| --- | --- |
-| `alignment_auto_chain` | alignment Assets (characterization + Step1..4) |
-| `ioc_restart` | EPICS IOC-hosted Assets |
-| `vibration_baseline` | `Camera` (run at high frame rate) |
-| `mirror_recoat_return` | `Mirror` |
-
-`vibration_baseline` is the high-speed vibration characterization on the staff-authored [docs2bm item_070 page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_070.html): the active FLIR Oryx (serial `19173710`, the same microscope detector) runs at about 99 fps watching the scintillator image, and the per-frame vertical shift is analyzed for vibration peaks. The capture reuses the `collect` action body like the dark and flat baselines, so it is conductible today; the FFT analysis is downstream of CORA, and the captured stack becomes the [vibration-baseline Dataset](experiment.md). Performance class ("high-speed") is the `Camera` `max_framerate_hz` settings axis, not a separate Asset (`VIB-1`). It stays in Pending until staff confirm whether vibration baselining is recurring practice (`VIB-2`). The companion air-handler-shutdown finding and the multi-hour flat-field stability study on the same page are not procedures: their operator takeaways are [Cautions](cautions.md) (vibration after an air-handler shutdown, and acquiring flats close to scan time), and their distinctive mechanics (per-air-handler EPICS-triggered capture, the live beam-current stop loop) are deferred edge concerns, not modelled here.
-
-## Beam modes (Mono / Pink)
+## Beam modes
 
 Reference for the coordinated optic moves above. 2-BM runs in two beam modes, and the energy menus are mode-specific (see [Energy-tracking optic axes](inventory.md#energy-tracking-optic-axes)). In monochromatic mode the double-multilayer monochromator (DMM) is inserted and its crystals Bragg-select one energy (the Mono menu: 13.374, 13.574, 18.0, 20.0, 25.0, 25.584 keV; the energy curves are stamped `beam_mode = mono`). In pink (broadband) mode the DMM is driven out of the beam (its Y motors to about -10) and the Bragg arms park, so the full bending-magnet beam passes through; the mirror coating stripe (`2bma:m3`, with a coordinated mirror-table X move on `2bma:m1` / `m4`) then sets the high-energy cutoff (the Pink menu: 30, 40, 50, 60 keV). Diagnostics and downstream tracking follow the mode: the diagnostic flag (`2bma:m44`) is raised in Mono and parked in Pink, and the downstream table and B-station slits hold neutral in Pink. Source: the staff-authored [docs2bm components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html).
 
-Switching between the modes is the `beam_mode_change` operation above. CORA does not yet model the switch or carry Pink positions: the energy IOC stores Mono and Pink as two saved configs, but only the Mono curves are seeded (Pink seeds when staff provide the Pink `store_0`, MODE-3), the named-stripe to m3-position map is unpublished (MIRROR-1), and the DMM insert and bypass ceremony is unrecorded (MODE-2). Per-mode energy curves are carried by the `beam_mode` operating-point key. This is deferred until the staff answers land; see [Open questions](questions.md#beam-mode-mono-pink).
+Switching between the modes is the `beam_mode_change` operation above. CORA does not yet model the switch or carry Pink positions: the energy IOC stores Mono and Pink as two saved configs, but only the Mono curves are seeded (Pink seeds when staff provide the Pink `store_0`, MODE-3), the named-stripe to m3-position map is unpublished (MIRROR-1), and the DMM insert and bypass ceremony is unrecorded (MODE-2). Per-mode energy curves are carried by the `beam_mode` operating-point key. This is deferred until the staff answers land; see [Open questions](questions.md#beam-mode).
 
 ## From the 2-BM procedures source
 
@@ -110,7 +97,7 @@ The [2bm-procedures](https://github.com/xray-imaging/2bm-procedures) repo ([rend
 
 The source also defines eight stub procedures as named targets for a precondition graph (each declares only its postcondition): `beamline_enabled`, `a_slits_open`, `energy_configured`, `flag_in_beam`, `b_shutter_open` (P6-50 safety shutter), `b_slits_configured`, `sample_out_of_beam`, `microscope_configured`. In the CORA lens most of these are already-modeled state, not new procedures to build: `energy_configured` is the postcondition of the `energy_setting` Procedure above, `b_shutter_open` is the `StationShutter` open state ([Shutter state at run start](experiment.md#shutter-state-at-run-start)), `sample_out_of_beam` is the operator assertion the [`flat_baseline`](recipes.md) recipe already relies on, `microscope_configured` is the microscope setup, and `a_slits_open` / `b_slits_configured` are slit state that `slit_centering` establishes. `flag_in_beam` (`2bma:m44`) is the one genuinely unmodeled stub: there is no flag Asset yet.
 
-### Precondition graph (`detector_z_rail_alignment`)
+### Precondition graph for `detector_z_rail_alignment`
 
 The staff source carries the preconditions as a machine-readable list (the `PRECONDITIONS` array in `detector_z_rail_alignment.py`): each entry is a postcondition *state*, a satisfying *procedure* that establishes it, an informal *predicate* over PVs, and a 2bm-docs spec page. The state name and the procedure name differ, which the flat list above blurs: the eight stubs are the states; the procedures that satisfy them are named in the second column here. This is the shape a future `Procedure.preconditions` would carry; it is reproduced so the dependency edges are explicit.
 

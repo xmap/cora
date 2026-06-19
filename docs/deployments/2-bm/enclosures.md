@@ -19,7 +19,7 @@ Each hutch's permit maps off one Personnel Safety System search-and-secure PV, t
 
 `start_run` and `start_procedure` run an Enclosure pre-flight gate that derives the hutches in scope from the bound Assets and requires each to be Permitted. The chain walk, the error classes, and the HTTP codes are on the [module page](../../architecture/modules/enclosure/index.md#cross-module-boundaries). Because each 2-BM Device names exactly one hutch, an A-only Run gates on `2-BM-A` alone while a cross-hutch Run spanning both needs both Permitted. The `test_2bm_two_hutch_enclosure_gate` and `test_2bm_enclosure_chain_walk` scenarios exercise both shapes; the gate fires the moment the two hutch Enclosures register.
 
-## Beam-availability PVs (proposed, pending PSS sign-off)
+## Beam-availability PVs
 
 Separate from the per-hutch permit, CORA reads upstream beam-availability signals. These are a beam-availability concern (modeled by the `BeamAvailabilityLookup` port, used by [Recipes](recipes.md) and [Procedures](procedures.md)), not the Enclosure permit. The names below were CORA-proposed against the post-migration 2-BM staff screens and await a formal sign-off by the APS PSS gateway owner; treat the strings as unconfirmed.
 
@@ -31,8 +31,3 @@ Separate from the per-hutch permit, CORA reads upstream beam-availability signal
 | Upstream permit (composite) | `SR-ACIS:2BM:FesPermitM` | `1` = FES-open permitted |
 
 Of these, only `SR-ACIS:2BM:FesPermitM` is wired today (through the `BeamAvailabilityLookup` port); it folds storage-ring health, injection state, the APS-wide permits, and the BLEPS fault chain into one boolean and is the recommended single read for an "upstream OK" pre-flight check. The gateway host (`s2pvgate.xray.aps.anl.gov:5064`) and the exact FES / SBS shutter PV leaf names are unconfirmed and need staff confirmation before the observer adapter binds them.
-
-## Pending
-
-- `2-BM-A` (optics hutch) and `2-BM-B` (experiment hutch): not yet registered.
-- Production Personnel Safety System observer adapter: subscribes to both hutch `SecureM` permit channels and reports interlock changes into `observe_enclosure_status`. Until it integrates at first pilot, the permit channel has no live source.
