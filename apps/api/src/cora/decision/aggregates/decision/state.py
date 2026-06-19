@@ -289,6 +289,53 @@ ReactionDismissalChoice = Literal["EventDismissed"]
 REACTION_DISMISSAL_CHOICES: Final = frozenset({"EventDismissed"})
 
 
+# RunSupervisor agent writes one Decision per supervision disposition on
+# an in-flight Run. Open-ended convention identical to RunDebrief /
+# CautionProposal; the closed choice vocabulary lives in the
+# `RunSupervisionChoice` Literal below. See
+# [[project-run-supervisor-design]] for the full grounding.
+DECISION_CONTEXT_RUN_SUPERVISION = "RunSupervision"
+
+
+# Closed `choice` value set for `context = "RunSupervision"` Decisions.
+# Projection-validated, not domain-enforced (the open-string
+# `DecisionContext` + `DecisionChoice` shape is preserved). Six values:
+#
+#   - `Continue`              -- no wind-down trigger met; no command
+#                               issued (the NoAction-bias default).
+#   - `Hold`                  -- issues HoldRun (pause, resumable).
+#   - `Stop`                  -- issues StopRun (controlled early exit).
+#   - `Abort`                 -- issues AbortRun (data-unusable exit).
+#   - `SupervisionDeferred`   -- audit-fallback: signal stale / absent /
+#                               unevaluable, OR a state race made the
+#                               command a no-op; no wind-down taken.
+#                               Qualified with the agent work-noun
+#                               (parallel to DebriefDeferred) so it does
+#                               not collide in the shared, globally-
+#                               filtered DecisionChoice projection.
+#   - `SupervisionConflicted` -- audit-only: lost the per-Run lease race
+#                               to another supervisor evaluator (parallel
+#                               to DebriefConflicted / CautionDraftConflicted).
+RunSupervisionChoice = Literal[
+    "Continue",
+    "Hold",
+    "Stop",
+    "Abort",
+    "SupervisionDeferred",
+    "SupervisionConflicted",
+]
+RUN_SUPERVISION_CHOICES: Final = frozenset(
+    {
+        "Continue",
+        "Hold",
+        "Stop",
+        "Abort",
+        "SupervisionDeferred",
+        "SupervisionConflicted",
+    }
+)
+
+
 # acceptance-signal capture: closed 3-value rating set on
 # the new `DecisionRated` event. `useful` and `misleading` are
 # operator-affirmative; `ignored` is a positive marker ("operator saw
