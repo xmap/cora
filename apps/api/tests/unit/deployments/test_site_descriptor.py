@@ -69,10 +69,12 @@ def test_site_loads_and_validates() -> None:
     assert site.facility.code == "aps"
     assert site.facility.kind == "Site"
     # lower bounds, not exact: additive edits should not break this test, except
-    # agents == 2 which is drift-guarded against the code seeds below.
+    # agents which are drift-guarded against the code seeds below. The two
+    # non-pending LLM agents are equality-checked in test_agents_match_seed_constants;
+    # RunSupervisor is authored pending (identity seeded, runtime not yet operational).
     assert len(site.practices) >= 17
     assert len(site.actors) >= 9
-    assert len(site.agents) == 2
+    assert len(site.agents) == 3
     assert len(site.supplies) >= 1
     assert len(site.clearances) >= 1
     assert len(site.cautions) >= 1

@@ -56,6 +56,7 @@ from cora.agent import (
     register_agent_tools,
     seed_caution_drafter_agent,
     seed_run_debriefer_agent,
+    seed_run_supervisor_agent,
     wire_agent,
 )
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
@@ -581,6 +582,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_run_debriefer_agent(deps)
             # same shape for CautionDrafter.
             await seed_caution_drafter_agent(deps)
+            # same shape for RunSupervisor (deterministic in-loop agent).
+            await seed_run_supervisor_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row

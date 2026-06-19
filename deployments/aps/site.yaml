@@ -75,6 +75,7 @@ actors:
 agents:
   - {name: RunDebriefer, kind: RunDebriefer, version: 1.0.0, model_provider: anthropic, model_name: claude-haiku-4-5}
   - {name: CautionDrafter, kind: CautionDrafter, version: 1.0.0, model_provider: anthropic, model_name: claude-sonnet-4-6}
+  - {name: RunSupervisor, kind: RunSupervisor, version: 1.0.0, model_provider: deterministic, model_name: "agent:RunSupervisor:v1", pending: true, note: "rule-based in-loop supervisor; identity seeded, runtime not yet operational"}
 
 # Supply BC: facility-wide continuously-available resources whose availability the facility tracks.
 supplies:
