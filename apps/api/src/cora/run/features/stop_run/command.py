@@ -17,7 +17,15 @@ from uuid import UUID
 
 @dataclass(frozen=True)
 class StopRun:
-    """Controlled early exit of a Run (Running | Held → Stopped)."""
+    """Controlled early exit of a Run (Running | Held → Stopped).
+
+    `decided_by_decision_id` (mirrors AbortRun + AdjustRun + StartRun):
+    optional Decision BC reference justifying this stop. The operator
+    route leaves it None; an in-process agent runtime (RunSupervisor)
+    sets it to link an autonomous stop to its Decision. NO existence
+    check at the decider per the cross-BC eventual-consistency stance.
+    """
 
     run_id: UUID
     reason: str
+    decided_by_decision_id: UUID | None = None

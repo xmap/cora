@@ -40,4 +40,10 @@ def decide(
         raise RunNotFoundError(command.run_id)
     if state.status not in _HOLDABLE_STATUSES:
         raise RunCannotHoldError(state.id, current_status=state.status)
-    return [RunHeld(run_id=state.id, occurred_at=now)]
+    return [
+        RunHeld(
+            run_id=state.id,
+            decided_by_decision_id=command.decided_by_decision_id,
+            occurred_at=now,
+        )
+    ]

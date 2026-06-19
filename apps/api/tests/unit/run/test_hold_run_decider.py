@@ -104,3 +104,28 @@ def test_decide_is_pure_same_inputs_same_outputs() -> None:
     first = hold_run.decide(state=state, command=command, now=_NOW)
     second = hold_run.decide(state=state, command=command, now=_NOW)
     assert first == second
+
+
+@pytest.mark.unit
+def test_decide_defaults_decided_by_decision_id_to_none_when_omitted() -> None:
+    """Default for the optional Decision-causation link is None (operator route)."""
+    state = _run(status=RunStatus.RUNNING)
+    events = hold_run.decide(
+        state=state,
+        command=HoldRun(run_id=state.id),
+        now=_NOW,
+    )
+    assert events[0].decided_by_decision_id is None
+
+
+@pytest.mark.unit
+def test_decide_threads_decided_by_decision_id_through_to_event() -> None:
+    """When an agent runtime supplies it, decided_by_decision_id flows verbatim."""
+    state = _run(status=RunStatus.RUNNING)
+    decision_id = uuid4()
+    events = hold_run.decide(
+        state=state,
+        command=HoldRun(run_id=state.id, decided_by_decision_id=decision_id),
+        now=_NOW,
+    )
+    assert events[0].decided_by_decision_id == decision_id
