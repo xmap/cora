@@ -20,7 +20,7 @@ signal types:
     and routes it (PSO or the trigILF subset, selected by MUX2-1)
     through to the camera. This edge starts an exposure.
   - the NV200D piezo step triggers (`step_trigger_ttl`): the two legs
-    documented under docs/deployments/2-bm/assets.md "NV200D trigger
+    documented under docs/deployments/2-bm/inventory.md "NV200D trigger
     wiring" (item_028), where each TTL edge advances a preloaded piezo
     position during camera readout. This edge advances a motion step,
     not an exposure, so its signal type is deliberately distinct.

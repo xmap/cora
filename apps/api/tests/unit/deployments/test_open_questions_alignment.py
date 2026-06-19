@@ -1,14 +1,14 @@
-"""Fitness guard: a deployment's Open questions stay aligned with its assets.md placeholders.
+"""Fitness guard: a deployment's Open questions stay aligned with its inventory.md placeholders.
 
 The Open questions page (`docs/deployments/<id>/questions.md`) is a
 delete-on-answer queue: every modelling value a beamline must confirm
-carries an `unknown-pending-confirmation` token in `assets.md`, tagged
+carries an `unknown-pending-confirmation` token in `inventory.md`, tagged
 with the id of the question that will resolve it (for example
 `` `unknown-pending-confirmation` (DRIVE-1) ``). This guard keeps the two
 from drifting:
 
   - completeness: every `unknown-pending-confirmation` placeholder in a
-    deployment's `assets.md` table is tagged with a `(QUESTION-ID)`.
+    deployment's `inventory.md` table is tagged with a `(QUESTION-ID)`.
     A new placeholder cannot land untracked.
   - no orphan / no dead tag: every tagged id is a live question on that
     deployment's `questions.md`. A question cannot be deleted while its
@@ -24,7 +24,7 @@ token-vs-assertion classification the data shows is not mechanical.
 
 Only markdown table rows count as placeholders; prose mentions of the
 token (paragraphs discussing it) are ignored. The test discovers every
-`docs/deployments/<id>/` that has BOTH `questions.md` and `assets.md`, so
+`docs/deployments/<id>/` that has BOTH `questions.md` and `inventory.md`, so
 a new beamline is guarded automatically.
 """
 
@@ -51,7 +51,7 @@ def _deployments_with_questions() -> list[Path]:
     return sorted(
         d
         for d in _DEPLOYMENTS.iterdir()
-        if (d / "questions.md").is_file() and (d / "assets.md").is_file()
+        if (d / "questions.md").is_file() and (d / "inventory.md").is_file()
     )
 
 
@@ -68,7 +68,7 @@ def test_at_least_one_deployment_has_a_questions_page() -> None:
     # Guards against the discovery silently finding nothing (a moved path
     # would make every parametrized test below vanish and pass vacuously).
     assert _deployments_with_questions(), (
-        "no docs/deployments/<id>/ with both questions.md and assets.md found"
+        "no docs/deployments/<id>/ with both questions.md and inventory.md found"
     )
 
 
@@ -87,7 +87,7 @@ def test_every_placeholder_is_tagged_with_a_live_question(deployment: Path) -> N
     dangling: list[str] = []
     checked = 0
     for number, line in enumerate(
-        (deployment / "assets.md").read_text(encoding="utf-8").splitlines(), start=1
+        (deployment / "inventory.md").read_text(encoding="utf-8").splitlines(), start=1
     ):
         # Only value-placeholders count: the token inside a markdown table
         # row. Prose mentions of the token are not placeholders to tag.
@@ -96,14 +96,14 @@ def test_every_placeholder_is_tagged_with_a_live_question(deployment: Path) -> N
         checked += 1
         tags = _TAG.findall(line)
         if not tags:
-            untagged.append(f"  assets.md:{number}: {line.strip()}")
+            untagged.append(f"  inventory.md:{number}: {line.strip()}")
             continue
         dangling.extend(
-            f"  assets.md:{number}: ({tag}) is not a live question"
+            f"  inventory.md:{number}: ({tag}) is not a live question"
             for tag in tags
             if tag not in live
         )
-    assert checked, f"{deployment.name}: no placeholder rows found in assets.md (parser drift?)"
+    assert checked, f"{deployment.name}: no placeholder rows found in inventory.md (parser drift?)"
     assert not untagged, (
         f"{deployment.name}: `{_PLACEHOLDER}` placeholder(s) with no (QUESTION-ID) tag. "
         f"Add the tracking question id so the answer has a home:\n" + "\n".join(untagged)

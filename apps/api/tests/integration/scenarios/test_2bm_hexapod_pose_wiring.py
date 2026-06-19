@@ -14,7 +14,7 @@ parented to it (Device-in-Device, the addressable-sub-module case the
 can address a single DoF by name.
 
 This materializes the model documented under
-docs/deployments/2-bm/assets.md "Hexapod DoF model": the three
+docs/deployments/2-bm/inventory.md "Hexapod DoF model": the three
 translations (X, Y, Z) and three rotations (Roll = A about X,
 Pitch = B about Y, Yaw = C about Z), each carrying a `SolverReference`
 partition rule naming the `2bmHXP` firmware solver, plus the

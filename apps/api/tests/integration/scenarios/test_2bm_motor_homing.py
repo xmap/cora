@@ -160,7 +160,7 @@ _CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
 # intentional-modeling rule exists to forbid.
 # The remaining 89 Kohzu motors on the 2bmb crate plus the entire
 # 2bma driven-side population live in the Pending table in
-# `docs/deployments/2-bm/assets.md`. The other 2 controller hardware
+# `docs/deployments/2-bm/inventory.md`. The other 2 controller hardware
 # classes at 2-BM (Nanotec ST4118 inside Optique Peter, Schunk
 # LPTM 30 inside the camera selector) remain deferred per
 # [[project-controller-as-asset-research]].

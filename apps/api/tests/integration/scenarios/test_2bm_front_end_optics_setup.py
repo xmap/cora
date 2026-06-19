@@ -199,7 +199,7 @@ async def test_front_end_optics_register_under_frontenddrive(db_pool: asyncpg.Po
         assert events[1].payload["family_id"] == str(cap_id), f"{name}: wrong Family bound"
 
     # ----- MirrorTable parents the Unit; the Mirror is relocated onto it
-    #       (2-BM -> MirrorTable -> Mirror), matching the assets.md containment. -----
+    #       (2-BM -> MirrorTable -> Mirror), matching the inventory.md containment. -----
     mirror_table_events, _ = await deps.event_store.load("Asset", mirror_table_id)
     assert mirror_table_events[0].payload["name"] == "MirrorTable"
     assert mirror_table_events[0].payload["parent_id"] == str(_2BM_UNIT_ID)

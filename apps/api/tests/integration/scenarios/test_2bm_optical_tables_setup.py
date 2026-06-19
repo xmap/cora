@@ -173,7 +173,7 @@ async def test_optical_tables_registered_as_standalone_assets(db_pool: asyncpg.P
     #       partition rule and no wiring -- CORA just names and addresses them.
     #       Names follow the hexapod axis convention (one unified CORA axis
     #       vocabulary); each axis's table3.* PV + raw AX/AY/AZ label live in the
-    #       descriptor / assets.md, mirroring the hexapod DoF facets. -----
+    #       descriptor / inventory.md, mirroring the hexapod DoF facets. -----
     await bind_define_family(deps)(
         DefineFamily(name="PseudoAxis", affordances=frozenset()),
         principal_id=_PRINCIPAL_ID,
