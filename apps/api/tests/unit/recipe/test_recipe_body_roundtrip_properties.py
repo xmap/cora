@@ -13,7 +13,7 @@ Pins three invariants:
 from uuid import uuid4
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
 from cora.recipe.aggregates.recipe import (
@@ -105,13 +105,21 @@ def test_recipe_post_init_rejects_empty_step_tuple() -> None:
         max_size=4,
     ),
 )
+# Regression: a generated binding under the probe key `"x"` used to clobber
+# the BindingRef and make the test assert against its own injected literal.
+@example(name="0", bindings={"x": 0})
 def test_binding_sentinel_survives_dict_key_reorder(name: str, bindings: dict[str, object]) -> None:
     """The `__binding__` sentinel must distinguish BindingRefs from literal dicts.
 
     A `{key: bindings}` value that happens to carry `__binding__` would
     be misread; the v1 contract forbids that key in literal payloads.
     """
-    bindings_no_collision = {k: v for k, v in bindings.items() if k != "__binding__"}
+    # Exclude both the `__binding__` sentinel (the contract forbids it in
+    # literal payloads) AND the fixed probe key `"x"` that holds the
+    # BindingRef: a generated `"x"` would clobber the probe via the spread
+    # below, making the test assert against a literal it injected itself
+    # rather than against the roundtrip.
+    bindings_no_collision = {k: v for k, v in bindings.items() if k not in ("__binding__", "x")}
     step = RecipeActionStep(
         name=name,
         params={"x": BindingRef("p"), **bindings_no_collision},
