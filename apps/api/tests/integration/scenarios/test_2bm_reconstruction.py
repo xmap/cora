@@ -56,8 +56,10 @@ input/output data lineage, without conducting the job itself.
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
+import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -85,6 +87,7 @@ from cora.equipment.features.update_family_settings_schema import (
     bind as bind_update_family_settings_schema,
 )
 from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
+from cora.operation.adapters.local_process_compute_port import LocalProcessComputePort
 from cora.operation.ports.compute_port import JobSpec
 from cora.recipe.aggregates.capability import ExecutorShape
 from cora.recipe.aggregates.method import ExecutionPattern
@@ -487,3 +490,92 @@ async def test_reconstruction_conducts_via_compute_runtime_and_gates_promotion(
     # It is specifically the simulator-origin gate that blocks it (not the
     # lineage guard, which now passes): the message names the actuation.
     assert "actuation" in str(exc_info.value)
+
+
+@pytest.mark.integration
+async def test_reconstruction_conducts_on_a_real_subprocess_and_is_promotable(
+    db_pool: asyncpg.Pool,
+    tmp_path: Path,
+) -> None:
+    """End-to-end CONDUCT on the real local-process executor: the
+    ComputeRuntime runs an actual subprocess that writes the recon output,
+    captures Physical actuation, and the resulting Dataset (lineage-linked
+    and with its raw input promoted) IS promotable to Production. The
+    Physical counterpart of the Simulated gate test."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
+    fixture = await _seed_recon_recipe(deps)
+
+    run_id = await bind_start_run(deps)(
+        StartRun(
+            name="SIRT reconstruction (local subprocess) of Proposal 2026-1241",
+            plan_id=fixture.plan_id,
+            subject_id=None,
+            override_parameters={"num_iter": 200, "tol": 0.0005},
+            trigger_source="compute-runtime; local-process executor",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # A real subprocess writes the recon output file, so the artifact's
+    # checksum + size are genuine (not synthesised). LocalProcessComputePort
+    # declares Physical actuation, so the output is promotable.
+    output_path = tmp_path / "recon_sirt.h5"
+    runtime = ComputeRuntime(
+        compute_port=LocalProcessComputePort(),
+        complete_run=bind_complete_run(deps),
+        abort_run=bind_abort_run(deps),
+    )
+    result = await runtime.conduct(
+        run_id=run_id,
+        job_spec=JobSpec(
+            command=(
+                sys.executable,
+                "-c",
+                f"import pathlib; pathlib.Path({str(output_path)!r}).write_bytes(b'recon-volume')",
+            ),
+            output_uri=output_path.as_uri(),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert result.succeeded
+    assert result.artifact_ref is not None
+
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert [e.event_type for e in run_events] == ["RunStarted", "RunCompleted"]
+    assert run_events[1].payload["actuation_kind"] == "Physical"
+
+    recon_dataset_id = await bind_register_dataset(deps)(
+        RegisterDataset(
+            name="2BM_recon_2026-05-20_sirt_physical",
+            uri=result.artifact_ref.uri,
+            checksum_algorithm=result.artifact_ref.checksum_algorithm,
+            checksum_value=result.artifact_ref.checksum_value,
+            byte_size=result.artifact_ref.byte_size,
+            media_type="application/x-hdf5",
+            conforms_to=frozenset({"https://www.nexusformat.org/NXtomoproc"}),
+            producing_run_id=run_id,
+            subject_id=fixture.subject_id,
+            derived_from=frozenset({fixture.raw_dataset_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    recon_events, _ = await deps.event_store.load("Dataset", recon_dataset_id)
+    assert recon_events[0].payload["producing_actuation_kind"] == "Physical"
+
+    # Promote the raw input, then the Physical recon promotes cleanly:
+    # no simulator taint, lineage now Production, producing Run Completed.
+    await bind_promote_dataset(deps)(
+        PromoteDataset(dataset_id=fixture.raw_dataset_id, reason="raw projections peer-reviewed"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_promote_dataset(deps)(
+        PromoteDataset(dataset_id=recon_dataset_id, reason="recon passed peer review"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    promoted_events, _ = await deps.event_store.load("Dataset", recon_dataset_id)
+    assert "DatasetPromoted" in [e.event_type for e in promoted_events]
