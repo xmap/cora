@@ -16,17 +16,20 @@ Things CORA still needs the beamline team to confirm are collected on [Open ques
 
 ## The beamline
 
-The systems you operate, and the devices they are built from.
+The systems you operate, in five areas: the three stations the beam passes through, plus the controls that drive them and the resources they draw on. See [the beamline overview](equipment/index.md) for how the areas relate.
 
-**Fixtures**, the composed units: a Fixture materializes a cross-facility [Assembly](../../catalog/assemblies.md) blueprint into this beamline's specific hardware, the same portable-to-bound move as a Recipe materializing a Method (an Assembly is to a Fixture as a Method is to a Recipe). These are the Assemblies 2-BM materializes:
+Along the beam, in order:
 
-- [Microscope](equipment/microscope.md): the Optique Peter detector, a `Microscope` Assembly over a reusable `Optics` sub-assembly, presenting the `Detector` Role.
-- [Sample tower](equipment/sample_tower.md): the sample positioning stack, a `SampleTower` Assembly presenting the `Positioner` Role, with the stages held in a containment chain.
+- [Source](equipment/source.md): the front-end optics that deliver and condition the beam (mirror, monochromator, slits, filters).
+- [Sample](equipment/sample_tower.md): the positioning stack that places the specimen, a `SampleTower` [Assembly](../../catalog/assemblies.md) presenting the `Positioner` Role.
+- [Detector](equipment/microscope.md): the imaging system, a `Microscope` Assembly over a reusable `Optics` sub-assembly, presenting the `Detector` Role.
 
-**Devices**, the hardware behind them:
+Cutting across all three:
 
-- [Layout](beamline.md): the equipment walk source to detector, every device with its calibration and condition, generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
-- [Assets](assets.md): the CORA Asset model view (flat tree by `parent_id`, Family affordances, vendor Models, settings schemas, drawings).
+- [Controls](equipment/controls.md): the controllers and drive crates, related to the hardware by `controller_id`, with the trigger wiring that links them.
+- [Resources](supplies.md): the continuously-available supplies a run needs (beam, cooling, vacuum).
+
+The cross-cutting reference views: the [Layout](beamline.md) walk generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor, the [Assets](assets.md) inventory (the flat tree by `parent_id`, Family affordances, vendor Models, settings), and the [Computed axes](computed-axes.md).
 
 ## Getting ready
 
@@ -34,7 +37,6 @@ Setup before a scan.
 
 - [Procedures](procedures.md): alignment, characterization, and recovery routines (Operation BC).
 - [Recipes](recipes.md): deployment-bound recipe designs (set-energy, hexapod reboot) that expand into Procedures (Recipe BC).
-- [Supplies](supplies.md): the resources a run needs available (beam, cooling, vacuum).
 - [Enclosures](enclosures.md): two hutch permits, optics hutch `2-BM-A` and experiment hutch `2-BM-B`, each gating its hutch's devices through the located-in pre-flight chain walk (Enclosure BC).
 - Clearances: the safety forms that must be Active to start, issued at the [APS Site](../aps/index.md#the-safety-envelope).
 

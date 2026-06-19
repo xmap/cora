@@ -91,17 +91,19 @@ nav:
       - deployments/2-bm/index.md
       - Open questions: deployments/2-bm/questions.md
       - The beamline:
-        - Fixtures:
-          - Microscope: deployments/2-bm/equipment/microscope.md
-          - Sample tower: deployments/2-bm/equipment/sample_tower.md
-        - Devices:
+        - deployments/2-bm/equipment/index.md
+        - Source: deployments/2-bm/equipment/source.md
+        - Sample (tower): deployments/2-bm/equipment/sample_tower.md
+        - Detector (microscope): deployments/2-bm/equipment/microscope.md
+        - Controls: deployments/2-bm/equipment/controls.md
+        - Resources: deployments/2-bm/supplies.md
+        - Reference:
           - Layout: deployments/2-bm/beamline.md
           - Assets: deployments/2-bm/assets.md
           - Computed axes: deployments/2-bm/computed-axes.md
       - Getting ready:
         - Procedures: deployments/2-bm/procedures.md
         - Recipes: deployments/2-bm/recipes.md
-        - Supplies: deployments/2-bm/supplies.md
         - Enclosures: deployments/2-bm/enclosures.md
       - Running a measurement:
         - Subjects: deployments/2-bm/subjects.md
