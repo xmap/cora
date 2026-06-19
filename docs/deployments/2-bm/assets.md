@@ -1,16 +1,10 @@
 # Assets
 
-*Equipment BC Assets registered under the 2-BM Unit.*
-
-The Devices that hang off 2-BM. The 2-BM Asset itself is a root Asset with `tier = Unit` (bound to its Site Facility via `facility_code`) and is declared on the [2-BM index](index.md). See [Model](../../architecture/model.md) for the aggregate shape.
-
-The Microscope detector is modelled as an Assembly + Fixture pair over a reusable Optics sub-assembly, with the constituents contained in one `Housing` Asset. The constituent Assets appear in the inventory below; the composition, containment, and wiring story lives on the dedicated [Microscope deployment](equipment/microscope.md) page.
-
-The sample positioning stack is modelled as a `SampleTower` Assembly + Fixture presenting as the `Positioner` Role, with the stages held in a literal-deep containment chain (each stage parents the one above). The composition, the containment chain, and the experiment-vs-loadout boundary (tomography, laminography, and mosaic are all Recipe Methods/Plans over one Fixture) live on the dedicated [Sample tower deployment](equipment/sample_tower.md) page.
-
-Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A` or the experiment hutch `2-BM-B`, declared per Device via `located_in_enclosure_id`. The Located-in column below records where each Device sits; the two hutches and the pre-flight gate they drive are on the [Enclosures](enclosures.md) page. The hutches are Enclosures, not Assets, so they do not appear as inventory rows.
+*The CORA Asset model for 2-BM: the flat `parent_id` device tree, each Family's affordances, the vendor Models behind the Assets, their settings, and engineering drawings.*
 
 ## Inventory
+
+The flat device tree under the `2-BM` root Asset (`tier = Unit`, bound to its Site Facility via `facility_code`; see [Model](../../architecture/model.md) for the aggregate shape). The Located-in column records each Device's hutch via `located_in_enclosure_id`, the optics hutch `2-BM-A` or the experiment hutch `2-BM-B`; the hutches are [Enclosures](enclosures.md), not Assets, so they are not rows. Two composed units appear as their constituent Assets, with the composition stories on their own pages: the [Microscope](equipment/microscope.md) detector (an Assembly + Fixture over an Optics sub-assembly, contained in one `Housing`) and the [Sample tower](equipment/sample_tower.md) positioning stack (a `SampleTower` Assembly + Fixture in a literal-deep containment chain).
 
 | Asset | Tier | Family | Parent | Located in |
 | --- | --- | --- | --- | --- |
@@ -22,7 +16,7 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `SampleStageDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `FrontEndDrive` | `Device` | `MotionController` | `2-BM` (a-station OMS VME58; drives the front-end optics band) | `2-BM-A` |
 | `Mirror` | `Device` | `Mirror` | `MirrorTable` (sits on the mirror table; driven by `FrontEndDrive`) | `2-BM-A` |
-| `MirrorTable` | `Device` | `Table` | `2-BM` (front-end support table `2bma:table1`; carries the `Mirror`; X axes driven by the energy-change IOC for stripe selection, bind X-surface only pending 2bm-docs#171) | `2-BM-A` |
+| `MirrorTable` | `Device` | `Table` | `2-BM` (front-end support table `2bma:table1`; carries the `Mirror`; X axes driven by the energy-change IOC for stripe selection) | `2-BM-A` |
 | `Monochromator` | `Device` | `Monochromator` | `2-BM` (driven by `FrontEndDrive`) | `2-BM-A` |
 | `Monochromator_BraggArmUpstream` | `Device` | `PseudoAxis` | `Monochromator` (energy-driven; LookupTable converts energy in keV to the upstream Bragg-arm angle in deg) | `2-BM-A` |
 | `Monochromator_BraggArmDownstream` | `Device` | `PseudoAxis` | `Monochromator` (energy-driven; downstream Bragg-arm angle in deg) | `2-BM-A` |
@@ -47,8 +41,8 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `LaminographyPitch` | `Device` | `TiltStage` | `Hexapod` (Kohzu SA16A goniometer `2bmb:m49`; tomography vs laminography is a tilt setpoint; driven by `SampleStageDrive`) | `2-BM-B` |
 | `PropagationDistanceDrive` | `Device` | `MotionController` | `2-BM` | `2-BM-B` |
 | `Timing` | `Device` | `TimingController` | `2-BM` (softGlueZynq trigger box; generates the camera trigger train via PSO, no `controller_id`) | `2-BM-B` |
-| `OpticsFineDrive` | `Device` | `MotionController` | `2-BM` (Jena NV100D piezo controller; drives deferred XY piezo optics axes, PIEZO-1/2) | `2-BM-B` |
-| `SampleFineDrive` | `Device` | `MotionController` | `2-BM` (Jena NV200D piezo controller; FPGA-stepped via `Timing`; drives deferred XY piezo axes, PIEZO-1/2) | `2-BM-B` |
+| `OpticsFineDrive` | `Device` | `MotionController` | `2-BM` (Jena NV100D piezo controller; drives deferred XY piezo optics axes) | `2-BM-B` |
+| `SampleFineDrive` | `Device` | `MotionController` | `2-BM` (Jena NV200D piezo controller; FPGA-stepped via `Timing`; drives deferred XY piezo axes) | `2-BM-B` |
 | `DetectorTable` | `Device` | `Table` | `2-BM` (detector support table `2bmb:table3`; carries the propagation-distance stage and the microscope `Housing`; `detector_z_rail_alignment` targets `.AX` / `.AY`) | `2-BM-B` |
 | `DetectorTable_X` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; translation along X; `2bmb:table3.X`) | `2-BM-B` |
 | `DetectorTable_Y` | `Device` | `PseudoAxis` | `DetectorTable` (IOC-computed virtual axis; translation along Y; `2bmb:table3.Y`) | `2-BM-B` |
@@ -84,9 +78,9 @@ Each Family declares a closed-enum set of operational primitives ([Affordances](
 | `Scintillator` | `Consumable` |
 | `Camera` | `Imageable`, `Binnable`, `Triggerable`, `Streamable`, `Recording` |
 | `Housing` | (empty; the containment chassis Family, no command surface; carried by the `Housing` Asset that parents the Microscope constituents and by `RotaryDriveChassis` that parents the `RotaryDrive` card) |
-| `Objective` | (pending: empty at initial registration) |
+| `Objective` | (empty at v1) |
 | `PseudoAxis` | (empty; partition rules live on `Asset.partition_rule`, not as affordances) |
-| `Table` | `Translatable`, `Rotatable` (the hutch support tables: `SampleTable` is translation-only, the detector and mirror tables add tilt axes. One `Table` Family across all three, confirmed by 2-BM staff (STAGE-8): the per-table axis set is a settings difference, not a Family split, see [Family settings schemas](#table)). Carries-other-equipment is `parent_id` placement, not an affordance; there is no Supporting affordance. All three (`SampleTable`, `DetectorTable`, `MirrorTable`) are seeded ([Inventory](#inventory)). |
+| `Table` | `Translatable`, `Rotatable` (the hutch support tables; `SampleTable` is translation-only, the detector and mirror tables add tilt axes. One Family spans all three, the per-table axis set being a settings difference, not a split; see [Family settings schemas](#table)). |
 | `Slit` | `Translatable`, `Homeable`, `Limitable` (four independently-driven blades; the ConditioningSlit and SampleSlit instances share this Family) |
 | `Mirror` | `Translatable`, `Homeable`, `Limitable` (vertical jacks set the deflection geometry; the coating stripe selector tracks energy and beam mode, see [Beam modes](procedures.md#beam-modes-mono-pink)) |
 | `Monochromator` | `Translatable`, `Homeable`, `Limitable` (the Bragg arms and the M2 vertical offset set the energy via an IOC coordinated move; insertable, bypassed in pink beam, see [Beam modes](procedures.md#beam-modes-mono-pink)) |
@@ -118,7 +112,7 @@ Per-Asset Model bindings carry the vendor identity that PIDINST Property 6 (Manu
 | `piezosystem_jena_nv100d` | Piezosystem Jena | `NV100D` | `MotionController` | `OpticsFineDrive` |
 | `piezosystem_jena_nv200d` | Piezosystem Jena | `NV200D/NET` | `MotionController` | `SampleFineDrive` |
 
-Model ids are derived deterministically from the `(manufacturer, part number)` key, so the same vendor product converges on one id across facilities. `oms_vme58` is that case here: `SampleStageDrive` and `FrontEndDrive` are two physical boards of one product line, so both bind the single `oms_vme58` row. Two drives shipped with `unknown-pending-confirmation` placeholders (a placeholder part number is not a real vendor key, so it falls back to a random id rather than colliding with another unconfirmed drive); both have since re-registered under their derived ids once operator confirmation identified them, the hexapod drive as the Aerotech Automation1-iXR3 (`aerotech_automation1_ixr3`) and the PropagationDistance drive as the Aerotech Ensemble HLe (`aerotech_ensemble_hle`), each replacing its earlier placeholder (DRIVE-4).
+Model ids are derived deterministically from the `(manufacturer, part number)` key, so the same vendor product converges on one id across facilities. `oms_vme58` is that case here: `SampleStageDrive` and `FrontEndDrive` are two physical boards of one product line, so both bind the single `oms_vme58` row.
 
 Part-number suffixes encode operationally significant variants: Aerotech `HEX300-230HL-E1-PL4-TAS` (`-E1` incremental encoder, `-PL4` ultra-high-accuracy preload, `-TAS` thermally stabilized), `ABRS-250MP-M-AS` (`ABRS` air-bearing rotary series, `-M` mid-precision class, `-AS` air-bearing-stage suffix), and `PRO225SL-1000` (`-1000` mm travel). The full type designation is stored as a single `part_number` string.
 
@@ -132,45 +126,15 @@ The five fully-wired `MotionController` Assets in the back-reference table below
 | `SampleStageDrive` | `SampleTop_X` (`2bmb:m18`), `SampleTop_Z` (`2bmb:m17`), and 89 further motors on crate `ioc2bmb` | `oms_vme58` | `SampleTop_X.controller_id`, `SampleTop_Z.controller_id` |
 | `FrontEndDrive` | the front-end optics on crate `ioc2bma`: `Mirror`, `Monochromator`, `ConditioningSlit`, `SampleSlit`, `Filter` | `oms_vme58` | `controller_id` on each of the five optics |
 
-The two OMS VME58 boards bind the same `oms_vme58` Model row (one product line, two physical boards); per-instance identity (serial number, firmware version) lives in each Asset's [Settings](#settings). `PropagationDistanceDrive` was resolved to the Aerotech Ensemble HLe (`aerotech_ensemble_hle`, `EnsembleHLe10-40-A-IO-MXH`) by operator confirmation (#162 DRIVE-4, 2026-06-16); `HexapodDrive` was resolved to the Aerotech Automation1-iXR3 by operator confirmation (#156).
+Per-instance identity (serial number, firmware version) for the controllers lives in each Asset's [Settings](#settings).
 
-The Microscope objective selector (`2bmb:m1`) and camera selector (`2bmb:m5`) are stepper motors, identified on the source page as a Nanotec `ST4118M1404-B` and a Schunk `LPTM 30`, driven through the `SampleStageDrive` OMS VME58 crate rather than through dedicated controller boxes. Whether to register those steppers as distinct controller Assets, or carry them as the selector stages' motors, is a deferred follow-on.
+The Microscope objective selector (`2bmb:m1`) and camera selector (`2bmb:m5`) are stepper motors (a Nanotec `ST4118M1404-B` and a Schunk `LPTM 30`) driven through the `SampleStageDrive` OMS VME58 crate rather than dedicated controller boxes, so they are carried as the selector stages' motors rather than as distinct controller Assets.
 
-The six `Hexapod_*` DoF facets are PseudoAxis Assets (virtual DoFs over the `2bmHXP` hexapod-kinematics solver) and do not bind to a vendor Model: the Model-binding flow (PIDINST) targets physical commissioned hardware, so the physical `Hexapod` carries the Model binding (`aerotech_hex300`) and the facets inherit vendor identity through the constituent wiring. The full six-DoF surface and its constituent-port wiring are described under [Hexapod DoF model](computed-axes.md#hexapod-dof-model). The Kohzu SA16A-RM goniometer (`LaminographyPitch`, `2bmb:m49`) is a SEPARATE, permanently-installed stage (staff source page `item_020`), not the hexapod's `Hexapod_Pitch` axis; tomography vs laminography is a tilt setpoint on it, not an insert/remove. `LaminographyPitch` is now registered as an Asset in the [Inventory](#inventory) (the `tilt` constituent of the [Sample tower](equipment/sample_tower.md)). Its Model `kohzu_sa16a` is in the [vendor catalog](../../catalog/index.md) and binds when the stack settings/model slice fills it in. The exact model is the operator working value pending confirmation (STAGE-6: the source swivel kit also lists `SA16A-RS` / `SA07A-R2L`).
-
-## Fine-positioning piezo controllers (Jena NV100D / NV200D)
-
-Two Piezosystem Jena piezo nanopositioning controllers are registered as `MotionController` Assets: `OpticsFineDrive` (Jena NV100D, staff item_027) for fine optics positioning reached from the `mct_optics` screen, and `SampleFineDrive` (Jena NV200D/NET, staff item_028) whose two piezo axes step under FPGA trigger control during tomography acquisition. Both run EPICS IOCs on the host `arcturus` (`JenaNV100D` / `JenaNV200D`), drive two piezo axes each (X/Y), and are network-attached through two static IPs per box (recorded once confirmed, PIEZO-4).
-
-Only the controller boxes are modelled in this slice. The driven XY piezo `LinearStage` axes, their containment, and the controllers' final names are deferred: an Asset name must say what it positions, and the item pages do not record which physical element each piezo moves or the scan use-case. That world-fact (PIEZO-1) finalises both the axis Assets (PIEZO-2) and the two provisional controller names. `OpticsFineDrive` is grounded in the `mct_optics` association; `SampleFineDrive` is a best-guess label (the NV200D complements the optics NV100D, so its driven element may be optics- or detector-side rather than the sample) and will be renamed if PIEZO-1 says otherwise.
-
-### NV200D trigger wiring
-
-The NV200D is stepped by the already-modelled softGlueZynq `Timing` box: the FPGA emits a TTL pulse on a camera-readout boundary that advances the piezo to its next preloaded position (up to 1024 positions per axis). The two trigger legs are modelled as ports on the boxes and wires resolved at Plan-bind time, mirroring the [hexapod constituent wiring](computed-axes.md#constituent-port-wiring):
-
-| Asset | Port | Direction | `signal_type` |
-| --- | --- | --- | --- |
-| `Timing` | `out2`, `out3` | OUTPUT | `step_trigger_ttl` |
-| `SampleFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
-
-Two wires carry the trigger: `Timing.out2 -> SampleFineDrive.step_x_in` and `Timing.out3 -> SampleFineDrive.step_y_in` (the JenaX and JenaY coaxial cables land on FPGA `out2` and `out3` per item_028). Each leg has a softGlue gate-delay PV set to the exposure time plus a margin: `2bmbMZ1:SG:GateDly-3_DLY` and `2bmbMZ1:SG:GateDly-2_DLY`. The delay-PV labels read `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses the cable-to-output map above; the apparent cross is recorded verbatim and flagged for confirmation (PIEZO-5). `signal_type = step_trigger_ttl` is a working free-text value (ports are open-vocabulary, up to 50 characters); it is distinct from the camera's `TriggerIn` because this edge advances a motion step rather than starting an exposure. The ports sit on the controller box in this slice; they migrate onto the per-axis Assets when those are registered. `OpticsFineDrive` (NV100D) carries no trigger input: item_027 describes no FPGA stepping for it.
-
-### Camera trigger wiring
-
-The camera trigger is the headline path of [item_060](https://docs2bm.readthedocs.io/en/latest/source/ops/item_060.html): the `Timing` box generates the trigger pulse train and routes it (the raw PSO train, or the `trigILF` subset selected by `MUX2-1`) through to the camera, where each edge starts an exposure. The durable leg is modelled as ports plus a wire resolved at Plan-bind time, the same idiom as the [NV200D legs](#nv200d-trigger-wiring) above; the [Microscope](equipment/microscope.md) carries no blueprint wire for it, because the camera trigger arrives from an external timing source wired at the Plan level:
-
-| Asset | Port | Direction | `signal_type` |
-| --- | --- | --- | --- |
-| `Timing` | `camera_trigger_out` | OUTPUT | `frame_trigger_ttl` |
-| `Camera` | `trigger_in` | INPUT | `frame_trigger_ttl` |
-
-One wire carries the trigger: `Timing.camera_trigger_out -> Camera.trigger_in`. `signal_type = frame_trigger_ttl` is deliberately distinct from the piezo legs' `step_trigger_ttl`: this edge starts an exposure, not a motion step. The `Camera` carries the `Triggerable` affordance, so `trigger_in` is its consumed `TriggerIn` signal. The executable model is `apps/api/tests/integration/scenarios/test_2bm_trigger_wiring.py`, which wires this leg alongside the two piezo legs and validates all three at Plan-bind time.
-
-Two labels on this leg stay open for 2-BM staff (`TIME-2`): the exact FPGA output channel feeding the camera (the path string ends at the camera's `Line2` input but names no box-side output, so `camera_trigger_out` is the CORA-side port name pending that number), and the `GateDly1` block name (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028, whereas `GateDly1` is so far unconfirmed). softGlue gate-delay `Width` and `DLY` are counted in 10 MHz clock cycles (100 ns per count, so `Width = 100` is a 10 us pulse, item_060); the concrete per-scan values are Method / Plan configuration, not Asset state.
+The six `Hexapod_*` DoF facets are PseudoAxis Assets and bind no vendor Model: PIDINST targets physical commissioned hardware, so the physical `Hexapod` carries the binding (`aerotech_hex300`) and the facets inherit vendor identity through the constituent wiring (see [Hexapod DoF model](computed-axes.md#hexapod-dof-model)). `LaminographyPitch` is a separate permanently-installed Kohzu goniometer, not a hexapod DoF; its composition and the working `kohzu_sa16a` model binding are on the [Sample tower](equipment/sample_tower.md) page.
 
 ## Family settings schemas
 
-NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: the 2-BM detector classes (the active FLIR Oryx and the decommissioned PCO Dimax) differ along settings axes (`max_framerate_hz`, `sensor_kind`, `readout_mode`), not Family axes, so the high-framerate variant stays a `Camera` rather than a separate Family. `PseudoAxis` carries no settings schema (it is a facet Family).
+NEW schemas registered for the 2-BM deployment. The `RotaryStage`, `LinearStage`, and `Scintillator` schemas are declared at the [APS Site assets](../aps/assets.md) level once a second beamline uses them; today they remain implicit in the per-Asset [Settings](#settings) values below. The `Camera` schema is made explicit below: 2-BM runs two live `Camera`-Family Assets, the 5 MP FLIR Oryx (`Camera`) and the 31 MP FLIR Oryx (`Camera_HighRes`), which differ along settings axes (sensor size, frame rate), not Family axes, so a detector variant stays a `Camera` rather than a separate Family. `PseudoAxis` carries no settings schema (it is a facet Family).
 
 ### `Objective`
 
@@ -185,7 +149,7 @@ Intrinsic per-lens properties. Motion is via the lens turret motor wired into th
 
 ### `Hexapod`
 
-Operational envelope of a 6-DoF parallel-kinematic positioner. The schema captures the vendor-published envelope (per-DoF travel, speed, resolution, accuracy, load capacity) without exploding the legs as sub-Assets (vendor-sealed unit; inverse kinematics runs in controller firmware, not in CORA). DoF-level addressability is realized by six per-DoF PseudoAxis sub-modules (`Hexapod_X` ... `Hexapod_Yaw`) parented to this Hexapod, each carrying a `SolverReference` partition rule and wired to a hexapod feedback port; see [Constituent-port wiring](computed-axes.md#constituent-port-wiring). The envelope below stays the single contract for the physical unit; the DoF facets carry no settings of their own.
+Operational envelope of a 6-DoF parallel-kinematic positioner. The schema captures the vendor-published envelope (per-DoF travel, speed, resolution, accuracy, load capacity) without exploding the legs as sub-Assets (vendor-sealed unit; inverse kinematics runs in controller firmware, not in CORA). DoF-level addressability is realized by six per-DoF PseudoAxis sub-modules (`Hexapod_X` ... `Hexapod_Yaw`) parented to this Hexapod, each carrying a `SolverReference` partition rule and wired to a hexapod feedback port; see [Constituent-port wiring](computed-axes.md#constituent-port-wiring). Today only four of the six are exposed as 2-BM operator channels: `Hexapod_Z` and `Hexapod_Yaw` are modelled but not wired in the current EPICS, a deployment-configuration limit, not a device one (see [Hexapod DoF model](computed-axes.md#hexapod-dof-model)). The envelope below stays the single contract for the physical unit; the DoF facets carry no settings of their own.
 
 | Setting | Type | Unit | Notes |
 | --- | --- | --- | --- |
@@ -205,7 +169,7 @@ Operational envelope of a 6-DoF parallel-kinematic positioner. The schema captur
 | `load_capacity_horizontal` | number > 0 | kg | rated load with platform vertical |
 | `stage_mass` | number > 0 | kg | bare platform mass (excludes mounted payload) |
 
-The `max_speed_*`, `resolution_*`, and `accuracy_*` pairs collapse the six per-DoF measurements to two values per metric; the vendor datasheet's per-DoF variation is small enough that the dominant-DoF figure is a faithful envelope. The six per-DoF PseudoAxis facets (`Hexapod_X` ... `Hexapod_Yaw`) are the surface a Method binds against when it addresses a single DoF; this schema stays the envelope contract for the physical unit, and the facets carry no settings of their own.
+The `max_speed_*`, `resolution_*`, and `accuracy_*` pairs collapse the six per-DoF measurements to two values per metric; the vendor datasheet's per-DoF variation is small enough that the dominant-DoF figure is a faithful envelope.
 
 ### `MotionController`
 
@@ -223,7 +187,7 @@ Identity, configuration, and connectivity of a separately-modelled drive-electro
 
 ### `TimingController`
 
-Identity, configuration, and connectivity of a separately-modelled timing-signal box. The driven device (the camera) carries the `Triggerable` affordance; the timing box carries `Pulsing` (via the `Controller` Role) because it is the active generator of the trigger pulse train. This schema backs the registered `Timing` Asset ([Settings](#timing)); the per-box values land via `update_asset_settings` once 2-BM staff confirms the physical softGlueZynq box (`TIME-1`).
+Identity, configuration, and connectivity of a separately-modelled timing-signal box. The driven device (the camera) carries the `Triggerable` affordance; the timing box carries `Pulsing` (via the `Controller` Role) because it is the active generator of the trigger pulse train. This schema backs the registered `Timing` Asset ([Settings](#timing)); the per-box values land via `update_asset_settings` once 2-BM staff confirms the physical softGlueZynq box.
 
 | Setting | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -237,7 +201,7 @@ The durable trigger wiring (the box's output ports and the Plan wires routing th
 
 ### `Camera`
 
-Intrinsic detector properties, made explicit at 2-BM because a second detector class (the high-framerate PCO Dimax) shares the `Camera` Family with the FLIR Oryx and differs only along settings axes. The first four fields formalize what the per-Asset Settings already carry; the last three are the extension that lets one `Camera` Family span both detectors (variant-as-settings, not variant-as-subtype).
+Intrinsic detector properties, made explicit at 2-BM because more than one detector shares the `Camera` Family and they differ only along settings axes: two live FLIR Oryx Assets (the 5 MP `Camera` and the 31 MP `Camera_HighRes`) plus, in provenance, the decommissioned high-speed PCO Dimax. The first four fields formalize what the per-Asset Settings already carry; the last three are the extension that lets one `Camera` Family span these variants (variant-as-settings, not variant-as-subtype).
 
 | Setting | Type | Unit | Notes |
 | --- | --- | --- | --- |
@@ -245,13 +209,13 @@ Intrinsic detector properties, made explicit at 2-BM because a second detector c
 | `sensor_height` | integer > 0 | pixel | Active sensor rows. |
 | `pixel_size` | number > 0 | um | Physical sensor pixel pitch (before optical magnification). |
 | `bit_depth` | integer > 0 | bit | ADC bit depth per pixel. |
-| `max_framerate_hz` | number > 0 | Hz | Full-frame maximum frame rate; the axis that distinguishes a high-speed PCO Dimax from a general-purpose Oryx without a separate Family. |
+| `max_framerate_hz` | number > 0 | Hz | Full-frame maximum frame rate; the axis that distinguishes a high-frame-rate detector (such as the decommissioned PCO Dimax) from a general-purpose Oryx without a separate Family. |
 | `sensor_kind` | closed enum: `CMOS \| sCMOS \| CCD \| EMCCD` | | Sensor architecture. Four known values; add-only enum. |
 | `readout_mode` | closed enum: `RollingShutter \| GlobalShutter` | | Shutter / readout architecture; governs motion-blur behaviour under triggered fly-scans. |
 
 ### `Table`
 
-The support/positioning table Family (the hutch optical tables; staff name it in the [2-BM components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html)). One Family spans three 2-BM tables that differ only along a settings axis (the motor/axis layout), not a Family axis, so it is one `Table` Family rather than a split (confirmed by 2-BM staff, STAGE-8): `SampleTable` (four direct translation motors, no combined record), `DetectorTable` (six virtual axes on record `2bmb:table3`, computed from six support motors in an SRI 3-Y / 2-X / 1-Z geometry), and `MirrorTable` (`2bma:table1`, also a six-axis SRI table), whose X axes (`M0X` / `M2X`) are driven by the energy-change IOC for stripe selection (staff confirmed it is in operational use, not unused, STAGE-7). The Family carries motion affordances for the axes a given table drives; the carries-other-equipment relationship is `Asset.parent_id` placement, not an affordance. All three are in the [Inventory](#inventory) with schema-validated settings (each carries an enforced `axis_layout`; see the per-Asset [Settings](#settings) blocks). `DetectorTable`'s six virtual axes are modelled as PseudoAxis sub-Assets (see [Detector table axes](computed-axes.md#detector-table-axes)); `MirrorTable`'s axes remain a deferred follow-up (X-surface-only pending 2bm-docs#171). The EPICS handles (the virtual record and per-axis or support-motor PVs) live in each Asset's `alternate_identifiers`, not in the schema.
+The support/positioning table Family (the hutch optical tables; staff name it in the [2-BM components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html)). One Family spans three 2-BM tables that differ only along a settings axis (the motor/axis layout), not a Family axis, so it is one `Table` Family rather than a split (confirmed by 2-BM staff): `SampleTable` (four direct translation motors, no combined record), `DetectorTable` (six virtual axes on record `2bmb:table3`, computed from six support motors in an SRI 3-Y / 2-X / 1-Z geometry), and `MirrorTable` (`2bma:table1`, also a six-axis SRI table), whose X axes (`M0X` / `M2X`) are driven by the energy-change IOC for stripe selection (in operational use, staff-confirmed). The Family carries motion affordances for the axes a given table drives; the carries-other-equipment relationship is `Asset.parent_id` placement, not an affordance. All three are in the [Inventory](#inventory) with schema-validated settings (each carries an enforced `axis_layout`; see the per-Asset [Settings](#settings) blocks). `DetectorTable`'s six virtual axes are modelled as PseudoAxis sub-Assets (see [Detector table axes](computed-axes.md#detector-table-axes)); `MirrorTable`'s axes remain a deferred follow-up (see [MirrorTable settings](#mirrortable)). The EPICS handles (the virtual record and per-axis or support-motor PVs) live in each Asset's `alternate_identifiers`, not in the schema.
 
 | Setting | Type | Notes |
 | --- | --- | --- |
@@ -259,7 +223,7 @@ The support/positioning table Family (the hutch optical tables; staff name it in
 | `virtual_record` | string, optional | The composite EPICS record when the table exposes one (`2bmb:table3`, `2bma:table1`); absent for the sample table, which addresses its four motors directly. |
 | `geometry` | string, optional | Support-point layout when the axes are computed from support motors (for example, SRI 3 Y-supports / 2 X-supports / 1 Z-support). |
 
-The composite tables expose three virtual tilt axes (`.AX` / `.AY` / `.AZ`). 2-BM staff confirmed the mapping (STAGE-9): `.AX` = pitch (rotation about lab-X), `.AY` = yaw (about lab-Y), `.AZ` = roll (about beam Z); the `detector_z_rail_alignment` Procedure drives `2bmb:table3.AX` / `.AY` by these names, and the same convention applies to `2bma:table1`. One caveat constrains `MirrorTable`: its `M1Y` macro is a known IOC substitution error (mapped to the in-vacuum stripe-selector motor `2bma:m3`, not a table Y support; tracked in 2bm-docs#171), so only the table-X surface (`M0X` / `M2X`) is safe to drive until that is fixed, and the composite Y / `.AX` / `.AY` axes are not.
+The composite tables expose three virtual tilt axes (`.AX` = pitch, `.AY` = yaw, `.AZ` = roll, staff-confirmed); the per-axis modelling is on [Detector table axes](computed-axes.md#detector-table-axes). The `MirrorTable` caveat (only the table-X surface is safe to drive today) is on its [settings block](#mirrortable).
 
 ## Settings
 
@@ -283,7 +247,7 @@ The detector optical table (six virtual axes on record `2bmb:table3`, computed f
 
 ### `MirrorTable`
 
-The front-end mirror optical table (record `2bma:table1`). `axis_layout = virtual_pose`; its X axes (`M0X` / `M2X`) are driven by the energy-change IOC for stripe selection. Bind the table-X surface only until the `M1Y = 2bma:m3` IOC substitution error (2bm-docs#171) is fixed.
+The front-end mirror optical table (record `2bma:table1`). `axis_layout = virtual_pose`; its X axes (`M0X` / `M2X`) are driven by the energy-change IOC for stripe selection. Bind the table-X surface only until the `M1Y = 2bma:m3` IOC substitution error is fixed.
 
 | Setting | Value |
 | --- | --- |
@@ -293,7 +257,7 @@ The front-end mirror optical table (record `2bma:table1`). `axis_layout = virtua
 
 ### `RotaryDrive`
 
-Bound to Model `aerotech_ensemble_ml` (Aerotech Ensemble ML 10-40-IO-MXH digital drive; Multi-Loop subseries, with the `-IO-` option, corrected from the catalog Ensemble HLe by operator confirmation, #162 DRIVE-4), drives `Rotary` (back-reference on `Rotary.controller_id`). The serial number below was confirmed by operator hardware-label readings (#161 DRIVE-1); the `firmware_version` placeholder lands via `update_asset_settings` once a vendor-utility session confirms it (DRIVE-2), as for the other drives.
+Bound to Model `aerotech_ensemble_ml` (Aerotech Ensemble ML 10-40-IO-MXH digital drive; Multi-Loop subseries, with the `-IO-` option, corrected from the catalog Ensemble HLe by operator confirmation), drives `Rotary` (back-reference on `Rotary.controller_id`). The serial number below was confirmed by operator hardware-label readings; the `firmware_version` placeholder lands via `update_asset_settings` once a vendor-utility session confirms it, as for the other drives.
 
 The drive card is installed in `RotaryDriveChassis` (see below): `RotaryDrive.parent_id` points at that chassis. The chassis identity (its own serial number, order number, and drawing) lives on that Asset, not overloaded onto this drive.
 
@@ -306,7 +270,7 @@ The drive card is installed in `RotaryDriveChassis` (see below): `RotaryDrive.pa
 
 ### `RotaryDriveChassis`
 
-Bound to Model `aerotech_tm3a` (Aerotech TM3-A power and distribution chassis), Family `Housing` (the containment-chassis Family). This is the chassis the `RotaryDrive` Ensemble ML card is installed in: it provides the DC bus (two 20 V segments), the integrated 24 V PS24-1 supply, US 115 VAC input, and Aeronet distribution to the ML drive cards via slots C1ML and C2ML. It is inventory-only (no command surface), and it parents `RotaryDrive` via `parent_id`. The chassis is a separate physical thing from the drive card, so its identity lives here rather than as cross-references on the drive: the per-unit serial number and the vendor order number are carried in `alternate_identifiers`, and the build-to document `630D2079 REV-H` is the canonical [Drawing](#engineering-drawings). Recording the chassis as its own Asset (rather than folding its identifiers onto `RotaryDrive`) follows the identity-bearing-component convention; see [issue #162](https://github.com/xmap/cora/issues/162).
+Bound to Model `aerotech_tm3a` (Aerotech TM3-A power and distribution chassis), Family `Housing` (the containment-chassis Family). This is the chassis the `RotaryDrive` Ensemble ML card is installed in: it provides the DC bus (two 20 V segments), the integrated 24 V PS24-1 supply, US 115 VAC input, and Aeronet distribution to the ML drive cards via slots C1ML and C2ML. It is inventory-only (no command surface), and it parents `RotaryDrive` via `parent_id`. The chassis is a separate physical thing from the drive card, so its identity lives here rather than as cross-references on the drive: the per-unit serial number and the vendor order number are carried in `alternate_identifiers`, and the build-to document `630D2079 REV-H` is the canonical [Drawing](#engineering-drawings). Recording the chassis as its own Asset (rather than folding its identifiers onto `RotaryDrive`) follows the identity-bearing-component convention.
 
 | Alternate identifier | Kind | Value |
 | --- | --- | --- |
@@ -315,7 +279,7 @@ Bound to Model `aerotech_tm3a` (Aerotech TM3-A power and distribution chassis), 
 
 ### `PropagationDistanceDrive`
 
-Bound to Model `aerotech_ensemble_hle` (Aerotech Ensemble HLe 10-40-A-IO-MXH digital drive; resolved from the `unknown-pending-confirmation` placeholder by operator confirmation 2026-06-16, #162 DRIVE-4), drives `PropagationDistance` (back-reference on `PropagationDistance.controller_id`). Operators address the propagation-distance stage via `2bmbAERO:m1` (IOC name + channel). The IOC is software (an EPICS process); the Asset modelled here is the hardware drive box behind it, so the IOC handle `2bmbAERO` lives in `alternate_identifiers` (kind `EPICS_PV`), not in the name. `axis_count=1` reflects the 1:1 binding to the single propagation-distance stage; `protocol=Aerotech_Native` matches the other Aerotech drives. The serial number below was confirmed by operator hardware-label readings (#161 DRIVE-1); `firmware_version` is still pending a vendor-utility session (DRIVE-2).
+Bound to Model `aerotech_ensemble_hle` (Aerotech Ensemble HLe 10-40-A-IO-MXH digital drive; resolved from the `unknown-pending-confirmation` placeholder by operator confirmation 2026-06-16), drives `PropagationDistance` (back-reference on `PropagationDistance.controller_id`). Operators address the propagation-distance stage via `2bmbAERO:m1` (IOC name + channel). The IOC is software (an EPICS process); the Asset modelled here is the hardware drive box behind it, so the IOC handle `2bmbAERO` lives in `alternate_identifiers` (kind `EPICS_PV`), not in the name. `axis_count=1` reflects the 1:1 binding to the single propagation-distance stage; `protocol=Aerotech_Native` matches the other Aerotech drives. The serial number below was confirmed by operator hardware-label readings; `firmware_version` is still pending a vendor-utility session.
 
 | Setting | Value |
 | --- | --- |
@@ -348,7 +312,7 @@ Bound to Model `oms_vme58` (same product line as `SampleStageDrive`; one Model r
 
 ### `HexapodDrive`
 
-Bound to Model `aerotech_automation1_ixr3`, drives `Hexapod` (back-reference on `Hexapod.controller_id`). Operator confirmation (2026-06-15, issue #156) identified the drive as an Aerotech Automation1-iXR3 in a separate rack (not sealed into the HexGen 300 housing), serial number `486125-01`, resolving the `unknown-pending-confirmation` placeholder and the HexapodDrive half of DRIVE-4; the real vendor key re-mints the deterministic Model id. The "native Aerotech Ensemble" EPICS interface handle lives in `alternate_identifiers`. `axis_count=6` reflects the hexapod's six degrees of freedom; the firmware version is still pending (DRIVE-2).
+Bound to Model `aerotech_automation1_ixr3`, drives `Hexapod` (back-reference on `Hexapod.controller_id`). Operator confirmation (2026-06-15) identified the drive as an Aerotech Automation1-iXR3 in a separate rack (not sealed into the HexGen 300 housing), serial number `486125-01`, resolving the `unknown-pending-confirmation` placeholder; the real vendor key re-mints the deterministic Model id. The "native Aerotech Ensemble" EPICS interface handle lives in `alternate_identifiers`. `axis_count=6` reflects the hexapod's six degrees of freedom; the firmware version is still pending.
 
 | Setting | Value |
 | --- | --- |
@@ -361,7 +325,7 @@ Bound to Model `aerotech_automation1_ixr3`, drives `Hexapod` (back-reference on 
 
 The softGlueZynq FPGA timing box (`2bmbMZ1:SG:`) that generates the camera trigger pulse train (`{PSO, trigILF} -> MUX2-1 -> GateDly1 -> camera Line2`, where `MUX2-1` is a 2:1 selector routing either the raw PSO train or the `trigILF` subset of PSO pulses to the camera, set per scan via `MUX2-1_SEL_Signal`, item_060). It carries the `Pulsing` affordance via the `Controller` Role and, unlike a `MotionController`, is itself the actor (the pulse generator), not a driven device, so it carries no `controller_id`. Substrate ("FPGA") is not a Family axis: the box is a `TimingController` whose identity and gateware (bitstream) version live in `settings`, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
 
-The placeholders below land via `update_asset_settings` once 2-BM staff confirm the physical box (`TIME-1`). For an FPGA box the gateware/bitstream version is the reproducibility-critical field: the trigger logic can change between Runs, so a Run cannot answer "did the timing change between Run X and Run Y" without it.
+The placeholders below land via `update_asset_settings` once 2-BM staff confirm the physical box. For an FPGA box the gateware/bitstream version is the reproducibility-critical field: the trigger logic can change between Runs, so a Run cannot answer "did the timing change between Run X and Run Y" without it.
 
 | Setting | Value |
 | --- | --- |
@@ -374,13 +338,13 @@ The durable trigger wiring is modelled as ports plus Plan wires ([Camera trigger
 
 ### `Rotary`
 
-Bound to Model `aerotech_abrs250mp`. Aerotech ABRS-250MP-M-AS air-bearing direct-drive rotary stage (250 mm aperture, mid-precision class), driven by `RotaryDrive` (referenced via `Rotary.controller_id`). Operator confirmation (2026-06-15, issue #156) corrected the part number from the catalog typo `ABS250MP-M-AS` to the hardware-label value `ABRS-250MP-M-AS` (the ABRS air-bearing-rotary series), which re-mints the deterministic Model id. Per-unit identity is now on record: serial number `146853-A-1-1-X` in `alternate_identifiers`, and the vendor engineering drawing `630C2125 REV (-)` (see [Engineering drawings](#engineering-drawings)).
+Bound to Model `aerotech_abrs250mp`. Aerotech ABRS-250MP-M-AS air-bearing direct-drive rotary stage (250 mm aperture, mid-precision class), driven by `RotaryDrive` (referenced via `Rotary.controller_id`). Operator confirmation (2026-06-15) corrected the part number from the catalog typo `ABS250MP-M-AS` to the hardware-label value `ABRS-250MP-M-AS` (the ABRS air-bearing-rotary series), which re-mints the deterministic Model id. Per-unit identity is now on record: serial number `146853-A-1-1-X` in `alternate_identifiers`, and the vendor engineering drawing `630C2125 REV (-)` (see [Engineering drawings](#engineering-drawings)).
 
-The `encoder_resolution` below is taken from the Ensemble encoder table on the staff [sample motor stack page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_050.html) (`item_050`): the stage reports 532800 encoder pulses per revolution (11840 lines/rev x 45 scale factor), so 360 deg / 532800 = 0.000676 deg per count. This replaces an earlier unsourced `0.0001 deg` value; operator confirmation is tracked as STAGE-10.
+The `encoder_resolution` below is taken from the Ensemble encoder table on the staff [sample motor stack page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_050.html) (`item_050`): the stage reports 532800 encoder pulses per revolution (11840 lines/rev x 45 scale factor), so 360 deg / 532800 = 0.000676 deg per count. This replaces an earlier unsourced `0.0001 deg` value, pending operator confirmation.
 
 | Setting | Value |
 | --- | --- |
-| `min_position` | `−360 deg` |
+| `min_position` | `-360 deg` |
 | `max_position` | `360 deg` |
 | `max_speed` | `720 deg/s` |
 | `encoder_resolution` | `0.000676 deg` |
@@ -392,14 +356,14 @@ Bound to Model `kohzu_cyat070`, driven by `SampleStageDrive` (referenced via `Sa
 
 | Setting | Value |
 | --- | --- |
-| `min_position` | `−10 mm` |
+| `min_position` | `-10 mm` |
 | `max_position` | `10 mm` |
 | `max_speed` | `1 mm/s` |
 | `encoder_resolution` | `0.0005 mm` |
 
 ### `Hexapod`
 
-Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexapod.controller_id`). The physical unit's serial number is `486060-01` (operator-confirmed 2026-06-15, issue #156; carried in `alternate_identifiers`). Values from the Aerotech HEX300-230HL product datasheet (Hex300-Data-Sheet-D20250203). Per-DoF figures collapse to the dominant axis where the vendor's range across DoFs fits within a faithful envelope (e.g., translation accuracy reported as the laxest of X / Y / Z).
+Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexapod.controller_id`). The physical unit's serial number is `486060-01` (operator-confirmed 2026-06-15; carried in `alternate_identifiers`). Values from the Aerotech HEX300-230HL product datasheet (Hex300-Data-Sheet-D20250203). Per-DoF figures collapse to the dominant axis where the vendor's range across DoFs fits within a faithful envelope (e.g., translation accuracy reported as the laxest of X / Y / Z).
 
 | Setting | Value |
 | --- | --- |
@@ -428,7 +392,7 @@ Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexa
 
 ### `Camera`
 
-The active 5 MP FLIR Oryx, confirmed by 2-BM staff (DET-8): a Sony IMX250 CMOS global-shutter sensor, IOC-reported model `Oryx ORX-10G-51S5M`, serial number `19173710`, firmware `1710.0.0.0`. The per-unit serial lives in the Camera Asset's `alternate_identifiers` (kind `SerialNumber`); the firmware version is per-unit identity recorded alongside it (the `Camera` schema carries no firmware field, unlike the controller schemas). The camera's EPICS channel prefix `2bmSP1:` lives in `alternate_identifiers` (kind `EPICS_PV`), the same convention each drive uses for its IOC handle (for example `2bmbAERO` on `PropagationDistanceDrive`): it is the addressing channel operators reach the camera through, distinct from the driver software running behind it. The areaDetector / Spinnaker SDK, driver, and ADCore versions are IOC-deployment state, not Camera-Asset state, and are not recorded here.
+The active 5 MP FLIR Oryx, confirmed by 2-BM staff: a Sony IMX250 CMOS global-shutter sensor, IOC-reported model `Oryx ORX-10G-51S5M`, serial number `19173710`, firmware `1710.0.0.0`. The per-unit serial lives in the Camera Asset's `alternate_identifiers` (kind `SerialNumber`); the firmware version is per-unit identity recorded alongside it (the `Camera` schema carries no firmware field, unlike the controller schemas). The camera's EPICS channel prefix `2bmSP1:` lives in `alternate_identifiers` (kind `EPICS_PV`), the same convention each drive uses for its IOC handle (for example `2bmbAERO` on `PropagationDistanceDrive`): it is the addressing channel operators reach the camera through, distinct from the driver software running behind it. The areaDetector / Spinnaker SDK, driver, and ADCore versions are IOC-deployment state, not Camera-Asset state, and are not recorded here.
 
 | Setting | Value |
 | --- | --- |
@@ -442,7 +406,7 @@ The active 5 MP FLIR Oryx, confirmed by 2-BM staff (DET-8): a Sony IMX250 CMOS g
 
 ### `Camera_HighRes`
 
-The alternate FLIR Oryx 31 MP, the camera the validated `detector_z_rail_alignment` ran on. Per-unit identity is confirmed (DET-8): IOC-reported model `Oryx ORX-10G-310S9M`, serial number `22150530`, firmware `1904.0.72.0`, bound to catalog Model `flir_oryx_31mp`; the serial, firmware, and the EPICS prefix `2bmSP2:` live in the Asset's `alternate_identifiers`. The `Camera_Selector` switches the optical path between this camera and the 5 MP `Camera`, so it is registered under the `Housing` but is not bound into the single-camera Microscope Fixture. Its pixel pitch is the same `3.45 um` as the 5 MP unit (staff `2bm-procedures`); the remaining `Camera`-schema settings (`sensor_width`, `sensor_height`, `bit_depth`, and the extended `max_framerate_hz` / `sensor_kind` / `readout_mode`) are not yet on file, so the Asset is registered identity-only with settings pending (DET-13).
+The alternate FLIR Oryx 31 MP, the camera the validated `detector_z_rail_alignment` ran on. Per-unit identity is confirmed: IOC-reported model `Oryx ORX-10G-310S9M`, serial number `22150530`, firmware `1904.0.72.0`, bound to catalog Model `flir_oryx_31mp`; the serial, firmware, and the EPICS prefix `2bmSP2:` live in the Asset's `alternate_identifiers`. The `Camera_Selector` switches the optical path between this camera and the 5 MP `Camera`, so it is registered under the `Housing` but is not bound into the single-camera Microscope Fixture. Its pixel pitch is the same `3.45 um` as the 5 MP unit (staff `2bm-procedures`); the remaining `Camera`-schema settings (`sensor_width`, `sensor_height`, `bit_depth`, and the extended `max_framerate_hz` / `sensor_kind` / `readout_mode`) are not yet on file, so the Asset is registered identity-only with settings pending.
 
 ### `Camera_Selector`
 
@@ -489,7 +453,7 @@ The Schunk LPTM 30 translation stage with folding mirrors that selects camera 0 
 
 Each Asset may carry one canonical engineering reference as a `(system, number, revision)` triple per the [Drawing VO](../../architecture/modules/equipment/index.md). The carrier holds the build-to document for the physical specimen; the [Mount drawing](equipment/microscope.md#calibration-drawings-and-citation) on the slot is a separate document (where the slot lives in the beamline).
 
-Assets not listed below have no canonical document cited on the 2-BM source page yet (Kohzu `CYAT-070` datasheet for the four `SampleTop_*` stages, an APS shutter drawing for `StationShutter`, and a FLIR Oryx datasheet for `Camera`). These populate when the operator confirms the canonical reference.
+Assets not listed below have no canonical document cited on the 2-BM source page yet (Kohzu `CYAT-070` datasheet for the two `SampleTop_*` stages, an APS shutter drawing for `StationShutter`, and a FLIR Oryx datasheet for `Camera`). These populate when the operator confirms the canonical reference.
 
 ### `Hexapod`
 
@@ -509,7 +473,7 @@ Aerotech HEX300-230HL hexapod product datasheet (Hex300-Data-Sheet-D20250203.pdf
 | `number` | `630C2125` |
 | `revision` | `(-)` |
 
-Aerotech vendor-issued engineering drawing for the `ABRS-250MP-M-AS` rotary stage (operator-confirmed 2026-06-15, issue #156). Serves as the canonical reference until an `ABRS-250MP` datasheet PDF is also obtained.
+Aerotech vendor-issued engineering drawing for the `ABRS-250MP-M-AS` rotary stage (operator-confirmed 2026-06-15). Serves as the canonical reference until an `ABRS-250MP` datasheet PDF is also obtained.
 
 ### `RotaryDriveChassis`
 
@@ -519,7 +483,7 @@ Aerotech vendor-issued engineering drawing for the `ABRS-250MP-M-AS` rotary stag
 | `number` | `630D2079` |
 | `revision` | `H` |
 
-Aerotech build-to drawing for the TM3-A chassis that houses the `RotaryDrive` Ensemble ML card (operator label `630D2079 REV-H`, operator-confirmed, #162 DRIVE-4).
+Aerotech build-to drawing for the TM3-A chassis that houses the `RotaryDrive` Ensemble ML card (operator label `630D2079 REV-H`, operator-confirmed).
 
 ### `PropagationDistance`
 
@@ -573,11 +537,43 @@ v1 attaches the housing manual as the canonical reference; the Mitutoyo MPLAPO L
 | `number` | `MAN-11863` |
 | `revision` | `0521-0465-A` |
 
+## Signal wiring (ports and Plan wires)
+
+Trigger and step signals between Assets are modelled as typed ports plus wires resolved at Plan-bind time, the same idiom as the [hexapod constituent wiring](computed-axes.md#constituent-port-wiring). The executable model is `apps/api/tests/integration/scenarios/test_2bm_trigger_wiring.py`, which wires the camera and piezo legs and validates them at Plan-bind time.
+
+### Fine-positioning piezo controllers (Jena NV100D / NV200D)
+
+Two Piezosystem Jena piezo nanopositioning controllers are registered as `MotionController` Assets: `OpticsFineDrive` (Jena NV100D, staff item_027) for fine optics positioning reached from the `mct_optics` screen, and `SampleFineDrive` (Jena NV200D/NET, staff item_028) whose two piezo axes step under FPGA trigger control during tomography acquisition. Both run EPICS IOCs on the host `arcturus` (`JenaNV100D` / `JenaNV200D`), drive two piezo axes each (X/Y), and are network-attached through two static IPs per box (recorded once confirmed).
+
+Only the controller boxes are modelled today; the driven XY piezo axes and the controllers' final names are deferred pending the world-fact of what each piezo positions.
+
+### NV200D trigger wiring
+
+The NV200D is stepped by the already-modelled softGlueZynq `Timing` box: the FPGA emits a TTL pulse on a camera-readout boundary that advances the piezo to its next preloaded position (up to 1024 positions per axis). The two trigger legs are modelled as ports on the boxes and wires resolved at Plan-bind time:
+
+| Asset | Port | Direction | `signal_type` |
+| --- | --- | --- | --- |
+| `Timing` | `out2`, `out3` | OUTPUT | `step_trigger_ttl` |
+| `SampleFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
+
+Two wires carry the trigger: `Timing.out2 -> SampleFineDrive.step_x_in` and `Timing.out3 -> SampleFineDrive.step_y_in` (the JenaX and JenaY coaxial cables land on FPGA `out2` and `out3` per item_028). Each leg has a softGlue gate-delay PV set to the exposure time plus a margin: `2bmbMZ1:SG:GateDly-3_DLY` and `2bmbMZ1:SG:GateDly-2_DLY`. The delay-PV labels read `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses the cable-to-output map above; the apparent cross is recorded verbatim and flagged for confirmation. `signal_type = step_trigger_ttl` is a working free-text value (ports are open-vocabulary, up to 50 characters); it is distinct from the camera's `TriggerIn` because this edge advances a motion step rather than starting an exposure. The ports sit on the controller box today; they migrate onto the per-axis Assets when those are registered. `OpticsFineDrive` (NV100D) carries no trigger input: item_027 describes no FPGA stepping for it.
+
+### Camera trigger wiring
+
+The camera trigger is the headline path of [item_060](https://docs2bm.readthedocs.io/en/latest/source/ops/item_060.html): the `Timing` box generates the trigger pulse train and routes it (the raw PSO train, or the `trigILF` subset selected by `MUX2-1`) through to the camera, where each edge starts an exposure. The durable leg is modelled as ports plus a wire resolved at Plan-bind time, the same idiom as the [NV200D legs](#nv200d-trigger-wiring) above; the [Microscope](equipment/microscope.md) carries no blueprint wire for it, because the camera trigger arrives from an external timing source wired at the Plan level:
+
+| Asset | Port | Direction | `signal_type` |
+| --- | --- | --- | --- |
+| `Timing` | `camera_trigger_out` | OUTPUT | `frame_trigger_ttl` |
+| `Camera` | `trigger_in` | INPUT | `frame_trigger_ttl` |
+
+One wire carries the trigger: `Timing.camera_trigger_out -> Camera.trigger_in`. `signal_type = frame_trigger_ttl` is deliberately distinct from the piezo legs' `step_trigger_ttl`: this edge starts an exposure, not a motion step. The `Camera` carries the `Triggerable` affordance, so `trigger_in` is its consumed `TriggerIn` signal.
+
+Two labels on the camera leg stay open for 2-BM staff: the exact FPGA output channel feeding the camera (the path string ends at the camera's `Line2` input but names no box-side output, so `camera_trigger_out` is the CORA-side port name pending that number), and the `GateDly1` block name (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028, whereas `GateDly1` is so far unconfirmed). softGlue gate-delay `Width` and `DLY` are counted in 10 MHz clock cycles (100 ns per count, so `Width = 100` is a 10 us pulse, item_060); the concrete per-scan values are Method / Plan configuration, not Asset state.
+
 ## Pending
 
-Devices that physically exist at 2-BM but are not yet registered as CORA Assets; each carries `new: true` in the 2-BM descriptor (`deployments/2-bm/beamline.yaml`). The five front-end / beam-conditioning optics driven by `FrontEndDrive` are now registered (see the [Inventory](#inventory)); `BeamPositionMonitor` remains an unmodelled front-end device, but a diagnostic, not a motor: the descriptor records no PV or controller for it.
-
-All three `Table`-Family support tables are registered ([Inventory](#inventory)): `SampleTable` (the sample-tower base), `DetectorTable`, and `MirrorTable`. Their `Table` settings schema is enforced (each carries a validated `axis_layout`; see [Settings](#settings)). `DetectorTable`'s six virtual axes are modelled as PseudoAxis sub-Assets ([Detector table axes](computed-axes.md#detector-table-axes)); `MirrorTable`'s axes remain deferred (X-surface-only pending 2bm-docs#171).
+Devices that physically exist at 2-BM but are not yet registered as CORA Assets. The named device below carries `new: true` in the 2-BM descriptor (`deployments/2-bm/beamline.yaml`); the broader rows are device categories that exist physically but are not yet itemized in the descriptor. The five front-end / beam-conditioning optics driven by `FrontEndDrive` are now registered (see the [Inventory](#inventory)); `BeamPositionMonitor` remains an unmodelled front-end device, but a diagnostic, not a motor: the descriptor records no PV or controller for it.
 
 | Asset | Family |
 | --- | --- |
@@ -587,7 +583,7 @@ All three `Table`-Family support tables are registered ([Inventory](#inventory))
 
 ## Decommissioned (provenance only)
 
-Detectors 2-BM ran in the past. They are neither active Assets nor awaiting registration; [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) records them under `decommissioned` for provenance. When modelled they are `Camera` Assets in a terminal lifecycle state: the `Camera` Family spans them and the active FLIR Oryx, because performance class ("high-speed") is a settings axis, not a separate Family, per [How families are decided](../../catalog/index.md#families-settings-over-subtypes).
+Detectors 2-BM ran in the past. They are neither active Assets nor awaiting registration; [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) records them under `decommissioned` for provenance. When modelled they are `Camera` Assets in a terminal lifecycle state, spanned by the same `Camera` Family as the active detectors (performance class is a settings axis, not a separate Family; see [Camera schema](#camera)).
 
 | Asset | Family | Note |
 | --- | --- | --- |

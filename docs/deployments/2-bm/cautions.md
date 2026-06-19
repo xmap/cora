@@ -1,55 +1,45 @@
 # Cautions
 
-*Caution BC Cautions targeting 2-BM Assets and Procedures.*
+*Caution BC Cautions in force at 2-BM: the operator advisories surfaced before a Run.*
 
-Operator tribal knowledge captured at shakedown, first-light, or production time. Surfaced on every future Run start via the `CautionLookup` snapshot. See [Model](../../architecture/model.md) for the aggregate shape.
+A caution is operator tribal knowledge about an Asset, an observed quirk paired with a workaround, captured at shakedown, first light, or in production. It shows at the start of any Run whose scope includes its target. That scope is the Assets the Run's Plan binds, widened at Run start to add each bound Asset's controller and the Assets that contain it; a caution filed on a controller or on a containing unit therefore reaches a Run that binds only the stage beneath it. Cautions warn, they never block: blocking authority belongs to the [Safety](../../architecture/modules/safety/index.md) BC. None of the cautions below sets an expiry; each persists until an operator supersedes or retires it. See [Model](../../architecture/model.md) for the aggregate shape.
 
-| Target | Category | Severity | Text |
-| --- | --- | --- | --- |
-| `Rotary` | `Wear` | `Caution` | Misses index pulse on cold-start home; retry after 5s |
-| `HexapodDrive` | `Wear` | `Caution` | Locks up under sustained load or over-travel; recover via `hexapod_reboot` |
-| `Hexapod` | `Wear` | `Caution` | Y dial misreads after reboot; set Y dial to 350 before any Y move |
+2-BM has one rotary-stage quirk and a linked pair of hexapod quirks, plus a queue of cautions still to be written up.
 
-## Aerotech cold-start index miss
+## Rotary stage: cold-start index miss
 
-`Wear` / `Caution`. Tags: `aerotech`, `home`, `cold_start`.
+`Wear` / `Caution`, filed against `Rotary`. Tags: `aerotech`, `home`, `cold_start`.
 
-**Observation.** The Aerotech ABRS rotary stage misses its index pulse on the first home attempt after a power cycle. Subsequent homes work; only the cold-start first attempt is affected. Observed during 2-BM shakedown on 2026-05-17.
+The Aerotech ABRS rotary stage misses its index pulse on the first home attempt after a power cycle. Later homes succeed; only the cold-start first attempt is affected.
 
-**Workaround.** Issue `HOME` command, wait 5s for settling, re-issue `HOME`. Verify `index_pulse=1` on encoder readback before treating home as successful. Optionally pre-warm the stage by jogging +/-1° before the first home.
+**Workaround.** Issue `HOME`, wait about five seconds for the stage to settle, then issue `HOME` again, and confirm the encoder reads `index_pulse=1` before treating the home as good. Pre-warming the stage with a small jog before the first home also avoids it.
 
-**Lifetime.** No `expires_at` (permanent until superseded or retired). Persists on the operator banner for every future Run start at 2-BM until the underlying stage is replaced or recalibrated.
+## Hexapod: controller lockup and the Y dial after a reboot
 
-## Hexapod controller lockup
+These two travel together. The controller lockup is cleared by a reboot, and the reboot leaves the Y dial needing a manual reset before the next move, so an operator who meets the first will meet the second. Both are documented by 2-BM staff on the [sample motor stack page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_050.html).
 
-`Wear` / `Caution`. Tags: `hexapod`, `controller_lockup`, `pdu_power_cycle`, `ioc_restart`.
+### Controller lockup
 
-**Observation.** The Aerotech HexGen hexapod controller (driving the Aerotech HEX300-230HL hexapod stage per the [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html)) occasionally locks up under sustained load: the `2bmHXP:HexapodAllEnabled` EPICS PV reads `0` while motion commands return no error. Operator-observable symptom is the hexapod stops responding to position requests even though no fault has been raised by the motion-control layer. A second, distinct trigger for the same recovery is documented on the staff [sample motor stack page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_050.html) (`item_050`): driving the hexapod past its travel range raises a controller drive error that disconnects all axis drivers and turns the normally-green Enable/Fault indicator off. Both failure modes clear with the same `hexapod_reboot` ceremony.
+`Wear` / `Caution`, filed against `HexapodDrive`. The fault is in the drive electronics and the recovery is entirely controller-side, so the caution sits on the drive controller rather than the stage. Tags: `hexapod`, `controller_lockup`, `pdu_power_cycle`, `ioc_restart`.
 
-**Workaround.** Run `hexapod_reboot.py` (in [`decarlof/2bmb-bin`](https://github.com/decarlof/2bmb-bin)): stops the hexapod IOC, power-cycles PDU outlet 5 (the operator-facing outlet number; the NetBooter relay index is zero-based, so the wire call is `rly=4`) with the script's power-settling delays (10 s off, 30 s on), restarts the IOC, polls `HexapodAllEnabled` for up to 180s. If the PV is still `0` after the timeout, `caput 2bmHXP:EnableWork.PROC 1` to force-enable, then re-poll. Manual checks during recovery: verify outlet state via NetBooter `/status.xml`; SSH `2bmb@arcturus` for IOC log inspection.
+The hexapod controller occasionally stops responding while reporting no fault: it no longer moves to commanded positions and the `2bmHXP:HexapodAllEnabled` signal reads `0`. Driving the hexapod past its travel range reaches the same state by another route, disconnecting the axis drivers and turning the Enable indicator off. Both clear the same way.
 
-**Modeling note.** This Caution targets `HexapodDrive` (the controller Asset) rather than `Hexapod` (the stage), because the failure mode is in the drive electronics and the workaround is entirely controller-side (PDU outlet, IOC restart, EPICS PV poll). The [2-BM beamline components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html) calls the EPICS interface "native Aerotech Ensemble" but does not name the controller box, so the Asset records what is known (Aerotech vendor, drives the hexapod) and leaves identity details to settings placeholders confirmed via `update_asset_settings`. The separate [Y-stage dial-misreset Caution](#hexapod-y-stage-dial-misreset-after-reboot) below targets the stage instead, because that quirk is a homing / encoder-dial artifact, not a drive-electronics fault.
+**Workaround.** Recover with the [`hexapod_reboot` recipe](recipes.md#hexapod_reboot): it stops the IOC, power-cycles the controller, restarts the IOC, and waits for every axis to re-enable, with a force-enable and re-poll if the enable signal is still `0` after the wait. The recipe holds the outlet, timing, and PV details. Treat an unresponsive hexapod as this lockup rather than chasing a motion-control bug.
 
-**Lifetime.** No `expires_at` (permanent until superseded or retired). Surfaces on every future Run start at 2-BM that targets `HexapodDrive` (or, by `controller_id` back-reference traversal, `Hexapod`), so operators know to run the recovery routine on first sign of unresponsiveness rather than chasing a phantom motion-control bug.
+### Y dial after a reboot
 
-## Hexapod Y-stage dial misreset after reboot
+`Wear` / `Caution`, filed against `Hexapod`. This is a homing artifact of the stage, not a drive fault, so the caution sits on the stage. Tags: `hexapod`, `y_axis`, `post_reboot`, `dial_reset`.
 
-`Wear` / `Caution`. Tags: `hexapod`, `y_axis`, `post_reboot`, `dial_reset`.
-
-**Observation.** After the hexapod controller is rebooted (the lockup recovery above, or any power-cycle), every axis homes correctly except Y. The Y dial position resets to 0 while the encoder readback dial reads 350, so the two disagree; commanding a Y move in this state raises a drive error. Documented on the staff [sample motor stack page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_050.html) (`item_050`).
-
-**Workaround.** Before commanding any Y motion after a reboot, manually set the Y dial to 350 so it agrees with the encoder readback, then resume normal operation. This is a required post-reboot step, not an optional one: skipping it turns the first Y move into a drive error that forces another reboot.
-
-**Modeling note.** Targets `Hexapod` (the stage) rather than `HexapodDrive` (the controller), because the quirk is a stage homing / encoder-dial artifact, not a drive-electronics fault. It is deliberately left at the hexapod level rather than narrowed to the `Hexapod_Y` degree-of-freedom facet so that it surfaces on any hexapod-level Run, including the reboot Procedure itself (which targets `Hexapod`); narrowing to `Hexapod_Y` waits on confirming that `CautionLookup` traverses `parent_id` the way it traverses `controller_id`.
-
-**Lifetime.** No `expires_at` (permanent until superseded or retired). Surfaces on every future Run start at 2-BM that touches the hexapod, so an operator who has just rebooted is reminded to fix the Y dial before the first Y move. That this quirk is still current is tracked as `HXP-8`.
+After any hexapod reboot, every axis homes correctly except Y: the Y dial resets to 0 while the encoder reads 350, and the first Y move in that state faults. Set the Y dial to 350 so it agrees with the encoder before commanding any Y motion. This is a required post-reboot step, not an optional one: skipping it faults the move and forces another reboot.
 
 ## Pending
 
-| Target | Category | Severity | Text |
-| --- | --- | --- | --- |
-| 2-BM Unit | | | Vibration threshold exceeded after air-handler shutdown |
-| `Camera` | | | Detector dark-frame drift after long beam-off periods |
-| `Scintillator` | | | Scintillator browning under prolonged white-beam exposure |
-| Sample-stage Devices | | | Sample-stage backlash after manual handling |
-| `Monochromator` | | | Flat-field stripe pattern drifts over hours (DMM optics); acquire flats as close to scan time as possible |
+Cautions seen in the field but not yet written up:
+
+| Target | Text |
+| --- | --- |
+| `2-BM` | Vibration threshold exceeded after air-handler shutdown |
+| `Camera` | Detector dark-frame drift after long beam-off periods |
+| `Scintillator` | Scintillator browning under prolonged white-beam exposure |
+| `SampleTop_X` | Sample-stage backlash after manual handling |
+| `Monochromator` | Flat-field stripe pattern drifts over hours (DMM optics) |
