@@ -25,7 +25,7 @@ An operation can also be authored as a [Recipe](recipes.md): a reusable, paramet
 | `slit_centering` | `ConditioningSlit` or `SampleSlit` + image chain |
 | `blade_throw_characterization` | `ConditioningSlit` or `SampleSlit` blades + image chain |
 
-Image chain = `Camera`, `Scintillator`.
+Image chain = `Camera_5MP`, `Scintillator`.
 
 When `center_alignment` converges, the operator records the result as a `rotation_center` [Calibration](../../architecture/modules/calibration/index.md) on the rotary stage, appended with a `MeasuredSource` citing the Procedure. The alignment is the act; the Calibration stores the value.
 
@@ -69,7 +69,7 @@ The [2bm-procedures](https://github.com/xray-imaging/2bm-procedures) repo ([rend
 
 | Staff procedure (validated) | Target Assets | Note |
 | --- | --- | --- |
-| Detector Z-rail alignment to the beam | drives `PropagationDistance` (the Z walk on `2bmbAERO:m1`) and the `DetectorTable` angular axes (`2bmb:table3.AX` / `.AY`, the tilt correction); imaging chain `Scintillator` + `Camera` | Modeled as `detector_z_rail_alignment`. NOT the same as `roll_alignment` / `pitch_alignment` above: those align the sample `Hexapod`, not the detector table. The staff `target_asset_ids` are `PropagationDistance`, `DetectorTable`, `Scintillator` (the staff name is `Scintillator_LuAG`; CORA keeps the material as a setting). |
+| Detector Z-rail alignment to the beam | drives `PropagationDistance` (the Z walk on `2bmbAERO:m1`) and the `DetectorTable` angular axes (`2bmb:table3.AX` / `.AY`, the tilt correction); imaging chain `Scintillator` + `Camera_5MP` | Modeled as `detector_z_rail_alignment`. NOT the same as `roll_alignment` / `pitch_alignment` above: those align the sample `Hexapod`, not the detector table. The staff `target_asset_ids` are `PropagationDistance`, `DetectorTable`, `Scintillator` (the staff name is `Scintillator_LuAG`; CORA keeps the material as a setting). |
 | Centre and close an L3-style slit aperture | `ConditioningSlit` (A) or `SampleSlit` (B) | Modeled as `slit_centering` (named by its operation noun, not the staff verb-phrase). Runs on either L3 station (the `--slit-station` parameter, default B), not only the A-station slit; two-phase: centre on Hcenter / Vcenter, then sequential H / V size reduction as steps inside the one act. |
 | Calibrate the throw of each L3 slit blade motor | `ConditioningSlit` (A) or `SampleSlit` (B) blade motors | Modeled as `blade_throw_characterization`, which mints the `blade_throw_scale` [Calibration](../../architecture/modules/calibration/index.md). Runs on either L3 station (default B); drive each blade by +/- blade_throw_mm, measure edge shift, fit per-blade slopes (the fit is downstream of CORA). |
 
@@ -98,7 +98,7 @@ Three further preconditions in the source have no dedicated procedure: `fes_shut
 | --- | --- |
 | `alignment_auto_chain` | alignment Assets (characterization + Step1..4) |
 | `ioc_restart` | EPICS IOC-hosted Assets |
-| `vibration_baseline` | `Camera` (run at high frame rate) |
+| `vibration_baseline` | `Camera_5MP` (run at high frame rate) |
 | `mirror_recoat_return` | `Mirror` |
 
 `vibration_baseline` is the high-speed vibration characterization on the staff-authored [docs2bm item_070 page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_070.html): the active FLIR Oryx (serial `19173710`, the same microscope detector) runs at about 99 fps watching the scintillator image, and the per-frame vertical shift is analyzed for vibration peaks. The capture reuses the `collect` action body like the dark and flat baselines, so it is conductible today; the FFT analysis is downstream of CORA, and the captured stack becomes the [vibration-baseline Dataset](experiment.md). Performance class ("high-speed") is the `Camera` `max_framerate_hz` settings axis, not a separate Asset (`VIB-1`). It stays in Pending until staff confirm whether vibration baselining is recurring practice (`VIB-2`). The companion air-handler-shutdown finding and the multi-hour flat-field stability study on the same page are not procedures: their operator takeaways are [Cautions](cautions.md) (vibration after an air-handler shutdown, and acquiring flats close to scan time), and their distinctive mechanics (per-air-handler EPICS-triggered capture, the live beam-current stop loop) are deferred edge concerns, not modelled here.

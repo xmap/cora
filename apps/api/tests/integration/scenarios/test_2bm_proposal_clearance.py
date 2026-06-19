@@ -208,7 +208,7 @@ _DEVICES = (
         "RotaryStage",
         _CAP_ROTARY_STAGE_ID,
     ),
-    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Camera_5MP", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
 )
 
 _BEAMTIME = BeamtimeSpec(

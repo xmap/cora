@@ -188,7 +188,7 @@ _DEVICES = (
         _CAP_LINEAR_STAGE_ID,
         controller_id=_ASSET_AEROTECH_2BMBAERO_DRIVE_ID,
     ),
-    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Camera_5MP", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
 

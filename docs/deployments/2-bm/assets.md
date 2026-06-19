@@ -63,8 +63,8 @@ Devices are located in one of the two hutch Enclosures, the optics hutch `2-BM-A
 | `Objective_1.1x` | `Device` | `Objective` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 | `Objective_Selector` | `Device` | `PseudoAxis` | `Housing` (bound into Microscope Fixture; writes the MCTOptics `LensSelect` composite; partition rule records lens-to-turret positions, MCTOptics actuates) | `2-BM-B` |
 | `PropagationDistance` | `Device` | `LinearStage` | `DetectorTable` (the sample-to-detector rail mounted on the detector table; carries the `Housing`; bound into Microscope Fixture; driven by `PropagationDistanceDrive`) | `2-BM-B` |
-| `Camera` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
-| `Camera_HighRes` | `Device` | `Camera` | `Housing` (the alternate FLIR Oryx 31 MP, selected by `Camera_Selector`; not bound into the Microscope Fixture) | `2-BM-B` |
+| `Camera_5MP` | `Device` | `Camera` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
+| `Camera_31MP` | `Device` | `Camera` | `Housing` (the alternate FLIR Oryx 31 MP, selected by `Camera_Selector`; not bound into the Microscope Fixture) | `2-BM-B` |
 | `Camera_Selector` | `Device` | `LinearStage` | `Housing` (Schunk LPTM 30; switches the optical path between the two cameras) | `2-BM-B` |
 | `Scintillator` | `Device` | `Scintillator` | `Housing` (bound into Microscope Fixture) | `2-BM-B` |
 
@@ -162,9 +162,9 @@ The camera trigger is the headline path of [item_060](https://docs2bm.readthedoc
 | Asset | Port | Direction | `signal_type` |
 | --- | --- | --- | --- |
 | `Timing` | `camera_trigger_out` | OUTPUT | `frame_trigger_ttl` |
-| `Camera` | `trigger_in` | INPUT | `frame_trigger_ttl` |
+| `Camera_5MP` | `trigger_in` | INPUT | `frame_trigger_ttl` |
 
-One wire carries the trigger: `Timing.camera_trigger_out -> Camera.trigger_in`. `signal_type = frame_trigger_ttl` is deliberately distinct from the piezo legs' `step_trigger_ttl`: this edge starts an exposure, not a motion step. The `Camera` carries the `Triggerable` affordance, so `trigger_in` is its consumed `TriggerIn` signal. The executable model is `apps/api/tests/integration/scenarios/test_2bm_trigger_wiring.py`, which wires this leg alongside the two piezo legs and validates all three at Plan-bind time.
+One wire carries the trigger: `Timing.camera_trigger_out -> Camera_5MP.trigger_in`. `signal_type = frame_trigger_ttl` is deliberately distinct from the piezo legs' `step_trigger_ttl`: this edge starts an exposure, not a motion step. The `Camera_5MP` carries the `Triggerable` affordance, so `trigger_in` is its consumed `TriggerIn` signal. The executable model is `apps/api/tests/integration/scenarios/test_2bm_trigger_wiring.py`, which wires this leg alongside the two piezo legs and validates all three at Plan-bind time.
 
 Two labels on this leg stay open for 2-BM staff (`TIME-2`): the exact FPGA output channel feeding the camera (the path string ends at the camera's `Line2` input but names no box-side output, so `camera_trigger_out` is the CORA-side port name pending that number), and the `GateDly1` block name (the piezo legs use the source-grounded `GateDly-2`/`GateDly-3` from item_028, whereas `GateDly1` is so far unconfirmed). softGlue gate-delay `Width` and `DLY` are counted in 10 MHz clock cycles (100 ns per count, so `Width = 100` is a 10 us pulse, item_060); the concrete per-scan values are Method / Plan configuration, not Asset state.
 
@@ -426,9 +426,9 @@ Bound to Model `aerotech_hex300`, driven by `HexapodDrive` (referenced via `Hexa
 | `thickness` | `100 um` |
 | `decay_time` | `0.07 us` |
 
-### `Camera`
+### `Camera_5MP`
 
-The active 5 MP FLIR Oryx, confirmed by 2-BM staff (DET-8): a Sony IMX250 CMOS global-shutter sensor, IOC-reported model `Oryx ORX-10G-51S5M`, serial number `19173710`, firmware `1710.0.0.0`. The per-unit serial lives in the Camera Asset's `alternate_identifiers` (kind `SerialNumber`); the firmware version is per-unit identity recorded alongside it (the `Camera` schema carries no firmware field, unlike the controller schemas). The camera's EPICS channel prefix `2bmSP1:` lives in `alternate_identifiers` (kind `EPICS_PV`), the same convention each drive uses for its IOC handle (for example `2bmbAERO` on `PropagationDistanceDrive`): it is the addressing channel operators reach the camera through, distinct from the driver software running behind it. The areaDetector / Spinnaker SDK, driver, and ADCore versions are IOC-deployment state, not Camera-Asset state, and are not recorded here.
+The active 5 MP FLIR Oryx, confirmed by 2-BM staff (DET-8): a Sony IMX250 CMOS global-shutter sensor, IOC-reported model `Oryx ORX-10G-51S5M`, serial number `19173710`, firmware `1710.0.0.0`. The per-unit serial lives in the Camera_5MP Asset's `alternate_identifiers` (kind `SerialNumber`); the firmware version is per-unit identity recorded alongside it (the `Camera` schema carries no firmware field, unlike the controller schemas). The camera's EPICS channel prefix `2bmSP1:` lives in `alternate_identifiers` (kind `EPICS_PV`), the same convention each drive uses for its IOC handle (for example `2bmbAERO` on `PropagationDistanceDrive`): it is the addressing channel operators reach the camera through, distinct from the driver software running behind it. The areaDetector / Spinnaker SDK, driver, and ADCore versions are IOC-deployment state, not Camera_5MP-Asset state, and are not recorded here.
 
 | Setting | Value |
 | --- | --- |
@@ -440,9 +440,9 @@ The active 5 MP FLIR Oryx, confirmed by 2-BM staff (DET-8): a Sony IMX250 CMOS g
 | `sensor_kind` | `CMOS` |
 | `readout_mode` | `GlobalShutter` |
 
-### `Camera_HighRes`
+### `Camera_31MP`
 
-The alternate FLIR Oryx 31 MP, the camera the validated `detector_z_rail_alignment` ran on. Per-unit identity is confirmed (DET-8): IOC-reported model `Oryx ORX-10G-310S9M`, serial number `22150530`, firmware `1904.0.72.0`, bound to catalog Model `flir_oryx_31mp`; the serial, firmware, and the EPICS prefix `2bmSP2:` live in the Asset's `alternate_identifiers`. The `Camera_Selector` switches the optical path between this camera and the 5 MP `Camera`, so it is registered under the `Housing` but is not bound into the single-camera Microscope Fixture. Its pixel pitch is the same `3.45 um` as the 5 MP unit (staff `2bm-procedures`); the remaining `Camera`-schema settings (`sensor_width`, `sensor_height`, `bit_depth`, and the extended `max_framerate_hz` / `sensor_kind` / `readout_mode`) are not yet on file, so the Asset is registered identity-only with settings pending (DET-13).
+The alternate FLIR Oryx 31 MP, the camera the validated `detector_z_rail_alignment` ran on. Per-unit identity is confirmed (DET-8): IOC-reported model `Oryx ORX-10G-310S9M`, serial number `22150530`, firmware `1904.0.72.0`, bound to catalog Model `flir_oryx_31mp`; the serial, firmware, and the EPICS prefix `2bmSP2:` live in the Asset's `alternate_identifiers`. The `Camera_Selector` switches the optical path between this camera and the `Camera_5MP`, so it is registered under the `Housing` but is not bound into the single-camera Microscope Fixture. Its pixel pitch is the same `3.45 um` as the 5 MP unit (staff `2bm-procedures`); the remaining `Camera`-schema settings (`sensor_width`, `sensor_height`, `bit_depth`, and the extended `max_framerate_hz` / `sensor_kind` / `readout_mode`) are not yet on file, so the Asset is registered identity-only with settings pending (DET-13).
 
 ### `Camera_Selector`
 
@@ -489,7 +489,7 @@ The Schunk LPTM 30 translation stage with folding mirrors that selects camera 0 
 
 Each Asset may carry one canonical engineering reference as a `(system, number, revision)` triple per the [Drawing VO](../../architecture/modules/equipment/index.md). The carrier holds the build-to document for the physical specimen; the [Mount drawing](equipment/microscope.md#calibration-drawings-and-citation) on the slot is a separate document (where the slot lives in the beamline).
 
-Assets not listed below have no canonical document cited on the 2-BM source page yet (Kohzu `CYAT-070` datasheet for the four `SampleTop_*` stages, an APS shutter drawing for `StationShutter`, and a FLIR Oryx datasheet for `Camera`). These populate when the operator confirms the canonical reference.
+Assets not listed below have no canonical document cited on the 2-BM source page yet (Kohzu `CYAT-070` datasheet for the four `SampleTop_*` stages, an APS shutter drawing for `StationShutter`, and a FLIR Oryx datasheet for `Camera_5MP`). These populate when the operator confirms the canonical reference.
 
 ### `Hexapod`
 

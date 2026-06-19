@@ -172,7 +172,7 @@ _STEPS_OPEN_EVENT_ID = UUID("01900000-0000-7000-8000-000000359f12")
 
 _DEVICES = (
     DeviceSpec("StationShutter", _ASSET_SHUTTER_2BM_ID, "Shutter", _CAP_SHUTTER_ID),
-    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Camera_5MP", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
 )
 

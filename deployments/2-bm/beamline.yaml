@@ -324,8 +324,8 @@ detector:
   cora: Assembly(Microscope) composed of the reusable Optics sub-assembly (turret, objectives, objective selector, propagation distance) plus camera and scintillator leaf slots, anchored to a Housing. Fixture(microscope_at_2bm) presents as a Detector
   placement: Mount + Frame (2BM_hutch_frame)
   note: >
-    Two cameras are installed (item_020): the FLIR Oryx 5 MP (Camera, pv 2bmSP1:)
-    and a FLIR Oryx 31 MP (Camera_HighRes, pv 2bmSP2:), selected by the Camera_Selector
+    Two cameras are installed (item_020): the FLIR Oryx 5 MP (Camera_5MP, pv 2bmSP1:)
+    and a FLIR Oryx 31 MP (Camera_31MP, pv 2bmSP2:), selected by the Camera_Selector
     (a Schunk LPTM 30 translation stage with folding mirrors, pv 2bmb:m5). The
     second camera, the selector, and the per-camera rotation motors (2bmb:m7/m8)
     are recorded here as real devices; registering them as CORA Assets is a
@@ -421,7 +421,7 @@ detector:
           value: "100 um"
           source: AssertedSource
           status: Provisional
-    - name: Camera
+    - name: Camera_5MP
       family: Camera              # camera 0 (the modeled camera)
       model: flir_oryx
       pv: "2bmSP1:"
@@ -434,7 +434,7 @@ detector:
       firmware_version: "1710.0.0.0"
       part_number_reported: "Oryx ORX-10G-51S5M"   # IOC-reported; catalog SKU ORX-10G-51S5M-C is the same class (10G vs 10GS = form factor only)
       replaceable: true
-    - name: Camera_HighRes
+    - name: Camera_31MP
       family: Camera             # camera 1 (item_020): FLIR Oryx 31 MP, the alternate detector selected by Camera_Selector
       model: flir_oryx_31mp
       model_reported: "Oryx ORX-10G-310S9M"        # DET-8 (#142): per-unit identity confirmed

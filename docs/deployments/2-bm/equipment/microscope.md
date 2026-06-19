@@ -26,9 +26,9 @@ The detector sits about 55 m from the source in the 2-BM experiment hutch (Enclo
 <li><span class="node">Objective_2x</span> <span class="meta">Device, Objective, 2x</span></li>
 <li><span class="node">Objective_1.1x</span> <span class="meta">Device, Objective, 1.1x</span></li>
 <li><span class="node">Objective_Selector</span> <span class="meta">Device, PseudoAxis</span></li>
-<li><span class="node">Camera</span> <span class="meta">Device, Camera</span></li>
+<li><span class="node">Camera_5MP</span> <span class="meta">Device, Camera</span></li>
 <li><span class="node">Scintillator</span> <span class="meta">Device, Scintillator</span></li>
-<li><span class="node">Camera_HighRes</span> <span class="meta">Device, Camera; alternate 31 MP, outside the Fixture</span></li>
+<li><span class="node">Camera_31MP</span> <span class="meta">Device, Camera; alternate 31 MP, outside the Fixture</span></li>
 <li><span class="node">Camera_Selector</span> <span class="meta">Device, LinearStage; switches the camera path, outside the Fixture</span></li>
 </ul>
 </li>
@@ -41,7 +41,7 @@ The detector sits about 55 m from the source in the 2-BM experiment hutch (Enclo
 <li><span class="node">materializes Assembly = Microscope</span> <span class="meta">presents_as the Detector Role</span>
 <ul>
 <li><span class="node">sub-assembly optics</span> <span class="rel">&rarr; Assembly = Optics (content-hash pinned)</span></li>
-<li><span class="node">leaf slot camera</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; Camera</span></li>
+<li><span class="node">leaf slot camera</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; Camera_5MP</span></li>
 <li><span class="node">leaf slot scintillator</span> <span class="meta">Exactly1</span> <span class="rel">&rarr; Scintillator</span></li>
 </ul>
 </li>
@@ -60,7 +60,7 @@ The detector sits about 55 m from the source in the 2-BM experiment hutch (Enclo
 </ul>
 </div>
 
-`Microscope` is the Assembly (the blueprint) and, with `microscope_at_2bm`, the Fixture (the materialization). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical chassis; it parents seven of the eight functional constituents (the eighth, the `PropagationDistance` rail, is the part the housing rides on, so it parents the housing instead). It also parents the alternate `Camera_HighRes` and its `Camera_Selector`, which sit under the housing but outside the Fixture (see [Open items](#open-items)).
+`Microscope` is the Assembly (the blueprint) and, with `microscope_at_2bm`, the Fixture (the materialization). `Optics` is a reusable sub-assembly the Microscope composes. `Housing` is the physical chassis; it parents seven of the eight functional constituents (the eighth, the `PropagationDistance` rail, is the part the housing rides on, so it parents the housing instead). It also parents the alternate `Camera_31MP` and its `Camera_Selector`, which sit under the housing but outside the Fixture (see [Open items](#open-items)).
 
 ## Two axes: composition and containment
 
@@ -130,7 +130,7 @@ Switch the active objective by writing the `Objective_Selector` index (0/1/2); t
 - The `Objective_Selector` `partition_rule` references the turret motor by Asset id, but nothing enforces that this is the same motor bound into the `turret` slot; there is no cross-slot constraint primitive today.
 - `register_fixture` requires every bound constituent to be installed in some Mount, so a pool-backed deployment gives each a lightweight Mount even though the housing approximates its placement.
 - Plan-binding does not yet enforce `needed_assembly_ids` satisfaction: a Plan that omits a Fixture materializing the required Assembly passes silently today.
-- The alternate 31 MP camera (`Camera_HighRes`) and the `Camera_Selector` (Schunk LPTM 30, `2bmb:m5`, rotation motors `2bmb:m7`/`m8`) are now registered Assets under the `Housing`: the selector switches the optical path between the 5 MP `Camera` (bound into the Fixture) and the 31 MP. `Camera_HighRes` is registered identity-only; item_020 confirms its sensor (6464 x 4852 px, 26 fps), leaving only bit depth, sensor kind, and readout mode pending ([DET-13](../questions.md#the-microscope-detector)), which the `Camera` schema needs before the settings group can be applied.
+- The alternate 31 MP camera (`Camera_31MP`) and the `Camera_Selector` (Schunk LPTM 30, `2bmb:m5`, rotation motors `2bmb:m7`/`m8`) are now registered Assets under the `Housing`: the selector switches the optical path between the 5 MP `Camera` (bound into the Fixture) and the 31 MP. `Camera_31MP` is registered identity-only; item_020 confirms its sensor (6464 x 4852 px, 26 fps), leaving only bit depth, sensor kind, and readout mode pending ([DET-13](../questions.md#the-microscope-detector)), which the `Camera` schema needs before the settings group can be applied.
 - Containment models `PropagationDistance` (the sample-to-detector rail, `2bmbAERO:m1`) as carrying the `Housing` (`DetectorTable -> PropagationDistance -> Housing`), on the engineering assumption that moving the rail travels the whole detector. Whether the entire microscope rides the rail, or only part of it moves while the rest stays on the table, is the open world-fact [DET-12](../questions.md#the-microscope-detector); a staff answer that contradicts it would flip the rail back to a housing constituent.
 
 ## Exercised model

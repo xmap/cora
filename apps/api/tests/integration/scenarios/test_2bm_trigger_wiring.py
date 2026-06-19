@@ -29,7 +29,7 @@ signal types:
 
 Three wires validate end-to-end against the strict forward-reference
 contract (ports must exist before they are wired): one camera-trigger
-wire (`Timing.camera_trigger_out -> Camera.trigger_in`) and two piezo
+wire (`Timing.camera_trigger_out -> Camera_5MP.trigger_in`) and two piezo
 step-trigger wires (`Timing.out2 -> SampleFineDrive.step_x_in`,
 `Timing.out3 -> SampleFineDrive.step_y_in`). A successful `add_plan_wire`
 is itself the proof of direction (source OUTPUT, target INPUT) and exact
@@ -52,7 +52,7 @@ test_2bm_hexapod_pose_wiring.py.
 ```
 2-BM (Unit)
 +-- Timing (Device)            Family: TimingController   softGlueZynq box (2bmbMZ1:SG:)
-+-- Camera (Device)            Family: Camera             detector that the trigger drives
++-- Camera_5MP (Device)            Family: Camera             detector that the trigger drives
 +-- SampleFineDrive (Device)   Family: MotionController   NV200D piezo, FPGA-stepped
 ```
 """
@@ -121,7 +121,7 @@ _SIG_STEP = "step_trigger_ttl"
 
 _DEVICES = (
     DeviceSpec("Timing", _TIMING_ID, "TimingController", _CAP_TIMING_CONTROLLER_ID),
-    DeviceSpec("Camera", _CAMERA_ID, "Camera", _CAP_CAMERA_ID),
+    DeviceSpec("Camera_5MP", _CAMERA_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec(
         "SampleFineDrive", _SAMPLE_FINE_DRIVE_ID, "MotionController", _CAP_MOTION_CONTROLLER_ID
     ),
@@ -268,13 +268,13 @@ async def test_trigger_wiring_validates_end_to_end(
         *["AssetPortAdded"] * 3,
     ], f"Timing: unexpected event sequence {timing_types}"
 
-    # The Camera: genesis + Family + its single trigger INPUT port.
+    # The Camera_5MP: genesis + Family + its single trigger INPUT port.
     camera_events, _ = await deps.event_store.load("Asset", _CAMERA_ID)
     assert [ev.event_type for ev in camera_events] == [
         "AssetRegistered",
         "AssetFamilyAdded",
         "AssetPortAdded",
-    ], f"Camera: unexpected event sequence {[ev.event_type for ev in camera_events]}"
+    ], f"Camera_5MP: unexpected event sequence {[ev.event_type for ev in camera_events]}"
 
     # The NV200D piezo: genesis + Family + its two step INPUT ports.
     piezo_events, _ = await deps.event_store.load("Asset", _SAMPLE_FINE_DRIVE_ID)
@@ -306,5 +306,5 @@ async def test_trigger_wiring_validates_end_to_end(
         f"unexpected: {actual_wires - frozenset(_WIRE_SPECS)}"
     )
     assert _WIRE_CAMERA in actual_wires, (
-        "the camera-trigger wire (Timing.camera_trigger_out -> Camera.trigger_in) is missing"
+        "the camera-trigger wire (Timing.camera_trigger_out -> Camera_5MP.trigger_in) is missing"
     )
