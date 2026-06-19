@@ -96,26 +96,20 @@ nav:
         - Sample (tower): deployments/2-bm/equipment/sample_tower.md
         - Detector (microscope): deployments/2-bm/equipment/microscope.md
         - Controls: deployments/2-bm/equipment/controls.md
-        - Resources: deployments/2-bm/supplies.md
         - Reference:
           - Layout: deployments/2-bm/beamline.md
           - Assets: deployments/2-bm/assets.md
           - Computed axes: deployments/2-bm/computed-axes.md
-      - Getting ready:
+      - Techniques: deployments/2-bm/techniques.md
+      - Operations:
+        - deployments/2-bm/operations.md
         - Procedures: deployments/2-bm/procedures.md
         - Recipes: deployments/2-bm/recipes.md
         - Enclosures: deployments/2-bm/enclosures.md
-      - Running a measurement:
-        - Subjects: deployments/2-bm/subjects.md
-        - Runs: deployments/2-bm/runs.md
-        - Campaigns: deployments/2-bm/campaigns.md
-      - Results:
-        - Datasets: deployments/2-bm/datasets.md
-      - Operating envelope:
-        - Decisions: deployments/2-bm/decisions.md
-        - Policies: deployments/2-bm/policies.md
         - Cautions: deployments/2-bm/cautions.md
-        - Actors: deployments/2-bm/actors.md
+      - Experiment: deployments/2-bm/experiment.md
+      - Governance: deployments/2-bm/governance.md
+      - Model: deployments/2-bm/model.md
     - Facility envelope:
       - APS (Site):
         - deployments/aps/index.md

@@ -10,9 +10,7 @@
 | Institution | Argonne (context; not modeled as an Asset or Facility) |
 | Drawing | `(ICMS, A342-RT1000, 02)` (APS beamline layout drawing, Rev 02, May 2026) |
 
-The measurement lifecycle below is the reading order: the beamline itself, then getting it ready, running a measurement, the results, and the envelope that governs it. The physical layer is generated from the descriptor; the operational stages are hand-authored today and become CORA-projection-generated in a later phase.
-
-Things CORA still needs the beamline team to confirm are collected on [Open questions](questions.md).
+The configured zones below live in these docs: the beamline itself, what it can do, how it is operated, and who governs it. The live per-experiment data (subjects, runs, datasets) is served by the running app, not a doc page. Things CORA still needs the beamline team to confirm are collected on [Open questions](questions.md).
 
 ## The beamline
 
@@ -27,39 +25,26 @@ Along the beam, in order:
 Cutting across all three:
 
 - [Controls](equipment/controls.md): the controllers and drive crates, related to the hardware by `controller_id`, with the trigger wiring that links them.
-- [Resources](supplies.md): the continuously-available supplies a run needs (beam, cooling, vacuum).
+- Resources: the continuously-available supplies a run needs (beam, cooling, vacuum), tracked under [Operations > Supplies](operations.md#supplies).
 
 The cross-cutting reference views: the [Layout](beamline.md) walk generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor, the [Assets](assets.md) inventory (the flat tree by `parent_id`, Family affordances, vendor Models, settings), and the [Computed axes](computed-axes.md).
 
-## Getting ready
+## Techniques
 
-Setup before a scan.
+[Techniques](techniques.md): what 2-BM can do, each a portable [Catalog](../../catalog/methods.md) Method bound through an APS [Practice](../aps/index.md#the-techniques-adapted-here). The function view survives equipment swaps.
 
-- [Procedures](procedures.md): alignment, characterization, and recovery routines (Operation BC).
-- [Recipes](recipes.md): deployment-bound recipe designs (set-energy, hexapod reboot) that expand into Procedures (Recipe BC).
-- [Enclosures](enclosures.md): two hutch permits, optics hutch `2-BM-A` and experiment hutch `2-BM-B`, each gating its hutch's devices through the located-in pre-flight chain walk (Enclosure BC).
-- Clearances: the safety forms that must be Active to start, issued at the [APS Site](../aps/index.md#the-safety-envelope).
+## Operations
 
-## Running a measurement
+[Operations](operations.md) is the runbook for getting ready and measuring. It ties together [Procedures](procedures.md) (alignment, characterization, recovery), [Recipes](recipes.md) (deployment-bound step sequences that expand into Procedures), [Enclosures](enclosures.md) (the two hutch permits, optics hutch `2-BM-A` and experiment hutch `2-BM-B`), and [Cautions](cautions.md). Clearances, the safety forms that must be Active to start, are issued at the [APS Site](../aps/index.md#the-safety-envelope).
 
-The act of measuring.
+## Experiment
 
-- [Subjects](subjects.md): the samples mounted and measured.
-- [Runs](runs.md): execution instances and their state.
-- [Campaigns](campaigns.md): series that group many runs.
-- The recipe a run executes is a [Method](../../catalog/methods.md) (cross-facility) bound through an APS [Practice](../aps/index.md#the-techniques-adapted-here).
+[Experiment](experiment.md): the live per-experiment view, the subjects, runs, campaigns, datasets, and decisions of a beamtime. Described here as shape; the real instances are served live by the app.
 
-## Results
+## Governance
 
-What came out and whether it is trustworthy.
+[Governance](governance.md): who may act at 2-BM and the trust policies (Zone, Conduit, Policy) that gate their commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md#who-acts-here); on the beamline they surface through the actions they take.
 
-- [Datasets](datasets.md): the data products, with lineage back to the run, subject, and equipment.
+## Model
 
-## Operating envelope
-
-Who and what governs.
-
-- [Decisions](decisions.md): the accountability ledger (overrides, steering).
-- [Policies](policies.md): the authorization rules in effect at the beamline.
-- [Cautions](cautions.md): operator advisories and tribal knowledge.
-- People and autonomous agents are facility principals at the [APS Site](../aps/index.md#who-acts-here); on the beamline they surface only through the actions they take above.
+[Model](model.md): the developer's by-kind index into where each CORA aggregate's 2-BM content lives.

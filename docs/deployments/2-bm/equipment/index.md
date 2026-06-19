@@ -2,7 +2,7 @@
 
 *The 2-BM beamline as five areas you can jump to: the three stations the beam passes through, plus the controls that drive them and the resources they draw on.*
 
-The beamline divides into two kinds of thing. Along the beam, in order, sit the three **stations**: the [Source](source.md) that delivers and conditions the beam, the [Sample](sample_tower.md) stack that places the specimen in it, and the [Detector](microscope.md) that records what comes through. Cutting across all three are the two shared concerns: the [Controls](controls.md) that drive the hardware, and the [Resources](../supplies.md) the beamline draws on.
+The beamline divides into two kinds of thing. Along the beam, in order, sit the three **stations**: the [Source](source.md) that delivers and conditions the beam, the [Sample](sample_tower.md) stack that places the specimen in it, and the [Detector](microscope.md) that records what comes through. Cutting across all three are the two shared concerns: the [Controls](controls.md) that drive the hardware, and the [Resources](../operations.md#supplies) the beamline draws on.
 
 The stations are containment trees of apparatus (`Asset.parent_id`); controls relate to that apparatus sideways, by `controller_id`, and a resource is a Supply in its own right. So the list reads as one row of peers, but the first three share an axis the last two cross.
 
@@ -15,7 +15,7 @@ The stations are containment trees of apparatus (`Asset.parent_id`); controls re
 ## Shared
 
 - [Controls](controls.md): the controllers and drive crates, and the trigger wiring that links them across stations.
-- [Resources](../supplies.md): the continuously-available supplies a run needs, beam, cooling, and vacuum among them.
+- [Resources](../operations.md#supplies): the continuously-available supplies a run needs, beam, cooling, and vacuum among them.
 
 ## Reference
 
