@@ -35,7 +35,7 @@ A `Decision` is the entire record of a single choice. The decision facts (`choic
 
 | Name | Shape | Where used |
 |---|---|---|
-| `DecisionContext` | trimmed string, 1-100 chars; well-known constants documented (RecipeApproval, RunAbort, RunStop, RunTruncate, ResourceAllocation, PolicyGrant, ProcedureExecution, DatasetDiscard, RunDebrief, CautionProposal) | `Decision.context` |
+| `DecisionContext` | trimmed string, 1-100 chars; well-known constants documented (RecipeApproval, RunAbort, RunStop, RunTruncate, ResourceAllocation, PolicyGrant, ProcedureExecution, DatasetDiscard, RunDebrief, CautionProposal, RunSupervision, CautionPromotion, ClearanceExpiry) | `Decision.context` |
 | `DecisionChoice` | trimmed string, 1-500 chars; closed sub-vocabularies validated at projection time per context | `Decision.choice` |
 | `DecisionRule` | trimmed string, 1-500 chars; convention encourages prefixed identifiers like `iso17025:7.1.3:simple_acceptance` or `cora:policy:recipe_approval:v1` | `Decision.rule` |
 | `DecisionConfidenceSource` | closed StrEnum: `self_reported` \| `logprob` \| `ensemble` \| `human` | `Decision.confidence_source` |
@@ -49,7 +49,7 @@ A `Decision` is the entire record of a single choice. The decision facts (`choic
 
 `DecisionContext` is intentionally an open string with documented well-known constants. New contexts arrive without a schema migration. The well-known set is validated at projection time, not at write time.
 
-`DecisionChoice` is similarly open at the BC boundary, with per-context closed sub-vocabularies enforced at the projection layer. Two such sub-vocabularies exist today: the seven-value `RunDebrief` choice (NominalCompletion, DegradedCompletion, OperatorAbort, EquipmentAbort, DataSuspect, DebriefDeferred, DebriefConflicted) and the six-value `CautionProposal` choice (NoAction, ProposeNotice, ProposeCaution, ProposeWarning, ProposeSupersede, CautionDraftConflicted).
+`DecisionChoice` is similarly open at the BC boundary, with per-context closed sub-vocabularies enforced at the projection layer. The agent contexts each carry one: the seven-value `RunDebrief` choice (NominalCompletion, DegradedCompletion, OperatorAbort, EquipmentAbort, DataSuspect, DebriefDeferred, DebriefConflicted), the six-value `CautionProposal` choice (NoAction, ProposeNotice, ProposeCaution, ProposeWarning, ProposeSupersede, CautionDraftConflicted), the six-value `RunSupervision` choice (Continue, Hold, Stop, Abort, SupervisionDeferred, SupervisionConflicted), the three-value `CautionPromotion` choice (Promote, PromotionDeferred, PromotionConflicted), and the single-value `ClearanceExpiry` choice (Expire). The audit-fallback values stay work-noun-qualified (SupervisionDeferred, PromotionConflicted) so they do not collide in the shared, globally-filtered choice column.
 
 `ConfidenceBand` is never stored on the aggregate. The stored confidence is a single float in `[0, 1]`, and the band is computed at read time via `confidence_band()`: `Low` is below `0.3`, `Medium` is `[0.3, 0.7)`, `High` is `[0.7, 0.95)`, `Certain` is `[0.95, 1.0]`. The projection precomputes the band for fast categorical filtering, but the float is the source of truth. A `None` confidence yields a `None` band: the not-set distinction is preserved rather than silently mapped to `Low`. A `NaN` confidence also yields `None`.
 
@@ -111,7 +111,7 @@ The `append_inferences` slice does not open or close a logbook; it appends one e
 _Generated from the code at build time._
 <!-- /arch:slices-table -->
 
-`register_decision` performs two cross-aggregate pre-loads in the handler before appending. The Actor referenced by `actor_id` must exist; no status check is run (a Decision can be made by an Actor in any lifecycle state, including Deactivated, because the historical fact still holds). The decider then refuses any Actor whose `kind` is `agent`: agent-emitted Decisions are written by the subscriber path (RunDebriefer, CautionDrafter) so the Signer port can wrap each row at the boundary; this slice stays human and service-account only. When `parent_id` is set, the parent Decision must exist. For operator-triggered re-invocations of an agent run-debrief, the handler additionally checks that the parent Decision carries the same `run_id` and the same RunDebrief context.
+`register_decision` performs two cross-aggregate pre-loads in the handler before appending. The Actor referenced by `actor_id` must exist; no status check is run (a Decision can be made by an Actor in any lifecycle state, including Deactivated, because the historical fact still holds). The decider then refuses any Actor whose `kind` is `agent`: agent-emitted Decisions are composed on dedicated agent paths instead, not through this slice, which stays human and service-account only. The LLM subscribers (RunDebriefer, CautionDrafter) compose on a path that can wrap each row through the Signer port at the boundary; the deterministic active runtimes (RunSupervisor, CautionPromoter, ClearanceExpirer) compose their Decisions inline on the same dedicated-path principle. When `parent_id` is set, the parent Decision must exist. For operator-triggered re-invocations of an agent run-debrief, the handler additionally checks that the parent Decision carries the same `run_id` and the same RunDebrief context.
 
 `list_decisions` is a keyset-paginated read against `proj_decision_summary`. The handler accepts an optional `confidence_band` filter and an optional `actor_id` filter, and uses the same no-smart-logic-in-SQL discipline as every other list slice in CORA. The `confidence_band` filter resolves against the denormalized column, so a low-cardinality categorical predicate stays an indexed lookup.
 
@@ -248,7 +248,7 @@ There is no foreign key from `entries_decision_inferences` to the Decision aggre
 |---|---|---|
 | Access | reads-from | `Decision.actor_id` is an `Actor.id`; the handler pre-loads the Actor at registration to confirm existence |
 | Trust | shared-vocabulary-with | `Decision.context = "PolicyGrant"` Decisions are written by the Authorize port path when a policy decision is consequential enough to record; `alternatives` carries the determining-policy ids in those Decisions |
-| Agent | writes-into | the agent subscribers for `RunDebriefer` and `CautionDrafter` write one Decision per terminal Run event; the subscriber composes `DecisionRegistered` inline so the decision_id is deterministic from the run_id |
+| Agent | writes-into | all five agents author Decisions in their own contexts (`RunDebrief`, `CautionProposal`, `RunSupervision`, `CautionPromotion`, `ClearanceExpiry`); each composes `DecisionRegistered` inline rather than through `register_decision`, and most derive a deterministic decision_id from the entity acted on (run_id, proposal id, clearance id) for idempotent re-delivery |
 | Run | reads-from | `RunAbort`, `RunStop`, `RunTruncate`, and `RunDebrief` Decisions reference a Run id either in `inputs` or in the context vocabulary; the link is by value, not stored on Run |
 | Recipe | reads-from | `RecipeApproval` Decisions cite a Recipe id in `inputs`; the link is by value |
 | Data | reads-from | `DatasetDiscard` Decisions cite a Dataset id, and `invalidation`-kind chains pair with the `demote_dataset` slice on the Data module so an authorized retract has a citable rule |
@@ -257,7 +257,7 @@ There is no foreign key from `entries_decision_inferences` to the Decision aggre
 
 The `actor_id` reference is pre-loaded at the registration handler, but no status check is run. A Decision made by an Actor who is later deactivated is still a valid historical fact, and its audit value does not diminish. The `parent_id` reference is also pre-loaded; the cross-Run and cross-context guards on operator re-invocations of agent debriefs are the only structural checks beyond existence.
 
-Decisions are read by many modules and written by few. The two agent subscribers (`RunDebriefer`, `CautionDrafter`) are the only AI authors today; everything else is human or operator path. The Authorize port does not write Decisions for every authorization; the per-decision audit log lives in `entries_conduit_verdicts`, and a `PolicyGrant` Decision is reserved for the small subset of policy decisions consequential enough to record at the Decision-aggregate level.
+Decisions are read by many modules and written by few. CORA's five agents are the only non-human authors: the two LLM subscribers (`RunDebriefer`, `CautionDrafter`) plus the three deterministic runtimes (`RunSupervisor`, `CautionPromoter`, `ClearanceExpirer`); everything else is human or operator path. The Authorize port does not write Decisions for every authorization; the per-decision audit log lives in `entries_conduit_verdicts`, and a `PolicyGrant` Decision is reserved for the small subset of policy decisions consequential enough to record at the Decision-aggregate level.
 
 ## Examples
 

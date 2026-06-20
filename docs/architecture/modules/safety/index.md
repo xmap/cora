@@ -19,7 +19,6 @@ A Clearance carries five roles:
 Out of scope
 {: .cora-kicker }
 
-- **Auto-expiry on `valid_until`.** Active clearances do not automatically transition to Expired when the validity window passes; an operator must call `expire_clearance` explicitly. Background expiry is a deferred follow-up.
 - **Typed form-field schema on `ClearanceTemplate`.** The template carries identity (`code`, `title`, `version`) and its own lifecycle, but not yet a typed schema for the form's fields; the field structure is still convention plus the `Clearance` payload shape. A per-template field schema lands when a facility needs machine-validated form bodies.
 - **Per-user certifications.** Operator training records (radiation safety cards, cryogenic handling certs) are deferred to a sibling `ParticipantCertification` aggregate.
 - **Typed mitigation and risk aggregates.** `HazardDeclaration.mitigations` is a free-form set of reference strings today; a typed `Mitigation` aggregate and a separate `Risk` aggregate (per the four-primitive Hazard / Hazardous Situation / Risk / Barrier split) are deferred.
@@ -110,7 +109,7 @@ stateDiagram-v2
 : Requires `UnderReview` AND at least one step in `review_steps` whose `decision` is `Approved`. Approving without any approving step in the chain raises.
 
 `reject_clearance` / `expire_clearance`
-: Both require a free-form `reason` (1–500 chars). `reject` from `UnderReview`; `expire` from `Active`.
+: Both require a free-form `reason` (1–500 chars). `reject` from `UnderReview`; `expire` from `Active`. `expire_clearance` is now issued both by operators and automatically by the deterministic ClearanceExpirer agent, which sweeps Active clearances and expires those whose `valid_until` has passed (the agent supplies the reason "validity window elapsed"). The decider stays a pure `Active -> Expired` transition; it does not re-check `valid_until`, so the agent's window check is what gates the automatic path.
 
 `amend_clearance`
 : Parent must be `Active`. The slice creates a new child Clearance (with `parent_id` pointing back) and atomically supersedes the parent in a single cross-stream write (see Cross-Module boundaries).
@@ -293,6 +292,7 @@ The partial UNIQUE index on `(facility_code, code) WHERE status != 'Withdrawn'` 
 | Subject | shared-id-with | `SubjectBinding.subject_id` references a Subject the Clearance gates |
 | Run | reads-from | Run.start calls `ClearanceLookup.find_referencing_run(run_id, subject_id, asset_ids)` against `proj_safety_clearance_summary`; at least one `Active` Clearance must cover the Run scope or `start_run` rejects with `RunRequiresActiveClearance` |
 | Operation | reads-from | Procedure.start performs the analogous check via `ProcedureBinding` references |
+| Agent | written-by | the deterministic ClearanceExpirer agent issues `expire_clearance` on Active clearances whose `valid_until` has passed, through the same authorized command path an operator uses; the resulting `ClearanceExpired` is byte-identical to an operator-driven expiry |
 | (any) | writes-to via `append_streams` | `amend_clearance` writes `ClearanceSuperseded` to the parent stream and `ClearanceRegistered` to the child stream atomically in a single Postgres transaction; all-or-nothing, a `ConcurrencyError` on either stream rolls back the whole commit |
 
 Binding-target references are validated for UUID shape at the API boundary but not for existence at write time; the eventual-consistency stance lets a Clearance be registered before its target Subject or Run exists, which matches how facility paperwork actually flows (the form is filed before beamtime, then bound to the Run at start).

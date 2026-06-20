@@ -1,8 +1,8 @@
-# Agent module <span class="md-maturity md-maturity--stable" title="Eleven slices shipped with two production agents (RunDebriefer, CautionDrafter), four-state lifecycle, tool grants, and budget declarations">stable</span>
+# Agent module <span class="md-maturity md-maturity--stable" title="Eleven slices, five seeded agents (LLM: RunDebriefer, CautionDrafter; deterministic: RunSupervisor, CautionPromoter, ClearanceExpirer), four-state lifecycle, tool grants, and budget declarations">stable</span>
 
 ## Purpose & Scope
 
-The Agent module records the typed configuration for each AI agent that participates in CORA. An Agent is the digital identity card of a kind of automation: "the RunDebriefer agent runs on Claude Haiku 4.5, gets the prompt template at this id, and writes its findings as Decisions on the Run it watched"; "the CautionDrafter agent watches terminal Run events and proposes Cautions for operator review". The aggregate carries everything needed to identify, version, and gate an agent's behaviour for reproducibility; the runtime lives in the subscriber layer that invokes it.
+The Agent module records the typed configuration for each agent that participates in CORA, whether it is backed by a language model or by a fixed rule. An Agent is the digital identity card of a kind of automation: "the RunDebriefer agent runs on Claude Haiku 4.5, gets the prompt template at this id, and writes its findings as Decisions on the Run it watched"; "the ClearanceExpirer agent is rule-based, watches Active safety clearances, and expires the ones whose validity window has passed". The aggregate carries everything needed to identify, version, and gate an agent's behaviour for reproducibility; the runtime that acts on the configuration lives outside the aggregate.
 
 Agents share their identity with the Access module's Actors: the same UUID names the agent's record here and the agent's Actor record over there, written atomically at definition. Every Decision an agent writes, and every authorisation check that runs against an agent's action, refers to that single id.
 
@@ -13,6 +13,26 @@ An Agent carries five roles:
 - **A typed configuration record.** Required: `kind`, `name`, `version`, `model_ref` (provider plus model plus optional snapshot pin). Optional: `description`, `canonical_uri` (https-only, A2A-forward-compat), `prompt_template_id`, `capabilities` (free-form, cardinality-capped). All bounded-text fields trim and validate at the value-object boundary.
 - **Tool grants and budget declarations.** `tools` is a frozenset of MCP tool names the agent is authorised to invoke; grants and revocations are idempotent and stay editable in `Defined`, `Versioned`, and `Suspended` (only `Deprecated` blocks them). `budget` carries optional `monthly_usd_cap` and `daily_token_cap`; declaration only today, with enforcement deferred to the Budget BC.
 - **Cross-BC action slices.** Two slices today drive cross-BC writes: `regenerate_run_debrief` invokes the RunDebriefer agent on demand and writes a Decision on the named Run; `promote_caution_proposal` reads a CautionDrafter agent's `CautionProposal` Decision and writes the proposed Caution into the Caution module after operator review.
+
+### The agent fleet
+
+Five agents are seeded today. They split two ways. By **how they decide**: the two LLM agents (RunDebriefer, CautionDrafter) call a model; the three deterministic agents (RunSupervisor, CautionPromoter, ClearanceExpirer) apply a fixed rule and carry a sentinel `model_ref` with no prompt template. By **what they do**: passive agents only advise (they write a Decision and stop); active agents decide and then act, but only by issuing an existing spine command through the same authorized path a human uses, so the resulting record is byte-identical whether a human or the agent acted.
+
+The runtime that drives an agent takes one of three host shapes:
+
+- **On-demand slice.** A REST/MCP call invokes the agent directly (`regenerate_run_debrief`).
+- **Event-triggered subscriber.** A subscriber in the projection worker reacts to a domain event: RunDebriefer and CautionDrafter on a terminal Run, CautionPromoter on a registered `CautionProposal` Decision.
+- **Composition-root periodic loop.** A background task sweeps on a timer: RunSupervisor watches in-flight Runs and issues `hold_run` / `stop_run` when beam is lost; ClearanceExpirer sweeps Active clearances and issues `expire_clearance` once a validity window has passed.
+
+| Agent | Decides | Host | Acts |
+|---|---|---|---|
+| RunDebriefer | LLM | on-demand slice + subscriber | writes a `RunDebrief` Decision (passive) |
+| CautionDrafter | LLM | subscriber | writes a `CautionProposal` Decision (passive) |
+| RunSupervisor | deterministic | periodic loop | `hold_run` / `stop_run` + `RunSupervision` Decision |
+| CautionPromoter | deterministic | subscriber | registers a Caution + `CautionPromotion` Decision |
+| ClearanceExpirer | deterministic | periodic loop | `expire_clearance` + `ClearanceExpiry` Decision |
+
+The active runtimes (RunSupervisor, CautionPromoter, ClearanceExpirer) ship off by default, gate every actuation through the Authorize port like any principal, and stand down the moment their Actor is deactivated. None of them reaches past the spine onto the real-time floor: an active agent only issues a command the spine already exposes.
 
 <div class="cora-aside cora-aside--deferred" markdown>
 
@@ -25,7 +45,7 @@ Out of scope
 - **Strict URI validation.** `canonical_uri` validation is loose today (https scheme, no fragment, length cap). RFC-compliant parsing waits until A2A wiring lands.
 - **Tool-name BNF.** `ToolName` accepts any 1-100 char trimmed string. Tightening to MCP's formal tool-naming BNF is a watch item.
 - **Closed `AgentKind` enum.** Kinds are free-form strings today. Graduation to a closed StrEnum waits until the vocabulary stabilises in pilot use.
-- **Decision integration in the aggregate.** The Agent aggregate is config-only. The runtime that invokes the agent and writes the Decision lives in the subscriber layer; the aggregate never knows it was invoked.
+- **Decision integration in the aggregate.** The Agent aggregate is config-only. The runtime that invokes the agent and writes the Decision lives in the subscriber and composition-root layers; the aggregate never knows it was invoked.
 
 </div>
 
@@ -54,6 +74,8 @@ Lifecycle timestamps (`defined_at`, `versioned_at`, `deprecated_at`) live on the
 | `ModelRef` | `provider: str (1-100)`, `model: str (1-200)`, `snapshot_pin: str? (1-100)` | `Agent.model_ref` (required at definition) |
 
 `ModelRef.snapshot_pin` enables reproducibility-by-construction: an Anthropic snapshot string, an OpenAI model fingerprint, or any provider-specific pin that names the exact weights used. Different `model_ref` requires defining a new Agent with a new `id`; the model identity is not a mutable field.
+
+Deterministic (rule-based) agents carry a sentinel `model_ref` (`provider="deterministic"`, `model="agent:<Kind>:v1"`) and no `prompt_template_id`: the field satisfies the aggregate's required-config contract but is never used to build a model client. RunSupervisor, CautionPromoter, and ClearanceExpirer all use this shape.
 
 ## FSM
 
@@ -175,11 +197,14 @@ The `CHECK` constraint encodes the closed `AgentStatus` enum at the row level. `
 |---|---|---|
 | Trust | gated-by | Every write-side Agent slice (lifecycle, grants, budget) is gated by the Authorize port resolving a `Policy` for the `(principal, command, conduit, surface)` tuple; deny outcomes refuse before the decider runs |
 | Access | shared-id-with | `Agent.id` is the same UUID as `Actor.id` for this agent; `define_agent` co-writes `ActorRegistered(kind="agent")` on the Access stream via `append_streams` |
-| Decision | writes-to (via subscriber and slice) | The RunDebriefer subscriber writes `DecisionRegistered` when a Run reaches a terminal state; `regenerate_run_debrief` writes a new `DecisionRegistered` on operator demand; agent-authored Decisions carry the agent's id in `actor_id` |
-| Run | reads-from (via subscriber) | The RunDebriefer subscriber filters on terminal-state Run events and loads the Run aggregate plus its `pinned_calibration_ids` to build the debrief context |
-| Caution | writes-to via `append_streams` | `promote_caution_proposal` reads a CautionDrafter Decision's `proposed_caution` payload and writes `CautionRegistered` (plus, for the supersede arm, `CautionSuperseded` on the parent stream) atomically |
+| Decision | writes-to (via subscriber, slice, and runtime) | Every agent writes its judgement as a `DecisionRegistered`, in its own context: `RunDebrief` (RunDebriefer), `CautionProposal` (CautionDrafter), `RunSupervision` (RunSupervisor), `CautionPromotion` (CautionPromoter), `ClearanceExpiry` (ClearanceExpirer). Agent-authored Decisions carry the agent's id in `actor_id` |
+| Run | reads-from + writes-to | The RunDebriefer subscriber filters on terminal-state Run events and loads the Run plus its `pinned_calibration_ids` to build the debrief context; the RunSupervisor loop issues `hold_run` / `stop_run` on an in-flight Run when beam is lost |
+| Caution | writes-to | `promote_caution_proposal` (operator-initiated) reads a CautionDrafter Decision's `proposed_caution` payload and writes `CautionRegistered` (plus, for the supersede arm, `CautionSuperseded`) atomically; the CautionPromoter loop performs the same Caution write automatically for high-confidence, Notice-only proposals |
+| Safety | writes-to | The ClearanceExpirer loop issues `expire_clearance` on an Active clearance whose `valid_until` has passed, writing `ClearanceExpired` |
 
-The two cross-BC action slices both gate on operator authorisation before any cross-BC write happens: `regenerate_run_debrief` requires the caller to be authorised to invoke the named agent; `promote_caution_proposal` requires the caller to be authorised to author Cautions, plus a provenance check that the named Decision was emitted by a registered CautionDrafter agent. Promotion is operator-initiated by design; the CautionDrafter never writes a Caution itself.
+The two cross-BC action slices both gate on operator authorisation before any cross-BC write happens: `regenerate_run_debrief` requires the caller to be authorised to invoke the named agent; `promote_caution_proposal` requires the caller to be authorised to author Cautions, plus a provenance check that the named Decision was emitted by a registered CautionDrafter agent. Promotion via the slice is operator-initiated by design; the CautionDrafter never writes a Caution itself.
+
+The active-agent runtimes write through the same authorized command paths a human uses, not through privileged back doors: RunSupervisor's `hold_run` / `stop_run`, CautionPromoter's Caution registration, and ClearanceExpirer's `expire_clearance` each pass the Authorize port for the agent principal before any write. This is what keeps the record byte-identical whether a human or an agent acted, and it is why the active runtimes can be turned off (or their Actor deactivated) without leaving a partial or privileged trail behind.
 
 ## Examples
 
