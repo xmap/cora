@@ -51,8 +51,8 @@ cleanly with version=None (the additive-state pattern).
 `needed_family_ids`, `version`, `parameters_schema`,
 `needed_supplies`, `capability_id`, `needed_assembly_ids`, AND the
 compute-classification fields (`execution_pattern`,
-`monotone_quality`, `resumable_from_checkpoint`) through from prior
-state. Constructing
+`monotone_quality`, `resumable_from_checkpoint`), AND `launch_spec`
+through from prior state. Constructing
 `Method(id=..., name=..., status=...)` without explicitly passing
 the additive frozenset/optional fields would silently WIPE them to
 defaults. Pinned by `test_evolve_<transition>_preserves_needed_family_ids`,
@@ -161,6 +161,10 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 execution_pattern=prior.execution_pattern,
                 monotone_quality=prior.monotone_quality,
                 resumable_from_checkpoint=prior.resumable_from_checkpoint,
+                # launch_spec PRESERVED across every transition (part of
+                # content identity; omitting it would silently wipe the
+                # recipe to None, the critical invariant below).
+                launch_spec=prior.launch_spec,
                 # required_roles PRESERVED across versioning; the
                 # role declarations are part of the content the
                 # version_tag attests to (Method.content_subset
@@ -194,6 +198,10 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 execution_pattern=prior.execution_pattern,
                 monotone_quality=prior.monotone_quality,
                 resumable_from_checkpoint=prior.resumable_from_checkpoint,
+                # launch_spec PRESERVED across every transition (part of
+                # content identity; omitting it would silently wipe the
+                # recipe to None, the critical invariant below).
+                launch_spec=prior.launch_spec,
                 # required_roles PRESERVED across deprecation; the
                 # declared roles remain part of the historical record.
                 required_roles=prior.required_roles,
@@ -231,6 +239,10 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 execution_pattern=prior.execution_pattern,
                 monotone_quality=prior.monotone_quality,
                 resumable_from_checkpoint=prior.resumable_from_checkpoint,
+                # launch_spec PRESERVED across every transition (part of
+                # content identity; omitting it would silently wipe the
+                # recipe to None, the critical invariant below).
+                launch_spec=prior.launch_spec,
                 # required_roles PRESERVED across schema updates; the
                 # two fields evolve independently.
                 required_roles=prior.required_roles,
@@ -279,6 +291,10 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 execution_pattern=prior.execution_pattern,
                 monotone_quality=prior.monotone_quality,
                 resumable_from_checkpoint=prior.resumable_from_checkpoint,
+                # launch_spec PRESERVED across every transition (part of
+                # content identity; omitting it would silently wipe the
+                # recipe to None, the critical invariant below).
+                launch_spec=prior.launch_spec,
                 required_roles=prior.required_roles | {new_role},
             )
         case MethodRequiredRoleRemoved(role_name=role_name):
@@ -306,6 +322,10 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 execution_pattern=prior.execution_pattern,
                 monotone_quality=prior.monotone_quality,
                 resumable_from_checkpoint=prior.resumable_from_checkpoint,
+                # launch_spec PRESERVED across every transition (part of
+                # content identity; omitting it would silently wipe the
+                # recipe to None, the critical invariant below).
+                launch_spec=prior.launch_spec,
                 required_roles=remaining,
             )
         case _:  # pragma: no cover  # exhaustiveness guard

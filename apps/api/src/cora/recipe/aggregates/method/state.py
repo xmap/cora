@@ -96,6 +96,7 @@ from cora.equipment.aggregates.asset import (
     PortDirection,
 )
 from cora.recipe.aggregates.method.execution_pattern import ExecutionPattern
+from cora.recipe.aggregates.method.launch_spec import LaunchSpec, launch_spec_to_dict
 from cora.shared.bounded_text import bounded_name
 from cora.shared.scope_markers import Annotated, DeferredVocabulary
 
@@ -698,6 +699,14 @@ class Method:
     # self-checkpointing BATCH may also be resumable; do NOT couple to
     # ITERATIVE). Default False (a Gridrec one-shot cannot resume).
     resumable_from_checkpoint: bool = False
+    # launch_spec: the vetted compute launch recipe (argv template) the
+    # conduct runtime builds the command from, so a caller selects a
+    # registered recipe instead of POSTing raw argv. Set by the dedicated
+    # update_method_launch_spec slice (NOT define_method, mirroring
+    # parameters_schema); None until set. Participates in content_subset
+    # (ORDER-PRESERVING: args are argv order). See
+    # [[project-method-launch-spec-stage0-design]].
+    launch_spec: LaunchSpec | None = None
 
     def content_subset(self) -> dict[str, object]:
         """Canonical content subset hashed into MethodVersioned.content_hash.
@@ -733,6 +742,15 @@ class Method:
             ),
             "monotone_quality": self.monotone_quality,
             "resumable_from_checkpoint": self.resumable_from_checkpoint,
+            # launch_spec participates in content identity: two Methods that
+            # differ only in their argv recipe are different recipes. Rendered
+            # ORDER-PRESERVING (launch_spec_to_dict does NOT sort args; their
+            # order is argv order). This is the ONE non-sorted member of this
+            # subset; do NOT "fix" it into a sort. None when unset. Per
+            # [[project-method-launch-spec-stage0-design]] L4.
+            "launch_spec": (
+                launch_spec_to_dict(self.launch_spec) if self.launch_spec is not None else None
+            ),
             # required_roles participates in the content hash so a
             # MethodVersioned event attests to the declared role slots
             # alongside parameters_schema / needed_family_ids / etc.
