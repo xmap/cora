@@ -293,10 +293,20 @@ sample-environment:
       trigger_source: PSO         # position-synchronized output drives the camera
       replaceable: true
       serial_number: "146853-A-1-1-X"           # operator-confirmed (#156)
-      drawing: { system: EDMS, number: 630C2125, revision: "(-)" }   # Aerotech vendor drawing (#156)
+      drawing: { system: EDMS, number: 630C2125, revision: "(-)" }   # Aerotech vendor per-unit drawing (#156)
+      datasheet: "https://de.aerotech.com/wp-content/uploads/2021/01/abrs.pdf"   # ABRS series datasheet, 2021-01 (#164)
       range: -360..360 deg
-      max_speed: 720 deg/s
+      max_speed: 720 deg/s               # operational soft limit at 2-BM (config on 2bmb:m102); the datasheet hardware max is max_speed_datasheet below
+      max_speed_datasheet: 3000 deg/s    # ABRS-250MP datasheet, 500 rpm (#164)
       encoder_resolution: 0.000676 deg   # item_050 Ensemble encoder table: 532800 pulses/rev (11840 lines/rev x 45) = 360/532800 deg/count; replaces an earlier unsourced 0.0001 deg (questions STAGE-10)
+      # ABRS-250MP datasheet specs (#164):
+      aperture: 35 mm                    # clear aperture; the 250 in ABRS-250MP is the stage width designator, not the aperture
+      accuracy_rotation: 2 arcsec        # calibrated accuracy, +/-2 arc sec
+      repeatability_rotation: 1 arcsec   # bidirectional, < 1 arc sec
+      load_capacity_axial: 66 kg
+      load_capacity_radial: 36 kg
+      load_capacity_tilt: 28 Nm          # max tilt moment
+      stage_mass: 15.6 kg
       # Rotary kit per 2-BM staff source (pre-APSU ops/item_100 "Rotary Stages"). ABRS-250MP-M-AS is the
       # currently-installed 2-BM-B rotary (manual/item_020). Mode/station labels ("fast tomo"/"mona tomo"/
       # "spindle") and whether the swap is a live loadout variant conflict pre vs post APSU; confirm (questions STAGE-5).
