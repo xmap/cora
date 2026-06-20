@@ -50,66 +50,67 @@ doesn't fit. Capability IS permitted in the fixture's command set
 because the recipe-chain helper needs it as a prereq for Method.
 """
 
-# pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false
-
-import asyncio
 from collections.abc import Callable, Iterator
-from datetime import UTC, datetime
-from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cora.api.main import create_app
 from cora.equipment.aggregates.asset import AssetTier
-from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.safety.aggregates.clearance_template import clearance_template_stream_id
-from cora.trust.aggregates.policy.events import (
-    PolicyDefined,
-    event_type_name,
-    to_payload,
+from tests._authz import trust_authorize_client
+
+_PERMITTED_COMMANDS = frozenset(
+    {
+        # Create-side
+        "RegisterActor",
+        "RegisterSubject",
+        "RegisterAsset",
+        "RegisterClearance",
+        "RegisterCampaign",
+        "RegisterDataset",
+        "DefineCalibration",
+        "RegisterCaution",
+        "RegisterDecision",
+        "RegisterProcedure",
+        "DefineAgent",
+        "DefineCapability",  # prereq for the recipe-chain helper
+        "DefineMethod",
+        "DefinePractice",
+        "DefinePlan",
+        "StartRun",
+        # Read-side (the gates this test exercises)
+        "GetActor",
+        "GetSubject",
+        "GetAsset",
+        "GetClearance",
+        "GetCampaign",
+        "GetDataset",
+        "GetCalibration",
+        "GetCaution",
+        "GetDecision",
+        "GetProcedure",
+        "GetAgent",
+        "GetMethod",
+        "GetPractice",
+        "GetPlan",
+        "GetRun",
+        # List-side (8e-1c, 8e-2a, 8e-3a, 8e-3b, 8e-4, 8e-5, 8e-6, 8e-7, 8e-8)
+        "ListActors",
+        "ListSubjects",
+        "ListAssets",
+        "ListFamilies",
+        "ListMethods",
+        "ListPractices",
+        "ListPlans",
+        "ListRuns",
+        "ListDatasets",
+        "ListDecisions",
+        "ListZones",
+        "ListConduits",
+        "ListPolicies",
+    }
 )
-
-
-def _seed_policy(
-    app: FastAPI,
-    *,
-    policy_id: UUID,
-    permitted_principal: UUID,
-    permitted_commands: frozenset[str],
-) -> None:
-    """Seed a single PolicyDefined event into the running app's
-    in-memory store. Same shape as `test_principal_header.py`'s
-    helper; duplicated here to keep the BOLA test self-contained
-    rather than coupling two files via a shared fixture file.
-
-    Binds the HTTP Surface so P1's commands (which arrive via the REST
-    TestClient on SYSTEM_HTTP_SURFACE_ID) strict-match; `evaluate`
-    denies any other surface."""
-    event = PolicyDefined(
-        policy_id=policy_id,
-        name="Bola-test-policy",
-        conduit_id=UUID(int=0),
-        permitted_principal_ids=(permitted_principal,),
-        permitted_commands=tuple(permitted_commands),
-        occurred_at=datetime.now(tz=UTC),
-        surface_id=SYSTEM_HTTP_SURFACE_ID,
-    )
-    new_event = to_new_event(
-        event_type=event_type_name(event),
-        payload=to_payload(event),
-        occurred_at=event.occurred_at,
-        event_id=uuid4(),
-        command_name="DefinePolicy",
-        correlation_id=uuid4(),
-        principal_id=uuid4(),
-    )
-    asyncio.run(
-        app.state.deps.event_store.append("Policy", policy_id, 0, [new_event]),
-    )
 
 
 @pytest.fixture
@@ -124,72 +125,13 @@ def bola_app(monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple[TestClient, UUID
     p1 = UUID("01900000-0000-7000-8000-00000000bb11")
     p2 = UUID("01900000-0000-7000-8000-00000000bb12")
 
-    monkeypatch.setenv("APP_ENV", "test")
-    monkeypatch.setenv("TRUST_POLICY_ID", str(policy_id))
-
-    client = TestClient(create_app())
-    client.__enter__()  # start lifespan; app.state.deps populated
-
-    _seed_policy(
-        cast("FastAPI", client.app),
+    with trust_authorize_client(
+        monkeypatch,
+        permitted_principal_ids={p1},
+        permitted_commands=_PERMITTED_COMMANDS,
         policy_id=policy_id,
-        permitted_principal=p1,
-        permitted_commands=frozenset(
-            {
-                # Create-side
-                "RegisterActor",
-                "RegisterSubject",
-                "RegisterAsset",
-                "RegisterClearance",
-                "RegisterCampaign",
-                "RegisterDataset",
-                "DefineCalibration",
-                "RegisterCaution",
-                "RegisterDecision",
-                "RegisterProcedure",
-                "DefineAgent",
-                "DefineCapability",  # prereq for the recipe-chain helper
-                "DefineMethod",
-                "DefinePractice",
-                "DefinePlan",
-                "StartRun",
-                # Read-side (the gates this test exercises)
-                "GetActor",
-                "GetSubject",
-                "GetAsset",
-                "GetClearance",
-                "GetCampaign",
-                "GetDataset",
-                "GetCalibration",
-                "GetCaution",
-                "GetDecision",
-                "GetProcedure",
-                "GetAgent",
-                "GetMethod",
-                "GetPractice",
-                "GetPlan",
-                "GetRun",
-                # List-side (8e-1c, 8e-2a, 8e-3a, 8e-3b, 8e-4, 8e-5, 8e-6, 8e-7, 8e-8)
-                "ListActors",
-                "ListSubjects",
-                "ListAssets",
-                "ListFamilies",
-                "ListMethods",
-                "ListPractices",
-                "ListPlans",
-                "ListRuns",
-                "ListDatasets",
-                "ListDecisions",
-                "ListZones",
-                "ListConduits",
-                "ListPolicies",
-            }
-        ),
-    )
-    try:
+    ) as client:
         yield client, p1, p2
-    finally:
-        client.__exit__(None, None, None)
 
 
 def _create_actor_as(client: TestClient, principal: UUID) -> UUID:

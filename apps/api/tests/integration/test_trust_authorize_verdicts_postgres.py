@@ -20,13 +20,12 @@ Also exercises:
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import asyncpg
 import pytest
 
 from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
-from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import (
     Allow,
     Deny,
@@ -37,18 +36,10 @@ from cora.trust.aggregates.conduit.entries import (
     PostgresVerdictStore,
     Verdict,
 )
-from cora.trust.aggregates.policy.events import (
-    PolicyDefined,
-)
-from cora.trust.aggregates.policy.events import (
-    event_type_name as policy_event_type_name,
-)
-from cora.trust.aggregates.policy.events import (
-    to_payload as policy_to_payload,
-)
 from cora.trust.authorize import TrustAuthorize
 from cora.trust.features import define_conduit
 from cora.trust.features.define_conduit import DefineConduit
+from tests._authz import seed_policy
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)
@@ -86,7 +77,6 @@ async def test_trust_authorize_persists_traversals_against_postgres(
     define_conduit_event_id = UUID("01900000-0000-7000-8000-000000067a03")
     logbook_opened_event_id = UUID("01900000-0000-7000-8000-000000067a04")
     policy_id = UUID("01900000-0000-7000-8000-000000067a05")
-    policy_event_id = UUID("01900000-0000-7000-8000-000000067a06")
     allow_entry_id = UUID("01900000-0000-7000-8000-000000067a07")
     deny_entry_id = UUID("01900000-0000-7000-8000-000000067a08")
 
@@ -118,34 +108,14 @@ async def test_trust_authorize_persists_traversals_against_postgres(
 
     # 2. Seed a Policy that gates `RegisterActor` for `_PRINCIPAL_ID`
     #    on this Conduit (so TrustAuthorize Allow/Deny is meaningful).
-    policy_envelope = to_new_event(
-        event_type=policy_event_type_name(
-            PolicyDefined(
-                policy_id=policy_id,
-                name="Test-policy",
-                conduit_id=conduit_id,
-                permitted_principal_ids=(_PRINCIPAL_ID,),
-                permitted_commands=("RegisterActor",),
-                occurred_at=_NOW,
-            )
-        ),
-        payload=policy_to_payload(
-            PolicyDefined(
-                policy_id=policy_id,
-                name="Test-policy",
-                conduit_id=conduit_id,
-                permitted_principal_ids=(_PRINCIPAL_ID,),
-                permitted_commands=("RegisterActor",),
-                occurred_at=_NOW,
-            )
-        ),
+    await seed_policy(
+        event_store,
+        policy_id=policy_id,
+        permitted_principal_ids={_PRINCIPAL_ID},
+        permitted_commands={"RegisterActor"},
+        conduit_id=conduit_id,
         occurred_at=_NOW,
-        event_id=policy_event_id,
-        command_name="DefinePolicy",
-        correlation_id=_CORRELATION_ID,
-        principal_id=uuid4(),
     )
-    await event_store.append("Policy", policy_id, expected_version=0, events=[policy_envelope])
 
     # 3. Wire TrustAuthorize with the verdicts store + a fresh
     #    id-generator (separate from the one used for define_conduit
