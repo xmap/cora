@@ -252,6 +252,7 @@ async def test_multi_cycle_hold_resume_then_stop_persists_full_event_stream(
     assert stopped.payload == {
         "run_id": str(run_id),
         "reason": "hit time budget cleanly",
+        "decided_by_decision_id": None,
         "occurred_at": _NOW.isoformat(),
     }
 
