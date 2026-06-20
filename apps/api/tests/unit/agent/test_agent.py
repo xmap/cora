@@ -405,7 +405,8 @@ def test_agent_budget_accepts_one_cap_set() -> None:
 
 @pytest.mark.unit
 def test_agent_budget_accepts_zero_caps() -> None:
-    """Zero caps are allowed (interpretation: 'no spend permitted today')."""
+    """Zero caps are allowed: recorded as the 'no spend' intent, not
+    enforced today (a 0 cap blocks nothing until the Budget BC lands)."""
     from cora.agent.aggregates.agent import AgentBudget
 
     b = AgentBudget(monthly_usd_cap=0.0, daily_token_cap=0)

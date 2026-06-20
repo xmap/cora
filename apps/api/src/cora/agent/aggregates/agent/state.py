@@ -619,12 +619,24 @@ class AgentSuspensionReason:
 @bounded_name(max_length=AGENT_TOOL_NAME_MAX_LENGTH, error_class=InvalidToolNameError)
 @dataclass(frozen=True)
 class ToolName:
-    """One MCP tool name the agent is authorized to invoke.
+    """One MCP tool name in the agent's declared tool set.
+
+    DECLARATION-ONLY today: the set is recorded by `grant_tool_to_agent`
+    / `revoke_tool_from_agent` and surfaced in reads, but is NOT
+    consulted at invocation. Nothing gates on it: the MCP edge registers
+    every tool globally and dispatches by principal (never by
+    `Agent.tools`), and the agent subscribers do not build tool-bearing
+    LLM requests. So "the agent is authorized to invoke X" is recorded
+    intent, not an enforced control, and revoking a tool changes no
+    runtime behavior. The future enforcement point is an agent runtime
+    that offers tools to the model. See
+    memory/project_authorization_envelope_design.md (dead switches /
+    Tier-1 #3).
 
     Bounded text 1-100 chars (matches MCP tool-naming convention;
-    tightening to a formal BNF is a watch item). The aggregate
-    carries `frozenset[ToolName]`. Cardinality cap enforced
-    separately by `grant_tool_to_agent` decider.
+    tightening to a formal BNF is a watch item). The aggregate carries
+    `frozenset[ToolName]`. Cardinality cap enforced separately by the
+    `grant_tool_to_agent` decider.
     """
 
     value: str
@@ -647,9 +659,10 @@ class AgentBudget:
     Budget BC can begin enforcement without further per-agent surface
     work.
 
-    Zero caps allowed (interpretation: "no spend permitted today");
-    future enforcement layer can treat zero as a hard stop.
-    Negative caps rejected.
+    Zero caps allowed: recorded as the "no spend" intent, but NOT
+    enforced today. A 0 cap blocks nothing (same as any other cap) until
+    the Budget BC lands; the future enforcement layer can treat zero as a
+    hard stop. Negative caps rejected.
     """
 
     monthly_usd_cap: float | None
@@ -754,7 +767,8 @@ class Agent:
     required by the RunDebriefer subscriber), `capabilities` (defaults
     to empty frozenset).
 
-    Lifecycle additions: `tools` per-agent MCP tool allowlist;
+    Lifecycle additions: `tools` per-agent declared MCP tool set
+    (recorded only; not consulted at invocation today, see `ToolName`);
     `budget` optional declarative caps (no enforcement at this
     layer); `suspended_at` / `resumed_at` / `suspension_reason`
     timestamps + reason for the `Suspended` non-terminal state.

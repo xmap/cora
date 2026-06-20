@@ -28,10 +28,11 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
     @mcp.tool(
         name="grant_tool_to_agent",
         description=(
-            "Add one MCP tool to an Agent's per-agent allowlist. Allowed in "
-            "Defined / Versioned / Suspended (only Deprecated blocks). "
-            "Idempotent: re-granting an existing tool emits no event. Cap is "
-            "32 entries per Agent."
+            "Add one MCP tool to an Agent's declared tool set. Recorded only: "
+            "not enforced at invocation yet, so this records intent, not an "
+            "enforced capability. Allowed in Defined / Versioned / Suspended "
+            "(only Deprecated blocks). Idempotent: re-granting an existing tool "
+            "emits no event. Cap is 32 entries per Agent."
         ),
     )
     async def grant_tool_to_agent_tool(  # pyright: ignore[reportUnusedFunction]

@@ -28,9 +28,11 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
     @mcp.tool(
         name="revoke_tool_from_agent",
         description=(
-            "Remove one MCP tool from an Agent's per-agent allowlist. Allowed "
-            "in Defined / Versioned / Suspended (only Deprecated blocks). "
-            "Idempotent: revoking a tool the Agent doesn't have emits no event."
+            "Remove one MCP tool from an Agent's declared tool set. Recorded "
+            "only: not enforced at invocation yet, so this changes recorded "
+            "intent, not runtime behavior. Allowed in Defined / Versioned / "
+            "Suspended (only Deprecated blocks). Idempotent: revoking a tool "
+            "the Agent doesn't have emits no event."
         ),
     )
     async def revoke_tool_from_agent_tool(  # pyright: ignore[reportUnusedFunction]

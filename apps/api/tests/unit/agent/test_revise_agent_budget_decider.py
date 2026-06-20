@@ -159,7 +159,8 @@ def test_negative_monthly_cap_raises_invalid_budget() -> None:
 
 @pytest.mark.unit
 def test_zero_caps_allowed() -> None:
-    """Zero caps are interpreted as 'no spend permitted today'."""
+    """Zero caps are recorded as the 'no spend' intent, not enforced
+    today (declaration-only until the Budget BC lands)."""
     agent = _agent(AgentStatus.VERSIONED)
     events = decide(
         state=agent,
