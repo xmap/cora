@@ -371,6 +371,30 @@ CAUTION_PROMOTION_CHOICES: Final = frozenset(
 )
 
 
+# ClearanceExpirer agent writes one Decision per safety Clearance it
+# auto-expires. Open-ended convention identical to RunSupervision /
+# CautionPromotion; the closed choice vocabulary lives in the
+# `ClearanceExpiryChoice` Literal below. The agent is purely positive: it
+# records a Decision only when it expires a clearance (a not-yet-elapsed
+# clearance is simply not selected, so there is no Deferred/Conflicted
+# disposition). The context noun is `ClearanceExpiry` (abstract
+# action-noun, family-clean with RunSupervision / CautionPromotion); the
+# agent kind is `ClearanceExpirer` (the doer) -- a deliberate Expiry-vs-
+# Expirer asymmetry across the context-naming and R5 doer axes, not drift.
+# See [[project-clearance-window-expirer-design]] for the full grounding.
+DECISION_CONTEXT_CLEARANCE_EXPIRY = "ClearanceExpiry"
+
+
+# Closed `choice` value set for `context = "ClearanceExpiry"` Decisions.
+# Projection-validated, not domain-enforced. Single value today (the agent
+# only ever acts to expire); the Literal exists for symmetry with the
+# sibling agent choices and so a future qualified disposition can land
+# additively. `Expire` is unique in the shared, globally-filtered
+# DecisionChoice projection column.
+ClearanceExpiryChoice = Literal["Expire"]
+CLEARANCE_EXPIRY_CHOICES: Final = frozenset({"Expire"})
+
+
 # acceptance-signal capture: closed 3-value rating set on
 # the new `DecisionRated` event. `useful` and `misleading` are
 # operator-affirmative; `ignored` is a positive marker ("operator saw
