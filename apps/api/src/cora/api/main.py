@@ -655,16 +655,19 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # implementor delegates to the Decision BC's append_inferences
             # handler (the only cross-BC reach into decision.features, allowed
             # here at the composition root), so it can only be built AFTER
-            # wire_decision. Override the Kernel's no-op default BEFORE
-            # wire_agent / register_agent_subscribers so the regenerate-debrief
-            # handler and the agent subscribers close over it.
-            deps = replace(
+            # wire_decision. Override the Kernel's no-op default IN PLACE (not
+            # via dataclasses.replace) BEFORE wire_agent /
+            # register_agent_subscribers so the regenerate-debrief handler and
+            # the agent subscribers close over it. In-place mutation (the same
+            # object.__setattr__ idiom equipment uses to attach deps.equipment)
+            # preserves any sub-deps earlier BC wiring attached to this Kernel
+            # instance; replace() would copy only dataclass fields and drop
+            # them, leaving app.state.deps without those attributes.
+            object.__setattr__(
                 deps,
-                inference_recorder=DelegatingInferenceRecorder(
-                    app.state.decision.append_inferences
-                ),
+                "inference_recorder",
+                DelegatingInferenceRecorder(app.state.decision.append_inferences),
             )
-            app.state.deps = deps
             app.state.supply = wire_supply(deps)
             app.state.enclosure = wire_enclosure(deps)
             app.state.operation = wire_operation(deps, control_port=shared_control_port)
