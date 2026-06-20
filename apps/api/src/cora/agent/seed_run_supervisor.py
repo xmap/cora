@@ -23,7 +23,9 @@ Per [[project-run-supervisor-design]]:
   - Authorization: the runtime issues commands through the Authorize
     port like any principal. Under the default AllowAllAuthorize it is
     permitted; under TrustAuthorize the operator's single configured
-    Policy must include this principal + {HoldRun, StopRun, AbortRun}.
+    Policy must include this principal + {HoldRun, StopRun, AbortRun,
+    ResumeRun} (ResumeRun only matters when the gated wind-up is enabled;
+    without the grant an autonomous resume is a logged no-op).
     No separate Policy is seeded: TrustAuthorize evaluates exactly ONE
     configured policy, so a separate RunSupervisor policy would never be
     consulted (it is operator-config, not seed config).
@@ -57,9 +59,12 @@ RUN_SUPERVISOR_AGENT_KIND = "RunSupervisor"
 RUN_SUPERVISOR_AGENT_VERSION = "1.0.0"
 RUN_SUPERVISOR_AGENT_DESCRIPTION = (
     "Deterministic in-loop agent: watches an in-flight Run and issues "
-    "hold_run / stop_run / abort_run when a wind-down rule fires, recording "
-    "one Decision(context=RunSupervision) per disposition. Wind-down only; "
-    "not a safety interlock (the floor PSS owns hard safety)."
+    "hold_run / stop_run / abort_run when a wind-down rule fires, and "
+    "(behind a separate opt-in) resume_run for a Run it itself held once "
+    "the full start-safety envelope is good again, recording one "
+    "Decision(context=RunSupervision) per disposition. Wind-down by default "
+    "plus one gated, fail-safe wind-up; not a safety interlock (the floor "
+    "PSS owns hard safety)."
 )
 
 
