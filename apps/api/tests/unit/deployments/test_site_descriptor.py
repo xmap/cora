@@ -71,10 +71,11 @@ def test_site_loads_and_validates() -> None:
     # lower bounds, not exact: additive edits should not break this test, except
     # agents which are drift-guarded against the code seeds below. The two
     # non-pending LLM agents are equality-checked in test_agents_match_seed_constants;
-    # RunSupervisor is authored pending (identity seeded, runtime not yet operational).
+    # RunSupervisor + CautionPromoter are authored pending (identity seeded,
+    # runtimes not yet operational).
     assert len(site.practices) >= 17
     assert len(site.actors) >= 9
-    assert len(site.agents) == 3
+    assert len(site.agents) == 4
     assert len(site.supplies) >= 1
     assert len(site.clearances) >= 1
     assert len(site.cautions) >= 1
