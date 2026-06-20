@@ -90,15 +90,24 @@ from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
 from cora.operation.adapters.local_process_compute_port import LocalProcessComputePort
 from cora.operation.ports.compute_port import JobSpec
 from cora.recipe.aggregates.capability import ExecutorShape
-from cora.recipe.aggregates.method import ExecutionPattern
+from cora.recipe.aggregates.method import (
+    ExecutionPattern,
+    LaunchArg,
+    LaunchSpec,
+    build_argv,
+    load_method,
+)
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_plan import DefinePlan
 from cora.recipe.features.define_plan import bind as bind_define_plan
 from cora.recipe.features.define_practice import DefinePractice
 from cora.recipe.features.define_practice import bind as bind_define_practice
+from cora.recipe.features.update_method_launch_spec import UpdateMethodLaunchSpec
+from cora.recipe.features.update_method_launch_spec import bind as bind_update_method_launch_spec
 from cora.recipe.features.update_method_parameters_schema import UpdateMethodParametersSchema
 from cora.recipe.features.update_method_parameters_schema import bind as bind_update_method_schema
+from cora.run.aggregates.run import load_run
 from cora.run.features.abort_run import bind as bind_abort_run
 from cora.run.features.complete_run import CompleteRun
 from cora.run.features.complete_run import bind as bind_complete_run
@@ -579,3 +588,112 @@ async def test_reconstruction_conducts_on_a_real_subprocess_and_is_promotable(
     )
     promoted_events, _ = await deps.event_store.load("Dataset", recon_dataset_id)
     assert "DatasetPromoted" in [e.event_type for e in promoted_events]
+
+
+def _sirt_launch_spec() -> LaunchSpec:
+    """The vetted 2-BM SIRT recon recipe. The algorithm is FIXED in the
+    recipe's base_command; the operator-tunable knobs (num_iter, tol) are
+    LaunchArgs naming parameters_schema keys, so a Run supplies values,
+    never argv tokens."""
+    return LaunchSpec(
+        base_command=("tomopy", "recon", "--algorithm", "sirt"),
+        args=(
+            LaunchArg(name="num_iter", flag="--num-iter", required=True),
+            LaunchArg(name="tol", flag="--tol", required=True),
+        ),
+        input_arg="--input",
+        output_arg="--output",
+    )
+
+
+@pytest.mark.integration
+async def test_reconstruction_conducts_from_vetted_launch_spec(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """End-to-end CONDUCT from a vetted launch_spec: the recon Method carries
+    a SIRT launch_spec; the server derives the argv from that recipe plus the
+    Run's effective_parameters (no caller-supplied command), and the
+    ComputeRuntime conducts it to a completed, Simulated-provenance Run.
+
+    This is the injection-safe path the conduct endpoint takes for a
+    launch_spec Method: a parameter value (num_iter=200) is rendered as
+    exactly one argv token, never re-parsed."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
+    fixture = await _seed_recon_recipe(deps)
+
+    # Attach the vetted SIRT recipe to the (schema-bearing) recon Method.
+    await bind_update_method_launch_spec(deps)(
+        UpdateMethodLaunchSpec(method_id=fixture.method_id, launch_spec=_sirt_launch_spec()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    run_id = await bind_start_run(deps)(
+        StartRun(
+            name="SIRT reconstruction (vetted launch_spec) of Proposal 2026-1241",
+            plan_id=fixture.plan_id,
+            subject_id=None,
+            override_parameters={"num_iter": 200, "tol": 0.0005},
+            trigger_source="compute-runtime; argv built server-side from launch_spec",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # ----- Derive the argv the way the conduct endpoint does -----
+
+    method = await load_method(deps.event_store, fixture.method_id)
+    assert method is not None
+    assert method.launch_spec is not None
+    run = await load_run(deps.event_store, run_id)
+    assert run is not None
+
+    raw_uri = "file:///data/2bm/2026-05/proj_raw.h5"
+    recon_uri = "file:///data/2bm/2026-05/recon_sirt.h5"
+    argv = build_argv(
+        method.launch_spec,
+        run.effective_parameters,
+        input_uris=(raw_uri,),
+        output_uri=recon_uri,
+    )
+    # The recipe + validated params render to a deterministic, shell-free argv.
+    assert argv == (
+        "tomopy",
+        "recon",
+        "--algorithm",
+        "sirt",
+        "--num-iter",
+        "200",
+        "--tol",
+        "0.0005",
+        "--input",
+        raw_uri,
+        "--output",
+        recon_uri,
+    )
+
+    # ----- Conduct the derived job via the (Simulated) ComputePort -----
+
+    runtime = ComputeRuntime(
+        compute_port=InMemoryComputePort(),
+        complete_run=bind_complete_run(deps),
+        abort_run=bind_abort_run(deps),
+    )
+    result = await runtime.conduct(
+        run_id=run_id,
+        job_spec=JobSpec(
+            command=argv,
+            input_uris=(raw_uri,),
+            output_uri=recon_uri,
+            parameters=dict(run.effective_parameters),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert result.succeeded
+    assert result.artifact_ref is not None
+    assert result.artifact_ref.uri == recon_uri
+
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert [e.event_type for e in run_events] == ["RunStarted", "RunCompleted"]
+    assert run_events[1].payload["actuation_kind"] == "Simulated"

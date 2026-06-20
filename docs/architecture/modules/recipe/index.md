@@ -26,7 +26,7 @@ Out of scope
 | Name | Identity | State summary | FSM |
 |---|---|---|---|
 | `Capability` | `id: UUID` | `id`, `code`, `name`, `status`, `version`, `description`, `required_affordances`, `executor_shapes`, `parameters_schema`, `replaced_by_capability_id`, `suggested_role_ids` | yes (3-state) |
-| `Method` | `id: UUID` | `id`, `name`, `capability_id`, `needed_family_ids`, `needed_assembly_ids`, `needed_supplies`, `required_roles`, `parameters_schema`, `status`, `version`, `content_hash` | yes (3-state) |
+| `Method` | `id: UUID` | `id`, `name`, `capability_id`, `needed_family_ids`, `needed_assembly_ids`, `needed_supplies`, `required_roles`, `parameters_schema`, `launch_spec`, `status`, `version`, `content_hash` | yes (3-state) |
 | `Practice` | `id: UUID` | `id`, `name`, `method_id`, `site_id`, `status`, `version` | yes (3-state) |
 | `Plan` | `id: UUID` | `id`, `name`, `practice_id`, `method_id`, `asset_ids`, `default_parameters`, `wires`, `role_bindings`, `status`, `version` | yes (3-state) |
 | `Recipe` | `id: UUID` | `id`, `name`, `capability_id`, `steps: tuple[RecipeStep]`, `status`, `version`, `replaced_by_recipe_id?` | yes (3-state) |
@@ -53,6 +53,9 @@ Out of scope
 | `PortRequirement` | 3-tuple `(port_name, direction, signal_type)`; `direction` is the Equipment `PortDirection` enum; port name + signal type bounds mirror Asset.ports | `RoleRequirement.required_ports` |
 | `RoleRequirement` | tuple `(role_name, role_kind, family_id, required_ports, optional)`; `role_kind: UUID \| None` targets a global Role contract, `family_id: UUID \| None` is the anatomical escape hatch, with an XOR invariant (exactly one set) | `Method.required_roles` |
 | `RoleBinding` | tuple `(role_name, asset_id)`; pins which Asset fills a declared role slot | `Plan.role_bindings` |
+| `ArgStyle` | closed StrEnum: `value` \| `flag_only` | `LaunchArg.style` |
+| `LaunchArg` | tuple `(name, flag, position, required, style)`; `name` names a `parameters_schema` key, never an interpolation string; `flag` XOR `position` selects flag-style vs positional | members of `LaunchSpec.args` |
+| `LaunchSpec` | tuple `(base_command, args, input_arg, output_arg)`; the vetted recipe a conduct caller selects instead of posting raw argv | `Method.launch_spec` |
 
 Version tags (`version_tag`) are operator-supplied free text, 1-50 chars after trim, validated at the API boundary and defensively in the decider; no value-object wrapper. Tags can be semver (`v2.1.0`), date-stamped (`2026-Q3`), or institution-specific.
 
@@ -84,6 +87,8 @@ stateDiagram-v2
 
 Schema and wiring updates (`update_method_parameters_schema`, `update_plan_default_parameters`, `add_plan_wire`, `remove_plan_wire`) are orthogonal to the lifecycle: they are permitted in `Defined`, `Versioned`, and `Deprecated` alike.
 
+A Method may also carry an optional `launch_spec` (`update_method_launch_spec`): the vetted recipe for a compute conduct. Where `parameters_schema` says which knobs a Run may set, `launch_spec` says how those knobs become a command line. Each `LaunchArg` names a `parameters_schema` key (never an interpolation string), so a conduct caller picks the Method and supplies validated values rather than posting raw argv; the server renders the argv list itself and runs it shell-free, which makes command injection a type fact rather than a runtime hope. Two cross-checks keep the pair coherent: `update_method_launch_spec` rejects an arg that names a key the schema does not declare (and requires a boolean-typed key for a `flag_only` arg), and `update_method_parameters_schema` rejects a schema change that would drop a key a stored `launch_spec` still binds. `launch_spec` participates in `content_hash` in argv order (it is the one content member whose element order is load-bearing). The conduct endpoint is dual-mode during migration: a Method with a `launch_spec` always builds its argv server-side and refuses a raw command, while a Method without one still accepts a raw command, gated by `CORA_ALLOW_RAW_CONDUCT`.
+
 ## Events
 
 ### Capability
@@ -103,6 +108,7 @@ Schema and wiring updates (`update_method_parameters_schema`, `update_plan_defau
 | `MethodVersioned` | `method_id`, `version_tag`, `occurred_at` | `version_method` succeeds |
 | `MethodDeprecated` | `method_id`, `occurred_at` | `deprecate_method` succeeds |
 | `MethodParametersSchemaUpdated` | `method_id`, `parameters_schema?`, `occurred_at` | `update_method_parameters_schema` succeeds; the schema replaces wholesale (None clears) |
+| `MethodLaunchSpecUpdated` | `method_id`, `launch_spec?`, `occurred_at` | `update_method_launch_spec` succeeds; the launch spec replaces wholesale (None clears) |
 | `MethodRequiredRoleAdded` | `method_id`, `role_name`, `family_id?`, `role_kind?`, `required_ports`, `optional`, `occurred_at` | `add_method_required_role` succeeds; `family_id` XOR `role_kind` per the `RoleRequirement` invariant |
 | `MethodRequiredRoleRemoved` | `method_id`, `role_name`, `occurred_at` | `remove_method_required_role` succeeds |
 
