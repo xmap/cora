@@ -14,7 +14,7 @@ Mirrors `test_run_debrief_subscriber.py` structure.
 
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import pytest
 
@@ -43,6 +43,7 @@ from cora.infrastructure.ports import (
     FakeLLM,
     FakeLLMResponse,
     LLMServerError,
+    LLMUsage,
 )
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.recipe.aggregates.plan import (
@@ -62,7 +63,7 @@ from cora.run.aggregates.run.events import (
     RunCompleted,
 )
 from tests.unit._helpers import build_deps
-from tests.unit.agent._helpers import Ed25519FakeSigner
+from tests.unit.agent._helpers import Ed25519FakeSigner, FakeInferenceRecorder
 
 _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 17, 14, 47, 0, tzinfo=UTC)
@@ -236,11 +237,13 @@ def _terminal_event(
 async def _build_subscriber(
     event_store: InMemoryEventStore,
     llm: FakeLLM,
+    inference_recorder: FakeInferenceRecorder | None = None,
 ) -> CautionDrafterSubscriber:
     return CautionDrafterSubscriber(
         event_store=event_store,
         llm=llm,
         caution_lookup=AlwaysQuietCautionLookup(),
+        inference_recorder=inference_recorder,
     )
 
 
@@ -1177,3 +1180,115 @@ async def test_apply_writes_caution_draft_conflicted_unidentified_winner_on_no_w
     assert decision.reasoning is not None
     assert "winning agent not identified" in decision.reasoning
     assert llm.received == []
+
+
+# ---------------------------------------------------------------------------
+# Inference provenance
+# ---------------------------------------------------------------------------
+
+
+_CANNED_PROPOSE_WITH_USAGE = FakeLLMResponse(
+    parsed=_CANNED_PROPOSE_CAUTION.parsed,
+    usage=LLMUsage(input_tokens=2048, output_tokens=320),
+    stop_reason="tool_use",
+    model_id="claude-sonnet-4-6-20260201",
+)
+
+
+@pytest.mark.unit
+async def test_apply_records_inference_on_proposal() -> None:
+    """A proposal records one inference trace carrying the LLM call's
+    provider, resolved model snapshot, token usage, and stop reason."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_PROPOSE_WITH_USAGE])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunAborted", run_id=run_id, reason="encoder offline")
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 1
+    call = recorder.calls[0]
+    decision_id = _derive_decision_id(event.event_id)
+    assert call.trace.decision_id == decision_id
+    assert call.trace.event_id == uuid5(decision_id, "inference:0")
+    assert call.trace.operation_name == "chat"
+    assert call.trace.provider_name == "anthropic"
+    assert call.trace.request_model == "claude-sonnet-4-6"
+    assert call.trace.response_model == "claude-sonnet-4-6-20260201"
+    assert call.trace.input_tokens == 2048
+    assert call.trace.output_tokens == 320
+    assert call.trace.finish_reasons == ("tool_use",)
+    assert call.trace.agent_id == str(CAUTION_DRAFTER_AGENT_ID)
+    assert call.trace.agent_name == CAUTION_DRAFTER_AGENT_NAME
+    assert call.principal_id == CAUTION_DRAFTER_AGENT_ID
+    assert call.correlation_id == event.correlation_id
+    assert call.causation_id == event.event_id
+
+
+@pytest.mark.unit
+async def test_apply_records_inference_on_noaction() -> None:
+    """Even when the LLM refuses (NoAction), the call ran and was paid for,
+    so its provenance is still recorded."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 1
+    assert recorder.calls[0].trace.request_model == "claude-sonnet-4-6"
+
+
+@pytest.mark.unit
+async def test_apply_records_no_inference_on_llm_failure() -> None:
+    """The deferred path (LLM exhausted) has no response, so no inference
+    is recorded even though a NoAction Decision is written."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[LLMServerError("synthetic 500")])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "NoAction"
+    assert recorder.calls == []
+
+
+@pytest.mark.unit
+async def test_apply_inference_recorder_failure_does_not_break_decision() -> None:
+    """A recorder that raises must not propagate: the proposal Decision is
+    still written (provenance is supplementary, fire-and-forget)."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_PROPOSE_WITH_USAGE])
+    recorder = FakeInferenceRecorder(raises=RuntimeError("recorder boom"))
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunAborted", run_id=run_id, reason="encoder offline")
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 1
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "ProposeCaution"

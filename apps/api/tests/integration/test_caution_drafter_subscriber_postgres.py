@@ -24,7 +24,7 @@ in CI). Real-Anthropic recorded-cassette test remains a watch item.
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportMissingParameterType=false, reportPrivateUsage=false, reportUnknownParameterType=false
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import asyncpg
 import pytest
@@ -39,6 +39,7 @@ from cora.agent.subscribers.caution_drafter import (
     CautionDrafterSubscriber,
     _derive_decision_id,
 )
+from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.caution.aggregates.caution import (
     CautionCannotSupersedeError,
     CautionCategory,
@@ -46,9 +47,13 @@ from cora.caution.aggregates.caution import (
     CautionStatus,
     load_caution,
 )
-from cora.decision.aggregates.decision import load_decision
+from cora.decision.aggregates.decision import (
+    PostgresInferenceStore,
+    load_decision,
+)
+from cora.decision.features.append_inferences import bind as bind_append_inferences
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.ports import FakeLLM, FakeLLMResponse
+from cora.infrastructure.ports import FakeLLM, FakeLLMResponse, LLMUsage
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.recipe.aggregates.plan import PlanDefined
 from cora.recipe.aggregates.plan import event_type_name as plan_event_type_name
@@ -576,3 +581,71 @@ async def test_supersede_raises_concurrency_error_when_parent_mutated_mid_promot
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
+
+
+async def _read_inferences_for_decision(
+    db_pool: asyncpg.Pool, decision_id: UUID
+) -> list[asyncpg.Record]:
+    async with db_pool.acquire() as conn:
+        return await conn.fetch(
+            """
+            SELECT event_id, decision_id, operation_name, provider_name,
+                   request_model, response_model, input_tokens, output_tokens,
+                   finish_reasons, agent_id
+            FROM entries_decision_inferences
+            WHERE decision_id = $1
+            ORDER BY occurred_at, event_id
+            """,
+            decision_id,
+        )
+
+
+@pytest.mark.integration
+async def test_subscriber_records_inference_row_end_to_end(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A proposal lands one inference row in entries_decision_inferences
+    carrying the CautionDrafter LLM call's provenance."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(10)])
+    await seed_caution_drafter_agent(deps)
+    plan_id = uuid4()
+    run_id = uuid4()
+    await _seed_plan(deps, plan_id)
+    await _seed_run(deps, run_id, plan_id)
+
+    canned = _canned_propose_caution_response()
+    llm = FakeLLM(
+        responses=[
+            FakeLLMResponse(
+                parsed=canned.parsed,
+                usage=LLMUsage(input_tokens=2048, output_tokens=320),
+                stop_reason="tool_use",
+                model_id="claude-sonnet-4-6-20260201",
+            )
+        ]
+    )
+    append_inferences = bind_append_inferences(
+        deps, inference_store=PostgresInferenceStore(db_pool)
+    )
+    subscriber = CautionDrafterSubscriber(
+        event_store=deps.event_store,
+        llm=llm,
+        caution_lookup=deps.caution_lookup,
+        inference_recorder=DelegatingInferenceRecorder(append_inferences),
+    )
+    event = _terminal_aborted_event(run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision_id = _derive_decision_id(event.event_id)
+    rows = await _read_inferences_for_decision(db_pool, decision_id)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["event_id"] == uuid5(decision_id, "inference:0")
+    assert row["provider_name"] == "anthropic"
+    assert row["request_model"] == "claude-sonnet-4-6"
+    assert row["response_model"] == "claude-sonnet-4-6-20260201"
+    assert row["input_tokens"] == 2048
+    assert row["output_tokens"] == 320
+    assert list(row["finish_reasons"]) == ["tool_use"]
+    assert row["agent_id"] == str(CAUTION_DRAFTER_AGENT_ID)

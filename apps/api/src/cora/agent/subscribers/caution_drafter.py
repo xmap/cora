@@ -99,6 +99,7 @@ from cora.agent.subscribers._terminal_run_helpers import (
 from cora.agent.subscribers.run_debriefer import redact_secrets
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_CAUTION_PROPOSAL,
+    DECISION_REASONING_OPERATION_CHAT,
     DecisionChoice,
     DecisionConfidenceSource,
     DecisionContext,
@@ -112,7 +113,11 @@ from cora.decision.aggregates.decision import (
 )
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import ConcurrencyError
+from cora.infrastructure.ports import (
+    AgentInferenceTrace,
+    ConcurrencyError,
+    NullInferenceRecorder,
+)
 from cora.infrastructure.signing import SIGNED_EVENT_TYPES
 from cora.recipe.aggregates.plan import load_plan
 from cora.run.aggregates.run import load_run
@@ -121,7 +126,14 @@ from cora.shared.identity import ActorId
 if TYPE_CHECKING:
     from cora.access.aggregates.actor import Actor
     from cora.infrastructure.kernel import Kernel
-    from cora.infrastructure.ports import LLM, CautionLookup, Signer
+    from cora.infrastructure.ports import (
+        LLM,
+        CautionLookup,
+        InferenceRecorder,
+        LLMChatRequest,
+        LLMResponse,
+        Signer,
+    )
     from cora.infrastructure.ports.event_store import EventStore, NewEvent, StoredEvent
     from cora.infrastructure.projection.handler import ConnectionLike
 
@@ -185,11 +197,16 @@ class CautionDrafterSubscriber:
         llm: LLM,
         caution_lookup: CautionLookup,
         signer: Signer | None = None,
+        inference_recorder: InferenceRecorder | None = None,
     ) -> None:
         self.event_store = event_store
         self.llm = llm
         self.caution_lookup = caution_lookup
         self.signer = signer
+        # Defaults to the no-op recorder so direct test construction stays
+        # inert; production wiring passes the Kernel's recorder via
+        # `make_caution_drafter_subscriber`.
+        self.inference_recorder = inference_recorder or NullInferenceRecorder()
 
     async def apply(self, event: StoredEvent, conn: ConnectionLike) -> None:
         """Process one terminal Run event."""
@@ -369,6 +386,68 @@ class CautionDrafterSubscriber:
             valid_target_ids=plan.asset_ids,
             log=log,
         )
+
+        # Capture model provenance for the proposal Decision. Recorded even
+        # when _write_proposal fell back to NoAction (hallucinated target /
+        # missing tuple): the LLM call ran and was paid for, so its cost and
+        # model identity are still worth the audit trail. After the Decision
+        # append commits so the recorder's lazy logbook-open finds it.
+        await self._record_inference(
+            decision_id=decision_id,
+            actor=actor,
+            request=request,
+            response=response,
+            terminal_event=event,
+            log=log,
+        )
+
+    async def _record_inference(
+        self,
+        *,
+        decision_id: UUID,
+        actor: Actor,
+        request: LLMChatRequest,
+        response: LLMResponse,
+        terminal_event: StoredEvent,
+        log: Any,
+    ) -> None:
+        """Best-effort capture of this LLM call's model provenance.
+
+        Mirrors `RunDebrieferSubscriber._record_inference`: fire-and-forget
+        (the recorder never raises per its port contract; the try/except is
+        defense-in-depth), deterministic inference `event_id` so retries dedup,
+        recorded only after the Decision append commits. See that method and
+        the inference_recorder port for the operator AppendInferences grant
+        note.
+        """
+        trace = AgentInferenceTrace(
+            decision_id=decision_id,
+            event_id=uuid5(decision_id, "inference:0"),
+            occurred_at=terminal_event.occurred_at,
+            operation_name=DECISION_REASONING_OPERATION_CHAT,
+            provider_name=request.model_ref.provider,
+            request_model=request.model_ref.model,
+            response_model=response.model_id,
+            finish_reasons=(response.stop_reason,) if response.stop_reason else (),
+            input_tokens=response.usage.input_tokens,
+            output_tokens=response.usage.output_tokens,
+            request_max_tokens=request.max_output_tokens,
+            agent_id=str(CAUTION_DRAFTER_AGENT_ID),
+            agent_name=CAUTION_DRAFTER_AGENT_NAME,
+        )
+        try:
+            await self.inference_recorder.record(
+                trace,
+                principal_id=actor.id,
+                correlation_id=terminal_event.correlation_id,
+                causation_id=terminal_event.event_id,
+            )
+        except Exception as exc:
+            log.warning(
+                "caution_drafter.inference_record_failed",
+                error_class=type(exc).__name__,
+                error_message=redact_secrets(str(exc)[:200]),
+            )
 
     async def _write_proposal(
         self,
@@ -723,6 +802,7 @@ def make_caution_drafter_subscriber(deps: Kernel) -> CautionDrafterSubscriber:
         llm=deps.llm,
         caution_lookup=deps.caution_lookup,
         signer=deps.signer,
+        inference_recorder=deps.inference_recorder,
     )
 
 
