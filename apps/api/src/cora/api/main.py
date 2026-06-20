@@ -56,6 +56,7 @@ from cora.agent import (
     register_agent_tools,
     seed_caution_drafter_agent,
     seed_caution_promoter_agent,
+    seed_clearance_expirer_agent,
     seed_run_debriefer_agent,
     seed_run_supervisor_agent,
     wire_agent,
@@ -666,6 +667,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_run_supervisor_agent(deps)
             # same shape for CautionPromoter (deterministic auto-promote agent).
             await seed_caution_promoter_agent(deps)
+            # same shape for ClearanceExpirer (deterministic in-loop agent).
+            await seed_clearance_expirer_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
