@@ -53,7 +53,8 @@ key retry replays the cached DebriefDeferred; the operator must
 mint a fresh key to bypass the cache).
 """
 
-from typing import Protocol
+from datetime import datetime
+from typing import Any, Protocol
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
@@ -70,6 +71,7 @@ from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, RUN_DEBRIEFER_AGENT_NAME
 from cora.agent.subscribers.run_debriefer import redact_secrets
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_RUN_DEBRIEF,
+    DECISION_REASONING_OPERATION_CHAT,
     DecisionParentAgentMismatchError,
     DecisionParentNotFoundError,
     DecisionParentRunMismatchError,
@@ -80,7 +82,14 @@ from cora.decision.aggregates.decision import (
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import Deny, LLMError
+from cora.infrastructure.ports import (
+    AgentInferenceTrace,
+    Deny,
+    InferenceRecorder,
+    LLMChatRequest,
+    LLMError,
+    LLMResponse,
+)
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import RunNotFoundError, load_run
 
@@ -212,6 +221,7 @@ def bind(deps: Kernel) -> Handler:
         )
         request = build_run_debrief_chat_request(payload)
 
+        response: LLMResponse | None = None
         try:
             response = await llm.chat(request)
         except LLMError as exc:
@@ -275,10 +285,77 @@ def bind(deps: Kernel) -> Handler:
             events=[new_event],
         )
 
+        # Capture model provenance for the regenerated Decision, only when the
+        # LLM actually ran (the DebriefDeferred path has no response). After
+        # the append so the recorder's lazy logbook-open finds the Decision.
+        if outcome == "success" and response is not None:
+            await _record_inference(
+                deps.inference_recorder,
+                decision_id=new_id,
+                request=request,
+                response=response,
+                occurred_at=now,
+                principal_id=RUN_DEBRIEFER_AGENT_ID,
+                correlation_id=correlation_id,
+                causation_id=causation_id,
+                log=log,
+            )
+
         log.info("regenerate_run_debrief.success", outcome=outcome, decision_id=str(new_id))
         return new_id
 
     return handler
+
+
+async def _record_inference(
+    recorder: InferenceRecorder,
+    *,
+    decision_id: UUID,
+    request: LLMChatRequest,
+    response: LLMResponse,
+    occurred_at: datetime,
+    principal_id: UUID,
+    correlation_id: UUID,
+    causation_id: UUID | None,
+    log: Any,
+) -> None:
+    """Best-effort capture of the on-demand LLM call's model provenance.
+
+    Mirrors the subscriber path: fire-and-forget (the recorder never raises
+    per its port contract; the try/except is defense-in-depth), deterministic
+    inference `event_id`, recorded only after the Decision append commits.
+    The inference is attributed to the RunDebriefer agent principal (the WHO of
+    the Decision), so the operator-initiated regenerate carries the same authz
+    requirement as the auto-fired subscriber path.
+    """
+    trace = AgentInferenceTrace(
+        decision_id=decision_id,
+        event_id=uuid5(decision_id, "inference:0"),
+        occurred_at=occurred_at,
+        operation_name=DECISION_REASONING_OPERATION_CHAT,
+        provider_name=request.model_ref.provider,
+        request_model=request.model_ref.model,
+        response_model=response.model_id,
+        finish_reasons=(response.stop_reason,) if response.stop_reason else (),
+        input_tokens=response.usage.input_tokens,
+        output_tokens=response.usage.output_tokens,
+        request_max_tokens=request.max_output_tokens,
+        agent_id=str(RUN_DEBRIEFER_AGENT_ID),
+        agent_name=RUN_DEBRIEFER_AGENT_NAME,
+    )
+    try:
+        await recorder.record(
+            trace,
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+        )
+    except Exception as exc:
+        log.warning(
+            "regenerate_run_debrief.inference_record_failed",
+            error_class=type(exc).__name__,
+            error_message=redact_secrets(str(exc)[:200]),
+        )
 
 
 def _extract_parent_run_id(inputs: dict[str, object] | None) -> UUID | None:

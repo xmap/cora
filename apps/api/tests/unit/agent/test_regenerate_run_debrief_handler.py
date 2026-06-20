@@ -9,8 +9,9 @@ RuntimeError when kernel.llm is unwired.
 
 # pyright: reportPrivateUsage=false, reportUnknownMemberType=false
 
+from dataclasses import replace
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import pytest
 
@@ -40,12 +41,14 @@ from cora.infrastructure.ports import (
     FakeLLM,
     FakeLLMResponse,
     LLMServerError,
+    LLMUsage,
 )
 from cora.run.aggregates.run import RunNotFoundError, RunStarted
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
 from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps
+from tests.unit.agent._helpers import FakeInferenceRecorder
 
 _NOW = datetime(2026, 5, 17, 16, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000088001")
@@ -577,3 +580,108 @@ def test_slice_reexports_command_handler_and_router() -> None:
     assert hasattr(regenerate_run_debrief, "Handler")
     assert hasattr(regenerate_run_debrief, "IdempotentHandler")
     assert hasattr(regenerate_run_debrief, "router")
+
+
+# ---------- Inference provenance ----------
+
+
+_CANNED_OK_WITH_USAGE = FakeLLMResponse(
+    parsed=_CANNED_OK.parsed,
+    usage=LLMUsage(input_tokens=1536, output_tokens=240),
+    stop_reason="tool_use",
+    model_id="claude-haiku-4-5-20260201",
+)
+
+
+@pytest.mark.unit
+async def test_handler_records_inference_on_success() -> None:
+    """A successful on-demand regeneration records one inference trace
+    attributed to the RunDebriefer agent principal."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK_WITH_USAGE])
+    recorder = FakeInferenceRecorder()
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_run(store, run_id)
+    deps = replace(
+        build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm),
+        inference_recorder=recorder,
+    )
+    handler = bind(deps)
+
+    await handler(
+        RegenerateRunDebrief(run_id=run_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert len(recorder.calls) == 1
+    call = recorder.calls[0]
+    assert call.trace.decision_id == _NEW_DECISION_ID
+    assert call.trace.event_id == uuid5(_NEW_DECISION_ID, "inference:0")
+    assert call.trace.provider_name == "anthropic"
+    assert call.trace.request_model == "claude-haiku-4-5"
+    assert call.trace.response_model == "claude-haiku-4-5-20260201"
+    assert call.trace.input_tokens == 1536
+    assert call.trace.output_tokens == 240
+    assert call.trace.finish_reasons == ("tool_use",)
+    # The inference is the agent's, attributed to the agent principal (not
+    # the operator who issued the command).
+    assert call.principal_id == RUN_DEBRIEFER_AGENT_ID
+    assert call.correlation_id == _CORRELATION_ID
+
+
+@pytest.mark.unit
+async def test_handler_records_no_inference_on_llm_failure() -> None:
+    """The DebriefDeferred path has no LLM response, so no inference is
+    recorded even though a Decision is written."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[LLMServerError("synthetic 500")])
+    recorder = FakeInferenceRecorder()
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_run(store, run_id)
+    deps = replace(
+        build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm),
+        inference_recorder=recorder,
+    )
+    handler = bind(deps)
+
+    decision_id = await handler(
+        RegenerateRunDebrief(run_id=run_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    decision = await load_decision(store, decision_id)
+    assert decision is not None
+    assert decision.choice.value == "DebriefDeferred"
+    assert recorder.calls == []
+
+
+@pytest.mark.unit
+async def test_handler_inference_recorder_failure_does_not_break_decision() -> None:
+    """A recorder that raises must not propagate: the Decision is still
+    written and returned."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK_WITH_USAGE])
+    recorder = FakeInferenceRecorder(raises=RuntimeError("recorder boom"))
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_run(store, run_id)
+    deps = replace(
+        build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm),
+        inference_recorder=recorder,
+    )
+    handler = bind(deps)
+
+    decision_id = await handler(
+        RegenerateRunDebrief(run_id=run_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert len(recorder.calls) == 1
+    decision = await load_decision(store, decision_id)
+    assert decision is not None
+    assert decision.choice.value == "NominalCompletion"
