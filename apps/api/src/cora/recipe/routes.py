@@ -66,7 +66,9 @@ from cora.recipe.aggregates.method import (
     MethodParametersSchemaDropsLaunchArgError,
     MethodRoleNameAlreadyDeclaredError,
     MethodRoleNameNotFoundError,
+    MissingLaunchParameterError,
     RoleRequirementBindingDuplicateError,
+    UnsafeLaunchUriError,
 )
 from cora.recipe.aggregates.plan import (
     InvalidPlanDefaultParametersError,
@@ -303,6 +305,12 @@ def register_recipe_routes(app: FastAPI) -> None:
         MethodLaunchArgUnknownParameterError,
         MethodLaunchArgNotBooleanError,
         MethodParametersSchemaDropsLaunchArgError,
+        # Conduct-time launch-argv build failures (raised by build_argv at
+        # the compute conduct endpoint; recipe-owned so registered here,
+        # handlers are app-global). A required parameter absent / an unsafe
+        # caller URI -> 400.
+        MissingLaunchParameterError,
+        UnsafeLaunchUriError,
         # Positional role-tagging VO constructor failures
         # (RoleName empty/too-long, PortRequirement empty/too-long port
         # name or signal_type). Mapped to 400.

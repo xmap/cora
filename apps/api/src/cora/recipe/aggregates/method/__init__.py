@@ -20,6 +20,11 @@ from cora.recipe.aggregates.method.events import (
 )
 from cora.recipe.aggregates.method.evolver import evolve, fold
 from cora.recipe.aggregates.method.execution_pattern import ExecutionPattern
+from cora.recipe.aggregates.method.launch_argv import (
+    MissingLaunchParameterError,
+    UnsafeLaunchUriError,
+    build_argv,
+)
 from cora.recipe.aggregates.method.launch_spec import (
     ArgStyle,
     InvalidLaunchSpecError,
@@ -121,10 +126,13 @@ __all__ = [
     "MethodRoleNameNotFoundError",
     "MethodStatus",
     "MethodVersioned",
+    "MissingLaunchParameterError",
     "PortRequirement",
     "RoleName",
     "RoleRequirement",
     "RoleRequirementBindingDuplicateError",
+    "UnsafeLaunchUriError",
+    "build_argv",
     "event_type_name",
     "evolve",
     "fold",
