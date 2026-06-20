@@ -64,6 +64,20 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 
 Microscope-bound Models (turret motor, Mitutoyo MPLAPO kit, FLIR Oryx, Crytur LuAG) live on the [Microscope deployment](equipment/microscope.md#vendor-catalog) page. The `kohzu_sa16a` binding for `LaminographyPitch` is on the [Sample tower](equipment/sample_tower.md) page.
 
+## Front-end windows
+
+The descriptor declares the front-end window set as a passive `Window` Asset (`FrontEndWindow`), alongside the other passive beam-path elements (`BeamStop`, `Collimator`). The `Window` Family is not yet in the catalog and none of this tier is registered in the spine, so materialization is deferred. The attenuation contribution (Be thickness to transmission) belongs to the `Attenuable` concern, which is also deferred; until then a window carries recorded identity only, not Run provenance.
+
+Confirmed composition (`BEAM-2`): three OFHC-housed Be windows in the front-end / beam-conditioning path, total Be foil thickness 0.63 mm. Source: `APS_2191941` rows 5/8/9 (the post-APS-U 02-BM component reference table).
+
+| Window | Drawing | z (mm) | Be thickness | Aperture H x V (mm) |
+| --- | --- | --- | --- | --- |
+| W4-20 | `4105090804-200000` | 28718 | 0.25 mm | 120 x 15 |
+| W4-60 | `4105090804-600000` | 30804 | 0.13 mm | 25 x 120 |
+| (unlabelled) | `4102020106-400000` | 32417 | 0.25 mm | 8.8 x 145 |
+
+When this tier is materialized, whether the set is one `FrontEndWindow` Asset recording the composition or three per-window `Window` Assets is an open modeling choice (the windows are ~3.7 m apart with distinct drawings).
+
 ## Settings
 
 Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIVE-2, TIME-1) kept inline.
@@ -119,6 +133,7 @@ One canonical `(system, number, revision)` triple per Asset, except `Rotary`, wh
 
 | Asset | Drawing | System |
 | --- | --- | --- |
+| `StationShutter` | `41050401-410003` | `APS` |
 | `Hexapod` | `Hex300-Data-Sheet` rev `D20250203` | `EDMS` |
 | `Rotary` | `630C2125` rev `(-)` | `EDMS` |
 | `Rotary` | [ABRS series datasheet](https://de.aerotech.com/wp-content/uploads/2021/01/abrs.pdf) (2021-01) | Aerotech |
@@ -130,7 +145,9 @@ One canonical `(system, number, revision)` triple per Asset, except `Rotary`, wh
 | `Objective_1.1x` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
 | `Scintillator` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
 
-Not yet cited: Kohzu `CYAT-070` datasheet (`SampleTop_*`), an APS shutter drawing (`StationShutter`), a FLIR Oryx datasheet (`Camera`).
+The `StationShutter` row cites the safety-shutter element drawing. Its containing four-element P6-50 assembly (white-beam stop, W collimator, safety shutter, SST baffle) is drawing `41050401-500000`. Both numbers come from `APS_2191941` row 10 (the post-APS-U 02-BM component reference table); the RSS tag `02-BM-A-P-01` is unchanged.
+
+Not yet cited: Kohzu `CYAT-070` datasheet (`SampleTop_*`), a FLIR Oryx datasheet (`Camera`).
 
 ## Signal wiring
 
@@ -202,7 +219,7 @@ Angular mapping (`AX`=pitch, `AY`=yaw, `AZ`=roll) is staff-confirmed (STAGE-9).
 
 ### Energy-tracking optic axes
 
-Setting energy is a discrete coordinated move. The staff energy-change IOC stores per-energy positions (`store_0` saved table) and drives ~15 motors. Each per-axis relationship is modelled as a continuous curve: a `PseudoAxis` carrying a `LookupTable` partition rule converting energy (`unit_in=keV`) to axis position, pinning a `Calibration` revision by id (`energy_position_curve` quantity, `beam_mode=mono`). `invertible=True` (Bragg geometry monotonic; no constituent wiring needed). Coordinating operation = the `energy_setting` Procedure, which accepts a free keV value between saved points. Models: `test_2bm_energy_curves_setup.py` (curves) + `test_2bm_energy_setting.py` (operation).
+Setting energy is a discrete coordinated move. The staff energy-change IOC stores per-energy positions (`store_0` saved table) and drives ~15 motors. Each per-axis relationship is modelled as a continuous curve: a `PseudoAxis` carrying a `LookupTable` partition rule converting energy (`unit_in=keV`) to axis position, pinning a `Calibration` revision by id (`energy_position_curve` quantity, `beam_mode=mono`). `invertible=True` (the saved table is monotonic in energy; no constituent wiring needed). Coordinating operation = the `energy_setting` Procedure, which accepts a free keV value between saved points. Models: `test_2bm_energy_curves_setup.py` (curves) + `test_2bm_energy_setting.py` (operation).
 
 Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0, 25.0, 25.584 keV. Pink mode bypasses the monochromator. Beam-mode switching itself is on the [Procedures](procedures.md#beam-modes) page, not a virtual axis.
 
@@ -216,7 +233,9 @@ Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0,
 
 - Not energy axes: `crystal2_z` (M2 Z, `2bma:m8`) is a setup translation the IOC does not drive; the mirror is held constant. Neither carries an energy curve.
 - DMM lateral stripe not yet modelled: substrate has two multilayer periods (13.8 / 24 angstrom) on stripes 4 mm apart; upstream/downstream X motors (`2bma:m25` / `2bma:m28`) may select per energy band. Operator-facing selection vs fixed setup is open (`ENERGY-6`).
-- Seeded curves are PROVISIONAL: x-points are real configured energies, positions are placeholders pending the real `store_0` table (see [Open questions](questions.md#energy-and-the-optics)). Runtime `eval_lookup_table` is wired; out-of-range refuses (`extrapolation_kind=Error`); refuse vs clamp vs menu-only is open (`ENERGY-4`).
+- Drive mechanism confirmed (`ENERGY-3`): the IOC reads each per-energy position from the saved `store_0` table and linearly interpolates between bracketing calibrated energies for off-table requests; it performs no Bragg-angle computation (the per-energy Bragg condition is captured empirically in the saved values). This is exactly the `LookupTable` (LINEAR) model used here.
+- Tunability confirmed (`ENERGY-4`): continuously tunable to any energy within each mode's calibrated range (Mono [13.374, 25.584] keV, Pink [30, 60] keV) via that linear interpolation; out-of-range requests are refused (`extrapolation_kind=Error` is correct), and the inter-mode gap (25.584, 30.000) keV is not bridgeable.
+- Seeded curve POSITIONS are still PROVISIONAL: the x-points are real configured energies, but the y-positions are placeholders pending the real `store_0` values (`ENERGY-1` / `ENERGY-2`, see [Open questions](questions.md#energy-and-the-optics)). Runtime `eval_lookup_table` is wired.
 - The `energy_offset` Calibration on `Monochromator` (from the `energy_characterization` Procedure, channel-cut rocking curve, item_022) is kept independent of these curves. Whether the IOC folds the measured offset into `store_0` or applies it separately is open (`ENERGY-8`).
 
 ### Filter foil selection

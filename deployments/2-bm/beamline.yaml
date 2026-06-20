@@ -83,7 +83,13 @@ front-end:
       passive: true
       replaceable: true
       new: true
-      confirm: "count and thickness"
+      note: >
+        Three OFHC-housed Be windows in the front-end / beam-conditioning
+        path, total Be foil thickness 0.63 mm (W4-20 0.25 mm @ z=28718,
+        W4-60 0.13 mm @ z=30804, unlabelled 0.25 mm @ z=32417); source
+        APS_2191941 (BEAM-2). Per-window detail in inventory.md. Window
+        Family + per-window materialization deferred with the passive
+        beam-path tier (BeamStop, Collimator).
     - name: FrontEndShutter
       family: Shutter
       pv: "S02BM-PSS:FES"
