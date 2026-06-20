@@ -709,3 +709,108 @@ body::before {
   color: #9CA3AF;
   background-color: rgba(156, 163, 175, 0.12);
 }
+
+/* ---- Admonitions: hairline panel ----
+   Material's default admonition is a chunky boxed card with a tinted title
+   bar and a cyan (.info) / blue (.note) mask icon, which clashes with the
+   amber, borderless-table house style. Restyle to flat Linear/Vercel chrome:
+   a 1px rounded border, no drop shadow, a near-invisible tint, and the title
+   as a compact uppercase tracked label over a hairline divider. .info is the
+   branded "Generated from the descriptor" banner that appears on every
+   generated page; .note is the quieter neutral sibling. Base .admonition
+   carries the panel so any future type inherits a clean look. */
+.md-typeset .admonition {
+  font-size: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--md-default-fg-color) 14%, transparent);
+  border-left-width: 1px;
+  border-radius: 0.4rem;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--md-default-fg-color) 2%, transparent);
+  margin: 1.5rem 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Title becomes a tracked label, not a tinted bar. The hairline below it is
+   the only divider; the icon is hidden, so the left padding resets to align
+   with the body text rather than leaving an icon gap. */
+.md-typeset .admonition > .admonition-title {
+  margin: 0;
+  padding: 0.55rem 0.9rem 0.5rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  line-height: 1.3;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--md-default-fg-color) 10%, transparent);
+}
+
+.md-typeset .admonition > .admonition-title::before {
+  display: none;
+}
+
+.md-typeset .admonition > .admonition-title + * {
+  margin-top: 0.6rem;
+}
+
+.md-typeset .admonition > *:not(.admonition-title) {
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
+}
+
+.md-typeset .admonition > :last-child {
+  margin-bottom: 0.6rem;
+}
+
+.md-typeset .admonition a {
+  color: var(--md-accent-fg-color);
+}
+
+/* .info is the branded banner. The .admonition compound is required because
+   Material recolors the box border via .md-typeset .admonition.info
+   (specificity 0,3,0), so a bare .info selector would lose and leave the
+   cyan default in place. */
+.md-typeset .admonition.info {
+  border-color: color-mix(in srgb, var(--md-primary-fg-color) 35%, transparent);
+  background: var(--md-accent-fg-color--transparent);
+}
+
+.md-typeset .admonition.info > .admonition-title {
+  color: var(--md-primary-fg-color);
+  border-bottom-color: color-mix(in srgb, var(--md-primary-fg-color) 25%, transparent);
+}
+
+/* .note is the quieter sibling for occasional inline notes. Same .admonition
+   compound so it outranks Material's blue box border. */
+.md-typeset .admonition.note {
+  border-color: color-mix(in srgb, var(--md-default-fg-color) 14%, transparent);
+  background: color-mix(in srgb, var(--md-default-fg-color) 2%, transparent);
+}
+
+.md-typeset .admonition.note > .admonition-title {
+  color: var(--md-default-fg-color--light);
+  border-bottom-color: color-mix(in srgb, var(--md-default-fg-color) 10%, transparent);
+}
+
+/* Dark mode: borders and dividers go fractionally softer so the hairline
+   reads as a panel edge, not a hard rule, against the slate background. */
+[data-md-color-scheme="slate"] .md-typeset .admonition {
+  border-color: color-mix(in srgb, var(--md-default-fg-color) 18%, transparent);
+  background: color-mix(in srgb, var(--md-default-fg-color) 4%, transparent);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition > .admonition-title {
+  border-bottom-color: color-mix(in srgb, var(--md-default-fg-color) 14%, transparent);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition.info {
+  border-color: color-mix(in srgb, var(--md-primary-fg-color) 45%, transparent);
+  background: var(--md-accent-fg-color--transparent);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition.note {
+  border-color: color-mix(in srgb, var(--md-default-fg-color) 18%, transparent);
+  background: color-mix(in srgb, var(--md-default-fg-color) 4%, transparent);
+}
