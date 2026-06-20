@@ -96,6 +96,17 @@ class Settings(BaseSettings):
     # permissive default.
     require_authenticated_principal: bool = False
 
+    # Escape hatch for intentionally running the permit-everyone
+    # `AllowAllAuthorize` stub (no command gating) in production, e.g.
+    # an airgapped single-operator pilot that genuinely wants no authz.
+    # Default false: under `app_env in {"prod", "production"}` with no
+    # `trust_policy_id` set, `create_app()` refuses to boot unless this
+    # is True, so a prod deployment cannot silently ship the permissive
+    # default. Non-prod envs ignore this (permissive is the dev / test
+    # posture). Mirrors the per-IdP `allow_insecure_*` opt-in shape:
+    # the insecure choice is allowed, but only as a conscious one.
+    allow_permissive_authz: bool = False
+
     # Projection worker
     # `projection_use_listen_notify=True` (default) wires the worker's
     # wake-up signal to LISTEN on the `events` channel emitted by the

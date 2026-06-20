@@ -272,11 +272,17 @@ def test_create_app_refuses_to_boot_in_prod_without_require_auth(
 
 
 @pytest.mark.contract
-def test_create_app_boots_in_prod_with_require_auth(
+def test_create_app_boots_in_prod_with_real_policy_and_require_auth(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sanity inverse: production env + require=True boots cleanly."""
+    """Recommended prod posture boots cleanly.
+
+    Production env with a real TRUST_POLICY_ID + require=True boots. With
+    no TRUST_POLICY_ID the AllowAll-in-prod gate would refuse; that path
+    is covered by the two tests below.
+    """
     monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("TRUST_POLICY_ID", "00000000-0000-0000-0000-000000000002")
     monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
     # Just constructing the app is enough; no need to enter lifespan
     # (which would try to open a real DB pool against production URL).
@@ -285,7 +291,46 @@ def test_create_app_boots_in_prod_with_require_auth(
 
 
 @pytest.mark.contract
-@pytest.mark.parametrize("env_value", ["prod", "production"])
+def test_create_app_refuses_prod_with_permissive_authz_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Prod with no TRUST_POLICY_ID wires AllowAllAuthorize (permit
+    everyone). `require=True` isolates this from condition 1; the new
+    gate refuses boot because ALLOW_PERMISSIVE_AUTHZ is not set, so a
+    production deployment cannot silently ship the permit-everyone
+    default."""
+    monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
+    monkeypatch.delenv("TRUST_POLICY_ID", raising=False)
+    monkeypatch.delenv("ALLOW_PERMISSIVE_AUTHZ", raising=False)
+    with pytest.raises(RuntimeError, match="ALLOW_PERMISSIVE_AUTHZ"):
+        create_app()
+
+
+@pytest.mark.contract
+def test_create_app_boots_prod_with_explicit_permissive_optin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Escape hatch: prod + no policy boots when the operator
+    consciously sets ALLOW_PERMISSIVE_AUTHZ=true (an airgapped /
+    single-operator pilot that genuinely wants no command gating). The
+    insecure choice is allowed, but only as a deliberate one."""
+    monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
+    monkeypatch.delenv("TRUST_POLICY_ID", raising=False)
+    monkeypatch.setenv("ALLOW_PERMISSIVE_AUTHZ", "true")
+    app = create_app()
+    assert app is not None
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize(
+    "env_value",
+    # Includes case / whitespace variants: the guard normalizes APP_ENV
+    # (strip + lower) so "PROD" or " Production " cannot silently bypass
+    # the prod gates. pydantic case-folds env-var NAMES, not VALUES.
+    ["prod", "production", "PROD", "Production", " prod "],
+)
 def test_startup_gate_recognizes_both_prod_app_env_spellings(
     monkeypatch: pytest.MonkeyPatch,
     env_value: str,

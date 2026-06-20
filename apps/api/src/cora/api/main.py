@@ -226,7 +226,8 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
     """Refuse to boot deployments where the principal-fallback would
     silently grant admin to header-less callers.
 
-    TWO failure conditions, both producing the same fail-fast:
+    THREE numbered conditions, plus the F11 transport-security check
+    below, all producing the same fail-fast:
 
     1. `app_env in {prod, production}` without
        `require_authenticated_principal=True`. The legacy Phase-3e
@@ -249,13 +250,29 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
        constructible. The exemption is safe because `app_env=test`
        is never operator-set in deployment configs.
 
-    Bootstrap workflow stays clean: a fresh deploy wanting AllowAll
-    leaves `trust_policy_id` unset (today's default). A deploy
-    wanting real authz sets BOTH env vars together — and operates
+    3. `app_env in {prod, production}` with `trust_policy_id is None`
+       and `allow_permissive_authz` not set. A None `trust_policy_id`
+       wires `AllowAllAuthorize`, which permits every command; shipping
+       that permit-everyone stub to production is almost always a
+       misconfiguration. Refuse boot unless the operator consciously
+       opts in via `ALLOW_PERMISSIVE_AUTHZ=true`, the same conscious-
+       choice shape as the per-IdP `allow_insecure_*` opt-ins.
+
+    Bootstrap workflow stays clean: a fresh non-prod deploy wanting
+    AllowAll leaves `trust_policy_id` unset (today's default); a prod
+    deploy points `TRUST_POLICY_ID` at the seeded bootstrap policy (or
+    sets `ALLOW_PERMISSIVE_AUTHZ=true` to stay permissive on purpose).
+    A deploy wanting real authz sets `TRUST_POLICY_ID` +
+    `REQUIRE_AUTHENTICATED_PRINCIPAL=true` together, and operates
     behind an auth proxy that strips/sets `X-Principal-Id` per the
     routing.py contract.
     """
-    if settings.app_env in _PROD_APP_ENVS and not settings.require_authenticated_principal:
+    # Normalize once so case or surrounding whitespace in APP_ENV cannot
+    # silently bypass the prod gates: pydantic case-folds env-var NAMES,
+    # not VALUES, so a raw "PROD" / "Production " would otherwise miss
+    # `_PROD_APP_ENVS` and ship AllowAllAuthorize.
+    app_env = settings.app_env.strip().lower()
+    if app_env in _PROD_APP_ENVS and not settings.require_authenticated_principal:
         msg = (
             f"app_env={settings.app_env!r} requires "
             "require_authenticated_principal=True (set "
@@ -264,7 +281,7 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
         )
         raise RuntimeError(msg)
     if (
-        settings.app_env != "test"
+        app_env != "test"
         and settings.trust_policy_id is not None
         and not settings.require_authenticated_principal
     ):
@@ -285,7 +302,7 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
     # The per-adapter check in `JwtTokenVerifier` / `IntrospectionTokenVerifier`
     # CAN'T see `app_env`; this Settings-level check refuses boot when
     # any IdP entry opts in to insecure URLs under prod.
-    if settings.app_env in _PROD_APP_ENVS:
+    if app_env in _PROD_APP_ENVS:
         for idp in settings.identity_providers:
             if idp.allow_insecure_jwks_url or idp.allow_insecure_introspection_url:
                 msg = (
@@ -299,6 +316,28 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
                     "memory/project_edge_auth_design.md gate-review F11."
                 )
                 raise RuntimeError(msg)
+    # Prod must not silently run the permit-everyone AllowAllAuthorize
+    # stub. `trust_policy_id is None` wires AllowAllAuthorize (every
+    # command permitted); shipping that to production is almost always a
+    # misconfiguration, not an intent. Refuse boot unless the operator
+    # consciously opts in via `allow_permissive_authz`, mirroring the
+    # per-IdP `allow_insecure_*` opt-ins above. Placed last so the more
+    # specific transport-security (F11) message wins when both apply;
+    # non-prod envs keep the permissive default for dev / test.
+    if (
+        app_env in _PROD_APP_ENVS
+        and settings.trust_policy_id is None
+        and not settings.allow_permissive_authz
+    ):
+        msg = (
+            f"app_env={settings.app_env!r} has no trust_policy_id set, so the "
+            "API would run AllowAllAuthorize and permit every command. Set "
+            "TRUST_POLICY_ID to the seeded bootstrap policy "
+            "(00000000-0000-0000-0000-000000000002) to enable real authz, or "
+            "set ALLOW_PERMISSIVE_AUTHZ=true to consciously run permissive in "
+            "production. See docs/stack/deployment.md."
+        )
+        raise RuntimeError(msg)
 
 
 def create_app(*, settings: Settings | None = None) -> FastAPI:
