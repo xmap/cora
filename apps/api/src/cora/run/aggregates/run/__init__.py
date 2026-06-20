@@ -38,6 +38,7 @@ from cora.run.aggregates.run.parameters_validation import (
     validate_effective_parameters_against_method_schema,
 )
 from cora.run.aggregates.run.read import load_run
+from cora.run.aggregates.run.safety_envelope import check_safety_envelope
 from cora.run.aggregates.run.state import (
     LOGBOOK_KIND_OBSERVATION,
     OBSERVATION_LOGBOOK_SCHEMA,
@@ -171,6 +172,7 @@ __all__ = [
     "RunTruncateReason",
     "RunTruncated",
     "SamplingProcedure",
+    "check_safety_envelope",
     "event_type_name",
     "evolve",
     "fold",

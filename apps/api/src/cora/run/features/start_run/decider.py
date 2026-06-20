@@ -90,21 +90,14 @@ from cora.run.aggregates.run import (
     CautionAcknowledgement,
     Run,
     RunAlreadyExistsError,
-    RunBeamAvailabilityUnknownError,
     RunBoundPlanDeprecatedError,
     RunCannotJoinCampaignError,
     RunCapabilitiesNotSatisfiedError,
-    RunClearanceCoverageMismatchError,
-    RunEnclosureCoverageMismatchError,
     RunName,
     RunPlanAssetDecommissionedError,
-    RunRequiresActiveClearanceError,
-    RunRequiresAvailableSupplyError,
-    RunRequiresOpenBeamShuttersError,
-    RunRequiresPermittedEnclosureError,
     RunStarted,
     RunSubjectNotMountableError,
-    RunSupplyCoverageMismatchError,
+    check_safety_envelope,
     validate_effective_parameters_against_method_schema,
     validate_pinned_calibration_ids,
 )
@@ -219,111 +212,21 @@ def decide(
     if state is not None:
         raise RunAlreadyExistsError(state.id)
 
-    # cross-BC clearance gate: at least one Safety
-    # Clearance must be Active AND reference this Run's scope. The
-    # handler pre-loaded every clearance whose bindings reference
-    # the Run/Subject/Asset ids via deps.clearance_lookup. Partition
-    # on status == "Active" to distinguish "no clearance at all"
-    # (RunRequiresActiveClearanceError) from "clearance exists but
-    # none Active" (RunClearanceCoverageMismatchError). Modern DDD
-    # consensus (Khononov / Dudycz / Herberto Graca 2024-2025): cross-
-    # context gating queries a replicated read model (here:
-    # proj_safety_clearance_summary), not the upstream aggregate.
-    if not context.referencing_clearances:
-        raise RunRequiresActiveClearanceError(new_id)
-    active_clearances = [c for c in context.referencing_clearances if c.status == "Active"]
-    if not active_clearances:
-        raise RunClearanceCoverageMismatchError(
-            new_id,
-            referencing_clearance_count=len(context.referencing_clearances),
-        )
-
-    # cross-BC Supply gate per
-    # [[project_supply_preflight_gate_design]]: for every kind in
-    # Method.needed_supplies, at least one Supply of that kind must
-    # be registered (RunRequiresAvailableSupplyError when absent),
-    # AND at least one of those registered Supplies must be in
-    # status=Available (RunSupplyCoverageMismatchError when present
-    # but none Available). Default-strict: Degraded does NOT pass;
-    # operators with override authority use mark_supply_available
-    # to declare a Supply Available before starting. Mirrors the
-    # clearance-gate two-error pair pattern above.
-    for kind in sorted(needed_supplies_snapshot):
-        candidates = context.needed_supplies_satisfaction.get(kind, ())
-        if not candidates:
-            raise RunRequiresAvailableSupplyError(new_id, kind)
-        if not any(s.status == "Available" for s in candidates):
-            raise RunSupplyCoverageMismatchError(
-                new_id,
-                kind,
-                frozenset((s.supply_id, s.status) for s in candidates),
-            )
-
-    # cross-BC Enclosure gate per [[project_enclosure_stage1_design]]:
-    # every referencing Enclosure row must be `permit_status ==
-    # "Permitted"` AND `lifecycle == "Active"`. Per L-pre-1 (always-
-    # derive-from-Asset-chain), the scope set is derived in the handler
-    # by collecting each scoped Asset's (and ancestor's)
-    # `located_in_enclosure_id` and loading them via
-    # `EnclosureLookup.find_by_ids`; this decider treats an empty
-    # `context.referencing_enclosures` as Permit-by-default (no scoped
-    # Asset is located in any Enclosure). When any row
-    # fails, the decider raises with `enclosure_status_summary`
-    # carrying the `(enclosure_id, "permit_status|lifecycle")` tuple
-    # for every failing Enclosure so the 409 names each blocker.
-    # Default-strict: NotPermitted / Unknown / Decommissioned all fail
-    # (the adapter excludes most Decommissioned rows at the read
-    # layer; the decider treats any non-"Active" non-"Permitted" row
-    # as a fail defensively).
-    failing_rows = tuple(
-        e
-        for e in context.referencing_enclosures
-        if not (e.permit_status == "Permitted" and e.lifecycle == "Active")
-    )
-    if failing_rows:
-        # Build the user-facing summary as a frozenset (dedupes on
-        # (id, label) for noise reduction in the 409 message). The
-        # branch decision uses raw tuple lengths so a future adapter
-        # that returns duplicate rows still classifies correctly.
-        failing_summary = frozenset(
-            (e.enclosure_id, f"{e.permit_status}|{e.lifecycle}") for e in failing_rows
-        )
-        if len(failing_rows) == len(context.referencing_enclosures):
-            # Every referencing Enclosure failed the gate.
-            raise RunRequiresPermittedEnclosureError(new_id, failing_summary)
-        # Mixed: at least one passed, at least one failed.
-        raise RunEnclosureCoverageMismatchError(new_id, failing_summary)
-
-    # cross-BC beam-availability gate per BEAM-1: when the deployment
-    # configures beam PVs the handler reads the live front-end + station
-    # shutter states (BeamBlockingM, inverted polarity: 0 == open) and
-    # the ACIS FES-permit composite at the start instant and threads the
-    # BeamAvailabilityLookupResult here. None means the deployment configures
-    # no beam PVs (beam-by-default; generic deployments + the pre-BEAM-1
-    # behavior). Fail-closed: a read whose quality is not Good
-    # (disconnected / bad PV) refuses the Run rather than assume beam is
-    # open. Distinct axis from the Enclosure SecureM permit above:
-    # beam-open cycles per-scan, the enclosure permit is access-state.
-    # The reading is consumed ONLY by this gate and intentionally NOT
-    # persisted: a started Run necessarily passed the gate, so a stored
+    # cross-BC live-signal gates (clearance / supply / enclosure / beam),
+    # shared with the RunSupervisor's pre-resume re-check so the two never
+    # drift. The reading is consumed ONLY by this gate and intentionally
+    # NOT persisted: a started Run necessarily passed it, so a stored
     # snapshot would always be all-open and carry no information beyond
-    # the RunStarted event's existence; BEAM-1 also forbids recording the
-    # per-scan shutter cycling.
-    if context.beam_availability is not None:
-        beam = context.beam_availability
-        if not beam.quality_ok:
-            raise RunBeamAvailabilityUnknownError(new_id)
-        blocking = frozenset(
-            flag
-            for flag, ok in (
-                ("fes_open", beam.fes_open),
-                ("sbs_open", beam.sbs_open),
-                ("fes_permit", beam.fes_permit),
-            )
-            if not ok
-        )
-        if blocking:
-            raise RunRequiresOpenBeamShuttersError(new_id, blocking)
+    # the RunStarted event's existence (BEAM-1 also forbids recording the
+    # per-scan shutter cycling).
+    check_safety_envelope(
+        run_id=new_id,
+        referencing_clearances=context.referencing_clearances,
+        needed_supplies_snapshot=needed_supplies_snapshot,
+        needed_supplies_satisfaction=context.needed_supplies_satisfaction,
+        referencing_enclosures=context.referencing_enclosures,
+        beam_availability=context.beam_availability,
+    )
 
     if context.plan.status is PlanStatus.DEPRECATED:
         raise RunBoundPlanDeprecatedError(context.plan.id)
