@@ -4,9 +4,10 @@ Four kinds of guard, matching the no-drift boundary:
   - round-trip: the descriptor loads and validates against its schema.
   - enum-equality: the closed-vocabulary frozensets mirrored in
     scripts/site_descriptor.py equal their cora enums (FacilityKind, ActorKind).
-  - agent drift-guard: the agents authored in site.yaml equal the code seeds
-    (RunDebriefer + CautionDrafter), so a seeded agent missing from the docs (or
-    a model / version / kind drift between code and docs) fails the build.
+  - agent drift-guard: the two LLM agents authored in site.yaml (RunDebriefer +
+    CautionDrafter) equal the code seeds, so a seeded agent missing from the docs
+    (or a model / version / kind drift between code and docs) fails the build. The
+    three deterministic agents are authored pending and surfaced as planned.
   - facility invariants: the facility records what the bootstrap actually seeds
     (kind=Site, display_name == code).
 
@@ -171,9 +172,13 @@ def test_renders_single_site_narrative() -> None:
         "## Who acts here",
     ):
         assert heading in page, f"missing section {heading}"
-    # both agents surfaced with their models (the gap-fix)
+    # both active agents surfaced with their models (the gap-fix)
     assert "CautionDrafter" in page and "claude-sonnet-4-6" in page
     assert "RunDebriefer" in page and "claude-haiku-4-5" in page
+    # the three deterministic agents are seeded pending; surface them so all five
+    # are discoverable on the deployment page, not just the two live LLM ones
+    for pending_agent in ("RunSupervisor", "CautionPromoter", "ClearanceExpirer"):
+        assert pending_agent in page, f"pending agent {pending_agent} not surfaced"
     # content woven in from every folded list
     assert "[`tomography`](../../catalog/methods.md)" in page  # practice -> catalog method
     assert "`human`" in page  # principals

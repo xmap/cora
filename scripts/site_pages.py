@@ -135,6 +135,7 @@ def _principals(site: Site) -> list[str]:
         for a in site.agents
         if not a.pending
     ]
+    agent_pending = [a.name for a in site.agents if a.pending]
     blocks = [
         "## Who acts here",
         "Every action CORA records is attributed to a principal. At APS those are the people "
@@ -145,11 +146,15 @@ def _principals(site: Site) -> list[str]:
     ]
     blocks += _planned(actor_pending)
     blocks += [
-        "Agents are advisory LLM principals. Each one's id is shared with an Access Actor "
-        "(`kind=agent`) through a single cross-BC atomic write, so an agent's writes attribute the "
-        "same way a person's do. They observe and advise; they never gate Run state.",
+        "Agents are principals too. Each one's id is shared with an Access Actor (`kind=agent`) "
+        "through a single cross-BC atomic write, so an agent's writes attribute the same way a "
+        "person's do. The agents active here today are advisory: they observe and write Decisions, "
+        "and never gate Run state. The planned agents are deterministic and rule-based; when "
+        "enabled they act only by issuing a command the spine already exposes, through the same "
+        "authorized path a person uses.",
         _table(["Agent", "Version", "Model"], agent_rows),
     ]
+    blocks += _planned(agent_pending)
     return blocks
 
 
