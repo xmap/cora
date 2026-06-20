@@ -61,6 +61,7 @@ from cora.agent import (
     seed_run_supervisor_agent,
     wire_agent,
 )
+from cora.api._clearance_expirer import clearance_expirer_lifespan
 from cora.api._compute_runtime import ComputeRuntime
 from cora.api._conduct_run_route import register_conduct_run_routes
 from cora.api._conduct_run_tool import register_conduct_run_tools
@@ -729,6 +730,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         deps,
                         list_runs=app.state.run.list_runs,
                         hold_run=app.state.run.hold_run,
+                    ),
+                    clearance_expirer_lifespan(
+                        deps,
+                        list_clearances=app.state.safety.list_clearances,
+                        expire_clearance=app.state.safety.expire_clearance,
                     ),
                 ):
                     yield

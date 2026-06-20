@@ -418,6 +418,11 @@ depends_on = [
     # RunNotFoundError) when a Run changes state under it between read and issue.
     "cora.run.aggregates",
     "cora.safety",
+    # ClearanceExpirer runtime (cora.api._clearance_expirer) catches Clearance
+    # lifecycle errors (ClearanceCannotExpireError / ClearanceNotFoundError /
+    # InvalidClearanceExpireReasonError) when a clearance changes state under it
+    # between the list read and the expire issue.
+    "cora.safety.aggregates",
     "cora.subject",
     "cora.supply",
     "cora.trust",

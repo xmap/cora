@@ -186,6 +186,14 @@ class Settings(BaseSettings):
     # no LLM, so it registers independently of ANTHROPIC_API_KEY.
     caution_promoter_enabled: bool = False
 
+    # `clearance_expirer_enabled` gates the ClearanceExpirer background runtime
+    # (the 3rd ACTIVE agent). Default off: deployments opt in explicitly.
+    # `clearance_expirer_tick_seconds` is the sweep cadence (>= 0.1s); clearance
+    # windows elapse on hour/day timescales so the default is far slower than the
+    # RunSupervisor's beam-tracking cadence.
+    clearance_expirer_enabled: bool = False
+    clearance_expirer_tick_seconds: float = 300.0
+
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
     # from. Empty (default) keeps the legacy X-Principal-Id-with-
@@ -387,6 +395,18 @@ class Settings(BaseSettings):
             msg = (
                 f"run_supervisor_tick_seconds must be >= 0.1, got {value}; "
                 "values below 100ms would tight-loop the supervisor"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("clearance_expirer_tick_seconds")
+    @classmethod
+    def _validate_clearance_expirer_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight expiry-sweep loop."""
+        if value < 0.1:
+            msg = (
+                f"clearance_expirer_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the expirer"
             )
             raise ValueError(msg)
         return value
