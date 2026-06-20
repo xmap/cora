@@ -249,6 +249,7 @@ async def test_execute_setpoint_records_success_entry_with_expected_payload() ->
     assert entry.payload == {
         "address": "2bma:rot:val",
         "value": 12.5,
+        "step_index": 0,
         "result": "ok",
     }
 
@@ -312,6 +313,32 @@ async def test_execute_records_earlier_setpoint_successes_before_middle_failure(
     # 2 append calls: one OK at index 0, one FAILED at index 1; index 2 never tried.
     assert len(appender.calls) == 2
     assert appender.calls[0].command.entries[0].payload["result"] == "ok"
+    assert appender.calls[1].command.entries[0].payload["result"] == "failed"
+
+
+@pytest.mark.unit
+async def test_execute_records_step_index_matching_conduct_position() -> None:
+    """Each step entry carries its zero-based position, including the failing step."""
+    port = InMemoryControlPort()
+    port.simulate_connect("2bma:rot:val")
+    # 2bma:cam:exposure NEVER connected -> NotConnected at index 1
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4() for _ in range(2)])
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(
+            SetpointStep(address="2bma:rot:val", value=1.0),
+            SetpointStep(address="2bma:cam:exposure", value=0.01),
+            SetpointStep(address="2bma:shutter:open", value=True),
+        ),
+    )
+    assert result.failure is not None
+    assert result.failure.step_index == 1
+    # Success entry at index 0, failure entry at index 1; index 2 never tried.
+    assert appender.calls[0].command.entries[0].payload["step_index"] == 0
+    assert appender.calls[1].command.entries[0].payload["step_index"] == 1
     assert appender.calls[1].command.entries[0].payload["result"] == "failed"
 
 
@@ -419,6 +446,7 @@ async def test_execute_action_invokes_registered_body_and_records_result_data() 
     assert entry.payload == {
         "name": "home_motor",
         "params": {"axis": "rot"},
+        "step_index": 0,
         "result": "ok",
         "result_data": {"final_position": 0.0, "homed": True},
     }
