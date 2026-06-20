@@ -31,6 +31,7 @@ def test_run_supervision_choices_closed_set() -> None:
             {
                 "Continue",
                 "Hold",
+                "Resume",
                 "Stop",
                 "Abort",
                 "SupervisionDeferred",

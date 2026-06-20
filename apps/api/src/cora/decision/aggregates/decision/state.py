@@ -299,11 +299,15 @@ DECISION_CONTEXT_RUN_SUPERVISION = "RunSupervision"
 
 # Closed `choice` value set for `context = "RunSupervision"` Decisions.
 # Projection-validated, not domain-enforced (the open-string
-# `DecisionContext` + `DecisionChoice` shape is preserved). Six values:
+# `DecisionContext` + `DecisionChoice` shape is preserved). Seven values:
 #
 #   - `Continue`              -- no wind-down trigger met; no command
 #                               issued (the NoAction-bias default).
 #   - `Hold`                  -- issues HoldRun (pause, resumable).
+#   - `Resume`                -- issues ResumeRun (the gated wind-up: only
+#                               for a Run the supervisor itself held, only
+#                               when the full start-safety envelope is good
+#                               again; mirror of Hold).
 #   - `Stop`                  -- issues StopRun (controlled early exit).
 #   - `Abort`                 -- issues AbortRun (data-unusable exit).
 #   - `SupervisionDeferred`   -- audit-fallback: signal stale / absent /
@@ -319,6 +323,7 @@ DECISION_CONTEXT_RUN_SUPERVISION = "RunSupervision"
 RunSupervisionChoice = Literal[
     "Continue",
     "Hold",
+    "Resume",
     "Stop",
     "Abort",
     "SupervisionDeferred",
@@ -328,6 +333,7 @@ RUN_SUPERVISION_CHOICES: Final = frozenset(
     {
         "Continue",
         "Hold",
+        "Resume",
         "Stop",
         "Abort",
         "SupervisionDeferred",
