@@ -29,7 +29,11 @@ The [recipe ladder](the-recipe-ladder.md) descends from a portable technique dow
 
 ## A pause needs no excuse
 
-When the beam goes down mid-scan, the operator holds the run, and when the beam comes back, they resume it. Both are first-class transitions, and the notable thing about them is what they do not carry: neither hold nor resume takes an operator reason. This is deliberate, and it follows the same instinct as the packaging-machine and acquisition-framework state models that came before it. A pause is a routine operation, not an incident. The act of holding is itself the signal; demanding a typed justification for every beam-down hold would turn an ordinary part of a shift into paperwork and teach operators to write "beam down" five hundred times until the field meant nothing. So hold and resume stay slim, and a run can cycle between running and held as many times as the night requires, each hold ended by a resume before the run goes on.
+When the beam goes down mid-scan, the operator holds the run; when it comes back, they resume. Both are first-class transitions, and the notable thing is what they leave out: neither one takes a reason.
+
+That is deliberate, and it mirrors how mature control and acquisition systems already treat a pause. A hold is a routine operation, not an incident, and the act of holding is itself the signal. Requiring a typed justification for every beam-down hold would turn an ordinary part of a shift into paperwork, and teach operators to type "beam down" five hundred times until the field meant nothing. So hold and resume stay slim, and a run can cycle between running and held as many times as the night demands, each hold closed by a resume before the run goes on.
+
+A pause need not even wait for a person. CORA ships an optional supervisor, an agent that watches the beam and holds a run on its own when the beam drops, then brings it back once the beam has safely returned. That second half is more careful than it sounds, careful enough to deserve [its own post](no-proof-no-resume.md): a machine may pause beam-on work freely, because pausing can only make the floor calmer, but resuming has to re-earn the full set of checks a fresh start passes before it lets the beam back onto the sample.
 
 ## Steer, do not restart
 
