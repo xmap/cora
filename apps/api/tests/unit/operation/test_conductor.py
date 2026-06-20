@@ -2,11 +2,18 @@
 
 Coverage spans both step kinds shipped to date (setpoint + action):
 
+  Pre-effect in-flight marker (side-effecting steps):
+  - a setpoint / action records a `result="in_flight"` marker entry
+    BEFORE the effect, then the `ok` / `failed` outcome after (two
+    appends per side-effecting step); a check records no marker
+  - a cancelled / crashing effect still leaves the marker behind
+    (marker-without-outcome = the interrupted step), enabling resume
+
   Setpoint:
   - empty steps -> trivially succeeds, no handler call
-  - 3 setpoints -> 3 ControlPort writes + 3 step entries recorded
+  - 3 setpoints -> 3 ControlPort writes; each records marker + outcome
   - first write raises ControlNotConnectedError -> halt at index 0,
-    failure entry recorded, ConductorResult.failure populated
+    marker + failure entry recorded, ConductorResult.failure populated
   - middle write raises ControlTimeoutError -> halt at index N,
     earlier successes recorded, failure entry for the failing step,
     remaining steps untouched
@@ -140,19 +147,23 @@ class _SequenceIdGenerator:
     """Deterministic id_generator that returns a pre-supplied list of ids.
 
     Lets tests pin event_id values into the recorded entries so the
-    payload assertion is exact. Raises on exhaustion so missing ids
-    are loud, not silent.
+    payload assertion is exact. The pre-effect in-flight marker doubles
+    the per-step append count for setpoint / action steps, so a test
+    supplies only the ids it actually asserts on (pinned first, in
+    order) and lets the rest auto-generate. Append-COUNT assertions are
+    pinned via `len(appender.calls)`, not via id exhaustion, so lenient
+    generation here masks no over-append bug.
     """
 
     ids: list[UUID]
     _index: int = 0
 
     def new_id(self) -> UUID:
-        if self._index >= len(self.ids):
-            raise RuntimeError("FixedIdGenerator exhausted")
-        out = self.ids[self._index]
-        self._index += 1
-        return out
+        if self._index < len(self.ids):
+            out = self.ids[self._index]
+            self._index += 1
+            return out
+        return uuid4()
 
 
 def _conductor(
@@ -219,39 +230,70 @@ async def test_execute_setpoints_writes_each_step_via_control_port_in_order() ->
 
 
 @pytest.mark.unit
-async def test_execute_setpoint_records_success_entry_with_expected_payload() -> None:
-    """Each successful write produces one append call with the expected payload."""
+async def test_execute_setpoint_records_in_flight_marker_then_success_entry() -> None:
+    """A successful write produces two append calls: the pre-effect in-flight
+    marker first, then the `ok` outcome entry, both carrying the envelope."""
     port = InMemoryControlPort(now=lambda: _FIXED_NOW)
     port.simulate_connect("2bma:rot:val")
     appender = _FakeAppendStep()
     procedure_id = uuid4()
     principal_id = uuid4()
     correlation_id = uuid4()
-    event_id = uuid4()
-    conductor = _conductor(port, appender, ids=[event_id])
+    marker_id = uuid4()
+    outcome_id = uuid4()
+    conductor = _conductor(port, appender, ids=[marker_id, outcome_id])
     await conductor.execute(
         procedure_id=procedure_id,
         principal_id=principal_id,
         correlation_id=correlation_id,
         steps=(SetpointStep(address="2bma:rot:val", value=12.5),),
     )
-    assert len(appender.calls) == 1
-    call = appender.calls[0]
-    assert call.command.procedure_id == procedure_id
-    assert call.principal_id == principal_id
-    assert call.correlation_id == correlation_id
-    assert len(call.command.entries) == 1
-    entry = call.command.entries[0]
-    assert entry.event_id == event_id
-    assert entry.step_kind == "setpoint"
-    assert entry.sampled_at == _FIXED_NOW
-    assert entry.occurred_at == _FIXED_NOW
-    assert entry.payload == {
+    assert len(appender.calls) == 2
+    for call in appender.calls:
+        assert call.command.procedure_id == procedure_id
+        assert call.principal_id == principal_id
+        assert call.correlation_id == correlation_id
+        assert len(call.command.entries) == 1
+    marker = appender.calls[0].command.entries[0]
+    assert marker.event_id == marker_id
+    assert marker.step_kind == "setpoint"
+    assert marker.payload == {
+        "address": "2bma:rot:val",
+        "value": 12.5,
+        "step_index": 0,
+        "result": "in_flight",
+    }
+    outcome = appender.calls[1].command.entries[0]
+    assert outcome.event_id == outcome_id
+    assert outcome.step_kind == "setpoint"
+    assert outcome.sampled_at == _FIXED_NOW
+    assert outcome.occurred_at == _FIXED_NOW
+    assert outcome.payload == {
         "address": "2bma:rot:val",
         "value": 12.5,
         "step_index": 0,
         "result": "ok",
     }
+
+
+@pytest.mark.unit
+async def test_execute_check_records_no_in_flight_marker() -> None:
+    """A check is a pure read (always safe to re-run), so it records its
+    single outcome entry only -- no pre-effect in-flight marker."""
+    port = InMemoryControlPort()
+    port.set_reading("2bma:rot:rbv", _good_reading(45.0))
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender)
+    await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(CheckStep(address="2bma:rot:rbv", criterion=EqualsCriterion(expected=45.0)),),
+    )
+    assert len(appender.calls) == 1
+    assert appender.calls[0].command.entries[0].payload["result"] == "ok"
+    results = [c.command.entries[0].payload["result"] for c in appender.calls]
+    assert "in_flight" not in results
 
 
 @pytest.mark.unit
@@ -279,9 +321,11 @@ async def test_execute_halts_at_first_not_connected_error_on_setpoint() -> None:
         error_class="ControlNotConnectedError",
         message="Control address '2bma:rot:val' not connected",
     )
-    # Exactly one failure entry recorded; the second step is untouched.
-    assert len(appender.calls) == 1
-    failure_entry = appender.calls[0].command.entries[0]
+    # In-flight marker then the failure outcome for step 0; the second
+    # step is untouched (no marker, no outcome).
+    assert len(appender.calls) == 2
+    assert appender.calls[0].command.entries[0].payload["result"] == "in_flight"
+    failure_entry = appender.calls[1].command.entries[0]
     assert failure_entry.payload["result"] == "failed"
     assert failure_entry.payload["error_class"] == "ControlNotConnectedError"
     assert "not connected" in failure_entry.payload["message"]
@@ -310,10 +354,11 @@ async def test_execute_records_earlier_setpoint_successes_before_middle_failure(
     assert result.failure is not None
     assert result.failure.step_index == 1
     assert result.failure.target == "2bma:cam:exposure"
-    # 2 append calls: one OK at index 0, one FAILED at index 1; index 2 never tried.
-    assert len(appender.calls) == 2
-    assert appender.calls[0].command.entries[0].payload["result"] == "ok"
-    assert appender.calls[1].command.entries[0].payload["result"] == "failed"
+    # 4 append calls: marker+ok at index 0, marker+failed at index 1;
+    # index 2 never tried (no marker).
+    assert len(appender.calls) == 4
+    results = [c.command.entries[0].payload["result"] for c in appender.calls]
+    assert results == ["in_flight", "ok", "in_flight", "failed"]
 
 
 @pytest.mark.unit
@@ -336,10 +381,12 @@ async def test_execute_records_step_index_matching_conduct_position() -> None:
     )
     assert result.failure is not None
     assert result.failure.step_index == 1
-    # Success entry at index 0, failure entry at index 1; index 2 never tried.
-    assert appender.calls[0].command.entries[0].payload["step_index"] == 0
-    assert appender.calls[1].command.entries[0].payload["step_index"] == 1
-    assert appender.calls[1].command.entries[0].payload["result"] == "failed"
+    # marker+ok at index 0, marker+failed at index 1; index 2 never tried.
+    # Every entry (marker and outcome) carries its step's position.
+    step_indices = [c.command.entries[0].payload["step_index"] for c in appender.calls]
+    results = [c.command.entries[0].payload["result"] for c in appender.calls]
+    assert step_indices == [0, 0, 1, 1]
+    assert results == ["in_flight", "ok", "in_flight", "failed"]
 
 
 @pytest.mark.unit
@@ -365,7 +412,12 @@ async def test_execute_passes_through_causation_and_surface_ids() -> None:
 
 @pytest.mark.unit
 async def test_execute_does_not_catch_non_port_exceptions_on_setpoint() -> None:
-    """A CancelledError mid-write propagates; nothing is recorded for it."""
+    """A CancelledError mid-write propagates; the pre-effect in-flight marker
+    IS recorded (it lands before the write), but no outcome entry follows.
+
+    The marker-without-outcome is exactly the resume substrate: the
+    interrupted step is identifiable after a crash / cancellation.
+    """
 
     class _CancellingPort:
         async def read(self, _address: str) -> Reading:  # pragma: no cover  # unused
@@ -391,7 +443,9 @@ async def test_execute_does_not_catch_non_port_exceptions_on_setpoint() -> None:
             correlation_id=uuid4(),
             steps=(SetpointStep(address="anywhere", value=1.0),),
         )
-    assert appender.calls == []
+    # Only the in-flight marker; the cancelled write recorded no outcome.
+    assert len(appender.calls) == 1
+    assert appender.calls[0].command.entries[0].payload["result"] == "in_flight"
 
 
 @pytest.mark.unit
@@ -441,7 +495,17 @@ async def test_execute_action_invokes_registered_body_and_records_result_data() 
     port.simulate_connect("2bma:rot:val")
     await captured[0].control_port.write("2bma:rot:val", 4.2)
     assert (await port.read("2bma:rot:val")).value == 4.2
-    entry = appender.calls[0].command.entries[0]
+    # marker (no result_data yet) then the outcome carrying result_data.
+    assert len(appender.calls) == 2
+    marker = appender.calls[0].command.entries[0]
+    assert marker.step_kind == "action"
+    assert marker.payload == {
+        "name": "home_motor",
+        "params": {"axis": "rot"},
+        "step_index": 0,
+        "result": "in_flight",
+    }
+    entry = appender.calls[1].command.entries[0]
     assert entry.step_kind == "action"
     assert entry.payload == {
         "name": "home_motor",
@@ -474,9 +538,10 @@ async def test_execute_action_unknown_name_records_failure_and_halts() -> None:
     assert result.failure.source_kind == "action"
     assert result.failure.target == "nope"
     assert result.failure.error_class == "UnknownActionError"
-    # Only one record (the failure); the second action is untouched.
-    assert len(appender.calls) == 1
-    payload = appender.calls[0].command.entries[0].payload
+    # marker then the failure outcome; the second action is untouched.
+    assert len(appender.calls) == 2
+    assert appender.calls[0].command.entries[0].payload["result"] == "in_flight"
+    payload = appender.calls[1].command.entries[0].payload
     assert payload["result"] == "failed"
     assert payload["error_class"] == "UnknownActionError"
     assert payload["name"] == "nope"
@@ -504,14 +569,19 @@ async def test_execute_action_body_raising_control_error_records_failure_and_hal
     assert result.failure.error_class == "ControlTimeoutError"
     assert result.failure.source_kind == "action"
     assert result.failure.target == "picky"
-    payload = appender.calls[0].command.entries[0].payload
+    assert appender.calls[0].command.entries[0].payload["result"] == "in_flight"
+    payload = appender.calls[1].command.entries[0].payload
     assert payload["result"] == "failed"
     assert payload["error_class"] == "ControlTimeoutError"
 
 
 @pytest.mark.unit
 async def test_execute_action_body_raising_non_port_exception_propagates() -> None:
-    """Generic exceptions in a body propagate; the Conductor does not swallow them."""
+    """Generic exceptions in a body propagate; the Conductor does not swallow them.
+
+    The pre-effect in-flight marker IS recorded (it lands before the body
+    runs), but no outcome entry follows the propagating exception.
+    """
 
     async def buggy(_ctx: ActionContext) -> Mapping[str, Any]:
         raise RuntimeError("oops")
@@ -527,7 +597,9 @@ async def test_execute_action_body_raising_non_port_exception_propagates() -> No
             correlation_id=uuid4(),
             steps=(ActionStep(name="buggy"),),
         )
-    assert appender.calls == []
+    # Only the in-flight marker; the crashing body recorded no outcome.
+    assert len(appender.calls) == 1
+    assert appender.calls[0].command.entries[0].payload["result"] == "in_flight"
 
 
 @pytest.mark.unit
@@ -563,9 +635,14 @@ async def test_execute_walks_mixed_setpoint_and_action_steps_in_order() -> None:
     assert result.succeeded is True
     assert result.completed_count == 3
     assert invocations == ["open_shutter", "close_shutter"]
-    # 3 recorded entries in order: action / setpoint / action.
-    kinds = [c.command.entries[0].step_kind for c in appender.calls]
-    assert kinds == ["action", "setpoint", "action"]
+    # Outcome entries in order: action / setpoint / action (each preceded
+    # by its in-flight marker, filtered out here).
+    outcome_kinds = [
+        c.command.entries[0].step_kind
+        for c in appender.calls
+        if c.command.entries[0].payload["result"] != "in_flight"
+    ]
+    assert outcome_kinds == ["action", "setpoint", "action"]
 
 
 @pytest.mark.unit
@@ -820,8 +897,14 @@ async def test_execute_walks_mixed_setpoint_action_check_steps_in_order() -> Non
     )
     assert result.succeeded is True
     assert result.completed_count == 3
-    kinds = [c.command.entries[0].step_kind for c in appender.calls]
-    assert kinds == ["setpoint", "action", "check"]
+    # Outcome entries in order: setpoint / action / check. The setpoint and
+    # action each prepend an in-flight marker; the check (pure read) does not.
+    outcome_kinds = [
+        c.command.entries[0].step_kind
+        for c in appender.calls
+        if c.command.entries[0].payload["result"] != "in_flight"
+    ]
+    assert outcome_kinds == ["setpoint", "action", "check"]
 
 
 # --- conduct (FSM lifecycle) coverage -----------------------------------
@@ -1053,7 +1136,8 @@ async def test_setpoint_default_verify_omits_post_reading_from_payload() -> None
         correlation_id=uuid4(),
         steps=(SetpointStep(address="2bma:rot:val", value=1.0),),
     )
-    payload = appender.calls[0].command.entries[0].payload
+    # calls[0] is the in-flight marker; calls[1] is the outcome.
+    payload = appender.calls[1].command.entries[0].payload
     assert "post_reading" not in payload
     assert "post_read_error" not in payload
 
@@ -1071,7 +1155,8 @@ async def test_setpoint_verify_attaches_post_reading_to_payload() -> None:
         correlation_id=uuid4(),
         steps=(SetpointStep(address="2bma:rot:val", value=4.2, verify=True),),
     )
-    payload = appender.calls[0].command.entries[0].payload
+    # calls[0] is the in-flight marker (no post_reading); calls[1] the outcome.
+    payload = appender.calls[1].command.entries[0].payload
     assert payload["result"] == "ok"
     assert payload["post_reading"]["value"] == 4.2
     assert payload["post_reading"]["quality"] == "Good"
@@ -1125,7 +1210,8 @@ async def test_setpoint_verify_records_bad_quality_reading_without_halting() -> 
         steps=(SetpointStep(address="2bma:rot:val", value=4.2, verify=True),),
     )
     assert result.succeeded is True
-    payload = appender.calls[0].command.entries[0].payload
+    # calls[0] is the in-flight marker; calls[1] is the outcome.
+    payload = appender.calls[1].command.entries[0].payload
     assert payload["result"] == "ok"
     assert payload["post_reading"]["quality"] == "Bad"
     assert payload["post_reading"]["quality_detail"] == "alarm_status=3"
@@ -1162,7 +1248,8 @@ async def test_setpoint_verify_records_read_failure_as_post_read_error() -> None
         steps=(SetpointStep(address="lonely", value=1.0, verify=True),),
     )
     assert result.succeeded is True
-    payload = appender.calls[0].command.entries[0].payload
+    # calls[0] is the in-flight marker; calls[1] is the outcome.
+    payload = appender.calls[1].command.entries[0].payload
     assert payload["result"] == "ok"
     assert "post_reading" not in payload
     assert payload["post_read_error"]["error_class"] == "ControlNotConnectedError"
@@ -1182,7 +1269,10 @@ async def test_setpoint_verify_does_not_change_write_failure_halt_behavior() -> 
         steps=(SetpointStep(address="missing", value=1.0, verify=True),),
     )
     assert result.succeeded is False
-    payload = appender.calls[0].command.entries[0].payload
+    # calls[0] is the in-flight marker; calls[1] is the failure outcome
+    # (the write failed before the verify post-read, so no post_reading).
+    assert appender.calls[0].command.entries[0].payload["result"] == "in_flight"
+    payload = appender.calls[1].command.entries[0].payload
     assert payload["result"] == "failed"
     assert payload["error_class"] == "ControlNotConnectedError"
     assert "post_reading" not in payload
@@ -1461,9 +1551,10 @@ async def test_execute_setpoint_via_registry_with_unrouted_address_records_failu
     assert result.failure is not None
     assert result.failure.error_class == "NoAdapterForAddressError"
     assert result.failure.source_kind == "setpoint"
-    # Recorded in logbook, not propagated as a 500.
-    assert len(appender.calls) == 1
-    assert appender.calls[0].command.entries[0].payload["result"] == "failed"
+    # Recorded in logbook (marker + failure), not propagated as a 500.
+    assert len(appender.calls) == 2
+    assert appender.calls[0].command.entries[0].payload["result"] == "in_flight"
+    assert appender.calls[1].command.entries[0].payload["result"] == "failed"
 
 
 # --- actuation provenance (ActuationKind) -------------------------------

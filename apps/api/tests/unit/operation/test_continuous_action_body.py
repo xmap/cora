@@ -406,7 +406,7 @@ async def test_conductor_executes_continuous_action_and_records_step_entry() -> 
         control_port=port,
         append_step=appender,
         clock=FakeClock(_FIXED_NOW),
-        id_generator=_SequenceIdGenerator([uuid4()]),
+        id_generator=_SequenceIdGenerator([uuid4(), uuid4()]),
         action_registry=registry,
     )
     result = await conductor.execute(
@@ -432,7 +432,9 @@ async def test_conductor_executes_continuous_action_and_records_step_entry() -> 
     )
     assert result.succeeded is True
     assert result.completed_count == 1
-    entry = appender.calls[0].command.entries[0]
+    # calls[0] is the pre-effect in-flight marker; calls[1] is the outcome.
+    assert appender.calls[0].command.entries[0].payload["result"] == "in_flight"
+    entry = appender.calls[1].command.entries[0]
     assert entry.step_kind == "action"
     assert entry.payload["name"] == "continuous"
     assert entry.payload["result"] == "ok"

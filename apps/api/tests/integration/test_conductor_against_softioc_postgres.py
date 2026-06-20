@@ -167,17 +167,30 @@ async def test_conductor_runs_setpoint_check_against_real_softioc_and_postgres(
             """,
             procedure_id,
         )
-    assert [r["step_kind"] for r in rows] == ["setpoint", "check"]
     import json
 
-    setpoint_payload = json.loads(rows[0]["payload"])
+    parsed = [(r["step_kind"], json.loads(r["payload"])) for r in rows]
+    # The setpoint is side-effecting: it records a pre-effect in-flight
+    # marker then the `ok` outcome, both round-tripping into Postgres. The
+    # check (pure read) records only its outcome -- no marker.
+    assert [(k, p["result"]) for k, p in parsed] == [
+        ("setpoint", "in_flight"),
+        ("setpoint", "ok"),
+        ("check", "ok"),
+    ]
+    setpoint_marker = parsed[0][1]
+    assert setpoint_marker["address"] == f"{softioc}double_value"
+    assert setpoint_marker["value"] == 7.5
+    assert "post_reading" not in setpoint_marker  # marker precedes the write
+
+    setpoint_payload = parsed[1][1]
     assert setpoint_payload["address"] == f"{softioc}double_value"
     assert setpoint_payload["value"] == 7.5
     assert setpoint_payload["result"] == "ok"
     assert setpoint_payload["post_reading"]["value"] == 7.5
     assert setpoint_payload["post_reading"]["quality"] == "Good"
 
-    check_payload = json.loads(rows[1]["payload"])
+    check_payload = parsed[2][1]
     assert check_payload["address"] == f"{softioc}double_value"
     assert check_payload["criterion"] == {
         "kind": "within_tolerance",

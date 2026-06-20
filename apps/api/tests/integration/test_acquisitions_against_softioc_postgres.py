@@ -178,7 +178,7 @@ async def test_conductor_runs_collect_action_against_real_softioc_and_postgres(
             """
             SELECT step_kind, payload
             FROM entries_operation_procedure_activities
-            WHERE procedure_id = $1
+            WHERE procedure_id = $1 AND payload->>'result' IS DISTINCT FROM 'in_flight'
             ORDER BY sampled_at, event_id
             """,
             procedure_id,
@@ -269,7 +269,7 @@ async def test_conductor_runs_discrete_action_walks_axis_with_per_point_collects
             """
             SELECT payload
             FROM entries_operation_procedure_activities
-            WHERE procedure_id = $1
+            WHERE procedure_id = $1 AND payload->>'result' IS DISTINCT FROM 'in_flight'
             """,
             procedure_id,
         )
@@ -356,7 +356,7 @@ async def test_conductor_runs_continuous_action_with_axis_sweep_against_softioc(
             """
             SELECT payload
             FROM entries_operation_procedure_activities
-            WHERE procedure_id = $1
+            WHERE procedure_id = $1 AND payload->>'result' IS DISTINCT FROM 'in_flight'
             """,
             procedure_id,
         )

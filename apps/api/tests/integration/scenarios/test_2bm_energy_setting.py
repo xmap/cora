@@ -354,7 +354,9 @@ async def test_energy_setting_records_a_coordinated_move(db_pool: asyncpg.Pool) 
     await _drain(db_pool)
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(
-            "SELECT step_kind FROM entries_operation_procedure_activities WHERE procedure_id = $1",
+            "SELECT step_kind FROM entries_operation_procedure_activities "
+            "WHERE procedure_id = $1 "
+            "AND payload->>'result' IS DISTINCT FROM 'in_flight'",
             procedure_id,
         )
     kinds = [r["step_kind"] for r in rows]

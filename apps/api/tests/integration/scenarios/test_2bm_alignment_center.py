@@ -1056,7 +1056,7 @@ async def _read_steps(db_pool: asyncpg.Pool, procedure_id: UUID) -> list[asyncpg
             """
             SELECT step_kind, payload, sampled_at
             FROM entries_operation_procedure_activities
-            WHERE procedure_id = $1
+            WHERE procedure_id = $1 AND payload->>'result' IS DISTINCT FROM 'in_flight'
             ORDER BY sampled_at
             """,
             procedure_id,

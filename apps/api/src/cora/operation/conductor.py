@@ -37,6 +37,19 @@ can return a result dict carrying their own status (e.g. `{"ok":
 False, "reason": "out_of_range"}`); the Conductor treats any return
 from a body as success-shaped at this tier.
 
+## Pre-effect in-flight marker (side-effecting steps)
+
+A setpoint and an action are side-effecting: each records a SEPARATE
+`result="in_flight"` step entry BEFORE the effect runs, then the
+`ok` / `failed` outcome entry after. This doubles the per-step append
+count for those two kinds. A check is a pure read (always safe to
+re-run), so it records no marker, only its single outcome entry. The
+marker is the resume substrate: an `in_flight` entry with no matching
+outcome for the same `step_index` is the one step that was mid-flight
+when a conduct halted, even if the halt was a crash or cancellation
+(the marker append completes before the effect). See
+[[project_resumable_conduct_design]] Tier 1.
+
 ## Check semantics
 
 A `CheckStep` carries an address + an acceptance criterion. The
@@ -196,6 +209,21 @@ _RESULT_FAILED = "failed"
 projections do not split on it, but the field is pinned so future
 read-side filters can separate successful vs failed steps without
 parsing the message string."""
+
+_RESULT_IN_FLIGHT = "in_flight"
+"""Pre-effect in-flight marker discriminator, written to a SEPARATE
+step entry BEFORE a side-effecting step (setpoint / action) actuates,
+then followed by the `ok` / `failed` outcome entry after. A check is a
+pure read (always safe to re-run), so it records NO marker -- only its
+single outcome entry.
+
+The marker is what lets a future resume identify the one step that was
+mid-flight when a conduct halted: an `in_flight` entry with no matching
+outcome entry for the same `step_index` is the interrupted step. The
+marker is recorded even when the effect then raises or is cancelled
+(the marker append completes before the effect runs); that is the
+point -- a crashed write leaves a marker-without-outcome behind so the
+step is recoverable. See [[project_resumable_conduct_design]] Tier 1."""
 
 _QUALITY_GOOD = "Good"
 
@@ -756,6 +784,16 @@ class Conductor:
         port: ControlPort,
     ) -> ConductorFailure | None:
         payload_body: dict[str, Any] = {"address": step.address, "value": step.value}
+        # Pre-effect in-flight marker (side-effecting step): record intent
+        # BEFORE the write so a halt mid-write leaves a marker-without-outcome
+        # the resume reader can identify. See `_RESULT_IN_FLIGHT`.
+        await self._record(
+            envelope=envelope,
+            index=index,
+            step_kind=_STEP_KIND_SETPOINT,
+            body=payload_body,
+            result=_RESULT_IN_FLIGHT,
+        )
         try:
             await port.write(step.address, step.value, wait=True)
         except _CONTROL_ERRORS as exc:
@@ -817,6 +855,18 @@ class Conductor:
         port: ControlPort,
     ) -> ConductorFailure | None:
         payload_body: dict[str, Any] = {"name": step.name, "params": dict(step.params)}
+        # Pre-effect in-flight marker (side-effecting step): record intent
+        # BEFORE the action body runs so a halt mid-action leaves a
+        # marker-without-outcome the resume reader can identify. An unknown
+        # action still records the marker (the step kind is side-effecting)
+        # then its failure outcome. See `_RESULT_IN_FLIGHT`.
+        await self._record(
+            envelope=envelope,
+            index=index,
+            step_kind=_STEP_KIND_ACTION,
+            body=payload_body,
+            result=_RESULT_IN_FLIGHT,
+        )
         body = self._action_registry.lookup(step.name)
         if body is None:
             exc = UnknownActionError(step.name)

@@ -592,7 +592,9 @@ async def test_resolution_alignment_plays_out_end_to_end(
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(
             "SELECT step_kind FROM entries_operation_procedure_activities "
-            "WHERE procedure_id = $1 ORDER BY sampled_at",
+            "WHERE procedure_id = $1 "
+            "AND payload->>'result' IS DISTINCT FROM 'in_flight' "
+            "ORDER BY sampled_at",
             _PROCEDURE_ID,
         )
     assert len(rows) == 13
