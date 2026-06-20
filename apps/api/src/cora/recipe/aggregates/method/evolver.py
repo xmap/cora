@@ -83,11 +83,13 @@ from cora.recipe.aggregates.method.events import (
     MethodDefined,
     MethodDeprecated,
     MethodEvent,
+    MethodLaunchSpecUpdated,
     MethodParametersSchemaUpdated,
     MethodRequiredRoleAdded,
     MethodRequiredRoleRemoved,
     MethodVersioned,
 )
+from cora.recipe.aggregates.method.launch_spec import launch_spec_from_dict
 from cora.recipe.aggregates.method.state import (
     Method,
     MethodName,
@@ -245,6 +247,30 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 launch_spec=prior.launch_spec,
                 # required_roles PRESERVED across schema updates; the
                 # two fields evolve independently.
+                required_roles=prior.required_roles,
+            )
+        case MethodLaunchSpecUpdated(launch_spec=launch_spec):
+            prior = require_state(state, "MethodLaunchSpecUpdated")
+            # Orthogonal to lifecycle (like the parameters_schema arm):
+            # status / version / content_hash preserved; only launch_spec
+            # changes (None clears it).
+            return Method(
+                id=prior.id,
+                name=prior.name,
+                needed_family_ids=prior.needed_family_ids,
+                status=prior.status,
+                version=prior.version,
+                content_hash=prior.content_hash,
+                parameters_schema=prior.parameters_schema,
+                needed_supplies=prior.needed_supplies,
+                capability_id=prior.capability_id,
+                needed_assembly_ids=prior.needed_assembly_ids,
+                execution_pattern=prior.execution_pattern,
+                monotone_quality=prior.monotone_quality,
+                resumable_from_checkpoint=prior.resumable_from_checkpoint,
+                launch_spec=(
+                    launch_spec_from_dict(launch_spec) if launch_spec is not None else None
+                ),
                 required_roles=prior.required_roles,
             )
         case MethodRequiredRoleAdded(

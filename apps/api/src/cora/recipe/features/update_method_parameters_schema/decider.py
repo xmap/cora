@@ -36,6 +36,9 @@ Invariants:
     AND the loaded Capability has a parameters_schema) MUST be a
     structural subset of Capability.parameters_schema ->
     MethodParametersNotSubsetError
+  - the update (or clear) must not drop a parameters_schema key still
+    bound by a stored launch_spec ->
+    MethodParametersSchemaDropsLaunchArgError
   - If proposed == current, return [] (no event emitted)
 """
 
@@ -49,6 +52,7 @@ from cora.recipe.aggregates.method import (
     Method,
     MethodNotFoundError,
     MethodParametersNotSubsetError,
+    MethodParametersSchemaDropsLaunchArgError,
     MethodParametersSchemaUpdated,
     validate_parameters_schema,
 )
@@ -115,6 +119,19 @@ def decide(
                 raise MethodParametersNotSubsetError(
                     state.id, state.capability_id, str(exc)
                 ) from exc
+
+    # Reciprocal guard: a stored launch_spec binds parameters_schema
+    # keys; the update must not drop a key still bound (clearing the
+    # schema drops them all). The error names the offending binding so
+    # the operator removes it from the launch_spec first. Per
+    # [[project-method-launch-spec-stage0-design]].
+    if state.launch_spec is not None and state.launch_spec.args:
+        new_properties: set[str] = set()
+        if command.parameters_schema is not None:
+            new_properties = set(command.parameters_schema.get("properties", {}))
+        for arg in state.launch_spec.args:
+            if arg.name not in new_properties:
+                raise MethodParametersSchemaDropsLaunchArgError(state.id, arg.name)
 
     if command.parameters_schema == state.parameters_schema:
         return []

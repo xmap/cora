@@ -899,3 +899,57 @@ class InvalidMethodIterativeStoppingFieldError(ValueError):
         )
         self.method_id = method_id
         self.accepted_keys = accepted_keys
+
+
+class MethodLaunchArgUnknownParameterError(ValueError):
+    """A launch_spec LaunchArg names a key absent from parameters_schema.
+
+    A launch arg binds a parameters_schema property to an argv slot, so
+    every `LaunchArg.name` must be a top-level property of the Method's
+    current `parameters_schema`. Set the schema first (or fix the name).
+    Validation family -> HTTP 400. Per
+    [[project-method-launch-spec-stage0-design]].
+    """
+
+    def __init__(self, method_id: UUID, arg_name: str) -> None:
+        super().__init__(
+            f"Method {method_id} launch_spec binds parameter {arg_name!r} which is not a "
+            "property of its parameters_schema; declare the schema key first"
+        )
+        self.method_id = method_id
+        self.arg_name = arg_name
+
+
+class MethodLaunchArgNotBooleanError(ValueError):
+    """A flag_only LaunchArg names a non-boolean parameters_schema key.
+
+    `style=flag_only` emits a bare switch iff the value is truthy, so the
+    bound schema property must be `type: boolean`. Validation family ->
+    HTTP 400.
+    """
+
+    def __init__(self, method_id: UUID, arg_name: str) -> None:
+        super().__init__(
+            f"Method {method_id} launch_spec binds {arg_name!r} as a flag_only switch but "
+            "its parameters_schema type is not boolean"
+        )
+        self.method_id = method_id
+        self.arg_name = arg_name
+
+
+class MethodParametersSchemaDropsLaunchArgError(ValueError):
+    """A parameters_schema update would drop a key the launch_spec binds.
+
+    The reciprocal of `MethodLaunchArgUnknownParameterError`: you cannot
+    remove a schema property that a stored launch_spec still binds. Names
+    the offending binding so the operator removes it from the launch_spec
+    first. Validation family -> HTTP 400.
+    """
+
+    def __init__(self, method_id: UUID, arg_name: str) -> None:
+        super().__init__(
+            f"Method {method_id} parameters_schema update drops parameter {arg_name!r} "
+            "still bound by its launch_spec; update the launch_spec first"
+        )
+        self.method_id = method_id
+        self.arg_name = arg_name

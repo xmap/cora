@@ -170,6 +170,28 @@ class MethodParametersSchemaUpdated:
 
 
 @dataclass(frozen=True)
+class MethodLaunchSpecUpdated:
+    """The Method's vetted compute launch recipe was set / replaced / cleared.
+
+    `launch_spec` is the serialized `LaunchSpec` (see
+    `launch_spec_to_dict`), or None to clear it. Sets the argv the
+    conduct runtime builds so a caller selects this recipe rather than
+    POSTing raw argv. Orthogonal to lifecycle (Defined / Versioned /
+    Deprecated all permit launch-spec updates), so no status is carried.
+
+    Shape deliberately mirrors `MethodParametersSchemaUpdated` and, like
+    it, carries NO `actor_id` (an asymmetric add would trip the
+    fold-symmetry fitness test; if Method-mutation events ever gain
+    actors it is one cross-event sweep). See
+    [[project-method-launch-spec-stage0-design]].
+    """
+
+    method_id: UUID
+    launch_spec: dict[str, Any] | None
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class MethodRequiredRoleAdded:
     """A positional role slot was declared on the Method.
 
@@ -227,6 +249,7 @@ MethodEvent = (
     | MethodVersioned
     | MethodDeprecated
     | MethodParametersSchemaUpdated
+    | MethodLaunchSpecUpdated
     | MethodRequiredRoleAdded
     | MethodRequiredRoleRemoved
 )
@@ -310,6 +333,16 @@ def to_payload(event: MethodEvent) -> dict[str, Any]:
             return {
                 "method_id": str(method_id),
                 "parameters_schema": parameters_schema,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case MethodLaunchSpecUpdated(
+            method_id=method_id,
+            launch_spec=launch_spec,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "method_id": str(method_id),
+                "launch_spec": launch_spec,
                 "occurred_at": occurred_at.isoformat(),
             }
         case MethodRequiredRoleAdded(
@@ -438,6 +471,15 @@ def from_stored(stored: StoredEvent) -> MethodEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
+        case "MethodLaunchSpecUpdated":
+            return deserialize_or_raise(
+                "MethodLaunchSpecUpdated",
+                lambda: MethodLaunchSpecUpdated(
+                    method_id=UUID(payload["method_id"]),
+                    launch_spec=payload["launch_spec"],
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
         case "MethodRequiredRoleAdded":
 
             def _build_method_required_role_added() -> MethodRequiredRoleAdded:
@@ -481,6 +523,7 @@ __all__ = [
     "MethodDefined",
     "MethodDeprecated",
     "MethodEvent",
+    "MethodLaunchSpecUpdated",
     "MethodParametersSchemaUpdated",
     "MethodRequiredRoleAdded",
     "MethodRequiredRoleRemoved",

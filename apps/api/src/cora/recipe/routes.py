@@ -44,6 +44,7 @@ from cora.recipe.aggregates.capability import (
     InvalidExecutorShapesError,
 )
 from cora.recipe.aggregates.method import (
+    InvalidLaunchSpecError,
     InvalidMethodIterativeStoppingFieldError,
     InvalidMethodMonotoneQualityError,
     InvalidMethodNameError,
@@ -58,8 +59,11 @@ from cora.recipe.aggregates.method import (
     MethodCannotMutateRequiredRolesError,
     MethodCannotVersionError,
     MethodCapabilityExecutorMismatchError,
+    MethodLaunchArgNotBooleanError,
+    MethodLaunchArgUnknownParameterError,
     MethodNotFoundError,
     MethodParametersNotSubsetError,
+    MethodParametersSchemaDropsLaunchArgError,
     MethodRoleNameAlreadyDeclaredError,
     MethodRoleNameNotFoundError,
     RoleRequirementBindingDuplicateError,
@@ -151,6 +155,7 @@ from cora.recipe.features import (
     remove_plan_wire,
     unbind_plan_role,
     update_capability_suggested_roles,
+    update_method_launch_spec,
     update_method_parameters_schema,
     update_plan_default_parameters,
     version_capability,
@@ -241,6 +246,7 @@ def register_recipe_routes(app: FastAPI) -> None:
     app.include_router(version_method.router)
     app.include_router(deprecate_method.router)
     app.include_router(update_method_parameters_schema.router)
+    app.include_router(update_method_launch_spec.router)
     app.include_router(add_method_required_role.router)
     app.include_router(remove_method_required_role.router)
     app.include_router(define_practice.router)
@@ -288,6 +294,15 @@ def register_recipe_routes(app: FastAPI) -> None:
         # family), per project-compute-modeling-stage0-design.
         InvalidMethodMonotoneQualityError,
         InvalidMethodIterativeStoppingFieldError,
+        # Launch-spec validation family (update_method_launch_spec +
+        # the reciprocal schema guard): malformed spec, an arg naming an
+        # unknown schema key, a flag_only arg on a non-boolean key, and a
+        # schema update dropping a bound key. All -> 400. Per
+        # project-method-launch-spec-stage0-design.
+        InvalidLaunchSpecError,
+        MethodLaunchArgUnknownParameterError,
+        MethodLaunchArgNotBooleanError,
+        MethodParametersSchemaDropsLaunchArgError,
         # Positional role-tagging VO constructor failures
         # (RoleName empty/too-long, PortRequirement empty/too-long port
         # name or signal_type). Mapped to 400.

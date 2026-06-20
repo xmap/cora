@@ -1167,6 +1167,15 @@
         "title": "ApproveClearanceRequest",
         "type": "object"
       },
+      "ArgStyle": {
+        "description": "Closed v1 vocabulary for how a named parameter renders into argv.",
+        "enum": [
+          "value",
+          "flag_only"
+        ],
+        "title": "ArgStyle",
+        "type": "string"
+      },
       "AssetIntegrationViewResponse": {
         "description": "Read-side DTO at the API boundary.\n\nDecouples wire format from the domain `AssetIntegrationView`. Lists\nserialize in deterministic order (families/cautions/capabilities by\ntheir canonical sort; ports already sorted by name in the handler).\n\n`incomplete` is TRUE if any Family in `asset.family_ids` failed to load\n(eventual-consistency tolerance per\n[[project-dataset-lineage-design]]); consumers should treat the\nbundle as partial in that case.",
         "properties": {
@@ -7234,6 +7243,108 @@
         ],
         "title": "InterpolationKind",
         "type": "string"
+      },
+      "LaunchArgRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `LaunchArg`.",
+        "properties": {
+          "flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Option flag (XOR with position).",
+            "title": "Flag"
+          },
+          "name": {
+            "description": "A parameters_schema property key.",
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Positional index (XOR with flag).",
+            "title": "Position"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "style": {
+            "$ref": "#/components/schemas/ArgStyle",
+            "default": "value"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "LaunchArgRequest",
+        "type": "object"
+      },
+      "LaunchSpecRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `LaunchSpec`.",
+        "properties": {
+          "args": {
+            "items": {
+              "$ref": "#/components/schemas/LaunchArgRequest"
+            },
+            "title": "Args",
+            "type": "array"
+          },
+          "base_command": {
+            "description": "Literal argv prefix.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Base Command",
+            "type": "array"
+          },
+          "input_arg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Flag before each input URI.",
+            "title": "Input Arg"
+          },
+          "output_arg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Flag before the output URI.",
+            "title": "Output Arg"
+          }
+        },
+        "required": [
+          "base_command"
+        ],
+        "title": "LaunchSpecRequest",
+        "type": "object"
       },
       "ListPermissionsResponse": {
         "description": "Read-side DTO at the API boundary.\n\n`incomplete` is always False at v1, required from day 1 per the\ndesign lock's anti-hook to forward-compat with future ABAC\npolicies that may make enumeration lossy.",
@@ -14484,6 +14595,27 @@
           "new_placement"
         ],
         "title": "UpdateFramePlacementRequest",
+        "type": "object"
+      },
+      "UpdateMethodLaunchSpecRequest": {
+        "description": "Body for `POST /methods/{method_id}/launch-spec`.",
+        "properties": {
+          "launch_spec": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LaunchSpecRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The vetted launch recipe, or null to clear an existing one."
+          }
+        },
+        "required": [
+          "launch_spec"
+        ],
+        "title": "UpdateMethodLaunchSpecRequest",
         "type": "object"
       },
       "UpdateMethodParametersSchemaRequest": {
@@ -32241,6 +32373,106 @@
           }
         },
         "summary": "Mark an existing method as deprecated",
+        "tags": [
+          "recipe"
+        ]
+      }
+    },
+    "/methods/{method_id}/launch-spec": {
+      "post": {
+        "operationId": "post_methods_launch_spec_methods__method_id__launch_spec_post",
+        "parameters": [
+          {
+            "description": "Target method's id.",
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "description": "Target method's id.",
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMethodLaunchSpecRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Launch spec rejected: malformed (bad flag, flag/position both, position gap), names an unknown parameters_schema key, or binds a flag_only arg to a non-boolean key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No method exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Concurrent write to the same method stream conflicted."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Set, replace, or clear a Method's launch_spec",
         "tags": [
           "recipe"
         ]

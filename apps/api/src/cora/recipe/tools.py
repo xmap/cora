@@ -43,6 +43,9 @@ from cora.recipe.features.unbind_plan_role import tool as unbind_plan_role_tool
 from cora.recipe.features.update_capability_suggested_roles import (
     tool as update_capability_suggested_roles_tool,
 )
+from cora.recipe.features.update_method_launch_spec import (
+    tool as update_method_launch_spec_tool,
+)
 from cora.recipe.features.update_method_parameters_schema import (
     tool as update_method_parameters_schema_tool,
 )
@@ -82,6 +85,10 @@ def register_recipe_tools(
     update_method_parameters_schema_tool.register(
         mcp,
         get_handler=lambda: get_handlers().update_method_parameters_schema,
+    )
+    update_method_launch_spec_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().update_method_launch_spec,
     )
     add_method_required_role_tool.register(
         mcp,

@@ -57,6 +57,7 @@ from cora.recipe.features import (
     remove_plan_wire,
     unbind_plan_role,
     update_capability_suggested_roles,
+    update_method_launch_spec,
     update_method_parameters_schema,
     update_plan_default_parameters,
     version_capability,
@@ -78,6 +79,7 @@ class RecipeHandlers:
     version_method: version_method.Handler
     deprecate_method: deprecate_method.Handler
     update_method_parameters_schema: update_method_parameters_schema.Handler
+    update_method_launch_spec: update_method_launch_spec.Handler
     add_method_required_role: add_method_required_role.Handler
     remove_method_required_role: remove_method_required_role.Handler
     define_practice: define_practice.IdempotentHandler
@@ -144,6 +146,11 @@ def wire_recipe(deps: Kernel) -> RecipeHandlers:
         update_method_parameters_schema=with_tracing(
             update_method_parameters_schema.bind(deps),
             command_name="UpdateMethodParametersSchema",
+            bc=_BC,
+        ),
+        update_method_launch_spec=with_tracing(
+            update_method_launch_spec.bind(deps),
+            command_name="UpdateMethodLaunchSpec",
             bc=_BC,
         ),
         add_method_required_role=with_tracing(
