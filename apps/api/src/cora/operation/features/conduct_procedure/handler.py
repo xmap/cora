@@ -46,6 +46,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
+from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny, EventStore
@@ -63,13 +64,18 @@ from cora.operation.aggregates.procedure import (
     ProcedureStepsForbiddenForRecipeDrivenError,
     RecipeExpanderVersionMismatchError,
     RecipeExpansionRecordNotFoundError,
+    event_type_name,
     load_procedure_with_events,
+    to_payload,
 )
-from cora.operation.conductor import Conductor, Step
+from cora.operation.conductor import Conductor, Step, step_to_payload
 from cora.operation.errors import UnauthorizedError
 from cora.operation.features.conduct_procedure.command import (
     ConductProcedure,
     ConductProcedureResult,
+)
+from cora.operation.features.conduct_procedure.manifest import (
+    decide_resolved_steps_recorded,
 )
 from cora.operation.ports.recipe_expander import RecipeExpander
 from cora.recipe.aggregates.capability import CapabilityStatus, load_capability
@@ -216,6 +222,41 @@ def bind(
             correlation_id=correlation_id,
             constituent_resolver=constituent_resolver,
         )
+
+        # Pin the resolved step list (after recipe + pseudoaxis expansion)
+        # BEFORE conducting, so a future resume replays this exact list
+        # instead of re-deriving it from live Plan.wires / partition rules.
+        # Provenance-only ResolvedStepsRecorded; the helper emits it only
+        # while the Procedure is still Defined and returns [] otherwise,
+        # leaving the Conductor's start_procedure to surface a lifecycle
+        # failure (keeps the conduct route's failures-in-body contract).
+        manifest_events = decide_resolved_steps_recorded(
+            procedure,
+            tuple(step_to_payload(step) for step in steps),
+            now=deps.clock.now(),
+        )
+        if manifest_events:
+            _, current_version = await deps.event_store.load(
+                stream_type="Procedure", stream_id=command.procedure_id
+            )
+            await deps.event_store.append(
+                stream_type="Procedure",
+                stream_id=command.procedure_id,
+                expected_version=current_version,
+                events=[
+                    to_new_event(
+                        event_type=event_type_name(event),
+                        payload=to_payload(event),
+                        occurred_at=event.occurred_at,
+                        event_id=deps.id_generator.new_id(),
+                        command_name=_COMMAND_NAME,
+                        correlation_id=correlation_id,
+                        causation_id=causation_id,
+                        principal_id=principal_id,
+                    )
+                    for event in manifest_events
+                ],
+            )
 
         result = await conductor.conduct(
             procedure_id=command.procedure_id,

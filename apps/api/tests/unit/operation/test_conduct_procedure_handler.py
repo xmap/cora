@@ -26,13 +26,17 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import Allow, Deny
+from cora.infrastructure.ports.clock import FakeClock
+from cora.infrastructure.ports.id_generator import UUIDv7Generator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.adapters.in_memory_recipe_expander import (
     InMemoryRecipeExpander,
 )
 from cora.operation.aggregates.procedure import (
     ProcedureRegistered,
+    ResolvedStepsRecorded,
     event_type_name,
+    from_stored,
     to_payload,
 )
 from cora.operation.conductor import (
@@ -44,6 +48,7 @@ from cora.operation.conductor import (
     SetpointStep,
     Step,
     WithinToleranceCriterion,
+    step_to_payload,
 )
 from cora.operation.errors import UnauthorizedError
 from cora.operation.features.conduct_procedure.command import (
@@ -163,9 +168,14 @@ def _deps(authz: _FakeAuthz, event_store: InMemoryEventStore | None = None) -> K
     class _MinimalKernel:
         authz: _FakeAuthz
         event_store: InMemoryEventStore
+        clock: FakeClock
+        id_generator: UUIDv7Generator
 
     return _MinimalKernel(  # type: ignore[return-value]
-        authz=authz, event_store=event_store or InMemoryEventStore()
+        authz=authz,
+        event_store=event_store or InMemoryEventStore(),
+        clock=FakeClock(datetime(2026, 6, 20, 12, 0, 0, tzinfo=UTC)),
+        id_generator=UUIDv7Generator(),
     )
 
 
@@ -211,6 +221,41 @@ async def test_conduct_procedure_handler_dispatches_to_conductor_with_envelope()
     assert result.completed_count == 2
     assert result.succeeded is True
     assert result.failure is None
+
+
+@pytest.mark.unit
+async def test_conduct_procedure_pins_resolved_steps_before_conducting() -> None:
+    """The handler appends a ResolvedStepsRecorded manifest (the resolved
+    step list) to the Procedure stream before dispatching to the Conductor."""
+    procedure_id = uuid4()
+    store = InMemoryEventStore()
+    await _seed_procedure(store, procedure_id)
+    conductor = _FakeConductor(result=ConductorResult(procedure_id=procedure_id, completed_count=2))
+    handler = bind(
+        _deps(_FakeAuthz(), store),  # type: ignore[arg-type]
+        conductor=conductor,  # type: ignore[arg-type]
+        expansion_port=InMemoryRecipeExpander(),
+    )
+    steps: tuple[Step, ...] = (
+        SetpointStep(address="2bma:rot:val", value=45.0),
+        CheckStep(address="2bma:shutter", criterion=EqualsCriterion(expected="Open")),
+    )
+
+    await handler(
+        ConductProcedure(procedure_id=procedure_id, steps=steps),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+    )
+
+    stored, _ = await store.load(stream_type="Procedure", stream_id=procedure_id)
+    manifests = [
+        event
+        for event in (from_stored(s) for s in stored)
+        if isinstance(event, ResolvedStepsRecorded)
+    ]
+    assert len(manifests) == 1
+    assert manifests[0].step_count == 2
+    assert manifests[0].resolved_steps == tuple(step_to_payload(step) for step in steps)
 
 
 @pytest.mark.unit

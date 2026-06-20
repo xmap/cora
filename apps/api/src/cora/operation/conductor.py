@@ -1019,6 +1019,32 @@ def _criterion_to_dict(criterion: CheckCriterion) -> dict[str, Any]:
     }
 
 
+def step_to_payload(step: Step) -> dict[str, Any]:
+    """Serialize a `Step` to a JSON-clean dict (inverse of `step_from_wire`).
+
+    Mirrors the conduct route's wire shape (the `kind` discriminator +
+    field names) so the resolved step list pinned on `ResolvedStepsRecorded`
+    round-trips back to `Step` objects via `step_from_wire` at resume. A
+    tuple `value` serializes as a list (JSON has no tuple); the criterion
+    reuses `_criterion_to_dict` so the wire shape stays single-sourced.
+    """
+    if isinstance(step, SetpointStep):
+        value: Any = list(step.value) if isinstance(step.value, tuple) else step.value
+        return {
+            "kind": "setpoint",
+            "address": step.address,
+            "value": value,
+            "verify": step.verify,
+        }
+    if isinstance(step, ActionStep):
+        return {"kind": "action", "name": step.name, "params": dict(step.params)}
+    return {
+        "kind": "check",
+        "address": step.address,
+        "criterion": _criterion_to_dict(step.criterion),
+    }
+
+
 def _criterion_matches(criterion: CheckCriterion, value: Any) -> bool:
     """True iff `value` satisfies `criterion`.
 
@@ -1090,4 +1116,5 @@ __all__ = [
     "SetpointStep",
     "Step",
     "WithinToleranceCriterion",
+    "step_to_payload",
 ]

@@ -372,12 +372,46 @@ class ProcedureIterationEnded:
     occurred_at: datetime
 
 
+@dataclass(frozen=True)
+class ResolvedStepsRecorded:
+    """Provenance event: the FINAL resolved step list a conduct will walk.
+
+    Pinned at conduct start, before any step executes, AFTER recipe
+    re-expansion AND pseudoaxis / constituent resolution have produced
+    the concrete `Step` list the Conductor actually walks. A future
+    resume replays THIS list verbatim instead of re-deriving it from live
+    `Plan.wires` / `Asset.partition_rule` / calibration, which could
+    yield a different list and silently skip or mis-target a step.
+
+    Distinct from `RecipeExpansionRecorded`: that event is registration-
+    time, pre-pseudoaxis, and stores content HASHES for cheap re-
+    derivation; this event is conduct-time, post-pseudoaxis, and stores
+    the FULL resolved step list for verbatim replay. The two are
+    complementary provenance on the same Procedure stream.
+
+    `resolved_steps` is the conducted list serialized to JSON-friendly
+    dicts (the Conductor's `step_to_payload` wire shape); the concrete
+    constituent setpoint values are already baked in by the pseudoaxis
+    rewrite. `step_count` is a denorm for cheap read-side checks, mirror
+    of `RecipeExpansionRecorded.step_count`.
+
+    Provenance-only: the evolver leaves Procedure state unchanged when
+    this event arrives (mirrors `RecipeExpansionRecorded`).
+    """
+
+    procedure_id: UUID
+    resolved_steps: tuple[Mapping[str, Any], ...]
+    step_count: int
+    occurred_at: datetime
+
+
 # Discriminated union of every event the Procedure aggregate emits.
 # The FSM is closed by the three transition events; the per-step
 # logbook envelope event `ProcedureActivitiesLogbookOpened` opens lazily
 # on first append; the iteration boundary pair
 # (`ProcedureIterationStarted` / `ProcedureIterationEnded`) folds onto
-# the iteration denorm without touching the lifecycle status.
+# the iteration denorm without touching the lifecycle status;
+# `RecipeExpansionRecorded` / `ResolvedStepsRecorded` are provenance-only.
 ProcedureEvent = (
     ProcedureRegistered
     | ProcedureStarted
@@ -388,6 +422,7 @@ ProcedureEvent = (
     | ProcedureIterationStarted
     | ProcedureIterationEnded
     | RecipeExpansionRecorded
+    | ResolvedStepsRecorded
 )
 
 
@@ -550,6 +585,18 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "step_count": step_count,
                 "occurred_at": occurred_at.isoformat(),
             }
+        case ResolvedStepsRecorded(
+            procedure_id=procedure_id,
+            resolved_steps=resolved_steps,
+            step_count=step_count,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "procedure_id": str(procedure_id),
+                "resolved_steps": [dict(step) for step in resolved_steps],
+                "step_count": step_count,
+                "occurred_at": occurred_at.isoformat(),
+            }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 
@@ -692,6 +739,16 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                 ),
                 extra=(ValueError,),
             )
+        case "ResolvedStepsRecorded":
+            return deserialize_or_raise(
+                "ResolvedStepsRecorded",
+                lambda: ResolvedStepsRecorded(
+                    procedure_id=UUID(payload["procedure_id"]),
+                    resolved_steps=tuple(dict(step) for step in payload["resolved_steps"]),
+                    step_count=int(payload["step_count"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
         case _:
             msg = f"Unknown ProcedureEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -708,6 +765,7 @@ __all__ = [
     "ProcedureStarted",
     "ProcedureTruncated",
     "RecipeExpansionRecorded",
+    "ResolvedStepsRecorded",
     "event_type_name",
     "from_stored",
     "to_payload",

@@ -73,6 +73,7 @@ from cora.operation.aggregates.procedure.events import (
     ProcedureStarted,
     ProcedureTruncated,
     RecipeExpansionRecorded,
+    ResolvedStepsRecorded,
 )
 from cora.operation.aggregates.procedure.state import (
     Procedure,
@@ -225,6 +226,12 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
             # there is no projection-folded denorm onto Procedure state
             # beyond what `ProcedureRegistered.recipe_id` already pins.
             return require_state(state, "RecipeExpansionRecorded")
+        case ResolvedStepsRecorded():
+            # Provenance-only event: leaves Procedure state unchanged. The
+            # full resolved step list lives in the event stream for
+            # conduct-time replay (resume reads it back); there is no
+            # state fold. Mirrors the RecipeExpansionRecorded arm above.
+            return require_state(state, "ResolvedStepsRecorded")
         case ProcedureIterationStarted(iteration_index=iteration_index):
             # One convergence-loop iteration began: bump the denorm count
             # and record the open index. Status untouched (iteration is
