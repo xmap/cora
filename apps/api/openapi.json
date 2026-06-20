@@ -3780,14 +3780,21 @@
         "description": "Body for `POST /runs/{run_id}/conduct`.",
         "properties": {
           "command": {
-            "description": "The argv the substrate launches (e.g. tomopy recon --algorithm sirt).",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 256,
-            "minItems": 1,
-            "title": "Command",
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 256,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Raw argv (legacy path), only for a Method with NO launch_spec. Forbidden (422) when the Method has a launch_spec: the server builds the argv from the vetted recipe instead.",
+            "title": "Command"
           },
           "input_uris": {
             "description": "URIs the job reads (e.g. the raw projection Dataset's Distribution).",
@@ -3828,9 +3835,6 @@
             "description": "Optional resource shape; defaults to unspecified."
           }
         },
-        "required": [
-          "command"
-        ],
         "title": "ConductRunRequest",
         "type": "object"
       },
@@ -38226,6 +38230,16 @@
             },
             "description": "Successful Response"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The Run's parameters do not satisfy the Method's launch_spec, or a URI is unsafe."
+          },
           "403": {
             "content": {
               "application/json": {
@@ -38237,7 +38251,7 @@
             "description": "Authorize port denied the underlying Run transition."
           },
           "422": {
-            "description": "Request body failed schema validation (empty command, bad field)."
+            "description": "Body failed schema validation, or a raw `command` was supplied for a launch_spec Method, or a raw `command` is missing / disabled."
           }
         },
         "summary": "Conduct a compute Run: submit the job, await it, then complete or abort the Run.",

@@ -16,6 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from tests.contract._compute_helpers import setup_run_with_launch_spec
 from tests.contract._helpers import create_capability_via_api
 from tests.contract._subject_helpers import register_active_asset
 
@@ -121,3 +122,52 @@ def test_post_conduct_compute_empty_command_returns_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(f"/runs/{uuid4()}/conduct", json={"command": []})
     assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_conduct_with_launch_spec_builds_argv_server_side() -> None:
+    """A launch_spec Method conducts with NO raw command: the server builds
+    the argv from the recipe + the Run's effective_parameters."""
+    with TestClient(create_app()) as client:
+        run_id = setup_run_with_launch_spec(client)
+        response = client.post(
+            f"/runs/{run_id}/conduct",
+            json={
+                "input_uris": ["file:///data/raw.h5"],
+                "output_uri": "file:///data/recon.h5",
+            },
+        )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["succeeded"] is True
+    assert body["status"] == "Succeeded"
+    assert body["artifact_uri"] == "file:///data/recon.h5"
+    assert body["actuation_kind"] == "Simulated"
+
+
+@pytest.mark.contract
+def test_post_conduct_with_launch_spec_rejects_raw_command_with_422() -> None:
+    """A launch_spec Method forbids a caller-supplied raw command."""
+    with TestClient(create_app()) as client:
+        run_id = setup_run_with_launch_spec(client)
+        response = client.post(
+            f"/runs/{run_id}/conduct",
+            json={"command": ["tomopy", "recon"], "output_uri": "file:///o.h5"},
+        )
+    assert response.status_code == 422, response.text
+
+
+@pytest.mark.contract
+def test_post_conduct_raw_command_returns_422_when_raw_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With CORA_ALLOW_RAW_CONDUCT=false, a no-launch_spec Method cannot
+    conduct a raw command."""
+    monkeypatch.setenv("CORA_ALLOW_RAW_CONDUCT", "false")
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        response = client.post(
+            f"/runs/{run_id}/conduct",
+            json={"command": ["noop"], "output_uri": "file:///o.h5"},
+        )
+    assert response.status_code == 422, response.text

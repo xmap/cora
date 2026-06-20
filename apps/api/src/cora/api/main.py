@@ -151,6 +151,7 @@ from cora.infrastructure.auth.exception_handlers import register_auth_exception_
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import build_kernel
 from cora.infrastructure.idempotency_pruner import idempotency_pruner_lifespan
+from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import configure_tracing, instrument_app
 from cora.infrastructure.projection import (
     ProjectionRegistry,
@@ -525,6 +526,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         runtime: ComputeRuntime = fastapi_app.state.compute_runtime
         return runtime
 
+    def _get_deps() -> Kernel:
+        deps: Kernel = fastapi_app.state.deps
+        return deps
+
     def _get_data_handlers() -> DataHandlers:
         handlers: DataHandlers = fastapi_app.state.data
         return handlers
@@ -582,7 +587,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_calibration_tools(mcp, get_handlers=_get_calibration_handlers)
     register_campaign_tools(mcp, get_handlers=_get_campaign_handlers)
     register_agent_tools(mcp, get_handlers=_get_agent_handlers)
-    register_conduct_run_tools(mcp, get_runtime=_get_compute_runtime)
+    register_conduct_run_tools(mcp, get_runtime=_get_compute_runtime, get_deps=_get_deps)
     mcp_app = mcp.streamable_http_app()
 
     @asynccontextmanager

@@ -326,6 +326,15 @@ class Settings(BaseSettings):
     compute_substrate: ComputeSubstrate = "in_memory"
     compute_default_timeout_s: float = 3600.0
 
+    # When True (default, migration window), the conduct endpoint still
+    # accepts a raw caller-supplied `command` for a Method that has NO
+    # launch_spec. A Method WITH a launch_spec always builds its argv
+    # server-side and rejects a raw command regardless of this flag.
+    # Flip to False to lock conduct to vetted launch_spec recipes only
+    # once every Method carries one. Read from `CORA_ALLOW_RAW_CONDUCT`.
+    # See [[project-method-launch-spec-stage0-design]].
+    cora_allow_raw_conduct: bool = True
+
     # Enclosure permit observer (PSS-1, beam-availability slice).
     # Maps each Enclosure name to the read-only Channel Access PV whose
     # value drives its permit (e.g. S02BM-PSS:StaA:SecureM, 1=secure).

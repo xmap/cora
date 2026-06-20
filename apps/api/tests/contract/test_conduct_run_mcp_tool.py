@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from tests.contract._compute_helpers import setup_run_with_launch_spec
 from tests.contract._mcp_helpers import open_session, parse_sse_data
 
 
@@ -59,3 +60,35 @@ def test_mcp_conduct_run_unknown_run_returns_structured_failure() -> None:
     assert result["run_id"] == run_id
     assert result["succeeded"] is False
     assert result["failure"] is not None
+
+
+@pytest.mark.contract
+def test_mcp_conduct_run_with_launch_spec_builds_argv_server_side() -> None:
+    """The tool resolves the Run's launch_spec Method and conducts with a
+    server-built argv (no raw command in the body)."""
+    with TestClient(create_app()) as client:
+        run_id = setup_run_with_launch_spec(client)
+        headers = open_session(client)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {
+                    "name": "conduct_run",
+                    "arguments": {
+                        "run_id": run_id,
+                        "body": {
+                            "input_uris": ["file:///data/raw.h5"],
+                            "output_uri": "file:///data/recon.h5",
+                        },
+                    },
+                },
+            },
+            headers=headers,
+        )
+    result = parse_sse_data(response.text)["result"]["structuredContent"]
+    assert result["run_id"] == run_id
+    assert result["succeeded"] is True
+    assert result["artifact_uri"] == "file:///data/recon.h5"

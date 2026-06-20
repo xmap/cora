@@ -417,6 +417,12 @@ depends_on = [
     "cora.federation",
     "cora.operation",
     "cora.recipe",
+    # Two composition-root consumers read recipe aggregates: the RunSupervisor
+    # gated-resume re-check (load Plan/Practice/Method, see cora.equipment.aggregates
+    # above) and the conduct ComputeRuntime resolving a Run's vetted launch_spec
+    # via Run -> Plan -> Practice -> Method (load_plan / load_practice /
+    # load_method). Blessed cross-BC aggregate read, same pattern as
+    # cora.run.aggregates / cora.decision.aggregates.
     "cora.recipe.aggregates",
     "cora.run",
     # RunSupervisor runtime catches Run lifecycle errors (RunCannotHoldError /
