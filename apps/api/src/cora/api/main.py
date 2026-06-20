@@ -59,6 +59,9 @@ from cora.agent import (
     seed_run_supervisor_agent,
     wire_agent,
 )
+from cora.api._compute_runtime import ComputeRuntime
+from cora.api._conduct_run_route import register_conduct_run_routes
+from cora.api._conduct_run_tool import register_conduct_run_tools
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
@@ -158,6 +161,7 @@ from cora.operation import (
     register_operation_tools,
     wire_operation,
 )
+from cora.operation.adapters.compute_port_config import ComputePortConfig, build_compute_port
 from cora.operation.adapters.control_port_beam_availability_lookup import (
     build_beam_availability_lookup,
 )
@@ -367,6 +371,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         handlers: RunHandlers = fastapi_app.state.run
         return handlers
 
+    def _get_compute_runtime() -> ComputeRuntime:
+        runtime: ComputeRuntime = fastapi_app.state.compute_runtime
+        return runtime
+
     def _get_data_handlers() -> DataHandlers:
         handlers: DataHandlers = fastapi_app.state.data
         return handlers
@@ -424,6 +432,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_calibration_tools(mcp, get_handlers=_get_calibration_handlers)
     register_campaign_tools(mcp, get_handlers=_get_campaign_handlers)
     register_agent_tools(mcp, get_handlers=_get_agent_handlers)
+    register_conduct_run_tools(mcp, get_runtime=_get_compute_runtime)
     mcp_app = mcp.streamable_http_app()
 
     @asynccontextmanager
@@ -501,6 +510,27 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             app.state.calibration = wire_calibration(deps)
             app.state.campaign = wire_campaign(deps)
             app.state.agent = wire_agent(deps)
+
+            # Compute CONDUCT runtime: the L2 edge runtime that drives a
+            # compute Run via ComputePort. Lives at the composition root
+            # (not a BC) because it needs both the ComputePort and the
+            # Run FSM handlers, and tach forbids cora.run -> cora.operation.
+            # `in_memory` substrate (default) keeps every job Simulated;
+            # `local_process` runs real subprocesses. Stashed for the
+            # conduct-run-compute route + MCP tool to read; aclose'd in
+            # the teardown below (mirrors the shared ControlPort).
+            compute_port = build_compute_port(
+                ComputePortConfig(
+                    substrate=settings.compute_substrate,
+                    default_timeout_s=settings.compute_default_timeout_s,
+                )
+            )
+            app.state.compute_port = compute_port
+            app.state.compute_runtime = ComputeRuntime(
+                compute_port=compute_port,
+                complete_run=app.state.run.complete_run,
+                abort_run=app.state.run.abort_run,
+            )
 
             # Boot-time fail-fast when the deployment is pointed at the
             # bootstrap seed but the seed's stream is missing. Without
@@ -677,6 +707,13 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     if _aclose is not None:
                         with contextlib.suppress(Exception):
                             await _aclose()
+                    # Release the ComputePort too (LocalProcessComputePort
+                    # kills any straggling subprocess; in-memory is a no-op).
+                    _compute_port = getattr(app.state, "compute_port", None)
+                    _compute_aclose = getattr(_compute_port, "aclose", None)
+                    if _compute_aclose is not None:
+                        with contextlib.suppress(Exception):
+                            await _compute_aclose()
                     await teardown()
                 finally:
                     # Flush pending OTel spans before the process exits
@@ -740,6 +777,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_calibration_routes(fastapi_app)
     register_campaign_routes(fastapi_app)
     register_agent_routes(fastapi_app)
+    register_conduct_run_routes(fastapi_app)
     # RFC 9728 Protected Resource Metadata. Discoverable
     # at /.well-known/oauth-protected-resource; clients dereference it
     # after a 401 + WWW-Authenticate response to learn which IdPs issue

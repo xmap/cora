@@ -18,6 +18,13 @@ _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 
 OtelExporter = Literal["otlp", "console", "none"]
 
+# ComputePort substrate selector. Mirrors the operation-tier
+# `ComputeSubstrate` in `cora.operation.adapters.compute_port_config`
+# (a trivial 2-value Literal kept per tier rather than centralised in a
+# new infrastructure module, since there is no shared route model the
+# way ControlPort's `Substrate` rides `ControlPortRoute`).
+ComputeSubstrate = Literal["in_memory", "local_process"]
+
 
 class Settings(BaseSettings):
     """Application configuration. Reads from environment variables and `.env`."""
@@ -248,6 +255,19 @@ class Settings(BaseSettings):
     # See `cora.infrastructure.control_port_route` for the route shape +
     # `cora.operation.adapters.control_port_config` for the factory.
     control_port_routes: list[ControlPortRoute] = []
+
+    # ComputePort substrate selection for the conduct runtime.
+    # `in_memory` (default) is the Simulated fake: the conduct surface
+    # is reachable but every job is Simulated, so no real subprocess
+    # runs (right for tests + a generic boot). `local_process` runs
+    # compute jobs as OS subprocesses on the host via
+    # `LocalProcessComputePort`. A single scalar, not a route table:
+    # ComputePort has one real adapter and no routing registry (the
+    # registry is the second-substrate trigger). Read from
+    # `COMPUTE_SUBSTRATE` / `COMPUTE_DEFAULT_TIMEOUT_S`. See
+    # `cora.operation.adapters.compute_port_config`.
+    compute_substrate: ComputeSubstrate = "in_memory"
+    compute_default_timeout_s: float = 3600.0
 
     # Enclosure permit observer (PSS-1, beam-availability slice).
     # Maps each Enclosure name to the read-only Channel Access PV whose
