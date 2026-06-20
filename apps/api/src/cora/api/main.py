@@ -213,6 +213,7 @@ from cora.trust import (
     register_trust_routes,
     register_trust_tools,
     verify_bootstrap_seed_present,
+    warn_if_verdict_log_dormant,
     wire_trust,
 )
 
@@ -586,6 +587,13 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # this check, a stale / unrestored DB silently 403s every
             # API call instead of failing visibly at startup.
             await verify_bootstrap_seed_present(deps)
+
+            # Heads-up (non-fatal): when authz is enforced but the
+            # per-Conduit Verdict audit log cannot populate yet (conduit
+            # injection not wired), warn at boot instead of silently
+            # logging an empty audit trail. See
+            # project_authorization_envelope_design watch item 6.
+            await warn_if_verdict_log_dormant(deps)
 
             # Federation BC self-Facility seed per
             # project_facility_aggregate_design Sub-Slice D. Idempotent

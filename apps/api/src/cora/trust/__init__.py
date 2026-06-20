@@ -25,6 +25,7 @@ from cora.trust._bootstrap import (
     SYSTEM_MCP_STDIO_SURFACE_ID,
     SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID,
     verify_bootstrap_seed_present,
+    warn_if_verdict_log_dormant,
 )
 from cora.trust._projections import register_trust_projections
 from cora.trust.authorize import TrustAuthorize
@@ -47,5 +48,6 @@ __all__ = [
     "register_trust_routes",
     "register_trust_tools",
     "verify_bootstrap_seed_present",
+    "warn_if_verdict_log_dormant",
     "wire_trust",
 ]
