@@ -27,6 +27,10 @@ Agent rollout.
     `DecisionRegistered(context="CautionProposal")` with 5-value
     choice + optional proposed-Caution tuple. Operator-promoted
     via the `promote_caution_proposal` slice.
+  - `CautionPromoterSubscriber` — DETERMINISTIC (no LLM): a
+    high-confidence Notice-only CautionProposal -> auto-promoted live
+    Caution + one `DecisionRegistered(context="CautionPromotion")`.
+    Gated by `settings.caution_promoter_enabled` (default off).
 
 Both subscribers run concurrently and INDEPENDENTLY in the
 projection worker. Both classify as `Reaction` (the public sibling
@@ -54,6 +58,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cora.agent.subscribers.caution_drafter import make_caution_drafter_subscriber
+from cora.agent.subscribers.caution_promoter import make_caution_promoter_subscriber
 from cora.agent.subscribers.run_debriefer import make_run_debriefer_subscriber
 from cora.infrastructure.logging import get_logger
 
@@ -66,6 +71,20 @@ _log = get_logger(__name__)
 
 def register_agent_subscribers(registry: ProjectionRegistry, deps: Kernel) -> None:
     """Register Agent BC's subscribers into the projection-worker registry."""
+    # CautionPromoter is DETERMINISTIC (no LLM), so it registers independently of
+    # ANTHROPIC_API_KEY, gated by its own off-by-default setting. It is the 3rd
+    # projection-worker Reaction; its gate is a fast deterministic check (no
+    # 5-15s LLM round-trip), so it does not warrant the deferred ReactionWorker
+    # pool split that the LLM Reactions' latency motivated.
+    if deps.settings.caution_promoter_enabled:
+        caution_promoter = make_caution_promoter_subscriber(deps)
+        registry.register(caution_promoter)
+        _log.info(
+            "agent_subscriber.registered",
+            subscriber=caution_promoter.name,
+            subscribed_event_types=sorted(caution_promoter.subscribed_event_types),
+        )
+
     if deps.llm is None:
         _log.warning(
             "agent_subscriber.skipped",

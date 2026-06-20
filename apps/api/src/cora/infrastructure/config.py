@@ -160,6 +160,13 @@ class Settings(BaseSettings):
     run_supervisor_enabled: bool = False
     run_supervisor_tick_seconds: float = 30.0
 
+    # `caution_promoter_enabled` gates the CautionPromoter subscriber (the 2nd
+    # ACTIVE agent). Default off: it is operational only once the
+    # operator-retirement-memory guard lands (it must not re-create a Notice an
+    # operator deliberately retired). The subscriber is deterministic and needs
+    # no LLM, so it registers independently of ANTHROPIC_API_KEY.
+    caution_promoter_enabled: bool = False
+
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
     # from. Empty (default) keeps the legacy X-Principal-Id-with-
