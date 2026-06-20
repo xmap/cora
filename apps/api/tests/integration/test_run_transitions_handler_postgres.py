@@ -210,6 +210,10 @@ async def test_complete_run_persists_and_round_trips_to_completed_state(
     assert completed.metadata == {"command": "CompleteRun"}
     assert completed.payload == {
         "run_id": str(run_id),
+        # compute-conduct provenance: None for a non-conducted complete.
+        "actuation_kind": None,
+        "producing_job_id": None,
+        "artifact_uri": None,
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -296,6 +300,9 @@ async def test_abort_run_persists_with_trimmed_reason_and_round_trips_to_aborted
         # when AbortRun.decided_by_decision_id was not provided;
         # forward-compat via `payload.get("decided_by_decision_id")`.
         "decided_by_decision_id": None,
+        # compute-conduct provenance: None for an operator abort.
+        "actuation_kind": None,
+        "producing_job_id": None,
         "occurred_at": _NOW.isoformat(),
     }
 
