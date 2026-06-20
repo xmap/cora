@@ -46,6 +46,10 @@ from cora.agent.seed_clearance_expirer import (
     CLEARANCE_EXPIRER_AGENT_ID,
     seed_clearance_expirer_agent,
 )
+from cora.agent.seed_clearance_watcher import (
+    CLEARANCE_WATCHER_AGENT_ID,
+    seed_clearance_watcher_agent,
+)
 from cora.agent.seed_run_supervisor import (
     RUN_SUPERVISOR_AGENT_ID,
     seed_run_supervisor_agent,
@@ -56,6 +60,7 @@ from cora.agent.wire import AgentHandlers, wire_agent
 __all__ = [
     "CAUTION_PROMOTER_AGENT_ID",
     "CLEARANCE_EXPIRER_AGENT_ID",
+    "CLEARANCE_WATCHER_AGENT_ID",
     "RUN_SUPERVISOR_AGENT_ID",
     "AgentHandlers",
     "CautionProposalMalformedError",
@@ -71,6 +76,7 @@ __all__ = [
     "seed_caution_drafter_agent",
     "seed_caution_promoter_agent",
     "seed_clearance_expirer_agent",
+    "seed_clearance_watcher_agent",
     "seed_run_debriefer_agent",
     "seed_run_supervisor_agent",
     "wire_agent",

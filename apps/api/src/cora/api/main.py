@@ -57,11 +57,13 @@ from cora.agent import (
     seed_caution_drafter_agent,
     seed_caution_promoter_agent,
     seed_clearance_expirer_agent,
+    seed_clearance_watcher_agent,
     seed_run_debriefer_agent,
     seed_run_supervisor_agent,
     wire_agent,
 )
 from cora.api._clearance_expirer import clearance_expirer_lifespan
+from cora.api._clearance_watcher import clearance_watcher_lifespan
 from cora.api._compute_runtime import ComputeRuntime
 from cora.api._conduct_run_route import register_conduct_run_routes
 from cora.api._conduct_run_tool import register_conduct_run_tools
@@ -792,6 +794,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_caution_promoter_agent(deps)
             # same shape for ClearanceExpirer (deterministic in-loop agent).
             await seed_clearance_expirer_agent(deps)
+            # same shape for ClearanceWatcher (deterministic flag-only agent).
+            await seed_clearance_watcher_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -858,6 +862,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         deps,
                         list_clearances=app.state.safety.list_clearances,
                         expire_clearance=app.state.safety.expire_clearance,
+                    ),
+                    clearance_watcher_lifespan(
+                        deps,
+                        list_clearances=app.state.safety.list_clearances,
+                        get_clearance=app.state.safety.get_clearance,
                     ),
                 ):
                     yield

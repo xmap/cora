@@ -224,6 +224,18 @@ class Settings(BaseSettings):
     clearance_expirer_enabled: bool = False
     clearance_expirer_tick_seconds: float = 300.0
 
+    # `clearance_watcher_enabled` gates the ClearanceWatcher background runtime
+    # (the 4th ACTIVE agent, first pure flag-only). Default off: deployments opt
+    # in explicitly. `clearance_watcher_tick_seconds` is the sweep cadence
+    # (>= 0.1s). `clearance_watcher_stale_after_seconds` is how long a clearance
+    # may sit in Submitted/UnderReview/Approved before it is flagged; the real
+    # review-turnaround SLA is a facility fact, so the default is only a
+    # placeholder (the runtime is off by default and an operator sets it on
+    # enable).
+    clearance_watcher_enabled: bool = False
+    clearance_watcher_tick_seconds: float = 300.0
+    clearance_watcher_stale_after_seconds: float = 604800.0
+
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
     # from. Empty (default) keeps the legacy X-Principal-Id-with-
@@ -458,6 +470,30 @@ class Settings(BaseSettings):
             msg = (
                 f"clearance_expirer_tick_seconds must be >= 0.1, got {value}; "
                 "values below 100ms would tight-loop the expirer"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("clearance_watcher_tick_seconds")
+    @classmethod
+    def _validate_clearance_watcher_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight watch-sweep loop."""
+        if value < 0.1:
+            msg = (
+                f"clearance_watcher_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the watcher"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("clearance_watcher_stale_after_seconds")
+    @classmethod
+    def _validate_clearance_watcher_stale_after_seconds(cls, value: float) -> float:
+        """Must be positive: a non-positive window would flag every clearance."""
+        if value <= 0:
+            msg = (
+                f"clearance_watcher_stale_after_seconds must be > 0, got {value}; "
+                "a non-positive window would flag every front-of-lifecycle clearance"
             )
             raise ValueError(msg)
         return value

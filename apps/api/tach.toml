@@ -433,7 +433,9 @@ depends_on = [
     # ClearanceExpirer runtime (cora.api._clearance_expirer) catches Clearance
     # lifecycle errors (ClearanceCannotExpireError / ClearanceNotFoundError /
     # InvalidClearanceExpireReasonError) when a clearance changes state under it
-    # between the list read and the expire issue.
+    # between the list read and the expire issue. ClearanceWatcher runtime
+    # (cora.api._clearance_watcher) also reaches it: get_clearance returns the
+    # Clearance aggregate whose ReviewStep entries it reads for review-step recency.
     "cora.safety.aggregates",
     "cora.subject",
     "cora.supply",

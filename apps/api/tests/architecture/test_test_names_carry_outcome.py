@@ -69,7 +69,7 @@ _OUTCOME_VERBS = (
     r"inserts?|drains?|expires?|throttles?|retries?|debounces?|"
     r"batches?|streams?|prunes?|throws?|crashes?|panics?|hits?|"
     r"misses?|races?|deadlocks?|leaks?|frees?|allocates?|spawns?|"
-    r"kills?|forks?|fires?|agrees?|forgets?|scrubs?|round_trips?|"
+    r"kills?|forks?|fires?|flags?|agrees?|forgets?|scrubs?|round_trips?|"
     r"short_circuits?|no_ops?|noops?|fans?_out|fans?_in|rolls?_back|"
     r"folds?|evolves?|seeds?|mounts?|dismounts?|debriefs?|drafts?|"
     r"promotes?|demotes?|deprecates?|supersedes?|abandons?|resumes?|"
