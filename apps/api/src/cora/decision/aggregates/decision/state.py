@@ -336,6 +336,41 @@ RUN_SUPERVISION_CHOICES: Final = frozenset(
 )
 
 
+# CautionPromoter agent writes one Decision per CautionProposal it
+# evaluates. Open-ended convention identical to CautionProposal; the
+# closed choice vocabulary lives in the `CautionPromotionChoice` Literal
+# below. See [[project-caution-promoter-design]] for the full grounding.
+DECISION_CONTEXT_CAUTION_PROMOTION = "CautionPromotion"
+
+
+# Closed `choice` value set for `context = "CautionPromotion"` Decisions.
+# Projection-validated, not domain-enforced. Three values:
+#
+#   - `Promote`              -- the proposal met the auto-promote gate; a
+#                              live Caution was registered.
+#   - `PromotionDeferred`    -- gate not met (severity above Notice, low
+#                              confidence, invalid target, or a Notice the
+#                              operator already retired). Carries the
+#                              Promotion work-noun (parallel to
+#                              SupervisionDeferred / DebriefDeferred) so it
+#                              does not collide in the shared, globally-
+#                              filtered DecisionChoice projection.
+#   - `PromotionConflicted`  -- an active Caution already covers the target;
+#                              no duplicate registered.
+CautionPromotionChoice = Literal[
+    "Promote",
+    "PromotionDeferred",
+    "PromotionConflicted",
+]
+CAUTION_PROMOTION_CHOICES: Final = frozenset(
+    {
+        "Promote",
+        "PromotionDeferred",
+        "PromotionConflicted",
+    }
+)
+
+
 # acceptance-signal capture: closed 3-value rating set on
 # the new `DecisionRated` event. `useful` and `misleading` are
 # operator-affirmative; `ignored` is a positive marker ("operator saw
