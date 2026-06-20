@@ -22,6 +22,8 @@ from cora.api._run_supervisor import (
     _MEM_DEFERRED,
     _MEM_HELD,
     EnvelopeCheck,
+    _assemble_and_check_envelope,
+    _issue_resume,
     _supervise_tick,
     decide_supervision,
     run_supervisor_lifespan,
@@ -36,7 +38,7 @@ from cora.infrastructure.ports.beam_availability_lookup import (
     BeamAvailabilityLookupResult,
 )
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.run.aggregates.run import RunNotFoundError
+from cora.run.aggregates.run import RunCannotResumeError, RunNotFoundError, RunStatus
 from cora.run.errors import UnauthorizedError
 from cora.run.features.hold_run import HoldRun
 from cora.run.features.hold_run.handler import Handler as HoldRunHandler
@@ -744,6 +746,104 @@ async def test_tick_own_holds_only_skips_operator_held_run(
 
     assert resume_calls == []
     assert run_id not in memory
+
+
+# ---------- _issue_resume + _assemble_and_check_envelope edges ----------
+
+
+def _make_raising_resume(exc: Exception) -> ResumeRunHandler:
+    async def resume_run(
+        command: ResumeRun,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> None:
+        raise exc
+
+    return resume_run
+
+
+@pytest.mark.unit
+async def test_issue_resume_swallows_state_race() -> None:
+    """A Run resumed/terminated under us (RunCannotResume / RunNotFound) is a
+    benign no-op, not a crash."""
+    kernel = _kernel()
+    run_id = uuid4()
+    await _issue_resume(
+        kernel,
+        _make_raising_resume(RunCannotResumeError(run_id, current_status=RunStatus.RUNNING)),
+        run_id=run_id,
+        decision_id=uuid4(),
+    )
+    await _issue_resume(
+        kernel,
+        _make_raising_resume(RunNotFoundError(run_id)),
+        run_id=run_id,
+        decision_id=uuid4(),
+    )
+
+
+@pytest.mark.unit
+async def test_issue_resume_swallows_unauthorized() -> None:
+    """A missing ResumeRun grant (config fault) is logged, not raised."""
+    kernel = _kernel()
+    await _issue_resume(
+        kernel,
+        _make_raising_resume(UnauthorizedError("supervisor not granted ResumeRun")),
+        run_id=uuid4(),
+        decision_id=uuid4(),
+    )
+
+
+@pytest.mark.unit
+async def test_tick_beam_open_running_is_noop_and_clears_memory() -> None:
+    """Beam open on a Running run: Continue, no command, and the memory-clear
+    branch (_apply_memory pop) runs."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id)])
+    hold_run, hold_calls = _make_recording_hold()
+
+    await _tick(kernel, list_runs=list_runs, hold_run=hold_run, beam_lookup=_BeamOpen(), memory={})
+
+    assert hold_calls == []
+
+
+@pytest.mark.unit
+async def test_tick_garbage_collects_settle_for_terminated_runs() -> None:
+    """A settle counter for a Run no longer in flight is pruned."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    stale_id = uuid4()
+    list_runs = _make_list_runs([])  # nothing in flight
+    hold_run, _ = _make_recording_hold()
+    settle: dict[UUID, int] = {stale_id: 1}
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamDown(),
+        memory={},
+        settle=settle,
+        resume_enabled=True,
+    )
+
+    assert stale_id not in settle
+
+
+@pytest.mark.unit
+async def test_assemble_envelope_plan_missing_is_not_ok() -> None:
+    """An unloadable upstream aggregate (corruption for a started Run) is
+    fail-safe: not ok, so the supervisor leaves the Run Held."""
+    kernel = _kernel()
+    item = _held_item(uuid4())  # plan_id points at no events
+    check = await _assemble_and_check_envelope(kernel, item, _beam())
+    assert check.ok is False
+    assert check.failed_gate == "plan_missing"
 
 
 @pytest.mark.unit
