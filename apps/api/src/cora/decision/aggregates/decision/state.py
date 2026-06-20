@@ -401,6 +401,28 @@ ClearanceExpiryChoice = Literal["Expire"]
 CLEARANCE_EXPIRY_CHOICES: Final = frozenset({"Expire"})
 
 
+# ClearanceWatcher agent writes one Decision per stalled front-of-lifecycle
+# Clearance it surfaces. Open-ended convention identical to ClearanceExpiry /
+# RunSupervision; the closed choice vocabulary lives in the
+# `ClearanceProgressChoice` Literal below. The agent is FLAG-ONLY: it records a
+# Decision only when it surfaces a stalled clearance (one per stall episode) and
+# issues NO command. The context noun is `ClearanceProgress` (abstract
+# action-noun, family-clean with ClearanceExpiry / CautionPromotion); the agent
+# kind is `ClearanceWatcher` (the doer) -- a deliberate Progress-vs-Watcher
+# asymmetry across the context-naming and R5 doer axes, not drift. See
+# [[project-clearance-watcher-design]] for the full grounding.
+DECISION_CONTEXT_CLEARANCE_PROGRESS = "ClearanceProgress"
+
+
+# Closed `choice` value set for `context = "ClearanceProgress"` Decisions.
+# Projection-validated, not domain-enforced. Single value today (the agent only
+# ever flags); the Literal exists for symmetry with the sibling agent choices
+# and so a future qualified disposition can land additively. `Flag` is unique in
+# the shared, globally-filtered DecisionChoice projection column.
+ClearanceProgressChoice = Literal["Flag"]
+CLEARANCE_PROGRESS_CHOICES: Final = frozenset({"Flag"})
+
+
 # acceptance-signal capture: closed 3-value rating set on
 # the new `DecisionRated` event. `useful` and `misleading` are
 # operator-affirmative; `ignored` is a positive marker ("operator saw
