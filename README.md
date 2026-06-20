@@ -165,7 +165,7 @@
 | src/cora/api/\_conduct\_run\_tool.py                                                     |       26 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/\_enclosure\_permit\_observer.py                                            |       61 |        0 |       16 |        0 |    100.0% |           |
 | src/cora/api/\_run\_supervisor.py                                                        |      124 |        2 |       32 |        1 |     98.1% |  306, 338 |
-| src/cora/api/main.py                                                                     |      270 |        0 |       20 |        3 |     99.0% |325-\>324, 767-\>772, 774-\>777 |
+| src/cora/api/main.py                                                                     |      271 |        0 |       20 |        3 |     99.0% |326-\>325, 775-\>780, 782-\>785 |
 | src/cora/api/middleware.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/api/protected\_resource\_metadata.py                                            |       30 |        0 |        8 |        1 |     97.4% | 127-\>125 |
 | src/cora/calibration/\_\_init\_\_.py                                                     |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -2103,7 +2103,7 @@
 | src/cora/supply/tools.py                                                                 |       24 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/supply/wire.py                                                                  |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/\_\_init\_\_.py                                                           |        9 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/\_bootstrap.py                                                            |       23 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/trust/\_bootstrap.py                                                            |       34 |        0 |       14 |        0 |    100.0% |           |
 | src/cora/trust/\_projections.py                                                          |       12 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/\_visit\_update\_handler.py                                               |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/\_\_init\_\_.py                                                |        0 |        0 |        0 |        0 |    100.0% |           |
@@ -2283,7 +2283,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **46129** |  **997** | **6364** |  **261** | **97.3%** |           |
+| **TOTAL**                                                                                | **46141** |  **997** | **6368** |  **261** | **97.3%** |           |
 
 
 ## Setup coverage badge
