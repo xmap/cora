@@ -179,6 +179,15 @@ class Settings(BaseSettings):
     run_supervisor_enabled: bool = False
     run_supervisor_tick_seconds: float = 30.0
 
+    # `run_supervisor_resume_enabled` is a SEPARATE opt-in for the gated wind-up
+    # (autonomous ResumeRun), so a deployment may run auto-hold without auto-
+    # resume. Default off; requires run_supervisor_enabled too (the loop must
+    # be running). `run_supervisor_resume_settle_ticks` is the anti-flap settle
+    # window: the start-safety envelope must read good for this many consecutive
+    # ticks before an autonomous resume fires (>= 1).
+    run_supervisor_resume_enabled: bool = False
+    run_supervisor_resume_settle_ticks: int = 2
+
     # `caution_promoter_enabled` gates the CautionPromoter subscriber (the 2nd
     # ACTIVE agent). Default off: it is operational only once the
     # operator-retirement-memory guard lands (it must not re-create a Notice an
@@ -395,6 +404,18 @@ class Settings(BaseSettings):
             msg = (
                 f"run_supervisor_tick_seconds must be >= 0.1, got {value}; "
                 "values below 100ms would tight-loop the supervisor"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_supervisor_resume_settle_ticks")
+    @classmethod
+    def _validate_run_supervisor_resume_settle_ticks(cls, value: int) -> int:
+        """Floor of 1: a resume needs at least one good envelope read first."""
+        if value < 1:
+            msg = (
+                f"run_supervisor_resume_settle_ticks must be >= 1, got {value}; "
+                "an autonomous resume requires at least one good envelope read"
             )
             raise ValueError(msg)
         return value

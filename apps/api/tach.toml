@@ -410,12 +410,18 @@ depends_on = [
     "cora.enclosure.adapters",
     "cora.equipment",
     "cora.equipment.adapters",
+    # RunSupervisor's gated-resume envelope re-check re-derives the start scope
+    # by loading Plan/Practice/Method (cora.recipe.aggregates) and Assets
+    # (cora.equipment.aggregates), mirroring start_run's handler.
+    "cora.equipment.aggregates",
     "cora.federation",
     "cora.operation",
     "cora.recipe",
+    "cora.recipe.aggregates",
     "cora.run",
     # RunSupervisor runtime catches Run lifecycle errors (RunCannotHoldError /
-    # RunNotFoundError) when a Run changes state under it between read and issue.
+    # RunCannotResumeError / RunNotFoundError) when a Run changes state under it
+    # between read and issue.
     "cora.run.aggregates",
     "cora.safety",
     # ClearanceExpirer runtime (cora.api._clearance_expirer) catches Clearance

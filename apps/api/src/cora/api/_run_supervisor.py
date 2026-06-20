@@ -75,14 +75,32 @@ from cora.decision.aggregates.decision import (
     validate_inputs,
     validate_reasoning,
 )
+from cora.equipment.aggregates.asset import load_asset
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.run.aggregates.run import RunCannotHoldError, RunNotFoundError
+from cora.recipe.aggregates.method import load_method
+from cora.recipe.aggregates.plan import load_plan
+from cora.recipe.aggregates.practice import load_practice
+from cora.run.aggregates.run import (
+    RunBeamAvailabilityUnknownError,
+    RunCannotHoldError,
+    RunCannotResumeError,
+    RunClearanceCoverageMismatchError,
+    RunEnclosureCoverageMismatchError,
+    RunNotFoundError,
+    RunRequiresActiveClearanceError,
+    RunRequiresAvailableSupplyError,
+    RunRequiresOpenBeamShuttersError,
+    RunRequiresPermittedEnclosureError,
+    RunSupplyCoverageMismatchError,
+    check_safety_envelope,
+)
 from cora.run.errors import UnauthorizedError
 from cora.run.features.hold_run import HoldRun
 from cora.run.features.list_runs import ListRuns
+from cora.run.features.resume_run import ResumeRun
 from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
@@ -93,10 +111,12 @@ if TYPE_CHECKING:
         BeamAvailabilityLookup,
         BeamAvailabilityLookupResult,
     )
+    from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
     from cora.run.features.hold_run.handler import Handler as HoldRunHandler
     from cora.run.features.list_runs import RunSummaryItem
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
     from cora.run.features.list_runs.query import RunStatusFilter
+    from cora.run.features.resume_run.handler import Handler as ResumeRunHandler
 
 _log = get_logger(__name__)
 
@@ -126,6 +146,35 @@ class SupervisionOutcome:
     record: bool
     issue_hold: bool
     issue_resume: bool = False
+
+
+# Maps each start-safety gate error to a short label for Decision evidence
+# and logging. The keys are the exact errors `check_safety_envelope` raises.
+_ENVELOPE_GATE: dict[type[Exception], str] = {
+    RunRequiresActiveClearanceError: "clearance",
+    RunClearanceCoverageMismatchError: "clearance",
+    RunRequiresAvailableSupplyError: "supply",
+    RunSupplyCoverageMismatchError: "supply",
+    RunRequiresPermittedEnclosureError: "enclosure",
+    RunEnclosureCoverageMismatchError: "enclosure",
+    RunBeamAvailabilityUnknownError: "beam",
+    RunRequiresOpenBeamShuttersError: "beam",
+}
+_ENVELOPE_ERRORS = tuple(_ENVELOPE_GATE)
+
+
+@dataclass(frozen=True)
+class EnvelopeCheck:
+    """Result of re-checking a held Run's start-safety envelope.
+
+    `ok` is True only when every live-signal gate passes. `failed_gate` is
+    the short label of the first failing gate (or a `*_missing` marker when
+    an upstream aggregate could not be loaded), for Decision evidence and
+    logs; None when ok.
+    """
+
+    ok: bool
+    failed_gate: str | None
 
 
 def decide_supervision(
@@ -222,14 +271,25 @@ async def _record_decision(
     run_id: UUID,
     choice: str,
     beam: BeamAvailabilityLookupResult,
+    extra_inputs: dict[str, str] | None = None,
 ) -> None:
     """Compose and append one DecisionRegistered (Decision BC genesis).
 
     Mirrors the subscriber `_compose_and_append` shape (public Decision VOs
     only). A ConcurrencyError means a prior tick already wrote this id (rare
-    cross-restart re-derivation); treat as success.
+    cross-restart re-derivation); treat as success. `extra_inputs` adds
+    disposition-specific evidence (e.g. the resume envelope + settle count).
     """
     now = deps.clock.now()
+    decision_inputs = {
+        "run_id": str(run_id),
+        "beam_fes_open": str(beam.fes_open),
+        "beam_sbs_open": str(beam.sbs_open),
+        "beam_fes_permit": str(beam.fes_permit),
+        "beam_quality_ok": str(beam.quality_ok),
+    }
+    if extra_inputs:
+        decision_inputs.update(extra_inputs)
     domain_event = DecisionRegistered(
         decision_id=decision_id,
         decided_by=ActorId(RUN_SUPERVISOR_AGENT_ID),
@@ -242,15 +302,7 @@ async def _record_decision(
         confidence=validate_confidence(None),
         confidence_source=DecisionConfidenceSource.SELF_REPORTED,
         alternatives=(),
-        inputs=validate_inputs(
-            {
-                "run_id": str(run_id),
-                "beam_fes_open": str(beam.fes_open),
-                "beam_sbs_open": str(beam.sbs_open),
-                "beam_fes_permit": str(beam.fes_permit),
-                "beam_quality_ok": str(beam.quality_ok),
-            }
-        ),
+        inputs=validate_inputs(decision_inputs),
         reasoning_signature=None,
         occurred_at=now,
     )
@@ -300,6 +352,113 @@ async def _issue_hold(
         _log.warning("run_supervisor.hold_unauthorized", run_id=str(run_id))
 
 
+async def _issue_resume(
+    deps: Kernel,
+    resume_run: ResumeRunHandler,
+    *,
+    run_id: UUID,
+    decision_id: UUID,
+) -> None:
+    """Issue ResumeRun through the authorized handler; benign no-op on state race."""
+    try:
+        await resume_run(
+            ResumeRun(run_id=run_id, decided_by_decision_id=decision_id),
+            principal_id=RUN_SUPERVISOR_AGENT_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+    except (RunCannotResumeError, RunNotFoundError) as exc:
+        # The Run changed under us between read and issue (an operator resumed
+        # it, or it terminated): a benign no-op, not an error.
+        _log.info("run_supervisor.resume_skipped", run_id=str(run_id), reason=type(exc).__name__)
+    except UnauthorizedError:
+        # Configuration fault: the supervisor principal is not granted ResumeRun.
+        # Log loudly; take no autonomous action (the Run stays Held).
+        _log.warning("run_supervisor.resume_unauthorized", run_id=str(run_id))
+
+
+async def _assemble_and_check_envelope(
+    deps: Kernel,
+    item: RunSummaryItem,
+    beam: BeamAvailabilityLookupResult,
+) -> EnvelopeCheck:
+    """Re-derive a held Run's start-safety envelope and check it.
+
+    Reproduces the `start_run` handler's load + scope-widening (Plan ->
+    Practice -> Method -> Assets, controller + ancestor-chain widening) and
+    the four cross-BC lookups, then runs the shared `check_safety_envelope`
+    against the SAME `beam` reading the tick already took. A missing upstream
+    aggregate (data corruption for a Run that started) is treated as
+    not-ok / fail-safe (stay Held) rather than crashing the tick; genuine
+    I/O failures propagate to the tick's retry.
+    """
+    plan = await load_plan(deps.event_store, item.plan_id)
+    if plan is None:
+        return EnvelopeCheck(ok=False, failed_gate="plan_missing")
+    practice = await load_practice(deps.event_store, plan.practice_id)
+    if practice is None:
+        return EnvelopeCheck(ok=False, failed_gate="practice_missing")
+    method = await load_method(deps.event_store, practice.method_id)
+    if method is None:
+        return EnvelopeCheck(ok=False, failed_gate="method_missing")
+
+    controller_ids: set[UUID] = set()
+    for asset_id in sorted(plan.asset_ids, key=str):
+        asset = await load_asset(deps.event_store, asset_id)
+        if asset is None:
+            return EnvelopeCheck(ok=False, failed_gate="asset_missing")
+        if asset.controller_id is not None:
+            controller_ids.add(asset.controller_id)
+
+    # Scope widening identical to start_run: controller back-refs (one-hop)
+    # then the parent_id ancestor closure, so a clearance/enclosure bound to
+    # a controller or a containing Unit is in scope exactly as at start.
+    scoped_asset_ids = plan.asset_ids | controller_ids
+    ancestor_rows = await deps.asset_lookup.ancestors_of(scoped_asset_ids)
+    scoped_asset_ids = scoped_asset_ids | {row.id for row in ancestor_rows}
+
+    referencing_clearances = tuple(
+        await deps.clearance_lookup.find_referencing_run(
+            run_id=item.run_id,
+            subject_id=item.subject_id,
+            asset_ids=scoped_asset_ids,
+        )
+    )
+    located_in_enclosure_ids = frozenset(
+        row.located_in_enclosure_id
+        for row in ancestor_rows
+        if row.located_in_enclosure_id is not None
+    )
+    referencing_enclosures = tuple(
+        await deps.enclosure_lookup.find_by_ids(enclosure_ids=located_in_enclosure_ids)
+    )
+    needed_supplies_satisfaction: dict[str, tuple[SupplyLookupResult, ...]] = {}
+    if method.needed_supplies:
+        satisfaction = await deps.supply_lookup.find_supplies_by_kind(kinds=method.needed_supplies)
+        needed_supplies_satisfaction = {kind: tuple(refs) for kind, refs in satisfaction.items()}
+
+    try:
+        check_safety_envelope(
+            run_id=item.run_id,
+            referencing_clearances=referencing_clearances,
+            needed_supplies_snapshot=method.needed_supplies,
+            needed_supplies_satisfaction=needed_supplies_satisfaction,
+            referencing_enclosures=referencing_enclosures,
+            beam_availability=beam,
+        )
+    except _ENVELOPE_ERRORS as exc:
+        return EnvelopeCheck(ok=False, failed_gate=_ENVELOPE_GATE[type(exc)])
+    return EnvelopeCheck(ok=True, failed_gate=None)
+
+
+def _apply_memory(memory: dict[UUID, str], run_id: UUID, outcome: SupervisionOutcome) -> None:
+    """Persist the per-Run supervisor memory transition (None clears it)."""
+    if outcome.new_memory is None:
+        memory.pop(run_id, None)
+    else:
+        memory[run_id] = outcome.new_memory
+
+
 async def _drain_runs(
     list_runs: ListRunsHandler, deps: Kernel, *, status: RunStatusFilter
 ) -> list[RunSummaryItem]:
@@ -324,10 +483,14 @@ async def _supervise_tick(
     deps: Kernel,
     list_runs: ListRunsHandler,
     hold_run: HoldRunHandler,
+    resume_run: ResumeRunHandler,
     beam_lookup: BeamAvailabilityLookup,
     memory: dict[UUID, str],
+    settle: dict[UUID, int],
+    resume_enabled: bool,
+    resume_settle_ticks: int,
 ) -> None:
-    """One supervision pass over all in-flight Runs."""
+    """One supervision pass over all in-flight Runs (hold + gated resume)."""
     actor = await load_actor(deps.event_store, RUN_SUPERVISOR_AGENT_ID)
     if actor is None or not actor.active:
         # Supervisor not seeded yet, or deactivated by an operator: stand down.
@@ -339,19 +502,26 @@ async def _supervise_tick(
     for run_id in list(memory):
         if run_id not in inflight_ids:
             del memory[run_id]
+    for run_id in list(settle):
+        if run_id not in inflight_ids:
+            del settle[run_id]
 
-    if not running:
+    # Own-holds-only: only a Held Run the supervisor itself holds is a resume
+    # candidate. Empty unless the wind-up is explicitly enabled.
+    resume_candidates = (
+        [item for item in held if memory.get(item.run_id) == _MEM_HELD] if resume_enabled else []
+    )
+    if not running and not resume_candidates:
         return
 
     beam = await beam_lookup.read_beam_availability()
+
+    # Hold pass (Running Runs).
     for item in running:
         outcome = decide_supervision(
             run_status=item.status, beam=beam, prior=memory.get(item.run_id)
         )
-        if outcome.new_memory is None:
-            memory.pop(item.run_id, None)
-        else:
-            memory[item.run_id] = outcome.new_memory
+        _apply_memory(memory, item.run_id, outcome)
         if not outcome.record:
             continue
         decision_id = deps.id_generator.new_id()
@@ -361,24 +531,70 @@ async def _supervise_tick(
         if outcome.issue_hold:
             await _issue_hold(deps, hold_run, run_id=item.run_id, decision_id=decision_id)
 
+    # Gated resume pass (Held Runs the supervisor holds).
+    for item in resume_candidates:
+        check = await _assemble_and_check_envelope(deps, item, beam)
+        if check.ok:
+            settle[item.run_id] = settle.get(item.run_id, 0) + 1
+        else:
+            settle.pop(item.run_id, None)
+            _log.info(
+                "run_supervisor.resume_blocked",
+                run_id=str(item.run_id),
+                failed_gate=check.failed_gate,
+            )
+        settle_count = settle.get(item.run_id, 0)
+        outcome = decide_supervision(
+            run_status=item.status,
+            beam=beam,
+            prior=memory.get(item.run_id),
+            envelope_ok=check.ok,
+            settle_ticks_met=settle_count >= resume_settle_ticks,
+        )
+        _apply_memory(memory, item.run_id, outcome)
+        if not outcome.record:
+            continue
+        decision_id = deps.id_generator.new_id()
+        await _record_decision(
+            deps,
+            decision_id=decision_id,
+            run_id=item.run_id,
+            choice=outcome.choice,
+            beam=beam,
+            extra_inputs={"envelope_ok": str(check.ok), "settle_ticks": str(settle_count)},
+        )
+        if outcome.issue_resume:
+            # Resumed: drop the settle counter (the Run is leaving the
+            # held-by-us candidate set as it returns to Running).
+            settle.pop(item.run_id, None)
+            await _issue_resume(deps, resume_run, run_id=item.run_id, decision_id=decision_id)
+
 
 async def _supervise_loop(
     deps: Kernel,
     list_runs: ListRunsHandler,
     hold_run: HoldRunHandler,
+    resume_run: ResumeRunHandler,
     beam_lookup: BeamAvailabilityLookup,
     interval_seconds: float,
+    resume_enabled: bool,
+    resume_settle_ticks: int,
 ) -> None:
     """Periodic supervision loop. A failed tick is logged; the next tick retries."""
     memory: dict[UUID, str] = {}
+    settle: dict[UUID, int] = {}
     while True:
         try:
             await _supervise_tick(
                 deps=deps,
                 list_runs=list_runs,
                 hold_run=hold_run,
+                resume_run=resume_run,
                 beam_lookup=beam_lookup,
                 memory=memory,
+                settle=settle,
+                resume_enabled=resume_enabled,
+                resume_settle_ticks=resume_settle_ticks,
             )
         except asyncio.CancelledError:
             raise
@@ -393,13 +609,16 @@ async def run_supervisor_lifespan(
     *,
     list_runs: ListRunsHandler,
     hold_run: HoldRunHandler,
+    resume_run: ResumeRunHandler,
     beam_lookup: BeamAvailabilityLookup | None = None,
     interval_seconds: float | None = None,
 ) -> AsyncGenerator[None]:
     """Spawn the RunSupervisor loop for the duration of the context.
 
     No-op unless `settings.run_supervisor_enabled` is True (default off, so a
-    deployment opts in explicitly).
+    deployment opts in explicitly). The gated wind-up is a separate opt-in
+    (`run_supervisor_resume_enabled`, also default off) so a deployment may
+    run auto-hold without auto-resume.
     """
     if not deps.settings.run_supervisor_enabled:
         _log.info("run_supervisor.skipped", reason="disabled")
@@ -412,9 +631,20 @@ async def run_supervisor_lifespan(
         else deps.settings.run_supervisor_tick_seconds
     )
     lookup = beam_lookup if beam_lookup is not None else deps.beam_availability_lookup
-    _log.info("run_supervisor.started", interval_seconds=interval)
+    resume_enabled = deps.settings.run_supervisor_resume_enabled
+    resume_settle_ticks = deps.settings.run_supervisor_resume_settle_ticks
+    _log.info("run_supervisor.started", interval_seconds=interval, resume_enabled=resume_enabled)
     task = asyncio.create_task(
-        _supervise_loop(deps, list_runs, hold_run, lookup, interval),
+        _supervise_loop(
+            deps,
+            list_runs,
+            hold_run,
+            resume_run,
+            lookup,
+            interval,
+            resume_enabled,
+            resume_settle_ticks,
+        ),
         name="run-supervisor",
     )
     try:
@@ -426,4 +656,4 @@ async def run_supervisor_lifespan(
         _log.info("run_supervisor.stopped")
 
 
-__all__ = ["SupervisionOutcome", "decide_supervision", "run_supervisor_lifespan"]
+__all__ = ["EnvelopeCheck", "SupervisionOutcome", "decide_supervision", "run_supervisor_lifespan"]
