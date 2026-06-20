@@ -68,12 +68,23 @@ context".
 
 ## Authorize + actor gate
 
-The subscriber does NOT call the `Authorize` port. The agent's
-permission to register Decisions is granted at Agent definition
-time (the `define_agent` slice's `principal_id` was an admin
-who authorised the agent's existence). Per-call authorization is
-an HTTP-handler concern; subscribers are internal workers running
-under the agent's identity.
+The subscriber does NOT call the `Authorize` port for the Decision
+write. The agent's permission to register Decisions is granted at
+Agent definition time (the `define_agent` slice's `principal_id` was
+an admin who authorised the agent's existence). Per-call
+authorization is an HTTP-handler concern; subscribers are internal
+workers running under the agent's identity.
+
+The supplementary inference-provenance record (see `_record_inference`)
+DOES flow through an authorized path: the recorder delegates to the
+Decision BC's `append_inferences` handler, which authorizes
+`AppendInferences`. Under the default AllowAll this passes; under a
+real Trust policy the operator must grant this agent principal
+`AppendInferences` (the same way RunSupervisor is granted `HoldRun`),
+else the record is denied. The recorder logs a loud
+`inference_recorder.unauthorized` warning on denial so a missing grant
+is visible, never a silent provenance gap; the Decision write itself is
+unaffected.
 
 The subscriber DOES gate on the agent's `Actor.active` flag
 (per security gate-review convention): an operator deactivating the agent's
@@ -141,6 +152,7 @@ from cora.agent.subscribers._terminal_run_helpers import (
 )
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_RUN_DEBRIEF,
+    DECISION_REASONING_OPERATION_CHAT,
     DecisionChoice,
     DecisionConfidenceSource,
     DecisionContext,
@@ -154,7 +166,11 @@ from cora.decision.aggregates.decision import (
 )
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import ConcurrencyError
+from cora.infrastructure.ports import (
+    AgentInferenceTrace,
+    ConcurrencyError,
+    NullInferenceRecorder,
+)
 from cora.infrastructure.signing import SIGNED_EVENT_TYPES
 from cora.run.aggregates.run import load_run
 from cora.shared.identity import ActorId
@@ -162,7 +178,14 @@ from cora.shared.identity import ActorId
 if TYPE_CHECKING:
     from cora.access.aggregates.actor import Actor
     from cora.infrastructure.kernel import Kernel
-    from cora.infrastructure.ports import LLM, LogbookMirror, Signer
+    from cora.infrastructure.ports import (
+        LLM,
+        InferenceRecorder,
+        LLMChatRequest,
+        LLMResponse,
+        LogbookMirror,
+        Signer,
+    )
     from cora.infrastructure.ports.event_store import EventStore, NewEvent, StoredEvent
     from cora.infrastructure.projection.handler import ConnectionLike
 
@@ -265,11 +288,16 @@ class RunDebrieferSubscriber:
         llm: LLM,
         logbook_mirror: LogbookMirror | None,
         signer: Signer | None = None,
+        inference_recorder: InferenceRecorder | None = None,
     ) -> None:
         self.event_store = event_store
         self.llm = llm
         self.logbook_mirror = logbook_mirror
         self.signer = signer
+        # Defaults to the no-op recorder so direct test construction (and any
+        # caller that omits it) stays inert; production wiring passes the
+        # Kernel's recorder via `make_run_debriefer_subscriber`.
+        self.inference_recorder = inference_recorder or NullInferenceRecorder()
 
     async def apply(self, event: StoredEvent, conn: ConnectionLike) -> None:
         """Process one terminal Run event.
@@ -422,6 +450,18 @@ class RunDebrieferSubscriber:
             log=log,
         )
 
+        # Capture model provenance (provider, resolved snapshot, token usage)
+        # for the Decision just written. After the Decision append commits so
+        # the recorder's lazy logbook-open finds the Decision stream.
+        await self._record_inference(
+            decision_id=decision_id,
+            actor=actor,
+            request=request,
+            response=response,
+            terminal_event=event,
+            log=log,
+        )
+
         if self.logbook_mirror is not None:
             try:
                 await self.logbook_mirror.mirror_decision(
@@ -438,6 +478,59 @@ class RunDebrieferSubscriber:
                     error_class=type(exc).__name__,
                     error_message=redact_secrets(str(exc)[:200]),
                 )
+
+    async def _record_inference(
+        self,
+        *,
+        decision_id: UUID,
+        actor: Actor,
+        request: LLMChatRequest,
+        response: LLMResponse,
+        terminal_event: StoredEvent,
+        log: Any,
+    ) -> None:
+        """Best-effort capture of this LLM call's model provenance.
+
+        Fire-and-forget (mirrors the logbook_mirror call): the Decision is the
+        audit-grade source of truth, so a recorder failure must not break the
+        subscriber. The recorder never raises per its port contract; the
+        try/except is defense-in-depth. The inference `event_id` is derived
+        deterministically from the Decision id so a subscriber retry re-records
+        the same id and the inference store no-ops on conflict.
+
+        Under a real Trust policy the agent principal must be granted
+        `AppendInferences` (as RunSupervisor is granted `HoldRun`); a missing
+        grant surfaces as a loud `inference_recorder.unauthorized` warning from
+        the recorder, never a silent drop.
+        """
+        trace = AgentInferenceTrace(
+            decision_id=decision_id,
+            event_id=uuid5(decision_id, "inference:0"),
+            occurred_at=terminal_event.occurred_at,
+            operation_name=DECISION_REASONING_OPERATION_CHAT,
+            provider_name=request.model_ref.provider,
+            request_model=request.model_ref.model,
+            response_model=response.model_id,
+            finish_reasons=(response.stop_reason,) if response.stop_reason else (),
+            input_tokens=response.usage.input_tokens,
+            output_tokens=response.usage.output_tokens,
+            request_max_tokens=request.max_output_tokens,
+            agent_id=str(RUN_DEBRIEFER_AGENT_ID),
+            agent_name=RUN_DEBRIEFER_AGENT_NAME,
+        )
+        try:
+            await self.inference_recorder.record(
+                trace,
+                principal_id=actor.id,
+                correlation_id=terminal_event.correlation_id,
+                causation_id=terminal_event.event_id,
+            )
+        except Exception as exc:
+            log.warning(
+                "run_debriefer.inference_record_failed",
+                error_class=type(exc).__name__,
+                error_message=redact_secrets(str(exc)[:200]),
+            )
 
     async def _write_debrief_success(
         self,
@@ -703,6 +796,7 @@ def make_run_debriefer_subscriber(deps: Kernel) -> RunDebrieferSubscriber:
         llm=deps.llm,
         logbook_mirror=deps.logbook_mirror,
         signer=deps.signer,
+        inference_recorder=deps.inference_recorder,
     )
 
 

@@ -13,7 +13,7 @@ item for later iters.
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportMissingParameterType=false, reportPrivateUsage=false, reportUnknownParameterType=false
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import asyncpg
 import pytest
@@ -32,9 +32,15 @@ from cora.agent.subscribers.run_debriefer import (
     RunDebrieferSubscriber,
     _derive_decision_id,
 )
-from cora.decision.aggregates.decision import load_decision
+from cora.api._inference_recorder import DelegatingInferenceRecorder
+from cora.decision.aggregates.decision import (
+    LOGBOOK_KIND_INFERENCE,
+    PostgresInferenceStore,
+    load_decision,
+)
+from cora.decision.features.append_inferences import bind as bind_append_inferences
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.ports import FakeLLM, FakeLLMResponse
+from cora.infrastructure.ports import FakeLLM, FakeLLMResponse, LLMUsage
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.run.aggregates.run import RunStarted
 from cora.run.aggregates.run import event_type_name as run_event_type_name
@@ -228,3 +234,119 @@ async def test_seed_does_not_collide_with_pre_existing_actor(
     # the all-or-nothing semantics of append_streams.
     _, agent_version = await deps.event_store.load("Agent", RUN_DEBRIEFER_AGENT_ID)
     assert agent_version == 0  # Agent stream is empty (batch rolled back)
+
+
+_CANNED_OK_WITH_USAGE = FakeLLMResponse(
+    parsed=_CANNED_OK.parsed,
+    usage=LLMUsage(input_tokens=1280, output_tokens=214),
+    stop_reason="tool_use",
+    model_id="claude-haiku-4-5-20260201",
+)
+
+
+# Ids the append_inferences lazy-open consumes (logbook_id + the
+# DecisionLogbookOpened envelope id) via the FixedIdGenerator. Four is
+# generous; the open step mints two on the first apply and none on retry.
+_LOGBOOK_IDS = [UUID(f"01900000-0000-7000-8000-0000000fb00{i}") for i in range(1, 5)]
+
+
+async def _read_inferences_for_decision(
+    db_pool: asyncpg.Pool, decision_id: UUID
+) -> list[asyncpg.Record]:
+    async with db_pool.acquire() as conn:
+        return await conn.fetch(
+            """
+            SELECT
+                event_id, decision_id, operation_name, provider_name,
+                request_model, response_model, request_max_tokens,
+                finish_reasons, input_tokens, output_tokens,
+                agent_id, agent_name
+            FROM entries_decision_inferences
+            WHERE decision_id = $1
+            ORDER BY occurred_at, event_id
+            """,
+            decision_id,
+        )
+
+
+def _build_recording_subscriber(
+    deps, db_pool: asyncpg.Pool, llm: FakeLLM
+) -> RunDebrieferSubscriber:
+    """RunDebriefer wired to a real append_inferences-backed recorder.
+
+    Mirrors the composition root: the recorder delegates to the
+    append_inferences handler bound over a PostgresInferenceStore, so the
+    full lazy-open + entry-write path runs against real Postgres.
+    """
+    append_inferences = bind_append_inferences(
+        deps, inference_store=PostgresInferenceStore(db_pool)
+    )
+    return RunDebrieferSubscriber(
+        event_store=deps.event_store,
+        llm=llm,
+        logbook_mirror=None,
+        inference_recorder=DelegatingInferenceRecorder(append_inferences),
+    )
+
+
+@pytest.mark.integration
+async def test_subscriber_records_inference_row_end_to_end(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A successful debrief lands one inference row in
+    entries_decision_inferences with the LLM call's provenance, and opens
+    the inference logbook on the Decision stream."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=_LOGBOOK_IDS)
+    await seed_run_debriefer_agent(deps)
+    run_id = uuid4()
+    plan_id = UUID("01900000-0000-7000-8000-000000000401")
+    await _seed_run(deps, run_id, plan_id)
+
+    llm = FakeLLM(responses=[_CANNED_OK_WITH_USAGE])
+    subscriber = _build_recording_subscriber(deps, db_pool, llm)
+    event = _terminal_event(run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision_id = _derive_decision_id(event.event_id)
+    rows = await _read_inferences_for_decision(db_pool, decision_id)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["event_id"] == uuid5(decision_id, "inference:0")
+    assert row["operation_name"] == "chat"
+    assert row["provider_name"] == "anthropic"
+    assert row["request_model"] == "claude-haiku-4-5"
+    assert row["response_model"] == "claude-haiku-4-5-20260201"
+    assert row["input_tokens"] == 1280
+    assert row["output_tokens"] == 214
+    assert list(row["finish_reasons"]) == ["tool_use"]
+    assert row["agent_id"] == str(RUN_DEBRIEFER_AGENT_ID)
+
+    # The inference logbook was opened on the Decision stream.
+    decision = await load_decision(deps.event_store, decision_id)
+    assert decision is not None
+    assert decision.logbooks.get(LOGBOOK_KIND_INFERENCE) is not None
+
+
+@pytest.mark.integration
+async def test_subscriber_inference_write_is_idempotent_on_retry(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Re-applying the same terminal event re-derives the same inference
+    event_id; the store's ON CONFLICT keeps exactly one row."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=_LOGBOOK_IDS)
+    await seed_run_debriefer_agent(deps)
+    run_id = uuid4()
+    plan_id = UUID("01900000-0000-7000-8000-000000000401")
+    await _seed_run(deps, run_id, plan_id)
+
+    llm = FakeLLM(responses=[_CANNED_OK_WITH_USAGE, _CANNED_OK_WITH_USAGE])
+    subscriber = _build_recording_subscriber(deps, db_pool, llm)
+    event = _terminal_event(run_id)
+
+    await subscriber.apply(event, conn=None)
+    await subscriber.apply(event, conn=None)
+
+    decision_id = _derive_decision_id(event.event_id)
+    rows = await _read_inferences_for_decision(db_pool, decision_id)
+    assert len(rows) == 1

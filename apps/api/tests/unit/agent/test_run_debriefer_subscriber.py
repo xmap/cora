@@ -11,7 +11,7 @@ missing-Actor guard.
 
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import pytest
 
@@ -43,6 +43,7 @@ from cora.infrastructure.ports import (
     FakeLLM,
     FakeLLMResponse,
     LLMServerError,
+    LLMUsage,
 )
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.run.aggregates.run import (
@@ -60,7 +61,7 @@ from cora.run.aggregates.run.events import (
     RunStopped,
     RunTruncated,
 )
-from tests.unit.agent._helpers import Ed25519FakeSigner
+from tests.unit.agent._helpers import Ed25519FakeSigner, FakeInferenceRecorder
 
 _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 17, 14, 47, 0, tzinfo=UTC)
@@ -216,11 +217,13 @@ def _terminal_event(
 async def _build_subscriber(
     event_store: InMemoryEventStore,
     llm: FakeLLM,
+    inference_recorder: FakeInferenceRecorder | None = None,
 ) -> RunDebrieferSubscriber:
     return RunDebrieferSubscriber(
         event_store=event_store,
         llm=llm,
         logbook_mirror=None,
+        inference_recorder=inference_recorder,
     )
 
 
@@ -239,6 +242,17 @@ _CANNED_OK = FakeLLMResponse(
     },
     stop_reason="tool_use",
     model_id="claude-haiku-4-5",
+)
+
+
+# Same shape as _CANNED_OK but with explicit token usage + a resolved
+# dated snapshot, so the inference-provenance tests can assert real values
+# flow from the LLMResponse onto the recorded trace.
+_CANNED_OK_WITH_USAGE = FakeLLMResponse(
+    parsed=_CANNED_OK.parsed,
+    usage=LLMUsage(input_tokens=1280, output_tokens=214),
+    stop_reason="tool_use",
+    model_id="claude-haiku-4-5-20260201",
 )
 
 
@@ -1178,7 +1192,8 @@ async def test_apply_writes_debrief_conflicted_when_another_agent_holds_lease() 
     )
     assert pre_acquired is True
 
-    subscriber = await _build_subscriber(store, llm)
+    recorder = FakeInferenceRecorder()
+    subscriber = await _build_subscriber(store, llm, recorder)
     await subscriber.apply(event, conn=None)
 
     decision_id = _derive_decision_id(event.event_id)
@@ -1190,8 +1205,9 @@ async def test_apply_writes_debrief_conflicted_when_another_agent_holds_lease() 
     # winning agent_id is recorded in inputs for cross-Decision audit.
     assert decision.inputs is not None
     assert decision.inputs["winning_agent_id"] == str(foreign_agent_id)
-    # LLM must NOT have been called.
+    # LLM must NOT have been called, so no inference is recorded either.
     assert llm.received == []
+    assert recorder.calls == []
 
 
 @pytest.mark.unit
@@ -1270,3 +1286,103 @@ async def test_apply_writes_debrief_conflicted_unidentified_winner_on_no_winner_
     assert decision.reasoning is not None
     assert "winning agent not identified" in decision.reasoning
     assert llm.received == []
+
+
+# ---------- Inference provenance ----------
+
+
+@pytest.mark.unit
+async def test_apply_records_inference_on_success() -> None:
+    """A successful debrief records one inference trace carrying the LLM
+    call's provider, resolved model snapshot, token usage, and stop reason."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK_WITH_USAGE])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 1
+    call = recorder.calls[0]
+    decision_id = _derive_decision_id(event.event_id)
+    assert call.trace.decision_id == decision_id
+    assert call.trace.event_id == uuid5(decision_id, "inference:0")
+    assert call.trace.operation_name == "chat"
+    assert call.trace.provider_name == "anthropic"
+    assert call.trace.request_model == "claude-haiku-4-5"
+    assert call.trace.response_model == "claude-haiku-4-5-20260201"
+    assert call.trace.input_tokens == 1280
+    assert call.trace.output_tokens == 214
+    assert call.trace.finish_reasons == ("tool_use",)
+    assert call.trace.request_max_tokens == 1024
+    assert call.trace.agent_id == str(RUN_DEBRIEFER_AGENT_ID)
+    assert call.trace.agent_name == RUN_DEBRIEFER_AGENT_NAME
+    assert call.principal_id == RUN_DEBRIEFER_AGENT_ID
+    assert call.correlation_id == event.correlation_id
+    assert call.causation_id == event.event_id
+
+
+@pytest.mark.unit
+async def test_apply_records_no_inference_on_llm_failure() -> None:
+    """The deferred path (LLM exhausted) has no LLM response, so no
+    inference is recorded even though a DebriefDeferred Decision is written."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[LLMServerError("synthetic 500")])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "DebriefDeferred"
+    assert recorder.calls == []
+
+
+@pytest.mark.unit
+async def test_apply_inference_recorder_failure_does_not_break_decision() -> None:
+    """A recorder that raises must not propagate: the Decision is still
+    written (provenance is supplementary, fire-and-forget)."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK_WITH_USAGE])
+    recorder = FakeInferenceRecorder(raises=RuntimeError("recorder boom"))
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 1
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "NominalCompletion"
+
+
+@pytest.mark.unit
+async def test_apply_records_inference_with_stable_event_id_under_retry() -> None:
+    """Re-applying the same terminal event re-records with the SAME inference
+    event_id (the idempotency seed), so the store dedups on re-delivery."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK_WITH_USAGE, _CANNED_OK_WITH_USAGE])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 2
+    assert recorder.calls[0].trace.event_id == recorder.calls[1].trace.event_id

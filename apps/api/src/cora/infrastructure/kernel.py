@@ -61,7 +61,9 @@ from cora.infrastructure.ports import (
     FamilyLookup,
     IdempotencyStore,
     IdGenerator,
+    InferenceRecorder,
     LogbookMirror,
+    NullInferenceRecorder,
     ProfileStore,
     RoleLookup,
     Signer,
@@ -321,6 +323,21 @@ class Kernel:
     `ControlPortBeamAvailabilityLookup` over the shared ControlPort when
     `BEAM_AVAILABILITY_PVS` is configured. Gate-specific tests likewise
     `replace` it with a stub returning the reading under test."""
+
+    inference_recorder: InferenceRecorder = field(default_factory=NullInferenceRecorder)
+    """Cross-BC capability port the LLM-backed agents call to record one
+    model-provenance trace (provider, resolved model snapshot, token usage)
+    per Decision into the Decision BC's Inference logbook.
+
+    A capability PORT, NOT the Decision BC's `InferenceStore` (which stays
+    BC-internal in `wire_decision` per the store-stays-BC-internal rule above):
+    the producers cannot reach that store or import the sibling BC's
+    `append_inferences` handler across the BC boundary. Defaults to the no-op
+    `NullInferenceRecorder` so unwired kernels and unit tests stay inert; the
+    composition root overrides it post-construction via `dataclasses.replace`
+    with an implementor that delegates to the `append_inferences` handler once
+    the Decision handlers are wired (mirrors the `beam_availability_lookup`
+    post-construction override)."""
 
 
 Teardown = Callable[[], Awaitable[None]]

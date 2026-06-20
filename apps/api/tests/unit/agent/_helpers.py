@@ -8,6 +8,7 @@ same seed dance.
 """
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
@@ -26,9 +27,53 @@ from cora.agent.aggregates.agent import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
+from cora.infrastructure.ports import AgentInferenceTrace
 from cora.infrastructure.signing import event_type_to_payload_type
 from cora.shared.content_hash import canonical_body_bytes, pae_bytes
 from cora.shared.identity import ActorId
+
+
+@dataclass(frozen=True)
+class RecordedInference:
+    """One captured `InferenceRecorder.record` call for assertions."""
+
+    trace: AgentInferenceTrace
+    principal_id: UUID
+    correlation_id: UUID
+    causation_id: UUID | None
+
+
+class FakeInferenceRecorder:
+    """Spy `InferenceRecorder` for agent-subscriber tests.
+
+    Captures every `record` call. Pass `raises` to simulate a recorder
+    failure: the call is still captured (so a test can assert it was
+    attempted) and then the exception is raised, which the subscriber must
+    swallow without breaking the Decision write.
+    """
+
+    def __init__(self, *, raises: Exception | None = None) -> None:
+        self.calls: list[RecordedInference] = []
+        self._raises = raises
+
+    async def record(
+        self,
+        trace: AgentInferenceTrace,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+    ) -> None:
+        self.calls.append(
+            RecordedInference(
+                trace=trace,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                causation_id=causation_id,
+            )
+        )
+        if self._raises is not None:
+            raise self._raises
 
 
 async def seed_defined_agent(

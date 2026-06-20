@@ -88,6 +88,11 @@ from cora.infrastructure.ports.idempotency_store import (
     IdempotencyStore,
     LockedRecent,
 )
+from cora.infrastructure.ports.inference_recorder import (
+    AgentInferenceTrace,
+    InferenceRecorder,
+    NullInferenceRecorder,
+)
 from cora.infrastructure.ports.llm import (
     LLM,
     CacheBreakpoint,
@@ -137,6 +142,7 @@ from cora.infrastructure.ports.token_verifier import (
 
 __all__ = [
     "LLM",
+    "AgentInferenceTrace",
     "AllBeamOpenLookup",
     "AllSatisfiedSupplyLookup",
     "Allow",
@@ -191,6 +197,7 @@ __all__ = [
     "IdempotencyClaimLostError",
     "IdempotencyConflictError",
     "IdempotencyStore",
+    "InferenceRecorder",
     "IntrospectionUnavailableError",
     "InvalidTokenError",
     "LLMAuthenticationError",
@@ -211,6 +218,7 @@ __all__ = [
     "ModelRef",
     "NewEvent",
     "NoSuppliesRegisteredLookup",
+    "NullInferenceRecorder",
     "PrincipalKind",
     "Profile",
     "ProfileStore",

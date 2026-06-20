@@ -66,6 +66,7 @@ from cora.api._compute_runtime import ComputeRuntime
 from cora.api._conduct_run_route import register_conduct_run_routes
 from cora.api._conduct_run_tool import register_conduct_run_tools
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
+from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
@@ -649,6 +650,21 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             app.state.run = wire_run(deps)
             app.state.data = wire_data(deps)
             app.state.decision = wire_decision(deps)
+            # The InferenceRecorder is a capability port the LLM-backed agents
+            # call to record one model-provenance trace per Decision. Its
+            # implementor delegates to the Decision BC's append_inferences
+            # handler (the only cross-BC reach into decision.features, allowed
+            # here at the composition root), so it can only be built AFTER
+            # wire_decision. Override the Kernel's no-op default BEFORE
+            # wire_agent / register_agent_subscribers so the regenerate-debrief
+            # handler and the agent subscribers close over it.
+            deps = replace(
+                deps,
+                inference_recorder=DelegatingInferenceRecorder(
+                    app.state.decision.append_inferences
+                ),
+            )
+            app.state.deps = deps
             app.state.supply = wire_supply(deps)
             app.state.enclosure = wire_enclosure(deps)
             app.state.operation = wire_operation(deps, control_port=shared_control_port)
