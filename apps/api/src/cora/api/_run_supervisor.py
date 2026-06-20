@@ -7,15 +7,22 @@ because it issues Run BC commands AND composes Decision BC events; only
 `test_no_cross_bc_features_imports` ban, which scans BC packages, not the
 composition root). See [[project-run-supervisor-design]].
 
-## What v1 does
+## What it does
 
 Each tick, for every in-flight Run, it reads facility beam availability
-ONCE and decides a disposition. v1 ships exactly one wind-down rule:
+ONCE and decides a disposition:
 
   - `Continue`  -- beam is available (or its quality is unknown): no action.
   - `Hold`      -- beam is DEFINITELY down while the Run is Running: record a
                    Decision(context=RunSupervision, choice=Hold) and issue
                    `hold_run` (linked via `decided_by_decision_id`).
+  - `Resume`    -- the gated wind-up. A Run the supervisor itself held is
+                   resumed only when the FULL start-safety envelope is good
+                   again (an Active clearance covers the scope, every enclosure
+                   is Permitted, every needed supply is Available, and the beam
+                   is open) AND it has stayed good for the settle window. Records
+                   a Decision(choice=Resume) and issues `resume_run`. Off unless
+                   `run_supervisor_resume_enabled` (own-holds-only; fail-safe).
   - `SupervisionDeferred` -- beam is still down but the operator RESUMED a Run
                    the supervisor had held: respect the operator (no re-hold),
                    record one deferral Decision. This is the operator-override
@@ -28,18 +35,21 @@ missing data).
 
 ## Fail-safe and bounded
 
-The command set is wind-down only; it can never drive hardware harder. The
-source-state guard (`hold_run` accepts only Running) means a Held Run is never
-re-held, and Decisions are recorded edge-triggered (only on a disposition that
-changes state), so a quiet beam produces no Decision churn. The runtime gates
-on `Actor.active`, so deactivating the supervisor Actor stops it.
+Hold is fail-safe wind-down. Resume is the one wind-UP, and it is gated to
+stay fail-safe: it re-checks the same envelope a fresh start passes (any
+failed OR unknown signal keeps the Run Held), only ever resumes a Run the
+supervisor itself held, and requires a settle window so a flickering beam
+cannot flap a Run between Held and Running. Decisions are recorded edge-
+triggered (only on a disposition that changes state), so a quiet beam produces
+no Decision churn. The runtime gates on `Actor.active`, so deactivating the
+supervisor Actor stops it.
 
 ## Authorization
 
 Commands flow through the normal bound handler (Authorize port + decider).
 Under the default `AllowAllAuthorize` the supervisor is permitted; under
 `TrustAuthorize` the operator's configured Policy must grant this principal
-HoldRun. No bypass (design Lock 5).
+HoldRun and (for the gated wind-up) ResumeRun. No bypass (design Lock 5).
 """
 
 from __future__ import annotations
@@ -107,13 +117,15 @@ class SupervisionOutcome:
 
     `choice` is a RunSupervisionChoice value. `new_memory` is the per-Run
     memory to retain (None clears it). `record` gates whether a Decision is
-    written this tick (edge-triggered). `issue_hold` gates the HoldRun command.
+    written this tick (edge-triggered). `issue_hold` gates the HoldRun command;
+    `issue_resume` gates the ResumeRun command (the gated wind-up).
     """
 
     choice: str
     new_memory: str | None
     record: bool
     issue_hold: bool
+    issue_resume: bool = False
 
 
 def decide_supervision(
@@ -121,14 +133,41 @@ def decide_supervision(
     run_status: str,
     beam: BeamAvailabilityLookupResult,
     prior: str | None,
+    envelope_ok: bool | None = None,
+    settle_ticks_met: bool = False,
 ) -> SupervisionOutcome:
-    """Pure v1 supervision rule for one Run (no I/O).
+    """Pure supervision rule for one Run (no I/O).
 
-    Beam is "definitely down" only when the read quality is Good and a
-    shutter/permit is closed; a non-Good read is "unknown" and yields no
-    action (Lock 4). Only Running Runs are actionable (hold_run's source
-    state).
+    Hold path (Running): beam is "definitely down" only when the read
+    quality is Good and a shutter/permit is closed; a non-Good read is
+    "unknown" and yields no action (Lock 4).
+
+    Resume path (Held): the gated wind-up. A Held Run the supervisor
+    itself holds (`prior == _MEM_HELD`) is resumed only when the full
+    start-safety envelope is good again (`envelope_ok`, computed by the
+    caller via `check_safety_envelope`) AND it has stayed good for the
+    settle window (`settle_ticks_met`, anti-flap). The envelope check and
+    the beam reading are the caller's I/O; this rule consumes their
+    booleans. A Held Run the supervisor did NOT hold (`prior` is None /
+    DEFERRED) is never auto-resumed (own-holds-only).
     """
+    if run_status == "Held":
+        if prior == _MEM_HELD and envelope_ok and settle_ticks_met:
+            # Wind-up: we held it, the envelope is safe again, and it has
+            # been stable. Resume and drop to DEFERRED so a beam re-drop
+            # right after does not immediately re-hold (anti-flap).
+            return SupervisionOutcome(
+                choice="Resume",
+                new_memory=_MEM_DEFERRED,
+                record=True,
+                issue_hold=False,
+                issue_resume=True,
+            )
+        # Held but not ours, or the envelope is not (yet) safe/stable:
+        # take no action and keep our memory so we keep watching.
+        return SupervisionOutcome(
+            choice="Continue", new_memory=prior, record=False, issue_hold=False
+        )
     if run_status != "Running":
         return SupervisionOutcome(
             choice="Continue", new_memory=None, record=False, issue_hold=False
@@ -162,6 +201,13 @@ def _reasoning_for(choice: str) -> str:
         return (
             "Beam unavailable (a shutter or the FES permit is closed); held the "
             "Run to avoid acquiring on absent beam. Resumable once beam returns."
+        )
+    if choice == "Resume":
+        return (
+            "Beam returned and the full start-safety envelope is satisfied again "
+            "(an Active clearance covers the scope, every enclosure is Permitted, "
+            "every needed supply is Available, and the shutters are open); resumed "
+            "the Run the supervisor itself held."
         )
     return (
         "Beam still unavailable but the operator resumed the Run; deferring to "

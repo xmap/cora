@@ -104,6 +104,91 @@ def test_non_running_is_no_op() -> None:
     assert out.issue_hold is False
 
 
+# ---------- pure rule: gated wind-up (Resume) ----------
+
+
+@pytest.mark.unit
+def test_held_ours_envelope_safe_and_settled_resumes() -> None:
+    """A Run the supervisor held, whose envelope is safe again and stable,
+    is resumed and drops to DEFERRED (anti-flap)."""
+    out = decide_supervision(
+        run_status="Held",
+        beam=_beam(),
+        prior=_MEM_HELD,
+        envelope_ok=True,
+        settle_ticks_met=True,
+    )
+    assert out.choice == "Resume"
+    assert out.record is True
+    assert out.issue_resume is True
+    assert out.issue_hold is False
+    assert out.new_memory == _MEM_DEFERRED
+
+
+@pytest.mark.unit
+def test_held_ours_envelope_safe_but_not_settled_waits() -> None:
+    """Envelope good but the settle window has not elapsed: keep watching,
+    do not resume (anti-flap)."""
+    out = decide_supervision(
+        run_status="Held",
+        beam=_beam(),
+        prior=_MEM_HELD,
+        envelope_ok=True,
+        settle_ticks_met=False,
+    )
+    assert out.choice == "Continue"
+    assert out.issue_resume is False
+    assert out.record is False
+    assert out.new_memory == _MEM_HELD
+
+
+@pytest.mark.unit
+def test_held_ours_envelope_unsafe_stays_held() -> None:
+    """Settled but the envelope is not safe: never resume into a state a
+    fresh start would refuse."""
+    out = decide_supervision(
+        run_status="Held",
+        beam=_beam(),
+        prior=_MEM_HELD,
+        envelope_ok=False,
+        settle_ticks_met=True,
+    )
+    assert out.choice == "Continue"
+    assert out.issue_resume is False
+    assert out.new_memory == _MEM_HELD
+
+
+@pytest.mark.unit
+def test_held_envelope_unknown_stays_held() -> None:
+    """Fail-safe: an uncomputed/unknown envelope (None) never resumes."""
+    out = decide_supervision(
+        run_status="Held",
+        beam=_beam(),
+        prior=_MEM_HELD,
+        envelope_ok=None,
+        settle_ticks_met=True,
+    )
+    assert out.choice == "Continue"
+    assert out.issue_resume is False
+
+
+@pytest.mark.unit
+def test_held_not_ours_never_auto_resumes() -> None:
+    """Own-holds-only: a Held Run the supervisor did not hold (prior None,
+    e.g. an operator hold or memory lost across restart) is never resumed,
+    even with a safe, settled envelope."""
+    out = decide_supervision(
+        run_status="Held",
+        beam=_beam(),
+        prior=None,
+        envelope_ok=True,
+        settle_ticks_met=True,
+    )
+    assert out.choice == "Continue"
+    assert out.issue_resume is False
+    assert out.new_memory is None
+
+
 # ---------- tick: full loop with fakes ----------
 
 
