@@ -673,6 +673,7 @@ def test_to_payload_serializes_run_held_to_primitives() -> None:
     event = RunHeld(run_id=run_id, occurred_at=_NOW)
     assert to_payload(event) == {
         "run_id": str(run_id),
+        "decided_by_decision_id": None,
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -694,6 +695,49 @@ def test_from_stored_rebuilds_run_held() -> None:
 @pytest.mark.unit
 def test_run_held_round_trips() -> None:
     original = RunHeld(run_id=uuid4(), occurred_at=_NOW)
+    stored = _stored("RunHeld", to_payload(original))
+    assert from_stored(stored) == original
+
+
+# Decision-to-Run linkage on RunHeld (RunSupervisor traceability)
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_run_held_with_decision_id() -> None:
+    decision_id = uuid4()
+    event = RunHeld(
+        run_id=uuid4(),
+        decided_by_decision_id=decision_id,
+        occurred_at=_NOW,
+    )
+    assert to_payload(event)["decided_by_decision_id"] == str(decision_id)
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_run_held_without_decision_id_key_as_none() -> None:
+    """Forward-compat: pre-supervisor RunHeld payloads have no
+    decided_by_decision_id key; the `.get(..., None)` fold rebuilds None."""
+    run_id = uuid4()
+    stored = _stored(
+        "RunHeld",
+        {
+            "run_id": str(run_id),
+            "occurred_at": _NOW.isoformat(),
+            # NOTE: no decided_by_decision_id key — pre-supervisor shape.
+        },
+    )
+    event = from_stored(stored)
+    assert isinstance(event, RunHeld)
+    assert event.decided_by_decision_id is None
+
+
+@pytest.mark.unit
+def test_run_held_with_decision_id_round_trips() -> None:
+    original = RunHeld(
+        run_id=uuid4(),
+        decided_by_decision_id=uuid4(),
+        occurred_at=_NOW,
+    )
     stored = _stored("RunHeld", to_payload(original))
     assert from_stored(stored) == original
 
@@ -754,6 +798,7 @@ def test_to_payload_serializes_run_stopped_to_primitives() -> None:
     assert to_payload(event) == {
         "run_id": str(run_id),
         "reason": "hit time budget cleanly",
+        "decided_by_decision_id": None,
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -782,6 +827,52 @@ def test_run_stopped_round_trips() -> None:
     original = RunStopped(
         run_id=uuid4(),
         reason="hit time budget cleanly",
+        occurred_at=_NOW,
+    )
+    stored = _stored("RunStopped", to_payload(original))
+    assert from_stored(stored) == original
+
+
+# Decision-to-Run linkage on RunStopped (RunSupervisor traceability)
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_run_stopped_with_decision_id() -> None:
+    decision_id = uuid4()
+    event = RunStopped(
+        run_id=uuid4(),
+        reason="agent supervisor early-stop",
+        decided_by_decision_id=decision_id,
+        occurred_at=_NOW,
+    )
+    assert to_payload(event)["decided_by_decision_id"] == str(decision_id)
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_run_stopped_without_decision_id_key_as_none() -> None:
+    """Forward-compat: pre-supervisor RunStopped payloads have no
+    decided_by_decision_id key; the `.get(..., None)` fold rebuilds None."""
+    run_id = uuid4()
+    stored = _stored(
+        "RunStopped",
+        {
+            "run_id": str(run_id),
+            "reason": "hit time budget cleanly",
+            "occurred_at": _NOW.isoformat(),
+            # NOTE: no decided_by_decision_id key — pre-supervisor shape.
+        },
+    )
+    event = from_stored(stored)
+    assert isinstance(event, RunStopped)
+    assert event.decided_by_decision_id is None
+
+
+@pytest.mark.unit
+def test_run_stopped_with_decision_id_round_trips() -> None:
+    original = RunStopped(
+        run_id=uuid4(),
+        reason="agent supervisor early-stop",
+        decided_by_decision_id=uuid4(),
         occurred_at=_NOW,
     )
     stored = _stored("RunStopped", to_payload(original))

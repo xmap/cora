@@ -55,10 +55,18 @@ from cora.agent import (
     register_agent_subscribers,
     register_agent_tools,
     seed_caution_drafter_agent,
+    seed_caution_promoter_agent,
+    seed_clearance_expirer_agent,
     seed_run_debriefer_agent,
+    seed_run_supervisor_agent,
     wire_agent,
 )
+from cora.api._clearance_expirer import clearance_expirer_lifespan
+from cora.api._compute_runtime import ComputeRuntime
+from cora.api._conduct_run_route import register_conduct_run_routes
+from cora.api._conduct_run_tool import register_conduct_run_tools
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
+from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
 from cora.calibration import (
@@ -156,6 +164,7 @@ from cora.operation import (
     register_operation_tools,
     wire_operation,
 )
+from cora.operation.adapters.compute_port_config import ComputePortConfig, build_compute_port
 from cora.operation.adapters.control_port_beam_availability_lookup import (
     build_beam_availability_lookup,
 )
@@ -206,6 +215,7 @@ from cora.trust import (
     register_trust_routes,
     register_trust_tools,
     verify_bootstrap_seed_present,
+    warn_if_verdict_log_dormant,
     wire_trust,
 )
 
@@ -219,19 +229,28 @@ def _settings_for_app() -> Settings:
     return Settings()  # type: ignore[call-arg]  # Pydantic loads from env
 
 
-_PROD_APP_ENVS = frozenset({"prod", "production"})
+# Production-tier app environments that must run the full hardened
+# posture: a real authenticated principal, no permit-everyone AllowAll
+# default, and HTTPS-only IdPs. `staging` is included deliberately: a
+# pre-prod box typically handles realistic data and is network-reachable,
+# so it should not silently run wide-open. Genuinely-casual staging can
+# still opt out per-check (ALLOW_PERMISSIVE_AUTHZ, etc.). Dev / test /
+# local and any other env name keep the permissive default.
+_PROD_LIKE_APP_ENVS = frozenset({"prod", "production", "staging"})
 
 
 def _enforce_production_principal_policy(settings: Settings) -> None:
     """Refuse to boot deployments where the principal-fallback would
     silently grant admin to header-less callers.
 
-    TWO failure conditions, both producing the same fail-fast:
+    THREE numbered conditions, plus the F11 transport-security check
+    below, all producing the same fail-fast:
 
-    1. `app_env in {prod, production}` without
+    1. `app_env in {prod, production, staging}` without
        `require_authenticated_principal=True`. The legacy Phase-3e
        gate: header-less prod requests would otherwise run as
        SYSTEM_PRINCIPAL_ID under whichever Authorize port is wired.
+       `staging` is treated as production-tier (see `_PROD_LIKE_APP_ENVS`).
 
     2. `trust_policy_id is not None` without
        `require_authenticated_principal=True`, when `app_env` is
@@ -249,22 +268,39 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
        constructible. The exemption is safe because `app_env=test`
        is never operator-set in deployment configs.
 
-    Bootstrap workflow stays clean: a fresh deploy wanting AllowAll
-    leaves `trust_policy_id` unset (today's default). A deploy
-    wanting real authz sets BOTH env vars together — and operates
+    3. `app_env in {prod, production, staging}` with `trust_policy_id is
+       None` and `allow_permissive_authz` not set. A None `trust_policy_id`
+       wires `AllowAllAuthorize`, which permits every command; shipping
+       that permit-everyone stub to production is almost always a
+       misconfiguration. Refuse boot unless the operator consciously
+       opts in via `ALLOW_PERMISSIVE_AUTHZ=true`, the same conscious-
+       choice shape as the per-IdP `allow_insecure_*` opt-ins.
+
+    Bootstrap workflow stays clean: a fresh non-prod deploy wanting
+    AllowAll leaves `trust_policy_id` unset (today's default); a prod
+    deploy points `TRUST_POLICY_ID` at the seeded bootstrap policy (or
+    sets `ALLOW_PERMISSIVE_AUTHZ=true` to stay permissive on purpose).
+    A deploy wanting real authz sets `TRUST_POLICY_ID` +
+    `REQUIRE_AUTHENTICATED_PRINCIPAL=true` together, and operates
     behind an auth proxy that strips/sets `X-Principal-Id` per the
     routing.py contract.
     """
-    if settings.app_env in _PROD_APP_ENVS and not settings.require_authenticated_principal:
+    # Normalize once so case or surrounding whitespace in APP_ENV cannot
+    # silently bypass the prod gates: pydantic case-folds env-var NAMES,
+    # not VALUES, so a raw "PROD" / "Production " would otherwise miss
+    # `_PROD_LIKE_APP_ENVS` and ship AllowAllAuthorize.
+    app_env = settings.app_env.strip().lower()
+    if app_env in _PROD_LIKE_APP_ENVS and not settings.require_authenticated_principal:
         msg = (
             f"app_env={settings.app_env!r} requires "
             "require_authenticated_principal=True (set "
             "REQUIRE_AUTHENTICATED_PRINCIPAL=true). The permissive "
-            "SYSTEM_PRINCIPAL_ID fallback is not safe for production."
+            "SYSTEM_PRINCIPAL_ID fallback is not safe for a "
+            "production-tier environment (prod / production / staging)."
         )
         raise RuntimeError(msg)
     if (
-        settings.app_env != "test"
+        app_env != "test"
         and settings.trust_policy_id is not None
         and not settings.require_authenticated_principal
     ):
@@ -285,7 +321,7 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
     # The per-adapter check in `JwtTokenVerifier` / `IntrospectionTokenVerifier`
     # CAN'T see `app_env`; this Settings-level check refuses boot when
     # any IdP entry opts in to insecure URLs under prod.
-    if settings.app_env in _PROD_APP_ENVS:
+    if app_env in _PROD_LIKE_APP_ENVS:
         for idp in settings.identity_providers:
             if idp.allow_insecure_jwks_url or idp.allow_insecure_introspection_url:
                 msg = (
@@ -299,6 +335,28 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
                     "memory/project_edge_auth_design.md gate-review F11."
                 )
                 raise RuntimeError(msg)
+    # Prod must not silently run the permit-everyone AllowAllAuthorize
+    # stub. `trust_policy_id is None` wires AllowAllAuthorize (every
+    # command permitted); shipping that to production is almost always a
+    # misconfiguration, not an intent. Refuse boot unless the operator
+    # consciously opts in via `allow_permissive_authz`, mirroring the
+    # per-IdP `allow_insecure_*` opt-ins above. Placed last so the more
+    # specific transport-security (F11) message wins when both apply;
+    # non-prod envs keep the permissive default for dev / test.
+    if (
+        app_env in _PROD_LIKE_APP_ENVS
+        and settings.trust_policy_id is None
+        and not settings.allow_permissive_authz
+    ):
+        msg = (
+            f"app_env={settings.app_env!r} has no trust_policy_id set, so the "
+            "API would run AllowAllAuthorize and permit every command. Set "
+            "TRUST_POLICY_ID to the seeded bootstrap policy "
+            "(00000000-0000-0000-0000-000000000002) to enable real authz, or "
+            "set ALLOW_PERMISSIVE_AUTHZ=true to consciously run permissive in "
+            "production. See docs/stack/deployment.md."
+        )
+        raise RuntimeError(msg)
 
 
 def _signing_factory_display_name(factory: object) -> str:
@@ -340,17 +398,19 @@ def _enforce_production_signing_posture(
     `InMemorySigner` signs with an ephemeral per-process key whose
     signatures cannot be verified across a restart. Both are correct for
     dev / test and are the documented stubs kept until the rule-of-two
-    wire-tier trigger fires, but under `app_env in {prod, production}`
-    they would silently ship a false integrity guarantee. This is the
+    wire-tier trigger fires, but under a production-tier `app_env`
+    ({prod, production, staging}, see `_PROD_LIKE_APP_ENVS`) they would
+    silently ship a false integrity guarantee. This is the
     in-memory-default footgun the `make_inmemory_kernel` fitness test
     guards for the Kernel; here it guards the signing factories.
 
-    Sibling to `_enforce_production_principal_policy`: fail at boot,
-    which is cheaper than discovering crypto-free signing in production.
-    `allow_insecure_inmemory_signing=True` is the explicit staging
-    escape hatch.
+    Sibling to `_enforce_production_principal_policy`, and keyed on the
+    same `_PROD_LIKE_APP_ENVS` set so staging runs the hardened posture
+    too: fail at boot, which is cheaper than discovering crypto-free
+    signing in production. `allow_insecure_inmemory_signing=True` is the
+    explicit per-environment escape hatch.
     """
-    if settings.app_env not in _PROD_APP_ENVS:
+    if settings.app_env not in _PROD_LIKE_APP_ENVS:
         return
     if settings.allow_insecure_inmemory_signing:
         return
@@ -461,6 +521,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         handlers: RunHandlers = fastapi_app.state.run
         return handlers
 
+    def _get_compute_runtime() -> ComputeRuntime:
+        runtime: ComputeRuntime = fastapi_app.state.compute_runtime
+        return runtime
+
     def _get_data_handlers() -> DataHandlers:
         handlers: DataHandlers = fastapi_app.state.data
         return handlers
@@ -518,6 +582,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_calibration_tools(mcp, get_handlers=_get_calibration_handlers)
     register_campaign_tools(mcp, get_handlers=_get_campaign_handlers)
     register_agent_tools(mcp, get_handlers=_get_agent_handlers)
+    register_conduct_run_tools(mcp, get_runtime=_get_compute_runtime)
     mcp_app = mcp.streamable_http_app()
 
     @asynccontextmanager
@@ -588,11 +653,39 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             app.state.campaign = wire_campaign(deps)
             app.state.agent = wire_agent(deps)
 
+            # Compute CONDUCT runtime: the L2 edge runtime that drives a
+            # compute Run via ComputePort. Lives at the composition root
+            # (not a BC) because it needs both the ComputePort and the
+            # Run FSM handlers, and tach forbids cora.run -> cora.operation.
+            # `in_memory` substrate (default) keeps every job Simulated;
+            # `local_process` runs real subprocesses. Stashed for the
+            # conduct-run-compute route + MCP tool to read; aclose'd in
+            # the teardown below (mirrors the shared ControlPort).
+            compute_port = build_compute_port(
+                ComputePortConfig(
+                    substrate=settings.compute_substrate,
+                    default_timeout_s=settings.compute_default_timeout_s,
+                )
+            )
+            app.state.compute_port = compute_port
+            app.state.compute_runtime = ComputeRuntime(
+                compute_port=compute_port,
+                complete_run=app.state.run.complete_run,
+                abort_run=app.state.run.abort_run,
+            )
+
             # Boot-time fail-fast when the deployment is pointed at the
             # bootstrap seed but the seed's stream is missing. Without
             # this check, a stale / unrestored DB silently 403s every
             # API call instead of failing visibly at startup.
             await verify_bootstrap_seed_present(deps)
+
+            # Heads-up (non-fatal): when authz is enforced but the
+            # per-Conduit Verdict audit log cannot populate yet (conduit
+            # injection not wired), warn at boot instead of silently
+            # logging an empty audit trail. See
+            # project_authorization_envelope_design watch item 6.
+            await warn_if_verdict_log_dormant(deps)
 
             # Federation BC self-Facility seed per
             # project_facility_aggregate_design Sub-Slice D. Idempotent
@@ -669,6 +762,12 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_run_debriefer_agent(deps)
             # same shape for CautionDrafter.
             await seed_caution_drafter_agent(deps)
+            # same shape for RunSupervisor (deterministic in-loop agent).
+            await seed_run_supervisor_agent(deps)
+            # same shape for CautionPromoter (deterministic auto-promote agent).
+            await seed_caution_promoter_agent(deps)
+            # same shape for ClearanceExpirer (deterministic in-loop agent).
+            await seed_clearance_expirer_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -725,6 +824,16 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         kernel=deps,
                         name_to_id=enclosure_permit_ids,
                     ),
+                    run_supervisor_lifespan(
+                        deps,
+                        list_runs=app.state.run.list_runs,
+                        hold_run=app.state.run.hold_run,
+                    ),
+                    clearance_expirer_lifespan(
+                        deps,
+                        list_clearances=app.state.safety.list_clearances,
+                        expire_clearance=app.state.safety.expire_clearance,
+                    ),
                 ):
                     yield
             finally:
@@ -756,6 +865,13 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     if _aclose is not None:
                         with contextlib.suppress(Exception):
                             await _aclose()
+                    # Release the ComputePort too (LocalProcessComputePort
+                    # kills any straggling subprocess; in-memory is a no-op).
+                    _compute_port = getattr(app.state, "compute_port", None)
+                    _compute_aclose = getattr(_compute_port, "aclose", None)
+                    if _compute_aclose is not None:
+                        with contextlib.suppress(Exception):
+                            await _compute_aclose()
                     await teardown()
                 finally:
                     # Flush pending OTel spans before the process exits
@@ -819,6 +935,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_calibration_routes(fastapi_app)
     register_campaign_routes(fastapi_app)
     register_agent_routes(fastapi_app)
+    register_conduct_run_routes(fastapi_app)
     # RFC 9728 Protected Resource Metadata. Discoverable
     # at /.well-known/oauth-protected-resource; clients dereference it
     # after a 401 + WWW-Authenticate response to learn which IdPs issue

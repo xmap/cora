@@ -18,8 +18,8 @@ from cora.infrastructure.ports import (
 from cora.infrastructure.projection.registry import ProjectionRegistry
 
 
-def _kernel(*, llm: object | None) -> object:
-    settings = Settings()  # type: ignore[call-arg]
+def _kernel(*, llm: object | None, caution_promoter_enabled: bool = False) -> object:
+    settings = Settings(caution_promoter_enabled=caution_promoter_enabled)  # type: ignore[call-arg]
     return make_inmemory_kernel(
         settings=settings,
         clock=FakeClock(datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)),
@@ -50,6 +50,30 @@ def test_skips_run_debrief_when_llm_is_none() -> None:
     register_agent_subscribers(registry, kernel)  # type: ignore[arg-type]
 
     assert "run_debriefer" not in registry.names()
+
+
+@pytest.mark.unit
+def test_registers_caution_promoter_when_enabled() -> None:
+    """The deterministic promoter registers independently of the LLM, gated by
+    its own off-by-default setting."""
+    registry = ProjectionRegistry()
+    kernel = _kernel(llm=None, caution_promoter_enabled=True)
+
+    register_agent_subscribers(registry, kernel)  # type: ignore[arg-type]
+
+    assert "caution_promoter" in registry.names()
+
+
+@pytest.mark.unit
+def test_skips_caution_promoter_when_disabled_by_default() -> None:
+    """Default settings leave the promoter off (the retirement-memory guard is
+    the prerequisite to enable it operationally)."""
+    registry = ProjectionRegistry()
+    kernel = _kernel(llm=FakeLLM())
+
+    register_agent_subscribers(registry, kernel)  # type: ignore[arg-type]
+
+    assert "caution_promoter" not in registry.names()
 
 
 @pytest.mark.unit

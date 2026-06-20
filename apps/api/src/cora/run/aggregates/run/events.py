@@ -301,10 +301,19 @@ class RunHeld:
     brief dropout, operator break) that doesn't reify a domain
     reason. Future-additive if the same re-evaluation triggers
     documented for RunAborted's reason field crystallize.
+
+    `decided_by_decision_id` (mirrors RunAborted + RunAdjusted +
+    RunStarted): optional Decision-causation link to the Decision BC
+    record that justified this hold. None for operator-routed holds;
+    set when an in-process agent runtime (RunSupervisor) issues the
+    hold. NO existence check per the cross-BC eventual-consistency
+    stance. Forward-compat via `payload.get("decided_by_decision_id")`
+    returning None for legacy pre-supervisor streams.
     """
 
     run_id: UUID
     occurred_at: datetime
+    decided_by_decision_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -409,11 +418,19 @@ class RunStopped:
     Bluesky precedent (Stop = controlled deceleration / clean
     exit; Abort = emergency, prioritises speed over orderly
     shutdown).
+
+    `decided_by_decision_id` (mirrors RunAborted + RunAdjusted +
+    RunStarted): optional Decision-causation link justifying this
+    stop. None for operator-routed stops; set when an in-process
+    agent runtime (RunSupervisor) issues the stop. NO existence check
+    per the cross-BC eventual-consistency stance. Forward-compat via
+    `payload.get("decided_by_decision_id")` for legacy streams.
     """
 
     run_id: UUID
     reason: str
     occurred_at: datetime
+    decided_by_decision_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -633,9 +650,16 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "pinned_calibration_ids": sorted(str(pin) for pin in pinned_calibration_ids),
                 "occurred_at": occurred_at.isoformat(),
             }
-        case RunHeld(run_id=run_id, occurred_at=occurred_at):
+        case RunHeld(
+            run_id=run_id,
+            decided_by_decision_id=decided_by_decision_id,
+            occurred_at=occurred_at,
+        ):
             return {
                 "run_id": str(run_id),
+                "decided_by_decision_id": (
+                    str(decided_by_decision_id) if decided_by_decision_id is not None else None
+                ),
                 "occurred_at": occurred_at.isoformat(),
             }
         case RunResumed(run_id=run_id, occurred_at=occurred_at):
@@ -675,10 +699,18 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "producing_job_id": producing_job_id,
                 "occurred_at": occurred_at.isoformat(),
             }
-        case RunStopped(run_id=run_id, reason=reason, occurred_at=occurred_at):
+        case RunStopped(
+            run_id=run_id,
+            reason=reason,
+            decided_by_decision_id=decided_by_decision_id,
+            occurred_at=occurred_at,
+        ):
             return {
                 "run_id": str(run_id),
                 "reason": reason,
+                "decided_by_decision_id": (
+                    str(decided_by_decision_id) if decided_by_decision_id is not None else None
+                ),
                 "occurred_at": occurred_at.isoformat(),
             }
         case RunTruncated(
@@ -824,13 +856,21 @@ def from_stored(stored: StoredEvent) -> RunEvent:
 
             return deserialize_or_raise("RunStarted", _build_run_started)
         case "RunHeld":
-            return deserialize_or_raise(
-                "RunHeld",
-                lambda: RunHeld(
+
+            def _build_run_held() -> RunHeld:
+                # `decided_by_decision_id` optional. Forward-compat additive:
+                # legacy pre-supervisor streams replay without the key via
+                # `.get(..., None)`.
+                raw_decided_by_held = payload.get("decided_by_decision_id")
+                return RunHeld(
                     run_id=UUID(payload["run_id"]),
+                    decided_by_decision_id=(
+                        UUID(raw_decided_by_held) if raw_decided_by_held is not None else None
+                    ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
-                ),
-            )
+                )
+
+            return deserialize_or_raise("RunHeld", _build_run_held)
         case "RunResumed":
             return deserialize_or_raise(
                 "RunResumed",
@@ -875,14 +915,22 @@ def from_stored(stored: StoredEvent) -> RunEvent:
 
             return deserialize_or_raise("RunAborted", _build_run_aborted)
         case "RunStopped":
-            return deserialize_or_raise(
-                "RunStopped",
-                lambda: RunStopped(
+
+            def _build_run_stopped() -> RunStopped:
+                # `decided_by_decision_id` optional. Forward-compat additive:
+                # legacy pre-supervisor streams replay without the key via
+                # `.get(..., None)`.
+                raw_decided_by_stopped = payload.get("decided_by_decision_id")
+                return RunStopped(
                     run_id=UUID(payload["run_id"]),
                     reason=payload["reason"],
+                    decided_by_decision_id=(
+                        UUID(raw_decided_by_stopped) if raw_decided_by_stopped is not None else None
+                    ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
-                ),
-            )
+                )
+
+            return deserialize_or_raise("RunStopped", _build_run_stopped)
         case "RunTruncated":
 
             def _build_run_truncated() -> RunTruncated:

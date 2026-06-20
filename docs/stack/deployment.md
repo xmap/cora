@@ -9,14 +9,17 @@ The load-bearing auth vars (full list in `.env.example`):
 | Var | Default | When you set it |
 | --- | --- | --- |
 | `DATABASE_URL` | `postgresql://cora:cora@localhost:5432/cora` | Always |
-| `TRUST_POLICY_ID` | unset → `AllowAllAuthorize` | When you want real authz |
-| `REQUIRE_AUTHENTICATED_PRINCIPAL` | `false` | Must be `true` whenever `TRUST_POLICY_ID` is set (the boot gate refuses otherwise; see below) |
+| `TRUST_POLICY_ID` | unset → `AllowAllAuthorize` | When you want real authz. In a production-tier env (`prod`/`production`/`staging`) it is required unless `ALLOW_PERMISSIVE_AUTHZ=true` (see below) |
+| `REQUIRE_AUTHENTICATED_PRINCIPAL` | `false` | Must be `true` whenever `TRUST_POLICY_ID` is set, and in any production-tier env (the boot gate refuses otherwise; see below) |
+| `ALLOW_PERMISSIVE_AUTHZ` | `false` | Production-tier escape hatch: set `true` to run the permit-everyone `AllowAllAuthorize` stub on purpose in a `prod`/`production`/`staging` env (airgapped / single-operator pilot) |
 | `IDENTITY_PROVIDERS` | unset → legacy `X-Principal-Id` header mode | JSON list of `IdentityProviderConfig` entries (see [Auth](auth.md)); enables bearer-token mode at the HTTP edge |
 | `ANTHROPIC_API_KEY` | unset → AI subscribers log-and-skip | When you want RunDebriefer / CautionDrafter live |
 
 ### Startup boot gate
 
 If you set `TRUST_POLICY_ID` without `REQUIRE_AUTHENTICATED_PRINCIPAL=true`, `create_app()` raises `RuntimeError` at boot. Without the header check, anyone could send `X-Principal-Id: 00000000-…0` and impersonate SYSTEM under the configured policy, so the two must be set together.
+
+In a production-tier env (`APP_ENV` = `prod`, `production`, or `staging`), `create_app()` also raises `RuntimeError` if `TRUST_POLICY_ID` is unset, because a None policy wires `AllowAllAuthorize`, which permits every command. Point `TRUST_POLICY_ID` at the seeded bootstrap policy (`00000000-0000-0000-0000-000000000002`) to enable real authz, or set `ALLOW_PERMISSIVE_AUTHZ=true` to run permissive on purpose. The opt-in mirrors the per-IdP `allow_insecure_*` flags: the insecure choice stays available, but only as a conscious one. `staging` is treated as production-tier (it usually handles real data and is network-reachable); other env names (dev/local/ci/e2e) keep the permissive default.
 
 Test env (`APP_ENV=test`) is exempt: legitimate test fixtures exercise the SYSTEM-fallback-under-real-policy scenario.
 

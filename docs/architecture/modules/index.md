@@ -66,7 +66,7 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     ---
 
-    Typed configuration for AI agents (RunDebriefer, CautionDrafter). Four-state lifecycle with Suspended pause, shared id with Access Actor, MCP tool allowlist, declarative budgets, and two cross-BC action slices.
+    Typed configuration for CORA's five agents: two LLM (RunDebriefer, CautionDrafter) and three deterministic (RunSupervisor, CautionPromoter, ClearanceExpirer). Four-state lifecycle with Suspended pause, shared id with Access Actor, MCP tool allowlist, declarative budgets, and passive plus active runtimes.
 
     [Read →](agent/index.md)
 

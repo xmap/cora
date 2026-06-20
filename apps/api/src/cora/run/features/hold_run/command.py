@@ -17,6 +17,15 @@ from uuid import UUID
 
 @dataclass(frozen=True)
 class HoldRun:
-    """Pause an actively-running Run (Running → Held)."""
+    """Pause an actively-running Run (Running → Held).
+
+    `decided_by_decision_id` (mirrors AbortRun + AdjustRun + StartRun):
+    optional Decision BC reference to the record that justified this
+    hold. The operator-facing route leaves it None (routine holds need
+    no justification); an in-process agent runtime (RunSupervisor) sets
+    it to link an autonomous hold to its Decision. NO existence check at
+    the decider per the cross-BC eventual-consistency stance.
+    """
 
     run_id: UUID
+    decided_by_decision_id: UUID | None = None

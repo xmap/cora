@@ -3635,6 +3635,56 @@
         "title": "CompositePartitionBody",
         "type": "object"
       },
+      "ComputeResourcesRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for `ComputeResources` (all optional).\n\nMirrors the bound ComputeNode Asset's GPU/RAM settings. The\nlocal-process adapter ignores these (a subprocess takes what the\nbox has); a future scheduler adapter maps them to `--gres` / `--mem`.",
+        "properties": {
+          "cpus": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpus"
+          },
+          "gpu_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Gpu Count",
+            "type": "integer"
+          },
+          "gpu_memory_gb": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gpu Memory Gb"
+          },
+          "system_ram_gb": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "System Ram Gb"
+          }
+        },
+        "title": "ComputeResourcesRequest",
+        "type": "object"
+      },
       "ConductProcedureRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /procedures/{procedure_id}/conduct`.",
@@ -3714,6 +3764,140 @@
           "succeeded"
         ],
         "title": "ConductProcedureResponse",
+        "type": "object"
+      },
+      "ConductRunRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /runs/{run_id}/conduct`.",
+        "properties": {
+          "command": {
+            "description": "The argv the substrate launches (e.g. tomopy recon --algorithm sirt).",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 256,
+            "minItems": 1,
+            "title": "Command",
+            "type": "array"
+          },
+          "input_uris": {
+            "description": "URIs the job reads (e.g. the raw projection Dataset's Distribution).",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 512,
+            "title": "Input Uris",
+            "type": "array"
+          },
+          "output_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the job writes its artifact; recorded as the output Dataset uri.",
+            "title": "Output Uri"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "Validated parameter set (typically the Run's effective_parameters).",
+            "title": "Parameters",
+            "type": "object"
+          },
+          "resources": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComputeResourcesRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional resource shape; defaults to unspecified."
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "ConductRunRequest",
+        "type": "object"
+      },
+      "ConductRunResponse": {
+        "description": "Response body for the conduct-run-compute route.\n\n`succeeded` is the canonical pass/fail bit. `status` is the job's\nterminal `ComputeStatus` value (or null when the job never started).\n`actuation_kind` is read-only operator visibility; the promotion\ngate reads it server-side off the Run stream, never back from here.\n`failure` is non-null iff `succeeded` is False.",
+        "properties": {
+          "actuation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actuation Kind"
+          },
+          "artifact_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Uri"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run_id",
+          "succeeded"
+        ],
+        "title": "ConductRunResponse",
         "type": "object"
       },
       "ConduitListResponse": {
@@ -37747,6 +37931,84 @@
           }
         },
         "summary": "Mark an existing Run as completed (happy-path terminal)",
+        "tags": [
+          "run"
+        ]
+      }
+    },
+    "/runs/{run_id}/conduct": {
+      "post": {
+        "description": "Conduct a compute Run end-to-end. Failures land in the response body.",
+        "operationId": "post_runs_conduct_runs__run_id__conduct_post",
+        "parameters": [
+          {
+            "description": "Target Run's id (must be Running).",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Target Run's id (must be Running).",
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConductRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConductRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the underlying Run transition."
+          },
+          "422": {
+            "description": "Request body failed schema validation (empty command, bad field)."
+          }
+        },
+        "summary": "Conduct a compute Run: submit the job, await it, then complete or abort the Run.",
         "tags": [
           "run"
         ]

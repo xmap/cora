@@ -14,28 +14,14 @@ Three concerns:
      status.
 """
 
-# pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false
-# `app.state.deps.event_store` is typed as `Any` by FastAPI's state
-# machinery; the white-box seed helper accepts that and casts at use.
-
-import asyncio
 from collections.abc import Iterator
-from datetime import UTC, datetime
-from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
-from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
-from cora.trust.aggregates.policy.events import (
-    PolicyDefined,
-    event_type_name,
-    to_payload,
-)
+from tests._authz import trust_authorize_client
 
 # ---------- Optional / validation ----------
 
@@ -93,43 +79,6 @@ def test_post_zones_accepts_x_principal_id_header_in_trust_bc_too() -> None:
 # ---------- End-to-end with TrustAuthorize ----------
 
 
-def _seed_policy_in_store(
-    app: FastAPI,
-    *,
-    policy_id: UUID,
-    conduit_id: UUID,
-    permitted_principal_ids: frozenset[UUID],
-    permitted_commands: frozenset[str],
-) -> None:
-    """Seed a PolicyDefined event directly into the running app's
-    in-memory store. Bypasses the API because TrustAuthorize is
-    already gating every command at this point in the test (the
-    bootstrap chicken-and-egg documented in TrustAuthorize's
-    docstring)."""
-    event = PolicyDefined(
-        policy_id=policy_id,
-        name="Test-policy",
-        conduit_id=conduit_id,
-        permitted_principal_ids=tuple(permitted_principal_ids),
-        permitted_commands=tuple(permitted_commands),
-        occurred_at=datetime.now(tz=UTC),
-        # Bind the seeded HTTP Surface so the gated HTTP calls below
-        # (which arrive on SYSTEM_HTTP_SURFACE_ID) strict-match.
-        surface_id=SYSTEM_HTTP_SURFACE_ID,
-    )
-    new_event = to_new_event(
-        event_type=event_type_name(event),
-        payload=to_payload(event),
-        occurred_at=event.occurred_at,
-        event_id=uuid4(),
-        command_name="DefinePolicy",
-        correlation_id=uuid4(),
-        principal_id=uuid4(),
-    )
-    store = app.state.deps.event_store
-    asyncio.run(store.append("Policy", policy_id, 0, [new_event]))
-
-
 @pytest.fixture
 def trust_authorize_app(
     monkeypatch: pytest.MonkeyPatch,
@@ -144,32 +93,18 @@ def trust_authorize_app(
     """
     policy_id = UUID("01900000-0000-7000-8000-00000000700f")
     allowed_principal = UUID("01900000-0000-7000-8000-000000000a01")
-    # Post-3h: handlers pass nil conduit_id by default; the gating
-    # policy must use the same conduit_id to match.
-    conduit_id = UUID(int=0)
-
-    monkeypatch.setenv("APP_ENV", "test")
-    monkeypatch.setenv("TRUST_POLICY_ID", str(policy_id))
-
-    client = TestClient(create_app())
-    client.__enter__()  # start lifespan; app.state.deps now populated
-
-    _seed_policy_in_store(
-        # `client.app` is typed as `ASGI3App | _WrapASGI2` (Starlette);
-        # we know it's the FastAPI instance create_app() returned. Cast
-        # so pyright accepts the call.
-        cast("FastAPI", client.app),
+    with trust_authorize_client(
+        monkeypatch,
+        permitted_principal_ids={allowed_principal},
+        permitted_commands={
+            "RegisterActor",
+            "DefineZone",
+            "DefineConduit",
+            "DefinePolicy",
+        },
         policy_id=policy_id,
-        conduit_id=conduit_id,
-        permitted_principal_ids=frozenset({allowed_principal}),
-        permitted_commands=frozenset(
-            {"RegisterActor", "DefineZone", "DefineConduit", "DefinePolicy"}
-        ),
-    )
-    try:
+    ) as client:
         yield client, allowed_principal, policy_id
-    finally:
-        client.__exit__(None, None, None)
 
 
 @pytest.mark.contract
@@ -272,18 +207,23 @@ def test_create_app_refuses_to_boot_in_prod_without_require_auth(
 
 
 @pytest.mark.contract
-def test_create_app_boots_in_prod_with_require_auth(
+def test_create_app_boots_in_prod_with_real_policy_and_require_auth(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sanity inverse: production env + require=True boots cleanly.
+    """Recommended prod posture boots cleanly.
 
-    This test isolates the principal-policy axis. Prod boot also runs
-    `_enforce_production_signing_posture`, an orthogonal gate that
-    refuses the default in-memory signing stubs under prod; the
-    escape hatch keeps that gate out of scope here (its own coverage
-    lives in tests/unit/api/test_production_signing_posture.py).
+    Production env with a real TRUST_POLICY_ID + require=True boots. With
+    no TRUST_POLICY_ID the AllowAll-in-prod gate would refuse; that path
+    is covered by the two tests below.
+
+    Prod boot also runs `_enforce_production_signing_posture`, an
+    orthogonal gate that refuses the default in-memory signing stubs
+    under prod; the `ALLOW_INSECURE_INMEMORY_SIGNING` escape hatch keeps
+    that gate out of scope here (its own coverage lives in
+    tests/unit/api/test_production_signing_posture.py).
     """
     monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("TRUST_POLICY_ID", "00000000-0000-0000-0000-000000000002")
     monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
     monkeypatch.setenv("ALLOW_INSECURE_INMEMORY_SIGNING", "true")
     # Just constructing the app is enough; no need to enter lifespan
@@ -293,8 +233,69 @@ def test_create_app_boots_in_prod_with_require_auth(
 
 
 @pytest.mark.contract
-@pytest.mark.parametrize("env_value", ["prod", "production"])
-def test_startup_gate_recognizes_both_prod_app_env_spellings(
+def test_create_app_refuses_prod_with_permissive_authz_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Prod with no TRUST_POLICY_ID wires AllowAllAuthorize (permit
+    everyone). `require=True` isolates this from condition 1; the new
+    gate refuses boot because ALLOW_PERMISSIVE_AUTHZ is not set, so a
+    production deployment cannot silently ship the permit-everyone
+    default."""
+    monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
+    monkeypatch.delenv("TRUST_POLICY_ID", raising=False)
+    monkeypatch.delenv("ALLOW_PERMISSIVE_AUTHZ", raising=False)
+    with pytest.raises(RuntimeError, match="ALLOW_PERMISSIVE_AUTHZ"):
+        create_app()
+
+
+@pytest.mark.contract
+def test_create_app_boots_prod_with_explicit_permissive_optin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Escape hatch: prod + no policy boots when the operator
+    consciously sets ALLOW_PERMISSIVE_AUTHZ=true (an airgapped /
+    single-operator pilot that genuinely wants no command gating). The
+    insecure choice is allowed, but only as a deliberate one.
+
+    ALLOW_INSECURE_INMEMORY_SIGNING=true keeps the orthogonal signing
+    guard out of scope: prod boot also refuses the default in-memory
+    signing stubs (its own coverage lives in
+    tests/unit/api/test_production_signing_posture.py)."""
+    monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
+    monkeypatch.delenv("TRUST_POLICY_ID", raising=False)
+    monkeypatch.setenv("ALLOW_PERMISSIVE_AUTHZ", "true")
+    monkeypatch.setenv("ALLOW_INSECURE_INMEMORY_SIGNING", "true")
+    app = create_app()
+    assert app is not None
+
+
+@pytest.mark.contract
+def test_create_app_refuses_staging_with_permissive_authz_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Staging is production-tier: it must not silently run AllowAll
+    either. require=True isolates this from condition 1; the AllowAll
+    gate refuses boot because ALLOW_PERMISSIVE_AUTHZ is not set."""
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
+    monkeypatch.delenv("TRUST_POLICY_ID", raising=False)
+    monkeypatch.delenv("ALLOW_PERMISSIVE_AUTHZ", raising=False)
+    with pytest.raises(RuntimeError, match="ALLOW_PERMISSIVE_AUTHZ"):
+        create_app()
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize(
+    "env_value",
+    # Production-tier spellings + case / whitespace variants: the guard
+    # normalizes APP_ENV (strip + lower) so "PROD" or " Production "
+    # cannot silently bypass the gates (pydantic case-folds env-var
+    # NAMES, not VALUES). "staging" is production-tier too.
+    ["prod", "production", "staging", "PROD", "Production", " prod "],
+)
+def test_startup_gate_recognizes_prod_like_app_envs(
     monkeypatch: pytest.MonkeyPatch,
     env_value: str,
 ) -> None:

@@ -37,12 +37,8 @@ from cora.trust.aggregates.conduit import (
     to_payload as conduit_to_payload,
 )
 from cora.trust.aggregates.conduit.entries import InMemoryVerdictStore
-from cora.trust.aggregates.policy.events import (
-    PolicyDefined,
-    event_type_name,
-    to_payload,
-)
 from cora.trust.authorize import TrustAuthorize
+from tests._authz import seed_policy
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 _POLICY_ID = UUID("01900000-0000-7000-8000-000000000601")
@@ -62,24 +58,14 @@ async def _seed_policy(
     principals: frozenset[UUID] = frozenset({_ALLOWED_PRINCIPAL}),
     commands: frozenset[str] = frozenset({"RegisterActor"}),
 ) -> None:
-    event = PolicyDefined(
+    await seed_policy(
+        store,
         policy_id=policy_id,
-        name="Test-policy",
+        permitted_principal_ids=principals,
+        permitted_commands=commands,
         conduit_id=conduit_id,
-        permitted_principal_ids=tuple(principals),
-        permitted_commands=tuple(commands),
         occurred_at=_NOW,
     )
-    new_event = to_new_event(
-        event_type=event_type_name(event),
-        payload=to_payload(event),
-        occurred_at=event.occurred_at,
-        event_id=uuid4(),
-        command_name="DefinePolicy",
-        correlation_id=uuid4(),
-        principal_id=uuid4(),
-    )
-    await store.append("Policy", policy_id, expected_version=0, events=[new_event])
 
 
 @pytest.mark.unit

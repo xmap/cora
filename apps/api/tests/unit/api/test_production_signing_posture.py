@@ -1,8 +1,9 @@
 # pyright: reportPrivateUsage=false
 """Unit tests for the production signing-posture boot guard.
 
-`_enforce_production_signing_posture` refuses to boot a `prod` /
-`production` deployment whose signing factories still resolve to the
+`_enforce_production_signing_posture` refuses to boot a production-tier
+deployment (`prod` / `production` / `staging`, the same `_PROD_LIKE_APP_ENVS`
+set the authz guards key on) whose signing factories still resolve to the
 in-memory stubs (`InMemorySignaturePort` does no crypto;
 `InMemorySigner` uses an ephemeral key). It is the signing-side sibling
 of `_enforce_production_principal_policy` and of the
@@ -52,7 +53,7 @@ def _enforce(settings: Settings, **overrides: object) -> None:
     _enforce_production_signing_posture(settings, **factories)  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("app_env", ["prod", "production"])
+@pytest.mark.parametrize("app_env", ["prod", "production", "staging"])
 def test_prod_with_inmemory_stubs_refuses_boot(app_env: str) -> None:
     with pytest.raises(RuntimeError, match="in-memory signing stubs"):
         _enforce(_settings(app_env=app_env))
@@ -71,7 +72,7 @@ def test_escape_hatch_allows_inmemory_in_prod() -> None:
     _enforce(_settings(app_env="prod", allow_insecure=True))
 
 
-@pytest.mark.parametrize("app_env", ["test", "local", "staging"])
+@pytest.mark.parametrize("app_env", ["test", "local", "dev"])
 def test_non_prod_app_env_allows_inmemory(app_env: str) -> None:
     _enforce(_settings(app_env=app_env))
 
@@ -123,12 +124,13 @@ def test_create_app_refuses_prod_boot_with_default_inmemory_signing(
     """End-to-end: create_app wires the in-memory signing stubs, so a prod
     boot is refused at construction (before the lifespan opens a DB pool).
 
-    REQUIRE_AUTHENTICATED_PRINCIPAL=true clears the sibling principal-policy
-    guard (which runs first) so the failure is provably the signing guard,
-    and the escape hatch is left unset.
+    REQUIRE_AUTHENTICATED_PRINCIPAL=true and a set TRUST_POLICY_ID clear the
+    sibling principal-policy guard (which runs first) so the failure is
+    provably the signing guard, and the escape hatch is left unset.
     """
     monkeypatch.setenv("APP_ENV", "prod")
     monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
+    monkeypatch.setenv("TRUST_POLICY_ID", "00000000-0000-0000-0000-000000000002")
     monkeypatch.delenv("ALLOW_INSECURE_INMEMORY_SIGNING", raising=False)
     with pytest.raises(RuntimeError, match="in-memory signing stubs"):
         create_app()
@@ -137,10 +139,13 @@ def test_create_app_refuses_prod_boot_with_default_inmemory_signing(
 def test_create_app_boots_in_prod_with_signing_escape_hatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The escape hatch lets a staging-as-prod deployment construct the app
-    with the in-memory signing stubs still wired."""
+    """The escape hatch lets a production-tier deployment construct the app
+    with the in-memory signing stubs still wired. REQUIRE_AUTHENTICATED_PRINCIPAL
+    and a set TRUST_POLICY_ID clear the sibling authz guard so only the signing
+    escape hatch is under test."""
     monkeypatch.setenv("APP_ENV", "prod")
     monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
+    monkeypatch.setenv("TRUST_POLICY_ID", "00000000-0000-0000-0000-000000000002")
     monkeypatch.setenv("ALLOW_INSECURE_INMEMORY_SIGNING", "true")
     app = create_app()
     assert app is not None

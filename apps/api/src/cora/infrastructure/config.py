@@ -18,6 +18,13 @@ _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 
 OtelExporter = Literal["otlp", "console", "none"]
 
+# ComputePort substrate selector. Mirrors the operation-tier
+# `ComputeSubstrate` in `cora.operation.adapters.compute_port_config`
+# (a trivial 2-value Literal kept per tier rather than centralised in a
+# new infrastructure module, since there is no shared route model the
+# way ControlPort's `Substrate` rides `ControlPortRoute`).
+ComputeSubstrate = Literal["in_memory", "local_process"]
+
 
 class Settings(BaseSettings):
     """Application configuration. Reads from environment variables and `.env`."""
@@ -91,10 +98,22 @@ class Settings(BaseSettings):
     # back to `SYSTEM_PRINCIPAL_ID`. Default false matches the
     # dev / test posture where the fallback is convenient.
     # The startup check in `create_app()` refuses to boot when
-    # `app_env in {"prod", "production"}` and this is False, so a
-    # production deployment cannot accidentally launch with the
-    # permissive default.
+    # `app_env` is production-tier ({"prod", "production", "staging"}) and
+    # this is False, so a production-tier deployment cannot accidentally
+    # launch with the permissive default.
     require_authenticated_principal: bool = False
+
+    # Escape hatch for intentionally running the permit-everyone
+    # `AllowAllAuthorize` stub (no command gating) in a production-tier
+    # env, e.g. an airgapped single-operator pilot that genuinely wants
+    # no authz. Default false: under production-tier `app_env`
+    # ({"prod", "production", "staging"}) with no `trust_policy_id` set,
+    # `create_app()` refuses to boot unless this is True, so such a
+    # deployment cannot silently ship the permissive default. Other envs
+    # ignore this (permissive is the dev / test posture). Mirrors the
+    # per-IdP `allow_insecure_*` opt-in shape: the insecure choice is
+    # allowed, but only as a conscious one.
+    allow_permissive_authz: bool = False
 
     # Federation / event-signing posture.
     # The signing seam ships with in-memory adapters by default: the
@@ -107,12 +126,14 @@ class Settings(BaseSettings):
     # are deliberately deferred.
     #
     # The startup check in `create_app()` refuses to boot when
-    # `app_env in {"prod", "production"}` and any signing factory still
-    # resolves to one of those stubs, so a production deployment cannot
-    # silently ship crypto-free signing (the federation SignaturePort)
-    # or non-durable signatures (the ephemeral-key event Signer). Set
-    # this true only for a staging environment that is intentionally
-    # exercising the prod posture before the wire-tier adapters land.
+    # `app_env` is production-tier ({"prod", "production", "staging"},
+    # the same set the authz guards key on) and any signing factory
+    # still resolves to one of those stubs, so a production-tier
+    # deployment cannot silently ship crypto-free signing (the
+    # federation SignaturePort) or non-durable signatures (the
+    # ephemeral-key event Signer). Set this true only for an environment
+    # intentionally exercising the prod posture before the wire-tier
+    # adapters land (e.g. a staging deployment).
     allow_insecure_inmemory_signing: bool = False
 
     # Projection worker
@@ -172,6 +193,27 @@ class Settings(BaseSettings):
     # handler latency (~100ms) but short enough that a crashed worker's
     # locked rows recover within a minute.
     idempotency_lock_stale_seconds: int = 60
+
+    # `run_supervisor_enabled` gates the RunSupervisor background runtime (the
+    # first ACTIVE in-loop agent). Default off: deployments opt in explicitly.
+    # `run_supervisor_tick_seconds` is the supervision cadence (>= 0.1s).
+    run_supervisor_enabled: bool = False
+    run_supervisor_tick_seconds: float = 30.0
+
+    # `caution_promoter_enabled` gates the CautionPromoter subscriber (the 2nd
+    # ACTIVE agent). Default off: it is operational only once the
+    # operator-retirement-memory guard lands (it must not re-create a Notice an
+    # operator deliberately retired). The subscriber is deterministic and needs
+    # no LLM, so it registers independently of ANTHROPIC_API_KEY.
+    caution_promoter_enabled: bool = False
+
+    # `clearance_expirer_enabled` gates the ClearanceExpirer background runtime
+    # (the 3rd ACTIVE agent). Default off: deployments opt in explicitly.
+    # `clearance_expirer_tick_seconds` is the sweep cadence (>= 0.1s); clearance
+    # windows elapse on hour/day timescales so the default is far slower than the
+    # RunSupervisor's beam-tracking cadence.
+    clearance_expirer_enabled: bool = False
+    clearance_expirer_tick_seconds: float = 300.0
 
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
@@ -262,6 +304,19 @@ class Settings(BaseSettings):
     # `cora.operation.adapters.control_port_config` for the factory.
     control_port_routes: list[ControlPortRoute] = []
 
+    # ComputePort substrate selection for the conduct runtime.
+    # `in_memory` (default) is the Simulated fake: the conduct surface
+    # is reachable but every job is Simulated, so no real subprocess
+    # runs (right for tests + a generic boot). `local_process` runs
+    # compute jobs as OS subprocesses on the host via
+    # `LocalProcessComputePort`. A single scalar, not a route table:
+    # ComputePort has one real adapter and no routing registry (the
+    # registry is the second-substrate trigger). Read from
+    # `COMPUTE_SUBSTRATE` / `COMPUTE_DEFAULT_TIMEOUT_S`. See
+    # `cora.operation.adapters.compute_port_config`.
+    compute_substrate: ComputeSubstrate = "in_memory"
+    compute_default_timeout_s: float = 3600.0
+
     # Enclosure permit observer (PSS-1, beam-availability slice).
     # Maps each Enclosure name to the read-only Channel Access PV whose
     # value drives its permit (e.g. S02BM-PSS:StaA:SecureM, 1=secure).
@@ -349,6 +404,30 @@ class Settings(BaseSettings):
             msg = (
                 f"idempotency_lock_stale_seconds must be >= 1, got {value}; "
                 "values below 1s would treat every concurrent claim as stale"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_supervisor_tick_seconds")
+    @classmethod
+    def _validate_run_supervisor_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight supervision loop."""
+        if value < 0.1:
+            msg = (
+                f"run_supervisor_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the supervisor"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("clearance_expirer_tick_seconds")
+    @classmethod
+    def _validate_clearance_expirer_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight expiry-sweep loop."""
+        if value < 0.1:
+            msg = (
+                f"clearance_expirer_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the expirer"
             )
             raise ValueError(msg)
         return value

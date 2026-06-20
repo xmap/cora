@@ -12,16 +12,11 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import Allow, AuthzResult, Deny
 from cora.trust import TrustHandlers, UnauthorizedError, wire_trust
-from cora.trust.aggregates.policy.events import (
-    PolicyDefined,
-    event_type_name,
-    to_payload,
-)
 from cora.trust.features import list_permissions
 from cora.trust.features.list_permissions import ListPermissions
+from tests._authz import seed_policy
 from tests.unit._helpers import build_deps
 
 
@@ -63,24 +58,14 @@ async def _seed_policy(
     principals: frozenset[UUID] = frozenset({_ALLOWED_PRINCIPAL}),
     commands: frozenset[str] = frozenset({"RegisterActor", "DefinePolicy", "DefineZone"}),
 ) -> None:
-    event = PolicyDefined(
+    await seed_policy(
+        store,
         policy_id=policy_id,
-        name="Test-policy",
+        permitted_principal_ids=principals,
+        permitted_commands=commands,
         conduit_id=conduit_id,
-        permitted_principal_ids=tuple(principals),
-        permitted_commands=tuple(commands),
         occurred_at=_NOW,
     )
-    new_event = to_new_event(
-        event_type=event_type_name(event),
-        payload=to_payload(event),
-        occurred_at=event.occurred_at,
-        event_id=uuid4(),
-        command_name="DefinePolicy",
-        correlation_id=uuid4(),
-        principal_id=uuid4(),
-    )
-    await store.append("Policy", policy_id, expected_version=0, events=[new_event])
 
 
 def _query(

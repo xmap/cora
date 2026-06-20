@@ -10,14 +10,19 @@ decomposition and the bootstrap-policy surface binding.
 from uuid import UUID
 
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.logging import get_logger
 from cora.infrastructure.routing import (
+    NIL_SENTINEL_ID,
     SYSTEM_HTTP_SURFACE_ID,
     SYSTEM_MCP_STDIO_SURFACE_ID,
     SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID,
     SYSTEM_PRINCIPAL_ID,
 )
+from cora.trust.aggregates.conduit import LOGBOOK_KIND_VERDICT, load_conduit
 from cora.trust.aggregates.policy import load_policy
 from cora.trust.aggregates.surface import load_surface
+
+_log = get_logger(__name__)
 
 # Bootstrap Policy id. Bound to (conduit=nil, surface=HTTP). Production
 # deployments set `TRUST_POLICY_ID=00000000-0000-0000-0000-000000000002`
@@ -110,6 +115,48 @@ async def verify_bootstrap_seed_present(deps: Kernel) -> None:
         raise RuntimeError(msg)
 
 
+async def warn_if_verdict_log_dormant(deps: Kernel) -> None:
+    """Warn (loudly, once at boot) when authz is ENFORCED but the
+    per-Conduit Verdict audit log cannot populate.
+
+    `TrustAuthorize` writes a Verdict row per decision only when the
+    conduit a command flows through has an open verdict logbook. Handlers
+    currently route every command through the nil-sentinel conduit
+    (surface / conduit injection is not wired yet), and no verdict
+    logbook is seeded there, so the audit log silently stays empty even
+    with enforcement on. Surfacing it here turns a silent gap into a
+    boot-time heads-up rather than a discovery during a compliance audit.
+    Authz decisions are still captured in structured logs
+    (`trust_authorize.allow` / `trust_authorize.deny`) and OTel spans.
+
+    Non-fatal by design: a known-limitation notice, not a misconfig. When
+    `trust_policy_id` is unset (AllowAll) there are no decisions to record
+    and no warning is emitted.
+    """
+    settings = deps.settings
+    if settings.trust_policy_id is None:
+        return
+
+    conduit = await load_conduit(deps.event_store, NIL_SENTINEL_ID)
+    if conduit is not None and conduit.logbooks.get(LOGBOOK_KIND_VERDICT) is not None:
+        return
+
+    _log.warning(
+        "trust_authorize.verdict_log_dormant",
+        trust_policy_id=str(settings.trust_policy_id),
+        conduit_id=str(NIL_SENTINEL_ID),
+        detail=(
+            "Authorization is ENFORCED but the per-Conduit Verdict audit log "
+            "will NOT populate: handlers route through the nil-sentinel "
+            "conduit, which has no open verdict logbook (conduit injection is "
+            "not wired yet). Authz decisions are still recorded in structured "
+            "logs (trust_authorize.allow / trust_authorize.deny) and OTel "
+            "spans. See memory project_authorization_envelope_design (watch "
+            "item 6) + project_conduit_injection_design."
+        ),
+    )
+
+
 __all__ = [
     "SYSTEM_BOOTSTRAP_POLICY_ID",
     "SYSTEM_HTTP_SURFACE_ID",
@@ -117,4 +164,5 @@ __all__ = [
     "SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID",
     "SYSTEM_PRINCIPAL_ID",
     "verify_bootstrap_seed_present",
+    "warn_if_verdict_log_dormant",
 ]

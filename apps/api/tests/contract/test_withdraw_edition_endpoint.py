@@ -20,27 +20,15 @@ tests/integration/test_edition_lifecycle_postgres.py). These contract
 tests cover the error-mapping branches reachable in TestClient.
 """
 
-# pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false
-
-import asyncio
 from collections.abc import Iterator
-from datetime import UTC, datetime
-from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
 from cora.data.aggregates.dataset import DATASET_CHECKSUM_SHA256_HEX_LENGTH
-from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
-from cora.trust.aggregates.policy.events import (
-    PolicyDefined,
-    event_type_name,
-    to_payload,
-)
+from tests._authz import trust_authorize_client
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
 
@@ -126,36 +114,6 @@ def test_post_withdraw_edition_returns_422_for_empty_reason() -> None:
 # ---------- 403 Authorize.Deny via TrustAuthorize policy ----------
 
 
-def _seed_policy(
-    app: FastAPI,
-    *,
-    policy_id: UUID,
-    permitted_principal: UUID,
-    permitted_commands: frozenset[str],
-) -> None:
-    event = PolicyDefined(
-        policy_id=policy_id,
-        name="Withdraw-edition-authz-test-policy",
-        conduit_id=UUID(int=0),
-        permitted_principal_ids=(permitted_principal,),
-        permitted_commands=tuple(permitted_commands),
-        occurred_at=datetime.now(tz=UTC),
-        surface_id=SYSTEM_HTTP_SURFACE_ID,
-    )
-    new_event = to_new_event(
-        event_type=event_type_name(event),
-        payload=to_payload(event),
-        occurred_at=event.occurred_at,
-        event_id=uuid4(),
-        command_name="DefinePolicy",
-        correlation_id=uuid4(),
-        principal_id=uuid4(),
-    )
-    asyncio.run(
-        app.state.deps.event_store.append("Policy", policy_id, 0, [new_event]),
-    )
-
-
 _PERMITTED_SETUP_COMMANDS: frozenset[str] = frozenset(
     {
         "RegisterDataset",
@@ -174,22 +132,13 @@ def withdraw_authz_app(
     policy_id = UUID("01900000-0000-7000-8000-00000000e901")
     p1 = UUID("01900000-0000-7000-8000-00000000e911")
     p2 = UUID("01900000-0000-7000-8000-00000000e912")
-
-    monkeypatch.setenv("APP_ENV", "test")
-    monkeypatch.setenv("TRUST_POLICY_ID", str(policy_id))
-
-    client = TestClient(create_app())
-    client.__enter__()
-    _seed_policy(
-        cast("FastAPI", client.app),
-        policy_id=policy_id,
-        permitted_principal=p1,
+    with trust_authorize_client(
+        monkeypatch,
+        permitted_principal_ids={p1},
         permitted_commands=_PERMITTED_SETUP_COMMANDS,
-    )
-    try:
+        policy_id=policy_id,
+    ) as client:
         yield client, p1, p2
-    finally:
-        client.__exit__(None, None, None)
 
 
 @pytest.mark.contract

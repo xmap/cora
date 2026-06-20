@@ -68,7 +68,7 @@ class AgentSeedIdentity:
     version: str
     description: str
     model_ref: ModelRef
-    prompt_template_id: UUID
+    prompt_template_id: UUID | None
     agent_event_id: UUID
     actor_event_id: UUID
     correlation_id: UUID

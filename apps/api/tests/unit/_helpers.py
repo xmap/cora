@@ -120,6 +120,7 @@ def build_deps(
     ids: list[UUID] | None = None,
     now: datetime | None = None,
     event_store: EventStore | None = None,
+    trust_policy_id: UUID | None = None,
     deny: bool = False,
     authz: Authorize | None = None,
     llm: LLM | None = None,
@@ -142,6 +143,10 @@ def build_deps(
     `authz` overrides the default authorize port (use this for
     tests injecting a recording / counting / specific-reason
     Authorize stub). When `authz` is set, `deny` is ignored.
+
+    `trust_policy_id` sets `Settings.trust_policy_id` (default None =
+    AllowAll posture). Use this for tests that exercise startup checks
+    keyed on whether real authz is configured.
 
     `llm` wires a test LLM (typically
     `FakeLLM`) when the handler under test consumes one
@@ -208,7 +213,7 @@ def build_deps(
     from cora.federation.adapters.in_memory_signature_port import InMemorySignaturePort
 
     return make_inmemory_kernel(
-        settings=Settings(app_env="test"),  # type: ignore[call-arg]
+        settings=Settings(app_env="test", trust_policy_id=trust_policy_id),  # type: ignore[call-arg]
         clock=FakeClock(now or DEFAULT_NOW),
         id_generator=FixedIdGenerator(list(ids or [])),
         authz=authz,

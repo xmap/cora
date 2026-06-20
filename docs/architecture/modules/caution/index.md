@@ -167,6 +167,7 @@ The supersession lineage walks `superseded_by_caution_id` forward (to find the h
 | Operation | shared-id-with | `ProcedureTarget.procedure_id` references the Procedure the Caution attaches to |
 | Access | shared-id-with | `Caution.author_actor_id` references the Actor who first registered the Caution (or the chain's earliest ancestor) |
 | Decision | shared-id-with | Promotion of a CautionDrafter proposal into a Caution copies the originating `Decision.id` onto the resulting Caution as provenance; the link is by value and not verified at write time |
+| Agent | written-by | the deterministic CautionPromoter agent auto-registers a Caution from a high-confidence, Notice-only `CautionProposal` Decision, performing the same `CautionRegistered` write as the operator-initiated `promote_caution_proposal` slice and recording a `CautionPromotion` Decision; Notice-only and off by default, so higher severities stay operator-gated |
 | Run | upstream-of | `Run.start` calls `CautionLookup.find_for_run(subject_id, asset_ids, procedure_ids)` against `proj_caution_summary`; matching Active Cautions are returned as a banner on the response, never gate the start |
 | (any) | writes-to via `append_streams` | `supersede_caution` writes `CautionSuperseded` to the parent stream and `CautionRegistered` to the child stream atomically in a single Postgres transaction; all-or-nothing, a `ConcurrencyError` on either stream rolls back the whole commit |
 

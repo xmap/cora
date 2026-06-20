@@ -35,6 +35,7 @@ from cora.subject.features.register_subject import RegisterSubject
 from cora.trust.authorize import TrustAuthorize
 from cora.trust.features import define_policy
 from cora.trust.features.define_policy import DefinePolicy
+from tests._authz import seed_policy
 from tests.integration._helpers import build_postgres_deps
 from tests.unit.subject._helpers import seed_active_asset
 
@@ -66,22 +67,24 @@ async def _seed_policy(
     db_pool: asyncpg.Pool,
     *,
     policy_id: UUID,
-    policy_event_id: UUID,
     permitted_commands: frozenset[str],
     name: str,
 ) -> None:
-    """Helper: define a Trust policy via AllowAll-wired deps."""
-    bootstrap = _bootstrap_deps(db_pool, ids=[policy_id, policy_event_id])
-    await define_policy.bind(bootstrap)(
-        DefinePolicy(
-            name=name,
-            conduit_id=_CONDUIT_ID,
-            permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
-            permitted_commands=permitted_commands,
-            surface_id=SYSTEM_HTTP_SURFACE_ID,
-        ),
-        principal_id=_BOOTSTRAP_PRINCIPAL,
-        correlation_id=_CORRELATION_ID,
+    """Helper: seed a Trust policy directly into the event store.
+
+    Delegates to the shared `seed_policy` helper, preserving the
+    file's permitted principal, conduit, surface, and timestamp so the
+    gated handlers (which call on `SYSTEM_HTTP_SURFACE_ID`) strict-match.
+    """
+    await seed_policy(
+        PostgresEventStore(db_pool),
+        policy_id=policy_id,
+        permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
+        permitted_commands=permitted_commands,
+        conduit_id=_CONDUIT_ID,
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
+        name=name,
+        occurred_at=_NOW,
     )
 
 
@@ -98,14 +101,12 @@ async def test_trust_policy_gates_subject_register_for_permitted_principal(
     separate BC: a single Policy aggregate must gate commands across
     every BC's wire chain identically."""
     policy_id = UUID("01900000-0000-7000-8000-0000000bb101")
-    policy_event_id = UUID("01900000-0000-7000-8000-0000000bb1e1")
     subject_id = UUID("01900000-0000-7000-8000-0000000bb102")
     register_event_id = UUID("01900000-0000-7000-8000-0000000bb1e2")
 
     await _seed_policy(
         db_pool,
         policy_id=policy_id,
-        policy_event_id=policy_event_id,
         permitted_commands=frozenset({"RegisterSubject"}),
         name="GateB-PermitRegisterSubject",
     )
@@ -132,14 +133,12 @@ async def test_trust_policy_gates_subject_register_denies_other_principal(
     chain raises its own application-error class so log filters /
     aggregator queries can distinguish 403s by source BC."""
     policy_id = UUID("01900000-0000-7000-8000-0000000bb201")
-    policy_event_id = UUID("01900000-0000-7000-8000-0000000bb2e1")
     spare_a = UUID("01900000-0000-7000-8000-0000000bb202")
     spare_b = UUID("01900000-0000-7000-8000-0000000bb2e2")
 
     await _seed_policy(
         db_pool,
         policy_id=policy_id,
-        policy_event_id=policy_event_id,
         permitted_commands=frozenset({"RegisterSubject"}),
         name="GateB-DenyOtherForSubject",
     )
@@ -169,7 +168,6 @@ async def test_trust_policy_gates_subject_update_style_command(
     a refactor that drops the call would break authz silently."""
     # Setup: define a policy permitting both RegisterSubject and MountSubject.
     policy_id = UUID("01900000-0000-7000-8000-0000000bb301")
-    policy_event_id = UUID("01900000-0000-7000-8000-0000000bb3e1")
     subject_id = UUID("01900000-0000-7000-8000-0000000bb302")
     register_event_id = UUID("01900000-0000-7000-8000-0000000bb3e2")
     mount_event_id = UUID("01900000-0000-7000-8000-0000000bb3e3")
@@ -177,7 +175,6 @@ async def test_trust_policy_gates_subject_update_style_command(
     await _seed_policy(
         db_pool,
         policy_id=policy_id,
-        policy_event_id=policy_event_id,
         permitted_commands=frozenset({"RegisterSubject", "MountSubject"}),
         name="GateB-PermitRegisterAndMount",
     )
@@ -248,7 +245,6 @@ async def test_trust_policy_gates_access_handler_with_distinct_error_class(
     above, but for Access — confirming the convention holds across
     BCs even when they share the same cross-BC `Authorize` adapter."""
     policy_id = UUID("01900000-0000-7000-8000-0000000bb401")
-    policy_event_id = UUID("01900000-0000-7000-8000-0000000bb4e1")
     actor_id = UUID("01900000-0000-7000-8000-0000000bb402")
     register_event_id = UUID("01900000-0000-7000-8000-0000000bb4e2")
     spare_event_id = UUID("01900000-0000-7000-8000-0000000bb4e3")
@@ -257,7 +253,6 @@ async def test_trust_policy_gates_access_handler_with_distinct_error_class(
     await _seed_policy(
         db_pool,
         policy_id=policy_id,
-        policy_event_id=policy_event_id,
         permitted_commands=frozenset({"RegisterActor"}),
         name="GateB-PermitRegisterActorOnly",
     )

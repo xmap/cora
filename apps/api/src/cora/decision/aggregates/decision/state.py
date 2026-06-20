@@ -289,6 +289,112 @@ ReactionDismissalChoice = Literal["EventDismissed"]
 REACTION_DISMISSAL_CHOICES: Final = frozenset({"EventDismissed"})
 
 
+# RunSupervisor agent writes one Decision per supervision disposition on
+# an in-flight Run. Open-ended convention identical to RunDebrief /
+# CautionProposal; the closed choice vocabulary lives in the
+# `RunSupervisionChoice` Literal below. See
+# [[project-run-supervisor-design]] for the full grounding.
+DECISION_CONTEXT_RUN_SUPERVISION = "RunSupervision"
+
+
+# Closed `choice` value set for `context = "RunSupervision"` Decisions.
+# Projection-validated, not domain-enforced (the open-string
+# `DecisionContext` + `DecisionChoice` shape is preserved). Six values:
+#
+#   - `Continue`              -- no wind-down trigger met; no command
+#                               issued (the NoAction-bias default).
+#   - `Hold`                  -- issues HoldRun (pause, resumable).
+#   - `Stop`                  -- issues StopRun (controlled early exit).
+#   - `Abort`                 -- issues AbortRun (data-unusable exit).
+#   - `SupervisionDeferred`   -- audit-fallback: signal stale / absent /
+#                               unevaluable, OR a state race made the
+#                               command a no-op; no wind-down taken.
+#                               Qualified with the agent work-noun
+#                               (parallel to DebriefDeferred) so it does
+#                               not collide in the shared, globally-
+#                               filtered DecisionChoice projection.
+#   - `SupervisionConflicted` -- audit-only: lost the per-Run lease race
+#                               to another supervisor evaluator (parallel
+#                               to DebriefConflicted / CautionDraftConflicted).
+RunSupervisionChoice = Literal[
+    "Continue",
+    "Hold",
+    "Stop",
+    "Abort",
+    "SupervisionDeferred",
+    "SupervisionConflicted",
+]
+RUN_SUPERVISION_CHOICES: Final = frozenset(
+    {
+        "Continue",
+        "Hold",
+        "Stop",
+        "Abort",
+        "SupervisionDeferred",
+        "SupervisionConflicted",
+    }
+)
+
+
+# CautionPromoter agent writes one Decision per CautionProposal it
+# evaluates. Open-ended convention identical to CautionProposal; the
+# closed choice vocabulary lives in the `CautionPromotionChoice` Literal
+# below. See [[project-caution-promoter-design]] for the full grounding.
+DECISION_CONTEXT_CAUTION_PROMOTION = "CautionPromotion"
+
+
+# Closed `choice` value set for `context = "CautionPromotion"` Decisions.
+# Projection-validated, not domain-enforced. Three values:
+#
+#   - `Promote`              -- the proposal met the auto-promote gate; a
+#                              live Caution was registered.
+#   - `PromotionDeferred`    -- gate not met (severity above Notice, low
+#                              confidence, invalid target, or a Notice the
+#                              operator already retired). Carries the
+#                              Promotion work-noun (parallel to
+#                              SupervisionDeferred / DebriefDeferred) so it
+#                              does not collide in the shared, globally-
+#                              filtered DecisionChoice projection.
+#   - `PromotionConflicted`  -- an active Caution already covers the target;
+#                              no duplicate registered.
+CautionPromotionChoice = Literal[
+    "Promote",
+    "PromotionDeferred",
+    "PromotionConflicted",
+]
+CAUTION_PROMOTION_CHOICES: Final = frozenset(
+    {
+        "Promote",
+        "PromotionDeferred",
+        "PromotionConflicted",
+    }
+)
+
+
+# ClearanceExpirer agent writes one Decision per safety Clearance it
+# auto-expires. Open-ended convention identical to RunSupervision /
+# CautionPromotion; the closed choice vocabulary lives in the
+# `ClearanceExpiryChoice` Literal below. The agent is purely positive: it
+# records a Decision only when it expires a clearance (a not-yet-elapsed
+# clearance is simply not selected, so there is no Deferred/Conflicted
+# disposition). The context noun is `ClearanceExpiry` (abstract
+# action-noun, family-clean with RunSupervision / CautionPromotion); the
+# agent kind is `ClearanceExpirer` (the doer) -- a deliberate Expiry-vs-
+# Expirer asymmetry across the context-naming and R5 doer axes, not drift.
+# See [[project-clearance-window-expirer-design]] for the full grounding.
+DECISION_CONTEXT_CLEARANCE_EXPIRY = "ClearanceExpiry"
+
+
+# Closed `choice` value set for `context = "ClearanceExpiry"` Decisions.
+# Projection-validated, not domain-enforced. Single value today (the agent
+# only ever acts to expire); the Literal exists for symmetry with the
+# sibling agent choices and so a future qualified disposition can land
+# additively. `Expire` is unique in the shared, globally-filtered
+# DecisionChoice projection column.
+ClearanceExpiryChoice = Literal["Expire"]
+CLEARANCE_EXPIRY_CHOICES: Final = frozenset({"Expire"})
+
+
 # acceptance-signal capture: closed 3-value rating set on
 # the new `DecisionRated` event. `useful` and `misleading` are
 # operator-affirmative; `ignored` is a positive marker ("operator saw

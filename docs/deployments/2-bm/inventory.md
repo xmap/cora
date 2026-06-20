@@ -12,7 +12,7 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `SampleTable` | `Table` | (none) | `2-BM` | `axis_layout=translation_xyz` | live |
 | `RotaryDriveChassis` | `Housing` | `aerotech_tm3a` | `2-BM` | serial `160591-A-1-1`, order `730578` | live |
 | `RotaryDrive` | `MotionController` | `aerotech_ensemble_ml` | `RotaryDriveChassis` | serial `730792/1`, `axis_count=1`, `Aerotech_Native` | live |
-| `Rotary` | `RotaryStage` | `aerotech_abrs250mp` | `LaminographyPitch` | -360..360 deg, `max_speed=720 deg/s`, `encoder_resolution=0.000676 deg` | live |
+| `Rotary` | `RotaryStage` | `aerotech_abrs250mp` | `LaminographyPitch` | -360..360 deg, `max_speed=720 deg/s` (operational), `aperture=35 mm`, `encoder_resolution=0.000676 deg` | live |
 | `SampleStageDrive` | `MotionController` | `oms_vme58` | `2-BM` | `axis_count=91`, `OMS_VME` | live |
 | `FrontEndDrive` | `MotionController` | `oms_vme58` | `2-BM` | `axis_count=91`, `OMS_VME` | live |
 | `Mirror` | `Mirror` | (none) | `MirrorTable` | driven by `FrontEndDrive` | live |
@@ -80,7 +80,7 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 | `FrontEndDrive` | `serial_number=unknown-pending-confirmation` (DRIVE-1); `firmware_version=unknown-pending-confirmation` (DRIVE-2); `axis_count=91`; `protocol=OMS_VME`; crate `ioc2bma`, no IP (VME-bus) |
 | `HexapodDrive` | `serial_number=486125-01`; `firmware_version=unknown-pending-confirmation` (DRIVE-2); `axis_count=6`; `protocol=Aerotech_Native`; Automation1-iXR3 in separate rack |
 | `Timing` | `serial_number=unknown-pending-confirmation` (TIME-1); `firmware_version=unknown-pending-confirmation` (TIME-1); `output_channel_count=unknown-pending-confirmation` (TIME-1); `protocol=EPICS`; `2bmbMZ1:SG:` |
-| `Rotary` | `min_position=-360 deg`; `max_position=360 deg`; `max_speed=720 deg/s`; `encoder_resolution=0.000676 deg`; `homing_offset=0 deg`; altid serial `146853-A-1-1-X`; part `ABRS-250MP-M-AS` |
+| `Rotary` | `min_position=-360 deg`; `max_position=360 deg`; `max_speed=720 deg/s` (operational soft limit); `max_speed_datasheet=3000 deg/s` (500 rpm); `encoder_resolution=0.000676 deg`; `homing_offset=0 deg`; `aperture=35 mm`; `accuracy_rotation=2 arcsec`; `repeatability_rotation=1 arcsec`; `load_capacity_axial=66 kg`; `load_capacity_radial=36 kg`; `load_capacity_tilt=28 Nm`; `stage_mass=15.6 kg`; altid serial `146853-A-1-1-X`; part `ABRS-250MP-M-AS`; [datasheet](#engineering-drawings) on file (#164) |
 | `SampleTop_X` | `min_position=-10 mm`; `max_position=10 mm`; `max_speed=1 mm/s`; `encoder_resolution=0.0005 mm`; channel `2bmb:m18` |
 | `SampleTop_Z` | same Model `kohzu_cyat070` + controller as `SampleTop_X`; channel `2bmb:m17` |
 | `Hexapod` | `travel_x=55 mm`, `travel_y=60 mm`, `travel_z=25 mm`, `travel_a=15 deg`, `travel_b=15 deg`, `travel_c=30 deg`; `max_speed_translation=25 mm/s`, `max_speed_rotation=15 deg/s`; `resolution_translation=20 nm`, `resolution_rotation=0.2 urad`; `accuracy_translation=1 um`, `accuracy_rotation=10 urad`; `load_capacity_vertical=45 kg`, `load_capacity_horizontal=21 kg`; `stage_mass=12 kg`; altid serial `486060-01` |
@@ -115,12 +115,13 @@ Controller back-references: `RotaryDrive`->`Rotary.controller_id`; `HexapodDrive
 
 ## Engineering drawings
 
-One canonical `(system, number, revision)` triple per Asset. Optique Peter `MAN-11863` (rev `0521-0465-A`) is the shared housing manual covering every Microscope-bound constituent.
+One canonical `(system, number, revision)` triple per Asset, except `Rotary`, which cites both its per-unit vendor drawing and the ABRS family datasheet. Optique Peter `MAN-11863` (rev `0521-0465-A`) is the shared housing manual covering every Microscope-bound constituent.
 
 | Asset | Drawing | System |
 | --- | --- | --- |
 | `Hexapod` | `Hex300-Data-Sheet` rev `D20250203` | `EDMS` |
 | `Rotary` | `630C2125` rev `(-)` | `EDMS` |
+| `Rotary` | [ABRS series datasheet](https://de.aerotech.com/wp-content/uploads/2021/01/abrs.pdf) (2021-01) | Aerotech |
 | `RotaryDriveChassis` | `630D2079` rev `H` | `EDMS` |
 | `PropagationDistance` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
 | `Turret` | `MAN-11863` rev `0521-0465-A` | `EDMS` |

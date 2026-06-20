@@ -6,20 +6,15 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import (
     Allow,
     Deny,
 )
 from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust import TrustHandlers, UnauthorizedError, wire_trust
-from cora.trust.aggregates.policy.events import (
-    PolicyDefined,
-    event_type_name,
-    to_payload,
-)
 from cora.trust.features import evaluate_policy
 from cora.trust.features.evaluate_policy import EvaluatePolicy
+from tests._authz import seed_policy
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -50,25 +45,15 @@ async def _seed_policy(
     policy binds the HTTP Surface so `evaluate` (strict surface match)
     can Allow a query carrying the same surface.
     """
-    event = PolicyDefined(
+    await seed_policy(
+        store,
         policy_id=policy_id,
-        name="Test-policy",
+        permitted_principal_ids=principals,
+        permitted_commands=commands,
         conduit_id=conduit_id,
-        permitted_principal_ids=tuple(principals),
-        permitted_commands=tuple(commands),
-        occurred_at=_NOW,
         surface_id=surface_id,
+        occurred_at=_NOW,
     )
-    new_event = to_new_event(
-        event_type=event_type_name(event),
-        payload=to_payload(event),
-        occurred_at=event.occurred_at,
-        event_id=uuid4(),
-        command_name="DefinePolicy",
-        correlation_id=uuid4(),
-        principal_id=uuid4(),
-    )
-    await store.append("Policy", policy_id, expected_version=0, events=[new_event])
 
 
 def _query(
