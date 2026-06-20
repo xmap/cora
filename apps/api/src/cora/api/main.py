@@ -219,7 +219,14 @@ def _settings_for_app() -> Settings:
     return Settings()  # type: ignore[call-arg]  # Pydantic loads from env
 
 
-_PROD_APP_ENVS = frozenset({"prod", "production"})
+# Production-tier app environments that must run the full hardened
+# posture: a real authenticated principal, no permit-everyone AllowAll
+# default, and HTTPS-only IdPs. `staging` is included deliberately: a
+# pre-prod box typically handles realistic data and is network-reachable,
+# so it should not silently run wide-open. Genuinely-casual staging can
+# still opt out per-check (ALLOW_PERMISSIVE_AUTHZ, etc.). Dev / test /
+# local and any other env name keep the permissive default.
+_PROD_LIKE_APP_ENVS = frozenset({"prod", "production", "staging"})
 
 
 def _enforce_production_principal_policy(settings: Settings) -> None:
@@ -229,10 +236,11 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
     THREE numbered conditions, plus the F11 transport-security check
     below, all producing the same fail-fast:
 
-    1. `app_env in {prod, production}` without
+    1. `app_env in {prod, production, staging}` without
        `require_authenticated_principal=True`. The legacy Phase-3e
        gate: header-less prod requests would otherwise run as
        SYSTEM_PRINCIPAL_ID under whichever Authorize port is wired.
+       `staging` is treated as production-tier (see `_PROD_LIKE_APP_ENVS`).
 
     2. `trust_policy_id is not None` without
        `require_authenticated_principal=True`, when `app_env` is
@@ -250,8 +258,8 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
        constructible. The exemption is safe because `app_env=test`
        is never operator-set in deployment configs.
 
-    3. `app_env in {prod, production}` with `trust_policy_id is None`
-       and `allow_permissive_authz` not set. A None `trust_policy_id`
+    3. `app_env in {prod, production, staging}` with `trust_policy_id is
+       None` and `allow_permissive_authz` not set. A None `trust_policy_id`
        wires `AllowAllAuthorize`, which permits every command; shipping
        that permit-everyone stub to production is almost always a
        misconfiguration. Refuse boot unless the operator consciously
@@ -270,14 +278,15 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
     # Normalize once so case or surrounding whitespace in APP_ENV cannot
     # silently bypass the prod gates: pydantic case-folds env-var NAMES,
     # not VALUES, so a raw "PROD" / "Production " would otherwise miss
-    # `_PROD_APP_ENVS` and ship AllowAllAuthorize.
+    # `_PROD_LIKE_APP_ENVS` and ship AllowAllAuthorize.
     app_env = settings.app_env.strip().lower()
-    if app_env in _PROD_APP_ENVS and not settings.require_authenticated_principal:
+    if app_env in _PROD_LIKE_APP_ENVS and not settings.require_authenticated_principal:
         msg = (
             f"app_env={settings.app_env!r} requires "
             "require_authenticated_principal=True (set "
             "REQUIRE_AUTHENTICATED_PRINCIPAL=true). The permissive "
-            "SYSTEM_PRINCIPAL_ID fallback is not safe for production."
+            "SYSTEM_PRINCIPAL_ID fallback is not safe for a "
+            "production-tier environment (prod / production / staging)."
         )
         raise RuntimeError(msg)
     if (
@@ -302,7 +311,7 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
     # The per-adapter check in `JwtTokenVerifier` / `IntrospectionTokenVerifier`
     # CAN'T see `app_env`; this Settings-level check refuses boot when
     # any IdP entry opts in to insecure URLs under prod.
-    if app_env in _PROD_APP_ENVS:
+    if app_env in _PROD_LIKE_APP_ENVS:
         for idp in settings.identity_providers:
             if idp.allow_insecure_jwks_url or idp.allow_insecure_introspection_url:
                 msg = (
@@ -325,7 +334,7 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
     # specific transport-security (F11) message wins when both apply;
     # non-prod envs keep the permissive default for dev / test.
     if (
-        app_env in _PROD_APP_ENVS
+        app_env in _PROD_LIKE_APP_ENVS
         and settings.trust_policy_id is None
         and not settings.allow_permissive_authz
     ):

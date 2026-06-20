@@ -324,14 +324,30 @@ def test_create_app_boots_prod_with_explicit_permissive_optin(
 
 
 @pytest.mark.contract
+def test_create_app_refuses_staging_with_permissive_authz_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Staging is production-tier: it must not silently run AllowAll
+    either. require=True isolates this from condition 1; the AllowAll
+    gate refuses boot because ALLOW_PERMISSIVE_AUTHZ is not set."""
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
+    monkeypatch.delenv("TRUST_POLICY_ID", raising=False)
+    monkeypatch.delenv("ALLOW_PERMISSIVE_AUTHZ", raising=False)
+    with pytest.raises(RuntimeError, match="ALLOW_PERMISSIVE_AUTHZ"):
+        create_app()
+
+
+@pytest.mark.contract
 @pytest.mark.parametrize(
     "env_value",
-    # Includes case / whitespace variants: the guard normalizes APP_ENV
-    # (strip + lower) so "PROD" or " Production " cannot silently bypass
-    # the prod gates. pydantic case-folds env-var NAMES, not VALUES.
-    ["prod", "production", "PROD", "Production", " prod "],
+    # Production-tier spellings + case / whitespace variants: the guard
+    # normalizes APP_ENV (strip + lower) so "PROD" or " Production "
+    # cannot silently bypass the gates (pydantic case-folds env-var
+    # NAMES, not VALUES). "staging" is production-tier too.
+    ["prod", "production", "staging", "PROD", "Production", " prod "],
 )
-def test_startup_gate_recognizes_both_prod_app_env_spellings(
+def test_startup_gate_recognizes_prod_like_app_envs(
     monkeypatch: pytest.MonkeyPatch,
     env_value: str,
 ) -> None:

@@ -91,20 +91,21 @@ class Settings(BaseSettings):
     # back to `SYSTEM_PRINCIPAL_ID`. Default false matches the
     # dev / test posture where the fallback is convenient.
     # The startup check in `create_app()` refuses to boot when
-    # `app_env in {"prod", "production"}` and this is False, so a
-    # production deployment cannot accidentally launch with the
-    # permissive default.
+    # `app_env` is production-tier ({"prod", "production", "staging"}) and
+    # this is False, so a production-tier deployment cannot accidentally
+    # launch with the permissive default.
     require_authenticated_principal: bool = False
 
     # Escape hatch for intentionally running the permit-everyone
-    # `AllowAllAuthorize` stub (no command gating) in production, e.g.
-    # an airgapped single-operator pilot that genuinely wants no authz.
-    # Default false: under `app_env in {"prod", "production"}` with no
-    # `trust_policy_id` set, `create_app()` refuses to boot unless this
-    # is True, so a prod deployment cannot silently ship the permissive
-    # default. Non-prod envs ignore this (permissive is the dev / test
-    # posture). Mirrors the per-IdP `allow_insecure_*` opt-in shape:
-    # the insecure choice is allowed, but only as a conscious one.
+    # `AllowAllAuthorize` stub (no command gating) in a production-tier
+    # env, e.g. an airgapped single-operator pilot that genuinely wants
+    # no authz. Default false: under production-tier `app_env`
+    # ({"prod", "production", "staging"}) with no `trust_policy_id` set,
+    # `create_app()` refuses to boot unless this is True, so such a
+    # deployment cannot silently ship the permissive default. Other envs
+    # ignore this (permissive is the dev / test posture). Mirrors the
+    # per-IdP `allow_insecure_*` opt-in shape: the insecure choice is
+    # allowed, but only as a conscious one.
     allow_permissive_authz: bool = False
 
     # Projection worker
