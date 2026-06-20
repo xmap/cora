@@ -45,6 +45,22 @@ def test_decide_emits_run_resumed_for_held_state() -> None:
 
 
 @pytest.mark.unit
+def test_decide_threads_decided_by_decision_id_onto_event() -> None:
+    """An autonomous (RunSupervisor) resume links its Decision; the
+    decider passes the id straight through to RunResumed."""
+    state = _run(status=RunStatus.HELD)
+    decision_id = uuid4()
+    events = resume_run.decide(
+        state=state,
+        command=ResumeRun(run_id=state.id, decided_by_decision_id=decision_id),
+        now=_NOW,
+    )
+    assert events == [
+        RunResumed(run_id=state.id, decided_by_decision_id=decision_id, occurred_at=_NOW)
+    ]
+
+
+@pytest.mark.unit
 def test_decide_raises_run_not_found_when_state_is_none() -> None:
     target_id = uuid4()
     with pytest.raises(RunNotFoundError) as exc_info:

@@ -757,8 +757,20 @@ def test_to_payload_serializes_run_resumed_to_primitives() -> None:
     event = RunResumed(run_id=run_id, occurred_at=_NOW)
     assert to_payload(event) == {
         "run_id": str(run_id),
+        "decided_by_decision_id": None,
         "occurred_at": _NOW.isoformat(),
     }
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_run_resumed_with_decision_id() -> None:
+    decision_id = uuid4()
+    event = RunResumed(
+        run_id=uuid4(),
+        decided_by_decision_id=decision_id,
+        occurred_at=_NOW,
+    )
+    assert to_payload(event)["decided_by_decision_id"] == str(decision_id)
 
 
 @pytest.mark.unit
@@ -776,8 +788,37 @@ def test_from_stored_rebuilds_run_resumed() -> None:
 
 
 @pytest.mark.unit
+def test_from_stored_rebuilds_run_resumed_without_decision_id_key_as_none() -> None:
+    """Forward-compat: pre-supervisor RunResumed payloads have no
+    decided_by_decision_id key; the `.get(..., None)` fold rebuilds None."""
+    run_id = uuid4()
+    stored = _stored(
+        "RunResumed",
+        {
+            "run_id": str(run_id),
+            "occurred_at": _NOW.isoformat(),
+            # NOTE: no decided_by_decision_id key — pre-supervisor shape.
+        },
+    )
+    event = from_stored(stored)
+    assert isinstance(event, RunResumed)
+    assert event.decided_by_decision_id is None
+
+
+@pytest.mark.unit
 def test_run_resumed_round_trips() -> None:
     original = RunResumed(run_id=uuid4(), occurred_at=_NOW)
+    stored = _stored("RunResumed", to_payload(original))
+    assert from_stored(stored) == original
+
+
+@pytest.mark.unit
+def test_run_resumed_with_decision_id_round_trips() -> None:
+    original = RunResumed(
+        run_id=uuid4(),
+        decided_by_decision_id=uuid4(),
+        occurred_at=_NOW,
+    )
     stored = _stored("RunResumed", to_payload(original))
     assert from_stored(stored) == original
 

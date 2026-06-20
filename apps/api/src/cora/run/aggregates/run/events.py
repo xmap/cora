@@ -321,10 +321,19 @@ class RunResumed:
     """A held Run was resumed (Held → Running).
 
     Slim payload by design — resume is just permission to proceed.
+
+    `decided_by_decision_id` (mirrors RunHeld): optional Decision-
+    causation link to the Decision BC record that justified this resume.
+    None for operator-routed resumes; set when the in-process
+    RunSupervisor issues an autonomous, safety-gated resume. NO existence
+    check per the cross-BC eventual-consistency stance. Forward-compat
+    via `payload.get("decided_by_decision_id")` returning None for legacy
+    pre-supervisor streams.
     """
 
     run_id: UUID
     occurred_at: datetime
+    decided_by_decision_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -662,9 +671,16 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 ),
                 "occurred_at": occurred_at.isoformat(),
             }
-        case RunResumed(run_id=run_id, occurred_at=occurred_at):
+        case RunResumed(
+            run_id=run_id,
+            decided_by_decision_id=decided_by_decision_id,
+            occurred_at=occurred_at,
+        ):
             return {
                 "run_id": str(run_id),
+                "decided_by_decision_id": (
+                    str(decided_by_decision_id) if decided_by_decision_id is not None else None
+                ),
                 "occurred_at": occurred_at.isoformat(),
             }
         case RunCompleted(
@@ -872,13 +888,21 @@ def from_stored(stored: StoredEvent) -> RunEvent:
 
             return deserialize_or_raise("RunHeld", _build_run_held)
         case "RunResumed":
-            return deserialize_or_raise(
-                "RunResumed",
-                lambda: RunResumed(
+
+            def _build_run_resumed() -> RunResumed:
+                # `decided_by_decision_id` optional. Forward-compat additive:
+                # legacy pre-supervisor streams replay without the key via
+                # `.get(..., None)`.
+                raw_decided_by_resumed = payload.get("decided_by_decision_id")
+                return RunResumed(
                     run_id=UUID(payload["run_id"]),
+                    decided_by_decision_id=(
+                        UUID(raw_decided_by_resumed) if raw_decided_by_resumed is not None else None
+                    ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
-                ),
-            )
+                )
+
+            return deserialize_or_raise("RunResumed", _build_run_resumed)
         case "RunCompleted":
             return deserialize_or_raise(
                 "RunCompleted",
