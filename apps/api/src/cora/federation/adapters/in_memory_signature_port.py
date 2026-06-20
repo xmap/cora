@@ -12,11 +12,17 @@ Dict-backed, no crypto. Test entry verbs:
     a fresh envelope to return on `sign(canonicalized, ...)` when
     `canonicalized.adapter_version` matches.
 
+This adapter is wired by default in `cora.api.main`; because it does
+no crypto and rubber-stamps every verify, the prod boot guard
+`_enforce_production_signing_posture` refuses to boot under
+`app_env in {prod, production}` while it is still wired (escape hatch:
+`ALLOW_INSECURE_INMEMORY_SIGNING=true` for staging).
+
 Note on the arch-2 delegation invariant: the IN-MEMORY adapter
 does NOT need a ByteSigner instance because it does no crypto;
-it returns canned outcomes for testing. The architecture-fitness
-test `test_signature_port_delegates_to_signing_port.py` (lands at
-the same time as the first wire-tier adapter) walks PRODUCTION
+it returns canned outcomes for testing. The planned architecture-fitness
+test `test_signature_port_delegates_to_signing_port.py` (deferred with
+the first wire-tier adapter, not present yet) will walk PRODUCTION
 adapters under `cora/federation/adapters/<family>_signature_port.py`,
 not this in-memory test fixture.
 """

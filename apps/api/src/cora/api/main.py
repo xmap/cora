@@ -301,6 +301,84 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
                 raise RuntimeError(msg)
 
 
+def _signing_factory_display_name(factory: object) -> str:
+    """Name a signing factory for the boot-guard message.
+
+    Factories are classes today (`InMemorySigner`), so `__name__` is the
+    natural label; fall back to the instance type name for any callable
+    that lacks one.
+    """
+    return getattr(factory, "__name__", type(factory).__name__)
+
+
+def _is_insecure_signing_stub(factory: object) -> bool:
+    """True when `factory` is an in-memory signing stub.
+
+    Keyed on the `InMemory` name prefix, the project-wide convention for
+    in-memory adapters (asserted by the facility-neutrality fitness
+    test). The prefix catches every current stub
+    (`InMemorySignaturePort` / `InMemorySigner` / `InMemoryPublishPort`)
+    and any future `InMemory*` stub wired without updating this guard;
+    real wire-tier adapters (`DsseStaticJwks...`, a KMS / Sigstore
+    signer) do not carry the prefix and pass.
+    """
+    return _signing_factory_display_name(factory).startswith("InMemory")
+
+
+def _enforce_production_signing_posture(
+    settings: Settings,
+    *,
+    signature_port_factory: object,
+    signer_factory: object,
+    publish_port_factory: object,
+) -> None:
+    """Refuse to boot a production deployment wired to in-memory signing.
+
+    The signing seam ships with in-memory adapters by default (see
+    `Settings.allow_insecure_inmemory_signing`): `InMemorySignaturePort`
+    does NO cryptography and rubber-stamps every federation verify;
+    `InMemorySigner` signs with an ephemeral per-process key whose
+    signatures cannot be verified across a restart. Both are correct for
+    dev / test and are the documented stubs kept until the rule-of-two
+    wire-tier trigger fires, but under `app_env in {prod, production}`
+    they would silently ship a false integrity guarantee. This is the
+    in-memory-default footgun the `make_inmemory_kernel` fitness test
+    guards for the Kernel; here it guards the signing factories.
+
+    Sibling to `_enforce_production_principal_policy`: fail at boot,
+    which is cheaper than discovering crypto-free signing in production.
+    `allow_insecure_inmemory_signing=True` is the explicit staging
+    escape hatch.
+    """
+    if settings.app_env not in _PROD_APP_ENVS:
+        return
+    if settings.allow_insecure_inmemory_signing:
+        return
+    offenders = [
+        f"{label}={_signing_factory_display_name(factory)}"
+        for label, factory in (
+            ("signature_port_factory", signature_port_factory),
+            ("signer_factory", signer_factory),
+            ("publish_port_factory", publish_port_factory),
+        )
+        if _is_insecure_signing_stub(factory)
+    ]
+    if offenders:
+        joined = ", ".join(offenders)
+        msg = (
+            f"app_env={settings.app_env!r} is wired to in-memory signing "
+            f"stubs: {joined}. InMemorySignaturePort does no cryptography "
+            "and accepts every federation artifact; InMemorySigner uses an "
+            "ephemeral key whose signatures do not verify across restarts. "
+            "Wire the wire-tier adapters (DSSE / COSE / SCITT plus a durable "
+            "KMS / Sigstore signer) before production, or set "
+            "ALLOW_INSECURE_INMEMORY_SIGNING=true for a staging environment "
+            "that is intentionally exercising the prod posture. See "
+            "memory/project_federation_port_design.md (rule-of-two trigger)."
+        )
+        raise RuntimeError(msg)
+
+
 def create_app(*, settings: Settings | None = None) -> FastAPI:
     """Build a fresh FastAPI app with its own FastMCP server instance.
 
@@ -315,6 +393,24 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     """
     settings = settings if settings is not None else _settings_for_app()
     _enforce_production_principal_policy(settings)
+
+    # Signing factories: in-memory stubs by default until the rule-of-two
+    # wire-tier trigger fires (see Settings.allow_insecure_inmemory_signing
+    # and memory:project_federation_port_design.md). Production overrides
+    # these with the DSSE+Sigstore + COSE+SCITT wire-tier adapters
+    # (signature/publish) and a durable KMS / Sigstore signer. Selected
+    # here, beside the sibling principal-policy guard, so the prod boot
+    # refusal fires at construction; the lifespan closes over these and
+    # hands them to build_kernel below.
+    signature_port_factory = InMemorySignaturePort
+    signer_factory = InMemorySigner
+    publish_port_factory = InMemoryPublishPort
+    _enforce_production_signing_posture(
+        settings,
+        signature_port_factory=signature_port_factory,
+        signer_factory=signer_factory,
+        publish_port_factory=publish_port_factory,
+    )
     # configure_tracing is a no-op when otel_exporter == "none" (the
     # default in tests), so calling it per create_app() is safe. In
     # production it runs once and installs the global TracerProvider.
@@ -443,18 +539,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 assembly_lookup_factory=PostgresAssemblyLookup,
                 role_lookup_factory=PostgresRoleLookup,
                 enclosure_lookup_factory=PostgresEnclosureLookup,
-                # publish_revision slice deps: in-memory adapters
-                # wired by default until the rule-of-two trigger
-                # fires per project_federation_port_design.md.
-                # Production deployments will override these with
-                # the DSSE+Sigstore + COSE+SCITT wire-tier adapters
-                # when the wire-tier work lands.
-                publish_port_factory=InMemoryPublishPort,
-                signature_port_factory=InMemorySignaturePort,
-                # In-memory Ed25519 event signer wired by default so Agent
-                # subscribers actually sign their DecisionRegistered rows;
-                # production overrides with a KMS / Sigstore-keyless adapter.
-                signer_factory=InMemorySigner,
+                # Signing factories selected and prod-guarded above.
+                publish_port_factory=publish_port_factory,
+                signature_port_factory=signature_port_factory,
+                signer_factory=signer_factory,
                 permit_lookup_factory=InMemoryPermitLookup,
                 llm_factory=build_llm,
                 # Pass the create_app-time Settings through so tests

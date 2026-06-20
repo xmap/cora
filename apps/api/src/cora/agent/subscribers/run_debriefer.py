@@ -656,8 +656,12 @@ class RunDebrieferSubscriber:
         """Attach signature/signature_kid when the kernel is configured
         with a `Signer` AND the event type is in SIGNED_EVENT_TYPES.
 
-        No-op when `self.signer is None` (no production adapter today;
-        unsigned rows are the legitimate default per design lock errata
+        No-op only when `self.signer is None` (a deployment that wires
+        no Signer). The default wiring in `cora.api.main` injects
+        `InMemorySigner`, so Agent-emitted DecisionRegistered rows are
+        signed at runtime; production swaps that for a durable KMS /
+        Sigstore signer. Human-actor DecisionRegistered rows from
+        `register_decision` stay unsigned by design (design lock errata
         2026-05-24). The subscriber emits Agent-actor events
         exclusively, so the actor-discrimination check that
         `register_decision` would need is implicit here.

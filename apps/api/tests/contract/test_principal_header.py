@@ -275,9 +275,17 @@ def test_create_app_refuses_to_boot_in_prod_without_require_auth(
 def test_create_app_boots_in_prod_with_require_auth(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sanity inverse: production env + require=True boots cleanly."""
+    """Sanity inverse: production env + require=True boots cleanly.
+
+    This test isolates the principal-policy axis. Prod boot also runs
+    `_enforce_production_signing_posture`, an orthogonal gate that
+    refuses the default in-memory signing stubs under prod; the
+    escape hatch keeps that gate out of scope here (its own coverage
+    lives in tests/unit/api/test_production_signing_posture.py).
+    """
     monkeypatch.setenv("APP_ENV", "prod")
     monkeypatch.setenv("REQUIRE_AUTHENTICATED_PRINCIPAL", "true")
+    monkeypatch.setenv("ALLOW_INSECURE_INMEMORY_SIGNING", "true")
     # Just constructing the app is enough; no need to enter lifespan
     # (which would try to open a real DB pool against production URL).
     app = create_app()

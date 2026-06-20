@@ -3,12 +3,16 @@
 Per arch-2 (SignaturePort delegates to ByteSigner): this port owns
 envelope construction + receipt hooks + credential resolution. Raw
 signature math (`Ed25519.sign`, `ECDSA.sign`) lives on
-`ByteSigner` at the kernel tier (Memo 3). The architecture-fitness
+`ByteSigner` at the kernel tier (Memo 3). A planned architecture-fitness
 test `tests/architecture/test_signature_port_delegates_to_signing_port.py`
-will land alongside the first wire-tier adapter and assert that
-every `SignaturePort.sign` adapter calls a method on a `ByteSigner`
-instance for the underlying signature math, never invoking crypto
-libraries (`cryptography.hazmat`, `nacl`, `pyca`) directly.
+is deferred together with the first wire-tier adapter (both gated on the
+rule-of-two trigger per memory:project_federation_port_design.md) and
+does not exist yet; when it lands it will assert that every
+`SignaturePort.sign` adapter calls a method on a `ByteSigner` instance
+for the underlying signature math, never invoking crypto libraries
+(`cryptography.hazmat`, `nacl`, `pyca`) directly. Until then the only
+adapter is the crypto-free `InMemorySignaturePort`, and the prod boot
+guard in `cora.api.main` refuses to ship it under prod posture.
 
 `canonicalized` is `CanonicalizedBytes` (from the kernel ByteSigner
 module), NOT raw `bytes`; this prevents bypassing the canonicalization
