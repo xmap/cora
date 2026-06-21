@@ -120,13 +120,9 @@ nav:
       - Techniques: deployments/tomowise/techniques.md
       - Governance: deployments/tomowise/governance.md
       - Model: deployments/tomowise/model.md
-    - Facility envelope:
-      - APS:
-        - deployments/aps/index.md
-        - Assets: deployments/aps/assets.md
-      - MAX IV:
-        - deployments/maxiv/index.md
-        - Assets: deployments/maxiv/assets.md
+    - Facilities:
+      - APS: deployments/aps/index.md
+      - MAX IV: deployments/maxiv/index.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
