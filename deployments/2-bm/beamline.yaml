@@ -129,9 +129,18 @@ conditioning-optics:
       family: Filter
       pv: { upstream_paddle: "2bma:m17", downstream_paddle: "2bma:m18" }
       controller: FrontEndDrive
-      foils: ["600 um Al", "150 um Al", "300 um C", "50 um C", "None"]   # operational downstream paddle (2bma:m18), in slot order; per-slot motor positions live in the index_position_table calibration (see test_2bm_filter_foil_setup.py)
+      foils: ["600 um Al", "150 um Al", "300 um C", "50 um C", "None"]   # downstream paddle (2bma:m18) bindings, in slot order, still valid in the IOC though m18 is currently Faulted; per-slot motor positions live in the index_position_table calibration (see test_2bm_filter_foil_setup.py)
       confirm: true
-      note: two paddles - downstream (2bma:m18) is operational and its foils are listed above; upstream (2bma:m17) is bound in software but not in service (selecting it has no beam effect). Foil materials/positions per the docs2bm components page (FOIL-1)
+      note: >
+        Two paddles. The upstream paddle (2bma:m17) is the operational filter
+        selector today (1 mm C, 150 um Al, 600 um Al, 1 mm Al, None);
+        downstream (2bma:m18) failed 2026-06-19 (parked 107.19 mm, motor cannot
+        actuate, condition Faulted), its bindings still valid in the IOC and
+        listed in foils above. m18 is not expected to be repaired soon, so m17
+        is the sole operational selector. Unit mm (caget 2bma:m18.EGU). Folding
+        the m18 Faulted condition and registering the m17 selector are the held
+        structural part (FOIL-1, #238); materials/positions per docs2bm +
+        2filter_setup.adl (FOIL-1/FOIL-2).
     - name: DiagnosticFlag
       family: LinearStage
       pv: "2bma:m44"

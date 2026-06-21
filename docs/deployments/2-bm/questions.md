@@ -122,12 +122,10 @@ On an energy change the DMM monochromator, its Bragg arms, and the tracking slit
 
 ## Filters and the mirror stripe
 
-These rows cover the absorber-foil paddles and the mirror coating stripe.
+This row covers the mirror coating stripe.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| FOIL-1 | `Blocks-go-live` | We model the operational downstream absorber-foil paddle (`2bma:m18`) as a discrete selector with these slots and motor positions, read from the components page: `600 um Al` at 0, `150 um Al` at 26, `300 um C` at 53, `50 um C` at 80, `None` at 106. Are the slots, order, and positions correct, and is the position unit millimetres (the components page says the motor EGU is "consistent with mm" but does not state it outright)? | downstream paddle modelled with the positions above; unit assumed mm | yes | [Filter foil selection](inventory.md#filter-foil-selection) |
-| FOIL-2 | `Nice-to-have` | Is the upstream foil paddle (`2bma:m17`) in service, i.e. does selecting it have any beam effect, or is it bound in software but inactive? And should it be expected to come back into service? | assumed bound in software but not in service (no beam effect) | yes | [Filter foil selection](inventory.md#filter-foil-selection) |
 | MIRROR-1 | `Nice-to-have` | Is the mirror coating stripe (`2bma:m3`) held at one fixed position in Mono mode and swept per energy in Pink mode (together with the optical-table X stages, driven by the energy-change IOC), rather than a freely-selectable discrete pick? And is there a stripe-to-position mapping (which stripe sits at which `m3` position) we can record? | energy/mode-dependent stripe; held in Mono, swept in Pink; no stripe->position map on file | not yet | [Beam modes](procedures.md#beam-modes) |
 
 ## Beam mode

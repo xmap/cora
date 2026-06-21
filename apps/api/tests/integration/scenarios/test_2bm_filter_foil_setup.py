@@ -7,10 +7,12 @@ bc_touches: Equipment, Calibration
 
 Models the 2-BM downstream absorber-foil paddle as a discrete "pick one of
 N" selector. Per the staff-authored docs2bm components page, the foil
-changer has two paddles (upstream 2bma:m17, NOT in service; downstream
-2bma:m18, operational), each holding four materials plus an empty (None)
-slot. The operational downstream paddle's published positions are seeded
-here as real values, not placeholders.
+changer has two paddles (upstream 2bma:m17 and downstream 2bma:m18), each
+holding four materials plus an empty (None) slot. Staff (FOIL-1/FOIL-2)
+corrected the operational status: m17 is the operational selector today and
+m18 failed 2026-06-19 (Faulted, parked 107.19 mm). The downstream paddle's
+published bindings stay valid in the IOC and are seeded here as real
+values, not placeholders.
 
 CORA models the selector as a PseudoAxis facet under the Filter device,
 carrying a LookupTable rule with interpolation_kind=NEAREST (snap to a
@@ -32,7 +34,8 @@ It proves the discrete-selector chain holds together: a PseudoAxis facet, a
 real index_position_table revision, and a NEAREST LookupTable. The
 position-only move is in scope; the foil's ATTENUATION (transmission as a
 function of material, thickness, and energy) is deferred (the Attenuable
-affordance), as is the non-operational upstream paddle. The conduct proof
+affordance), as is the upstream m17 selector (the operational paddle today;
+its slot table is a later slice). The conduct proof
 (select a foil and dispatch its position through the in-memory ControlPort)
 lives in test_pseudoaxis_roundtrip.py.
 
@@ -107,13 +110,13 @@ _DEVICES = (
     DeviceSpec("Filter", _FILTER_ID, "Filter", _CAP_FILTER_ID, controller_id=_FRONTENDDRIVE_ID),
 )
 
-# The operational downstream paddle (2bma:m18) foil slots, in selection
-# order, with the staff-published motor positions (docs2bm components page).
+# The downstream paddle (2bma:m18) foil slots, in selection order, with the
+# staff-published motor positions (docs2bm components page + 2filter_setup.adl).
 # The array index is the slot index; the name is documentary. Positions are
-# real (not placeholders); the position unit is the motor record EGU, which
-# docs2bm says is "consistent with mm" but does not definitively confirm
-# (open question FOIL-1). LowLimit (a homing reference also at 0.0) is
-# excluded: it is not an operator foil selection.
+# real (not placeholders); the position unit is mm, staff-confirmed via
+# caget 2bma:m18.EGU (FOIL-1). The m18 motor failed 2026-06-19 (Faulted);
+# its bindings stay valid in the IOC. LowLimit (a homing reference also at
+# 0.0) is excluded: it is not an operator foil selection.
 _FOIL_DEVICE_DESIGNATION = "downstream_filter_paddle"
 _FOIL_POINTS: list[dict[str, float | str]] = [
     {"name": "600 um Al", "position": 0.0},
@@ -171,8 +174,8 @@ async def test_filter_foil_selector_carries_index_table(db_pool: asyncpg.Pool) -
             operating_point={"device_designation": _FOIL_DEVICE_DESIGNATION},
             description=(
                 "Slot index -> motor position for the 2-BM downstream absorber-foil paddle "
-                "(2bma:m18, operational). Positions from the docs2bm components page; the unit "
-                "is the motor record EGU (consistent with mm, unconfirmed; see FOIL-1)."
+                "(2bma:m18; motor Faulted 2026-06-19, bindings still valid). Positions from "
+                "the docs2bm components page; the unit is mm (caget 2bma:m18.EGU, FOIL-1)."
             ),
         ),
         principal_id=_PRINCIPAL_ID,

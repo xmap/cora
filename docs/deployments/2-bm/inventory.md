@@ -222,7 +222,7 @@ Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0,
 
 ### Filter foil selection
 
-Discrete "pick one of N" move. `Filter_FoilSelector` PseudoAxis under `Filter`, carrying a `LookupTable` rule with `interpolation_kind=Nearest` backed by an `index_position_table` Calibration. `extrapolation_kind=Error` (cannot select an absent foil); `invertible=False` with `readback_aggregator_kind=Identity`. Foil changer has two paddles: downstream (`2bma:m18`) operational, upstream (`2bma:m17`) bound in software but not in service. Runtime proven end-to-end in `apps/api/tests/integration/test_pseudoaxis_roundtrip.py`; model: `test_2bm_filter_foil_setup.py`.
+Discrete "pick one of N" move. `Filter_FoilSelector` PseudoAxis under `Filter`, carrying a `LookupTable` rule with `interpolation_kind=Nearest` backed by an `index_position_table` Calibration. `extrapolation_kind=Error` (cannot select an absent foil); `invertible=False` with `readback_aggregator_kind=Identity`. Foil changer has two paddles: the upstream (`2bma:m17`) is the operational selector today; the downstream (`2bma:m18`) failed 2026-06-19 (parked 107.19 mm, condition Faulted), its bindings still valid in the IOC. Runtime proven end-to-end in `apps/api/tests/integration/test_pseudoaxis_roundtrip.py`; model: `test_2bm_filter_foil_setup.py`.
 
 Downstream-paddle slot positions (REAL, staff-published):
 
@@ -234,4 +234,4 @@ Downstream-paddle slot positions (REAL, staff-published):
 | 80 | `50 um C` | 80 |
 | 106 | `None` | 106 |
 
-The position unit is reported as the motor record EGU ("consistent with mm" but not definitively confirmed, `FOIL-1`). Foil ATTENUATION (`Attenuable`) and the energy-dependent mirror coating stripe (`2bma:m3`) are deliberately out of scope here (the stripe is modelled with the [beam-mode work](procedures.md#beam-modes)).
+The position unit is mm, staff-confirmed (`caget 2bma:m18.EGU`, `FOIL-1`). Foil ATTENUATION (`Attenuable`) and the energy-dependent mirror coating stripe (`2bma:m3`) are deliberately out of scope here (the stripe is modelled with the [beam-mode work](procedures.md#beam-modes)).
