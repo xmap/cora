@@ -9,7 +9,7 @@ HoldRun loop, the Actor.active revocation gate, and the disabled no-op.
 # pyright: reportPrivateUsage=false
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -26,6 +26,7 @@ from cora.api._run_supervisor import (
     _issue_resume,
     _supervise_tick,
     decide_supervision,
+    is_run_stale,
     run_supervisor_lifespan,
 )
 from cora.decision.aggregates.decision import load_decision
@@ -218,7 +219,7 @@ class _BeamDown:
         return _beam(fes=False)
 
 
-def _running_item(run_id: UUID) -> RunSummaryItem:
+def _running_item(run_id: UUID, *, running_since: datetime | None = _NOW) -> RunSummaryItem:
     return RunSummaryItem(
         run_id=run_id,
         name="streaming tomo",
@@ -227,6 +228,7 @@ def _running_item(run_id: UUID) -> RunSummaryItem:
         raid=None,
         status="Running",
         created_at=_NOW,
+        running_since=running_since,
         override_parameters_present=False,
         campaign_id=None,
     )
@@ -289,6 +291,8 @@ async def _tick(
     settle: dict[UUID, int] | None = None,
     resume_enabled: bool = False,
     resume_settle_ticks: int = 2,
+    liveness: set[UUID] | None = None,
+    liveness_ceiling_seconds: float | None = None,
 ) -> None:
     """Call _supervise_tick, defaulting the resume wiring (off) for hold-only tests."""
     if resume_run is None:
@@ -301,8 +305,10 @@ async def _tick(
         beam_lookup=beam_lookup,
         memory=memory,
         settle=settle if settle is not None else {},
+        liveness=liveness if liveness is not None else set(),
         resume_enabled=resume_enabled,
         resume_settle_ticks=resume_settle_ticks,
+        liveness_ceiling_seconds=liveness_ceiling_seconds,
     )
 
 
@@ -567,6 +573,7 @@ def _held_item(run_id: UUID) -> RunSummaryItem:
         raid=None,
         status="Held",
         created_at=_NOW,
+        running_since=_NOW,
         override_parameters_present=False,
         campaign_id=None,
     )
@@ -866,3 +873,258 @@ def test_run_supervisor_tick_seconds_rejects_sub_floor() -> None:
 @pytest.mark.unit
 def test_run_supervisor_tick_seconds_accepts_valid() -> None:
     assert Settings(run_supervisor_tick_seconds=5.0).run_supervisor_tick_seconds == 5.0  # type: ignore[call-arg]
+
+
+# ---------- Run-liveness watchdog (shadow rule) ----------
+
+
+@pytest.mark.unit
+def test_is_run_stale_returns_true_when_running_since_old() -> None:
+    assert is_run_stale(_NOW - timedelta(hours=2), _NOW, 3600.0) is True
+
+
+@pytest.mark.unit
+def test_is_run_stale_returns_false_when_running_since_recent() -> None:
+    assert is_run_stale(_NOW - timedelta(minutes=1), _NOW, 3600.0) is False
+
+
+@pytest.mark.unit
+def test_is_run_stale_inclusive_at_ceiling() -> None:
+    """Elapsed == ceiling FLAGS (inclusive >=); pins the `>`-vs-`>=` mutant."""
+    assert is_run_stale(_NOW - timedelta(seconds=3600), _NOW, 3600.0) is True
+
+
+@pytest.mark.unit
+def test_is_run_stale_returns_false_when_running_since_none() -> None:
+    assert is_run_stale(None, _NOW, 3600.0) is False
+
+
+@pytest.mark.unit
+async def test_shadow_liveness_flags_stale_run_observe_only() -> None:
+    """A Run Running past the ceiling is added to the liveness set (would_flag),
+    but the shadow pass issues NO command -- observe-only."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, running_since=_NOW - timedelta(hours=2))])
+    hold_run, hold_calls = _make_recording_hold()
+    resume_run, resume_calls = _make_recording_resume()
+    liveness: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        resume_run=resume_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        liveness_ceiling_seconds=3600.0,
+    )
+
+    assert liveness == {run_id}
+    assert hold_calls == []  # observe-only: no command issued
+    assert resume_calls == []
+
+
+@pytest.mark.unit
+async def test_shadow_liveness_does_not_flag_when_ceiling_none() -> None:
+    """No ceiling set (default): even a multi-day-running Run is never flagged."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, running_since=_NOW - timedelta(days=5))])
+    hold_run, _hold = _make_recording_hold()
+    liveness: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        liveness_ceiling_seconds=None,
+    )
+
+    assert liveness == set()
+
+
+@pytest.mark.unit
+async def test_shadow_liveness_not_flagged_when_running_since_recent() -> None:
+    """A recently (re)started Run is not flagged. The rule keys on running_since,
+    so a Run resumed after an overnight Held (running_since reset) is safe: the
+    false-alarm the running_since column exists to prevent."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, running_since=_NOW - timedelta(minutes=1))])
+    hold_run, _hold = _make_recording_hold()
+    liveness: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        liveness_ceiling_seconds=3600.0,
+    )
+
+    assert liveness == set()
+
+
+@pytest.mark.unit
+async def test_shadow_liveness_not_flagged_when_running_since_null() -> None:
+    """A Run with no running_since (legacy row) is never flagged: cannot evaluate."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, running_since=None)])
+    hold_run, _hold = _make_recording_hold()
+    liveness: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        liveness_ceiling_seconds=3600.0,
+    )
+
+    assert liveness == set()
+
+
+@pytest.mark.unit
+async def test_shadow_liveness_edge_triggered_across_ticks() -> None:
+    """A steadily-stale Run is flagged once: the liveness set is stable across
+    ticks (edge-triggered, no duplicate churn)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, running_since=_NOW - timedelta(hours=2))])
+    hold_run, _hold = _make_recording_hold()
+    liveness: set[UUID] = set()
+
+    for _ in range(2):
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=hold_run,
+            beam_lookup=_BeamOpen(),
+            memory={},
+            liveness=liveness,
+            liveness_ceiling_seconds=3600.0,
+        )
+
+    assert liveness == {run_id}
+
+
+@pytest.mark.unit
+async def test_shadow_liveness_flags_only_the_stale_run_among_running() -> None:
+    """With several Running Runs, only the stale one is flagged; a fresh sibling
+    is not poisoned."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    stale_id = uuid4()
+    fresh_id = uuid4()
+    list_runs = _make_list_runs(
+        [
+            _running_item(stale_id, running_since=_NOW - timedelta(hours=2)),
+            _running_item(fresh_id, running_since=_NOW - timedelta(minutes=1)),
+        ]
+    )
+    hold_run, _hold = _make_recording_hold()
+    liveness: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        liveness_ceiling_seconds=3600.0,
+    )
+
+    assert liveness == {stale_id}
+
+
+@pytest.mark.unit
+async def test_shadow_liveness_prunes_run_that_left_inflight() -> None:
+    """Once a flagged Run is no longer in-flight (terminated), its id is pruned
+    from the liveness set (mirrors the memory/settle GC)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    hold_run, _hold = _make_recording_hold()
+    liveness: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=_make_list_runs([_running_item(run_id, running_since=_NOW - timedelta(hours=2))]),
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        liveness_ceiling_seconds=3600.0,
+    )
+    assert liveness == {run_id}
+
+    # Next tick: the Run has terminated (no longer returned by list_runs).
+    await _tick(
+        kernel,
+        list_runs=_make_list_runs([]),
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        liveness_ceiling_seconds=3600.0,
+    )
+    assert liveness == set()
+
+
+@pytest.mark.unit
+async def test_shadow_liveness_rediscards_then_reflags_on_resume() -> None:
+    """Stale -> fresh (running_since reset, e.g. a resume) -> stale again: the
+    edge-trigger discards on fresh and re-flags when it goes stale again."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    hold_run, _hold = _make_recording_hold()
+    liveness: set[UUID] = set()
+
+    async def tick(running_since: datetime) -> None:
+        await _tick(
+            kernel,
+            list_runs=_make_list_runs([_running_item(run_id, running_since=running_since)]),
+            hold_run=hold_run,
+            beam_lookup=_BeamOpen(),
+            memory={},
+            liveness=liveness,
+            liveness_ceiling_seconds=3600.0,
+        )
+
+    await tick(_NOW - timedelta(hours=2))  # stale -> flagged
+    assert liveness == {run_id}
+    await tick(_NOW - timedelta(minutes=1))  # fresh (resumed) -> discarded
+    assert liveness == set()
+    await tick(_NOW - timedelta(hours=2))  # stale again -> re-flagged
+    assert liveness == {run_id}
+
+
+@pytest.mark.unit
+def test_run_liveness_ceiling_rejects_non_positive() -> None:
+    with pytest.raises(ValueError, match="run_liveness_ceiling_seconds"):
+        Settings(run_liveness_ceiling_seconds=0.0)  # type: ignore[call-arg]
+
+
+@pytest.mark.unit
+def test_run_liveness_ceiling_accepts_none_and_positive() -> None:
+    assert Settings().run_liveness_ceiling_seconds is None  # type: ignore[call-arg]
+    assert (
+        Settings(run_liveness_ceiling_seconds=7200.0).run_liveness_ceiling_seconds == 7200.0  # type: ignore[call-arg]
+    )

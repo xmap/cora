@@ -56,6 +56,7 @@ class RunSummaryItem:
     raid: str | None
     status: RunStatusFilter
     created_at: datetime
+    running_since: datetime | None
     override_parameters_present: bool
     campaign_id: UUID | None
 
@@ -82,7 +83,7 @@ class Handler(Protocol):
 
 
 _SELECT_COLUMNS = (
-    "run_id, name, plan_id, subject_id, raid, status, created_at, "
+    "run_id, name, plan_id, subject_id, raid, status, created_at, running_since, "
     "override_parameters_present, campaign_id"
 )
 
@@ -96,6 +97,7 @@ def _row_to_item(row: Any) -> RunSummaryItem:
         raid=str(row["raid"]) if row["raid"] is not None else None,
         status=cast("RunStatusFilter", str(row["status"])),
         created_at=row["created_at"],
+        running_since=row["running_since"],
         override_parameters_present=bool(row["override_parameters_present"]),
         campaign_id=row["campaign_id"],
     )

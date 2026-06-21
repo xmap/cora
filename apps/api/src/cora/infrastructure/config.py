@@ -209,6 +209,15 @@ class Settings(BaseSettings):
     run_supervisor_resume_enabled: bool = False
     run_supervisor_resume_settle_ticks: int = 2
 
+    # `run_liveness_ceiling_seconds` gates the RunLivenessWatchdog shadow rule
+    # inside the RunSupervisor loop: a Run that has been Running longer than this
+    # (now - running_since) is flagged as possibly-hung. Default None = OFF (a
+    # second off-gate above run_supervisor_enabled). No safe universal default
+    # exists -- the implausible-runtime ceiling is a per-beamline fact an
+    # operator sets on enable. Shadow v1 only LOGS would-flag; it records no
+    # Decision and issues no command.
+    run_liveness_ceiling_seconds: float | None = None
+
     # `caution_promoter_enabled` gates the CautionPromoter subscriber (the 2nd
     # ACTIVE agent). Default off: it is operational only once the
     # operator-retirement-memory guard lands (it must not re-create a Notice an
@@ -458,6 +467,19 @@ class Settings(BaseSettings):
             msg = (
                 f"run_supervisor_resume_settle_ticks must be >= 1, got {value}; "
                 "an autonomous resume requires at least one good envelope read"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_liveness_ceiling_seconds")
+    @classmethod
+    def _validate_run_liveness_ceiling_seconds(cls, value: float | None) -> float | None:
+        """None disables the Run-liveness watchdog; a set ceiling must be
+        positive (a non-positive ceiling would flag every Running Run at once)."""
+        if value is not None and value <= 0:
+            msg = (
+                f"run_liveness_ceiling_seconds must be > 0 when set, got {value}; "
+                "None disables the Run-liveness watchdog"
             )
             raise ValueError(msg)
         return value

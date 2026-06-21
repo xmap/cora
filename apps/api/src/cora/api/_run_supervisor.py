@@ -33,6 +33,18 @@ observe-stream that does not exist yet (strawman headline). Beam-unknown
 (`quality_ok=False`) takes NO action, per design Lock 4 (never act on
 missing data).
 
+## Shadow Run-liveness pass (RunLivenessWatchdog v1)
+
+A separate OBSERVE-ONLY pass flags a Run that has been Running for an
+implausibly long time (`now - running_since` past an operator ceiling): the
+de-facto-dead scan a human must currently catch by hand. v1 is SHADOW: it only
+logs `run_liveness.would_flag` and records no Decision / issues no command. Off
+unless `run_liveness_ceiling_seconds` is set (a second gate above
+`run_supervisor_enabled`). It keys on `running_since`, a CORA-owned un-spoofable
+signal, with its own edge-trigger memory (`liveness`) walled off from the
+beam-Hold FSM (`memory`). See [[project-run-liveness-watchdog-design]]; advise
+mode (a `Decision(choice=SupervisionQuieted)`) is the gated next rung.
+
 ## Fail-safe and bounded
 
 Hold is fail-safe wind-down. Resume is the one wind-UP, and it is gated to
@@ -105,6 +117,7 @@ from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+    from datetime import datetime
 
     from cora.infrastructure.kernel import Kernel
     from cora.infrastructure.ports.beam_availability_lookup import (
@@ -243,6 +256,19 @@ def decide_supervision(
             choice="SupervisionDeferred", new_memory=_MEM_DEFERRED, record=False, issue_hold=False
         )
     return SupervisionOutcome(choice="Hold", new_memory=_MEM_HELD, record=True, issue_hold=True)
+
+
+def is_run_stale(running_since: datetime | None, now: datetime, ceiling_seconds: float) -> bool:
+    """Pure Run-liveness rule (no I/O): a Running Run is liveness-stale once it
+    has been Running past the operator ceiling without progressing.
+
+    Inclusive boundary: elapsed == ceiling FLAGS (`>=`). A Run with no
+    `running_since` (legacy row, or one that started before the column existed)
+    is never stale -- it cannot be evaluated, so the watchdog defers (Lock 4:
+    never act on missing data). The signal is `running_since`, a CORA-owned,
+    un-spoofable timestamp set on RunStarted and reset on RunResumed.
+    """
+    return running_since is not None and (now - running_since).total_seconds() >= ceiling_seconds
 
 
 def _reasoning_for(choice: str) -> str:
@@ -487,10 +513,13 @@ async def _supervise_tick(
     beam_lookup: BeamAvailabilityLookup,
     memory: dict[UUID, str],
     settle: dict[UUID, int],
+    liveness: set[UUID],
     resume_enabled: bool,
     resume_settle_ticks: int,
+    liveness_ceiling_seconds: float | None,
 ) -> None:
-    """One supervision pass over all in-flight Runs (hold + gated resume)."""
+    """One supervision pass over all in-flight Runs (hold + gated resume +
+    shadow liveness)."""
     actor = await load_actor(deps.event_store, RUN_SUPERVISOR_AGENT_ID)
     if actor is None or not actor.active:
         # Supervisor not seeded yet, or deactivated by an operator: stand down.
@@ -505,6 +534,34 @@ async def _supervise_tick(
     for run_id in list(settle):
         if run_id not in inflight_ids:
             del settle[run_id]
+    for run_id in list(liveness):
+        if run_id not in inflight_ids:
+            liveness.discard(run_id)
+
+    # Shadow Run-liveness pass (RunLivenessWatchdog v1): OBSERVE-ONLY. It logs
+    # which Running Runs it WOULD flag as implausibly long (now - running_since
+    # past the operator ceiling) and records nothing, issues no command. Run
+    # before the beam read so it is independent of beam I/O. Off unless the
+    # operator set a ceiling. Edge-triggered via `liveness` (a set walled off
+    # from the beam-Hold `memory`): log once per stall episode; clearing on
+    # not-stale lets it re-log if a resumed Run goes stale again.
+    if liveness_ceiling_seconds is not None:
+        now = deps.clock.now()
+        for item in running:
+            running_since = item.running_since
+            if running_since is not None and is_run_stale(
+                running_since, now, liveness_ceiling_seconds
+            ):
+                if item.run_id not in liveness:
+                    liveness.add(item.run_id)
+                    _log.info(
+                        "run_liveness.would_flag",
+                        run_id=str(item.run_id),
+                        running_seconds=int((now - running_since).total_seconds()),
+                        ceiling_seconds=liveness_ceiling_seconds,
+                    )
+            else:
+                liveness.discard(item.run_id)
 
     # Own-holds-only: only a Held Run the supervisor itself holds is a resume
     # candidate. Empty unless the wind-up is explicitly enabled.
@@ -579,10 +636,12 @@ async def _supervise_loop(
     interval_seconds: float,
     resume_enabled: bool,
     resume_settle_ticks: int,
+    liveness_ceiling_seconds: float | None,
 ) -> None:
     """Periodic supervision loop. A failed tick is logged; the next tick retries."""
     memory: dict[UUID, str] = {}
     settle: dict[UUID, int] = {}
+    liveness: set[UUID] = set()
     while True:
         try:
             await _supervise_tick(
@@ -593,8 +652,10 @@ async def _supervise_loop(
                 beam_lookup=beam_lookup,
                 memory=memory,
                 settle=settle,
+                liveness=liveness,
                 resume_enabled=resume_enabled,
                 resume_settle_ticks=resume_settle_ticks,
+                liveness_ceiling_seconds=liveness_ceiling_seconds,
             )
         except asyncio.CancelledError:
             raise
@@ -633,7 +694,13 @@ async def run_supervisor_lifespan(
     lookup = beam_lookup if beam_lookup is not None else deps.beam_availability_lookup
     resume_enabled = deps.settings.run_supervisor_resume_enabled
     resume_settle_ticks = deps.settings.run_supervisor_resume_settle_ticks
-    _log.info("run_supervisor.started", interval_seconds=interval, resume_enabled=resume_enabled)
+    liveness_ceiling_seconds = deps.settings.run_liveness_ceiling_seconds
+    _log.info(
+        "run_supervisor.started",
+        interval_seconds=interval,
+        resume_enabled=resume_enabled,
+        liveness_ceiling_seconds=liveness_ceiling_seconds,
+    )
     task = asyncio.create_task(
         _supervise_loop(
             deps,
@@ -644,6 +711,7 @@ async def run_supervisor_lifespan(
             interval,
             resume_enabled,
             resume_settle_ticks,
+            liveness_ceiling_seconds,
         ),
         name="run-supervisor",
     )
@@ -656,4 +724,10 @@ async def run_supervisor_lifespan(
         _log.info("run_supervisor.stopped")
 
 
-__all__ = ["EnvelopeCheck", "SupervisionOutcome", "decide_supervision", "run_supervisor_lifespan"]
+__all__ = [
+    "EnvelopeCheck",
+    "SupervisionOutcome",
+    "decide_supervision",
+    "is_run_stale",
+    "run_supervisor_lifespan",
+]

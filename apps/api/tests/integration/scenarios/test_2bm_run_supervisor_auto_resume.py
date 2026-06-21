@@ -372,6 +372,8 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         beam_lookup=_BeamDown(),
         memory=memory,
         settle=settle,
+        liveness=set(),
+        liveness_ceiling_seconds=None,
         resume_enabled=True,
         resume_settle_ticks=1,
     )
@@ -388,6 +390,8 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         beam_lookup=_BeamOpen(),
         memory=memory,
         settle=settle,
+        liveness=set(),
+        liveness_ceiling_seconds=None,
         resume_enabled=True,
         resume_settle_ticks=1,
     )
@@ -432,6 +436,8 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         beam_lookup=_BeamDown(),
         memory=memory,
         settle=settle,
+        liveness=set(),
+        liveness_ceiling_seconds=None,
         resume_enabled=True,
         resume_settle_ticks=1,
     )
@@ -455,6 +461,8 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         beam_lookup=_BeamOpen(),
         memory=memory,
         settle=settle,
+        liveness=set(),
+        liveness_ceiling_seconds=None,
         resume_enabled=True,
         resume_settle_ticks=1,
     )

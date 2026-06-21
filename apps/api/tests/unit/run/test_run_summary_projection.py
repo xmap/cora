@@ -89,6 +89,9 @@ async def test_run_started_inserts_with_running_status_and_genesis_refs() -> Non
     assert "INSERT INTO proj_run_summary" in sql
     assert "ON CONFLICT (run_id) DO NOTHING" in sql
     assert "'Running'" in sql
+    # running_since is written at INSERT (= occurred_at, the Running start),
+    # reusing the $6 created_at param so the positional args below are unchanged.
+    assert "running_since" in sql
     assert args.args[1] == _RUN_ID
     assert args.args[2] == "Tomography-2026-05-13-001"
     assert args.args[3] == _PLAN_ID
@@ -192,7 +195,6 @@ async def test_run_started_sets_override_parameters_present_false_when_empty() -
     ("event_type", "expected_status"),
     [
         ("RunHeld", "Held"),
-        ("RunResumed", "Running"),
         ("RunCompleted", "Completed"),
         ("RunAborted", "Aborted"),
         ("RunStopped", "Stopped"),
@@ -200,9 +202,9 @@ async def test_run_started_sets_override_parameters_present_false_when_empty() -
     ],
 )
 async def test_lifecycle_transition_updates_status(event_type: str, expected_status: str) -> None:
-    """Each lifecycle event writes its expected status. Note that
-    RunResumed flips back to 'Running' (collapsing the held->resumed
-    round-trip into a single 'Running' state in the projection)."""
+    """Each generic lifecycle event writes its expected status via the shared
+    status UPDATE. RunResumed is NOT here: it has a dedicated arm that also
+    resets running_since (see test_run_resumed_sets_running_status_and_resets_running_since)."""
     proj = RunSummaryProjection()
     conn = AsyncMock()
     event = _stored(
@@ -219,6 +221,30 @@ async def test_lifecycle_transition_updates_status(event_type: str, expected_sta
     assert "SET status = $2" in sql
     assert args.args[1] == _RUN_ID
     assert args.args[2] == expected_status
+
+
+@pytest.mark.unit
+async def test_run_resumed_sets_running_status_and_resets_running_since() -> None:
+    """RunResumed flips status back to Running AND resets running_since to the
+    resume timestamp, so the Run-liveness signal measures only the new Running
+    interval (not the time spent Held)."""
+    proj = RunSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "RunResumed",
+        {"run_id": str(_RUN_ID), "occurred_at": _NOW.isoformat()},
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "UPDATE proj_run_summary" in sql
+    assert "status = 'Running'" in sql
+    assert "running_since = $2" in sql
+    assert args.args[1] == _RUN_ID
+    assert args.args[2] == _NOW
 
 
 @pytest.mark.unit

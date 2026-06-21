@@ -5,12 +5,12 @@ Subscribed events (genesis + 6 lifecycle transitions + 2 cross-
 aggregate membership transitions + 1 attribution-stamping
 transition):
   - RunStarted             -> INSERT (status=Running, name + plan_id +
-                                      subject_id? + raid? +
+                                      subject_id? + raid? + running_since +
                                       override_parameters_present +
                                       campaign_id? +
                                       pinned_calibration_ids from payload)
   - RunHeld                -> UPDATE status=Held
-  - RunResumed             -> UPDATE status=Running
+  - RunResumed             -> UPDATE status=Running + running_since reset
   - RunCompleted           -> UPDATE status=Completed   (terminal)
   - RunAborted             -> UPDATE status=Aborted     (terminal)
   - RunStopped             -> UPDATE status=Stopped     (terminal)
@@ -66,15 +66,25 @@ from cora.infrastructure.projection.handler import ConnectionLike
 
 _INSERT_RUN_SQL = """
 INSERT INTO proj_run_summary
-    (run_id, name, plan_id, subject_id, raid, status, created_at,
+    (run_id, name, plan_id, subject_id, raid, status, created_at, running_since,
      override_parameters_present, campaign_id, pinned_calibration_ids)
-VALUES ($1, $2, $3, $4, $5, 'Running', $6, $7, $8, $9::uuid[])
+VALUES ($1, $2, $3, $4, $5, 'Running', $6, $6, $7, $8, $9::uuid[])
 ON CONFLICT (run_id) DO NOTHING
 """
 
 _UPDATE_STATUS_SQL = """
 UPDATE proj_run_summary
 SET status = $2, updated_at = now()
+WHERE run_id = $1
+"""
+
+# RunResumed flips Held -> Running AND resets running_since to the resume
+# timestamp, so the Run-liveness signal measures only the current Running
+# interval (not the time spent Held). Status is the literal 'Running' since
+# RunResumed always lands there.
+_UPDATE_RESUMED_SQL = """
+UPDATE proj_run_summary
+SET status = 'Running', running_since = $2, updated_at = now()
 WHERE run_id = $1
 """
 
@@ -92,7 +102,6 @@ WHERE run_id = $1
 
 _EVENT_TO_STATUS = {
     "RunHeld": "Held",
-    "RunResumed": "Running",
     "RunCompleted": "Completed",
     "RunAborted": "Aborted",
     "RunStopped": "Stopped",
@@ -151,6 +160,15 @@ class RunSummaryProjection:
                 overrides_present,
                 campaign_id,
                 pinned_calibration_ids,
+            )
+            return
+        if event.event_type == "RunResumed":
+            # Held -> Running AND reset running_since so the liveness signal
+            # measures only the new Running interval, not the time spent Held.
+            await conn.execute(
+                _UPDATE_RESUMED_SQL,
+                UUID(event.payload["run_id"]),
+                datetime.fromisoformat(event.payload["occurred_at"]),
             )
             return
         if event.event_type == "RunAddedToCampaign":
