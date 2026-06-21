@@ -138,6 +138,8 @@ from cora.operation.features.complete_procedure.command import CompleteProcedure
 from cora.operation.features.complete_procedure.handler import (
     Handler as CompleteProcedureHandler,
 )
+from cora.operation.features.hold_procedure.command import HoldProcedure
+from cora.operation.features.hold_procedure.handler import Handler as HoldProcedureHandler
 from cora.operation.features.resume_procedure.command import ResumeProcedure
 from cora.operation.features.resume_procedure.handler import Handler as ResumeProcedureHandler
 from cora.operation.features.start_procedure.command import StartProcedure
@@ -477,12 +479,21 @@ class ConductorResult:
     (any simulator touch is disqualifying), so the failure-path result
     still reports the kind. Do not "fix" the observe-before-dispatch
     ordering in `_ActuationObserver` without revisiting this contract.
+
+    `held` is True ONLY when `try_conduct` paused the Procedure to `Held`
+    on a recoverable step failure (and the hold transition itself
+    succeeded). Every other path (`execute` / `conduct` / `execute_from`
+    / `reconduct`, and a `try_conduct` whose hold itself failed) leaves it
+    False. It reflects the ACTUAL transition, not the mere recoverability
+    of the failure, so a caller can distinguish a resumable `Held` outcome
+    from a terminal `Aborted` one (both carry `succeeded=False` + `failure`).
     """
 
     procedure_id: UUID
     completed_count: int
     failure: ConductorFailure | None = None
     actuation_kind: ActuationKind | None = None
+    held: bool = False
 
     @property
     def succeeded(self) -> bool:
@@ -578,6 +589,7 @@ class Conductor:
         complete_procedure: CompleteProcedureHandler | None = None,
         abort_procedure: AbortProcedureHandler | None = None,
         resume_procedure: ResumeProcedureHandler | None = None,
+        hold_procedure: HoldProcedureHandler | None = None,
     ) -> None:
         self._control_port = control_port
         self._append_step = append_step
@@ -588,6 +600,7 @@ class Conductor:
         self._complete_procedure = complete_procedure
         self._abort_procedure = abort_procedure
         self._resume_procedure = resume_procedure
+        self._hold_procedure = hold_procedure
 
     async def execute(
         self,
@@ -879,7 +892,7 @@ class Conductor:
         # that is what the caller needs to triage.
         failure = result.failure
         assert failure is not None  # not result.succeeded implies failure
-        reason = _derive_abort_reason(failure)
+        reason = _derive_failure_reason(failure)
         with contextlib.suppress(Exception):
             await self._abort_procedure(
                 AbortProcedure(
@@ -890,6 +903,160 @@ class Conductor:
                     actuation_kind=(
                         result.actuation_kind.value if result.actuation_kind is not None else None
                     ),
+                ),
+                **envelope_kwargs,
+            )
+        return result
+
+    async def try_conduct(
+        self,
+        *,
+        procedure_id: UUID,
+        principal_id: UUID,
+        correlation_id: UUID,
+        steps: Sequence[Step],
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ConductorResult:
+        """Drive the lifecycle like `conduct()`, but PAUSE to Held on a recoverable failure.
+
+        The pause-capable twin of `conduct()`. Identical start -> execute ->
+        complete-on-success path; the only divergence is the failure branch:
+
+          - a RECOVERABLE step failure (setpoint / check: re-drivable /
+            re-runnable on resume) -> best-effort `hold_procedure` (Running ->
+            Held). On a successful hold the result carries `held=True` so the
+            caller can offer `reconduct`; if the hold itself fails the
+            Procedure is left Running (same posture as conduct's best-effort
+            abort that fails) and `held` stays False.
+          - a NON-recoverable step failure (an action: an interrupted
+            acquisition is not auto-resumable, Tier 2) -> best-effort
+            `abort_procedure`, exactly like `conduct()`. Holding here would
+            strand a Procedure whose replay tail starts with an acquisition
+            that `reconduct` can only halt-for-operator on.
+          - lifecycle failures (start / complete rejected) and a mid-execute
+            `CancelledError` keep `conduct()`'s behavior verbatim (no hold).
+
+        Requires `start_procedure` + `complete_procedure` + `abort_procedure`
+        + `hold_procedure` handlers at __init__; raises `RuntimeError` (a
+        wiring bug) otherwise.
+
+        This is the Tier-1 producer that makes a Held + pinned-resolved-steps
+        state reachable, so the `reconduct` resume path has something to
+        resume. See [[project_resumable_conduct_design]] Tier 1.
+        """
+        if (
+            self._start_procedure is None
+            or self._complete_procedure is None
+            or self._abort_procedure is None
+            or self._hold_procedure is None
+        ):
+            raise RuntimeError(
+                "Conductor.try_conduct() requires start_procedure + complete_procedure + "
+                "abort_procedure + hold_procedure handlers at __init__; only execute() is "
+                "available without them."
+            )
+        envelope_kwargs: dict[str, Any] = {
+            "principal_id": principal_id,
+            "correlation_id": correlation_id,
+            "causation_id": causation_id,
+            "surface_id": surface_id,
+        }
+        try:
+            await self._start_procedure(
+                StartProcedure(procedure_id=procedure_id), **envelope_kwargs
+            )
+        except _LIFECYCLE_RERAISE:
+            raise
+        except Exception as exc:
+            return ConductorResult(
+                procedure_id=procedure_id,
+                completed_count=0,
+                failure=ConductorFailure(
+                    step_index=None,
+                    source_kind=_SOURCE_KIND_LIFECYCLE,
+                    target=_LIFECYCLE_TARGET_START,
+                    error_class=type(exc).__name__,
+                    message=str(exc),
+                ),
+            )
+        try:
+            result = await self.execute(
+                procedure_id=procedure_id,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                steps=steps,
+                causation_id=causation_id,
+                surface_id=surface_id,
+            )
+        except asyncio.CancelledError:
+            # Mirror conduct(): best-effort abort so the FSM is not orphaned in
+            # Running, then re-raise. A cancellation is not a recoverable step
+            # failure, so it aborts rather than pausing to Held.
+            with contextlib.suppress(Exception):
+                await self._abort_procedure(
+                    AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
+                    **envelope_kwargs,
+                )
+            raise
+        actuation_kind = result.actuation_kind.value if result.actuation_kind is not None else None
+        if result.succeeded:
+            try:
+                await self._complete_procedure(
+                    CompleteProcedure(procedure_id=procedure_id, actuation_kind=actuation_kind),
+                    **envelope_kwargs,
+                )
+            except _LIFECYCLE_RERAISE:
+                raise
+            except Exception as exc:
+                return ConductorResult(
+                    procedure_id=procedure_id,
+                    completed_count=result.completed_count,
+                    failure=ConductorFailure(
+                        step_index=None,
+                        source_kind=_SOURCE_KIND_LIFECYCLE,
+                        target=_LIFECYCLE_TARGET_COMPLETE,
+                        error_class=type(exc).__name__,
+                        message=str(exc),
+                    ),
+                )
+            return result
+        failure = result.failure
+        assert failure is not None  # not result.succeeded implies failure
+        if _is_recoverable_failure(failure):
+            # Pause-to-Held instead of abort: a setpoint / check failure is
+            # re-drivable / re-runnable, so keep the conduct resumable. The
+            # hold is best-effort: if it fails, leave the Procedure Running
+            # (held stays False) and surface the original step failure, the
+            # same posture as conduct()'s best-effort abort that fails.
+            held_ok = False
+            with contextlib.suppress(Exception):
+                await self._hold_procedure(
+                    HoldProcedure(
+                        procedure_id=procedure_id,
+                        reason=_derive_failure_reason(failure),
+                    ),
+                    **envelope_kwargs,
+                )
+                held_ok = True
+            if held_ok:
+                return ConductorResult(
+                    procedure_id=procedure_id,
+                    completed_count=result.completed_count,
+                    failure=failure,
+                    actuation_kind=result.actuation_kind,
+                    held=True,
+                )
+            return result
+        # Non-recoverable step failure (action): best-effort abort, exactly
+        # like conduct(). Holding would strand a Procedure whose replay tail
+        # starts with an interrupted acquisition.
+        with contextlib.suppress(Exception):
+            await self._abort_procedure(
+                AbortProcedure(
+                    procedure_id=procedure_id,
+                    reason=_derive_failure_reason(failure),
+                    actuation_kind=actuation_kind,
                 ),
                 **envelope_kwargs,
             )
@@ -1010,7 +1177,7 @@ class Conductor:
             await self._abort_procedure(
                 AbortProcedure(
                     procedure_id=procedure_id,
-                    reason=_derive_abort_reason(failure),
+                    reason=_derive_failure_reason(failure),
                     actuation_kind=actuation_kind,
                 ),
                 **envelope_kwargs,
@@ -1420,6 +1587,21 @@ def is_acquisition_halt(failure: ConductorFailure | None) -> bool:
     return failure is not None and failure.error_class == _RESUME_HALT_ERROR_CLASS
 
 
+def _is_recoverable_failure(failure: ConductorFailure) -> bool:
+    """True iff a conduct step failure is safe to PAUSE-and-resume, not abort.
+
+    Recoverable = a setpoint or check failure: on `reconduct` a setpoint is
+    re-driven (idempotent absolute write) and a check is re-run as a fresh
+    gate, so the conduct can honestly continue from the boundary. An action
+    failure is NOT recoverable here: an interrupted acquisition is
+    non-idempotent (Tier 2 per-point decomposition is the real fix), and a
+    Held Procedure whose replay tail starts with that acquisition could only
+    halt-for-operator on `reconduct`. This is `try_conduct`'s hold-vs-abort
+    branch; lifecycle failures never reach it (handled before the step-failure
+    branch). See [[project_resumable_conduct_design]] Tier 1."""
+    return failure.source_kind in (_STEP_KIND_SETPOINT, _STEP_KIND_CHECK)
+
+
 def _criterion_matches(criterion: CheckCriterion, value: Any) -> bool:
     """True iff `value` satisfies `criterion`.
 
@@ -1443,14 +1625,15 @@ def _mismatch_reason(criterion: CheckCriterion, value: Any) -> str:
     return f"value {value!r} not within {criterion.tolerance} of expected {criterion.expected}"
 
 
-def _derive_abort_reason(failure: ConductorFailure) -> str:
-    """Build a Procedure-aggregate-compliant abort reason from a step failure.
+def _derive_failure_reason(failure: ConductorFailure) -> str:
+    """Build a Procedure-aggregate-compliant reason string from a step failure.
 
-    Truncates to `REASON_MAX_LENGTH` so the AbortProcedure
-    handler does not reject the cleanup call. The format leads with
-    the step pointer (kind + index + target) so an operator scanning
-    the abort reason knows immediately which step in the conducted
-    sequence killed the Procedure.
+    Used for both the abort path (`conduct` / `reconduct`) and the
+    pause-to-Held path (`try_conduct`). Truncates to `REASON_MAX_LENGTH` so
+    the AbortProcedure / HoldProcedure handler does not reject the call. The
+    format leads with the step pointer (kind + index + target) so an operator
+    scanning the reason knows immediately which step in the conducted sequence
+    halted the Procedure.
     """
     if failure.step_index is None:
         prefix = f"{failure.source_kind} {failure.target}"

@@ -16,6 +16,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from cora.operation._conduct_preparation import decide_resolved_steps_recorded
 from cora.operation.aggregates.procedure import (
     ProcedureRegistered,
     ProcedureStarted,
@@ -30,9 +31,6 @@ from cora.operation.conductor import (
     Step,
     WithinToleranceCriterion,
     step_to_payload,
-)
-from cora.operation.features.conduct_procedure.resolved_steps import (
-    decide_resolved_steps_recorded,
 )
 from cora.operation.features.conduct_procedure.route import (
     ConductProcedureRequest,

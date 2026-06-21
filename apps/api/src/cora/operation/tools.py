@@ -31,6 +31,7 @@ from cora.operation.features.resume_procedure import tool as resume_procedure_to
 from cora.operation.features.start_iteration import tool as start_iteration_tool
 from cora.operation.features.start_procedure import tool as start_procedure_tool
 from cora.operation.features.truncate_procedure import tool as truncate_procedure_tool
+from cora.operation.features.try_conduct_procedure import tool as try_conduct_procedure_tool
 from cora.operation.wire import OperationHandlers
 
 
@@ -103,4 +104,8 @@ def register_operation_tools(
     conduct_procedure_tool.register(
         mcp,
         get_handler=lambda: get_handlers().conduct_procedure,
+    )
+    try_conduct_procedure_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().try_conduct_procedure,
     )

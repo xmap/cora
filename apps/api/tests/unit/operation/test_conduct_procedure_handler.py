@@ -29,6 +29,7 @@ from cora.infrastructure.ports import Allow, Deny
 from cora.infrastructure.ports.clock import FakeClock
 from cora.infrastructure.ports.id_generator import UUIDv7Generator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.operation._conduct_wire import criterion_from_wire, step_from_wire
 from cora.operation.adapters.in_memory_recipe_expander import (
     InMemoryRecipeExpander,
 )
@@ -58,9 +59,7 @@ from cora.operation.features.conduct_procedure.command import (
 from cora.operation.features.conduct_procedure.handler import bind
 from cora.operation.features.conduct_procedure.route import (
     ConductProcedureRequest,
-    criterion_from_wire,
     result_to_wire,
-    step_from_wire,
 )
 
 _NOW = datetime(2026, 6, 2, 12, 0, 0, tzinfo=UTC)

@@ -23,20 +23,13 @@ without parsing HTTP status codes.
 
 ## Pydantic wire types
 
-The Conductor's `Step = SetpointStep | ActionStep | CheckStep` and
-`CheckCriterion = EqualsCriterion | WithinToleranceCriterion` discriminated unions
-land on the wire as JSON discriminated unions with a `kind` field.
-Pydantic's `Field(discriminator="kind")` validates the union at
-parse time so a malformed step kind fails the request with a 422
-before the handler ever runs.
-
-Per-step `value` and `criterion.expected` are typed broadly
-(`int | float | bool | str | list[Any]`) to match the
-ControlPort's value vocabulary. Tuples-on-the-wire arrive as lists;
-the converter widens to tuple for the in-process Conductor.
+The shared step-list body + per-step failure shape live in the BC-level
+`cora.operation._conduct_wire` module (reused by `try_conduct_procedure`,
+which a slice cannot import directly). This slice owns only the
+conduct-specific request/response envelope.
 """
 
-from typing import Annotated, Any, Literal, cast
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
@@ -48,15 +41,12 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.operation.conductor import (
-    ActionStep,
-    CheckCriterion,
-    CheckStep,
-    ConductorFailure,
-    EqualsCriterion,
-    SetpointStep,
-    Step,
-    WithinToleranceCriterion,
+from cora.operation._conduct_wire import (
+    STEP_BATCH_MAX,
+    ConductorFailureResponse,
+    StepRequest,
+    failure_to_wire,
+    step_from_wire,
 )
 from cora.operation.features.conduct_procedure.command import (
     ConductProcedure,
@@ -64,97 +54,20 @@ from cora.operation.features.conduct_procedure.command import (
 )
 from cora.operation.features.conduct_procedure.handler import Handler
 
-_STEP_BATCH_MAX = 500
-"""Mirror of `append_activities`'s batch cap. A single
-`ConductProcedure` request never carries more than this many steps;
-larger procedures split client-side via multiple sequential runs."""
-
-
-class _SetpointStepRequest(BaseModel):
-    """JSON wire shape for a `SetpointStep`."""
-
-    kind: Literal["setpoint"]
-    address: str = Field(..., min_length=1)
-    value: int | float | bool | str | list[Any]
-    verify: bool = False
-
-    model_config = {"extra": "forbid"}
-
-
-class _ActionStepRequest(BaseModel):
-    """JSON wire shape for an `ActionStep`."""
-
-    kind: Literal["action"]
-    name: str = Field(..., min_length=1)
-    params: dict[str, Any] = Field(default_factory=dict)
-
-    model_config = {"extra": "forbid"}
-
-
-class _EqualsCriterion(BaseModel):
-    """JSON wire shape for an `EqualsCriterion`."""
-
-    kind: Literal["equals"]
-    expected: int | float | bool | str | list[Any]
-
-    model_config = {"extra": "forbid"}
-
-
-class _WithinToleranceCriterion(BaseModel):
-    """JSON wire shape for a `WithinToleranceCriterion`."""
-
-    kind: Literal["within_tolerance"]
-    expected: float
-    tolerance: float = Field(..., ge=0.0)
-
-    model_config = {"extra": "forbid"}
-
-
-_CriterionRequest = Annotated[
-    _EqualsCriterion | _WithinToleranceCriterion,
-    Field(discriminator="kind"),
-]
-
-
-class _CheckStepRequest(BaseModel):
-    """JSON wire shape for a `CheckStep`."""
-
-    kind: Literal["check"]
-    address: str = Field(..., min_length=1)
-    criterion: _CriterionRequest
-
-    model_config = {"extra": "forbid"}
-
-
-_StepRequest = Annotated[
-    _SetpointStepRequest | _ActionStepRequest | _CheckStepRequest,
-    Field(discriminator="kind"),
-]
-
 
 class ConductProcedureRequest(BaseModel):
     """Body for `POST /procedures/{procedure_id}/conduct`."""
 
-    steps: list[_StepRequest] = Field(
-        default_factory=list[_StepRequest],
-        max_length=_STEP_BATCH_MAX,
+    steps: list[StepRequest] = Field(
+        default_factory=list[StepRequest],
+        max_length=STEP_BATCH_MAX,
         description=(
-            f"Steps the Conductor walks in order (0-{_STEP_BATCH_MAX}). "
+            f"Steps the Conductor walks in order (0-{STEP_BATCH_MAX}). "
             "Empty list is valid: start + complete fire with no steps."
         ),
     )
 
     model_config = {"extra": "forbid"}
-
-
-class _ConductorFailureResponse(BaseModel):
-    """JSON wire shape for `ConductorFailure`."""
-
-    step_index: int | None
-    source_kind: str
-    target: str
-    error_class: str
-    message: str
 
 
 class ConductProcedureResponse(BaseModel):
@@ -174,61 +87,8 @@ class ConductProcedureResponse(BaseModel):
     procedure_id: UUID
     completed_count: int
     succeeded: bool
-    failure: _ConductorFailureResponse | None = None
+    failure: ConductorFailureResponse | None = None
     actuation_kind: str | None = None
-
-
-def criterion_from_wire(
-    wire: _EqualsCriterion | _WithinToleranceCriterion,
-) -> CheckCriterion:
-    """Build a Conductor `CheckCriterion` from a Pydantic wire model.
-
-    Public because `tool.py` calls it too (MCP + REST share the same
-    wire schema; the converter is the seam between the JSON shape
-    and the in-process Conductor type).
-    """
-    if isinstance(wire, _EqualsCriterion):
-        expected: Any = wire.expected
-        if isinstance(expected, list):
-            # wire.expected is a JSON list of Any; tuple-coerce for the in-process EqualsCriterion
-            return EqualsCriterion(expected=cast("tuple[Any, ...]", tuple(expected)))  # pyright: ignore[reportUnknownArgumentType]
-        return EqualsCriterion(expected=expected)
-    return WithinToleranceCriterion(expected=wire.expected, tolerance=wire.tolerance)
-
-
-def step_from_wire(
-    wire: _SetpointStepRequest | _ActionStepRequest | _CheckStepRequest,
-) -> Step:
-    """Build a Conductor `Step` from a Pydantic wire model.
-
-    Public because `tool.py` calls it too (MCP + REST share the same
-    wire schema).
-    """
-    if isinstance(wire, _SetpointStepRequest):
-        value: Any = wire.value
-        if isinstance(value, list):
-            return SetpointStep(
-                address=wire.address,
-                value=cast("tuple[Any, ...]", tuple(value)),  # pyright: ignore[reportUnknownArgumentType]
-                verify=wire.verify,
-            )
-        return SetpointStep(address=wire.address, value=value, verify=wire.verify)
-    if isinstance(wire, _ActionStepRequest):
-        return ActionStep(name=wire.name, params=wire.params)
-    return CheckStep(
-        address=wire.address,
-        criterion=criterion_from_wire(wire.criterion),
-    )
-
-
-def _failure_to_wire(failure: ConductorFailure) -> _ConductorFailureResponse:
-    return _ConductorFailureResponse(
-        step_index=failure.step_index,
-        source_kind=failure.source_kind,
-        target=failure.target,
-        error_class=failure.error_class,
-        message=failure.message,
-    )
 
 
 def result_to_wire(result: ConductProcedureResult) -> ConductProcedureResponse:
@@ -240,7 +100,7 @@ def result_to_wire(result: ConductProcedureResult) -> ConductProcedureResponse:
         procedure_id=result.procedure_id,
         completed_count=result.completed_count,
         succeeded=result.succeeded,
-        failure=_failure_to_wire(result.failure) if result.failure is not None else None,
+        failure=failure_to_wire(result.failure) if result.failure is not None else None,
         actuation_kind=result.actuation_kind,
     )
 

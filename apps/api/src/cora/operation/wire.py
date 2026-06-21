@@ -84,6 +84,7 @@ from cora.operation.features import (
     start_iteration,
     start_procedure,
     truncate_procedure,
+    try_conduct_procedure,
 )
 from cora.operation.ports.control_port import ControlPort
 
@@ -116,6 +117,7 @@ class OperationHandlers:
     list_procedures: list_procedures.Handler
     list_procedure_iterations: list_procedure_iterations.Handler
     conduct_procedure: conduct_procedure.Handler
+    try_conduct_procedure: try_conduct_procedure.Handler
     control_port: ControlPort
     """The ControlPort the Conductor talks to. Surfaced on the bundle
     so the FastAPI lifespan's teardown can call `aclose()` on it
@@ -191,6 +193,14 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
         command_name="ResumeProcedure",
         bc=_BC,
     )
+    # Hoisted likewise so the bundle field AND the Conductor share ONE
+    # post-tracing hold handler instance; Conductor.try_conduct composes it
+    # to pause-to-Held on a recoverable conduct failure.
+    hold_handler = with_tracing(
+        hold_procedure.bind(deps),
+        command_name="HoldProcedure",
+        bc=_BC,
+    )
     append_step_handler = with_tracing(
         append_activities.bind(deps, step_store=step_store),
         command_name="AppendProcedureActivities",
@@ -214,6 +224,7 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
         complete_procedure=complete_handler,
         abort_procedure=abort_handler,
         resume_procedure=resume_handler,
+        hold_procedure=hold_handler,
     )
     # Resume-and-replay orchestration: a thin slice handler over
     # Conductor.reconduct (which composes resume + execute_from +
@@ -221,6 +232,14 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
     reconduct_handler = with_tracing(
         reconduct_procedure.bind(deps, conductor=conductor),
         command_name="ReconductProcedure",
+        bc=_BC,
+    )
+    # Pause-capable conduct: a thin slice handler over Conductor.try_conduct
+    # (which composes start + execute + complete/hold/abort). Reuses the same
+    # conductor + recipe expander as conduct; no sibling-slice imports.
+    try_conduct_handler = with_tracing(
+        try_conduct_procedure.bind(deps, conductor=conductor, expansion_port=recipe_expander),
+        command_name="TryConductProcedure",
         bc=_BC,
     )
     return OperationHandlers(
@@ -258,11 +277,7 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
             command_name="TruncateProcedure",
             bc=_BC,
         ),
-        hold_procedure=with_tracing(
-            hold_procedure.bind(deps),
-            command_name="HoldProcedure",
-            bc=_BC,
-        ),
+        hold_procedure=hold_handler,
         resume_procedure=resume_handler,
         reconduct_procedure=reconduct_handler,
         start_iteration=with_tracing(
@@ -299,5 +314,6 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
             command_name="ConductProcedure",
             bc=_BC,
         ),
+        try_conduct_procedure=try_conduct_handler,
         control_port=control_port,
     )

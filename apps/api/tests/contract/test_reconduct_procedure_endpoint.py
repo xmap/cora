@@ -4,17 +4,13 @@ Resume-and-replay: resumes a Held Procedure and replays its pinned
 step-list tail. 200 with replay outcomes in body; 404/409/422/500 for
 protocol / guard / corruption faults.
 
-Note on coverage: the 200 happy path (a clean replay that auto-completes)
-requires a `Held` Procedure that carries a PINNED `ResolvedStepsRecorded`
-resolved steps. The synchronous conduct flow today pins the resolved steps then runs
-to a terminal state (Completed / Aborted) in one call, so there is no
-API-reachable `Held + resolved-steps state yet (producing it -- a conduct that
-pauses to Held instead of aborting on a halt, or a mid-conduct
-cooperative hold -- is a follow-up slice). The clean / halt / step-failure
-replay paths are covered end-to-end in
-`tests/unit/operation/test_reconduct_procedure_handler.py` against a
-seeded Held+resolved steps state. These contract tests cover the
-API-reachable guard / fault surfaces.
+The 200 happy paths are now API-reachable via `try_conduct_procedure`: it
+conducts a Procedure that pauses to `Held` on a recoverable step failure,
+leaving the pinned `ResolvedStepsRecorded` for `reconduct` to replay. The
+test wire-up uses `InMemoryControlPort` with no pre-connected addresses, so a
+setpoint fails (recoverable -> Held); reconduct then replays the pinned tail
+from the operator's boundary (an empty tail completes; a tail starting with an
+acquisition halts-for-operator).
 """
 
 from typing import Any
@@ -29,6 +25,57 @@ from cora.api.main import create_app
 def _register(client: TestClient) -> UUID:
     body: dict[str, Any] = {"name": "Vessel-A bakeout", "kind": "bakeout"}
     return UUID(client.post("/procedures", json=body).json()["procedure_id"])
+
+
+def _try_conduct_to_held(client: TestClient, steps: list[dict[str, Any]]) -> UUID:
+    """Register + try-conduct a Procedure to Held (the recoverable setpoint at
+    index 0 fails on the unconnected port), leaving a pinned resolved-step list
+    `reconduct` can replay. Returns the Held Procedure's id."""
+    pid = _register(client)
+    held = client.post(f"/procedures/{pid}/try-conduct", json={"steps": steps})
+    assert held.status_code == 200
+    assert held.json()["held"] is True
+    return pid
+
+
+@pytest.mark.contract
+def test_post_reconduct_completes_held_procedure_with_empty_tail() -> None:
+    """Reconduct a Held Procedure past the end of its resolved steps (empty
+    tail): nothing to replay, so it auto-completes (200, succeeded)."""
+    with TestClient(create_app()) as client:
+        pid = _try_conduct_to_held(
+            client, [{"kind": "setpoint", "address": "2bma:x", "value": 1.0}]
+        )
+        # boundary == len(resolved steps): the replayed tail is empty.
+        response = client.post(
+            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 1}
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["succeeded"] is True
+    assert body["acquisition_halt"] is False
+
+
+@pytest.mark.contract
+def test_post_reconduct_halts_on_acquisition_in_replayed_tail() -> None:
+    """Reconduct replaying a tail that starts with an acquisition halts for the
+    operator (200, acquisition_halt=True), leaving the Procedure Running."""
+    with TestClient(create_app()) as client:
+        pid = _try_conduct_to_held(
+            client,
+            [
+                {"kind": "setpoint", "address": "2bma:x", "value": 1.0},
+                {"kind": "action", "name": "collect"},
+            ],
+        )
+        # boundary == 1 skips the prefix setpoint; the tail starts with the action.
+        response = client.post(
+            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 1}
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["succeeded"] is False
+    assert body["acquisition_halt"] is True
 
 
 @pytest.mark.contract

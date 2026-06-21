@@ -1,45 +1,30 @@
-"""Application handler for the `conduct_procedure` slice.
+"""Application handler for the `try_conduct_procedure` slice.
 
-Thin orchestrator that delegates to `Conductor.conduct()`. The
-handler's job is the application-layer concerns the Conductor
-itself does not own: command-level authorization (the per-step
-`append_activities` calls already authz internally, but the
-ConductProcedure entry point gates the entire invocation), envelope
-threading, recipe-replay re-expansion when the Procedure was created
-via `register_procedure_from_recipe`, and result conversion from
-`ConductorResult` to the slice's `ConductProcedureResult` contract.
+Pause-capable conduct. A thin orchestrator that delegates to
+`Conductor.try_conduct()` (the pause-to-Held twin of `Conductor.conduct()`):
+on a recoverable step failure the Conductor pauses the Procedure to `Held`
+rather than aborting it, so the operator can `reconduct` from the pinned
+resolved steps. This is the Tier-1 producer that makes a Held + pinned-steps
+state reachable so the `reconduct` resume path has something to resume.
+
+Shares the pre-Conductor pipeline (recipe re-expansion + pseudoaxis +
+resolved-steps pin) with `conduct_procedure` via the BC-level
+`resolve_and_pin_conduct_steps`, and the HTTP/MCP wire shapes via
+`_conduct_wire`. It imports NO sibling slice: the cross-slice-independence
+fitness forbids that, and the shared seams live outside `features/`.
 
 ## Why no `_decider`
 
-Unlike CQRS slices that compute events from state, `conduct_procedure`
-records no new events on the Procedure stream directly: the wrapped
-`start_procedure` / `append_activities` / `complete_procedure` /
-`abort_procedure` handlers are the things that write. The slice is
-an orchestration entry point, NOT an aggregate-state-mutating
-decider. Therefore no `decider.py`, no `context.py`.
-
-## Recipe-driven re-expansion
-
-When the loaded Procedure has `recipe_id is not None`, the handler
-treats it as recipe-driven and runs the five-step replay gate
-specified by [[project-run-procedure-replay-design]]:
-forbid-non-empty-caller-steps -> find_recipe_expansion_record ->
-pins_from_payload -> port-version strict-equals guard ->
-load_recipe_at_version -> verify_bindings_hash -> expand ->
-verify_steps_hash -> hand fresh steps to Conductor. Legacy
-Procedures (`recipe_id is None`) hand `command.steps` to the
-Conductor unchanged.
+Like `conduct_procedure`, records no new events directly: the wrapped
+start / append / complete / abort / hold handlers (on the Conductor) write.
+An orchestration entry point, not an aggregate-state-mutating decider.
 
 ## Authorization scope
 
-`ConductProcedure` is authz-checked as a distinct command. The wrapped
-handlers (start / append / complete / abort) each authz internally
-with their OWN command names; an operator authorized to call
-`ConductProcedure` is NOT automatically authorized for each of those
-individually. That's correct: `ConductProcedure` is the
-operator-friendly entry; the underlying per-FSM-transition
-authorization is what the policy engine actually evaluates at each
-call site.
+`TryConductProcedure` is authz-checked as its own command. The wrapped
+transition handlers each authz internally with their OWN command names; an
+operator authorized to call `TryConductProcedure` is NOT automatically
+authorized for those individually. Same layering as `conduct_procedure`.
 """
 
 from typing import Protocol
@@ -56,29 +41,29 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.conductor import Conductor
 from cora.operation.errors import UnauthorizedError
-from cora.operation.features.conduct_procedure.command import (
-    ConductProcedure,
-    ConductProcedureResult,
+from cora.operation.features.try_conduct_procedure.command import (
+    TryConductProcedure,
+    TryConductProcedureResult,
 )
 from cora.operation.ports.recipe_expander import RecipeExpander
 
-_COMMAND_NAME = "ConductProcedure"
+_COMMAND_NAME = "TryConductProcedure"
 
 _log = get_logger(__name__)
 
 
 class Handler(Protocol):
-    """Callable interface every conduct_procedure handler implements."""
+    """Callable interface every try_conduct_procedure handler implements."""
 
     async def __call__(
         self,
-        command: ConductProcedure,
+        command: TryConductProcedure,
         *,
         principal_id: UUID,
         correlation_id: UUID,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
-    ) -> ConductProcedureResult: ...
+    ) -> TryConductProcedureResult: ...
 
 
 def bind(
@@ -87,27 +72,24 @@ def bind(
     conductor: Conductor,
     expansion_port: RecipeExpander,
 ) -> Handler:
-    """Build a conduct_procedure handler closed over deps + Conductor + port.
+    """Build a try_conduct_procedure handler closed over deps + Conductor + port.
 
-    `conductor` is BC-internal: wire_operation constructs it from
-    the bound FSM handlers + ControlPort + Kernel infra ports.
-    `expansion_port` is the same instance wired for
-    `register_procedure_from_recipe`; replay reads its `version`
-    attribute and calls `expand` against the pinned bindings. The
-    `event_store` is read via `deps.event_store` at the
-    `load_procedure_with_events` call site (no separate kwarg).
+    `conductor` is the same BC-internal Conductor `conduct_procedure` uses; it
+    carries the start / complete / abort / hold handlers (wired at app
+    composition) that `Conductor.try_conduct` composes. `expansion_port` is
+    the same instance wired for `register_procedure_from_recipe` + conduct.
     """
 
     async def handler(
-        command: ConductProcedure,
+        command: TryConductProcedure,
         *,
         principal_id: UUID,
         correlation_id: UUID,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
-    ) -> ConductProcedureResult:
+    ) -> TryConductProcedureResult:
         _log.info(
-            "conduct_procedure.start",
+            "try_conduct_procedure.start",
             command_name=_COMMAND_NAME,
             procedure_id=str(command.procedure_id),
             step_count=len(command.steps),
@@ -124,7 +106,7 @@ def bind(
         )
         if isinstance(authz, Deny):
             _log.info(
-                "conduct_procedure.denied",
+                "try_conduct_procedure.denied",
                 command_name=_COMMAND_NAME,
                 procedure_id=str(command.procedure_id),
                 principal_id=str(principal_id),
@@ -151,7 +133,7 @@ def bind(
             causation_id=causation_id,
         )
 
-        result = await conductor.conduct(
+        result = await conductor.try_conduct(
             procedure_id=command.procedure_id,
             principal_id=principal_id,
             correlation_id=correlation_id,
@@ -161,18 +143,20 @@ def bind(
         )
 
         _log.info(
-            "conduct_procedure.success",
+            "try_conduct_procedure.success",
             command_name=_COMMAND_NAME,
             procedure_id=str(command.procedure_id),
             completed_count=result.completed_count,
             succeeded=result.succeeded,
+            held=result.held,
             failure_class=(result.failure.error_class if result.failure is not None else None),
         )
 
-        return ConductProcedureResult(
+        return TryConductProcedureResult(
             procedure_id=result.procedure_id,
             completed_count=result.completed_count,
             succeeded=result.succeeded,
+            held=result.held,
             failure=result.failure,
             actuation_kind=(
                 result.actuation_kind.value if result.actuation_kind is not None else None

@@ -60,6 +60,10 @@ _ORCHESTRATION_SLICES: frozenset[str] = frozenset(
         # Conductor.execute_from + complete/abort; no direct event emission.
         # See [[project_resumable_conduct_design]].
         "cora.operation.features.reconduct_procedure",
+        # Pause-capable conduct entry: delegates Conductor.try_conduct
+        # (start + execute + complete/hold/abort); no direct event emission.
+        # See [[project_resumable_conduct_design]].
+        "cora.operation.features.try_conduct_procedure",
         # Bulk-mint sweep: enumerates Assets missing a persistent id and
         # delegates each to the assign_asset_persistent_id handler; no direct
         # event emission. See [[project_asset_persistent_id_design]].
