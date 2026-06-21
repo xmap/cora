@@ -51,13 +51,21 @@ parented to the physical device, backed by a real energy_position_curve
 revision, carrying a keV -> position LookupTable, with per-axis invertible
 honesty and a sibling Pink curve.
 
+It also records the DMM insert/bypass state (MODE-2): in Mono the DMM is
+inserted, in Pink retracted. Because that state is two-state and MODE-keyed
+(not per-energy), it is NOT a curve but a closed-enum Monochromator setting
+(dmm_insertion: inserted|retracted), modelled with the Table.axis_layout
+pattern (Family settings_schema + Asset.settings). The three DMM Y motors and
+their 0 / -10 mm targets are documentary in beamline.yaml.
+
 It does NOT drive motion: it sets up the per-axis curves but does not conduct
 them. The interpolation kernel (eval_lookup_table) is wired and proven in
 test_pseudoaxis_roundtrip.py, but a beamline move additionally needs the
-per-facet constituent wiring and live EPICS dispatch. This scenario also does
-NOT model the coordinating energy-setting operation (test_2bm_energy_setting.py)
-or the Mono<->Pink mode switch (MODE-2/3). This is an intentional-completeness
-shape model of the per-device mapping.
+per-facet constituent wiring and live EPICS dispatch. This scenario records the
+DMM insert/bypass STATE but does NOT model the coordinating energy-setting
+operation (test_2bm_energy_setting.py) or the coordinated Mono<->Pink mode-switch
+MOVE that drives it (the deferred beam_mode_change, MODE-3/MIRROR-1). This is an
+intentional-completeness shape model of the per-device mapping.
 
 ## Asset stack
 
@@ -113,6 +121,12 @@ from cora.equipment.features.register_asset import bind as bind_register_asset
 from cora.equipment.features.update_asset_partition_rule import UpdateAssetPartitionRule
 from cora.equipment.features.update_asset_partition_rule import (
     bind as bind_update_asset_partition_rule,
+)
+from cora.equipment.features.update_asset_settings import UpdateAssetSettings
+from cora.equipment.features.update_asset_settings import bind as bind_update_asset_settings
+from cora.equipment.features.update_family_settings_schema import UpdateFamilySettingsSchema
+from cora.equipment.features.update_family_settings_schema import (
+    bind as bind_update_family_settings_schema,
 )
 from cora.shared.identity import ActorId
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
@@ -305,6 +319,23 @@ _AXES: tuple[tuple[str, UUID, str, str, _P, _P, bool], ...] = (
     ),
 )
 
+# The Monochromator settings schema (the JSON-Schema subset; strictness is
+# injected at validation, mirroring Table.axis_layout). dmm_insertion is the
+# two-state mode primitive: in Mono the DMM is inserted (Bragg-selecting), in
+# Pink it is retracted (the beam passes straight through). The three DMM Y motors
+# (2bma:m26/m27/m29) drive together to 0 (in) or -10 mm (out) within the one
+# coordinated energy-change move (MODE-2). Their numeric targets are documentary
+# in beamline.yaml (an array-of-objects motor map is outside CORA's settings
+# subset, which has no `items`); the operator-facing state is this closed enum.
+_SCHEMA_MONOCHROMATOR: dict[str, object] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "dmm_insertion": {"type": "string", "enum": ["inserted", "retracted"]},
+    },
+    "required": ["dmm_insertion"],
+}
+
 
 def _id_queue() -> list[UUID]:
     """FixedIdGenerator queue: the facility prefix (Unit + 4 devices + their
@@ -460,6 +491,30 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
             correlation_id=_CORRELATION_ID,
         )
 
+    # ----- DMM insert/bypass state (MODE-2) -----
+    #
+    # Mono <-> Pink is realized physically by the DMM moving in or out of the
+    # beam: the three DMM Y motors drive together to 0 (in, Mono) or -10 mm (out,
+    # Pink) inside the one coordinated energy-change move, with no sequencing and
+    # no interlock (MODE-2). This is a two-state, MODE-keyed value, NOT a
+    # per-energy curve, so it is modeled as a closed-enum Monochromator setting
+    # (the Table.axis_layout pattern), not a PseudoAxis facet. The coordinated
+    # move that drives it is the deferred beam_mode_change operation.
+    await bind_update_family_settings_schema(deps)(
+        UpdateFamilySettingsSchema(
+            family_id=_CAP_MONOCHROMATOR_ID, settings_schema=_SCHEMA_MONOCHROMATOR
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_update_asset_settings(deps)(
+        UpdateAssetSettings(
+            asset_id=_MONOCHROMATOR_ID, settings_patch={"dmm_insertion": "inserted"}
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
     # ===== Assertions =====
 
     for facet_name, parent_id, axis_designation, unit_out, _mono, _pink, invertible in _AXES:
@@ -520,3 +575,18 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
         assert rule["kind"] == "Aggregation", f"{facet_name}: wrong rule kind"
         assert rule["aggregator_kind"] == aggregator_kind.value
         assert rule["constituent_count"] == 2
+
+    # DMM insert/bypass (MODE-2): the Monochromator Family carries the
+    # dmm_insertion enum schema, and the Monochromator Asset carries the
+    # mode-keyed two-state setting (currently inserted, the Mono state).
+    mono_family_events, _ = await deps.event_store.load("Family", _CAP_MONOCHROMATOR_ID)
+    schema_events = [e for e in mono_family_events if e.event_type == "FamilySettingsSchemaUpdated"]
+    assert schema_events, "Monochromator Family missing settings-schema update"
+    assert schema_events[-1].payload["settings_schema"]["properties"]["dmm_insertion"]["enum"] == [
+        "inserted",
+        "retracted",
+    ]
+    mono_asset_events, _ = await deps.event_store.load("Asset", _MONOCHROMATOR_ID)
+    settings_events = [e for e in mono_asset_events if e.event_type == "AssetSettingsUpdated"]
+    assert settings_events, "Monochromator missing dmm_insertion setting"
+    assert settings_events[-1].payload["settings"]["dmm_insertion"] == "inserted"

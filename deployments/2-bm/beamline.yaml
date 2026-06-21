@@ -191,6 +191,11 @@ conditioning-optics:
       controller: FrontEndDrive
       material: Si multilayer
       crystal_z_mm: [29335, 29934]
+      dmm_insertion:           # MODE-2 (#261): DMM physical insert(Mono)/retract(Pink); the mode-switch primitive, modeled as the Monochromator Asset setting dmm_insertion (enum inserted|retracted)
+        motors: ["2bma:m26", "2bma:m27", "2bma:m29"]   # dmm_usy_ob / dmm_usy_ib / dmm_dsy, driven together in the energy-change move (no sequencing, no interlock)
+        inserted_mm: 0.0       # Mono: DMM Y motors in, crystals in the beam
+        retracted_mm: -10.0    # Pink: DMM Y motors out, beam passes straight through
+        active: inserted       # current operational state
       confirm: true
       note: >
         Energy is set by the energy-change IOC as a discrete coordinated move:
@@ -209,9 +214,13 @@ conditioning-optics:
         the DMM is inserted (the per-energy axes above); in Pink the DMM Y motors
         drive out (about -10, beam passes straight through) and the Bragg arms
         park, with the mirror coating stripe setting the high-energy cutoff. Pink
-        configured energies: 30, 40, 50, 60 keV. The exact Mono<->Pink insert and
-        bypass positions and any required sequence are unconfirmed (MODE-2).
-        Source: docs2bm item_020.
+        configured energies: 30, 40, 50, 60 keV. The insert/bypass mechanism is
+        confirmed (MODE-2, #261): the three DMM Y motors m26/m27/m29 drive to 0
+        (in, Mono) or -10 mm (out, Pink) together within the one coordinated
+        energy-change move, with no special sequencing and no software interlock.
+        CORA records this two-state position as the dmm_insertion setting above;
+        the coordinated mode-switch move that drives it stays deferred with the
+        Pink positions and stripe map (MODE-3, MIRROR-1). Source: docs2bm item_020.
 
 beam-defining-and-safety:
   stage: source

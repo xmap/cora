@@ -17,7 +17,7 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `FrontEndDrive` | `MotionController` | `oms_vme58` | `2-BM` | `axis_count=91`, `OMS_VME` | live |
 | `Mirror` | `Mirror` | (none) | `MirrorTable` | driven by `FrontEndDrive` | live |
 | `MirrorTable` | `Table` | (none) | `2-BM` | `axis_layout=virtual_pose`, `virtual_record=2bma:table1` | live |
-| `Monochromator` | `Monochromator` | (none) | `2-BM` | driven by `FrontEndDrive` | live |
+| `Monochromator` | `Monochromator` | (none) | `2-BM` | `dmm_insertion=inserted` (MODE-2); driven by `FrontEndDrive` | live |
 | `Monochromator_BraggArmUpstream` | `PseudoAxis` | (none) | `Monochromator` | energy->upstream Bragg arm (deg) | live |
 | `Monochromator_BraggArmDownstream` | `PseudoAxis` | (none) | `Monochromator` | energy->downstream Bragg arm (deg) | live |
 | `Monochromator_M2Y` | `PseudoAxis` | (none) | `Monochromator` | energy->M2 vertical offset (mm) | live |
@@ -76,6 +76,7 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 | `SampleTable` | `axis_layout=translation_xyz`; direct motors `2bmb:m24` Y, `2bmb:m20` Z, `2bmb:m21` X-up, `2bmb:m22` X-down |
 | `DetectorTable` | `axis_layout=virtual_pose`; `virtual_record=2bmb:table3`; `geometry=SRI: 3 Y-supports, 2 X-supports, 1 Z-support` |
 | `MirrorTable` | `axis_layout=virtual_pose`; `virtual_record=2bma:table1`; `geometry=SRI support table`; X axes `M0X`/`M2X` driven by energy-change IOC; bind table-X surface only until `M1Y=2bma:m3` IOC substitution error fixed |
+| `Monochromator` | `dmm_insertion=inserted` (closed enum `inserted` \| `retracted`, MODE-2); DMM Y motors `2bma:m26` / `m27` / `m29` to `0` in (Mono) / `-10` mm out (Pink); driven by `FrontEndDrive` |
 | `RotaryDrive` | `serial_number=730792/1`; `firmware_version=unknown-pending-confirmation` (DRIVE-2); `axis_count=1`; `protocol=Aerotech_Native`; installed in `RotaryDriveChassis` |
 | `RotaryDriveChassis` | altids: serial `160591-A-1-1` (SerialNumber), order `730578` (Other); drawing `630D2079 REV-H`; inventory-only, no command surface |
 | `PropagationDistanceDrive` | `serial_number=228849-02`; `firmware_version=unknown-pending-confirmation` (DRIVE-2); `axis_count=1`; `protocol=Aerotech_Native`; IOC handle `2bmbAERO` (EPICS_PV altid); addressed `2bmbAERO:m1` |
@@ -219,6 +220,7 @@ Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0,
 | `DiagnosticFlag_Y` | `energy_move_flag` (`2bma:m44`) | energy -> flag height (Mono), parked out in Pink | mm |
 
 - Slit aperture is held constant at 20 mm; only the centre tracks the beam walk (non-monotonically). The centre and aperture are modelled as derived axes: `SampleSlit_VerticalCenter` (`Aggregation` `MidRange`) and `SampleSlit_VerticalAperture` (`Aggregation` `Difference`) over the two blades. `Aggregation` is one-way (computed from constituents), so they are read-only views. The rules declare the relationship; binding the two specific blades via constituent port wiring (the hexapod-pose pattern) is deferred with the rest of the per-facet conduct wiring.
+- DMM insert/bypass (MODE-2): the DMM is physically inserted in Mono and retracted in Pink. This two-state, mode-keyed position is NOT a per-energy curve; it is the `dmm_insertion` setting on the `Monochromator` (closed enum `inserted` | `retracted`, the `Table.axis_layout` pattern), with the three DMM Y motors (`2bma:m26` / `m27` / `m29`, driven together to `0` in / `-10` mm out) documentary in `beamline.yaml`. The coordinated move that drives it is the deferred `beam_mode_change` (MODE-3 / MIRROR-1).
 - Not energy axes: `crystal2_z` (M2 Z, `2bma:m8`) is a setup translation the IOC does not drive; the mirror is held constant in Mono. Neither carries a Mono curve.
 - DMM lateral stripe not yet modelled: substrate has two multilayer periods (13.8 / 24 angstrom) on stripes 4 mm apart; upstream/downstream X motors (`2bma:m25` / `2bma:m28`) may select per energy band. Operator-facing selection vs fixed setup is open (`ENERGY-6`).
 - Curves carry the REAL saved `store_0` positions (ENERGY-1/2, FLAG-1): full 6-energy Mono curves plus parked Pink curves. Runtime `eval_lookup_table` is wired; out-of-range refuses (`extrapolation_kind=Error`, staff-confirmed ENERGY-4: the inter-mode band 25.584-30 keV is not bridgeable by interpolation).

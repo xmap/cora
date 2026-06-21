@@ -119,7 +119,6 @@ This row covers the mirror coating stripe.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| MODE-2 | `Blocks-go-live` | How is the DMM physically inserted (Mono) and bypassed (Pink)? The components page implies the DMM Y motors drive to about -10 (out) for pink and 0 (in) for mono, with the Bragg arms parked when out, but we have no exact positions, PVs, or required switching sequence or interlock on file. What moves, to what positions, and in what order? | DMM Y to about -10 out / 0 in, Bragg arms parked in pink; exact positions and sequence unknown | not yet | [Beam modes](procedures.md#beam-modes) |
 | MODE-3 | `Blocks-go-live` | The pink-mode per-energy saved positions (the Pink half of `store_0`) for the swept mirror coating stripe (`2bma:m3`) and the mirror-table X stages (`2bma:m1` / `m4`)? The page gives a partial table (30 keV: m3 3.039, table X 8/8; 40: 13.0, 10/10; 50: 39.0, 10/10; 60: 49.0, 29/29 mm); please confirm and complete it, and (the data half of MIRROR-1) tell us which named stripe (a/b/c/d) sits at which `m3` position. | partial pink m3 and table-X positions from the page; stripe-to-label map not on file | not yet | [Beam modes](procedures.md#beam-modes) |
 
 ## Equipment protection
