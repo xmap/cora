@@ -129,8 +129,9 @@ One canonical `(system, number, revision)` triple per Asset, except `Rotary`, wh
 | `Objective_2x` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
 | `Objective_1.1x` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
 | `Scintillator` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
+| `StationShutter` | `41050401-410003` rev `(-)` (P6-50 shutter element; assembly `41050401-500000`) | `ICMS` |
 
-Not yet cited: Kohzu `CYAT-070` datasheet (`SampleTop_*`), an APS shutter drawing (`StationShutter`), a FLIR Oryx datasheet (`Camera`).
+Not yet cited: Kohzu `CYAT-070` datasheet (`SampleTop_*`), a FLIR Oryx datasheet (`Camera`).
 
 ## Signal wiring
 

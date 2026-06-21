@@ -180,9 +180,9 @@ def test_renders_source_stage_walk_and_no_em_dash() -> None:
     assert "](../../catalog/families.md)" in markdown
     assert "`Mask`" in markdown
     assert "[`Mask`](../../catalog/families.md)" not in markdown
-    # the folded source-area modelling note and a confirm note render
+    # the folded source-area modelling note and the confirm marker render
     assert "no Conditioner Role" in markdown
-    assert "confirm: count and thickness" in markdown
+    assert "`confirm`" in markdown
     # repo style: no em dashes in generated prose (chr() keeps the literal out of source)
     assert chr(0x2014) not in markdown
 

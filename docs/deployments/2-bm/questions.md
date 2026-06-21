@@ -102,12 +102,10 @@ CORA has registered the two Piezosystem Jena piezo controllers (NV100D, item_027
 
 ## Beam path and front end
 
-Three rows cover the front-end windows, the B-station safety shutter, and the diagnostic flag.
+One row covers the diagnostic flag.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| BEAM-2 | `Nice-to-have` | How many front-end Be windows are in the stack, and what is their total thickness? | windows exist; count and thickness unconfirmed | not yet | [Inventory](inventory.md#inventory) |
-| BEAM-3 | `Nice-to-have` | Is there a canonical APS drawing for the B-station safety shutter (`StationShutter`) beyond its RSS tag (`02-BM-A-P-01`)? | shutter modelled; only the RSS tag on file | not yet | [Engineering drawings](inventory.md#engineering-drawings) |
 | FLAG-1 | `Nice-to-have` | For the diagnostic flag (`DiagnosticFlag`, `2bma:m44`): its exact in-hutch location (which 2-BM-A position / z), and the energy-dependent vertical positions it takes in Mono (the staff `energy_move_flag` table) plus its parked Pink position? CORA registers it as a `Screen` Asset on `FrontEndDrive`, raised in Mono and parked in Pink, but does not yet carry its positions or model the Y as an energy-tracking axis. | registered as a `Screen` Asset; in-hutch position and energy-tracking Y curve pending | yes | [Beam modes](procedures.md#beam-modes) |
 
 ## Energy and the optics

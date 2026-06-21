@@ -83,7 +83,15 @@ front-end:
       passive: true
       replaceable: true
       new: true
-      confirm: "count and thickness"
+      window_count: 3
+      be_thickness_total: 0.63 mm   # BEAM-2 (#246): W4-20 0.25 + W4-60 0.13 + unlabelled 0.25 (staff-verified)
+      note: >
+        Three OFHC-housed Be windows on the 02-BM beam path; per-window child
+        Assets are deferred to the Window-Family slice. Source APS_2191941
+        (post-APS-U) rows 5/8/9: W4-20 (drawing 4105090804-200000, z 28718,
+        Be 0.25 mm), W4-60 (drawing 4105090804-600000, z 30804, Be 0.13 mm),
+        and an unlabelled Be window (drawing 4102020106-400000, z 32417,
+        Be 0.25 mm).
     - name: FrontEndShutter
       family: Shutter
       pv: "S02BM-PSS:FES"
@@ -207,6 +215,7 @@ beam-defining-and-safety:
           pv: "S02BM-PSS:SBS"
           material: "W 21 mm"
           aperture_mm: [60.0, 44.5]
+          drawing: { system: ICMS, number: 41050401-410003, revision: "(-)" }   # BEAM-3 (#247): P6-50 safety-shutter element; assembly drawing 41050401-500000; RSS 02-BM-A-P-01; source APS_2191941 row 10
           replaceable: true
           confirm: true
           note: >
