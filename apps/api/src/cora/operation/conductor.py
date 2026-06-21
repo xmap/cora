@@ -37,6 +37,16 @@ can return a result dict carrying their own status (e.g. `{"ok":
 False, "reason": "out_of_range"}`); the Conductor treats any return
 from a body as success-shaped at this tier.
 
+## Resume (execute_from)
+
+`execute_from` replays a PINNED conduct manifest from a re-establishment
+boundary rather than re-deriving the step list: re-drive setpoints, re-run
+checks as fresh gates, and halt-for-operator on an acquisition
+(`ActionStep`). It is the Tier-1 resumable-conduct primitive
+([[project_resumable_conduct_design]]); the manifest comes from
+`ResolvedStepsRecorded` parsed via `steps_from_manifest`. Like `execute`
+it drives no FSM transition.
+
 ## Pre-effect in-flight marker (side-effecting steps)
 
 A setpoint and an action are side-effecting: each records a SEPARATE
@@ -104,7 +114,8 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from enum import StrEnum
+from typing import Any, Protocol, cast
 from uuid import UUID
 
 from cora.infrastructure.ports.clock import Clock
@@ -226,6 +237,33 @@ point -- a crashed write leaves a marker-without-outcome behind so the
 step is recoverable. See [[project_resumable_conduct_design]] Tier 1."""
 
 _QUALITY_GOOD = "Good"
+
+_RESUME_HALT_ERROR_CLASS = "AcquisitionResumeRequiresOperator"
+"""`error_class` on the `ConductorFailure` that `execute_from` returns when
+a resume reaches an `ActionStep` (an acquisition). It is NOT an exception
+and NOT a step failure: re-running an interrupted acquisition is
+non-idempotent (fly-scan triggers are one-shot, a mid-arm collect reads
+identically for finished / aborted / never-armed), so resume HALTS and
+hands the decision (redo-fresh vs reseed) back to the operator rather than
+auto-skipping or auto-rerunning. See [[project_resumable_conduct_design]]."""
+
+
+class ResumePolicy(StrEnum):
+    """How `execute_from` re-establishes state while replaying a manifest tail.
+
+    `RE_ESTABLISH` (the only member today): re-drive setpoints (absolute
+    writes are idempotent; CORA has no relative-setpoint type), re-run
+    checks as fresh gates, and HALT on an acquisition (`ActionStep`) for an
+    operator decision. This is the locked default per
+    [[project_resumable_conduct_design]].
+
+    A future `COMPARE` member (read-and-compare instead of re-drive) is an
+    Anti-hook-until-lease: its single-writer guarantee is unsatisfiable on a
+    multi-writer floor until a Conduit/Surface write-ownership lease exists,
+    so it is deliberately absent rather than stubbed.
+    """
+
+    RE_ESTABLISH = "re_establish"
 
 
 @dataclass(frozen=True)
@@ -587,6 +625,104 @@ class Conductor:
             # and reset cleanly on exception.
             with with_dispatch_correlation_id(correlation_id):
                 failure = await self._dispatch(step, index=index, envelope=envelope, port=observer)
+            if failure is not None:
+                return ConductorResult(
+                    procedure_id=procedure_id,
+                    completed_count=completed,
+                    failure=failure,
+                    actuation_kind=observer.actuation_kind,
+                )
+            completed += 1
+        return ConductorResult(
+            procedure_id=procedure_id,
+            completed_count=completed,
+            actuation_kind=observer.actuation_kind,
+        )
+
+    async def execute_from(
+        self,
+        *,
+        procedure_id: UUID,
+        principal_id: UUID,
+        correlation_id: UUID,
+        manifest: Sequence[Step],
+        boundary: int,
+        policy: ResumePolicy = ResumePolicy.RE_ESTABLISH,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ConductorResult:
+        """Resume a halted conduct by REPLAYING a pinned manifest from `boundary`.
+
+        `manifest` is the FINAL resolved step list pinned on
+        `ResolvedStepsRecorded` at first conduct (parse the event's
+        `resolved_steps` back via `steps_from_manifest`). Resume NEVER
+        re-derives the step list -- a re-derived list could silently skip or
+        mis-target a step (the end-of-run "home to 0" aliasing the
+        start-of-run "home to 0" after an index shift). It replays
+        `manifest[boundary:]` verbatim:
+
+          - `SetpointStep` -> RE-DRIVE (idempotent absolute write). The
+            recorded `step_index` is the ABSOLUTE manifest position, so the
+            replayed journal lines up with the original conduct.
+          - `CheckStep` -> RE-RUN as a fresh gate (a passing check proves
+            "now", not "continuously", so it is re-evaluated).
+          - `ActionStep` -> HALT for an operator decision (an interrupted
+            acquisition is non-idempotent; see `_RESUME_HALT_ERROR_CLASS`).
+            The action is NOT executed and NOTHING is recorded for it; the
+            returned `ConductorResult.failure` carries the halt so the
+            caller (a resume orchestrator) routes the decision.
+
+        `boundary` is the re-establishment boundary from `ProcedureResumed`:
+        the index from which re-drive + re-run resumes. `boundary >=
+        len(manifest)` replays an empty tail (a no-op resume). Like
+        `execute`, this drives no FSM transition; it walks + records.
+
+        See [[project_resumable_conduct_design]] Tier 1.
+        """
+        if boundary < 0:
+            msg = f"boundary must be >= 0 (got {boundary})"
+            raise ValueError(msg)
+        if policy is not ResumePolicy.RE_ESTABLISH:  # pragma: no cover - only member today
+            msg = f"unsupported resume policy: {policy}"
+            raise ValueError(msg)
+        envelope = _Envelope(
+            procedure_id=procedure_id,
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            surface_id=surface_id,
+        )
+        observer = _ActuationObserver(self._control_port)
+        completed = 0
+        for index in range(boundary, len(manifest)):
+            step = manifest[index]
+            if isinstance(step, ActionStep):
+                # Halt-for-operator: do not re-run an interrupted acquisition.
+                return ConductorResult(
+                    procedure_id=procedure_id,
+                    completed_count=completed,
+                    failure=ConductorFailure(
+                        step_index=index,
+                        source_kind=_STEP_KIND_ACTION,
+                        target=step.name,
+                        error_class=_RESUME_HALT_ERROR_CLASS,
+                        message=(
+                            f"resume halted at step {index} (action {step.name!r}): an "
+                            "interrupted acquisition needs an operator decision "
+                            "(redo-fresh vs reseed); not auto-rerun, not auto-skipped"
+                        ),
+                    ),
+                    actuation_kind=observer.actuation_kind,
+                )
+            with with_dispatch_correlation_id(correlation_id):
+                if isinstance(step, SetpointStep):
+                    failure = await self._run_setpoint(
+                        step, index=index, envelope=envelope, port=observer
+                    )
+                else:
+                    failure = await self._run_check(
+                        step, index=index, envelope=envelope, port=observer
+                    )
             if failure is not None:
                 return ConductorResult(
                     procedure_id=procedure_id,
@@ -1070,11 +1206,12 @@ def _criterion_to_dict(criterion: CheckCriterion) -> dict[str, Any]:
 
 
 def step_to_payload(step: Step) -> dict[str, Any]:
-    """Serialize a `Step` to a JSON-clean dict (inverse of `step_from_wire`).
+    """Serialize a `Step` to a JSON-clean dict (inverse of `steps_from_manifest`).
 
     Mirrors the conduct route's wire shape (the `kind` discriminator +
     field names) so the resolved step list pinned on `ResolvedStepsRecorded`
-    round-trips back to `Step` objects via `step_from_wire` at resume. A
+    round-trips back to `Step` objects via `steps_from_manifest` at resume
+    (and via the route's Pydantic `step_from_wire` on the live HTTP path). A
     tuple `value` serializes as a list (JSON has no tuple); the criterion
     reuses `_criterion_to_dict` so the wire shape stays single-sourced.
     """
@@ -1093,6 +1230,55 @@ def step_to_payload(step: Step) -> dict[str, Any]:
         "address": step.address,
         "criterion": _criterion_to_dict(step.criterion),
     }
+
+
+def _criterion_from_dict(criterion: Mapping[str, Any]) -> CheckCriterion:
+    """Rebuild a `CheckCriterion` from its `_criterion_to_dict` shape."""
+    kind = criterion["kind"]
+    if kind == "equals":
+        expected: Any = criterion["expected"]
+        if isinstance(expected, list):
+            expected = cast("tuple[Any, ...]", tuple(expected))  # pyright: ignore[reportUnknownArgumentType]
+        return EqualsCriterion(expected=expected)
+    if kind == "within_tolerance":
+        return WithinToleranceCriterion(
+            expected=criterion["expected"], tolerance=criterion["tolerance"]
+        )
+    msg = f"unknown criterion kind: {kind!r}"
+    raise ValueError(msg)
+
+
+def _step_from_payload(payload: Mapping[str, Any]) -> Step:
+    """Rebuild one `Step` from its `step_to_payload` wire shape."""
+    kind = payload["kind"]
+    if kind == "setpoint":
+        value: Any = payload["value"]
+        if isinstance(value, list):
+            value = cast("tuple[Any, ...]", tuple(value))  # pyright: ignore[reportUnknownArgumentType]
+        return SetpointStep(
+            address=payload["address"], value=value, verify=payload.get("verify", False)
+        )
+    if kind == "action":
+        return ActionStep(name=payload["name"], params=dict(payload.get("params", {})))
+    if kind == "check":
+        return CheckStep(
+            address=payload["address"], criterion=_criterion_from_dict(payload["criterion"])
+        )
+    msg = f"unknown step kind: {kind!r}"
+    raise ValueError(msg)
+
+
+def steps_from_manifest(resolved_steps: Sequence[Mapping[str, Any]]) -> tuple[Step, ...]:
+    """Parse the pinned `ResolvedStepsRecorded.resolved_steps` back into `Step`s.
+
+    The exact inverse of `step_to_payload` (the serialization used to pin the
+    conduct manifest). A resume reads the pinned event's `resolved_steps`,
+    parses them with this helper, and hands the result to
+    `Conductor.execute_from` -- it NEVER re-derives the step list from live
+    `Plan.wires` / partition rules. Pure; no Pydantic (that lives at the HTTP
+    boundary in `step_from_wire`). See [[project_resumable_conduct_design]].
+    """
+    return tuple(_step_from_payload(step) for step in resolved_steps)
 
 
 def _criterion_matches(criterion: CheckCriterion, value: Any) -> bool:
@@ -1163,8 +1349,10 @@ __all__ = [
     "ConductorResult",
     "EqualsCriterion",
     "InMemoryActionRegistry",
+    "ResumePolicy",
     "SetpointStep",
     "Step",
     "WithinToleranceCriterion",
     "step_to_payload",
+    "steps_from_manifest",
 ]
