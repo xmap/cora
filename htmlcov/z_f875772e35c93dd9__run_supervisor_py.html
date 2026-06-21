@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f875772e35c93dd9_main_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-21 06:36 +0000
+            created at 2026-06-21 07:03 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -117,7 +117,7 @@
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">(`quality_ok=False`) takes NO action, per design Lock 4 (never act on</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="str">missing data).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">## Shadow Run-liveness pass (RunLivenessWatchdog v1)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">## Shadow run-liveness pass (the run-liveness rule, v1)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="str">A separate OBSERVE-ONLY pass flags a Run that has been Running for an</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="str">implausibly long time (`now - running_since` past an operator ceiling): the</span>&nbsp;</span><span class="r"></span></p>
@@ -348,7 +348,7 @@
     <p class="pln"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t265" href="#t265">265</a></span><span class="t"><span class="str">    Inclusive boundary: elapsed == ceiling FLAGS (`>=`). A Run with no</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t266" href="#t266">266</a></span><span class="t"><span class="str">    `running_since` (legacy row, or one that started before the column existed)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t"><span class="str">    is never stale -- it cannot be evaluated, so the watchdog defers (Lock 4:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t"><span class="str">    is never stale -- it cannot be evaluated, so the rule defers (Lock 4:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t"><span class="str">    never act on missing data). The signal is `running_since`, a CORA-owned,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t"><span class="str">    un-spoofable timestamp set on RunStarted and reset on RunResumed.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
@@ -622,7 +622,7 @@
     <p class="run"><span class="n"><a id="t538" href="#t538">538</a></span><span class="t">        <span class="key">if</span> <span class="nam">run_id</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">inflight_ids</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t539" href="#t539">539</a></span><span class="t">            <span class="nam">liveness</span><span class="op">.</span><span class="nam">discard</span><span class="op">(</span><span class="nam">run_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t540" href="#t540">540</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t541" href="#t541">541</a></span><span class="t">    <span class="com"># Shadow Run-liveness pass (RunLivenessWatchdog v1): OBSERVE-ONLY. It logs</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t541" href="#t541">541</a></span><span class="t">    <span class="com"># Shadow run-liveness pass (the run-liveness rule, v1): OBSERVE-ONLY. It logs</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t542" href="#t542">542</a></span><span class="t">    <span class="com"># which Running Runs it WOULD flag as implausibly long (now - running_since</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t543" href="#t543">543</a></span><span class="t">    <span class="com"># past the operator ceiling) and records nothing, issues no command. Run</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t544" href="#t544">544</a></span><span class="t">    <span class="com"># before the beam read so it is independent of beam I/O. Off unless the</span>&nbsp;</span><span class="r"></span></p>
@@ -824,7 +824,7 @@
             <a class="nav" href="z_f875772e35c93dd9_main_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-21 06:36 +0000
+            created at 2026-06-21 07:03 +0000
         </p>
     </div>
 </footer>

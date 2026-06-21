@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_9b1401bacecaa802_control_port_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-21 06:36 +0000
+            created at 2026-06-21 07:03 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -293,7 +293,7 @@
     <p class="run"><span class="n"><a id="t209" href="#t209">209</a></span><span class="t">    <span class="nam">run_supervisor_resume_enabled</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t210" href="#t210">210</a></span><span class="t">    <span class="nam">run_supervisor_resume_settle_ticks</span><span class="op">:</span> <span class="nam">int</span> <span class="op">=</span> <span class="num">2</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t211" href="#t211">211</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t212" href="#t212">212</a></span><span class="t">    <span class="com"># `run_liveness_ceiling_seconds` gates the RunLivenessWatchdog shadow rule</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t212" href="#t212">212</a></span><span class="t">    <span class="com"># `run_liveness_ceiling_seconds` gates the run-liveness shadow rule</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t">    <span class="com"># inside the RunSupervisor loop: a Run that has been Running longer than this</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">    <span class="com"># (now - running_since) is flagged as possibly-hung. Default None = OFF (a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">    <span class="com"># second off-gate above run_supervisor_enabled). No safe universal default</span>&nbsp;</span><span class="r"></span></p>
@@ -558,12 +558,12 @@
     <p class="run"><span class="n"><a id="t474" href="#t474">474</a></span><span class="t">    <span class="op">@</span><span class="nam">field_validator</span><span class="op">(</span><span class="str">"run_liveness_ceiling_seconds"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t475" href="#t475">475</a></span><span class="t">    <span class="op">@</span><span class="nam">classmethod</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t476" href="#t476">476</a></span><span class="t">    <span class="key">def</span> <span class="nam">_validate_run_liveness_ceiling_seconds</span><span class="op">(</span><span class="nam">cls</span><span class="op">,</span> <span class="nam">value</span><span class="op">:</span> <span class="nam">float</span> <span class="op">|</span> <span class="key">None</span><span class="op">)</span> <span class="op">-></span> <span class="nam">float</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t477" href="#t477">477</a></span><span class="t">        <span class="str">"""None disables the Run-liveness watchdog; a set ceiling must be</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t477" href="#t477">477</a></span><span class="t">        <span class="str">"""None disables the run-liveness rule; a set ceiling must be</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t478" href="#t478">478</a></span><span class="t"><span class="str">        positive (a non-positive ceiling would flag every Running Run at once)."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t479" href="#t479">479</a></span><span class="t">        <span class="key">if</span> <span class="nam">value</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">and</span> <span class="nam">value</span> <span class="op">&lt;=</span> <span class="num">0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t480" href="#t480">480</a></span><span class="t">            <span class="nam">msg</span> <span class="op">=</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t481" href="#t481">481</a></span><span class="t">                <span class="fst">f"</span><span class="fst">run_liveness_ceiling_seconds must be > 0 when set, got </span><span class="op">{</span><span class="nam">value</span><span class="op">}</span><span class="fst">; </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t482" href="#t482">482</a></span><span class="t">                <span class="str">"None disables the Run-liveness watchdog"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t482" href="#t482">482</a></span><span class="t">                <span class="str">"None disables the run-liveness rule"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t483" href="#t483">483</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t484" href="#t484">484</a></span><span class="t">            <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t485" href="#t485">485</a></span><span class="t">        <span class="key">return</span> <span class="nam">value</span>&nbsp;</span><span class="r"></span></p>
@@ -612,7 +612,7 @@
             <a class="nav" href="z_9b1401bacecaa802_control_port_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.1">coverage.py v7.14.1</a>,
-            created at 2026-06-21 06:36 +0000
+            created at 2026-06-21 07:03 +0000
         </p>
     </div>
 </footer>
