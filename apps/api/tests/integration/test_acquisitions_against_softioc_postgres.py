@@ -121,8 +121,9 @@ async def test_conductor_runs_collect_action_against_real_softioc_and_postgres(
     started_event_id = UUID("01900000-0000-7000-8000-0000020d0101")
     logbook_id = UUID("01900000-0000-7000-8000-0000020d0102")
     open_event_id = UUID("01900000-0000-7000-8000-0000020d0103")
-    collect_step_id = UUID("01900000-0000-7000-8000-0000020d0104")
-    completed_event_id = UUID("01900000-0000-7000-8000-0000020d0105")
+    collect_marker_id = UUID("01900000-0000-7000-8000-0000020d0104")
+    collect_step_id = UUID("01900000-0000-7000-8000-0000020d0105")
+    completed_event_id = UUID("01900000-0000-7000-8000-0000020d0106")
 
     deps = build_postgres_deps(
         db_pool,
@@ -131,6 +132,7 @@ async def test_conductor_runs_collect_action_against_real_softioc_and_postgres(
             started_event_id,
             logbook_id,
             open_event_id,
+            collect_marker_id,
             collect_step_id,
             completed_event_id,
         ],
@@ -211,8 +213,9 @@ async def test_conductor_runs_discrete_action_walks_axis_with_per_point_collects
     started_event_id = UUID("01900000-0000-7000-8000-0000020d0201")
     logbook_id = UUID("01900000-0000-7000-8000-0000020d0202")
     open_event_id = UUID("01900000-0000-7000-8000-0000020d0203")
-    discrete_step_id = UUID("01900000-0000-7000-8000-0000020d0204")
-    completed_event_id = UUID("01900000-0000-7000-8000-0000020d0205")
+    discrete_marker_id = UUID("01900000-0000-7000-8000-0000020d0204")
+    discrete_step_id = UUID("01900000-0000-7000-8000-0000020d0205")
+    completed_event_id = UUID("01900000-0000-7000-8000-0000020d0206")
 
     deps = build_postgres_deps(
         db_pool,
@@ -221,6 +224,7 @@ async def test_conductor_runs_discrete_action_walks_axis_with_per_point_collects
             started_event_id,
             logbook_id,
             open_event_id,
+            discrete_marker_id,
             discrete_step_id,
             completed_event_id,
         ],
@@ -296,8 +300,9 @@ async def test_conductor_runs_continuous_action_with_axis_sweep_against_softioc(
     started_event_id = UUID("01900000-0000-7000-8000-0000020d0301")
     logbook_id = UUID("01900000-0000-7000-8000-0000020d0302")
     open_event_id = UUID("01900000-0000-7000-8000-0000020d0303")
-    continuous_step_id = UUID("01900000-0000-7000-8000-0000020d0304")
-    completed_event_id = UUID("01900000-0000-7000-8000-0000020d0305")
+    continuous_marker_id = UUID("01900000-0000-7000-8000-0000020d0304")
+    continuous_step_id = UUID("01900000-0000-7000-8000-0000020d0305")
+    completed_event_id = UUID("01900000-0000-7000-8000-0000020d0306")
 
     deps = build_postgres_deps(
         db_pool,
@@ -306,6 +311,7 @@ async def test_conductor_runs_continuous_action_with_axis_sweep_against_softioc(
             started_event_id,
             logbook_id,
             open_event_id,
+            continuous_marker_id,
             continuous_step_id,
             completed_event_id,
         ],

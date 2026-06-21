@@ -104,9 +104,10 @@ async def test_conductor_runs_setpoint_check_against_real_softioc_and_postgres(
     logbook_id = UUID("01900000-0000-7000-8000-0000020c0101")
     open_event_id = UUID("01900000-0000-7000-8000-0000020c0102")
     started_event_id = UUID("01900000-0000-7000-8000-0000020c0103")
-    setpoint_step_id = UUID("01900000-0000-7000-8000-0000020c0104")
-    check_step_id = UUID("01900000-0000-7000-8000-0000020c0105")
-    completed_event_id = UUID("01900000-0000-7000-8000-0000020c0106")
+    setpoint_marker_id = UUID("01900000-0000-7000-8000-0000020c0104")
+    setpoint_outcome_id = UUID("01900000-0000-7000-8000-0000020c0105")
+    check_step_id = UUID("01900000-0000-7000-8000-0000020c0106")
+    completed_event_id = UUID("01900000-0000-7000-8000-0000020c0107")
 
     deps = build_postgres_deps(
         db_pool,
@@ -115,7 +116,8 @@ async def test_conductor_runs_setpoint_check_against_real_softioc_and_postgres(
             started_event_id,
             logbook_id,
             open_event_id,
-            setpoint_step_id,
+            setpoint_marker_id,
+            setpoint_outcome_id,
             check_step_id,
             completed_event_id,
         ],
@@ -217,8 +219,9 @@ async def test_conductor_aborts_procedure_when_setpoint_fails_against_softioc(
     started_event_id = UUID("01900000-0000-7000-8000-0000020c0201")
     logbook_id = UUID("01900000-0000-7000-8000-0000020c0202")
     open_event_id = UUID("01900000-0000-7000-8000-0000020c0203")
-    setpoint_step_id = UUID("01900000-0000-7000-8000-0000020c0204")
-    aborted_event_id = UUID("01900000-0000-7000-8000-0000020c0205")
+    setpoint_marker_id = UUID("01900000-0000-7000-8000-0000020c0204")
+    setpoint_outcome_id = UUID("01900000-0000-7000-8000-0000020c0205")
+    aborted_event_id = UUID("01900000-0000-7000-8000-0000020c0206")
 
     deps = build_postgres_deps(
         db_pool,
@@ -227,7 +230,8 @@ async def test_conductor_aborts_procedure_when_setpoint_fails_against_softioc(
             started_event_id,
             logbook_id,
             open_event_id,
-            setpoint_step_id,
+            setpoint_marker_id,
+            setpoint_outcome_id,
             aborted_event_id,
         ],
     )
@@ -284,9 +288,10 @@ async def test_conductor_completes_procedure_with_equals_check_against_softioc(
     started_event_id = UUID("01900000-0000-7000-8000-0000020c0301")
     logbook_id = UUID("01900000-0000-7000-8000-0000020c0302")
     open_event_id = UUID("01900000-0000-7000-8000-0000020c0303")
-    setpoint_step_id = UUID("01900000-0000-7000-8000-0000020c0304")
-    check_step_id = UUID("01900000-0000-7000-8000-0000020c0305")
-    completed_event_id = UUID("01900000-0000-7000-8000-0000020c0306")
+    setpoint_marker_id = UUID("01900000-0000-7000-8000-0000020c0304")
+    setpoint_outcome_id = UUID("01900000-0000-7000-8000-0000020c0305")
+    check_step_id = UUID("01900000-0000-7000-8000-0000020c0306")
+    completed_event_id = UUID("01900000-0000-7000-8000-0000020c0307")
 
     deps = build_postgres_deps(
         db_pool,
@@ -295,7 +300,8 @@ async def test_conductor_completes_procedure_with_equals_check_against_softioc(
             started_event_id,
             logbook_id,
             open_event_id,
-            setpoint_step_id,
+            setpoint_marker_id,
+            setpoint_outcome_id,
             check_step_id,
             completed_event_id,
         ],
