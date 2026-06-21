@@ -27,7 +27,7 @@ Out of scope
 | Name | Identity | State summary | FSM |
 |---|---|---|---|
 | `Run` | `id: UUID` | `name`, `plan_id`, `subject_id?`, `raid?`, `status`, `override_parameters`, `effective_parameters`, `trigger_source?`, `observation_logbook_id?`, `external_refs`, `campaign_id?`, `last_adjusted_at?`, `adjustment_count`, `pinned_calibration_ids` | yes |
-| `Observation` (sub-aggregate VO on `Run`) | `event_id: UUID` (per row) | `channel_name`, `value`, `units?`, `sampling_procedure`, `sampled_at`, `occurred_at`, `recorded_at` | no |
+| `Observation` (sub-aggregate VO on `Run`) | `event_id: UUID` (per row) | `channel_name`, `value`, `units?`, `sampling_procedure`, `sampled_at`, `occurred_at`, `recorded_at`, `is_simulated` | no |
 
 `Run.subject_id` is optional because some execution shapes have no Subject: dark-field acquisition, flat-field acquisition, energy characterization with a standard reference. These share the full Run lifecycle with sample Runs; only the Subject binding differs.
 
@@ -192,7 +192,8 @@ CREATE TABLE entries_run_observations (
     sampling_procedure  TEXT              NOT NULL,
     sampled_at          TIMESTAMPTZ       NOT NULL,
     occurred_at         TIMESTAMPTZ       NOT NULL,
-    recorded_at         TIMESTAMPTZ       NOT NULL DEFAULT now()
+    recorded_at         TIMESTAMPTZ       NOT NULL DEFAULT now(),
+    is_simulated        BOOLEAN           NOT NULL DEFAULT false
 );
 ```
 
@@ -203,6 +204,8 @@ The three timestamps each carry distinct meaning:
 - `recorded_at` is when Postgres wrote the row.
 
 Clock skew between the sensor (`sampled_at`) and the handler (`occurred_at`) is real and expected; the three timestamps preserve all three observations rather than collapsing them.
+
+`is_simulated` marks rows produced by a simulator or replay feeder (default `false` = real). It travels with the datum so a closed-loop rule reading these channels can disqualify simulated data rather than act on it as if it were real.
 
 ## Cross-Module boundaries
 
@@ -220,7 +223,7 @@ Clock skew between the sensor (`sampled_at`) and the handler (`occurred_at`) is 
 | Calibration | reads-from | `Run.pinned_calibration_ids` is a frozen set of `CalibrationRevision.id`s captured at `start_run` and **immutable** for the life of the Run; every FSM transition preserves the set verbatim, and downstream consumers cite this set to answer "what calibration was this scan acquired against?" deterministically |
 | Agent | writes-to (Decision stream) | Terminal Run events (`RunCompleted`, `RunAborted`, `RunStopped`, `RunTruncated`) are subscribed by the RunDebriefer and CautionDrafter agents, each of which emits an advisory `Decision` per terminal Run |
 | Agent | writes-to (Run stream, lease marker) | Each terminal-Run-event subscriber appends `DecisionDebriefRequested` to the Run stream BEFORE invoking its LLM as a per-(run, terminal-event, agent) lease primitive; first writer wins via the existing optimistic-concurrency constraint, losing agents emit a `DebriefConflicted` / `CautionDraftConflicted` audit Decision on their own Decision stream with zero LLM cost (no Run-state mutation) |
-| Agent | written-by (Run stream) | the deterministic RunSupervisor agent issues `hold_run` / `stop_run` on an in-flight Run when facility beam is lost, through the authorized command path; the resulting `RunHeld` / `RunStopped` carries `decided_by_decision_id` linking the agent's `RunSupervision` Decision and is byte-identical to an operator hold/stop. Wind-down only (never resumes or starts a Run), off by default, and not a safety interlock (the floor PSS owns hard safety) |
+| Agent | written-by (Run stream) | the deterministic RunSupervisor agent issues `hold_run` / `resume_run` / `stop_run` on an in-flight Run as facility beam is lost and returns, through the authorized command path; the resulting `RunHeld` / `RunResumed` / `RunStopped` carries `decided_by_decision_id` linking the agent's `RunSupervision` Decision and is byte-identical to an operator action. The gated wind-up (`resume_run`) re-checks the full start-safety envelope and only ever resumes a Run the supervisor itself held; it never starts a Run. The supervisor also carries shadow observe-only rules (run-liveness, plus signal-quality and signal-stall over the Run's observation channels) that log a would-flag and take no action. Off by default, and not a safety interlock (the floor PSS owns hard safety) |
 | Access | shared-id-with | Every Run event envelope carries `actor_id` for principal attribution; cross-module references are bare UUIDs and not verified at write time |
 
 `Plan`, `Subject`, `Asset`, `Campaign`, `Clearance`, and `Calibration` references are validated at handler load-time but treated as opaque by the decider; the decider operates on pre-loaded context bundles rather than re-fetching, which keeps the pure-decider boundary clean.
