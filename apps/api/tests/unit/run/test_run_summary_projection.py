@@ -191,6 +191,105 @@ async def test_run_started_sets_override_parameters_present_false_when_empty() -
 
 
 @pytest.mark.unit
+async def test_run_started_precomputes_rule_inputs_from_effective_parameters() -> None:
+    """RunStarted writes snr_limit ($10) + expected_observation_interval_seconds
+    ($11) read from the operator-declared effective_parameters keys, the
+    closed-loop rules' per-Run inputs (subscribed_event_types is unchanged, so
+    this column-level assertion is the real coverage)."""
+    proj = RunSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "RunStarted",
+        {
+            "run_id": str(_RUN_ID),
+            "name": "Run-with-rule-inputs",
+            "plan_id": str(_PLAN_ID),
+            "subject_id": None,
+            "raid": None,
+            "effective_parameters": {
+                "snr_limit": 5.0,
+                "expected_observation_interval_seconds": 2.5,
+            },
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[10] == 5.0
+    assert args.args[11] == 2.5
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "effective",
+    [
+        {},  # keys absent entirely (Method schema does not declare them)
+        {"snr_limit": 0.0, "expected_observation_interval_seconds": -1.0},  # non-positive
+        {"snr_limit": "nope", "expected_observation_interval_seconds": None},  # non-numeric
+    ],
+)
+async def test_run_started_leaves_rule_inputs_null_when_absent_or_degenerate(
+    effective: dict[str, Any],
+) -> None:
+    """Absent / non-positive / non-numeric rule inputs land NULL, which
+    disables the corresponding rule for the Run (cannot-tell -> defer)."""
+    proj = RunSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "RunStarted",
+        {
+            "run_id": str(_RUN_ID),
+            "name": "Run-no-rule-inputs",
+            "plan_id": str(_PLAN_ID),
+            "subject_id": None,
+            "raid": None,
+            "effective_parameters": effective,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[10] is None
+    assert args.args[11] is None
+
+
+@pytest.mark.unit
+async def test_run_adjusted_recomputes_rule_inputs_and_stamps_attribution() -> None:
+    """RunAdjusted re-snapshots effective_parameters, so the projection
+    recomputes snr_limit + expected_observation_interval_seconds in the SAME
+    arm as last_adjusted_by. Prevents a mid-run re-cadence from leaving the
+    rules on stale start-time inputs (the stale-baseline failure mode)."""
+    proj = RunSummaryProjection()
+    conn = AsyncMock()
+    adjusted_by = uuid4()
+    event = _stored(
+        "RunAdjusted",
+        {
+            "run_id": str(_RUN_ID),
+            "adjusted_by": str(adjusted_by),
+            "effective_parameters": {
+                "snr_limit": 8.0,
+                "expected_observation_interval_seconds": 4.0,
+            },
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "snr_limit" in sql
+    assert "expected_observation_interval_seconds" in sql
+    assert "last_adjusted_by" in sql
+    assert args.args[1] == _RUN_ID
+    assert args.args[2] == adjusted_by
+    assert args.args[3] == 8.0
+    assert args.args[4] == 4.0
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("event_type", "expected_status"),
     [

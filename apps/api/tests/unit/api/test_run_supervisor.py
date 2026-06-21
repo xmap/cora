@@ -219,7 +219,13 @@ class _BeamDown:
         return _beam(fes=False)
 
 
-def _running_item(run_id: UUID, *, running_since: datetime | None = _NOW) -> RunSummaryItem:
+def _running_item(
+    run_id: UUID,
+    *,
+    running_since: datetime | None = _NOW,
+    snr_limit: float | None = None,
+    expected_observation_interval_seconds: float | None = None,
+) -> RunSummaryItem:
     return RunSummaryItem(
         run_id=run_id,
         name="streaming tomo",
@@ -231,6 +237,8 @@ def _running_item(run_id: UUID, *, running_since: datetime | None = _NOW) -> Run
         running_since=running_since,
         override_parameters_present=False,
         campaign_id=None,
+        snr_limit=snr_limit,
+        expected_observation_interval_seconds=expected_observation_interval_seconds,
     )
 
 
@@ -576,6 +584,8 @@ def _held_item(run_id: UUID) -> RunSummaryItem:
         running_since=_NOW,
         override_parameters_present=False,
         campaign_id=None,
+        snr_limit=None,
+        expected_observation_interval_seconds=None,
     )
 
 
