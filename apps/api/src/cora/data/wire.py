@@ -55,11 +55,13 @@ from cora.data.features import (
 )
 from cora.data.ports.distribution_lookup import DistributionLookup
 from cora.data.ports.edition_serializer import EditionSerializer
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
-from cora.shared.ports.doi_minter import DoiMinter
+from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMinter
 
 _BC = "data"
 
@@ -97,9 +99,9 @@ def _build_edition_serializers() -> dict[EditionKind, EditionSerializer]:
     return {EditionKind.ROCRATE: RoCrate12Adapter()}
 
 
-def _build_doi_minter() -> DoiMinter:
-    """Wire the stub DoiMinter; production DataCite adapter swap is deferred."""
-    return StubDoiMinter()
+def _build_persistent_identifier_minter() -> PersistentIdentifierMinter:
+    """Wire the stub PersistentIdentifierMinter; production DataCite adapter swap is deferred."""
+    return StubPersistentIdentifierMinter()
 
 
 def wire_data(deps: Kernel) -> DataHandlers:
@@ -115,7 +117,7 @@ def wire_data(deps: Kernel) -> DataHandlers:
             SimpleNamespace(
                 distribution_lookup=_build_distribution_lookup(deps),
                 edition_serializers=_build_edition_serializers(),
-                doi_minter=_build_doi_minter(),
+                persistent_identifier_minter=_build_persistent_identifier_minter(),
             ),
         )
     return DataHandlers(

@@ -3,7 +3,7 @@
 Server-mint posture per Lock 5 of [[project-fixture-pidinst-design]]:
 the route forwards `(fixture_id, scheme, suffix)` to the handler, and
 the handler closure resolves the `PersistentIdentifier` from the shared
-`DoiMinter` port BEFORE invoking the pure decider. Non-determinism
+`PersistentIdentifierMinter` port BEFORE invoking the pure decider. Non-determinism
 (the minter call) is captured in the handler closure per
 [[project-non-determinism-principle]], NOT at the route layer. One
 minter call site (this handler), not two (route + MCP tool).
@@ -57,7 +57,7 @@ from cora.infrastructure.update_handler import make_update_handler
 from cora.shared.identifier import PersistentIdentifier
 
 if TYPE_CHECKING:
-    from cora.shared.ports.doi_minter import DoiMinter
+    from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMinter
 
 
 class Handler(Protocol):
@@ -77,7 +77,8 @@ class Handler(Protocol):
 def bind(deps: Kernel) -> Handler:
     """Build an assign_fixture_persistent_id handler closed over the shared deps.
 
-    Reads the BC-tier `DoiMinter` from `deps.equipment.doi_minter`
+    Reads the BC-tier `PersistentIdentifierMinter` from
+    `deps.equipment.persistent_identifier_minter`
     (shared with the Asset-tier slice per Lock 5; same SimpleNamespace
     stash wired by `wire_equipment(deps)`). Calls `minter.mint(scheme,
     suffix)` to resolve the `PersistentIdentifier`, then runs the pure
@@ -86,7 +87,7 @@ def bind(deps: Kernel) -> Handler:
     Returns the assigned `PersistentIdentifier` so the route can echo
     it in the 201 body.
     """
-    minter = cast("DoiMinter", deps.equipment.doi_minter)  # type: ignore[attr-defined]
+    minter = cast("PersistentIdentifierMinter", deps.equipment.persistent_identifier_minter)  # type: ignore[attr-defined]
 
     async def handler(
         command: AssignFixturePersistentId,

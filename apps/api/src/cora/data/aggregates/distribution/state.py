@@ -360,6 +360,27 @@ class DistributionByteSizeMismatchError(Exception):
         self.actual_byte_size = actual_byte_size
 
 
+class DistributionChecksumAlgorithmMismatchError(Exception):
+    """Raised when ``command.checksum_algorithm != dataset.checksum.algorithm``.
+
+    Byte-identical-copy invariant, algorithm leg: a copy of a directory
+    artifact (``sha256-tree``) must itself be hashed as a tree, and a
+    copy of a single file (``sha256``) as a file. Two 64-hex values under
+    different algorithms are not comparable, so the algorithm must match
+    before the value comparison is meaningful. Lifts to HTTP 409.
+    """
+
+    def __init__(self, dataset_id: UUID, expected_algorithm: str, actual_algorithm: str) -> None:
+        super().__init__(
+            f"Distribution checksum algorithm mismatch against Dataset {dataset_id}: "
+            f"expected {expected_algorithm!r} (from Dataset), "
+            f"got {actual_algorithm!r} (from command)"
+        )
+        self.dataset_id = dataset_id
+        self.expected_algorithm = expected_algorithm
+        self.actual_algorithm = actual_algorithm
+
+
 #: Canonical value used by the decider's `Supply.kind` check. Per L30:
 #: PascalCase per CORA closed-StrEnum convention. The Supply BC uses
 #: a free-form string `kind` today (validated via `validate_bounded_text`,

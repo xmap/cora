@@ -225,8 +225,9 @@ class Kernel:
     `add_assembly_presents_as` decider validates role_id resolves
     (affordance-superset deferred to register_fixture layer). 3D
     `bind_plan_role` handler walks Asset.family_ids ->
-    FamilyLookup.batch_lookup -> RoleLookup.lookup for the role_kind
-    satisfaction path (Lock 17 ANY-single-family disjunction). 3E
+    a gather of FamilyLookup.lookup (one per family) -> RoleLookup.lookup
+    for the role_kind satisfaction path (Lock 17 ANY-single-family
+    disjunction). 3E
     `update_capability_suggested_roles` handler validates every
     proposed RoleId resolves (Lock 10 documentation-only event).
     Equipment BC ships `PostgresRoleLookup` as the production adapter

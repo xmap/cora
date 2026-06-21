@@ -52,6 +52,11 @@ class ObservationInput:
     — when omitted, the handler defaults to `clock.now()`. Producers
     that have a separate ingest-time clock (DAQ adapters with their
     own buffering) can populate this explicitly."""
+    is_simulated: bool = False
+    """Provenance: True only when a sim / replay feeder produced this
+    value. Defaults to False (real), the safe direction for the
+    closed-loop gate: a real adapter that omits the flag is treated as
+    real. Only the sim feeder sets it True."""
 
 
 @dataclass(frozen=True)

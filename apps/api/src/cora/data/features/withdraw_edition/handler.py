@@ -5,7 +5,8 @@ Update-style handler. Pre-load order per design memo L17:
   1. UnauthorizedError (Authorize.authorize)
   2. Load Edition stream + fold -> EditionNotFoundError if None
   3. (Cheap) status guard (EditionCannotWithdrawError)
-  4. DoiMinter.tombstone(pid, reason) -> DoiMinterTombstoneError 502
+  4. PersistentIdentifierMinter.tombstone(pid, reason) ->
+     PersistentIdentifierMinterTombstoneError 502
   5. Decider emits EditionWithdrawn
 
 The tombstone side effect runs BEFORE the append: a wire failure
@@ -27,8 +28,8 @@ from cora.data.aggregates.edition import (
     to_payload,
 )
 from cora.data.aggregates.edition.state import (
-    DoiMinterTombstoneError,
     EditionWithdrawnWithoutPersistentIdError,
+    PersistentIdentifierMinterTombstoneError,
 )
 from cora.data.errors import UnauthorizedError
 from cora.data.features.withdraw_edition.command import WithdrawEdition
@@ -42,7 +43,7 @@ from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
-    from cora.shared.ports.doi_minter import DoiMinter
+    from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMinter
 
 _STREAM_TYPE = "Edition"
 _COMMAND_NAME = "WithdrawEdition"
@@ -66,7 +67,7 @@ class Handler(Protocol):
 
 def bind(deps: Kernel) -> Handler:
     """Build a withdraw_edition handler closed over the shared deps."""
-    minter = cast("DoiMinter", deps.data.doi_minter)  # type: ignore[attr-defined]
+    minter = cast("PersistentIdentifierMinter", deps.data.persistent_identifier_minter)  # type: ignore[attr-defined]
 
     async def handler(
         command: WithdrawEdition,
@@ -120,7 +121,7 @@ def bind(deps: Kernel) -> Handler:
         # command (DOI stays Findable; operator escalates).
         try:
             await minter.tombstone(state.external_pid, command.withdrawal_reason)
-        except DoiMinterTombstoneError:
+        except PersistentIdentifierMinterTombstoneError:
             raise
 
         domain_events = decide(

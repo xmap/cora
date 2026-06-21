@@ -36,7 +36,6 @@ from cora.calibration.quantities import (
     blade_throw_scale,
     detector_pixel_size,
     effective_thickness,
-    energy_offset,
     energy_position_curve,
     index_position_table,
     magnification,
@@ -63,7 +62,6 @@ class CalibrationQuantity(StrEnum):
     EFFECTIVE_THICKNESS = "effective_thickness"
     ENERGY_POSITION_CURVE = "energy_position_curve"
     INDEX_POSITION_TABLE = "index_position_table"
-    ENERGY_OFFSET = "energy_offset"
     BLADE_THROW_SCALE = "blade_throw_scale"
 
 
@@ -92,10 +90,6 @@ _SCHEMAS_BY_QUANTITY: dict[CalibrationQuantity, tuple[dict[str, Any], dict[str, 
     CalibrationQuantity.INDEX_POSITION_TABLE: (
         index_position_table.OPERATING_POINT_SCHEMA,
         index_position_table.VALUE_SCHEMA,
-    ),
-    CalibrationQuantity.ENERGY_OFFSET: (
-        energy_offset.OPERATING_POINT_SCHEMA,
-        energy_offset.VALUE_SCHEMA,
     ),
     CalibrationQuantity.BLADE_THROW_SCALE: (
         blade_throw_scale.OPERATING_POINT_SCHEMA,

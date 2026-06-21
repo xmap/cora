@@ -75,7 +75,7 @@ class CautionLookupResult:
 
     Carries the minimal columns the start_run handler embeds in the
     `RunStarted.acknowledged_cautions` payload tuple. Loaded by the
-    handler via `CautionLookup.find_active_for_run` and handed to
+    handler via `CautionLookup.find_active_in_scope` and handed to
     the decider in `RunStartContext.active_cautions`.
 
     `severity` is the StrEnum value as a plain string (matches the
@@ -100,16 +100,16 @@ class CautionLookupResult:
 class CautionLookup(Protocol):
     """Cross-BC port: query Caution's active-cautions projection from Run BC."""
 
-    async def find_active_for_run(
+    async def find_active_in_scope(
         self,
         *,
         asset_ids: frozenset[UUID],
         procedure_ids: frozenset[UUID],
         min_severity: MinSeverity = "Caution",
     ) -> list[CautionLookupResult]:
-        """Return every Active caution whose target references the Run's scope.
+        """Return every Active caution whose target is in the requested scope.
 
-        "References" means:
+        "In scope" means:
           - `target_kind == "Asset"` AND `target_id` is in `asset_ids`, OR
           - `target_kind == "Procedure"` AND `target_id` is in `procedure_ids`.
 
@@ -131,6 +131,31 @@ class CautionLookup(Protocol):
         """
         ...
 
+    async def find_retired_for_target(
+        self,
+        *,
+        target_kind: str,
+        target_id: UUID,
+        category: str,
+        authored_by: UUID,
+    ) -> list[CautionLookupResult]:
+        """Return Retired cautions for one (target, category, author).
+
+        The CautionPromoter operator-retirement-memory guard (Lock 5): before
+        auto-promoting a Notice-only CautionProposal, the promoter consults this
+        to see whether a matching Notice it previously registered was
+        deliberately Retired by an operator. A non-empty result means "respect
+        the operator's retirement, do not re-create" -> PromotionDeferred.
+
+        Matches on `target_kind` + `target_id` + `category` + `authored_by`.
+        The promoter passes its own agent id as `authored_by`, since the only
+        agent-authored Cautions are its own registrations (no agent retires a
+        Caution today; retire/supersede are human commands). Only
+        `status = 'Retired'` rows are returned; Active and Superseded never
+        appear.
+        """
+        ...
+
 
 class AlwaysQuietCautionLookup:
     """Test-default stub: returns `[]`.
@@ -148,7 +173,7 @@ class AlwaysQuietCautionLookup:
     surfaces additional payload entries (never gates).
     """
 
-    async def find_active_for_run(
+    async def find_active_in_scope(
         self,
         *,
         asset_ids: frozenset[UUID],
@@ -158,4 +183,15 @@ class AlwaysQuietCautionLookup:
         _ = asset_ids  # unused (stub never surfaces any cautions)
         _ = procedure_ids  # unused
         _ = min_severity  # unused
+        return []
+
+    async def find_retired_for_target(
+        self,
+        *,
+        target_kind: str,
+        target_id: UUID,
+        category: str,
+        authored_by: UUID,
+    ) -> list[CautionLookupResult]:
+        _ = (target_kind, target_id, category, authored_by)  # unused (stub)
         return []

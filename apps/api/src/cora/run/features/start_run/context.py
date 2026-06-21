@@ -27,7 +27,7 @@ Slice-local module by design: only `start_run` uses it today.
   - `referencing_clearances`: every Safety clearance
     whose bindings reference this Run's scope (run_id, subject_id,
     asset_ids), regardless of status. Loaded by the handler via
-    `deps.clearance_lookup.find_referencing_run(...)` against the
+    `deps.clearance_lookup.find_covering(...)` against the
     `proj_safety_clearance_summary` projection. Decider partitions
     on `status == "Active"` to distinguish "no clearance at all"
     (`RunRequiresActiveClearanceError`) from "clearance exists but
@@ -36,7 +36,7 @@ Slice-local module by design: only `start_run` uses it today.
     target references the Run's scope (asset_ids + a future
     procedure_ids when a procedure-driven run shape lands). Loaded
     by the handler via
-    `deps.caution_lookup.find_active_for_run(...)` against the
+    `deps.caution_lookup.find_active_in_scope(...)` against the
     `proj_caution_summary` projection. NON-BLOCKING by construction:
     the decider does NOT partition on this field; it only threads
     the snapshot into the `RunStarted` event payload as
@@ -127,7 +127,7 @@ class RunStartContext:
     """Live beam-availability reading at the Run-start instant (BEAM-1),
     or None when the deployment configured no beam PVs (gate skipped,
     beam-by-default). The handler calls
-    `deps.beam_availability_lookup.read_beam_availability()` and threads
+    `deps.beam_availability_lookup.read()` and threads
     the result here; the decider gates on it (fail-closed when
     `quality_ok` is False; refuse when any of `fes_open` / `sbs_open` /
     `fes_permit` is False). The reading is consumed only by the gate and

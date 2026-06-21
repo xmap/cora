@@ -25,7 +25,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             "DOI or Handle) to an existing Asset. Set-once: rejects "
             "when the Asset already carries a persistent_id. Rejects "
             "when the Asset is Decommissioned. Calls DataCite (or the "
-            "configured DoiMinter adapter) to mint the identifier "
+            "configured PersistentIdentifierMinter adapter) to mint the identifier "
             "server-side; returns the assigned (scheme, value) pair."
         ),
     )

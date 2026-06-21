@@ -3,7 +3,7 @@
 The only tier where the sweep actually runs: enumeration reads
 `proj_equipment_asset_summary` (needs a real pool + drained projections), and
 each per-asset mint goes through the wired `assign_asset_persistent_id` handler
-against the inert `StubDoiMinter`. Pins the end-to-end contract: every Asset
+against the inert `StubPersistentIdentifierMinter`. Pins the end-to-end contract: every Asset
 missing a persistent id gets one, and a second sweep finds nothing.
 """
 
@@ -27,7 +27,9 @@ from cora.equipment.features.mint_missing_asset_persistent_ids import (
     MintMissingAssetPersistentIds,
 )
 from cora.equipment.features.register_asset import RegisterAsset
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.kernel import Kernel
 from cora.shared.identifier import PersistentIdentifier, PersistentIdentifierScheme
 from tests.integration._equipment_helpers import drain_equipment_projections
@@ -44,7 +46,11 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 def _build_deps(db_pool: asyncpg.Pool, *, ids: list[UUID]) -> Kernel:
     deps = build_postgres_deps(db_pool, ids=ids, now=_NOW)
     # Parity with wire_equipment when no DataCite credentials are present.
-    object.__setattr__(deps, "equipment", SimpleNamespace(doi_minter=StubDoiMinter()))
+    object.__setattr__(
+        deps,
+        "equipment",
+        SimpleNamespace(persistent_identifier_minter=StubPersistentIdentifierMinter()),
+    )
     return deps
 
 

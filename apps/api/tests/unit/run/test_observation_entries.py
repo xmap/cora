@@ -38,6 +38,7 @@ def _row(**overrides: object) -> Observation:
         "occurred_at": _NOW,
         "correlation_id": uuid4(),
         "causation_id": None,
+        "is_simulated": False,
     }
     base.update(overrides)
     return Observation(**base)  # type: ignore[arg-type]
@@ -89,6 +90,17 @@ def test_run_observation_accepts_known_sampling_procedures(procedure: str) -> No
     6f-5c will extend to {'baseline', 'monitor'}; future-additive."""
     row = _row(sampling_procedure=procedure)
     assert row.sampling_procedure == procedure
+
+
+@pytest.mark.unit
+def test_run_observation_is_simulated_defaults_real_and_carries_sim_flag() -> None:
+    """Provenance: a row is real (is_simulated False) by default; a sim
+    feeder sets it True. The closed-loop read seam disqualifies True so a
+    rule cannot act on simulated data as if it were real."""
+    real_row = _row()
+    assert real_row.is_simulated is False
+    sim_row = _row(is_simulated=True)
+    assert sim_row.is_simulated is True
 
 
 @pytest.mark.unit

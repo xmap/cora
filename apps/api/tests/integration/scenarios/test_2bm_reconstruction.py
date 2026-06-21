@@ -86,6 +86,7 @@ from cora.equipment.features.update_family_settings_schema import UpdateFamilySe
 from cora.equipment.features.update_family_settings_schema import (
     bind as bind_update_family_settings_schema,
 )
+from cora.operation.adapters._tree_hash import sha256_tree
 from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
 from cora.operation.adapters.local_process_compute_port import LocalProcessComputePort
 from cora.operation.ports.compute_port import JobSpec
@@ -588,6 +589,99 @@ async def test_reconstruction_conducts_on_a_real_subprocess_and_is_promotable(
     )
     promoted_events, _ = await deps.event_store.load("Dataset", recon_dataset_id)
     assert "DatasetPromoted" in [e.event_type for e in promoted_events]
+
+
+@pytest.mark.integration
+async def test_reconstruction_conducts_directory_output_and_records_tree_hash(
+    db_pool: asyncpg.Pool,
+    tmp_path: Path,
+) -> None:
+    """End-to-end CONDUCT of a DIRECTORY output: a real subprocess writes a
+    tomopy-style per-slice TIFF stack into a `{stem}_rec/` directory, the
+    ComputeRuntime conducts it without aborting (the pre-tree-hash behavior
+    raised ArtifactNotFoundError on any non-file output), and the artifact
+    carries a deterministic `sha256-tree` digest + summed byte_size + file
+    count. The reconstructed Dataset registers with that tree checksum 1:1.
+
+    The Distribution algorithm-equality guard and the attestation-of-tree
+    refusal are covered at the decider tier in tests/unit/data; this
+    scenario proves the producer + Run + Dataset legs end to end.
+    """
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
+    fixture = await _seed_recon_recipe(deps)
+
+    run_id = await bind_start_run(deps)(
+        StartRun(
+            name="SIRT reconstruction (tiff stack) of Proposal 2026-1241",
+            plan_id=fixture.plan_id,
+            subject_id=None,
+            override_parameters={"num_iter": 200, "tol": 0.0005},
+            trigger_source="compute-runtime; local-process executor, tiff-stack output",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # A real subprocess writes a directory of per-slice TIFFs (tomopy's
+    # default save-format=tiff), so fetch_artifact_ref folds the tree.
+    output_dir = tmp_path / "recon_sirt_rec"
+    runtime = ComputeRuntime(
+        compute_port=LocalProcessComputePort(),
+        complete_run=bind_complete_run(deps),
+        abort_run=bind_abort_run(deps),
+    )
+    result = await runtime.conduct(
+        run_id=run_id,
+        job_spec=JobSpec(
+            command=(
+                sys.executable,
+                "-c",
+                (
+                    "import pathlib; "
+                    f"d = pathlib.Path({str(output_dir)!r}); d.mkdir(parents=True); "
+                    "[(d / f'slice_{i:04d}.tif').write_bytes(b'slice-%d' % i) for i in range(8)]"
+                ),
+            ),
+            output_uri=output_dir.as_uri(),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert result.succeeded
+    assert result.artifact_ref is not None
+
+    # The artifact is a directory tree-hash, matching a fresh recompute.
+    expected_digest, expected_size, expected_count = sha256_tree(output_dir)
+    assert result.artifact_ref.checksum_algorithm == "sha256-tree"
+    assert result.artifact_ref.checksum_value == expected_digest
+    assert result.artifact_ref.byte_size == expected_size
+    assert result.artifact_ref.entry_count == expected_count == 8
+
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert [e.event_type for e in run_events] == ["RunStarted", "RunCompleted"]
+    assert run_events[1].payload["actuation_kind"] == "Physical"
+
+    # The reconstructed Dataset records the tree checksum verbatim.
+    recon_dataset_id = await bind_register_dataset(deps)(
+        RegisterDataset(
+            name="2BM_recon_2026-05-20_sirt_tiff_stack",
+            uri=result.artifact_ref.uri,
+            checksum_algorithm=result.artifact_ref.checksum_algorithm,
+            checksum_value=result.artifact_ref.checksum_value,
+            byte_size=result.artifact_ref.byte_size,
+            media_type="image/tiff",
+            conforms_to=frozenset({"https://www.nexusformat.org/NXtomoproc"}),
+            producing_run_id=run_id,
+            subject_id=fixture.subject_id,
+            derived_from=frozenset({fixture.raw_dataset_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    recon_events, _ = await deps.event_store.load("Dataset", recon_dataset_id)
+    assert recon_events[0].payload["checksum"]["algorithm"] == "sha256-tree"
+    assert recon_events[0].payload["checksum"]["value"] == expected_digest
+    assert recon_events[0].payload["producing_actuation_kind"] == "Physical"
 
 
 def _sirt_launch_spec() -> LaunchSpec:

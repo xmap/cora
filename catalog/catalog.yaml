@@ -67,13 +67,17 @@ families:
   - name: Table
     note: "Support/positioning table Family (the hutch optical tables). One Family spans the 4-DOF sample table (pure translation), the 6-DOF detector table (six virtual axes on record 2bmb:table3), and the mirror table (in operational use, its X axes driven by the energy-change IOC for stripe selection, STAGE-7); the axis set is a per-Asset settings difference, not a Family split. 'Optical' is deliberately not in the name (it would name the contents, not the table's own nature; the OpticalHousing -> Housing precedent). Instances qualify at the Asset layer: SampleTable / DetectorTable / MirrorTable."
   - name: Slit
-    note: "Beam-defining aperture Family (four independently-driven blades forming a horizontal/vertical aperture). 2-BM: ConditioningSlit (A-station L3-20) and SampleSlit (B-station)."
+    note: "Beam-defining four-blade slit Family (four independently-driven blades forming a variable horizontal/vertical opening). 2-BM: ConditioningSlit (A-station L3-20) and SampleSlit (B-station)."
+  - name: Aperture
+    note: "Patterned beam-shaping aperture Family: a fixed-pattern mask positioned in the beam as a unit. Distinct from Slit (a variable opening defined by four driven blades) and from a passive Mask (a fixed beam-defining opening that does not move); the discriminator is the element's nature (a fixed code pattern), not that it is driven. 2-BM: the coded aperture for compressive-sensing tomography, fine-positioned by ApertureFineDrive."
   - name: Mirror
     note: "Beam-steering grazing-incidence mirror optic Family. 2-BM: the Y3-30 mirror (distinct from its MirrorTable support, which is Family Table)."
   - name: Monochromator
     note: "Energy-selecting optic Family; at 2-BM the double-multilayer monochromator (DMM). The energy-change IOC drives its Bragg arms + M2 vertical offset per energy; inserting it picks the beam energy, pink-beam operation bypasses it."
   - name: Filter
-    note: "Discrete absorber-foil changer Family; at 2-BM the C / Al foil paddles that attenuate and condition the white beam (only the downstream paddle is currently operational)."
+    note: "Discrete absorber-foil changer Family; at 2-BM the C / Al foil paddles that attenuate and condition the white beam (the upstream paddle 2bma:m17 is the operational selector; the downstream 2bma:m18 is currently Faulted)."
+  - name: InsertionDevice
+    note: "Source-defining insertion-device Family (the storage-ring straight-section source). One Family spans the cryo-undulator and the wiggler; the device type and its gap / field parameters are a per-Asset settings difference, not a Family split (the Table precedent). TomoWISE: the CPMU14 cryogenic permanent-magnet undulator and the 3T3PW three-pole wiggler, switchable per operation mode. A bending-magnet source (2-BM) is not an insertion device; it stays modelled loosely as the beam source, not through this Family."
   # Pending in code (documented, not yet defined): Goniometer;
   # future: OpticalRelay.
 
@@ -213,12 +217,10 @@ models:
     manufacturer: { name: "Oregon Micro Systems" }
     part_number: "VME58"
     declared_families: [MotionController]
-  - name: piezosystem_jena_nv100d
-    manufacturer: { name: "Piezosystem Jena" }   # working value; confirm vendor + part number (PIEZO-3)
-    part_number: "NV100D"
-    declared_families: [MotionController]
+  # piezosystem_jena_nv100d removed: the NV100D is present at 2-BM but not in operational
+  # use, so it binds no device (PIEZO-1, #241). Provenance kept in the beamline note.
   - name: piezosystem_jena_nv200d
-    manufacturer: { name: "Piezosystem Jena" }   # working value; item_028 title says "NV200D/NET" (PIEZO-3)
+    manufacturer: { name: "Piezosystem Jena" }
     part_number: "NV200D/NET"
     declared_families: [MotionController]
   - name: kohzu_cyat070

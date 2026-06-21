@@ -1,0 +1,346 @@
+# CORA Beamline descriptor: TomoWISE (MAX IV), design phase
+#
+# TomoWISE is a planned microtomography + nanotomography beamline at MAX IV
+# (Lund). It is bound to the MAX IV Site (deployments/maxiv/site.yaml).
+#
+# STATUS: design phase. Every value here is a TDR design SPECIFICATION, not a
+# commissioned measurement, so every device carries `new: true` (not yet modelled
+# in CORA) and `confirm: true` (value to be verified by MAX IV staff). Control
+# handles are omitted on purpose: MAX IV runs Tango/Sardana (not EPICS) and PV
+# names are TBD, so no `pv` field is invented. Devices bind to catalog Families
+# only, with no `model`, because vendors/part-numbers are not yet procured;
+# "(target)" models named in the TDR are carried as open questions, not bindings.
+#
+# Items the TDR explicitly defers are tagged inline with a (QUESTION-ID) that is
+# answered on docs/deployments/tomowise/questions.md. Two TDR coordinate frames
+# appear (front end: z from the CPMU14 source; optics hutch and downstream: z
+# from the straight-section centre, ~505 mm apart); z_mm values are approximate
+# from-source and carried as confirm (LAYOUT-1).
+
+beamline:
+  name: TomoWISE
+  facility: maxiv
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "two switchable insertion devices: CPMU14 undulator + 3T3PW wiggler, selected per operation mode (TDR design phase)"
+  z_span_mm: [0, 52000]
+  z_span_confirm: true
+
+# Two access-gated hutches. PSS permit signals are MAX IV facility signals, not
+# yet named in the TDR (PSS-1).
+enclosures:
+  - name: TomoWISE-optics
+    role: optics-hutch
+    facility_code: maxiv
+    permit_signal: {confirm: "MAX IV PSS permit signal TBD (PSS-1)"}
+  - name: TomoWISE-experiment
+    role: experiment-hutch
+    facility_code: maxiv
+    permit_signal: {confirm: "MAX IV PSS permit signal TBD (PSS-1)"}
+
+# --- SOURCE STAGE: the beam delivery shared by both endstations ---
+
+insertion-devices:
+  stage: source
+  enclosure: TomoWISE-optics
+  intro: "Two switchable straight-section sources. The undulator drives high-flux micro- and nano-tomography; the wiggler drives wide-field large-FOV white-beam microtomography. The operation mode selects which is in use."
+  note: >
+    z is measured from the straight-section centre here (CPMU14 at -505 mm,
+    3T3PW at +1734 mm). All specifications are TDR design targets.
+  devices:
+    - name: CPMU14
+      family: InsertionDevice
+      new: true
+      confirm: true
+      device_type: cryogenic-permanent-magnet-undulator
+      period: 14 mm
+      min_gap: 3.8 mm
+      length: 2.0 m (cryostat 2.67 m)
+      max_k_eff: 1.84
+      power_at_500ma: 11.1 kW
+      note: "primary source for high-flux micro- and nano-tomography"
+    - name: 3T3PW
+      family: InsertionDevice
+      new: true
+      confirm: true
+      device_type: three-pole-wiggler
+      field: 3 T
+      magnetic_length: 412 mm
+      min_gap: 11 mm
+      power_at_500ma: 1.6 kW
+      note: "wide-field large-FOV white-beam microtomography"
+
+front-end:
+  stage: source
+  enclosure: TomoWISE-optics
+  intro: "Fixed and movable masks plus the heat absorber that shape the beam and absorb power before the optics hutch."
+  note: >
+    z from the CPMU14 source (TDR Table 7.1). Mask/heat-absorber Families are
+    not yet in the catalog (they render as plain text pending the passive
+    beam-path tier); bound loosely here by design intent.
+  devices:
+    - name: FM1
+      family: Mask
+      z_mm: 14000
+      new: true
+      confirm: true
+      aperture: 1.100 mrad X/Y
+      power_absorbed: ~2 kW
+      note: "first fixed mask"
+    - name: FM2
+      family: Mask
+      z_mm: 15000
+      new: true
+      confirm: true
+      aperture: 1.100 mrad X / 0.100 mrad Y
+      power_absorbed: up to 7 kW
+      note: "second fixed mask"
+    - name: MSM
+      family: Mask
+      z_mm: 16500
+      new: true
+      confirm: true
+      aperture: 1.1 x 0.1 / 0.1 x 0.1 mrad2
+      note: "movable safety mask; <100 um lateral parasitic motion (design)"
+    - name: HeatAbsorber
+      family: HeatAbsorber
+      z_mm: 17000
+      new: true
+      confirm: true
+      power_budget: 4 kW
+      note: "heat absorber; movable masks MM1/MM2 alongside"
+
+optics-hutch:
+  stage: source
+  enclosure: TomoWISE-optics
+  intro: "The conditioning optics that filter, monochromate, and define the beam delivered to the experiment hutch. Diagnostic modules DM1/DM2 carry the bremsstrahlung collimators, white-beam stops, slits, and beam-position monitors."
+  note: >
+    z from the straight-section centre (TDR Table 8.1). Filter / BPM /
+    collimator / beam-stop Families are not all in the catalog yet and render
+    as plain text.
+  devices:
+    - name: CVD
+      family: Filter
+      z_mm: 24050
+      new: true
+      confirm: true
+      material: 0.35 mm CVD diamond
+      transmission: 95% @ 20 keV, 50% @ 10 keV
+      note: "diamond filter"
+    - name: WhiteBeamSlit
+      family: Slit
+      z_mm: 24280
+      new: true
+      confirm: true
+      opening: 60 urad
+      note: "white-beam slits (DM1)"
+    - name: PFU
+      family: Filter
+      z_mm: 25200
+      new: true
+      confirm: true
+      mechanism: two Si wedges, 3 deg wedge angle
+      effective_thickness: 0.2 to 25 mm
+      note: "power filters unit"
+    - name: MLM
+      family: Monochromator
+      z_mm: 25900
+      new: true
+      confirm: true
+      coating: W/Si or W/B4C bilayers, d=2.5 nm, 140 bilayers (OPT-1)
+      energy_range: 20 to 65 keV
+      bandwidth: dE/E ~ 1.8%
+      bragg_range: 3.84 to 12.6 mrad
+      max_power: 100 W
+      note: "multilayer monochromator; bypassed in white-beam modes"
+    - name: MonochromaticBeamSlit
+      family: Slit
+      z_mm: 28280
+      new: true
+      confirm: true
+      note: "monochromatic beam slits (DM2)"
+    - name: MF
+      family: Filter
+      new: true
+      confirm: true
+      transmission: 1e-4 to 1
+      note: "metal filter unit (third filter stage); on the experiment-hutch end wall"
+
+safety-shutters:
+  stage: source
+  enclosure: TomoWISE-optics
+  intro: "The safety unit (SU) gating the beam between the optics and experiment hutches."
+  note: "z from the straight-section centre. PSS permit signals TBD (PSS-1)."
+  devices:
+    - name: SS1
+      family: Shutter
+      z_mm: 31830
+      new: true
+      confirm: true
+      note: "safety shutter (SU)"
+    - name: SS2
+      family: Shutter
+      z_mm: 31830
+      new: true
+      confirm: true
+      note: "safety shutter (SU)"
+
+# --- SAMPLE STAGE: two endstations sharing the detector gantry ---
+
+microtomography-endstation:
+  stage: sample
+  enclosure: TomoWISE-experiment
+  intro: "The microtomography endstation, ~45 m from source: a fixed sample table carrying the rotary stage, sample positioning, laminography tilt, sample-side slits and fast shutter, and a slip ring for continuous rotation."
+  note: "All values TDR design targets. Stage models marked '(target)' are carried as questions, not bound."
+  devices:
+    - name: SampleTable
+      family: Table
+      z_mm: 45000
+      new: true
+      confirm: true
+      degrees_of_freedom: Xt (+/-100 mm), Yt (+50/-150 mm), beta (1.2 deg)
+      surface_to_beam: 390 mm
+      note: "fixed sample table at 45 m"
+    - name: Rotary
+      family: RotaryStage
+      new: true
+      confirm: true
+      max_speed: 1200 rpm
+      resolution: 1 mdeg
+      encoder: TTL, 3600 pulses per rotation
+      model_target: Lab Motion Systems RT100AX (STAGE-1)
+      note: "tomographic rotation; the master clock for triggering (TRIG-1)"
+    - name: SamplePositioning
+      family: LinearStage
+      new: true
+      confirm: true
+      travel: +/-6 mm per axis (Xs, Zs)
+      resolution: 0.1 um
+      model_target: Lab Motion Systems XY150B-12 (STAGE-2)
+      note: "sample centring stage"
+    - name: LaminographyTilt
+      family: TiltStage
+      new: true
+      confirm: true
+      travel: 25 deg
+      resolution: 50 mdeg
+      note: "laminography tilt axis"
+    - name: SampleSlit
+      family: Slit
+      new: true
+      confirm: true
+      opening: 50 x 5 mm
+      note: "sample-side precise slits; JJ X-ray IB-C50-air reference design"
+    - name: FastShutter
+      family: Shutter
+      new: true
+      confirm: true
+      note: "sample-side fast shutter; Arinax Colibri (<5 ms) / Innospexion (<10 ms) reference designs"
+    - name: SlipRing
+      family: SlipRing
+      new: true
+      confirm: true
+      channels: 30 to 40
+      note: "continuous-rotation feedthrough; up to 1000 rpm"
+
+nanotomography-endstation:
+  stage: sample
+  enclosure: TomoWISE-experiment
+  intro: "The nanotomography endstation, ~49-51 m from source: the KB mirror pair focuses the undulator beam for 200-nm-class cone-beam imaging. The sample stage is not yet specified."
+  note: "Mirror Family reused for the KB pair. The nano sample stage is deferred to procurement (NANO-1)."
+  devices:
+    - name: KB
+      family: Mirror
+      z_mm: 49000
+      new: true
+      confirm: true
+      type: fixed-curvature graded-multilayer KB pair
+      focal_spot: 205 x 196 nm @ 30 keV; 196 x 80 nm @ 45 keV
+      note: "Kirkpatrick-Baez focusing mirrors for nanotomography"
+    - name: NanoSampleStage
+      family: NanoPositioner
+      new: true
+      confirm: "specification deferred to procurement (NANO-1); must meet Abbe error compatible with 200 nm resolution"
+      note: "nanotomography sample stage; not yet specified in the TDR"
+
+# --- DETECTION STAGE: the shared detector gantry ---
+
+detector:
+  stage: detection
+  enclosure: TomoWISE-experiment
+  intro: "One detector gantry on 7 m floor rails serves both endstations (45 m to the 52 m hutch wall), carrying interchangeable microscopes and cameras. A removable flight tube reduces air scatter."
+  note: "Camera and microscope-optics models are design targets, chosen in project year 2 (DET-1, DET-2)."
+  devices:
+    - name: DetectorGantry
+      family: Table
+      new: true
+      confirm: true
+      axes: Xd, Yd, Zd (Zd on 7 m floor rails)
+      range: 45 m to 52 m
+      note: "shared detector gantry"
+    - name: MicLFOV
+      family: Microscope
+      new: true
+      confirm: true
+      magnification: 1 to 2x
+      numerical_aperture: ">0.2"
+      note: "large-field-of-view microscope (DET-2)"
+    - name: MicHR
+      family: Microscope
+      new: true
+      confirm: true
+      magnification: 4x / 10x / 20x
+      numerical_aperture: ">0.4"
+      note: "high-resolution microscope (DET-2)"
+    - name: CameraI
+      family: Camera
+      new: true
+      confirm: true
+      sensor: 16-25 Mpix, 16-bit sCMOS
+      framerate: 100-150 fps
+      note: "medium-speed camera; model TBD (DET-1)"
+    - name: CameraII
+      family: Camera
+      new: true
+      confirm: true
+      sensor: 4 Mpix, 12-bit CMOS
+      framerate: ">50000 fps"
+      note: "high-speed camera; model TBD (DET-1)"
+    - name: CameraIII
+      family: Camera
+      new: true
+      confirm: true
+      sensor: ~4 Mpix
+      framerate: ">2000 fps"
+      note: "streaming camera; model TBD (DET-1)"
+    - name: CameraIV
+      family: Camera
+      new: true
+      confirm: true
+      sensor: 150 Mpix, 54 x 40 mm, 3.76 um pixel
+      note: "large-sensor camera; matches the device procured for DanMAX (DET-1)"
+
+# Cross-cutting drive electronics and triggering. MAX IV runs Tango/Sardana;
+# control handles and the trigger conditioner are TBD.
+controls:
+  intro: >
+    The control stack is MAX IV Tango/Sardana with PandABox-class hardware
+    (per the DanMAX collaboration); PV/attribute handles are not yet assigned
+    (CTRL-1).
+  triggering:
+    - name: Triggering
+      family: TimingController
+      new: true
+      confirm: "rotary RT100AX TTL (3600 pulses/rev) is the master clock, expected to feed camera triggers directly; no FPGA conditioner specified, may evolve (TRIG-1)"
+      note: "trigger/sync scheme"
+
+# Continuously-available resources a run draws on (design phase).
+resources:
+  intro: >
+    The continuously-available facility resources a run needs present before it
+    can start. All pending confirmation in the design phase.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

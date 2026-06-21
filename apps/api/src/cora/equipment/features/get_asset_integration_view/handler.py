@@ -10,7 +10,7 @@ Read-time composition handler. Assembles the integration-view bundle by:
        (missing Family -> skip with warning log; set incomplete=True; mirrors
         promote_dataset derived_from peer-load tolerance per
         [[project-dataset-lineage-design]])
-    4. caution_lookup.find_active_for_run(
+    4. caution_lookup.find_active_in_scope(
            asset_ids={asset_id}, procedure_ids=frozenset(),
            min_severity="Notice")           -> list[CautionLookupResult]
        (port; returns [] in test mode via AlwaysQuietCautionLookup)
@@ -159,13 +159,11 @@ def bind(deps: Kernel) -> Handler:
             )
 
         # Step 4: active Cautions on this Asset via the existing port.
-        # `find_active_for_run` is named for its Run-start use case but
-        # accepts arbitrary asset_ids; we pass a single-element set.
         # min_severity="Notice" widens to all 3 severities (Notice +
         # Caution + Warning) — the integration view consumer wants the
         # full advisory set, not the start-Run threshold filter.
         # In-memory test mode: the AlwaysQuietCautionLookup returns [].
-        caution_refs = await deps.caution_lookup.find_active_for_run(
+        caution_refs = await deps.caution_lookup.find_active_in_scope(
             asset_ids=frozenset({query.asset_id}),
             procedure_ids=frozenset(),
             min_severity="Notice",

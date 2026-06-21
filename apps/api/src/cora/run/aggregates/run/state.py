@@ -1111,10 +1111,14 @@ class Run:
     loaded at handler-load time for re-validation, NOT verified by
     the decider as opaque). `subject_id` is the Subject being
     measured, or None for calibration / dark-field runs. `raid` is
-    the Research Activity Identifier (ISO 23527) for the project
-    this Run belongs to, opaque string carried verbatim, defaults
-    to None (additive retrofit; legacy Runs fold with raid=None
-    because old RunStarted payloads have no raid key). `status`
+    the Research Activity Identifier (ISO 23527) of the research
+    activity this Run belongs to, opaque string carried verbatim,
+    defaults to None. RAiD is project/activity scoped: one RAiD is
+    shared across the many Runs of an activity, never minted per
+    Run. This Run's own `id` is the per-run identity (compare the
+    Bluesky run uid and the Temporal Run Id). Additive retrofit:
+    legacy Runs fold with raid=None because old RunStarted payloads
+    have no raid key. `status`
     defaults to `Running` — the active steady-state.
 
     `override_parameters` is the operator-supplied overrides on top

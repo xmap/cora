@@ -10,7 +10,7 @@ this test landed none was enforced, so several files had drifted.
 
 The port class is named for its ROLE, and the role noun already signals
 the abstract seam: `EventStore`, `TokenVerifier`, `AssetLookup`,
-`IdGenerator`, `DoiMinter`, `EditionSerializer`. The generic word `Port`
+`IdGenerator`, `PersistentIdentifierMinter`, `EditionSerializer`. The generic word `Port`
 is redundant on top of a role noun (the sibling pair `TokenVerifier` /
 `ChecksumVerifier` is the tell), so it is forbidden EXCEPT where stripping
 it would leave a bare verb / abstract non-agent noun, or would collide

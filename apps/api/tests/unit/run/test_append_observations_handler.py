@@ -436,6 +436,35 @@ async def test_handler_threads_principal_id_into_actor_id() -> None:
     assert rows[0].actor_id == _PRINCIPAL_ID
 
 
+# ---------- is_simulated provenance threading ----------
+
+
+@pytest.mark.unit
+async def test_handler_threads_is_simulated_into_row_defaulting_real() -> None:
+    """The producer's is_simulated flag reaches the stored row; it
+    defaults to False (real) when omitted and is preserved when set."""
+    event_store = InMemoryEventStore()
+    await _seed_run_started(event_store, _RUN_ID)
+    observation_store = InMemoryObservationStore()
+    deps = build_deps(ids=[_LOGBOOK_ID, _LOGBOOK_OPEN_EVENT_ID], now=_NOW, event_store=event_store)
+    await append_observations.bind(deps, observation_store=observation_store)(
+        AppendObservations(
+            run_id=_RUN_ID,
+            entries=(
+                _entry(channel_name="real_default"),
+                _entry(channel_name="sim_explicit", is_simulated=True),
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    rows = observation_store.all()
+    real_row = next(r for r in rows if r.channel_name == "real_default")
+    sim_row = next(r for r in rows if r.channel_name == "sim_explicit")
+    assert real_row.is_simulated is False
+    assert sim_row.is_simulated is True
+
+
 # ---------- occurred_at fallback ----------
 
 

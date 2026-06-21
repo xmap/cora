@@ -36,6 +36,10 @@ class _ToolResult(BaseModel):
     status: str | None = None
     job_id: str | None = None
     artifact_uri: str | None = None
+    checksum_algorithm: str | None = None
+    checksum_value: str | None = None
+    byte_size: int | None = None
+    entry_count: int | None = None
     actuation_kind: str | None = None
     failure: str | None = None
 
@@ -89,6 +93,10 @@ def register(
             status=wire.status,
             job_id=wire.job_id,
             artifact_uri=wire.artifact_uri,
+            checksum_algorithm=wire.checksum_algorithm,
+            checksum_value=wire.checksum_value,
+            byte_size=wire.byte_size,
+            entry_count=wire.entry_count,
             actuation_kind=wire.actuation_kind,
             failure=wire.failure,
         )

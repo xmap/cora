@@ -9,7 +9,8 @@ Scenario test for the closing-the-books routine: after a beamtime
 finishes acquisition, the operator reviews each Trial Dataset and
 promotes the keepers to Production, then closes the Campaign
 (Active -> Closed). Sourced from `2bm-docs ops/item_025.rst`
-(end-of-beamtime data publish workflow + Globus push to Petrel).
+(end-of-beamtime data publish workflow). The 2-BM Globus collection is
+APS:DM:2BM, not Petrel (staff-confirmed, DATA-3, #270).
 
 Step O-6 of the operations-phase canonical-acquisition chain.
 Final scenario in the canonical first-acquisition arc.

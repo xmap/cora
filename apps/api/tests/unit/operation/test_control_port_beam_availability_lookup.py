@@ -47,7 +47,7 @@ async def test_read_beam_availability_all_open_when_blocking_zero_and_permit_one
     port = _port_with({FES_PV: _scalar(0), SBS_PV: _scalar(0), PERMIT_PV: _scalar(1)})
     lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
 
-    result = await lookup.read_beam_availability()
+    result = await lookup.read()
 
     assert result.fes_open is True
     assert result.sbs_open is True
@@ -60,7 +60,7 @@ async def test_read_beam_availability_fes_closed_when_blocking_nonzero() -> None
     port = _port_with({FES_PV: _scalar(1), SBS_PV: _scalar(0), PERMIT_PV: _scalar(1)})
     lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
 
-    result = await lookup.read_beam_availability()
+    result = await lookup.read()
 
     assert result.fes_open is False
     assert result.sbs_open is True
@@ -72,7 +72,7 @@ async def test_read_beam_availability_permit_denied_when_acis_zero() -> None:
     port = _port_with({FES_PV: _scalar(0), SBS_PV: _scalar(0), PERMIT_PV: _scalar(0)})
     lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
 
-    result = await lookup.read_beam_availability()
+    result = await lookup.read()
 
     assert result.fes_permit is False
     assert result.quality_ok is True
@@ -89,7 +89,7 @@ async def test_read_beam_availability_non_good_quality_fails_closed() -> None:
     )
     lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
 
-    result = await lookup.read_beam_availability()
+    result = await lookup.read()
 
     assert result.fes_open is False  # cannot confirm open
     assert result.quality_ok is False
@@ -101,7 +101,7 @@ async def test_read_beam_availability_disconnected_pv_fails_closed() -> None:
 
     lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
 
-    result = await lookup.read_beam_availability()
+    result = await lookup.read()
 
     assert result.fes_open is False
     assert result.quality_ok is False
@@ -115,7 +115,7 @@ async def test_read_beam_availability_unconfigured_permit_does_not_gate() -> Non
         control_port=port, beam_pvs={"fes": FES_PV, "sbs": SBS_PV}
     )
 
-    result = await lookup.read_beam_availability()
+    result = await lookup.read()
 
     assert result.fes_open is True
     assert result.sbs_open is True
@@ -128,7 +128,7 @@ async def test_read_beam_availability_non_integer_value_fails_closed() -> None:
     port = _port_with({FES_PV: _scalar("nan"), SBS_PV: _scalar(0), PERMIT_PV: _scalar(1)})
     lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
 
-    result = await lookup.read_beam_availability()
+    result = await lookup.read()
 
     assert result.fes_open is False
     assert result.quality_ok is False
@@ -140,7 +140,7 @@ async def test_read_beam_availability_fractional_value_fails_closed() -> None:
     port = _port_with({FES_PV: _scalar(0.4), SBS_PV: _scalar(0), PERMIT_PV: _scalar(1)})
     lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
 
-    result = await lookup.read_beam_availability()
+    result = await lookup.read()
 
     assert result.fes_open is False  # 0.4 is not an exact 0
     assert result.quality_ok is False  # untrustworthy reading -> fail closed
@@ -152,7 +152,7 @@ async def test_read_beam_availability_float_zero_reads_open() -> None:
     port = _port_with({FES_PV: _scalar(0.0), SBS_PV: _scalar(0), PERMIT_PV: _scalar(1)})
     lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
 
-    result = await lookup.read_beam_availability()
+    result = await lookup.read()
 
     assert result.fes_open is True
     assert result.quality_ok is True

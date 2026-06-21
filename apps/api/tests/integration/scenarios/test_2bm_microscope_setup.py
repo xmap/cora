@@ -53,10 +53,12 @@ objective is 2x (the physically-installed Mitutoyo M Plan Apo).
     {scintillator_material: "LuAG", energy: 25} -> 100 micrometer
   - 1 index_position_table calibration for the objective selector:
     {device_designation: "microscope_objective_turret"} -> 3 slot positions
-    (placeholder slot order + positions pending staff, DET-11)
+    (operator-verified Camera 0 column, DET-11; the full (lens x camera)
+    table is documentary in the descriptor, CORA models it data-only)
 
 All AssertedSource (operator-attested from the vendor datasheet + Optique
-Peter doc), status Provisional.
+Peter doc), status Provisional except the operator-verified selector table
+(Verified).
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -319,10 +321,11 @@ _SETTINGS_OBJECTIVE_1P1X: dict[str, Any] = {
 # The objective selector is a sliding ball-screw stage (LinearStage), not a
 # rotating turret: a Nanotec ST4118M1404-B over a 2 mm/rev ball screw with a
 # Heidenhain ERO 1420 encoder, positions in mm (2-BM beamline components page).
-# min/max span the outer objective positions (1.1x at -60.030, 10x at 58.640).
+# min/max span the outer objective positions across both cameras (1.1x at
+# -60.3784 on Camera 1, 10x at 59.2300 on Camera 1), operator-verified (DET-11).
 _SETTINGS_TURRET: dict[str, Any] = {
-    "min_position": -60.030,
-    "max_position": 58.640,
+    "min_position": -60.3784,
+    "max_position": 59.2300,
     "max_speed": 1.0,
     "encoder_resolution": 0.0016,
 }
@@ -685,21 +688,30 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
     # ----- index_position_table Calibration for the objective selector -----
     # The objective selector is a discrete index axis (the same shape as the
     # 2-BM filter foil carousel): the operator commands a slot index, the
-    # turret snaps to the saved position. It now points at a real
-    # index_position_table Calibration; earlier it borrowed a magnification
-    # revision as a placeholder because no index quantity existed. The slot
-    # order and positions are PROVISIONAL placeholders pending the real
-    # turret positions from 2-BM staff (DET-11); the magnification of each
-    # objective is a separate Calibration above.
+    # turret snaps to the saved position. The slot order and positions are the
+    # operator-verified 2-BM values (DET-11, caget 2026-06-19): LensSelect index
+    # 0 = 1.1x, 1 = 2x, 2 = 10x. The magnification of each objective is a
+    # separate Calibration above.
+    #
+    # DET-11 also established that the real MCTOptics lookup is two-dimensional:
+    # the turret position depends on the (lens, camera) pair, with a small
+    # per-camera offset, and MCTOptics applies coupled rotation (2bmb:m7/m8) and
+    # per-lens focus (2bmb:m2/m3/m4) lookups on the same change (18 PVs over six
+    # motors). CORA models this DATA-ONLY: this 1D table carries the Camera 0
+    # column (the in-beam 5 MP camera) as a single-camera provenance record. The
+    # full 2D table lives in the descriptor / microscope.md; true 2D actuation
+    # waits for the control layer and would reuse this LookupTable form (no new
+    # partition-rule shape; see project_microscope_reshape_design).
     selector_cal_id = await bind_define_calibration(deps)(
         DefineCalibration(
             target_id=optics_assets["objective_selector"],
             quantity=CalibrationQuantity.INDEX_POSITION_TABLE,
             operating_point={"device_designation": "microscope_objective_turret"},
             description=(
-                "Slot index -> turret position for the Microscope objective selector. "
-                "PROVISIONAL placeholder slot order + positions pending the real turret "
-                "positions from 2-BM staff (DET-11)."
+                "Slot index -> turret position (2bmb:m1) for the Microscope objective "
+                "selector, Camera 0 (5 MP) column. Operator-verified 2026-06-19 (DET-11). "
+                "The full (lens x camera) lookup is documentary in the descriptor; CORA "
+                "models the in-beam camera column data-only."
             ),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -710,14 +722,14 @@ async def test_microscope_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool)
             calibration_id=selector_cal_id,
             value={
                 "points": [
-                    {"name": "10x_Mitutoyo", "position": -50.0},
-                    {"name": "2x_Mitutoyo", "position": 0.0},
-                    {"name": "1.1x_Mitutoyo", "position": 50.0},
+                    {"name": "1.1x_Mitutoyo", "position": -59.8184},
+                    {"name": "2x_Mitutoyo", "position": -0.5734},
+                    {"name": "10x_Mitutoyo", "position": 58.8707},
                 ],
                 "position_unit": "mm",
-                "provisional": True,
+                "provisional": False,
             },
-            status=CalibrationStatus.PROVISIONAL,
+            status=CalibrationStatus.VERIFIED,
             source=AssertedSource(asserted_by=actor),
         ),
         principal_id=_PRINCIPAL_ID,

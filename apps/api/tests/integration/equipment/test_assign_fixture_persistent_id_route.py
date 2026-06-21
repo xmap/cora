@@ -8,8 +8,8 @@ Full status-code matrix per [[project-fixture-pidinst-design]] Section
   - 404 when the fixture stream is missing
   - 409 when the fixture already carries a persistent_id (set-once)
   - 422 wire-layer validation (empty suffix, missing scheme)
-  - 502 when the upstream DoiMinter raises PersistentIdentifierMintError
-    (RaisingDoiMinter fixture from conftest, swapped onto the bound
+  - 502 when the upstream PersistentIdentifierMinter raises PersistentIdentifierMintError
+    (RaisingPersistentIdentifierMinter fixture from conftest, swapped onto the bound
     handler via dataclasses.replace per slice F Lock 10)
   - Event-store persistence pin (the FixturePersistentIdAssigned event
     lands on the Fixture stream)
@@ -18,12 +18,12 @@ Full status-code matrix per [[project-fixture-pidinst-design]] Section
     not booted in test mode per the Asset-tier sibling precedent)
 
 Sibling pattern to `test_assign_asset_persistent_id_route.py`; reuses
-the conftest `raising_doi_minter` fixture introduced for the Asset
+the conftest `raising_persistent_identifier_minter` fixture introduced for the Asset
 slice F 502 path.
 
 In-memory adapters: `APP_ENV=test` is set in `tests/conftest.py`, so
 `create_app()` builds the kernel with `InMemoryEventStore` and the
-Equipment BC wires `StubDoiMinter` by default.
+Equipment BC wires `StubPersistentIdentifierMinter` by default.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportMissingTypeStubs=false
@@ -39,7 +39,7 @@ from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
 from cora.equipment.features import assign_fixture_persistent_id
-from tests.integration.equipment.conftest import RaisingDoiMinter
+from tests.integration.equipment.conftest import RaisingPersistentIdentifierMinter
 
 if TYPE_CHECKING:
     from cora.equipment.wire import EquipmentHandlers
@@ -112,10 +112,10 @@ def _register_fixture(client: TestClient) -> str:
     return fixture_id
 
 
-def _swap_doi_minter(app: FastAPI, minter: object) -> None:
+def _swap_persistent_identifier_minter(app: FastAPI, minter: object) -> None:
     """Rebuild the assign_fixture_persistent_id handler over a swapped minter.
 
-    The handler closes over `deps.equipment.doi_minter` at bind time, so
+    The handler closes over `deps.equipment.persistent_identifier_minter` at bind time, so
     mutating the SimpleNamespace alone is not enough: the live handler
     on `app.state.equipment.assign_fixture_persistent_id` was bound
     before the swap. We mutate the BC-local namespace AND rebind the
@@ -125,10 +125,12 @@ def _swap_doi_minter(app: FastAPI, minter: object) -> None:
     to the rebound closure.
     """
     deps = app.state.deps
-    object.__setattr__(deps.equipment, "doi_minter", minter)
+    object.__setattr__(deps.equipment, "persistent_identifier_minter", minter)
     rebound = assign_fixture_persistent_id.bind(deps)
     handlers: EquipmentHandlers = app.state.equipment
-    app.state.equipment = replace(handlers, assign_fixture_persistent_id=rebound, doi_minter=minter)
+    app.state.equipment = replace(
+        handlers, assign_fixture_persistent_id=rebound, persistent_identifier_minter=minter
+    )
 
 
 @pytest.mark.integration
@@ -306,9 +308,9 @@ def test_post_assign_fixture_persistent_id_writes_persistent_id_to_projection_af
 
 @pytest.mark.integration
 def test_post_assign_fixture_persistent_id_with_raising_minter_returns_502(
-    raising_doi_minter: RaisingDoiMinter,
+    raising_persistent_identifier_minter: RaisingPersistentIdentifierMinter,
 ) -> None:
-    """Override the bound minter with RaisingDoiMinter and assert 502.
+    """Override the bound minter with RaisingPersistentIdentifierMinter and assert 502.
 
     Verifies the L19 mapping wires correctly: a
     `PersistentIdentifierMintError` raised by the upstream port surfaces
@@ -319,7 +321,7 @@ def test_post_assign_fixture_persistent_id_with_raising_minter_returns_502(
     app = create_app()
     with TestClient(app) as client:
         fixture_id = _register_fixture(client)
-        _swap_doi_minter(app, raising_doi_minter)
+        _swap_persistent_identifier_minter(app, raising_persistent_identifier_minter)
         response = client.post(
             f"/fixtures/{fixture_id}/assign-persistent-identifier",
             json={"scheme": "DOI", "suffix": "WILL-FAIL"},

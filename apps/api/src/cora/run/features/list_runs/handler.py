@@ -59,6 +59,13 @@ class RunSummaryItem:
     running_since: datetime | None
     override_parameters_present: bool
     campaign_id: UUID | None
+    snr_limit: float | None
+    """Operator-set quality limit for Rule Q (closed-loop seam), precomputed
+    from effective_parameters at start / adjust. NULL disables Rule Q for
+    this Run. See [[project_observation_signal_port_design]]."""
+    expected_observation_interval_seconds: float | None
+    """Expected inter-arrival for Rule R (stall), precomputed from
+    effective_parameters. NULL disables Rule R for this Run."""
 
 
 @dataclass(frozen=True)
@@ -84,7 +91,8 @@ class Handler(Protocol):
 
 _SELECT_COLUMNS = (
     "run_id, name, plan_id, subject_id, raid, status, created_at, running_since, "
-    "override_parameters_present, campaign_id"
+    "override_parameters_present, campaign_id, snr_limit, "
+    "expected_observation_interval_seconds"
 )
 
 
@@ -100,6 +108,8 @@ def _row_to_item(row: Any) -> RunSummaryItem:
         running_since=row["running_since"],
         override_parameters_present=bool(row["override_parameters_present"]),
         campaign_id=row["campaign_id"],
+        snr_limit=row["snr_limit"],
+        expected_observation_interval_seconds=row["expected_observation_interval_seconds"],
     )
 
 

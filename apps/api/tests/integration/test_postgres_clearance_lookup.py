@@ -159,7 +159,7 @@ async def test_finds_active_clearance_bound_to_run_id(db_pool: asyncpg.Pool) -> 
     await _drain_safety(db_pool)
 
     lookup = PostgresClearanceLookup(db_pool)
-    results = await lookup.find_referencing_run(
+    results = await lookup.find_covering(
         run_id=run_id,
         subject_id=None,
         asset_ids=frozenset(),
@@ -184,7 +184,7 @@ async def test_finds_active_clearance_bound_to_subject_id(db_pool: asyncpg.Pool)
     await _drain_safety(db_pool)
 
     lookup = PostgresClearanceLookup(db_pool)
-    results = await lookup.find_referencing_run(
+    results = await lookup.find_covering(
         run_id=uuid4(),  # unrelated run id
         subject_id=subject_id,
         asset_ids=frozenset(),
@@ -211,7 +211,7 @@ async def test_finds_active_clearance_bound_to_any_asset_id(db_pool: asyncpg.Poo
 
     lookup = PostgresClearanceLookup(db_pool)
     # Run uses both asset_a (overlap with clearance) and asset_b (unrelated).
-    results = await lookup.find_referencing_run(
+    results = await lookup.find_covering(
         run_id=uuid4(),
         subject_id=None,
         asset_ids=frozenset({asset_id_a, asset_id_b}),
@@ -234,7 +234,7 @@ async def test_returns_empty_when_no_clearance_references_the_scope(
     await _drain_safety(db_pool)
 
     lookup = PostgresClearanceLookup(db_pool)
-    results = await lookup.find_referencing_run(
+    results = await lookup.find_covering(
         run_id=uuid4(),  # different from the seeded clearance's run_id
         subject_id=uuid4(),
         asset_ids=frozenset({uuid4()}),
@@ -244,7 +244,7 @@ async def test_returns_empty_when_no_clearance_references_the_scope(
 
 @pytest.mark.integration
 async def test_returns_non_active_clearances_too(db_pool: asyncpg.Pool) -> None:
-    """find_referencing_run returns ALL statuses; the decider partitions
+    """find_covering returns ALL statuses; the decider partitions
     on Active. Pin this by seeding a Defined (no transitions) clearance."""
     template_id = await _seed_active_template(db_pool)
     deps = _build_deps_with_pg_template_lookup(db_pool, ids=[uuid4() for _ in range(20)])
@@ -262,7 +262,7 @@ async def test_returns_non_active_clearances_too(db_pool: asyncpg.Pool) -> None:
     await _drain_safety(db_pool)
 
     lookup = PostgresClearanceLookup(db_pool)
-    results = await lookup.find_referencing_run(
+    results = await lookup.find_covering(
         run_id=run_id,
         subject_id=None,
         asset_ids=frozenset(),

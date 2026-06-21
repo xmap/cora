@@ -2,7 +2,7 @@
 
 `fixture_id` is the target Fixture aggregate. `scheme` selects the PID
 scheme (DOI or HANDLE). `suffix` is the optional operator-supplied
-local part; when absent the configured `DoiMinter` adapter auto-
+local part; when absent the configured `PersistentIdentifierMinter` adapter auto-
 generates one. The command does NOT carry the resolved
 `PersistentIdentifier` VO (server-mint posture per Lock 5 of
 [[project-fixture-pidinst-design]]): the handler resolves the minter
@@ -23,7 +23,7 @@ class AssignFixturePersistentId:
     already carries a `persistent_id` is rejected by the decider. There
     is no Fixture lifecycle gate today (Fixture has no Decommissioned
     state today). The handler resolves `(scheme, suffix)` through the
-    `DoiMinter` port into the full `PersistentIdentifier` before invoking
+    `PersistentIdentifierMinter` port into the full `PersistentIdentifier` before invoking
     the pure decider.
     """
 

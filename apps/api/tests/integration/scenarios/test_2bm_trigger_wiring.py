@@ -30,8 +30,8 @@ signal types:
 Three wires validate end-to-end against the strict forward-reference
 contract (ports must exist before they are wired): one camera-trigger
 wire (`Timing.camera_trigger_out -> Camera.trigger_in`) and two piezo
-step-trigger wires (`Timing.out2 -> SampleFineDrive.step_x_in`,
-`Timing.out3 -> SampleFineDrive.step_y_in`). A successful `add_plan_wire`
+step-trigger wires (`Timing.out2 -> ApertureFineDrive.step_x_in`,
+`Timing.out3 -> ApertureFineDrive.step_y_in`). A successful `add_plan_wire`
 is itself the proof of direction (source OUTPUT, target INPUT) and exact
 signal_type match, which `validate_wire_endpoints` enforces at add time;
 the camera target is not a `PseudoAxis`, so no fan-out arity check
@@ -53,7 +53,7 @@ test_2bm_hexapod_pose_wiring.py.
 2-BM (Unit)
 +-- Timing (Device)            Family: TimingController   softGlueZynq box (2bmbMZ1:SG:)
 +-- Camera (Device)            Family: Camera             detector that the trigger drives
-+-- SampleFineDrive (Device)   Family: MotionController   NV200D piezo, FPGA-stepped
++-- ApertureFineDrive (Device)   Family: MotionController   NV200D piezo, FPGA-stepped
 ```
 """
 
@@ -107,7 +107,7 @@ _CAP_MOTION_CONTROLLER_ID = family_stream_id(FamilyName("MotionController"))
 
 _TIMING_ID = UUID("01900000-0000-7000-8000-0000004d0a11")
 _CAMERA_ID = UUID("01900000-0000-7000-8000-0000004d0a12")
-_SAMPLE_FINE_DRIVE_ID = UUID("01900000-0000-7000-8000-0000004d0a13")
+_APERTURE_FINE_DRIVE_ID = UUID("01900000-0000-7000-8000-0000004d0a13")
 
 # Recipe ladder
 _CAPABILITY_ID = UUID("01900000-0000-7000-8000-0000004d0e01")
@@ -124,7 +124,7 @@ _DEVICES = (
     DeviceSpec("Timing", _TIMING_ID, "TimingController", _CAP_TIMING_CONTROLLER_ID),
     DeviceSpec("Camera", _CAMERA_ID, "Camera", _CAP_CAMERA_ID),
     DeviceSpec(
-        "SampleFineDrive", _SAMPLE_FINE_DRIVE_ID, "MotionController", _CAP_MOTION_CONTROLLER_ID
+        "ApertureFineDrive", _APERTURE_FINE_DRIVE_ID, "MotionController", _CAP_MOTION_CONTROLLER_ID
     ),
 )
 
@@ -136,8 +136,8 @@ _PORT_SPECS: tuple[tuple[UUID, str, PortDirection, str], ...] = (
     (_TIMING_ID, "out2", PortDirection.OUTPUT, _SIG_STEP),
     (_TIMING_ID, "out3", PortDirection.OUTPUT, _SIG_STEP),
     (_CAMERA_ID, "trigger_in", PortDirection.INPUT, _SIG_FRAME),
-    (_SAMPLE_FINE_DRIVE_ID, "step_x_in", PortDirection.INPUT, _SIG_STEP),
-    (_SAMPLE_FINE_DRIVE_ID, "step_y_in", PortDirection.INPUT, _SIG_STEP),
+    (_APERTURE_FINE_DRIVE_ID, "step_x_in", PortDirection.INPUT, _SIG_STEP),
+    (_APERTURE_FINE_DRIVE_ID, "step_y_in", PortDirection.INPUT, _SIG_STEP),
 )
 
 # Three wires: one camera-trigger leg + two piezo step-trigger legs.
@@ -145,8 +145,8 @@ _PORT_SPECS: tuple[tuple[UUID, str, PortDirection, str], ...] = (
 _WIRE_CAMERA = (_TIMING_ID, "camera_trigger_out", _CAMERA_ID, "trigger_in")
 _WIRE_SPECS: tuple[tuple[UUID, str, UUID, str], ...] = (
     _WIRE_CAMERA,
-    (_TIMING_ID, "out2", _SAMPLE_FINE_DRIVE_ID, "step_x_in"),
-    (_TIMING_ID, "out3", _SAMPLE_FINE_DRIVE_ID, "step_y_in"),
+    (_TIMING_ID, "out2", _APERTURE_FINE_DRIVE_ID, "step_x_in"),
+    (_TIMING_ID, "out3", _APERTURE_FINE_DRIVE_ID, "step_y_in"),
 )
 
 
@@ -238,7 +238,7 @@ async def test_trigger_wiring_validates_end_to_end(
         DefinePlan(
             name="2BM_trigger_routing_plan",
             practice_id=_PRACTICE_ID,
-            asset_ids=frozenset({_TIMING_ID, _CAMERA_ID, _SAMPLE_FINE_DRIVE_ID}),
+            asset_ids=frozenset({_TIMING_ID, _CAMERA_ID, _APERTURE_FINE_DRIVE_ID}),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -279,12 +279,12 @@ async def test_trigger_wiring_validates_end_to_end(
     ], f"Camera: unexpected event sequence {[ev.event_type for ev in camera_events]}"
 
     # The NV200D piezo: genesis + Family + its two step INPUT ports.
-    piezo_events, _ = await deps.event_store.load("Asset", _SAMPLE_FINE_DRIVE_ID)
+    piezo_events, _ = await deps.event_store.load("Asset", _APERTURE_FINE_DRIVE_ID)
     assert [ev.event_type for ev in piezo_events] == [
         "AssetRegistered",
         "AssetFamilyAdded",
         *["AssetPortAdded"] * 2,
-    ], f"SampleFineDrive: unexpected event sequence {[ev.event_type for ev in piezo_events]}"
+    ], f"ApertureFineDrive: unexpected event sequence {[ev.event_type for ev in piezo_events]}"
 
     # Plan stream carries exactly the three wires. Assert the 4-tuple
     # identities, including the camera-trigger leg specifically (the

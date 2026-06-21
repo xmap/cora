@@ -290,7 +290,7 @@ def bind(deps: Kernel) -> Handler:
         # clearance projection for every clearance whose bindings
         # reference this Run's scope. Decider partitions on Active.
         referencing_clearances = tuple(
-            await deps.clearance_lookup.find_referencing_run(
+            await deps.clearance_lookup.find_covering(
                 run_id=new_id,
                 subject_id=command.subject_id,
                 asset_ids=scoped_asset_ids,
@@ -330,7 +330,7 @@ def bind(deps: Kernel) -> Handler:
         # no Procedure scope today; forward-compat for procedure-
         # driven runs (Watch item for the start_procedure consumer).
         active_cautions = tuple(
-            await deps.caution_lookup.find_active_for_run(
+            await deps.caution_lookup.find_active_in_scope(
                 asset_ids=scoped_asset_ids,
                 procedure_ids=frozenset(),
             )
@@ -359,7 +359,7 @@ def bind(deps: Kernel) -> Handler:
         # the configured PVs live. The port never raises for substrate
         # disconnects: a bad read surfaces as quality_ok=False and the
         # decider fails closed.
-        beam_availability = await deps.beam_availability_lookup.read_beam_availability()
+        beam_availability = await deps.beam_availability_lookup.read()
 
         context = RunStartContext(
             plan=plan,

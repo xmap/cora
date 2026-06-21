@@ -47,8 +47,8 @@ from cora.equipment.errors import UnauthorizedError
 from cora.equipment.routes import register_equipment_routes
 from cora.equipment.tools import register_equipment_tools
 from cora.equipment.wire import EquipmentHandlers, wire_equipment
-from cora.shared.ports.doi_minter import (
-    DoiMinter,
+from cora.shared.ports.persistent_identifier_minter import (
+    PersistentIdentifierMinter,
     PersistentIdentifierMintError,
 )
 
@@ -56,9 +56,9 @@ __all__ = [
     "AssetPersistentIdAlreadyAssignedError",
     "AssetPersistentIdAssigned",
     "AssetPersistentIdAssignmentForbiddenError",
-    "DoiMinter",
     "EquipmentHandlers",
     "PersistentIdentifierMintError",
+    "PersistentIdentifierMinter",
     "UnauthorizedError",
     "bootstrap_equipment",
     "register_equipment_projections",

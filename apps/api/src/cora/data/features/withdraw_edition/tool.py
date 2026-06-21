@@ -28,7 +28,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         name="withdraw_edition",
         description=(
             "Withdraw a Published Edition: tombstone its DOI via the "
-            "DoiMinter port (the DOI stays Findable as a tombstone; it is "
+            "PersistentIdentifierMinter port (the DOI stays Findable as a tombstone; it is "
             "not deleted) and transition to Withdrawn. The withdrawal "
             "reason is mandatory and recorded forever."
         ),

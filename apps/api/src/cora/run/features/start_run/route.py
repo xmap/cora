@@ -62,10 +62,13 @@ class StartRunRequest(BaseModel):
         default=None,
         max_length=2048,
         description=(
-            "Research Activity Identifier (ISO 23527) for the project "
-            "this Run belongs to. Optional opaque string carried verbatim. "
-            "Used at PROV-O / DataCite export boundaries to link Datasets, "
-            "Subjects, Instruments, and people for cross-facility provenance."
+            "Research Activity Identifier (ISO 23527) of the research "
+            "activity this Run belongs to. Optional opaque string carried "
+            "verbatim. RAiD is project/activity scoped: share one RAiD "
+            "across the many Runs of an activity, do not mint one per Run "
+            "(the Run id is the per-run identity). Used at PROV-O / DataCite "
+            "export boundaries to link Datasets, Subjects, Instruments, and "
+            "people for cross-facility provenance."
         ),
     )
     override_parameters: dict[str, Any] = Field(

@@ -45,7 +45,9 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         description=(
             "Register a new Dataset (logical research data product) with the "
             "given metadata. The Data BC stores only metadata; bytes live at "
-            "the URI. checksum_algorithm must be 'sha256' today. Optional "
+            "the URI. checksum_algorithm is 'sha256' for a single file or "
+            "'sha256-tree' for a directory of files (a tree-hash over the "
+            "whole directory); both carry a 64-hex value. Optional "
             "cross-refs (producing_run_id, subject_id, derived_from) are "
             "validated for existence at registration. Idempotency-Key is "
         ),
@@ -73,7 +75,12 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         ],
         checksum_algorithm: Annotated[
             str,
-            Field(description="Checksum algorithm. Only 'sha256' supported today."),
+            Field(
+                description=(
+                    "Checksum algorithm: 'sha256' (single file) or 'sha256-tree' "
+                    "(directory tree-hash). Both carry a 64-hex value."
+                )
+            ),
         ],
         checksum_value: Annotated[
             str,

@@ -22,10 +22,14 @@ first subscriber-hosted cross-BC aggregate write in the agent BC.
   - confidence >= the high band (a SOFT gate: CautionDrafter confidence is
     self-reported / uncalibrated, so Notice-only + reversibility are the real
     safety).
-  - no active Caution already on the target (find_active_for_run with
+  - no active Caution already on the target (find_active_in_scope with
     min_severity="Notice", per-target).
   - the proposed tuple passes Caution VO validation (else deferred, never
     raised, so a bad LLM tuple cannot wedge the shared bookmark).
+  - no matching Notice this promoter previously registered was Retired by an
+    operator (find_retired_for_target on target_kind+target_id+category+
+    authored_by=CautionPromoter); a retirement is a deliberate operator
+    override, so the agent respects it and does not re-create -> deferred.
   - Authorize permits PromoteCautionProposal (parity with the human path).
 
 ## Idempotency
@@ -37,10 +41,16 @@ ConcurrencyError no-op.
 ## Off by default
 
 Registered only when `settings.caution_promoter_enabled` (default False). The
-operator-retirement-memory guard (consult retired Cautions so a Notice an
-operator deliberately retired is not re-created) is the prerequisite to enable
-it operationally; it needs a retired-caution read the CautionLookup port does
-not yet expose. See [[project-caution-promoter-design]].
+operator-retirement-memory guard (Lock 5) -- the prerequisite to enabling this
+operationally -- is now implemented (the `find_retired_for_target` gate arm
+above), so a deployment MAY opt in. It stays default-off because it is CORA's
+first no-human-in-the-loop artifact: enabling carries the Lock 15 obligation of
+a periodic operator precision-review of agent-authored Notices (via
+`list_cautions(authored_by=CAUTION_PROMOTER_AGENT_ID)`). A future agent-retire
+path would require threading the human retirer through the retire/supersede
+projection arms and keying the guard on it; today no agent retires a Caution,
+so the promoter's own authored_by is the correct key. See
+[[project-caution-promoter-design]].
 """
 
 from __future__ import annotations
@@ -239,7 +249,7 @@ class CautionPromoterSubscriber:
         procedure_ids: frozenset[UUID] = (
             frozenset({view.target_id}) if view.target_kind == "Procedure" else frozenset()
         )
-        existing = await self.caution_lookup.find_active_for_run(
+        existing = await self.caution_lookup.find_active_in_scope(
             asset_ids=asset_ids,
             procedure_ids=procedure_ids,
             min_severity="Notice",
@@ -249,12 +259,36 @@ class CautionPromoterSubscriber:
 
         # Re-validate the LLM-authored tuple through the Caution public VOs before
         # committing to Promote, so an invalid tuple defers rather than raising
-        # mid-write. (GOV-1 retirement-memory guard is deferred; the agent ships
-        # off by default until it lands.)
+        # mid-write.
         try:
             _validate_caution_fields(view)
         except ValueError:
             return "PromotionDeferred", "proposed caution failed Caution validation"
+
+        # GOV-1 (Lock 5) operator-retirement-memory guard: if a matching Notice
+        # this promoter previously registered was deliberately Retired by an
+        # operator, do not re-create it. Keyed on the promoter's own authored_by
+        # (the only agent-authored Cautions are its registrations); only Retired
+        # rows veto, so a Superseded predecessor does not.
+        #
+        # Trade-off (gate-review R4): this keys on the promoter's OWN authored_by
+        # ("do not resurrect my own retired output"), which UNDER-suppresses a
+        # human-authored retired Notice on the same target+category. The
+        # conservative alternative is author-agnostic (respect ANY operator
+        # retirement), which OVER-suppresses a genuinely-new agent heads-up.
+        # v1 takes the precise narrowing; widen to author-agnostic if operators
+        # report the agent re-raising heads-up they dismissed.
+        retired = await self.caution_lookup.find_retired_for_target(
+            target_kind=view.target_kind,
+            target_id=view.target_id,
+            category=view.category,
+            authored_by=CAUTION_PROMOTER_AGENT_ID,
+        )
+        if retired:
+            return (
+                "PromotionDeferred",
+                "a matching Notice was previously retired by an operator; respecting the override",
+            )
 
         authz = await self.authz.authorize(
             principal_id=CAUTION_PROMOTER_AGENT_ID,

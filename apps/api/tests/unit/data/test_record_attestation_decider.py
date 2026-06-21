@@ -23,6 +23,7 @@ from cora.data.aggregates.attestation import (
     AttestationKindRequiresDistributionError,
     AttestationOutcome,
     AttestationStatus,
+    AttestationTreeChecksumNotYetSupportedError,
     ChecksumVerifiedEvidence,
     InvalidAttestationEvidenceError,
     InvalidAttestationKindError,
@@ -97,13 +98,14 @@ def _distribution(
     distribution_id: UUID = _DISTRIBUTION_ID,
     dataset_id: UUID = _DATASET_ID,
     checksum_value: str = _GOOD_SHA,
+    checksum_algorithm: str = "sha256",
 ) -> Distribution:
     return Distribution(
         id=distribution_id,
         dataset_id=dataset_id,
         supply_id=_SUPPLY_ID,
         uri=DistributionUri("s3://b/k"),
-        checksum=DatasetChecksum(algorithm="sha256", value=checksum_value),
+        checksum=DatasetChecksum(algorithm=checksum_algorithm, value=checksum_value),
         byte_size=1024,
         encoding=DatasetEncoding(media_type="application/x-hdf5"),
         access_protocol=AccessProtocol.S3,
@@ -174,6 +176,25 @@ def test_decide_emits_attestation_recorded_with_all_fields_on_match() -> None:
     assert "error_detail" not in event.evidence
     assert event.occurred_at == _NOW
     assert event.attested_by == _PRINCIPAL
+
+
+@pytest.mark.unit
+def test_decide_refuses_attestation_of_tree_checksum_distribution() -> None:
+    # A directory (sha256-tree) Distribution cannot be verified by the
+    # whole-file verifier; recording is refused outright rather than
+    # recording a false Mismatch that would flip the Distribution to Stale.
+    cmd = _good_command(outcome="Mismatch", evidence_computed_checksum=_OTHER_SHA)
+    ctx = _context(distribution=_distribution(checksum_algorithm="sha256-tree"))
+    with pytest.raises(AttestationTreeChecksumNotYetSupportedError) as exc:
+        record_attestation.decide(
+            state=None,
+            command=cmd,
+            context=ctx,
+            now=_NOW,
+            new_id=uuid4(),
+            attested_by=_PRINCIPAL,
+        )
+    assert exc.value.algorithm == "sha256-tree"
 
 
 @pytest.mark.unit

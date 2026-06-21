@@ -243,7 +243,7 @@ def bind(deps: Kernel) -> Handler:
         # beam gate passes trivially; the production ControlPort-backed
         # adapter reads the configured PVs live and fails closed on a
         # bad read.
-        beam_availability = await deps.beam_availability_lookup.read_beam_availability()
+        beam_availability = await deps.beam_availability_lookup.read()
 
         context = ProcedureStartContext(
             assets=assets,

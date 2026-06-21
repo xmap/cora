@@ -107,10 +107,26 @@ nav:
       - Experiment: deployments/2-bm/experiment.md
       - Governance: deployments/2-bm/governance.md
       - Model: deployments/2-bm/model.md
+    - TomoWise:
+      - deployments/tomowise/index.md
+      - Open questions: deployments/tomowise/questions.md
+      - The beamline:
+        - deployments/tomowise/equipment/index.md
+        - Source: deployments/tomowise/beamline.md
+        - Endstations: deployments/tomowise/equipment/endstations.md
+        - Detector: deployments/tomowise/equipment/detector.md
+        - Controls: deployments/tomowise/equipment/controls.md
+        - Inventory: deployments/tomowise/inventory.md
+      - Techniques: deployments/tomowise/techniques.md
+      - Governance: deployments/tomowise/governance.md
+      - Model: deployments/tomowise/model.md
     - Facility envelope:
       - APS:
         - deployments/aps/index.md
         - Assets: deployments/aps/assets.md
+      - MAX IV:
+        - deployments/maxiv/index.md
+        - Assets: deployments/maxiv/assets.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

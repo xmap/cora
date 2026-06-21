@@ -2,7 +2,7 @@
 `proj_operation_procedure_summary` read model against real Postgres.
 
 This is the only place the widened status CHECK (migration
-20260621020000, admitting 'Held') is actually exercised: the projection
+20260621060000, admitting 'Held') is actually exercised: the projection
 unit tests use a mocked connection, so the column constraint is enforced
 only here.
 

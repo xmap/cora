@@ -77,13 +77,31 @@ front-end:
       water_cooled: true
       z_mm: 24020
       new: true
-      confirm: true
+      vendor_designation: M3-24
+      rss_tag: 02-BM-A-F-01
+      aperture_mm: [44.4, 4.5]   # H x V; staff-corrected from the pre-APS-U 50 x 3 (ALIGN-2, #264)
+      material: OFHC copper
+      drawing: { system: ICMS, number: 4102020101-240000, revision: "(-)" }   # APS_2191941 row 1
+      note: >
+        Fixed front-end exit mask (M3-24), the permanent beam-defining aperture
+        ~24 m from the source that the white-beam alignment routine centres on
+        (item_012). Aperture 44.4 x 4.5 mm H x V, OFHC copper, water-cooled
+        (ALIGN-2). Registering it as a child Asset rides with the
+        passive-beam-path Window slice.
     - name: FrontEndWindow
       family: Window
       passive: true
       replaceable: true
       new: true
-      confirm: "count and thickness"
+      window_count: 3
+      be_thickness_total: 0.63 mm   # BEAM-2 (#246): W4-20 0.25 + W4-60 0.13 + unlabelled 0.25 (staff-verified)
+      note: >
+        Three OFHC-housed Be windows on the 02-BM beam path; per-window child
+        Assets are deferred to the Window-Family slice. Source APS_2191941
+        (post-APS-U) rows 5/8/9: W4-20 (drawing 4105090804-200000, z 28718,
+        Be 0.25 mm), W4-60 (drawing 4105090804-600000, z 30804, Be 0.13 mm),
+        and an unlabelled Be window (drawing 4102020106-400000, z 32417,
+        Be 0.25 mm).
     - name: FrontEndShutter
       family: Shutter
       pv: "S02BM-PSS:FES"
@@ -121,20 +139,30 @@ conditioning-optics:
       family: Filter
       pv: { upstream_paddle: "2bma:m17", downstream_paddle: "2bma:m18" }
       controller: FrontEndDrive
-      foils: ["600 um Al", "150 um Al", "300 um C", "50 um C", "None"]   # operational downstream paddle (2bma:m18), in slot order; per-slot motor positions live in the index_position_table calibration (see test_2bm_filter_foil_setup.py)
-      confirm: true
-      note: two paddles - downstream (2bma:m18) is operational and its foils are listed above; upstream (2bma:m17) is bound in software but not in service (selecting it has no beam effect). Foil materials/positions per the docs2bm components page (FOIL-1)
+      foils_upstream: ["1 mm C", "150 um Al", "600 um Al", "1 mm Al", "None"]   # upstream paddle (2bma:m17), the OPERATIONAL selector today, in slot order; per-slot motor positions in the index_position_table calibration (see test_2bm_filter_foil_setup.py)
+      foils_downstream: ["600 um Al", "150 um Al", "300 um C", "50 um C", "None"]   # downstream paddle (2bma:m18) bindings, still valid in the IOC though m18 is currently Faulted; positions in the index_position_table calibration
+      note: >
+        Two paddles, each modelled as a Filter_FoilSelector_* PseudoAxis facet
+        with its own index_position_table calibration (test_2bm_filter_foil_setup.py).
+        The upstream paddle (2bma:m17) is the operational filter selector today;
+        the downstream (2bma:m18) failed 2026-06-19 (parked 107.19 mm, motor
+        cannot actuate), modelled condition Faulted with its bindings retained
+        (lifecycle stays Active). m18 is not expected to be repaired soon, so m17
+        is the sole operational selector. Unit mm (caget 2bma:m18.EGU);
+        materials/positions per docs2bm + 2filter_setup.adl (FOIL-1/FOIL-2).
     - name: DiagnosticFlag
-      family: LinearStage
+      family: Screen
       pv: "2bma:m44"
       controller: FrontEndDrive
+      z_mm: 32500
       note: >
         Motorized phosphor beam-viewing flag (the staff "diagnostic flag",
-        item_006 / item_020): a vertical insert on 2bma:m44. Raised into the
-        beam in Mono and parked in Pink; in Mono its Y is energy-dependent
-        (staff energy_move_flag). Exact in-hutch position, the energy-tracking
-        Y curve, and whether to model the position as a PseudoAxis are pending
-        (FLAG-1).
+        item_006 / item_020): a vertical insert on 2bma:m44, on its own
+        floor-referenced stand in 2-BM-A at z=32500 (FLAG-1, staff-confirmed).
+        Raised into the beam in Mono at an energy-dependent height (the staff
+        energy_move_flag table) and parked out (Y=0) in Pink; the Y is modelled
+        as the energy-tracked DiagnosticFlag_Y PseudoAxis
+        (test_2bm_energy_curves_setup.py). User offset: user = dial - 5 mm.
     - name: Mirror
       family: Mirror
       pv: { downstream_y: "2bma:m2", upstream_y: "2bma:m5", stripe_select: "2bma:m3" }
@@ -163,6 +191,11 @@ conditioning-optics:
       controller: FrontEndDrive
       material: Si multilayer
       crystal_z_mm: [29335, 29934]
+      dmm_insertion:           # MODE-2 (#261): DMM physical insert(Mono)/retract(Pink); the mode-switch primitive, modeled as the Monochromator Asset setting dmm_insertion (enum inserted|retracted)
+        motors: ["2bma:m26", "2bma:m27", "2bma:m29"]   # dmm_usy_ob / dmm_usy_ib / dmm_dsy, driven together in the energy-change move (no sequencing, no interlock)
+        inserted_mm: 0.0       # Mono: DMM Y motors in, crystals in the beam
+        retracted_mm: -10.0    # Pink: DMM Y motors out, beam passes straight through
+        active: inserted       # current operational state
       confirm: true
       note: >
         Energy is set by the energy-change IOC as a discrete coordinated move:
@@ -172,17 +205,22 @@ conditioning-optics:
         arms (bragg_arm_upstream/downstream) and the M2 vertical offset
         compensator (m2_offset_y); crystal2_z (M2 Z) is a setup translation the
         IOC does NOT drive. The m25-m29 tank/alignment motors ARE in the
-        coordinated move, but the components page names only the Bragg arms and
-        m2_offset_y as varying per energy, so CORA carries energy curves for
-        those alone (m25-m29 not modeled as per-energy curves pending staff
-        confirmation). CORA models each per-axis relationship as a continuous
+        coordinated move but are re-asserted at fixed values, not varied per
+        energy (staff-confirmed ENERGY-5: m25/m28 are constant alignment X in
+        both modes, m26/m27/m29 are two-state in-beam vs retracted by mode), so
+        CORA carries energy curves for the Bragg arms and m2_offset_y alone.
+        CORA models each per-axis relationship as a continuous
         curve interpolating the saved points. Two beam modes (MODE-1): in Mono
         the DMM is inserted (the per-energy axes above); in Pink the DMM Y motors
         drive out (about -10, beam passes straight through) and the Bragg arms
         park, with the mirror coating stripe setting the high-energy cutoff. Pink
-        configured energies: 30, 40, 50, 60 keV. The exact Mono<->Pink insert and
-        bypass positions and any required sequence are unconfirmed (MODE-2).
-        Source: docs2bm item_020.
+        configured energies: 30, 40, 50, 60 keV. The insert/bypass mechanism is
+        confirmed (MODE-2, #261): the three DMM Y motors m26/m27/m29 drive to 0
+        (in, Mono) or -10 mm (out, Pink) together within the one coordinated
+        energy-change move, with no special sequencing and no software interlock.
+        CORA records this two-state position as the dmm_insertion setting above;
+        the coordinated mode-switch move that drives it stays deferred with the
+        Pink positions and stripe map (MODE-3, MIRROR-1). Source: docs2bm item_020.
 
 beam-defining-and-safety:
   stage: source
@@ -206,6 +244,7 @@ beam-defining-and-safety:
           pv: "S02BM-PSS:SBS"
           material: "W 21 mm"
           aperture_mm: [60.0, 44.5]
+          drawing: { system: ICMS, number: 41050401-410003, revision: "(-)" }   # BEAM-3 (#247): P6-50 safety-shutter element; assembly drawing 41050401-500000; RSS 02-BM-A-P-01; source APS_2191941 row 10
           replaceable: true
           confirm: true
           note: >
@@ -248,6 +287,34 @@ beam-defining-and-safety:
       new: true
       confirm: true
       note: mono-mode only, held out of beam in pink mode
+    - name: Aperture
+      family: Aperture
+      controller: ApertureFineDrive
+      z_mm: 51300                    # 2-BM-B, between SampleSlit (50500) and the sample tower (~52-54 m), upstream of the sample (PIEZO-1, #241)
+      new: true
+      note: >
+        Coded-aperture mask stepped through positions in the beam for
+        compressive-sensing / dithered-sampling tomography, fine-positioned in X/Y by
+        ApertureFineDrive (two NV200D units via a nanoSXY 120 CAP flexure). Registered
+        identity-only: the spatial code pattern and any beam-effect (encoded
+        transmission) are deferred with the path reserved, per the passive-beam-path tier
+        discipline. Distinct from Slit (a variable four-blade opening) and Mask (a fixed
+        passive aperture): this is a fixed-pattern mask actively positioned.
+    - name: AlignmentCamera
+      family: Camera
+      pv: "2bma:m21"
+      controller: FrontEndDrive
+      new: true
+      confirm: true
+      note: >
+        Semi-permanent A-station beam-view camera (FLIR Oryx 5MP, IOC
+        2bmbOryx5MP on host lyra) on a vertical stage 2bma:m21. Permanently
+        installed but rarely engaged (annual / multi-year, for major
+        realignment): the beam reaches it only when an operator manually breaks
+        vacuum and removes an upstream pipe section. A distinct unit from the
+        B-station microscope Camera; exact part likely ORX-10G-51S5M, pending
+        operator confirmation (ALIGN-1). The rare-engagement is a note, not a
+        new lifecycle state.
 
 sample-environment:
   stage: sample
@@ -362,9 +429,9 @@ detector:
     - name: Turret
       family: LinearStage         # sliding ball-screw objective selector (item_020), not a rotating turret
       model: nanotec_st4118  # motor is a Nanotec stepper (item_020, ST4118M1404-B), not Optique Peter; ball-screw 2 mm/rev
-      pv: "2bmb:m1"               # on the ioc2bmb OMS VME58 crate (SampleStageDrive); MCTOptics commands it via LensSelect, not driven directly (DET-2)
+      pv: "2bmb:m1"               # on the ioc2bmb OMS VME58 crate (SampleStageDrive); MCTOptics commands it from the (lens x camera) lookup, never driven directly (DET-2, DET-11)
       controller: SampleStageDrive
-      range: -60.030..58.64 mm     # selector positions in mm
+      range: -60.3784..59.2300 mm     # selector positions in mm, operator-verified across both cameras 2026-06-19 (DET-11)
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
     - name: Objective_10x
       family: Objective
@@ -409,8 +476,31 @@ detector:
           source: AssertedSource
           status: Provisional
     - name: Objective_Selector
-      family: PseudoAxis          # virtual; writes the MCTOptics LensSelect composite, which sequences turret move + per-lens focus (2bmb:m2/m3/m4) + rotation offsets (DET-2); partition rule records lens positions, MCTOptics actuates
+      family: PseudoAxis          # virtual lens picker; CORA writes LensSelect, MCTOptics owns the (lens x camera) turret/rotation/focus lookup (DET-2, DET-11)
       pv: "2bm:MCTOptics:LensSelect"
+      readback_pv: "2bm:MCTOptics:LensSelected"
+      slot_labels_pv: ["2bm:MCTOptics:LensName0", "2bm:MCTOptics:LensName1", "2bm:MCTOptics:LensName2"]
+      lens_slots: ["1.1x_Mitutoyo", "2x_Mitutoyo", "10x_Mitutoyo"]   # LensSelect index 0/1/2 (DET-11 slot order, operator-verified 2026-06-19)
+      turret_lookup_mm:            # 2bmb:m1 position per (lens x camera); MCTOptics resolves it, CORA never drives 2bmb:m1 (DET-11)
+        camera0: { "1.1x_Mitutoyo": -59.8184, "2x_Mitutoyo": -0.5734, "10x_Mitutoyo": 58.8707 }   # Camera0LensPos{0,1,2}; Camera 0 = 5 MP, in beam
+        camera1: { "1.1x_Mitutoyo": -60.3784, "2x_Mitutoyo": -0.9240, "10x_Mitutoyo": 59.2300 }   # Camera1LensPos{0,1,2}; Camera 1 = 31 MP
+      coupled_lookups:             # two further per-(lens, camera) lookups fire on the same LensSelect/CameraSelect change; MCTOptics-owned, not CORA Assets (DET-11)
+        camera_rotation_pv: { camera0: "2bmb:m7", camera1: "2bmb:m8" }   # Camera{N}Lens{M}Rotation, 6 PVs, rotation-axis preservation
+        per_lens_focus_pv: ["2bmb:m2", "2bmb:m3", "2bmb:m4"]            # Camera{N}Lens{M}Focus, 6 PVs, degenerate (camera0 == camera1) today
+      note: >
+        The lens picker (item_020 MCTOptics). CORA writes the high-level
+        LensSelect, and CameraSelect on the Camera_Selector below; MCTOptics then
+        resolves the turret position (2bmb:m1), the per-camera rotation offset
+        (2bmb:m7 for Camera 0, 2bmb:m8 for Camera 1), and the per-lens focus
+        (2bmb:m2/m3/m4) from a joint (lens x camera) lookup: 18 calibration PVs
+        over six motors, all firing on any LensSelect or CameraSelect change. The
+        turret position depends on BOTH lens AND camera (DET-11, operator-verified
+        2026-06-19); a lens-only model would silently break rotation-axis
+        alignment whenever the camera is switched. CORA drives only LensSelect and
+        CameraSelect, never the six underlying motors. The PseudoAxis partition
+        rule (test_2bm_microscope_setup.py) carries the Camera 0 column as a
+        single-camera provenance record; the full 2D table is documentary here,
+        and true 2D actuation waits for the control-layer slice.
     - name: PropagationDistance
       family: LinearStage         # sample-to-detector distance (propagation) rail, not a focus stage; per-lens fine focus is on 2bmb:m2/m3/m4 (LENS0/1/2_FOCUS, item_020, MCTOptics), offsets in software
       model: aerotech_pro225sl
@@ -526,28 +616,31 @@ controls:
       protocol: OMS_VME
       axis_count: 91
       note: "a-station crate (ioc2bma); drives the front-end + optics band and also the B-station SampleSlit (2bma:m9-m12). Named for its primary band; the full driven set spans both hutches and lives in the EPICS channel map, not the name."
-    - name: OpticsFineDrive          # PROVISIONAL name; finalizes on PIEZO-1 (what it positions)
-      family: MotionController
-      model: piezosystem_jena_nv100d
-      protocol: EPICS                # arcturus host, IOC JenaNV100D; open-loop V / closed-loop um
-      axis_count: 2
-      note: >-
-        Piezosystem Jena NV100D piezo nanopositioning controller for fine optics positioning
-        (reached from the mct_optics screen). Drives 2 piezo axes (X/Y); the driven XY stages,
-        containment, and final name are deferred (PIEZO-1/2). IPs/PVs: PIEZO-4.
-    - name: SampleFineDrive          # PROVISIONAL name; best-guess element, finalizes on PIEZO-1
+    # NV100D (formerly the provisional OpticsFineDrive): physically present with IOC
+    # support (arcturus, IOC JenaNV100D) but NOT in operational use at 2-BM, because the
+    # NV100D lacks the external trigger mode tomoscan fly-scan needs, so no Run/Procedure
+    # drives it. Recorded as provenance, not modeled as an active controller (PIEZO-1, #241).
+    - name: ApertureFineDrive
       family: MotionController
       model: piezosystem_jena_nv200d
       protocol: EPICS                # arcturus host, IOC JenaNV200D; Xon/Xoff flow control
       axis_count: 2
+      ip_addresses: { x: "10.54.113.126", y: "10.54.113.125" }   # two NV200D units, one per axis (PIEZO-4, #244)
       note: >-
-        Piezosystem Jena NV200D/NET piezo controller; FPGA-triggered step mode for tomography
-        (up to 1024 preloaded positions, one step per TTL edge during camera readout). Complements
-        the NV100D. Driven XY stages + scan use-case deferred (PIEZO-1/2/5).
+        Two independent Piezosystem Jena NV200D/NET single-channel controllers (one per
+        axis, separate IPs above) that fine-position the Aperture coded-mask via a
+        nanoSXY 120 CAP XY flexure stage (part T-223-06D, 120 um nominal / 100 um
+        closed-loop per axis, 12.5 mm clear aperture; PIEZO-2, #242). FPGA-triggered step
+        mode advances a preloaded position list (1024-position buffer max, n=256 default,
+        --random for compressive-sensing dithered sampling). The driven X/Y LinearStage
+        axis Assets are deferred to a follow-up slice; the out2/out3 -> X/Y cable map
+        still needs operator confirmation (PIEZO-5). Renamed from the provisional
+        SampleFineDrive: it does NOT move the sample (PIEZO-1, #241).
   triggering:
     - name: Timing
       family: TimingController
       pv: "2bmbMZ1:SG:"
+      firmware_version: "2.0"   # softGlueZynq gateware (bitstream) version, from the softGlueZynqMenu.adl header (#271)
       path: "{PSO, trigILF} -> MUX2-1 -> GateDly1 -> camera Line2; out2 -> JenaX (GateDly-3_DLY); out3 -> JenaY (GateDly-2_DLY)"
       # MUX2-1 is a 2:1 selector: input0 = raw PSO train, input1 = trigILF (a chosen subset of PSO pulses); routed per scan via MUX2-1_SEL_Signal (item_060)
       replaceable: true
@@ -568,8 +661,10 @@ resources:
     - kind: Power
     - kind: ComputePool
     - kind: LiquidNitrogen        # 2-BM detector LN2 dewar
-    - kind: ProcessGas            # pending: sample-environment gas mix
-    - kind: CompressedAir         # pending: compressed-air supply (kind newly coined; not yet attested in code)
+  # No standing 2-BM gas-mix or compressed-air Supply (SUP-1/SUP-2, #268): sample
+  # gas is per-experiment, ESAF-gated (bottles, typically He/N2/Ar), so it is a
+  # Run-level fact not a beamline Supply; compressed air is the APS facility shop-air
+  # line with no beamline-local spec. Facility-scope ProcessGas stays in aps/site.yaml.
   replaceable_parts:
     # One selector, since CORA has no single asset-revision concept:
     #   recoatable surface  -> Consumable affordance, no separate asset

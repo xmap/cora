@@ -90,6 +90,13 @@ class Observation:
     occurred_at: datetime
     correlation_id: UUID
     causation_id: UUID | None
+    is_simulated: bool
+    """Per-observation provenance: True when the value came from a
+    simulator (a soft-IOC dress rehearsal, a replay trace). Only a sim
+    feeder sets it; real and human-entered rows are False. A closed-loop
+    rule treats True as disqualifying so it cannot act on simulated data
+    as if it were real. The read-side mirror of the Operation BC's
+    ActuationKind 'any simulator touch disqualifies Production' gate."""
 
 
 class ObservationStore(Protocol):
@@ -113,8 +120,9 @@ _APPEND_SQL = """
 INSERT INTO entries_run_observations (
     event_id, run_id, logbook_id, actor_id, command_name,
     channel_name, value, units, sampling_procedure,
-    sampled_at, occurred_at, correlation_id, causation_id
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    sampled_at, occurred_at, correlation_id, causation_id,
+    is_simulated
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 ON CONFLICT (event_id) DO NOTHING
 """
 
@@ -153,6 +161,7 @@ class PostgresObservationStore:
                         row.occurred_at,
                         row.correlation_id,
                         row.causation_id,
+                        row.is_simulated,
                     )
                     for row in rows
                 ],

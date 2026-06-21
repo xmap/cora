@@ -74,19 +74,29 @@ Each Model carries the vendor identity PIDINST needs (Manufacturer + Model). The
 
 ## Objective selector
 
-`Objective_Selector` is a virtual axis. CORA addresses it by writing a lens index (0, 1, 2) to the composite `2bm:MCTOptics:LensSelect` PV; the MCTOptics IOC owns the sequencing behind that single write, moving the turret (`2bmb:m1`) to the selected objective's position and applying that objective's per-lens fine focus (`2bmb:m2`/`m3`/`m4`, the `LENS0/1/2_FOCUS` macros) and rotation offsets. CORA drives the high-level composite (`LensSelect`, `LensName`, `CameraSelect`, and the status readbacks), never the raw `2bmb:m1`-`m4` motor records. Confirmed by 2-BM staff (DET-2).
+`Objective_Selector` is a virtual axis. CORA addresses it by writing a lens index (0, 1, 2) to the composite `2bm:MCTOptics:LensSelect` PV; the MCTOptics IOC owns the sequencing behind that single write. The key fact 2-BM staff confirmed (DET-11, operator-verified 2026-06-19) is that the sequencing is a **two-input lookup**: the turret position depends on the **(lens, camera)** pair, not the lens alone. Whenever either `LensSelect` or the camera setpoint (`2bm:MCTOptics:CameraSelect`, driving the `Camera_Selector`) changes, MCTOptics looks up and applies three coordinated values, eighteen calibration PVs over six motors:
 
-Its `partition_rule`, a closed `LookupTable` over lens index, is therefore CORA's PROVENANCE RECORD of which turret position each objective sits at (the selector is a sliding ball-screw stage, not a rotating turret), not an actuation path CORA executes:
+| Coupled lookup | Motor(s) | Value PVs | Per-camera dimension |
+| --- | --- | --- | --- |
+| Turret position | `2bmb:m1` | `Camera{N}LensPos{M}` (6) | active (~0.4-0.6 mm per-camera offset) |
+| Camera rotation | `2bmb:m7` (Cam 0), `2bmb:m8` (Cam 1) | `Camera{N}Lens{M}Rotation` (6) | active (rotation-axis preservation) |
+| Per-lens focus | `2bmb:m2`/`m3`/`m4` (per lens) | `Camera{N}Lens{M}Focus` (6) | degenerate today (Cam 0 == Cam 1) |
 
-| `Objective_Selector` | Turret position | Objective in beam |
-| --- | --- | --- |
-| `0` | `-60.030 mm` | 1.1x Mitutoyo |
-| `1` | `-0.837 mm` | 2x Mitutoyo |
-| `2` | `58.640 mm` | 10x Mitutoyo |
+CORA drives only the high-level setpoints (`LensSelect` and `CameraSelect`) and reads the status readbacks (`LensSelected`, `CameraSelected`), never the raw `2bmb:m1`/`m2`/`m3`/`m4`/`m7`/`m8` motor records. Driving any underlying motor directly would bypass one of the three lookups and silently break rotation-axis alignment. Confirmed by 2-BM staff (DET-2, DET-11).
 
-Writing `Objective_Selector = 1` writes lens index 1 to `2bm:MCTOptics:LensSelect`, and MCTOptics performs the move; the write is recorded as a control-dispatch event with a correlation id, and the lookup table is itself event-sourced, so revisions leave an audit trail of which positions were recorded when. The per-lens fine-focus motors (`2bmb:m2/m3/m4`) are MCTOptics-owned and are NOT modelled as CORA Assets; they move as a side effect of `LensSelect` (distinct from `PropagationDistance` / `2bmbAERO:m1`, the sample-to-detector rail CORA drives directly).
+The operator-verified turret positions, the two-dimensional table MCTOptics resolves:
 
-> **Deferred (DET-2 follow-up).** Whether to retire the index-to-position `LookupTable` (modelling `Objective_Selector` as a pass-through index write) and stop modelling `Turret` as a raw-motor Asset is a structural question for when CORA builds the real control layer. Today the actuation model is descriptive, so the provenance-record framing above is the intentional v1.
+| Lens index | Objective | Camera 0 (5 MP) | Camera 1 (31 MP) |
+| --- | --- | --- | --- |
+| `0` | 1.1x Mitutoyo | `-59.8184 mm` | `-60.3784 mm` |
+| `1` | 2x Mitutoyo | `-0.5734 mm` | `-0.9240 mm` |
+| `2` | 10x Mitutoyo | `58.8707 mm` | `59.2300 mm` |
+
+CORA models this **data-only**: its `partition_rule` stays a closed one-dimensional `LookupTable` over lens index, carrying the **Camera 0 column** (the in-beam 5 MP camera) as a single-camera PROVENANCE RECORD of where the turret sits per objective, not an actuation path CORA executes. The full two-dimensional table and the coupled rotation and focus PVs are documentary here and in the [descriptor](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml); they record "what was the turret-position lookup at scan time?" for a Run, but CORA does not resolve them, MCTOptics does.
+
+Writing `Objective_Selector = 1` writes lens index 1 to `2bm:MCTOptics:LensSelect`, and MCTOptics performs the joint move; the write is recorded as a control-dispatch event with a correlation id, and the lookup table is itself event-sourced, so revisions leave an audit trail of which positions were recorded when. The per-lens fine-focus motors (`2bmb:m2/m3/m4`) are MCTOptics-owned and are NOT modelled as CORA Assets; they move as a side effect of `LensSelect`/`CameraSelect` (distinct from `PropagationDistance` / `2bmbAERO:m1`, the sample-to-detector rail CORA drives directly).
+
+> **Deferred (control-layer follow-up).** A true two-dimensional `(lens, camera)` actuation path, resolving turret position, rotation, and focus from both inputs, waits for when CORA builds the real control layer; it would not add a new partition-rule shape (three parallel single-output lookups sharing the `(lens, camera)` input pair reuse the existing `LookupTable` form). Whether to then retire the index-to-position table (modelling `Objective_Selector` as a pass-through index write) and stop modelling `Turret` as a raw-motor Asset is the same structural question DET-2 raised. Today the actuation model is descriptive, so the single-camera provenance-record framing above is the intentional v1.
 
 ## Families
 

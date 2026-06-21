@@ -19,10 +19,10 @@ Layer 3 consumers (per [[project-role-aggregate-design]]):
     edge so the decider signature stays at 3 kwargs and the
     `make_update_handler` factory contract is preserved.
   - 3D `bind_plan_role` handler: walks Asset.family_ids ->
-    FamilyLookup.batch_lookup -> RoleLookup.lookup chain for the
-    role_kind satisfaction path. The role's required_affordances
-    drive the per-Family superset comparison (Lock 17 ANY-single-
-    family disjunction).
+    a gather of FamilyLookup.lookup (one call per family) ->
+    RoleLookup.lookup for the role_kind satisfaction path. The role's
+    required_affordances drive the per-Family superset comparison
+    (Lock 17 ANY-single-family disjunction).
   - 3E `update_capability_suggested_roles` handler: validates every
     proposed RoleId resolves (Lock 10 documentation-only event;
     existence is the only gate).

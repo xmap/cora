@@ -17,17 +17,21 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `FrontEndDrive` | `MotionController` | `oms_vme58` | `2-BM` | `axis_count=91`, `OMS_VME` | live |
 | `Mirror` | `Mirror` | (none) | `MirrorTable` | driven by `FrontEndDrive` | live |
 | `MirrorTable` | `Table` | (none) | `2-BM` | `axis_layout=virtual_pose`, `virtual_record=2bma:table1` | live |
-| `Monochromator` | `Monochromator` | (none) | `2-BM` | driven by `FrontEndDrive` | live |
+| `Monochromator` | `Monochromator` | (none) | `2-BM` | `dmm_insertion=inserted` (MODE-2); driven by `FrontEndDrive` | live |
 | `Monochromator_BraggArmUpstream` | `PseudoAxis` | (none) | `Monochromator` | energy->upstream Bragg arm (deg) | live |
 | `Monochromator_BraggArmDownstream` | `PseudoAxis` | (none) | `Monochromator` | energy->downstream Bragg arm (deg) | live |
 | `Monochromator_M2Y` | `PseudoAxis` | (none) | `Monochromator` | energy->M2 vertical offset (mm) | live |
 | `ConditioningSlit` | `Slit` | (none) | `2-BM` | white-beam slits; driven by `FrontEndDrive` | live |
 | `Filter` | `Filter` | (none) | `2-BM` | foil changer; driven by `FrontEndDrive` | live |
-| `Filter_FoilSelector` | `PseudoAxis` | (none) | `Filter` | slot index -> paddle position (Nearest) | live |
-| `DiagnosticFlag` | `LinearStage` | (none) | `2-BM` | `2bma:m44`; raised in Mono, parked in Pink | live |
+| `Filter_FoilSelector_Upstream` | `PseudoAxis` | (none) | `Filter` | m17 slot index -> position (Nearest); operational selector | live |
+| `Filter_FoilSelector_Downstream` | `PseudoAxis` | (none) | `Filter` | m18 slot index -> position (Nearest); bindings retained | Faulted (m18 failed 2026-06-19) |
+| `DiagnosticFlag` | `Screen` | (none) | `2-BM` | `2bma:m44` at z=32500; raised in Mono, parked in Pink | live |
+| `DiagnosticFlag_Y` | `PseudoAxis` | (none) | `DiagnosticFlag` | energy->flag height (Mono); parked out in Pink | live |
 | `SampleSlit` | `Slit` | (none) | `2-BM` | B-station slits; driven by `FrontEndDrive` | live |
 | `SampleSlit_VerticalTop` | `PseudoAxis` | (none) | `SampleSlit` | energy->top blade beam position (mm) | live |
 | `SampleSlit_VerticalBottom` | `PseudoAxis` | (none) | `SampleSlit` | energy->bottom blade beam position (mm) | live |
+| `SampleSlit_VerticalCenter` | `PseudoAxis` | (none) | `SampleSlit` | derived `MidRange(top, bot)`; beam-walk centre | live |
+| `SampleSlit_VerticalAperture` | `PseudoAxis` | (none) | `SampleSlit` | derived `Difference(top, bot)`; constant 20 mm gap | live |
 | `SampleTop_X` | `LinearStage` | `kohzu_cyat070` | `Rotary` | -10..10 mm, `max_speed=1 mm/s`, `encoder_resolution=0.0005 mm` | live |
 | `SampleTop_Z` | `LinearStage` | `kohzu_cyat070` | `SampleTop_X` | same Model/controller as `SampleTop_X` | live |
 | `HexapodDrive` | `MotionController` | `aerotech_automation1_ixr3` | `2-BM` | serial `486125-01`, `axis_count=6`, `Aerotech_Native` | live |
@@ -41,8 +45,7 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `LaminographyPitch` | `TiltStage` | `kohzu_sa16a` | `Hexapod` | Kohzu SA16A `2bmb:m49`; tomo/lamino = tilt setpoint | live |
 | `PropagationDistanceDrive` | `MotionController` | `aerotech_ensemble_hle` | `2-BM` | serial `228849-02`, `axis_count=1`, `Aerotech_Native` | live |
 | `Timing` | `TimingController` | (none) | `2-BM` | softGlueZynq trigger box; `protocol=EPICS`; no `controller_id` | live |
-| `OpticsFineDrive` | `MotionController` | `piezosystem_jena_nv100d` | `2-BM` | Jena NV100D; drives deferred XY piezo axes | live (provisional name) |
-| `SampleFineDrive` | `MotionController` | `piezosystem_jena_nv200d` | `2-BM` | Jena NV200D; FPGA-stepped via `Timing` | live (provisional name) |
+| `ApertureFineDrive` | `MotionController` | `piezosystem_jena_nv200d` | `2-BM` | two Jena NV200D units; fine-positions the `Aperture` coded-mask; FPGA-stepped via `Timing` | live |
 | `DetectorTable` | `Table` | (none) | `2-BM` | `axis_layout=virtual_pose`, `virtual_record=2bmb:table3` | live |
 | `DetectorTable_X` | `PseudoAxis` | (none) | `DetectorTable` | IOC virtual axis; `2bmb:table3.X` | live |
 | `DetectorTable_Y` | `PseudoAxis` | (none) | `DetectorTable` | IOC virtual axis; `2bmb:table3.Y` | live |
@@ -51,11 +54,11 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `DetectorTable_Pitch` | `PseudoAxis` | (none) | `DetectorTable` | IOC virtual axis; raw `AX`; `2bmb:table3.AX` | live |
 | `DetectorTable_Yaw` | `PseudoAxis` | (none) | `DetectorTable` | IOC virtual axis; raw `AY`; `2bmb:table3.AY` | live |
 | `Housing` | `Housing` | (none) | `PropagationDistance` | Microscope chassis; installed into a Mount | live |
-| `Turret` | `LinearStage` | (microscope catalog) | `Housing` | -60.030..58.640 mm, `encoder_resolution=0.0016 mm` | live |
+| `Turret` | `LinearStage` | (microscope catalog) | `Housing` | -60.3784..59.2300 mm (DET-11), `encoder_resolution=0.0016 mm` | live |
 | `Objective_10x` | `Objective` | (microscope catalog) | `Housing` | mag 10.0, NA 0.28, f=20 mm, WD 33.5 mm | live |
 | `Objective_2x` | `Objective` | (microscope catalog) | `Housing` | mag 2.0, NA 0.055, f=100 mm, WD 34 mm | live |
 | `Objective_1.1x` | `Objective` | (microscope catalog) | `Housing` | mag 1.1, NA 0.03, f=200 mm, WD 50 mm | live |
-| `Objective_Selector` | `PseudoAxis` | (none) | `Housing` | writes MCTOptics `LensSelect`; lens->turret partition rule | live |
+| `Objective_Selector` | `PseudoAxis` | (none) | `Housing` | writes MCTOptics `LensSelect`; (lens x camera) turret lookup, Camera 0 column as 1D provenance rule (DET-11) | live |
 | `PropagationDistance` | `LinearStage` | `aerotech_pro225sl` | `DetectorTable` | sample-to-detector rail; driven by `PropagationDistanceDrive` | live |
 | `Camera` | `Camera` | (microscope catalog) | `Housing` | 5 MP FLIR Oryx; 2448x2048, 3.45 um, 12 bit, 162 Hz, CMOS GlobalShutter | live |
 | `Camera_HighRes` | `Camera` | `flir_oryx_31mp` | `Housing` | 31 MP FLIR Oryx; pixel 3.45 um; other settings pending | live (settings pending) |
@@ -73,13 +76,14 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 | `SampleTable` | `axis_layout=translation_xyz`; direct motors `2bmb:m24` Y, `2bmb:m20` Z, `2bmb:m21` X-up, `2bmb:m22` X-down |
 | `DetectorTable` | `axis_layout=virtual_pose`; `virtual_record=2bmb:table3`; `geometry=SRI: 3 Y-supports, 2 X-supports, 1 Z-support` |
 | `MirrorTable` | `axis_layout=virtual_pose`; `virtual_record=2bma:table1`; `geometry=SRI support table`; X axes `M0X`/`M2X` driven by energy-change IOC; bind table-X surface only until `M1Y=2bma:m3` IOC substitution error fixed |
+| `Monochromator` | `dmm_insertion=inserted` (closed enum `inserted` \| `retracted`, MODE-2); DMM Y motors `2bma:m26` / `m27` / `m29` to `0` in (Mono) / `-10` mm out (Pink); driven by `FrontEndDrive` |
 | `RotaryDrive` | `serial_number=730792/1`; `firmware_version=unknown-pending-confirmation` (DRIVE-2); `axis_count=1`; `protocol=Aerotech_Native`; installed in `RotaryDriveChassis` |
 | `RotaryDriveChassis` | altids: serial `160591-A-1-1` (SerialNumber), order `730578` (Other); drawing `630D2079 REV-H`; inventory-only, no command surface |
 | `PropagationDistanceDrive` | `serial_number=228849-02`; `firmware_version=unknown-pending-confirmation` (DRIVE-2); `axis_count=1`; `protocol=Aerotech_Native`; IOC handle `2bmbAERO` (EPICS_PV altid); addressed `2bmbAERO:m1` |
 | `SampleStageDrive` | `serial_number=unknown-pending-confirmation` (DRIVE-1); `firmware_version=unknown-pending-confirmation` (DRIVE-2); `axis_count=91`; `protocol=OMS_VME`; crate `ioc2bmb`, no IP (VME-bus) |
 | `FrontEndDrive` | `serial_number=unknown-pending-confirmation` (DRIVE-1); `firmware_version=unknown-pending-confirmation` (DRIVE-2); `axis_count=91`; `protocol=OMS_VME`; crate `ioc2bma`, no IP (VME-bus) |
 | `HexapodDrive` | `serial_number=486125-01`; `firmware_version=unknown-pending-confirmation` (DRIVE-2); `axis_count=6`; `protocol=Aerotech_Native`; Automation1-iXR3 in separate rack |
-| `Timing` | `serial_number=unknown-pending-confirmation` (TIME-1); `firmware_version=unknown-pending-confirmation` (TIME-1); `output_channel_count=unknown-pending-confirmation` (TIME-1); `protocol=EPICS`; `2bmbMZ1:SG:` |
+| `Timing` | `firmware_version=2.0` (softGlueZynq gateware/bitstream); `serial_number=unknown` (IOC-admin only, not beamline-retrievable); `output_channel_count=unknown` (IOC-admin only, not beamline-retrievable); `protocol=EPICS`; `2bmbMZ1:SG:` |
 | `Rotary` | `min_position=-360 deg`; `max_position=360 deg`; `max_speed=720 deg/s` (operational soft limit); `max_speed_datasheet=3000 deg/s` (500 rpm); `encoder_resolution=0.000676 deg`; `homing_offset=0 deg`; `aperture=35 mm`; `accuracy_rotation=2 arcsec`; `repeatability_rotation=1 arcsec`; `load_capacity_axial=66 kg`; `load_capacity_radial=36 kg`; `load_capacity_tilt=28 Nm`; `stage_mass=15.6 kg`; altid serial `146853-A-1-1-X`; part `ABRS-250MP-M-AS`; [datasheet](#engineering-drawings) on file (#164) |
 | `SampleTop_X` | `min_position=-10 mm`; `max_position=10 mm`; `max_speed=1 mm/s`; `encoder_resolution=0.0005 mm`; channel `2bmb:m18` |
 | `SampleTop_Z` | same Model `kohzu_cyat070` + controller as `SampleTop_X`; channel `2bmb:m17` |
@@ -88,7 +92,7 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 | `Camera` | `sensor_width=2448 pixel`; `sensor_height=2048 pixel`; `pixel_size=3.45 um`; `bit_depth=12 bit`; `max_framerate_hz=162 Hz`; `sensor_kind=CMOS`; `readout_mode=GlobalShutter`; altids model `Oryx ORX-10G-51S5M`, serial `19173710`, firmware `1710.0.0.0`, EPICS `2bmSP1:` |
 | `Camera_HighRes` | model `Oryx ORX-10G-310S9M`; serial `22150530`; firmware `1904.0.72.0`; EPICS `2bmSP2:`; `pixel_size=3.45 um`; remaining `Camera`-schema settings pending |
 | `Camera_Selector` | Schunk LPTM 30 (`2bmb:m5`); Pos.0=20, Pos.1=15; `min/max/max_speed/encoder_resolution` pending |
-| `Turret` | `min_position=-60.030 mm`; `max_position=58.640 mm`; `encoder_resolution=0.0016 mm`; Nanotec ST4118M1404-B, Heidenhain ERO 1420 encoder; objectives at 1.1x=-60.030 mm, 10x=58.640 mm |
+| `Turret` | `min_position=-60.3784 mm`; `max_position=59.2300 mm`; `encoder_resolution=0.0016 mm`; Nanotec ST4118M1404-B, Heidenhain ERO 1420 encoder; MCTOptics resolves the (lens x camera) position (DET-11), Camera 0 column: 1.1x=-59.8184 mm, 2x=-0.5734 mm, 10x=58.8707 mm |
 | `Objective_10x` | `magnification=10.0`; `numerical_aperture=0.28`; `focal_length=20 mm`; `working_distance=33.5 mm` |
 | `Objective_2x` | `magnification=2.0`; `numerical_aperture=0.055`; `focal_length=100 mm`; `working_distance=34 mm` |
 | `Objective_1.1x` | `magnification=1.1`; `numerical_aperture=0.03`; `focal_length=200 mm`; `working_distance=50 mm` |
@@ -108,8 +112,7 @@ Models bound to non-microscope 2-BM Assets. Model ids are derived from `(manufac
 | `aerotech_tm3a` | Aerotech | `TM3-A-20B VDC-20B VDC / NO SPLIT / PS24-1 / C1ML-06 / C2ML-09 / US-115VAC` | `RotaryDriveChassis` |
 | `oms_vme58` | Oregon Micro Systems | `VME58` | `SampleStageDrive`, `FrontEndDrive` |
 | `kohzu_cyat070` | Kohzu | `CYAT-070` | `SampleTop_X`, `SampleTop_Z` |
-| `piezosystem_jena_nv100d` | Piezosystem Jena | `NV100D` | `OpticsFineDrive` |
-| `piezosystem_jena_nv200d` | Piezosystem Jena | `NV200D/NET` | `SampleFineDrive` |
+| `piezosystem_jena_nv200d` | Piezosystem Jena | `NV200D/NET` | `ApertureFineDrive` |
 
 Controller back-references: `RotaryDrive`->`Rotary.controller_id`; `HexapodDrive`->`Hexapod.controller_id`; `PropagationDistanceDrive`->`PropagationDistance.controller_id` (IOC `2bmbAERO`); `SampleStageDrive`->`SampleTop_X` (`2bmb:m18`) / `SampleTop_Z` (`2bmb:m17`) + 89 further motors on `ioc2bmb`; `FrontEndDrive`->`Mirror`, `Monochromator`, `ConditioningSlit`, `SampleSlit`, `Filter` on `ioc2bma`. The `Objective_Selector` (`2bmb:m1`) and `Camera_Selector` (`2bmb:m5`) steppers run through the `SampleStageDrive` OMS crate, not distinct controller Assets. The six `Hexapod_*` DoF facets bind no Model (the physical `Hexapod` carries `aerotech_hex300`).
 
@@ -129,8 +132,10 @@ One canonical `(system, number, revision)` triple per Asset, except `Rotary`, wh
 | `Objective_2x` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
 | `Objective_1.1x` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
 | `Scintillator` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
+| `StationShutter` | `41050401-410003` rev `(-)` (P6-50 shutter element; assembly `41050401-500000`) | `ICMS` |
+| `Mask` | `4102020101-240000` (M3-24 front-end exit mask; RSS `02-BM-A-F-01`) | `ICMS` |
 
-Not yet cited: Kohzu `CYAT-070` datasheet (`SampleTop_*`), an APS shutter drawing (`StationShutter`), a FLIR Oryx datasheet (`Camera`).
+Not yet cited: Kohzu `CYAT-070` datasheet (`SampleTop_*`), a FLIR Oryx datasheet (`Camera`).
 
 ## Signal wiring
 
@@ -138,19 +143,18 @@ Trigger and step signals are modelled as typed ports plus wires resolved at Plan
 
 ### Fine-positioning piezo controllers
 
-- `OpticsFineDrive` = Jena NV100D (staff item_027), fine optics positioning from the `mct_optics` screen; carries no trigger input (no FPGA stepping).
-- `SampleFineDrive` = Jena NV200D/NET (staff item_028), two piezo axes step under FPGA trigger during tomography.
-- Both run EPICS IOCs on host `arcturus` (`JenaNV100D` / `JenaNV200D`), drive two piezo axes each (X/Y), two static IPs per box (recorded once confirmed).
-- Only the controller boxes are modelled today; the driven XY piezo axes and final controller names are deferred.
+- `ApertureFineDrive` = two Piezosystem Jena NV200D/NET single-channel controllers (staff item_028), one per axis (X `10.54.113.126`, Y `10.54.113.125`), EPICS IOC `JenaNV200D` on host `arcturus`. They fine-position the `Aperture` coded-mask via a nanoSXY 120 CAP XY flexure stage (part `T-223-06D`, 120 um nominal / 100 um closed-loop per axis, 12.5 mm clear aperture); the axes step under FPGA trigger for compressive-sensing dithered sampling (PIEZO-1/2/4).
+- The Jena NV100D (formerly the provisional `OpticsFineDrive`, IOC `JenaNV100D`) is physically present but not in operational use at 2-BM: it lacks the external trigger mode tomoscan fly-scan needs, so no Run drives it. Recorded as provenance, not modelled as an active controller.
+- The driven X/Y `LinearStage` axis Assets and the `Aperture` identity registration are deferred to a follow-up slice; the FPGA `out2`/`out3` -> X/Y cable map needs operator confirmation (PIEZO-5).
 
 ### NV200D trigger wiring
 
 | Asset | Port | Direction | `signal_type` |
 | --- | --- | --- | --- |
 | `Timing` | `out2`, `out3` | OUTPUT | `step_trigger_ttl` |
-| `SampleFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
+| `ApertureFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
 
-- Wires: `Timing.out2 -> SampleFineDrive.step_x_in`, `Timing.out3 -> SampleFineDrive.step_y_in` (JenaX/JenaY land on FPGA `out2`/`out3`, item_028); up to 1024 positions/axis.
+- Wires: `Timing.out2 -> ApertureFineDrive.step_x_in`, `Timing.out3 -> ApertureFineDrive.step_y_in` (JenaX/JenaY land on FPGA `out2`/`out3`, item_028); up to 1024 positions/axis.
 - Gate-delay PVs: `2bmbMZ1:SG:GateDly-3_DLY` (labelled "X axis delay"), `2bmbMZ1:SG:GateDly-2_DLY` (labelled "Y axis delay"); the label-to-cable map appears crossed, recorded verbatim and flagged for confirmation.
 - Ports sit on the controller box today; they migrate onto per-axis Assets when registered.
 
@@ -202,9 +206,9 @@ Angular mapping (`AX`=pitch, `AY`=yaw, `AZ`=roll) is staff-confirmed (STAGE-9).
 
 ### Energy-tracking optic axes
 
-Setting energy is a discrete coordinated move. The staff energy-change IOC stores per-energy positions (`store_0` saved table) and drives ~15 motors. Each per-axis relationship is modelled as a continuous curve: a `PseudoAxis` carrying a `LookupTable` partition rule converting energy (`unit_in=keV`) to axis position, pinning a `Calibration` revision by id (`energy_position_curve` quantity, `beam_mode=mono`). `invertible=True` (Bragg geometry monotonic; no constituent wiring needed). Coordinating operation = the `energy_setting` Procedure, which accepts a free keV value between saved points. Models: `test_2bm_energy_curves_setup.py` (curves) + `test_2bm_energy_setting.py` (operation).
+Setting energy is a discrete coordinated move. The staff energy-change IOC stores per-energy positions (`store_0` saved table) and drives ~15 motors. Each per-axis relationship is modelled as a continuous curve: a `PseudoAxis` carrying a `LookupTable` partition rule converting energy (`unit_in=keV`) to axis position, pinning a `Calibration` revision by id (`energy_position_curve` quantity). Each axis carries a Mono curve (`beam_mode=mono`, the active rule) and a sibling Pink curve (`beam_mode=pink`, parked constant). `invertible` is per-axis: the Bragg arms + M2Y are monotonic in energy (`invertible=True`); the slit blades (constant 20 mm aperture, non-monotonic centre walk) and the flag Y (flat at the top of its range) are `invertible=False` with `readback_aggregator_kind=Identity`. Coordinating operation = the `energy_setting` Procedure, which accepts a free keV value between saved points. Models: `test_2bm_energy_curves_setup.py` (curves) + `test_2bm_energy_setting.py` (operation).
 
-Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0, 25.0, 25.584 keV. Pink mode bypasses the monochromator. Beam-mode switching itself is on the [Procedures](procedures.md#beam-modes) page, not a virtual axis.
+Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0, 25.0, 25.584 keV; Pink: 30, 40, 50, 60 keV (axes parked). Pink mode bypasses the monochromator. Beam-mode switching itself is on the [Procedures](procedures.md#beam-modes) page, not a virtual axis.
 
 | Axis Asset | Motors / handle | Curve | unit_out |
 | --- | --- | --- | --- |
@@ -213,15 +217,18 @@ Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0,
 | `Monochromator_M2Y` | `dmm_m2_y` | energy -> M2 vertical offset compensator | mm |
 | `SampleSlit_VerticalTop` | `b_slit_top` | energy -> top blade beam-walk | mm |
 | `SampleSlit_VerticalBottom` | `b_slit_bot` | energy -> bottom blade beam-walk | mm |
+| `DiagnosticFlag_Y` | `energy_move_flag` (`2bma:m44`) | energy -> flag height (Mono), parked out in Pink | mm |
 
-- Not energy axes: `crystal2_z` (M2 Z, `2bma:m8`) is a setup translation the IOC does not drive; the mirror is held constant. Neither carries an energy curve.
+- Slit aperture is held constant at 20 mm; only the centre tracks the beam walk (non-monotonically). The centre and aperture are modelled as derived axes: `SampleSlit_VerticalCenter` (`Aggregation` `MidRange`) and `SampleSlit_VerticalAperture` (`Aggregation` `Difference`) over the two blades. `Aggregation` is one-way (computed from constituents), so they are read-only views. The rules declare the relationship; binding the two specific blades via constituent port wiring (the hexapod-pose pattern) is deferred with the rest of the per-facet conduct wiring.
+- DMM insert/bypass (MODE-2): the DMM is physically inserted in Mono and retracted in Pink. This two-state, mode-keyed position is NOT a per-energy curve; it is the `dmm_insertion` setting on the `Monochromator` (closed enum `inserted` | `retracted`, the `Table.axis_layout` pattern), with the three DMM Y motors (`2bma:m26` / `m27` / `m29`, driven together to `0` in / `-10` mm out) documentary in `beamline.yaml`. The coordinated move that drives it is the deferred `beam_mode_change` (MODE-3 / MIRROR-1).
+- Not energy axes: `crystal2_z` (M2 Z, `2bma:m8`) is a setup translation the IOC does not drive; the mirror is held constant in Mono. Neither carries a Mono curve.
 - DMM lateral stripe not yet modelled: substrate has two multilayer periods (13.8 / 24 angstrom) on stripes 4 mm apart; upstream/downstream X motors (`2bma:m25` / `2bma:m28`) may select per energy band. Operator-facing selection vs fixed setup is open (`ENERGY-6`).
-- Seeded curves are PROVISIONAL: x-points are real configured energies, positions are placeholders pending the real `store_0` table (see [Open questions](questions.md#energy-and-the-optics)). Runtime `eval_lookup_table` is wired; out-of-range refuses (`extrapolation_kind=Error`); refuse vs clamp vs menu-only is open (`ENERGY-4`).
-- The `energy_offset` Calibration on `Monochromator` (from the `energy_characterization` Procedure, channel-cut rocking curve, item_022) is kept independent of these curves. Whether the IOC folds the measured offset into `store_0` or applies it separately is open (`ENERGY-8`).
+- Curves carry the REAL saved `store_0` positions (ENERGY-1/2, FLAG-1): full 6-energy Mono curves plus parked Pink curves. Runtime `eval_lookup_table` is wired; out-of-range refuses (`extrapolation_kind=Error`, staff-confirmed ENERGY-4: the inter-mode band 25.584-30 keV is not bridgeable by interpolation).
+- Recalibration updates these curves in place: the `energy_characterization` Procedure (channel-cut rocking curve, item_022) re-saves the corrected positions as a new revision of the affected `energy_position_curve`, `MeasuredSource`-cited, preserving the prior revision as history. There is no separate energy offset (`ENERGY-8`).
 
 ### Filter foil selection
 
-Discrete "pick one of N" move. `Filter_FoilSelector` PseudoAxis under `Filter`, carrying a `LookupTable` rule with `interpolation_kind=Nearest` backed by an `index_position_table` Calibration. `extrapolation_kind=Error` (cannot select an absent foil); `invertible=False` with `readback_aggregator_kind=Identity`. Foil changer has two paddles: downstream (`2bma:m18`) operational, upstream (`2bma:m17`) bound in software but not in service. Runtime proven end-to-end in `apps/api/tests/integration/test_pseudoaxis_roundtrip.py`; model: `test_2bm_filter_foil_setup.py`.
+Discrete "pick one of N" move. Two PseudoAxis facets under `Filter` (`Filter_FoilSelector_Upstream` for the operational `2bma:m17`, `Filter_FoilSelector_Downstream` for the `2bma:m18`), each carrying a `LookupTable` rule with `interpolation_kind=Nearest` backed by its own `index_position_table` Calibration. `extrapolation_kind=Error` (cannot select an absent foil); `invertible=False` with `readback_aggregator_kind=Identity`. The downstream m18 paddle failed 2026-06-19 (parked 107.19 mm), modelled condition `Faulted` with bindings retained and lifecycle still `Active`; m17 is the sole operational selector. Runtime proven end-to-end in `apps/api/tests/integration/test_pseudoaxis_roundtrip.py`; model: `test_2bm_filter_foil_setup.py`.
 
 Downstream-paddle slot positions (REAL, staff-published):
 
@@ -233,4 +240,4 @@ Downstream-paddle slot positions (REAL, staff-published):
 | 80 | `50 um C` | 80 |
 | 106 | `None` | 106 |
 
-The position unit is reported as the motor record EGU ("consistent with mm" but not definitively confirmed, `FOIL-1`). Foil ATTENUATION (`Attenuable`) and the energy-dependent mirror coating stripe (`2bma:m3`) are deliberately out of scope here (the stripe is modelled with the [beam-mode work](procedures.md#beam-modes)).
+The position unit is mm, staff-confirmed (`caget 2bma:m18.EGU`, `FOIL-1`). Foil ATTENUATION (`Attenuable`) and the energy-dependent mirror coating stripe (`2bma:m3`) are deliberately out of scope here (the stripe is modelled with the [beam-mode work](procedures.md#beam-modes)).

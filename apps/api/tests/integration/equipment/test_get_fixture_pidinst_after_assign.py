@@ -5,7 +5,7 @@ Pins the URN-fallback to DOI / Handle swap (Section 15.2 + Lock 16 of
 `_pidinst_serializer._build_fixture_identifier` extension performs when
 `view.persistent_id` is populated. The Fixture stream is mutated by
 `assign_fixture_persistent_id` (server-mint via the inert
-`StubDoiMinter` wired by `wire_equipment`), then `get_fixture_pidinst`
+`StubPersistentIdentifierMinter` wired by `wire_equipment`), then `get_fixture_pidinst`
 reads the stream + folds + the route runs `to_fixture_pidinst_record`;
 the resulting `PidinstIdentifier` should carry the DOI or Handle
 scheme byte-for-byte rather than the URN fallback emitted before any
@@ -61,7 +61,9 @@ from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_fixture import RegisterFixture
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.config import Settings
 from cora.infrastructure.kernel import Kernel
 from cora.shared.identifier import (
@@ -105,10 +107,14 @@ def _build_deps(
         facility_publisher=_PUBLISHER,
         landing_page_template=_LANDING_TEMPLATE,
     )
-    # The assign_fixture_persistent_id handler reads `deps.equipment.doi_minter`;
+    # The assign_fixture_persistent_id handler reads `deps.equipment.persistent_identifier_minter`;
     # mirror what `wire_equipment` registers when no DataCite credentials are
     # present (parity with test_get_fixture_pidinst_handler_postgres.py).
-    object.__setattr__(deps, "equipment", SimpleNamespace(doi_minter=StubDoiMinter()))
+    object.__setattr__(
+        deps,
+        "equipment",
+        SimpleNamespace(persistent_identifier_minter=StubPersistentIdentifierMinter()),
+    )
     return deps
 
 

@@ -15,10 +15,9 @@ Each box's bound vendor Model, communication protocol, slot capacity, and EPICS 
 | `PropagationDistanceDrive` | `PropagationDistance` | Aerotech `aerotech_ensemble_hle` | `Aerotech_Native` | 1 | `2bmbAERO` |
 | `SampleStageDrive` | the sample stages, and the Detector objective / camera selectors | OMS `oms_vme58` | `OMS_VME` | 91 | `ioc2bmb` (`2bmb:m*`) |
 | `FrontEndDrive` | the front-end optics: `Mirror`, `Monochromator`, `ConditioningSlit`, `SampleSlit`, `Filter` | OMS `oms_vme58` | `OMS_VME` | 91 | `ioc2bma` (`2bma:m*`) |
-| `OpticsFineDrive` | fine optics piezo axes (deferred, `PIEZO-1`) | Piezosystem Jena `piezosystem_jena_nv100d` | `EPICS` | 2 | `JenaNV100D` (host `arcturus`) |
-| `SampleFineDrive` | fine piezo axes (deferred, `PIEZO-1`) | Piezosystem Jena `piezosystem_jena_nv200d` | `EPICS` | 2 | `JenaNV200D` (host `arcturus`) |
+| `ApertureFineDrive` | the `Aperture` coded-mask (X/Y fine positioning, FPGA-stepped) | Piezosystem Jena `piezosystem_jena_nv200d` (two NV200D units) | `EPICS` | 2 | `JenaNV200D` (host `arcturus`) |
 
-`SampleStageDrive` reaching the Detector selectors, and `Timing` (below) reaching both the camera and the sample piezo, are why controls is modelled as a cross-cutting area: nesting these boxes under a single station would mis-attribute most of the graph. The two OMS VME58 cards bind one `oms_vme58` Model row (one product line, two physical boards); the Microscope objective (`2bmb:m1`) and camera (`2bmb:m5`) selector steppers run through the `SampleStageDrive` crate rather than as distinct controller Assets.
+`SampleStageDrive` reaching the Detector selectors, and `Timing` (below) reaching both the camera and the aperture piezo, are why controls is modelled as a cross-cutting area: nesting these boxes under a single station would mis-attribute most of the graph. The two OMS VME58 cards bind one `oms_vme58` Model row (one product line, two physical boards); the Microscope objective (`2bmb:m1`) and camera (`2bmb:m5`) selector steppers run through the `SampleStageDrive` crate rather than as distinct controller Assets.
 
 ## Triggering
 

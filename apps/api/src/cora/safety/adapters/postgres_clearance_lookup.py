@@ -57,7 +57,7 @@ class PostgresClearanceLookup:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
 
-    async def find_referencing_run(
+    async def find_covering(
         self,
         *,
         run_id: UUID,

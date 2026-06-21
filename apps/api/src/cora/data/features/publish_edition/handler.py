@@ -6,7 +6,7 @@ Update-style handler. Pre-load order per design memo L16:
   2. Load Edition stream + fold -> EditionNotFoundError if None
   3. (Decider) status guard (EditionCannotPublishError)
   4. (Decider) content_hash invariant
-  5. DoiMinter.mint(scheme=DOI, suffix=<edition_id>) -> 502 if raises
+  5. PersistentIdentifierMinter.mint(scheme=DOI, suffix=<edition_id>) -> 502 if raises
   6. Re-load member Datasets + canonical Distributions for re-serialize
   7. EditionSerializer.serialize(..., external_pid=minted_pid) ->
      post-mint sha256 = published_content_hash
@@ -48,13 +48,13 @@ from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.shared.identifier import PersistentIdentifierScheme
 from cora.shared.identity import ActorId
-from cora.shared.ports.doi_minter import PersistentIdentifierMintError
+from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMintError
 
 if TYPE_CHECKING:
     from cora.data.aggregates.edition import EditionKind
     from cora.data.ports.distribution_lookup import DistributionLookup
     from cora.data.ports.edition_serializer import EditionSerializer
-    from cora.shared.ports.doi_minter import DoiMinter
+    from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMinter
 
 _STREAM_TYPE = "Edition"
 _COMMAND_NAME = "PublishEdition"
@@ -86,7 +86,7 @@ def bind(deps: Kernel) -> Handler:
         "dict[EditionKind, EditionSerializer]",
         deps.data.edition_serializers,  # type: ignore[attr-defined]
     )
-    minter = cast("DoiMinter", deps.data.doi_minter)  # type: ignore[attr-defined]
+    minter = cast("PersistentIdentifierMinter", deps.data.persistent_identifier_minter)  # type: ignore[attr-defined]
 
     async def handler(
         command: PublishEdition,

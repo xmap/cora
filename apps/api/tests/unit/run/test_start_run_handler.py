@@ -899,7 +899,7 @@ class _FixedBeamLookup:
     def __init__(self, reading: BeamAvailabilityLookupResult) -> None:
         self._reading = reading
 
-    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+    async def read(self) -> BeamAvailabilityLookupResult:
         return self._reading
 
 

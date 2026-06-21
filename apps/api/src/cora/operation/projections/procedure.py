@@ -41,7 +41,7 @@ conditional columns and read worse than the explicit constants. Revisit
 only if a future arm restores uniformity.
 
 All branches idempotent. The status CHECK was widened to admit 'Held' in
-migration `20260621020000_proc_summary_status_admit_held` (Resumed maps
+migration `20260621060000_proc_summary_status_admit_held` (Resumed maps
 back to 'Running', so 'Held' is the only new persisted value). See
 [[project_resumable_conduct_design]].
 """

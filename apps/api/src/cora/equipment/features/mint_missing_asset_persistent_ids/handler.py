@@ -2,7 +2,7 @@
 
 Thin orchestrator (no decider): enumerates Assets that lack a persistent
 identifier from `proj_equipment_asset_summary`, then delegates each to the
-existing `assign_asset_persistent_id` handler, which mints via the `DoiMinter`
+existing `assign_asset_persistent_id` handler, which mints via the `PersistentIdentifierMinter`
 port and folds through the set-once decider. Mirrors
 `operation.conduct_procedure`: per-asset failures are encoded in the result,
 not raised, so a single response shape covers every outcome the operator

@@ -27,11 +27,12 @@ A) **Link rewriting** (`on_page_markdown`). Rewrites markdown links
    factual tables cannot drift. A malformed marker aborts the build.
 
 B) **Generated pages** (`on_files`). Renders virtual pages from the
-   descriptors: the beamline layout page from deployments/<id>/beamline.yaml
+   descriptors: one beamline layout page per deployments/<id>/beamline.yaml
    (scripts/beamline_*), the Catalog inventory pages from catalog/catalog.yaml
-   (scripts/catalog_*), and the APS site pages from deployments/aps/site.yaml
-   (scripts/site_*). A missing or invalid descriptor raises and fails the
-   build (mkdocs build --strict).
+   (scripts/catalog_*), and one site page per deployments/<site>/site.yaml
+   (scripts/site_*). Deployments and sites are discovered by glob, so a new
+   deployment renders without editing this hook. A missing or invalid
+   descriptor raises and fails the build (mkdocs build --strict).
 """
 
 from __future__ import annotations
@@ -46,9 +47,8 @@ HOOK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = HOOK_DIR.parent
 DOCS_DIR = REPO_ROOT / "docs"
 STAGED_CONTRIBUTING_SRC_URI = "reference/contributing.md"
-DESCRIPTOR_PATH = REPO_ROOT / "deployments" / "2-bm" / "beamline.yaml"
+DEPLOYMENTS_DIR = REPO_ROOT / "deployments"
 CATALOG_PATH = REPO_ROOT / "catalog" / "catalog.yaml"
-SITE_PATH = REPO_ROOT / "deployments" / "aps" / "site.yaml"
 CORA_SRC = REPO_ROOT / "apps" / "api" / "src" / "cora"
 
 LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
@@ -172,9 +172,10 @@ def on_page_markdown(
 def on_files(files: Any, *, config: Any) -> Any:
     """Inject the generated pages as virtual files.
 
-    Renders the beamline layout page, the Catalog inventory pages, and the
-    APS site pages from their descriptors. A missing or invalid descriptor
-    raises and fails the build.
+    Renders one beamline layout page per deployments/<id>/beamline.yaml, the
+    Catalog inventory pages, and one site page per deployments/<site>/site.yaml.
+    Both are discovered by glob (slug = the folder name). A missing or invalid
+    descriptor raises and fails the build.
     """
     # Defensive: re-assert the sys.path entry inside the function. The
     # module-scope insert can be lost depending on how mkdocs loads hooks.
@@ -195,20 +196,40 @@ def on_files(files: Any, *, config: Any) -> Any:
     catalog_methods = frozenset(m.name for m in catalog.methods)
 
     generated: dict[str, str] = {}
-    generated.update(
-        beamline_pages.render_all(
-            beamline_descriptor.load(DESCRIPTOR_PATH),
-            catalog_families=catalog_families,
-            catalog_models=catalog_models,
+
+    # Beamlines: render each, and build the facility -> [(label, slug)] map the
+    # site pages use to cross-link to the beamlines they actually host.
+    beamlines_by_site: dict[str, list[tuple[str, str]]] = {}
+    for path in sorted(DEPLOYMENTS_DIR.glob("*/beamline.yaml")):
+        slug = path.parent.name
+        descriptor = beamline_descriptor.load(path)
+        generated.update(
+            beamline_pages.render_all(
+                descriptor,
+                slug=slug,
+                catalog_families=catalog_families,
+                catalog_models=catalog_models,
+            )
         )
-    )
+        facility = descriptor.beamline.facility
+        if facility:
+            label = descriptor.beamline.name or slug
+            beamlines_by_site.setdefault(facility, []).append((label, slug))
+
     generated.update(catalog_pages.render_all(catalog))
-    generated.update(
-        site_pages.render_all(
-            site_descriptor.load(SITE_PATH),
-            catalog_methods=catalog_methods,
+
+    for path in sorted(DEPLOYMENTS_DIR.glob("*/site.yaml")):
+        slug = path.parent.name
+        site = site_descriptor.load(path)
+        generated.update(
+            site_pages.render_all(
+                site,
+                slug=slug,
+                catalog_methods=catalog_methods,
+                beamlines=beamlines_by_site.get(site.facility.code, []),
+            )
         )
-    )
+
     for src_uri, content in generated.items():
         files.append(File.generated(config, src_uri, content=content))
     return files

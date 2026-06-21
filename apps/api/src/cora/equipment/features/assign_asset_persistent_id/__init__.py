@@ -7,9 +7,10 @@ assets reject the assign with `AssetPersistentIdAssignmentForbiddenError`.
 
 Server-mint posture per Lock 12: the route forwards
 `(asset_id, scheme, suffix)` to the handler, and the handler closure
-resolves the `PersistentIdentifier` from the `DoiMinter` port
-(`StubDoiMinter` in F.1; `DataCiteDoiMinter` in F.2) before invoking
-the pure decider. One minter call site (the handler), not two.
+resolves the `PersistentIdentifier` from the `PersistentIdentifierMinter`
+port (`StubPersistentIdentifierMinter` in F.1;
+`DataCitePersistentIdentifierMinter` in F.2) before invoking the pure
+decider. One minter call site (the handler), not two.
 
 Module-as-namespace surface:
 

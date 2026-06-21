@@ -4,7 +4,7 @@ The decider sees `(state, command)` with the resolved
 `PersistentIdentifier` passed as a keyword-only argument (Lock 12
 server-mint posture: the handler resolves the minter call and forwards
 the resolved VO here). The decider is PURE: it does NOT call the
-DoiMinter, does NOT read the wall clock (caller injects `now`), and
+PersistentIdentifierMinter, does NOT read the wall clock (caller injects `now`), and
 does NOT touch any I/O. Non-determinism is captured in the handler
 closure per [[project-non-determinism-principle]].
 

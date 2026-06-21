@@ -45,10 +45,11 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         description=(
             "Register a new Distribution (materialized byte-copy of a logical "
             "Dataset at a storage Supply). The Data BC stores only metadata; "
-            "bytes live at the URI inside the Supply. checksum_algorithm must "
-            "be 'sha256' today. Both checksum_value and byte_size must match "
-            "the parent Dataset (byte-identical-copy invariant). The Supply "
-            "must have kind='Storage'."
+            "bytes live at the URI inside the Supply. checksum_algorithm is "
+            "'sha256' (single file) or 'sha256-tree' (directory tree-hash) and "
+            "must equal the parent Dataset's; checksum_value and byte_size must "
+            "match it too (byte-identical-copy invariant). The Supply must have "
+            "kind='Storage'."
         ),
     )
     async def register_distribution_tool(  # pyright: ignore[reportUnusedFunction]
@@ -74,7 +75,12 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         ],
         checksum_algorithm: Annotated[
             str,
-            Field(description="Checksum algorithm. Only 'sha256' supported today."),
+            Field(
+                description=(
+                    "Checksum algorithm: 'sha256' (single file) or 'sha256-tree' "
+                    "(directory tree-hash). Must equal the parent Dataset's."
+                )
+            ),
         ],
         checksum_value: Annotated[
             str,

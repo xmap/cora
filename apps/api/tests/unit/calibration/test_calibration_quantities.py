@@ -203,27 +203,6 @@ def test_index_position_table_value_shape() -> None:
 
 
 @pytest.mark.unit
-def test_energy_offset_operating_point_shape() -> None:
-    """The energy offset is keyed by the commanded energy it was measured
-    at plus the beam mode; both identify the revision chain."""
-    schema = get_operating_point_schema(CalibrationQuantity.ENERGY_OFFSET)
-    properties: dict[str, Any] = schema.get("properties", {})
-    assert set(properties.keys()) == {"energy", "beam_mode"}
-    assert "energy" in schema["required"]
-    assert "beam_mode" in schema["required"]
-
-
-@pytest.mark.unit
-def test_energy_offset_value_shape() -> None:
-    """The value carries the signed correction; uncertainty is optional."""
-    schema = get_value_schema(CalibrationQuantity.ENERGY_OFFSET)
-    properties: dict[str, Any] = schema.get("properties", {})
-    assert "offset" in properties
-    assert "offset" in schema["required"]
-    assert properties["offset"]["unit"] == {"system": "udunits", "code": "keV"}
-
-
-@pytest.mark.unit
 def test_blade_throw_scale_operating_point_shape() -> None:
     """The blade-throw scale is keyed by the optics config that sets the
     pixels-per-mm imaging magnification; it carries NO energy key (the

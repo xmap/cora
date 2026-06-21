@@ -34,7 +34,7 @@ async def _register_and_activate_clearance(
     """Walk the 6-step Clearance lifecycle so the Run-start safety gate passes.
 
     `bound_asset_id` is the Asset id the Clearance gates against (matches
-    `ClearanceLookup.find_referencing_run`'s `asset_ids` set). Returns the
+    `ClearanceLookup.find_covering`'s `asset_ids` set). Returns the
     activated Clearance's id."""
     template_id = clearance_template_stream_id(facility_code, "ESAF")
     registered = await client.post(

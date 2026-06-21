@@ -19,8 +19,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from beamline_descriptor import BeamlineDescriptor, Device, Group
 
-PAGE_SRC_URI = "deployments/2-bm/beamline.md"
-DESCRIPTOR_BLOB_URL = "https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml"
+_BLOB_BASE = "https://github.com/xmap/cora/blob/main"
 
 # Links up to the cross-facility Catalog (relative to the layout page).
 _CATALOG_FAMILIES = "../../catalog/families.md"
@@ -56,13 +55,16 @@ _STRUCTURAL = frozenset(
 def render_all(
     descriptor: BeamlineDescriptor,
     *,
+    slug: str = "2-bm",
     catalog_families: frozenset[str] = frozenset(),
     catalog_models: frozenset[str] = frozenset(),
 ) -> dict[str, str]:
     global _KNOWN_FAMILIES, _KNOWN_MODELS
     _KNOWN_FAMILIES = catalog_families
     _KNOWN_MODELS = catalog_models
-    return {PAGE_SRC_URI: _render_page(descriptor)}
+    src_uri = f"deployments/{slug}/beamline.md"
+    blob_url = f"{_BLOB_BASE}/deployments/{slug}/beamline.yaml"
+    return {src_uri: _render_page(descriptor, slug=slug, blob_url=blob_url)}
 
 
 def _esc(text: str) -> str:
@@ -217,7 +219,7 @@ def _render_group(name: str, group: Group) -> str:
     return "\n\n".join(blocks)
 
 
-def _render_page(descriptor: BeamlineDescriptor) -> str:
+def _render_page(descriptor: BeamlineDescriptor, *, slug: str, blob_url: str) -> str:
     beamline = descriptor.beamline
     blocks: list[str] = ["# Source"]
 
@@ -234,7 +236,7 @@ def _render_page(descriptor: BeamlineDescriptor) -> str:
     blocks.append(
         _admonition(
             f"This page is generated from the descriptor at "
-            f"[`deployments/2-bm/beamline.yaml`]({DESCRIPTOR_BLOB_URL}). "
+            f"[`deployments/{slug}/beamline.yaml`]({blob_url}). "
             "Edit the descriptor, not this page. For the CORA Asset model, "
             "settings, vendor catalog, drawings, and wiring, see "
             "[Inventory](inventory.md).",

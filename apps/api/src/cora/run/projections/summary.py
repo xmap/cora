@@ -19,7 +19,9 @@ transition):
                               (post-hoc add via add_run_to_campaign)
   - RunRemovedFromCampaign -> UPDATE campaign_id = NULL
                               (remove via remove_run_from_campaign)
-  - RunAdjusted            -> UPDATE last_adjusted_by = $2
+  - RunAdjusted            -> UPDATE last_adjusted_by = $2 AND recompute
+                              snr_limit + expected_observation_interval_seconds
+                              from the re-snapshotted effective_parameters
                               (overwrite-on-each-adjust; mirrors the
                               aggregate-state attribution-half per
                               [[project_fold_symmetry_design]])
@@ -58,7 +60,9 @@ with an empty UUID array.
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
+import math
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from cora.infrastructure.ports.event_store import StoredEvent
@@ -67,8 +71,9 @@ from cora.infrastructure.projection.handler import ConnectionLike
 _INSERT_RUN_SQL = """
 INSERT INTO proj_run_summary
     (run_id, name, plan_id, subject_id, raid, status, created_at, running_since,
-     override_parameters_present, campaign_id, pinned_calibration_ids)
-VALUES ($1, $2, $3, $4, $5, 'Running', $6, $6, $7, $8, $9::uuid[])
+     override_parameters_present, campaign_id, pinned_calibration_ids,
+     snr_limit, expected_observation_interval_seconds)
+VALUES ($1, $2, $3, $4, $5, 'Running', $6, $6, $7, $8, $9::uuid[], $10, $11)
 ON CONFLICT (run_id) DO NOTHING
 """
 
@@ -94,9 +99,18 @@ SET campaign_id = $2, updated_at = now()
 WHERE run_id = $1
 """
 
-_UPDATE_LAST_ADJUSTED_BY_SQL = """
+# RunAdjusted re-snapshots effective_parameters, so it MUST recompute the
+# closed-loop rule inputs in lockstep: a mid-run re-cadence (changing the
+# snr limit or the expected interval) would otherwise leave Rule R / Rule Q
+# evaluating against stale start-time inputs, the exact stale-baseline
+# failure the watchdog exists to prevent. Recompute lives in the SAME arm
+# (RunAdjusted is already subscribed; no new subscription).
+_UPDATE_ADJUSTED_SQL = """
 UPDATE proj_run_summary
-SET last_adjusted_by = $2, updated_at = now()
+SET last_adjusted_by = $2,
+    snr_limit = $3,
+    expected_observation_interval_seconds = $4,
+    updated_at = now()
 WHERE run_id = $1
 """
 
@@ -107,6 +121,32 @@ _EVENT_TO_STATUS = {
     "RunStopped": "Stopped",
     "RunTruncated": "Truncated",
 }
+
+
+def _positive_finite_or_none(raw: object) -> float | None:
+    """Coerce a raw effective-parameter value to a positive finite float,
+    else None. NULL/non-numeric/NaN/Infinity/<=0 all map to None, which
+    disables the corresponding rule for the Run (cannot-tell -> defer)."""
+    if raw is None or isinstance(raw, bool):
+        return None
+    try:
+        value = float(raw)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) and value > 0.0 else None
+
+
+def _rule_inputs(payload: dict[str, Any]) -> tuple[float | None, float | None]:
+    """Derive (snr_limit, expected_observation_interval_seconds) from a
+    RunStarted / RunAdjusted payload's effective_parameters by reading the
+    operator-declared conventional keys. Absent or degenerate -> None.
+    Forward-compat: legacy payloads lack effective_parameters entirely."""
+    effective = payload.get("effective_parameters") or {}
+    snr_limit = _positive_finite_or_none(effective.get("snr_limit"))
+    expected_interval = _positive_finite_or_none(
+        effective.get("expected_observation_interval_seconds")
+    )
+    return snr_limit, expected_interval
 
 
 class RunSummaryProjection:
@@ -149,6 +189,7 @@ class RunSummaryProjection:
             # pinned_calibration_ids key; .get(..., []) returns [] so legacy
             # rows land with an empty UUID array.
             pinned_calibration_ids = [UUID(p) for p in payload.get("pinned_calibration_ids", [])]
+            snr_limit, expected_interval = _rule_inputs(payload)
             await conn.execute(
                 _INSERT_RUN_SQL,
                 UUID(payload["run_id"]),
@@ -160,6 +201,8 @@ class RunSummaryProjection:
                 overrides_present,
                 campaign_id,
                 pinned_calibration_ids,
+                snr_limit,
+                expected_interval,
             )
             return
         if event.event_type == "RunResumed":
@@ -186,10 +229,13 @@ class RunSummaryProjection:
             )
             return
         if event.event_type == "RunAdjusted":
+            snr_limit, expected_interval = _rule_inputs(event.payload)
             await conn.execute(
-                _UPDATE_LAST_ADJUSTED_BY_SQL,
+                _UPDATE_ADJUSTED_SQL,
                 UUID(event.payload["run_id"]),
                 UUID(event.payload["adjusted_by"]),
+                snr_limit,
+                expected_interval,
             )
             return
         new_status = _EVENT_TO_STATUS.get(event.event_type)

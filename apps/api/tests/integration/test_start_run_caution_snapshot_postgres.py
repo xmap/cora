@@ -329,7 +329,7 @@ async def test_run_start_snapshots_controller_caution_via_controller_id_back_ref
     RunStarted even when the Plan targets only the stage. Pins the
     start_run handler's scope expansion of `plan.asset_ids` via
     `Asset.controller_id` back-references before calling
-    `caution_lookup.find_active_for_run`. Without expansion, this
+    `caution_lookup.find_active_in_scope`. Without expansion, this
     Caution would be silent at Run start (controller is not in the
     Plan's asset_ids; the lookup queries `target_id = ANY(asset_ids)`)
     and the controller-as-Asset honesty win would be lost at the

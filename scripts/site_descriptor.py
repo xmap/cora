@@ -9,9 +9,12 @@ Source-of-truth note (the no-drift boundary):
   - The closed enums (FacilityKind, ActorKind) are CODE-defined. This module
     mirrors them as frozensets to validate against, and a test asserts each
     mirror equals its `cora` enum.
-  - Agents (RunDebriefer, CautionDrafter) are CODE-SEEDED at app startup; a
-    drift-guard test asserts the agents authored here equal the seed constants
-    (name, kind, version, model provider/name).
+  - Agents are CODE-SEEDED at app startup. All five seeded agents are authored
+    here: the two LLM agents (RunDebriefer, CautionDrafter) are drift-guarded
+    against the seed constants (name, kind, version, model provider/name); the
+    three deterministic agents (RunSupervisor, CautionPromoter, ClearanceExpirer)
+    are authored pending (identity seeded, runtimes not yet operational) and
+    surfaced as planned.
   - The Facility (self facility) is bootstrap-seeded with invariants only
     (kind=Site, display_name == code); a light test asserts those invariants.
   - Practices and Actors have no global code seed (they live only in
@@ -54,6 +57,10 @@ class SiteFacility(BaseModel):
     code: str
     display_name: str
     kind: str
+    # Human title for the rendered page (e.g. "MAX IV"). When unset, the page
+    # falls back to the upper-cased display_name (which equals code), so a
+    # single-word lowercase code like "aps" still renders as "APS".
+    heading: str | None = None
     institution: str | None = None
     sectors: list[str] = []
     beamlines: list[str] = []

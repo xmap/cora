@@ -1522,7 +1522,7 @@
         "type": "string"
       },
       "AssignAssetPersistentIdRequest": {
-        "description": "Body for `POST /assets/{asset_id}/assign-persistent-identifier`.\n\n`scheme` selects the PID scheme; v1 supports DOI and HANDLE.\n`suffix` is the optional operator-supplied local part; when absent\nthe configured `DoiMinter` adapter auto-generates one. No `value`\nfield per the server-mint posture (Lock 12).",
+        "description": "Body for `POST /assets/{asset_id}/assign-persistent-identifier`.\n\n`scheme` selects the PID scheme; v1 supports DOI and HANDLE.\n`suffix` is the optional operator-supplied local part; when absent\nthe configured `PersistentIdentifierMinter` adapter auto-generates one. No `value`\nfield per the server-mint posture (Lock 12).",
         "properties": {
           "scheme": {
             "$ref": "#/components/schemas/PersistentIdentifierScheme",
@@ -1539,7 +1539,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional operator-supplied local part. When absent, the configured DoiMinter adapter auto-generates the suffix; the bare-request flow is the common case for retrospective bulk-mint per F1.4.",
+            "description": "Optional operator-supplied local part. When absent, the configured PersistentIdentifierMinter adapter auto-generates the suffix; the bare-request flow is the common case for retrospective bulk-mint per F1.4.",
             "title": "Suffix"
           }
         },
@@ -1571,7 +1571,7 @@
         "type": "object"
       },
       "AssignFixturePersistentIdRequest": {
-        "description": "Body for `POST /fixtures/{fixture_id}/assign-persistent-identifier`.\n\n`scheme` selects the PID scheme; v1 supports DOI and HANDLE.\n`suffix` is the optional operator-supplied local part; when absent\nthe configured `DoiMinter` adapter auto-generates one. No `value`\nfield per the server-mint posture.",
+        "description": "Body for `POST /fixtures/{fixture_id}/assign-persistent-identifier`.\n\n`scheme` selects the PID scheme; v1 supports DOI and HANDLE.\n`suffix` is the optional operator-supplied local part; when absent\nthe configured `PersistentIdentifierMinter` adapter auto-generates one. No `value`\nfield per the server-mint posture.",
         "properties": {
           "scheme": {
             "$ref": "#/components/schemas/PersistentIdentifierScheme",
@@ -1588,7 +1588,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional operator-supplied local part. When absent, the configured DoiMinter adapter auto-generates the suffix.",
+            "description": "Optional operator-supplied local part. When absent, the configured PersistentIdentifierMinter adapter auto-generates the suffix.",
             "title": "Suffix"
           }
         },
@@ -1888,7 +1888,6 @@
           "effective_thickness",
           "energy_position_curve",
           "index_position_table",
-          "energy_offset",
           "blade_throw_scale"
         ],
         "title": "CalibrationQuantity",
@@ -2969,7 +2968,7 @@
         "description": "Bulk-content integrity hash on the registration request body.",
         "properties": {
           "algorithm": {
-            "description": "Checksum algorithm name. Only 'sha256' is accepted today; the field is structured for forward-compatible algorithm addition (BLAKE3, SHA3, etc.).",
+            "description": "Checksum algorithm name: 'sha256' for a single file or 'sha256-tree' for a directory of files (a tree-hash over the whole directory). Both carry a 64-hex value. The field stays structured for forward-compatible algorithm addition.",
             "maxLength": 32,
             "minLength": 1,
             "title": "Algorithm",
@@ -3839,7 +3838,7 @@
         "type": "object"
       },
       "ConductRunResponse": {
-        "description": "Response body for the conduct-run-compute route.\n\n`succeeded` is the canonical pass/fail bit. `status` is the job's\nterminal `ComputeStatus` value (or null when the job never started).\n`actuation_kind` is read-only operator visibility; the promotion\ngate reads it server-side off the Run stream, never back from here.\n`failure` is non-null iff `succeeded` is False.",
+        "description": "Response body for the conduct-run-compute route.\n\n`succeeded` is the canonical pass/fail bit. `status` is the job's\nterminal `ComputeStatus` value (or null when the job never started).\n`actuation_kind` is read-only operator visibility; the promotion\ngate reads it server-side off the Run stream, never back from here.\n`failure` is non-null iff `succeeded` is False.\n\nThe artifact fields (`checksum_algorithm` / `checksum_value` /\n`byte_size` / `entry_count`) are surfaced on success so the operator\ncan register the output Dataset + Distribution without re-stating\nthem. `checksum_algorithm` is `sha256` for a single-file output or\n`sha256-tree` for a directory output (a tomopy tiff stack), in which\ncase `entry_count` is the file count; it is null for a single file.",
         "properties": {
           "actuation_kind": {
             "anyOf": [
@@ -3862,6 +3861,50 @@
               }
             ],
             "title": "Artifact Uri"
+          },
+          "byte_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Byte Size"
+          },
+          "checksum_algorithm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Algorithm"
+          },
+          "checksum_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Value"
+          },
+          "entry_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Count"
           },
           "failure": {
             "anyOf": [
@@ -6201,7 +6244,7 @@
         "description": "Bulk-content integrity hash on the registration request body.",
         "properties": {
           "algorithm": {
-            "description": "Checksum algorithm name. Only 'sha256' is accepted today; the field is structured for forward-compatible algorithm addition (BLAKE3, SHA3, etc.).",
+            "description": "Checksum algorithm name: 'sha256' for a single file or 'sha256-tree' for a directory of files. Must equal the parent Dataset's algorithm (byte-identical-copy invariant).",
             "maxLength": 32,
             "minLength": 1,
             "title": "Algorithm",
@@ -8214,6 +8257,12 @@
             "format": "uuid",
             "title": "Event Id",
             "type": "string"
+          },
+          "is_simulated": {
+            "default": false,
+            "description": "Provenance flag. True only when a simulator / replay feeder produced this value; defaults to False (real). Closed-loop rules disqualify simulated values so they cannot act on them as if real.",
+            "title": "Is Simulated",
+            "type": "boolean"
           },
           "occurred_at": {
             "anyOf": [
@@ -13765,7 +13814,7 @@
                 "type": "null"
               }
             ],
-            "description": "Research Activity Identifier (ISO 23527) for the project this Run belongs to. Optional opaque string carried verbatim. Used at PROV-O / DataCite export boundaries to link Datasets, Subjects, Instruments, and people for cross-facility provenance.",
+            "description": "Research Activity Identifier (ISO 23527) of the research activity this Run belongs to. Optional opaque string carried verbatim. RAiD is project/activity scoped: share one RAiD across the many Runs of an activity, do not mint one per Run (the Run id is the per-run identity). Used at PROV-O / DataCite export boundaries to link Datasets, Subjects, Instruments, and people for cross-facility provenance.",
             "title": "Raid"
           },
           "subject_id": {
@@ -27644,7 +27693,7 @@
                 }
               }
             },
-            "description": "DoiMinter.mint or EditionSerializer.serialize failed."
+            "description": "PersistentIdentifierMinter.mint or EditionSerializer.serialize failed."
           }
         },
         "summary": "Publish a Sealed Edition",
@@ -27877,7 +27926,7 @@
                 }
               }
             },
-            "description": "DoiMinter.tombstone failed."
+            "description": "PersistentIdentifierMinter.tombstone failed."
           }
         },
         "summary": "Withdraw a Published Edition",

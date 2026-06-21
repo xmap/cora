@@ -75,7 +75,7 @@ def test_projection_does_not_subscribe_to_iteration_ended() -> None:
 @pytest.mark.unit
 def test_projection_subscribes_to_hold_resume() -> None:
     """Resumable conduct now surfaces Held in the read model: migration
-    20260621020000 widened the `status` CHECK to admit 'Held', so the
+    20260621060000 widened the `status` CHECK to admit 'Held', so the
     projection folds ProcedureHeld -> status='Held' and ProcedureResumed ->
     status='Running'. See [[project_resumable_conduct_design]]."""
     proj = ProcedureSummaryProjection()

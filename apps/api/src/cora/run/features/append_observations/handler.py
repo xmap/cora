@@ -306,4 +306,5 @@ def _build_row(
         occurred_at=occurred_at,
         correlation_id=correlation_id,
         causation_id=causation_id,
+        is_simulated=entry.is_simulated,
     )

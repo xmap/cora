@@ -2,8 +2,8 @@
 
 Action endpoint at `POST /assets/{asset_id}/assign-persistent-identifier`.
 Thin wire layer: forwards `(asset_id, scheme, suffix)` to the handler,
-which resolves the `DoiMinter` call and runs the pure decider. The
-route itself does NOT depend on the `DoiMinter` port (Lock 12 keeps
+which resolves the `PersistentIdentifierMinter` call and runs the pure decider. The
+route itself does NOT depend on the `PersistentIdentifierMinter` port (Lock 12 keeps
 non-determinism in the handler closure only).
 
 201 Created on success with `AssignAssetPersistentIdResponse(scheme, value)`

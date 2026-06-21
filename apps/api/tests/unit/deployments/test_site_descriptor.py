@@ -4,9 +4,10 @@ Four kinds of guard, matching the no-drift boundary:
   - round-trip: the descriptor loads and validates against its schema.
   - enum-equality: the closed-vocabulary frozensets mirrored in
     scripts/site_descriptor.py equal their cora enums (FacilityKind, ActorKind).
-  - agent drift-guard: the agents authored in site.yaml equal the code seeds
-    (RunDebriefer + CautionDrafter), so a seeded agent missing from the docs (or
-    a model / version / kind drift between code and docs) fails the build.
+  - agent drift-guard: the two LLM agents authored in site.yaml (RunDebriefer +
+    CautionDrafter) equal the code seeds, so a seeded agent missing from the docs
+    (or a model / version / kind drift between code and docs) fails the build. The
+    three deterministic agents are authored pending and surfaced as planned.
   - facility invariants: the facility records what the bootstrap actually seeds
     (kind=Site, display_name == code).
 
@@ -46,6 +47,10 @@ pytestmark = pytest.mark.unit
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 _SITE = _REPO_ROOT / "deployments" / "aps" / "site.yaml"
+# Every site descriptor, so a new Site (e.g. MAX IV) is auto-enrolled in the
+# generic load + facility-invariant guard below. The APS-specific agent-seed
+# assertions stay pinned to _SITE.
+_ALL_SITES = sorted((_REPO_ROOT / "deployments").glob("*/site.yaml"))
 
 _VALID_FACILITY = "facility:\n  code: aps\n  display_name: aps\n  kind: Site\n"
 
@@ -62,6 +67,17 @@ def _load(name: str) -> ModuleType:
 
 sd = _load("site_descriptor")
 sp = _load("site_pages")
+
+
+@pytest.mark.parametrize("site_path", _ALL_SITES, ids=lambda p: p.parent.name)
+def test_every_site_loads_and_holds_facility_invariants(site_path: Path) -> None:
+    """Every deployments/<site>/site.yaml loads and records the bootstrap
+    invariants the seeder relies on (kind=Site, display_name == code). This
+    auto-enrolls new Sites so a malformed second-site descriptor fails the fast
+    unit suite, not only the docs build."""
+    site = sd.load(site_path)
+    assert site.facility.kind == FacilityKind.SITE.value
+    assert site.facility.display_name == site.facility.code
 
 
 def test_site_loads_and_validates() -> None:
@@ -171,9 +187,13 @@ def test_renders_single_site_narrative() -> None:
         "## Who acts here",
     ):
         assert heading in page, f"missing section {heading}"
-    # both agents surfaced with their models (the gap-fix)
+    # both active agents surfaced with their models (the gap-fix)
     assert "CautionDrafter" in page and "claude-sonnet-4-6" in page
     assert "RunDebriefer" in page and "claude-haiku-4-5" in page
+    # the three deterministic agents are seeded pending; surface them so all five
+    # are discoverable on the deployment page, not just the two live LLM ones
+    for pending_agent in ("RunSupervisor", "CautionPromoter", "ClearanceExpirer"):
+        assert pending_agent in page, f"pending agent {pending_agent} not surfaced"
     # content woven in from every folded list
     assert "[`tomography`](../../catalog/methods.md)" in page  # practice -> catalog method
     assert "`human`" in page  # principals

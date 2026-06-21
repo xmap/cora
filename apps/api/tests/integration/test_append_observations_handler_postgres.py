@@ -82,7 +82,7 @@ async def _read_readings_for_run(db_pool: asyncpg.Pool, run_id: UUID) -> list[as
                 event_id, run_id, logbook_id, actor_id, command_name,
                 channel_name, value, units, sampling_procedure,
                 sampled_at, occurred_at, recorded_at,
-                correlation_id, causation_id
+                correlation_id, causation_id, is_simulated
             FROM entries_run_observations
             WHERE run_id = $1
             ORDER BY sampled_at, event_id
@@ -187,10 +187,61 @@ async def test_append_observations_full_lazy_open_and_polymorphic_round_trip(
     # Optional units null on row_c.
     assert row_c["units"] is None
 
+    # is_simulated defaults to false (real) when the producer omits it.
+    assert row_a["is_simulated"] is False
+
     # recorded_at is set by Postgres DEFAULT now(); just verify it's
     # a datetime within a sane window of the test execution.
     assert row_a["recorded_at"] is not None
     assert isinstance(row_a["recorded_at"], datetime)
+
+
+@pytest.mark.integration
+async def test_append_observations_persists_is_simulated_flag(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A sim feeder's is_simulated=True and a real producer's default
+    False both round-trip through the new column. This is the per-row
+    provenance the closed-loop read seam filters on so a rule cannot act
+    on simulated data as if it were real."""
+    run_id = UUID("01900000-0000-7000-8000-0000006f5e01")
+    logbook_id = UUID("01900000-0000-7000-8000-0000006f5e02")
+    open_event_id = UUID("01900000-0000-7000-8000-0000006f5e03")
+    real_id = UUID("01900000-0000-7000-8000-0000006f5e11")
+    sim_id = UUID("01900000-0000-7000-8000-0000006f5e12")
+
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[logbook_id, open_event_id])
+    observation_store = PostgresObservationStore(db_pool)
+    await _seed_run_started(deps.event_store, run_id)
+
+    entries = (
+        ObservationInput(
+            event_id=real_id,
+            channel_name="snr",
+            value=7.2,
+            sampled_at=_NOW,
+            sampling_procedure="monitor",
+        ),
+        ObservationInput(
+            event_id=sim_id,
+            channel_name="snr",
+            value=7.2,
+            sampled_at=_NOW,
+            sampling_procedure="monitor",
+            is_simulated=True,
+        ),
+    )
+    count = await bind_append(deps, observation_store=observation_store)(
+        AppendObservations(run_id=run_id, entries=entries),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count == 2
+
+    rows = await _read_readings_for_run(db_pool, run_id)
+    by_id = {r["event_id"]: r for r in rows}
+    assert by_id[real_id]["is_simulated"] is False
+    assert by_id[sim_id]["is_simulated"] is True
 
 
 @pytest.mark.integration
