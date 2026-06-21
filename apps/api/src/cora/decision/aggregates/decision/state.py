@@ -299,7 +299,10 @@ DECISION_CONTEXT_RUN_SUPERVISION = "RunSupervision"
 
 # Closed `choice` value set for `context = "RunSupervision"` Decisions.
 # Projection-validated, not domain-enforced (the open-string
-# `DecisionContext` + `DecisionChoice` shape is preserved). Seven values:
+# `DecisionContext` + `DecisionChoice` shape is preserved). Ten values:
+# five beam-Hold/Resume + two audit-fallback + three advise-rung
+# observe->advise dispositions (Quieted / Stalled / Breached), the last
+# three Decision-only (one per breach edge, never a command).
 #
 #   - `Continue`              -- no wind-down trigger met; no command
 #                               issued (the NoAction-bias default).
@@ -320,6 +323,17 @@ DECISION_CONTEXT_RUN_SUPERVISION = "RunSupervision"
 #   - `SupervisionConflicted` -- audit-only: lost the per-Run lease race
 #                               to another supervisor evaluator (parallel
 #                               to DebriefConflicted / CautionDraftConflicted).
+#   - `SupervisionQuieted`    -- advise-rung: the run-age run-liveness
+#                               backstop fired (a Run has been Running
+#                               implausibly long). Decision-only, no command.
+#   - `SupervisionStalled`    -- advise-rung: a live observation channel's
+#                               arrivals stopped (Rule R rate-dropout) while
+#                               beam up + feeder alive. Decision-only.
+#   - `SupervisionBreached`   -- advise-rung: a quality channel's latest
+#                               value crossed below the operator-set limit
+#                               (Rule Q). Decision-only. (Named by naming-r3:
+#                               the limit was breached, an objective edge,
+#                               not the supervisor's epistemic state.)
 RunSupervisionChoice = Literal[
     "Continue",
     "Hold",
@@ -328,6 +342,9 @@ RunSupervisionChoice = Literal[
     "Abort",
     "SupervisionDeferred",
     "SupervisionConflicted",
+    "SupervisionQuieted",
+    "SupervisionStalled",
+    "SupervisionBreached",
 ]
 RUN_SUPERVISION_CHOICES: Final = frozenset(
     {
@@ -338,6 +355,9 @@ RUN_SUPERVISION_CHOICES: Final = frozenset(
         "Abort",
         "SupervisionDeferred",
         "SupervisionConflicted",
+        "SupervisionQuieted",
+        "SupervisionStalled",
+        "SupervisionBreached",
     }
 )
 
