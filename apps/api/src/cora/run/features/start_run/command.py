@@ -7,11 +7,13 @@ Carries the caller-controlled inputs:
     existence verified at handler-load time)
   - `subject_id` — the Subject being measured, or None for
     calibration / dark-field runs
-  - `raid` — Research Activity Identifier (ISO 23527) for the
-    project this Run belongs to. Optional; opaque string carried
-    verbatim. Added to support cross-facility provenance export
-    (DataCite / RAiD ecosystem); legacy Runs have raid=None and stay
-    valid via the forward-compatible payload load.
+  - `raid` — Research Activity Identifier (ISO 23527) of the
+    research activity this Run belongs to. Optional; opaque string
+    carried verbatim. RAiD is project/activity scoped: one RAiD is
+    shared across the many Runs of an activity, never minted per Run
+    (the per-run identity is the Run id). Supports cross-facility
+    provenance export (DataCite / RAiD ecosystem); legacy Runs have
+    raid=None and stay valid via the forward-compatible payload load.
   - `override_parameters` — operator-supplied overrides on top of
     `Plan.default_parameters`. Applied via RFC 7396 merge by the
     handler before the decider validates against the owning Method's

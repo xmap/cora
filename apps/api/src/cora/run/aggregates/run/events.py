@@ -131,8 +131,11 @@ class RunStarted:
     is null for dark-field / flat-field calibration runs per
     beamline-domain convention.
 
-    `raid` is the Research Activity Identifier (ISO 23527), opaque
-    string carried verbatim. Defaults to None (a Run that wasn't
+    `raid` is the Research Activity Identifier (ISO 23527) of the
+    research activity this Run belongs to, opaque string carried
+    verbatim. RAiD is project/activity scoped: one RAiD is shared
+    across the many Runs of an activity, never minted per Run (the
+    per-run identity is `run_id`). Defaults to None (a Run not
     registered against a research activity). Forward-compatible
     jsonb load: `from_stored` reads the key with `.get(...)` so
     legacy events without the raid key deserialize as `raid=None`.
