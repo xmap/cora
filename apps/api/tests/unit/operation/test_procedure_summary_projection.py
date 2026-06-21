@@ -49,6 +49,8 @@ def test_projection_metadata() -> None:
             "ProcedureCompleted",
             "ProcedureAborted",
             "ProcedureTruncated",
+            "ProcedureHeld",
+            "ProcedureResumed",
             "ProcedureActivitiesLogbookOpened",
             "ProcedureIterationStarted",
         }
@@ -71,19 +73,14 @@ def test_projection_does_not_subscribe_to_iteration_ended() -> None:
 
 
 @pytest.mark.unit
-def test_projection_does_not_subscribe_to_hold_resume() -> None:
-    """Tier-1 resumable conduct deliberately leaves the summary read model
-    untouched: the `status` CHECK constraint admits only the 5 non-Held
-    statuses, so subscribing to ProcedureHeld/Resumed would write a value
-    the column rejects. A held Procedure therefore shows its last
-    subscribed status (Running) in `list_procedures`; terminal states are
-    still captured because abort/truncate/complete require resuming to
-    Running first (and those events ARE subscribed). Surfacing `Held` in
-    the read model is a follow-up that needs a forward-only migration to
-    widen the CHECK. See [[project_resumable_conduct_design]]."""
+def test_projection_subscribes_to_hold_resume() -> None:
+    """Resumable conduct now surfaces Held in the read model: migration
+    20260621020000 widened the `status` CHECK to admit 'Held', so the
+    projection folds ProcedureHeld -> status='Held' and ProcedureResumed ->
+    status='Running'. See [[project_resumable_conduct_design]]."""
     proj = ProcedureSummaryProjection()
-    assert "ProcedureHeld" not in proj.subscribed_event_types
-    assert "ProcedureResumed" not in proj.subscribed_event_types
+    assert "ProcedureHeld" in proj.subscribed_event_types
+    assert "ProcedureResumed" in proj.subscribed_event_types
 
 
 @pytest.mark.unit
@@ -227,6 +224,46 @@ async def test_procedure_truncated_handles_null_interrupted_at() -> None:
     )
     await proj.apply(event, conn)
     assert conn.execute.call_args.args[4] is None
+
+
+@pytest.mark.unit
+async def test_procedure_held_updates_status_and_reason() -> None:
+    proj = ProcedureSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "ProcedureHeld",
+        {
+            "procedure_id": str(_PROCEDURE_ID),
+            "reason": "beam dropped",
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    sql = conn.execute.call_args.args[0]
+    assert "SET status = 'Held'" in sql
+    assert conn.execute.call_args.args[1] == _PROCEDURE_ID
+    assert conn.execute.call_args.args[2] == _NOW
+    assert conn.execute.call_args.args[3] == "beam dropped"
+
+
+@pytest.mark.unit
+async def test_procedure_resumed_updates_status_to_running_and_clears_reason() -> None:
+    proj = ProcedureSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "ProcedureResumed",
+        {
+            "procedure_id": str(_PROCEDURE_ID),
+            "re_establishment_boundary": 0,
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    sql = conn.execute.call_args.args[0]
+    assert "SET status = 'Running'" in sql
+    assert "last_status_reason = NULL" in sql
+    assert conn.execute.call_args.args[1] == _PROCEDURE_ID
+    assert conn.execute.call_args.args[2] == _NOW
 
 
 @pytest.mark.unit

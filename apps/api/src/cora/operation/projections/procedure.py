@@ -12,6 +12,11 @@ Subscribed events:
   - ProcedureTruncated           -> UPDATE status='Truncated' + status-change ts
                                                               + last_status_reason
                                                               + interrupted_at
+  - ProcedureHeld                -> UPDATE status='Held'      + status-change ts
+                                                              + last_status_reason
+  - ProcedureResumed             -> UPDATE status='Running'   + status-change ts
+                                                              (clears last_status_reason:
+                                                               Running is not reason-bearing)
   - ProcedureActivitiesLogbookOpened  -> UPDATE activity_logbook_id (status NOT touched;
                                                              logbook is orthogonal
                                                              to lifecycle)
@@ -26,16 +31,19 @@ set to the operator-supplied `iteration_index` (replay-safe under
 ordered per-stream delivery; equals the count because the start decider
 enforces strict-successor indexing).
 
-The 4 status-change UPDATEs share the same SQL shape (status literal +
-status-change timestamp + optional reason); per-event arms differ only
-in which status string + which payload fields they pull. A future
-parameterized `_UPDATE_STATUS_SQL` hoist (mirroring proj_supply_summary's
-later cleanup) becomes worthwhile when a 5th status-change arm
-lands -- today the 4 arms keep the dispatch readable.
+The 6 status-change UPDATEs (Started / Completed / Aborted / Truncated /
+Held / Resumed) keep per-event SQL constants rather than a parameterized
+`_UPDATE_STATUS_SQL`. The "hoist at the 5th arm" note from the 4-arm era
+was re-evaluated when Held/Resumed landed: the arms are NOT uniform
+(Truncated also sets interrupted_at, Resumed CLEARS last_status_reason
+rather than setting it), so a single parameterized SQL would need
+conditional columns and read worse than the explicit constants. Revisit
+only if a future arm restores uniformity.
 
-All branches idempotent. The CHECK constraint on `status` is locked
-with the full enum values day one (5 statuses) so no future migration
-is needed even if Held/Resumed land later.
+All branches idempotent. The status CHECK was widened to admit 'Held' in
+migration `20260621020000_proc_summary_status_admit_held` (Resumed maps
+back to 'Running', so 'Held' is the only new persisted value). See
+[[project_resumable_conduct_design]].
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -91,6 +99,24 @@ SET status = 'Truncated',
 WHERE procedure_id = $1
 """
 
+_UPDATE_HELD_SQL = """
+UPDATE proj_operation_procedure_summary
+SET status = 'Held',
+    last_status_changed_at = $2,
+    last_status_reason = $3,
+    updated_at = now()
+WHERE procedure_id = $1
+"""
+
+_UPDATE_RESUMED_SQL = """
+UPDATE proj_operation_procedure_summary
+SET status = 'Running',
+    last_status_changed_at = $2,
+    last_status_reason = NULL,
+    updated_at = now()
+WHERE procedure_id = $1
+"""
+
 _UPDATE_STEPS_LOGBOOK_OPENED_SQL = """
 UPDATE proj_operation_procedure_summary
 SET activity_logbook_id = $2,
@@ -117,6 +143,8 @@ class ProcedureSummaryProjection:
             "ProcedureCompleted",
             "ProcedureAborted",
             "ProcedureTruncated",
+            "ProcedureHeld",
+            "ProcedureResumed",
             "ProcedureActivitiesLogbookOpened",
             "ProcedureIterationStarted",
         }
@@ -188,6 +216,23 @@ class ProcedureSummaryProjection:
                 datetime.fromisoformat(event.payload["occurred_at"]),
                 event.payload["reason"],
                 interrupted_at,
+            )
+            return
+
+        if event.event_type == "ProcedureHeld":
+            await conn.execute(
+                _UPDATE_HELD_SQL,
+                UUID(event.payload["procedure_id"]),
+                datetime.fromisoformat(event.payload["occurred_at"]),
+                event.payload["reason"],
+            )
+            return
+
+        if event.event_type == "ProcedureResumed":
+            await conn.execute(
+                _UPDATE_RESUMED_SQL,
+                UUID(event.payload["procedure_id"]),
+                datetime.fromisoformat(event.payload["occurred_at"]),
             )
             return
 

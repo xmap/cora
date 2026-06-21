@@ -99,7 +99,7 @@ async def list_procedures(
         Query(
             alias="status",
             description=(
-                "Optional status filter (one of: Defined, Running, "
+                "Optional status filter (one of: Defined, Running, Held, "
                 "Completed, Aborted, Truncated). Omit to return all statuses."
             ),
         ),

@@ -35,12 +35,10 @@ def test_get_procedures_returns_empty_page_with_no_data(client: TestClient) -> N
 @pytest.mark.contract
 @pytest.mark.parametrize(
     "status_value",
-    ["Defined", "Running", "Completed", "Aborted", "Truncated"],
+    ["Defined", "Running", "Held", "Completed", "Aborted", "Truncated"],
 )
-def test_get_procedures_accepts_each_status_locked_day_one(
-    client: TestClient, status_value: str
-) -> None:
-    """All 5 statuses accepted; the Literal is locked at the full FSM."""
+def test_get_procedures_accepts_each_status(client: TestClient, status_value: str) -> None:
+    """All 6 ProcedureStatus values are accepted by the status filter."""
     with client:
         response = client.get(f"/procedures?status={status_value}")
     assert response.status_code == 200

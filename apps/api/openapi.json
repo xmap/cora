@@ -36079,7 +36079,7 @@
             }
           },
           {
-            "description": "Optional status filter (one of: Defined, Running, Completed, Aborted, Truncated). Omit to return all statuses.",
+            "description": "Optional status filter (one of: Defined, Running, Held, Completed, Aborted, Truncated). Omit to return all statuses.",
             "in": "query",
             "name": "status",
             "required": false,
@@ -36089,6 +36089,7 @@
                   "enum": [
                     "Defined",
                     "Running",
+                    "Held",
                     "Completed",
                     "Aborted",
                     "Truncated"
@@ -36099,7 +36100,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Optional status filter (one of: Defined, Running, Completed, Aborted, Truncated). Omit to return all statuses.",
+              "description": "Optional status filter (one of: Defined, Running, Held, Completed, Aborted, Truncated). Omit to return all statuses.",
               "title": "Status"
             }
           },

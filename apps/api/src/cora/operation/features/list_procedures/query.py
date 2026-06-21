@@ -1,15 +1,16 @@
 """The `ListProcedures` query: intent dataclass for keyset-paginated
 list of procedures from the projection.
 
-Four optional filters: status (one of the 5 ProcedureStatus values),
+Four optional filters: status (one of the 6 ProcedureStatus values),
 kind (free-form bare-str discriminator, exact match), parent_run_id
 (UUID for Phase-of-Run filtering), target_asset_id (UUID for
 "procedures targeting this Asset" via the GIN index on the
 target_asset_ids UUID[] column).
 
-`ProcedureStatusFilter` is locked at the full enum width day one
-(Defined / Running / Completed / Aborted / Truncated). Same forward-
-compat motivation as ListSupplies's SupplyStatusFilter.
+`ProcedureStatusFilter` mirrors the full `ProcedureStatus` enum
+(Defined / Running / Held / Completed / Aborted / Truncated). `Held`
+was added when resumable conduct surfaced it in the read model (the
+projection folds ProcedureHeld -> status='Held').
 
 Cursor encodes (registered_at, procedure_id) -- `registered_at` is
 set once at ProcedureRegistered (immutable), so it's a stable keyset
@@ -23,6 +24,7 @@ from uuid import UUID
 ProcedureStatusFilter = Literal[
     "Defined",
     "Running",
+    "Held",
     "Completed",
     "Aborted",
     "Truncated",
@@ -40,7 +42,7 @@ class ListProcedures:
     """Page size cap. Default 50, max 100 (route enforces)."""
 
     status: ProcedureStatusFilter | None = None
-    """Optional status filter (one of the five ProcedureStatus values)."""
+    """Optional status filter (one of the six ProcedureStatus values)."""
 
     kind: str | None = None
     """Optional kind filter (free-form, exact match; for example 'bakeout')."""
