@@ -1024,6 +1024,35 @@ async def test_conduct_without_lifecycle_handlers_raises_runtime_error() -> None
 
 
 @pytest.mark.unit
+async def test_try_conduct_without_handlers_raises_runtime_error() -> None:
+    """try_conduct() requires start + complete + abort + hold; a missing one is
+    a wiring bug, not a runtime failure, so it propagates."""
+    conductor = _conductor(InMemoryControlPort(), _FakeAppendStep())  # no FSM handlers
+    with pytest.raises(RuntimeError, match="try_conduct"):
+        await conductor.try_conduct(
+            procedure_id=uuid4(),
+            principal_id=uuid4(),
+            correlation_id=uuid4(),
+            steps=(),
+        )
+
+
+@pytest.mark.unit
+async def test_reconduct_without_handlers_raises_runtime_error() -> None:
+    """reconduct() requires resume + complete + abort; a missing one is a
+    wiring bug, so it propagates."""
+    conductor = _conductor(InMemoryControlPort(), _FakeAppendStep())  # no FSM handlers
+    with pytest.raises(RuntimeError, match="reconduct"):
+        await conductor.reconduct(
+            procedure_id=uuid4(),
+            principal_id=uuid4(),
+            correlation_id=uuid4(),
+            steps=(),
+            boundary=0,
+        )
+
+
+@pytest.mark.unit
 async def test_conduct_start_failure_records_lifecycle_failure_without_execute() -> None:
     """start_procedure rejection -> lifecycle failure; no steps attempted."""
     port = InMemoryControlPort()

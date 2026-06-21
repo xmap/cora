@@ -156,3 +156,37 @@ def test_post_reconduct_returns_422_for_malformed_id() -> None:
             "/procedures/not-a-uuid/reconduct", json={"re_establishment_boundary": 0}
         )
     assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_reconduct_returns_400_for_boundary_past_step_count() -> None:
+    """A boundary strictly past the pinned step count is rejected (it would
+    replay an empty tail and silently auto-complete)."""
+    with TestClient(create_app()) as client:
+        pid = _try_conduct_to_held(
+            client, [{"kind": "setpoint", "address": "2bma:x", "value": 1.0}]
+        )
+        response = client.post(
+            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 2}
+        )
+    assert response.status_code == 400
+
+
+@pytest.mark.contract
+def test_post_reconduct_aborts_on_a_genuine_step_failure() -> None:
+    """Replaying a tail whose setpoint still fails (unconnected address) aborts:
+    200 with succeeded=False + acquisition_halt=False (a genuine step failure,
+    not an acquisition halt)."""
+    with TestClient(create_app()) as client:
+        pid = _try_conduct_to_held(
+            client, [{"kind": "setpoint", "address": "2bma:x", "value": 1.0}]
+        )
+        # boundary 0 re-drives the still-unconnected setpoint -> it fails again.
+        response = client.post(
+            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 0}
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["succeeded"] is False
+    assert body["acquisition_halt"] is False
+    assert body["failure"]["source_kind"] == "setpoint"

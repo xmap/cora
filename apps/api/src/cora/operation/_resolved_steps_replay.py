@@ -3,7 +3,7 @@
 The resume path replays a halted conduct from PINNED resolved steps rather
 than re-deriving the step list. This module locates the
 `ResolvedStepsRecorded` provenance event (pinned once at conduct start by
-`conduct_procedure/handler.py` + `resolved_steps.py`) in a Procedure stream so
+`_conduct_preparation.resolve_and_pin_conduct_steps`) in a Procedure stream so
 the handler can parse `resolved_steps` back into `Step`s via
 `conductor.steps_from_payload` and hand them to `Conductor.execute_from`.
 

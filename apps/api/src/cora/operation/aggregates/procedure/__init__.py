@@ -93,6 +93,7 @@ from cora.operation.aggregates.procedure.state import (
     RecipeExpansionReplayMismatchError,
     ResolvedStepsRecordNotFoundError,
     StepKind,
+    merge_actuation_kinds,
 )
 
 __all__ = [
@@ -172,5 +173,6 @@ __all__ = [
     "from_stored",
     "load_procedure",
     "load_procedure_with_events",
+    "merge_actuation_kinds",
     "to_payload",
 ]

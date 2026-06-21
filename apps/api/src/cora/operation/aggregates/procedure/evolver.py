@@ -83,6 +83,7 @@ from cora.operation.aggregates.procedure.state import (
     Procedure,
     ProcedureName,
     ProcedureStatus,
+    merge_actuation_kinds,
 )
 
 
@@ -197,10 +198,16 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 ),
                 actuation_kind=prior.actuation_kind,
             )
-        case ProcedureHeld():
-            # Operator-pause transition (Running -> Held). Status-only
-            # change; every non-status field carries verbatim from prior
-            # (especially the iteration denorms). Mirrors RunHeld.
+        case ProcedureHeld(actuation_kind=held_actuation_kind):
+            # Operator-pause transition (Running -> Held). Status-only change;
+            # every non-status field carries verbatim from prior (especially
+            # the iteration denorms). Mirrors RunHeld. EXCEPT actuation_kind:
+            # the conduct's observed-so-far kind rides ProcedureHeld and is
+            # MERGED into state so it survives the hold->resume boundary (a
+            # reconduct from a boundary past a simulated prefix would otherwise
+            # complete as Physical and bypass the promote_dataset gate). Merge,
+            # not set, so a manual operator hold (actuation_kind=None) cannot
+            # wipe a prior conduct's recorded kind.
             prior = require_state(state, "ProcedureHeld")
             return Procedure(
                 id=prior.id,
@@ -218,7 +225,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
-                actuation_kind=prior.actuation_kind,
+                actuation_kind=merge_actuation_kinds(prior.actuation_kind, held_actuation_kind),
             )
         case ProcedureResumed():
             # Resume transition (Held -> Running). Status-only change; every

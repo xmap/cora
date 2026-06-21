@@ -10366,7 +10366,7 @@
           "failure": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/_ConductorFailureResponse"
+                "$ref": "#/components/schemas/ConductorFailureResponse"
               },
               {
                 "type": "null"
@@ -15502,47 +15502,6 @@
           "criterion"
         ],
         "title": "_CheckStepRequest",
-        "type": "object"
-      },
-      "_ConductorFailureResponse": {
-        "description": "JSON wire shape for `ConductorFailure`.",
-        "properties": {
-          "error_class": {
-            "title": "Error Class",
-            "type": "string"
-          },
-          "message": {
-            "title": "Message",
-            "type": "string"
-          },
-          "source_kind": {
-            "title": "Source Kind",
-            "type": "string"
-          },
-          "step_index": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Step Index"
-          },
-          "target": {
-            "title": "Target",
-            "type": "string"
-          }
-        },
-        "required": [
-          "step_index",
-          "source_kind",
-          "target",
-          "error_class",
-          "message"
-        ],
-        "title": "_ConductorFailureResponse",
         "type": "object"
       },
       "_EqualsCriterion": {
@@ -37290,6 +37249,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "re_establishment_boundary is past the pinned resolved step count."
           },
           "403": {
             "content": {

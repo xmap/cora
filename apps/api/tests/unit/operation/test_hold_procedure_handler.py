@@ -61,6 +61,8 @@ async def test_handler_appends_procedure_held_event_with_trimmed_reason() -> Non
         "reason": "beam dropped",
         "decided_by_decision_id": None,
         "occurred_at": _NOW.isoformat(),
+        # Operator hold (no conduct observer) leaves actuation_kind None.
+        "actuation_kind": None,
     }
 
 

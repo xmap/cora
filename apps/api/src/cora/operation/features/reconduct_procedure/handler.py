@@ -57,6 +57,7 @@ from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation._resolved_steps_replay import find_resolved_steps_record
 from cora.operation.aggregates.procedure import (
+    InvalidProcedureReEstablishmentBoundaryError,
     ProcedureCannotResumeError,
     ProcedureNotFoundError,
     ProcedureStatus,
@@ -157,12 +158,26 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
             raise ResolvedStepsRecordNotFoundError(command.procedure_id)
         steps = steps_from_payload(record.payload["resolved_steps"])
 
+        # Upper-bound guard: a boundary PAST the pinned step count would replay
+        # an empty tail and silently auto-complete with nothing re-driven. The
+        # resume decider only floors at 0 (it has no manifest to size against);
+        # the bound lives here, where the manifest is known. `boundary ==
+        # len(steps)` is allowed (a deliberate "everything already done,
+        # complete" resume); only strictly-past is rejected.
+        if command.re_establishment_boundary > len(steps):
+            raise InvalidProcedureReEstablishmentBoundaryError(command.re_establishment_boundary)
+
         result = await conductor.reconduct(
             procedure_id=command.procedure_id,
             principal_id=principal_id,
             correlation_id=correlation_id,
             steps=steps,
             boundary=command.re_establishment_boundary,
+            # The pre-hold conduct's observed kind (folded onto the Held
+            # Procedure) so the terminal event reflects the FULL provenance,
+            # not just the replay tail -- guards the promote_dataset gate
+            # against a boundary>0 resume past a simulated prefix.
+            prior_actuation_kind=procedure.actuation_kind,
             causation_id=causation_id,
             surface_id=surface_id,
         )

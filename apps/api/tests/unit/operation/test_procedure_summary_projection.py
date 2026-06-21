@@ -135,11 +135,12 @@ async def test_procedure_registered_handles_null_parent_run() -> None:
     assert args[5] is None
 
 
-# NOTE: the 4 status-change UPDATE arms (Started/Completed/Aborted/Truncated)
-# use literal status strings in SQL today (per-event SQL constants in the
-# projection). When `_UPDATE_STATUS_SQL` parameterized hoist lands (trigger:
-# 5th status-change arm), flip these substring assertions to `"SET status = $5"`
-# in lockstep with the projection refactor.
+# NOTE: the 6 status-change UPDATE arms (Started/Completed/Aborted/Truncated/
+# Held/Resumed) use literal status strings in SQL via per-event SQL constants.
+# The old "hoist to a parameterized `_UPDATE_STATUS_SQL` at the 5th arm" plan
+# was re-evaluated when Held/Resumed landed and dropped: the arms are NOT
+# uniform (Truncated also sets interrupted_at, Resumed CLEARS the reason), so a
+# single parameterized SQL reads worse. These substring assertions stay.
 
 
 @pytest.mark.unit

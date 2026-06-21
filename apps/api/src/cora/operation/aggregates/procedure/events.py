@@ -347,6 +347,16 @@ class ProcedureHeld:
     hold. NO existence check per the cross-BC eventual-consistency stance.
     Forward-compat via `payload.get("decided_by_decision_id")` -> None.
 
+    `actuation_kind` is the raw `ActuationKind` value the Conductor observed
+    in the conduct UP TO this pause (None for an operator hold issued outside
+    a conduct). It is carried so a later resume can fold the pre-hold
+    provenance with the replay tail's: without it, a `reconduct` from a
+    boundary past a simulated prefix would complete as `Physical` and slip
+    past the `promote_dataset` Simulated/Hybrid gate. The evolver merges it
+    into `Procedure.actuation_kind` (via `merge_actuation_kinds`);
+    `ProcedureResumed` then carries it forward. Additive: legacy streams fold
+    via `payload.get("actuation_kind")` -> None.
+
     Status is NOT carried (the event type encodes the transition); the
     evolver maps `ProcedureHeld -> HELD`.
     """
@@ -355,6 +365,7 @@ class ProcedureHeld:
     reason: str
     occurred_at: datetime
     decided_by_decision_id: UUID | None = None
+    actuation_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -586,6 +597,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             reason=reason,
             occurred_at=occurred_at,
             decided_by_decision_id=decided_by_decision_id,
+            actuation_kind=actuation_kind,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -594,6 +606,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                     str(decided_by_decision_id) if decided_by_decision_id is not None else None
                 ),
                 "occurred_at": occurred_at.isoformat(),
+                "actuation_kind": actuation_kind,
             }
         case ProcedureResumed(
             procedure_id=procedure_id,
@@ -796,6 +809,8 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                         UUID(raw_decided_by) if raw_decided_by is not None else None
                     ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    # Additive: pre-activation streams omit the key -> None.
+                    actuation_kind=payload.get("actuation_kind"),
                 )
 
             return deserialize_or_raise("ProcedureHeld", _build_held)

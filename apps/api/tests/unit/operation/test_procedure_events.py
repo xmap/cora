@@ -769,6 +769,7 @@ def test_to_payload_serializes_procedure_held() -> None:
             reason="beam dropped",
             decided_by_decision_id=decision_id,
             occurred_at=_NOW,
+            actuation_kind="Simulated",
         )
     )
     assert payload == {
@@ -776,6 +777,7 @@ def test_to_payload_serializes_procedure_held() -> None:
         "reason": "beam dropped",
         "decided_by_decision_id": str(decision_id),
         "occurred_at": _NOW.isoformat(),
+        "actuation_kind": "Simulated",
     }
 
 

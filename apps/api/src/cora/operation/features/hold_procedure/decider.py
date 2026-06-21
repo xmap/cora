@@ -53,5 +53,6 @@ def decide(
             reason=reason.value,
             decided_by_decision_id=command.decided_by_decision_id,
             occurred_at=now,
+            actuation_kind=command.actuation_kind,
         )
     ]

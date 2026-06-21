@@ -69,8 +69,11 @@ _WRITER_ARMS_PER_FIELD: dict[str, frozenset[str]] = {
     "iteration_count": frozenset({"ProcedureIterationStarted"}),
     "consecutive_unconverged_iterations": frozenset({"ProcedureIterationEnded"}),
     "max_consecutive_unconverged_iterations": frozenset(),
-    # Terminal arms snapshot the Conductor's observed kind from the event.
-    "actuation_kind": frozenset({"ProcedureCompleted", "ProcedureAborted"}),
+    # Terminal arms snapshot the Conductor's observed kind from the event;
+    # ProcedureHeld MERGES the conduct's observed-so-far kind into state (via
+    # merge_actuation_kinds) so the pre-hold provenance survives the
+    # hold->resume boundary.
+    "actuation_kind": frozenset({"ProcedureCompleted", "ProcedureAborted", "ProcedureHeld"}),
 }
 
 

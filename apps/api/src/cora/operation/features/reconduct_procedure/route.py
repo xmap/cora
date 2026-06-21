@@ -26,7 +26,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.operation.conductor import ConductorFailure
+from cora.operation._conduct_wire import ConductorFailureResponse, failure_to_wire
 from cora.operation.features.reconduct_procedure.command import (
     ReconductProcedure,
     ReconductProcedureResult,
@@ -50,16 +50,6 @@ class ReconductProcedureRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
 
-class _ConductorFailureResponse(BaseModel):
-    """JSON wire shape for `ConductorFailure`."""
-
-    step_index: int | None
-    source_kind: str
-    target: str
-    error_class: str
-    message: str
-
-
 class ReconductProcedureResponse(BaseModel):
     """Response body for the reconduct_procedure slice.
 
@@ -74,18 +64,8 @@ class ReconductProcedureResponse(BaseModel):
     succeeded: bool
     re_establishment_boundary: int
     acquisition_halt: bool
-    failure: _ConductorFailureResponse | None = None
+    failure: ConductorFailureResponse | None = None
     actuation_kind: str | None = None
-
-
-def _failure_to_wire(failure: ConductorFailure) -> _ConductorFailureResponse:
-    return _ConductorFailureResponse(
-        step_index=failure.step_index,
-        source_kind=failure.source_kind,
-        target=failure.target,
-        error_class=failure.error_class,
-        message=failure.message,
-    )
 
 
 def result_to_wire(result: ReconductProcedureResult) -> ReconductProcedureResponse:
@@ -99,7 +79,7 @@ def result_to_wire(result: ReconductProcedureResult) -> ReconductProcedureRespon
         succeeded=result.succeeded,
         re_establishment_boundary=result.re_establishment_boundary,
         acquisition_halt=result.acquisition_halt,
-        failure=_failure_to_wire(result.failure) if result.failure is not None else None,
+        failure=failure_to_wire(result.failure) if result.failure is not None else None,
         actuation_kind=result.actuation_kind,
     )
 
@@ -117,6 +97,10 @@ router = APIRouter(tags=["operation"])
     status_code=status.HTTP_200_OK,
     response_model=ReconductProcedureResponse,
     responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": "re_establishment_boundary is past the pinned resolved step count.",
+        },
         status.HTTP_403_FORBIDDEN: {
             "model": ErrorResponse,
             "description": "Authorize port denied the command.",

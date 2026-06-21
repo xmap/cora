@@ -1423,3 +1423,34 @@ class Procedure:
     enum; state stores the raw string (cross-BC string-snapshot seam,
     mirroring how the Data BC stores it). Additive-state default None:
     legacy + pre-activation streams fold cleanly."""
+
+
+def merge_actuation_kinds(first: str | None, second: str | None) -> str | None:
+    """Combine two observed actuation-kind values into the honest aggregate kind.
+
+    Mirrors the Conductor `_ActuationObserver`'s flag collapse, but over the
+    persisted raw string values (an `ActuationKind` value or None) so a resume
+    can fold the PRE-HOLD conduct's observed kind (carried on `ProcedureHeld`)
+    with the replay tail's kind before the terminal event. Without this, a
+    reconduct from a boundary past a simulated prefix would complete as
+    `Physical` and slip past the `promote_dataset` Simulated/Hybrid gate. None
+    contributes nothing; a `Physical` + `Simulated` mix (or either with
+    `Hybrid`) collapses to `Hybrid`. Pure + no `ActuationKind` import: the
+    aggregate stores the raw string by design (the cross-BC snapshot seam)."""
+    simulated_seen = False
+    physical_seen = False
+    for kind in (first, second):
+        if kind == "Simulated":
+            simulated_seen = True
+        elif kind == "Physical":
+            physical_seen = True
+        elif kind == "Hybrid":
+            simulated_seen = True
+            physical_seen = True
+    if simulated_seen and physical_seen:
+        return "Hybrid"
+    if simulated_seen:
+        return "Simulated"
+    if physical_seen:
+        return "Physical"
+    return None

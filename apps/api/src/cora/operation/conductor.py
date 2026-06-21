@@ -113,7 +113,7 @@ a fake without standing up the full handler machinery.
 import asyncio
 import contextlib
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Any, Protocol, cast
 from uuid import UUID
@@ -123,7 +123,7 @@ from cora.infrastructure.ports.event_store import ConcurrencyError
 from cora.infrastructure.ports.id_generator import IdGenerator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation._control_dispatch_context import with_dispatch_correlation_id
-from cora.operation.aggregates.procedure import ProcedureNotFoundError
+from cora.operation.aggregates.procedure import ProcedureNotFoundError, merge_actuation_kinds
 from cora.operation.errors import CheckFailedError, UnauthorizedError, UnknownActionError
 from cora.operation.features.abort_procedure.command import AbortProcedure
 from cora.operation.features.abort_procedure.handler import Handler as AbortProcedureHandler
@@ -1035,6 +1035,9 @@ class Conductor:
                     HoldProcedure(
                         procedure_id=procedure_id,
                         reason=_derive_failure_reason(failure),
+                        # Carry the observed-so-far kind so a later reconduct
+                        # folds the pre-hold provenance with the replay tail.
+                        actuation_kind=actuation_kind,
                     ),
                     **envelope_kwargs,
                 )
@@ -1070,6 +1073,7 @@ class Conductor:
         correlation_id: UUID,
         steps: Sequence[Step],
         boundary: int,
+        prior_actuation_kind: str | None = None,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> ConductorResult:
@@ -1142,10 +1146,24 @@ class Conductor:
             causation_id=causation_id,
             surface_id=surface_id,
         )
-        actuation_kind = result.actuation_kind.value if result.actuation_kind is not None else None
+        # Fold the pre-hold conduct's kind (carried on the Held procedure,
+        # passed in by the handler) with the replay tail's observed kind, so a
+        # boundary>0 resume past a simulated prefix does not complete as
+        # Physical and bypass the promote_dataset gate. boundary=0 re-observes
+        # everything, so the merge is a no-op there.
+        tail_actuation_kind = (
+            result.actuation_kind.value if result.actuation_kind is not None else None
+        )
+        actuation_kind = merge_actuation_kinds(prior_actuation_kind, tail_actuation_kind)
+        # Report the merged kind on the result too, so the response body matches
+        # the kind threaded onto the terminal event (not just the replay tail).
+        merged_result = replace(
+            result,
+            actuation_kind=(ActuationKind(actuation_kind) if actuation_kind is not None else None),
+        )
         if result.succeeded:
             # Clean tail (incl. empty tail): auto-complete, threading the
-            # observed kind onto ProcedureCompleted (Data BC gate carrier).
+            # merged observed kind onto ProcedureCompleted (Data BC gate carrier).
             try:
                 await self._complete_procedure(
                     CompleteProcedure(procedure_id=procedure_id, actuation_kind=actuation_kind),
@@ -1165,10 +1183,16 @@ class Conductor:
                         message=str(exc),
                     ),
                 )
-            return result
+            return merged_result
         if is_acquisition_halt(result.failure):
             # Halt-for-operator: leave the Procedure Running; no transition.
-            return result
+            # RESIDUAL: the replay tail's observed kind is NOT persisted here
+            # (no terminal event), so a later manual complete/abort -- which
+            # SETs actuation_kind from the command, not merges -- could stamp
+            # over a tail simulator touch. Narrower than the hold->resume gap
+            # this method closes; the design-memo second-writer hazard, aligned
+            # with the Tier-2 acquisition-decomposition deferral.
+            return merged_result
         # Genuine step failure: best-effort abort (if abort itself fails, the
         # original step failure is what surfaces). Mirrors conduct().
         failure = result.failure
@@ -1182,7 +1206,7 @@ class Conductor:
                 ),
                 **envelope_kwargs,
             )
-        return result
+        return merged_result
 
     async def _dispatch(
         self,

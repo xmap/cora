@@ -21,9 +21,11 @@ import pytest
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
+from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.aggregates.procedure import (
     InMemoryActivityStore,
+    InvalidProcedureReEstablishmentBoundaryError,
     ProcedureCannotResumeError,
     ProcedureHeld,
     ProcedureNotFoundError,
@@ -52,6 +54,7 @@ from cora.operation.features.reconduct_procedure import (
     ReconductProcedure,
     ReconductProcedureResult,
 )
+from cora.operation.ports.control_port import ActuationKind, ControlPort
 from cora.run.aggregates.run import RunHeld, RunStarted
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
@@ -80,7 +83,7 @@ def _deps(store: InMemoryEventStore, *, deny: bool = False) -> Kernel:
     )
 
 
-def _make_reconduct(deps: Kernel, port: InMemoryControlPort) -> ReconductHandler:
+def _make_reconduct(deps: Kernel, port: ControlPort) -> ReconductHandler:
     conductor = Conductor(
         control_port=port,
         append_step=append_activities.bind(deps, step_store=InMemoryActivityStore()),
@@ -99,9 +102,11 @@ async def _seed_held_with_steps(
     steps: Sequence[Step],
     procedure_id: UUID = _PROCEDURE_ID,
     parent_run_id: UUID | None = None,
+    held_actuation_kind: str | None = None,
 ) -> None:
     """Land a conducted-then-Held Procedure: Registered + ResolvedStepsRecorded
-    (the pinned resolved steps) + Started + Held."""
+    (the pinned resolved steps) + Started + Held. `held_actuation_kind` is the
+    kind the pre-hold conduct observed (carried on ProcedureHeld)."""
     resolved = tuple(step_to_payload(s) for s in steps)
     events = [
         ProcedureRegistered(
@@ -119,7 +124,12 @@ async def _seed_held_with_steps(
             occurred_at=_PRIOR,
         ),
         ProcedureStarted(procedure_id=procedure_id, occurred_at=_PRIOR),
-        ProcedureHeld(procedure_id=procedure_id, reason="beam dropped", occurred_at=_PRIOR),
+        ProcedureHeld(
+            procedure_id=procedure_id,
+            reason="beam dropped",
+            occurred_at=_PRIOR,
+            actuation_kind=held_actuation_kind,
+        ),
     ]
     await store.append(
         stream_type="Procedure",
@@ -385,3 +395,44 @@ async def test_raises_unauthorized_on_deny() -> None:
     deps = _deps(store, deny=True)
     with pytest.raises(UnauthorizedError):
         await _call(_make_reconduct(deps, InMemoryControlPort()), 0)
+
+
+@pytest.mark.unit
+async def test_raises_when_boundary_past_step_count() -> None:
+    """A boundary strictly past the pinned step count is rejected (it would
+    replay an empty tail and silently auto-complete). boundary == count is
+    allowed (a deliberate complete-with-nothing resume)."""
+    store = InMemoryEventStore()
+    await _seed_held_with_steps(store, steps=(SetpointStep(address="2bma:a", value=1.0),))
+    deps = _deps(store)
+    with pytest.raises(InvalidProcedureReEstablishmentBoundaryError):
+        await _call(_make_reconduct(deps, InMemoryControlPort()), 2)  # only 1 step pinned
+
+
+@pytest.mark.unit
+async def test_reconduct_folds_pre_hold_actuation_kind_into_completion() -> None:
+    """Regression (provenance gate): a conduct that touched a SIMULATED route
+    before the hold must not complete as Physical when reconducted over a
+    physical tail. The pre-hold kind carried on ProcedureHeld is merged with
+    the replay-tail kind, so the terminal event reports Hybrid and the
+    promote_dataset Simulated/Hybrid gate still bites."""
+    store = InMemoryEventStore()
+    inner = InMemoryControlPort()
+    inner.simulate_connect("real:a")
+    registry = ControlPortRegistry()
+    registry.register("real:", inner, is_simulated=False)  # the replay tail is physical
+    await _seed_held_with_steps(
+        store,
+        steps=(SetpointStep(address="real:a", value=1.0),),
+        held_actuation_kind="Simulated",  # the pre-hold prefix touched a simulator
+    )
+    deps = _deps(store)
+    result = await _call(_make_reconduct(deps, registry), 0)
+
+    assert result.succeeded is True
+    # Merged, NOT the tail-only Physical -> the response + the terminal event agree.
+    assert result.actuation_kind == ActuationKind.HYBRID.value
+    state = await load_procedure(store, _PROCEDURE_ID)
+    assert state is not None
+    assert state.status is ProcedureStatus.COMPLETED
+    assert state.actuation_kind == ActuationKind.HYBRID.value
