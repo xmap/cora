@@ -122,6 +122,13 @@ class ConductRunResponse(BaseModel):
     `actuation_kind` is read-only operator visibility; the promotion
     gate reads it server-side off the Run stream, never back from here.
     `failure` is non-null iff `succeeded` is False.
+
+    The artifact fields (`checksum_algorithm` / `checksum_value` /
+    `byte_size` / `entry_count`) are surfaced on success so the operator
+    can register the output Dataset + Distribution without re-stating
+    them. `checksum_algorithm` is `sha256` for a single-file output or
+    `sha256-tree` for a directory output (a tomopy tiff stack), in which
+    case `entry_count` is the file count; it is null for a single file.
     """
 
     run_id: UUID
@@ -129,6 +136,10 @@ class ConductRunResponse(BaseModel):
     status: str | None = None
     job_id: str | None = None
     artifact_uri: str | None = None
+    checksum_algorithm: str | None = None
+    checksum_value: str | None = None
+    byte_size: int | None = None
+    entry_count: int | None = None
     actuation_kind: str | None = None
     failure: str | None = None
 
@@ -234,12 +245,17 @@ def result_to_wire(result: ComputeRunResult) -> ConductRunResponse:
 
     Public because `tool.py` calls it too.
     """
+    artifact = result.artifact_ref
     return ConductRunResponse(
         run_id=result.run_id,
         succeeded=result.succeeded,
         status=result.status.value if result.status is not None else None,
         job_id=str(result.job_id) if result.job_id is not None else None,
-        artifact_uri=result.artifact_ref.uri if result.artifact_ref is not None else None,
+        artifact_uri=artifact.uri if artifact is not None else None,
+        checksum_algorithm=artifact.checksum_algorithm if artifact is not None else None,
+        checksum_value=artifact.checksum_value if artifact is not None else None,
+        byte_size=artifact.byte_size if artifact is not None else None,
+        entry_count=artifact.entry_count if artifact is not None else None,
         actuation_kind=result.actuation_kind.value if result.actuation_kind is not None else None,
         failure=result.failure,
     )

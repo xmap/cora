@@ -3839,7 +3839,7 @@
         "type": "object"
       },
       "ConductRunResponse": {
-        "description": "Response body for the conduct-run-compute route.\n\n`succeeded` is the canonical pass/fail bit. `status` is the job's\nterminal `ComputeStatus` value (or null when the job never started).\n`actuation_kind` is read-only operator visibility; the promotion\ngate reads it server-side off the Run stream, never back from here.\n`failure` is non-null iff `succeeded` is False.",
+        "description": "Response body for the conduct-run-compute route.\n\n`succeeded` is the canonical pass/fail bit. `status` is the job's\nterminal `ComputeStatus` value (or null when the job never started).\n`actuation_kind` is read-only operator visibility; the promotion\ngate reads it server-side off the Run stream, never back from here.\n`failure` is non-null iff `succeeded` is False.\n\nThe artifact fields (`checksum_algorithm` / `checksum_value` /\n`byte_size` / `entry_count`) are surfaced on success so the operator\ncan register the output Dataset + Distribution without re-stating\nthem. `checksum_algorithm` is `sha256` for a single-file output or\n`sha256-tree` for a directory output (a tomopy tiff stack), in which\ncase `entry_count` is the file count; it is null for a single file.",
         "properties": {
           "actuation_kind": {
             "anyOf": [
@@ -3862,6 +3862,50 @@
               }
             ],
             "title": "Artifact Uri"
+          },
+          "byte_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Byte Size"
+          },
+          "checksum_algorithm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Algorithm"
+          },
+          "checksum_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Value"
+          },
+          "entry_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Count"
           },
           "failure": {
             "anyOf": [
