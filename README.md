@@ -155,7 +155,7 @@
 | src/cora/agent/subscribers/\_\_init\_\_.py                                               |        3 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/subscribers/\_terminal\_run\_helpers.py                                   |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/subscribers/caution\_drafter.py                                           |      158 |        0 |       32 |        0 |    100.0% |           |
-| src/cora/agent/subscribers/caution\_promoter.py                                          |      133 |        3 |       28 |        1 |     97.5% |207-212, 381 |
+| src/cora/agent/subscribers/caution\_promoter.py                                          |      136 |        3 |       30 |        1 |     97.6% |217-222, 415 |
 | src/cora/agent/subscribers/run\_debriefer.py                                             |      127 |        2 |       18 |        1 |     97.9% |   789-793 |
 | src/cora/agent/tools.py                                                                  |       34 |        1 |        2 |        1 |     94.4% |       105 |
 | src/cora/agent/wire.py                                                                   |       14 |        0 |        2 |        0 |    100.0% |           |
@@ -307,7 +307,7 @@
 | src/cora/caution/\_caution\_dtos.py                                                      |       12 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/caution/\_projections.py                                                        |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/caution/adapters/\_\_init\_\_.py                                                |        2 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/caution/adapters/postgres\_caution\_lookup.py                                   |       16 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/caution/adapters/postgres\_caution\_lookup.py                                   |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/caution/aggregates/\_\_init\_\_.py                                              |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/caution/aggregates/caution/\_\_init\_\_.py                                      |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/caution/aggregates/caution/events.py                                            |       60 |        0 |       16 |        0 |    100.0% |           |
@@ -1306,7 +1306,7 @@
 | src/cora/infrastructure/ports/byte\_signer.py                                            |       39 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/canonicalizer.py                                           |       27 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/capability\_lookup.py                                      |       11 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/ports/caution\_lookup.py                                         |       14 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/ports/caution\_lookup.py                                         |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/clearance\_lookup.py                                       |       14 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/clearance\_template\_lookup.py                             |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/clock.py                                                   |       15 |        2 |        0 |        0 |     86.7% |    37, 40 |
@@ -2297,7 +2297,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **46771** | **1010** | **6526** |  **277** | **97.3%** |           |
+| **TOTAL**                                                                                | **46783** | **1010** | **6528** |  **277** | **97.3%** |           |
 
 
 ## Setup coverage badge
