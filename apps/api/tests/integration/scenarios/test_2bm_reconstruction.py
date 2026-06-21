@@ -592,7 +592,7 @@ async def test_reconstruction_conducts_on_a_real_subprocess_and_is_promotable(
 
 
 @pytest.mark.integration
-async def test_reconstruction_conducts_directory_output_with_tree_hash(
+async def test_reconstruction_conducts_directory_output_and_records_tree_hash(
     db_pool: asyncpg.Pool,
     tmp_path: Path,
 ) -> None:

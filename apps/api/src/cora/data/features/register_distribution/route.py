@@ -49,9 +49,9 @@ class DistributionChecksumRequest(BaseModel):
         min_length=1,
         max_length=32,
         description=(
-            "Checksum algorithm name. Only 'sha256' is accepted today; "
-            "the field is structured for forward-compatible algorithm "
-            "addition (BLAKE3, SHA3, etc.)."
+            "Checksum algorithm name: 'sha256' for a single file or "
+            "'sha256-tree' for a directory of files. Must equal the parent "
+            "Dataset's algorithm (byte-identical-copy invariant)."
         ),
     )
     value: str = Field(

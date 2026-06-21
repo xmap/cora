@@ -44,9 +44,10 @@ class ChecksumRequest(BaseModel):
         min_length=1,
         max_length=32,
         description=(
-            "Checksum algorithm name. Only 'sha256' is accepted today; "
-            "the field is structured for forward-compatible algorithm "
-            "addition (BLAKE3, SHA3, etc.)."
+            "Checksum algorithm name: 'sha256' for a single file or "
+            "'sha256-tree' for a directory of files (a tree-hash over the "
+            "whole directory). Both carry a 64-hex value. The field stays "
+            "structured for forward-compatible algorithm addition."
         ),
     )
     value: str = Field(

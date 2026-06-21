@@ -16,7 +16,7 @@ Out of scope
 - **A `Transfer` aggregate.** Moving bytes between backends is modeled as a `Method` + `TransferPort` in the Recipe module, not as a Data aggregate. `Distribution` is the resting materialization, not the transfer log.
 - **Persistent external identifier minting beyond DOI.** `Edition` mints a DOI through the shared `DoiMinter` port at publish time and tombstones it at withdraw. Handle, ARK, and IGSN flows, and DataCite event-data harvesting, are deferred until a real consumer asks.
 - **PROV-O vocabulary in the domain core.** In-domain lineage stays as the `derived_from` edge set on each Dataset plus the `Acquisition` capture fact. PROV-O export (`prov:wasDerivedFrom`, `prov:wasGeneratedBy`) lives at an API export adapter when a real consumer asks.
-- **Multi-checksum algorithms.** Only `sha256` is accepted. The `(algorithm, value)` shape is forward-compatible for adding BLAKE3, SHA3, or other algorithms when a real consumer asks.
+- **Multi-checksum algorithms.** Two algorithms are accepted: `sha256` (a single file) and `sha256-tree` (a directory of files, hashed as a deterministic tree-hash over the whole directory, the digest a directory-output compute artifact carries). Both produce a 64-lowercase-hex value, so the value format is identical and only the algorithm tag differs. The `(algorithm, value)` shape stays forward-compatible for adding BLAKE3, SHA3, or other algorithms when a real consumer asks.
 - **Re-promotion from Retracted.** Retracted is terminal. Operators who want to publish a corrected version register a new Dataset with `derived_from` pointing at the retracted one.
 - **Concrete Attestation kinds beyond checksum.** `AttestationKind` ships all four values, but only `ChecksumVerified` has a concrete evidence shape and verifier adapter today; `FormatValidated`, `ConformsToValidated`, and `BitRotChecked` are reserved for follow-on slices.
 
@@ -42,7 +42,7 @@ Out of scope
 |---|---|---|
 | `DatasetName` | trimmed string, 1-200 chars | `Dataset.name` |
 | `DatasetUri` | trimmed string, 1-2048 chars, must have a URI scheme, scheme must not be in the blocked list | `Dataset.uri` |
-| `DatasetChecksum` | `(algorithm, value)` pair; today algorithm must be `sha256`, value must be 64 lowercase hex chars | `Dataset.checksum`, `Distribution.checksum` |
+| `DatasetChecksum` | `(algorithm, value)` pair; algorithm is `sha256` (single file) or `sha256-tree` (directory tree-hash), value must be 64 lowercase hex chars for both | `Dataset.checksum`, `Distribution.checksum` |
 | `DatasetEncoding` | `(media_type, conforms_to)` pair; `media_type` is loose MIME-shape string 1-200 chars, `conforms_to` is a frozenset of up to 16 profile URIs each 1-2048 chars | `Dataset.encoding`, `Distribution.encoding` |
 | `DatasetStatus` | closed StrEnum: `Registered` \| `Discarded` | `Dataset.status` |
 | `Intent` | open StrEnum (additive); today: `Trial` \| `Production` \| `Retracted` | `Dataset.intent` |
