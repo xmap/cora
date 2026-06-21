@@ -474,6 +474,28 @@ class RecipeExpansionRecordNotFoundError(Exception):
         self.procedure_id = procedure_id
 
 
+class ResolvedStepsRecordNotFoundError(Exception):
+    """A Held Procedure cannot locate its pinned `ResolvedStepsRecorded` manifest.
+
+    Raised by the `reconduct_procedure` (resume-and-replay) handler when a
+    Held Procedure's stream carries no `ResolvedStepsRecorded` event. A
+    conduct pins exactly one at start (while `Defined`), so a conducted
+    Procedure always has it; its absence is corruption (stream truncation,
+    a manual event-store write, or a partial-write failure), not an
+    operational outcome. Kept OUT of the conduct/reconduct failures-in-body
+    contract (that is for step outcomes like an IOC rejecting a write).
+    Sibling of `RecipeExpansionRecordNotFoundError`. Mapped to HTTP 500.
+    """
+
+    def __init__(self, procedure_id: UUID) -> None:
+        super().__init__(
+            f"Procedure {procedure_id} is Held but its pinned "
+            f"ResolvedStepsRecorded manifest could not be located; resume "
+            f"replay cannot proceed."
+        )
+        self.procedure_id = procedure_id
+
+
 class RecipeExpansionReplayMismatchError(Exception):
     """Replay-time hash drift on a recipe-driven Procedure.
 

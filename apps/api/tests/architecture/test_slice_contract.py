@@ -56,6 +56,10 @@ _ORCHESTRATION_SLICES: frozenset[str] = frozenset(
         # complete_procedure / abort_procedure handlers; no direct event
         # emission. See [[project_edge_runtime_design]].
         "cora.operation.features.conduct_procedure",
+        # Resume-and-replay entry: delegates resume_procedure +
+        # Conductor.execute_from + complete/abort; no direct event emission.
+        # See [[project_resumable_conduct_design]].
+        "cora.operation.features.reconduct_procedure",
         # Bulk-mint sweep: enumerates Assets missing a persistent id and
         # delegates each to the assign_asset_persistent_id handler; no direct
         # event emission. See [[project_asset_persistent_id_design]].

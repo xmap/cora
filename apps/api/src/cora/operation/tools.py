@@ -22,6 +22,7 @@ from cora.operation.features.list_procedure_iterations import (
     tool as list_procedure_iterations_tool,
 )
 from cora.operation.features.list_procedures import tool as list_procedures_tool
+from cora.operation.features.reconduct_procedure import tool as reconduct_procedure_tool
 from cora.operation.features.register_procedure import tool as register_procedure_tool
 from cora.operation.features.register_procedure_from_recipe import (
     tool as register_procedure_from_recipe_tool,
@@ -70,6 +71,10 @@ def register_operation_tools(
     resume_procedure_tool.register(
         mcp,
         get_handler=lambda: get_handlers().resume_procedure,
+    )
+    reconduct_procedure_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().reconduct_procedure,
     )
     start_iteration_tool.register(
         mcp,

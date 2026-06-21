@@ -91,6 +91,7 @@ from cora.operation.aggregates.procedure.state import (
     RecipeExpansionOverflowError,
     RecipeExpansionRecordNotFoundError,
     RecipeExpansionReplayMismatchError,
+    ResolvedStepsRecordNotFoundError,
     StepKind,
 )
 
@@ -162,6 +163,7 @@ __all__ = [
     "RecipeExpansionRecordNotFoundError",
     "RecipeExpansionRecorded",
     "RecipeExpansionReplayMismatchError",
+    "ResolvedStepsRecordNotFoundError",
     "ResolvedStepsRecorded",
     "StepKind",
     "event_type_name",

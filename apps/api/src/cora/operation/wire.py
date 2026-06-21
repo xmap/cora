@@ -77,6 +77,7 @@ from cora.operation.features import (
     hold_procedure,
     list_procedure_iterations,
     list_procedures,
+    reconduct_procedure,
     register_procedure,
     register_procedure_from_recipe,
     resume_procedure,
@@ -107,6 +108,7 @@ class OperationHandlers:
     truncate_procedure: truncate_procedure.Handler
     hold_procedure: hold_procedure.Handler
     resume_procedure: resume_procedure.Handler
+    reconduct_procedure: reconduct_procedure.Handler
     start_iteration: start_iteration.Handler
     end_iteration: end_iteration.Handler
     append_activities: append_activities.Handler
@@ -181,6 +183,14 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
         command_name="AbortProcedure",
         bc=_BC,
     )
+    # Hoisted to a local so the bundle field AND the Conductor share ONE
+    # post-tracing resume handler instance (mirrors the start/complete/abort
+    # hoist; Conductor.reconduct composes this resume handler).
+    resume_handler = with_tracing(
+        resume_procedure.bind(deps),
+        command_name="ResumeProcedure",
+        bc=_BC,
+    )
     append_step_handler = with_tracing(
         append_activities.bind(deps, step_store=step_store),
         command_name="AppendProcedureActivities",
@@ -203,6 +213,15 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
         start_procedure=start_handler,
         complete_procedure=complete_handler,
         abort_procedure=abort_handler,
+        resume_procedure=resume_handler,
+    )
+    # Resume-and-replay orchestration: a thin slice handler over
+    # Conductor.reconduct (which composes resume + execute_from +
+    # complete/abort). Reuses the same conductor; no sibling-slice imports.
+    reconduct_handler = with_tracing(
+        reconduct_procedure.bind(deps, conductor=conductor),
+        command_name="ReconductProcedure",
+        bc=_BC,
     )
     return OperationHandlers(
         register_procedure=with_tracing(
@@ -244,11 +263,8 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
             command_name="HoldProcedure",
             bc=_BC,
         ),
-        resume_procedure=with_tracing(
-            resume_procedure.bind(deps),
-            command_name="ResumeProcedure",
-            bc=_BC,
-        ),
+        resume_procedure=resume_handler,
+        reconduct_procedure=reconduct_handler,
         start_iteration=with_tracing(
             start_iteration.bind(deps),
             command_name="StartProcedureIteration",

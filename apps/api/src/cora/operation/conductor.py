@@ -138,6 +138,8 @@ from cora.operation.features.complete_procedure.command import CompleteProcedure
 from cora.operation.features.complete_procedure.handler import (
     Handler as CompleteProcedureHandler,
 )
+from cora.operation.features.resume_procedure.command import ResumeProcedure
+from cora.operation.features.resume_procedure.handler import Handler as ResumeProcedureHandler
 from cora.operation.features.start_procedure.command import StartProcedure
 from cora.operation.features.start_procedure.handler import Handler as StartProcedureHandler
 from cora.operation.ports.control_port import (
@@ -575,6 +577,7 @@ class Conductor:
         start_procedure: StartProcedureHandler | None = None,
         complete_procedure: CompleteProcedureHandler | None = None,
         abort_procedure: AbortProcedureHandler | None = None,
+        resume_procedure: ResumeProcedureHandler | None = None,
     ) -> None:
         self._control_port = control_port
         self._append_step = append_step
@@ -584,6 +587,7 @@ class Conductor:
         self._start_procedure = start_procedure
         self._complete_procedure = complete_procedure
         self._abort_procedure = abort_procedure
+        self._resume_procedure = resume_procedure
 
     async def execute(
         self,
@@ -886,6 +890,128 @@ class Conductor:
                     actuation_kind=(
                         result.actuation_kind.value if result.actuation_kind is not None else None
                     ),
+                ),
+                **envelope_kwargs,
+            )
+        return result
+
+    async def reconduct(
+        self,
+        *,
+        procedure_id: UUID,
+        principal_id: UUID,
+        correlation_id: UUID,
+        manifest: Sequence[Step],
+        boundary: int,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ConductorResult:
+        """Resume a Held Procedure and REPLAY its pinned manifest from `boundary`.
+
+        The resume twin of `conduct()`: where `conduct()` drives
+        start -> execute -> complete | abort, this drives
+        resume -> execute_from -> complete | (leave Running) | abort.
+
+          1. Issue `resume_procedure` (transitions Held -> Running). Its OWN
+             authz + off-diagonal parent-Run-Held guard fire here; a non-Held
+             Procedure or a held parent Run raises `ProcedureCannotResumeError`
+             which PROPAGATES (mapped to 409 at the route) rather than landing
+             in the result body. A refused resume is a guard outcome, not a
+             replay outcome, and no replay has happened yet.
+          2. Call `self.execute_from(manifest, boundary)`: re-drive setpoints,
+             re-run checks, halt-for-operator on an acquisition.
+          3. Terminalize three-way:
+               - clean tail (incl. empty) -> `complete_procedure` (Completed).
+               - acquisition halt -> NO transition; the Procedure stays Running
+                 and the operator decides redo-fresh vs reseed from the result.
+               - genuine step failure -> best-effort `abort_procedure` (if the
+                 abort itself fails, the original step failure is what
+                 surfaces, mirroring `conduct()`).
+
+        `manifest` is the parsed `ResolvedStepsRecorded.resolved_steps`: the
+        caller locates + parses the PINNED record (resume NEVER re-derives the
+        step list). `boundary` is single-sourced: it rides into both
+        `ProcedureResumed.re_establishment_boundary` (audit) and
+        `execute_from(boundary=...)` (replay).
+
+        Requires `resume_procedure` + `complete_procedure` + `abort_procedure`
+        handlers at __init__; raises `RuntimeError` (a wiring bug) otherwise.
+
+        Unlike `conduct()`, this does NOT best-effort-abort on a mid-replay
+        `CancelledError`: a cancellation after the resume leaves the Procedure
+        Running with partial replay history, the same posture as the
+        acquisition-halt branch (the operator reconciles). See
+        [[project_resumable_conduct_design]] Tier 1.
+        """
+        if (
+            self._resume_procedure is None
+            or self._complete_procedure is None
+            or self._abort_procedure is None
+        ):
+            raise RuntimeError(
+                "Conductor.reconduct() requires resume_procedure + complete_procedure + "
+                "abort_procedure handlers at __init__; only execute_from() is available "
+                "without them."
+            )
+        envelope_kwargs: dict[str, Any] = {
+            "principal_id": principal_id,
+            "correlation_id": correlation_id,
+            "causation_id": causation_id,
+            "surface_id": surface_id,
+        }
+        # Held -> Running. Refusals (not-Held / held parent Run / authz deny /
+        # not-found) propagate to the route as their mapped HTTP codes; no
+        # replay has happened, so they are NOT swallowed into the result body.
+        await self._resume_procedure(
+            ResumeProcedure(procedure_id=procedure_id, re_establishment_boundary=boundary),
+            **envelope_kwargs,
+        )
+        result = await self.execute_from(
+            procedure_id=procedure_id,
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            manifest=manifest,
+            boundary=boundary,
+            causation_id=causation_id,
+            surface_id=surface_id,
+        )
+        actuation_kind = result.actuation_kind.value if result.actuation_kind is not None else None
+        if result.succeeded:
+            # Clean tail (incl. empty tail): auto-complete, threading the
+            # observed kind onto ProcedureCompleted (Data BC gate carrier).
+            try:
+                await self._complete_procedure(
+                    CompleteProcedure(procedure_id=procedure_id, actuation_kind=actuation_kind),
+                    **envelope_kwargs,
+                )
+            except _LIFECYCLE_RERAISE:
+                raise
+            except Exception as exc:
+                return ConductorResult(
+                    procedure_id=procedure_id,
+                    completed_count=result.completed_count,
+                    failure=ConductorFailure(
+                        step_index=None,
+                        source_kind=_SOURCE_KIND_LIFECYCLE,
+                        target=_LIFECYCLE_TARGET_COMPLETE,
+                        error_class=type(exc).__name__,
+                        message=str(exc),
+                    ),
+                )
+            return result
+        if is_acquisition_halt(result.failure):
+            # Halt-for-operator: leave the Procedure Running; no transition.
+            return result
+        # Genuine step failure: best-effort abort (if abort itself fails, the
+        # original step failure is what surfaces). Mirrors conduct().
+        failure = result.failure
+        assert failure is not None  # not succeeded + not halt -> failure
+        with contextlib.suppress(Exception):
+            await self._abort_procedure(
+                AbortProcedure(
+                    procedure_id=procedure_id,
+                    reason=_derive_abort_reason(failure),
+                    actuation_kind=actuation_kind,
                 ),
                 **envelope_kwargs,
             )
@@ -1281,6 +1407,19 @@ def steps_from_manifest(resolved_steps: Sequence[Mapping[str, Any]]) -> tuple[St
     return tuple(_step_from_payload(step) for step in resolved_steps)
 
 
+def is_acquisition_halt(failure: ConductorFailure | None) -> bool:
+    """True iff `failure` is `execute_from`'s halt-for-operator on an acquisition.
+
+    Distinguishes the resume halt (an `ActionStep` reached during replay,
+    which is a needs-operator-decision hand-off, NOT a failure) from a
+    genuine step failure (a setpoint/check that failed). A resume
+    orchestration completes on success, leaves the Procedure Running on an
+    acquisition halt, and aborts on a genuine failure -- this predicate is
+    the branch. See `_RESUME_HALT_ERROR_CLASS` and
+    [[project_resumable_conduct_design]]."""
+    return failure is not None and failure.error_class == _RESUME_HALT_ERROR_CLASS
+
+
 def _criterion_matches(criterion: CheckCriterion, value: Any) -> bool:
     """True iff `value` satisfies `criterion`.
 
@@ -1353,6 +1492,7 @@ __all__ = [
     "SetpointStep",
     "Step",
     "WithinToleranceCriterion",
+    "is_acquisition_halt",
     "step_to_payload",
     "steps_from_manifest",
 ]
