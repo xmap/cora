@@ -141,16 +141,18 @@ conditioning-optics:
         is the sole operational selector. Unit mm (caget 2bma:m18.EGU);
         materials/positions per docs2bm + 2filter_setup.adl (FOIL-1/FOIL-2).
     - name: DiagnosticFlag
-      family: LinearStage
+      family: Screen
       pv: "2bma:m44"
       controller: FrontEndDrive
+      z_mm: 32500
       note: >
         Motorized phosphor beam-viewing flag (the staff "diagnostic flag",
-        item_006 / item_020): a vertical insert on 2bma:m44. Raised into the
-        beam in Mono and parked in Pink; in Mono its Y is energy-dependent
-        (staff energy_move_flag). Exact in-hutch position, the energy-tracking
-        Y curve, and whether to model the position as a PseudoAxis are pending
-        (FLAG-1).
+        item_006 / item_020): a vertical insert on 2bma:m44, on its own
+        floor-referenced stand in 2-BM-A at z=32500 (FLAG-1, staff-confirmed).
+        Raised into the beam in Mono at an energy-dependent height (the staff
+        energy_move_flag table) and parked out (Y=0) in Pink; the Y is modelled
+        as the energy-tracked DiagnosticFlag_Y PseudoAxis
+        (test_2bm_energy_curves_setup.py). User offset: user = dial - 5 mm.
     - name: Mirror
       family: Mirror
       pv: { downstream_y: "2bma:m2", upstream_y: "2bma:m5", stripe_select: "2bma:m3" }

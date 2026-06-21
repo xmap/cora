@@ -108,7 +108,7 @@ The recipe captures the **happy path only** (controller enabled on the first che
 
 `dark_baseline` and `flat_baseline` reuse the registered `collect` action body and are conductible today; the baseline reduction that follows the capture is downstream of the recipe (reconstruction, unlike baseline reduction, is itself a recorded compute Method). `energy_setting` and `hexapod_reboot` are valid Recipe v1 data but invoke action bodies that are not registered yet, so conducting either would fail at the first unregistered step. They are recorded here so the step order, addresses, and tunable values are reviewable ahead of the executor work, which sits in the same deferred-runtime bucket as live motion. The specific blockers:
 
-- **`energy_setting`**: the `coordinate_energy_move` action body; the Plan.wiring-backed `pseudoaxis://` constituent resolver (deferred); the populated per-energy saved table from staff ([ENERGY-1](questions.md#energy-and-the-optics) / [ENERGY-2](questions.md#energy-and-the-optics)); and the real readback (`.RBV`) PVs.
+- **`energy_setting`**: the `coordinate_energy_move` action body; the Plan.wiring-backed `pseudoaxis://` constituent resolver (deferred); and the real readback (`.RBV`) PVs. The per-energy saved table is now populated with the real `store_0` values (ENERGY-1/2, in the [energy curves](inventory.md#energy-tracking-optic-axes)).
 - **`hexapod_reboot`**: the `run_shell_script` / `pdu_power_toggle` / `sleep` / `caget_poll` action bodies (plus `caput` for the force-enable branch) and their substrate adapters (a shell or SSH execution port, an HTTP port for the PDU, a channel-access read/write port); and the [HXP-5](questions.md#the-hexapod) PDU secret.
 
 ## Candidate recipes

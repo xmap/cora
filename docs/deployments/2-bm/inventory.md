@@ -25,7 +25,8 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `Filter` | `Filter` | (none) | `2-BM` | foil changer; driven by `FrontEndDrive` | live |
 | `Filter_FoilSelector_Upstream` | `PseudoAxis` | (none) | `Filter` | m17 slot index -> position (Nearest); operational selector | live |
 | `Filter_FoilSelector_Downstream` | `PseudoAxis` | (none) | `Filter` | m18 slot index -> position (Nearest); bindings retained | Faulted (m18 failed 2026-06-19) |
-| `DiagnosticFlag` | `LinearStage` | (none) | `2-BM` | `2bma:m44`; raised in Mono, parked in Pink | live |
+| `DiagnosticFlag` | `Screen` | (none) | `2-BM` | `2bma:m44` at z=32500; raised in Mono, parked in Pink | live |
+| `DiagnosticFlag_Y` | `PseudoAxis` | (none) | `DiagnosticFlag` | energy->flag height (Mono); parked out in Pink | live |
 | `SampleSlit` | `Slit` | (none) | `2-BM` | B-station slits; driven by `FrontEndDrive` | live |
 | `SampleSlit_VerticalTop` | `PseudoAxis` | (none) | `SampleSlit` | energy->top blade beam position (mm) | live |
 | `SampleSlit_VerticalBottom` | `PseudoAxis` | (none) | `SampleSlit` | energy->bottom blade beam position (mm) | live |
@@ -201,9 +202,9 @@ Angular mapping (`AX`=pitch, `AY`=yaw, `AZ`=roll) is staff-confirmed (STAGE-9).
 
 ### Energy-tracking optic axes
 
-Setting energy is a discrete coordinated move. The staff energy-change IOC stores per-energy positions (`store_0` saved table) and drives ~15 motors. Each per-axis relationship is modelled as a continuous curve: a `PseudoAxis` carrying a `LookupTable` partition rule converting energy (`unit_in=keV`) to axis position, pinning a `Calibration` revision by id (`energy_position_curve` quantity, `beam_mode=mono`). `invertible=True` (Bragg geometry monotonic; no constituent wiring needed). Coordinating operation = the `energy_setting` Procedure, which accepts a free keV value between saved points. Models: `test_2bm_energy_curves_setup.py` (curves) + `test_2bm_energy_setting.py` (operation).
+Setting energy is a discrete coordinated move. The staff energy-change IOC stores per-energy positions (`store_0` saved table) and drives ~15 motors. Each per-axis relationship is modelled as a continuous curve: a `PseudoAxis` carrying a `LookupTable` partition rule converting energy (`unit_in=keV`) to axis position, pinning a `Calibration` revision by id (`energy_position_curve` quantity). Each axis carries a Mono curve (`beam_mode=mono`, the active rule) and a sibling Pink curve (`beam_mode=pink`, parked constant). `invertible` is per-axis: the Bragg arms + M2Y are monotonic in energy (`invertible=True`); the slit blades (constant 20 mm aperture, non-monotonic centre walk) and the flag Y (flat at the top of its range) are `invertible=False` with `readback_aggregator_kind=Identity`. Coordinating operation = the `energy_setting` Procedure, which accepts a free keV value between saved points. Models: `test_2bm_energy_curves_setup.py` (curves) + `test_2bm_energy_setting.py` (operation).
 
-Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0, 25.0, 25.584 keV. Pink mode bypasses the monochromator. Beam-mode switching itself is on the [Procedures](procedures.md#beam-modes) page, not a virtual axis.
+Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0, 25.0, 25.584 keV; Pink: 30, 40, 50, 60 keV (axes parked). Pink mode bypasses the monochromator. Beam-mode switching itself is on the [Procedures](procedures.md#beam-modes) page, not a virtual axis.
 
 | Axis Asset | Motors / handle | Curve | unit_out |
 | --- | --- | --- | --- |
@@ -212,10 +213,12 @@ Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0,
 | `Monochromator_M2Y` | `dmm_m2_y` | energy -> M2 vertical offset compensator | mm |
 | `SampleSlit_VerticalTop` | `b_slit_top` | energy -> top blade beam-walk | mm |
 | `SampleSlit_VerticalBottom` | `b_slit_bot` | energy -> bottom blade beam-walk | mm |
+| `DiagnosticFlag_Y` | `energy_move_flag` (`2bma:m44`) | energy -> flag height (Mono), parked out in Pink | mm |
 
-- Not energy axes: `crystal2_z` (M2 Z, `2bma:m8`) is a setup translation the IOC does not drive; the mirror is held constant. Neither carries an energy curve.
+- Slit aperture is held constant at 20 mm; only the centre tracks the beam walk (non-monotonically). Exposing the centre / aperture as derived axes (`MidRange` / `Difference` of the two blades) needs constituent port wiring and is a deferred follow-up.
+- Not energy axes: `crystal2_z` (M2 Z, `2bma:m8`) is a setup translation the IOC does not drive; the mirror is held constant in Mono. Neither carries a Mono curve.
 - DMM lateral stripe not yet modelled: substrate has two multilayer periods (13.8 / 24 angstrom) on stripes 4 mm apart; upstream/downstream X motors (`2bma:m25` / `2bma:m28`) may select per energy band. Operator-facing selection vs fixed setup is open (`ENERGY-6`).
-- Seeded curves are PROVISIONAL: x-points are real configured energies, positions are placeholders pending the real `store_0` table (see [Open questions](questions.md#energy-and-the-optics)). Runtime `eval_lookup_table` is wired; out-of-range refuses (`extrapolation_kind=Error`); refuse vs clamp vs menu-only is open (`ENERGY-4`).
+- Curves carry the REAL saved `store_0` positions (ENERGY-1/2, FLAG-1): full 6-energy Mono curves plus parked Pink curves. Runtime `eval_lookup_table` is wired; out-of-range refuses (`extrapolation_kind=Error`, staff-confirmed ENERGY-4: the inter-mode band 25.584-30 keV is not bridgeable by interpolation).
 - Recalibration updates these curves in place: the `energy_characterization` Procedure (channel-cut rocking curve, item_022) re-saves the corrected positions as a new revision of the affected `energy_position_curve`, `MeasuredSource`-cited, preserving the prior revision as history. There is no separate energy offset (`ENERGY-8`).
 
 ### Filter foil selection

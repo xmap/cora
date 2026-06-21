@@ -97,22 +97,12 @@ The NV200D/NET piezo (now `ApertureFineDrive`) fine-positions the coded `Apertur
 | --- | --- | --- | --- | --- | --- |
 | PIEZO-5 | `Nice-to-have` | Confirm the NV200D FPGA trigger mapping and its purpose. item_028 routes the JenaX / JenaY cables to FPGA `out2` / `out3`, but labels the delay PVs `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses that cable map; which axis is on which output? And what is the 1024-position triggered-step mode used for (interlaced / dithered tomographic sampling)? | wired `Timing.out2 -> X`, `Timing.out3 -> Y` per the cable map, with the delay-PV labels recorded as the apparent cross; step use-case assumed fine-sampling during tomography | yes | [NV200D trigger wiring](inventory.md#nv200d-trigger-wiring) |
 
-## Beam path and front end
-
-One row covers the diagnostic flag.
-
-| ID | Priority | Question | CORA assumes | Already done? | Resolves |
-| --- | --- | --- | --- | --- | --- |
-| FLAG-1 | `Nice-to-have` | For the diagnostic flag (`DiagnosticFlag`, `2bma:m44`): its exact in-hutch location (which 2-BM-A position / z), and the energy-dependent vertical positions it takes in Mono (the staff `energy_move_flag` table) plus its parked Pink position? CORA registers it as a `Screen` Asset on `FrontEndDrive`, raised in Mono and parked in Pink, but does not yet carry its positions or model the Y as an energy-tracking axis. | registered as a `Screen` Asset; in-hutch position and energy-tracking Y curve pending | yes | [Beam modes](procedures.md#beam-modes) |
-
 ## Energy and the optics
 
-On an energy change the DMM monochromator, its Bragg arms, and the tracking slits move together to saved per-energy positions. These items supply those saved values and confirm how they are driven.
+On an energy change the DMM monochromator, its Bragg arms, and the tracking slits move together to saved per-energy positions (now recorded). The remaining items cover the multilayer stripe selection and the channel-cut calibration crystal.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| ENERGY-1 | `Nice-to-have` | The real saved per-energy positions (the `store_0` table) for the energy-driven DMM axes: the Bragg arms (`dmm_us_arm` / `dmm_ds_arm` = `2bma:m30` / `2bma:m31`) and the M2 vertical offset (`dmm_m2_y` = `2bma:m32`)? CORA models each as a continuous curve, but the positions it carries today are placeholders. | provisional placeholder curves; real saved points not on file | not yet | [Energy-tracking optic axes](inventory.md#energy-tracking-optic-axes) |
-| ENERGY-2 | `Nice-to-have` | The matching per-energy saved positions for the B-station sample-slit vertical pair (`b_slit_top` / `b_slit_bot` = `2bma:m9` / `2bma:m10`) that tracks the beam walk? (The mirror is held constant in Mono mode, so it gets no Mono energy curve; in Pink the coating stripe IS swept per energy, see MODE-3.) | provisional placeholder curves; real saved points not on file | not yet | [Energy-tracking optic axes](inventory.md#energy-tracking-optic-axes) |
 | ENERGY-6 | `Nice-to-have` | Per the [DMM page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_021.html) the monochromator substrate carries two multilayer stripes with different periods (13.8 and 24 angstrom, 4 mm apart). Is the active stripe selected per energy by a lateral crystal translation (the upstream / downstream X motors `2bma:m25` / `2bma:m28`, today folded into `ENERGY-5`), and which stripe serves which energies in the Mono menu (13.374 to 25.584 keV)? If it is an operator-facing per-energy selection rather than a fixed setup, CORA would model it as a named DMM stripe selector, the monochromator counterpart of the mirror coating stripe (`MIRROR-1`). | two stripes exist; no DMM stripe / d-spacing selector modelled; `2bma:m25` / `2bma:m28` lateral X carried only as unframed alignment motors | not yet | [Energy-tracking optic axes](inventory.md#energy-tracking-optic-axes) |
 | ENERGY-7 | `Nice-to-have` | Is energy calibration via a channel-cut crystal current 2-BM practice, and which crystal (its lattice spacing 2d; the [calibration page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_022.html) lists 3.84 angstrom)? Is the crystal a removable reference standard (CORA models it as a calibration Subject, like the resolution phantom) or installed equipment, and on what rotation stage is it rocked? | modelled as the `energy_characterization` Procedure with the crystal as a calibration Subject; current practice, crystal, and 2d unconfirmed | yes | [Procedures](procedures.md) |
 

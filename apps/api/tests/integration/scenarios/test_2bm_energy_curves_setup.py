@@ -1,52 +1,60 @@
-"""Energy -> position curves for the 2-BM energy-driven optic axes.
+"""Energy -> position curves for the 2-BM energy-driven axes.
 
 cluster: Commissioning
 archetype: setup
 bc_primary: Equipment
 bc_touches: Equipment, Calibration
 
-Models HOW the 2-BM optics that move with beam energy depend on it. The
+Models HOW the 2-BM axes that move with beam energy depend on it. The
 staff-authored docs2bm "Energy-change IOC" page is the ground truth: a
 change of energy is a DISCRETE coordinated move (saved per-energy
-positions, store_0, driven together to a configured set of energies), and
-the per-energy DMM axes are the Bragg arms (dmm_us_arm/dmm_ds_arm) plus the
-M2 vertical offset compensator (dmm_m2_y), with the B-station sample-slit
-vertical pair (b_slit_top/b_slit_bot) tracking the resulting beam walk.
-crystal2_z (M2 Z, 2bma:m8) is a setup translation the IOC does NOT drive,
-and the mirror is held constant (deflection geometry) - so neither carries
-an energy curve.
+positions, store_0, driven together to a configured set of energies). The
+per-energy axes are the DMM Bragg arms (dmm_us_arm/dmm_ds_arm) plus the M2
+vertical offset compensator (dmm_m2_y), the B-station sample-slit vertical
+pair (b_slit_top/b_slit_bot) tracking the resulting beam walk, and the
+diagnostic flag (energy_move_flag) raised to an energy-dependent height in
+Mono. crystal2_z (M2 Z, 2bma:m8) is a setup translation the IOC does NOT
+drive, and the mirror is held constant in Mono - so neither carries a Mono
+curve.
 
-CORA models each per-axis relationship as a continuous curve (a
-LookupTable backed by an energy_position_curve Calibration) that
-interpolates the discrete saved points. The underlying physics is
-continuous (Bragg geometry), so this is a faithful generalization of the
-beamline's discrete store and can answer for an off-list energy too; the
-saved store_0 list is the calibration data the curve is anchored to.
+CORA models each per-axis relationship as a curve (a LookupTable backed by
+an energy_position_curve Calibration) interpolating the discrete saved
+points. The values are the real saved store_0 positions (ENERGY-1/2,
+FLAG-1); each axis carries a Mono curve (operating_point beam_mode=mono)
+and a separate Pink curve (beam_mode=pink), where in Pink the axes are
+parked at constants (the DMM is bypassed, so there is no beam-walk to
+track). The Pink curves are recorded here as calibration data; the
+mode-switch operation that selects between them is the Pink-mode work
+(MODE-2/3).
 
-The curve x-points are three of the six real configured Mono energies
-(13.374, 18.0, 25.0 keV; the full set is in beamline.yaml), a representative
-subset to keep the placeholder fixture small; the positions are PROVISIONAL
-placeholders pending the real saved store_0 values from 2-BM staff (open
-questions ENERGY-1/2).
+invertibility is per-axis and honest: the Bragg arms and M2Y are
+monotonic in energy (invertible=True); the slit blades are NOT (the
+aperture is held constant at 20 mm and the centre walks non-monotonically,
+a step pattern), and the flag Y is flat at the top of its range, so both
+are invertible=False; every parked Pink curve is constant, so it is data
+only and carries no rule.
+
+The constant slit aperture (20 mm) and the centre-tracks-the-beam-walk view
+are recorded in prose here. Exposing them as derived axes
+(SampleSlit_VerticalCenter = MidRange(top, bot), VerticalAperture =
+Difference(top, bot)) needs the constituent port wiring (the hexapod-pose
+pattern) and is a separate slice.
 
 ## What this proves (and what it does not)
 
-It proves the per-axis chain holds together across heterogeneous axes
-(arm angles in deg, slit / offset positions in mm): a PseudoAxis facet
-parented to the physical optic, backed by a real energy_position_curve
-revision, carrying a keV -> position LookupTable. invertible=True is honest
-(the underlying Bragg geometry is monotonic in energy); confirm against the
-real saved points.
+It proves the per-axis chain holds together across heterogeneous axes (arm
+angles in deg, slit / offset / flag positions in mm): a PseudoAxis facet
+parented to the physical device, backed by a real energy_position_curve
+revision, carrying a keV -> position LookupTable, with per-axis invertible
+honesty and a sibling Pink curve.
 
 It does NOT drive motion: it sets up the per-axis curves but does not conduct
-them. The interpolation kernel (eval_lookup_table) is now wired and proven in
-test_pseudoaxis_roundtrip.py, but a beamline move additionally needs the real
-saved positions (these curves are PROVISIONAL), the per-facet constituent
-wiring, and live EPICS dispatch. This scenario also does NOT model the
-coordinating energy-setting operation that drives all the axes together as one
-discrete move - that heterogeneous fan-out is the energy_setting Procedure
-(test_2bm_energy_setting.py). This is an intentional-completeness shape model of
-the per-device mapping.
+them. The interpolation kernel (eval_lookup_table) is wired and proven in
+test_pseudoaxis_roundtrip.py, but a beamline move additionally needs the
+per-facet constituent wiring and live EPICS dispatch. This scenario also does
+NOT model the coordinating energy-setting operation (test_2bm_energy_setting.py)
+or the Mono<->Pink mode switch (MODE-2/3). This is an intentional-completeness
+shape model of the per-device mapping.
 
 ## Asset stack
 
@@ -58,8 +66,10 @@ the per-device mapping.
     |   +-- Monochromator_BraggArmDownstream   PseudoAxis  (energy -> dmm_ds_arm deg)
     |   +-- Monochromator_M2Y                  PseudoAxis  (energy -> dmm_m2_y mm)
     +-- SampleSlit (Device)              Slit           (driven by FrontEndDrive)
-        +-- SampleSlit_VerticalTop             PseudoAxis  (energy -> b_slit_top mm)
-        +-- SampleSlit_VerticalBottom          PseudoAxis  (energy -> b_slit_bot mm)
+    |   +-- SampleSlit_VerticalTop             PseudoAxis  (energy -> b_slit_top mm)
+    |   +-- SampleSlit_VerticalBottom          PseudoAxis  (energy -> b_slit_bot mm)
+    +-- DiagnosticFlag (Device)          Screen         (driven by FrontEndDrive)
+        +-- DiagnosticFlag_Y                   PseudoAxis  (energy -> flag Y mm)
 ```
 """
 
@@ -83,6 +93,7 @@ from cora.equipment.aggregates._partition_rule import (
     ExtrapolationKind,
     InterpolationKind,
     LookupTable,
+    ReadbackAggregatorKind,
 )
 from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
@@ -114,17 +125,20 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000004b0cc1")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-0000004b0a01")
 
 # Family ids (deterministic uuid5 from the name). MotionController +
-# Monochromator + Slit are defined by the install; PseudoAxis by this scenario.
+# Monochromator + Slit + Screen are defined by the install; PseudoAxis by
+# this scenario.
 _CAP_MOTION_CONTROLLER_ID = family_stream_id(FamilyName("MotionController"))
 _CAP_MONOCHROMATOR_ID = family_stream_id(FamilyName("Monochromator"))
 _CAP_SLIT_ID = family_stream_id(FamilyName("Slit"))
+_CAP_SCREEN_ID = family_stream_id(FamilyName("Screen"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 
-# Controller registered first so each optic's controller_id back-reference
+# Controller registered first so each device's controller_id back-reference
 # targets an already-registered Asset stream.
 _FRONTENDDRIVE_ID = UUID("01900000-0000-7000-8000-0000004b0a31")
 _MONOCHROMATOR_ID = UUID("01900000-0000-7000-8000-0000004b0a12")
 _SAMPLE_SLIT_ID = UUID("01900000-0000-7000-8000-0000004b0a14")
+_DIAGNOSTIC_FLAG_ID = UUID("01900000-0000-7000-8000-0000004b0a16")
 
 _DEVICES = (
     DeviceSpec("FrontEndDrive", _FRONTENDDRIVE_ID, "MotionController", _CAP_MOTION_CONTROLLER_ID),
@@ -138,24 +152,44 @@ _DEVICES = (
     DeviceSpec(
         "SampleSlit", _SAMPLE_SLIT_ID, "Slit", _CAP_SLIT_ID, controller_id=_FRONTENDDRIVE_ID
     ),
+    DeviceSpec(
+        "DiagnosticFlag",
+        _DIAGNOSTIC_FLAG_ID,
+        "Screen",
+        _CAP_SCREEN_ID,
+        controller_id=_FRONTENDDRIVE_ID,
+    ),
 )
 
-# The five energy-driven optic axes. The x-points reuse the real configured
-# Mono energies (docs2bm); the positions are PROVISIONAL placeholders. The two
-# Bragg-arm curves are intentionally seeded identical (the arms move to near-
-# identical angles) pending the real per-arm saved points (ENERGY-1).
-# (facet_name, parent_id, axis_designation, unit_out, points)
-_AXES: tuple[tuple[str, UUID, str, str, list[dict[str, float]]], ...] = (
+
+# Real saved store_0 positions (energy2bm.json, ENERGY-1/2/FLAG-1). Each axis
+# carries a Mono curve (6 configured energies) and a Pink curve (4 configured
+# energies, parked constant). invertible is the Mono-curve property: monotonic
+# arms / M2Y are invertible; the non-monotonic slit blades and the flat-topped
+# flag are not. Pink curves are constant data and carry no rule.
+# (facet_name, parent_id, axis_designation, unit_out, mono_points, pink_points, invertible)
+_P = list[dict[str, float]]
+_AXES: tuple[tuple[str, UUID, str, str, _P, _P, bool], ...] = (
     (
         "Monochromator_BraggArmUpstream",
         _MONOCHROMATOR_ID,
         "dmm_us_arm",
         "deg",
         [
-            {"energy": 13.374, "position": 1.20},
-            {"energy": 18.0, "position": 0.90},
-            {"energy": 25.0, "position": 0.65},
+            {"energy": 13.374, "position": 1.131},
+            {"energy": 13.574, "position": 1.081},
+            {"energy": 18.0, "position": 0.822},
+            {"energy": 20.0, "position": 0.726},
+            {"energy": 25.0, "position": 0.57725},
+            {"energy": 25.584, "position": 0.561},
         ],
+        [
+            {"energy": 30.0, "position": 0.740},
+            {"energy": 40.0, "position": 0.740},
+            {"energy": 50.0, "position": 0.740},
+            {"energy": 60.0, "position": 0.740},
+        ],
+        True,
     ),
     (
         "Monochromator_BraggArmDownstream",
@@ -163,10 +197,20 @@ _AXES: tuple[tuple[str, UUID, str, str, list[dict[str, float]]], ...] = (
         "dmm_ds_arm",
         "deg",
         [
-            {"energy": 13.374, "position": 1.20},
-            {"energy": 18.0, "position": 0.90},
-            {"energy": 25.0, "position": 0.65},
+            {"energy": 13.374, "position": 1.133},
+            {"energy": 13.574, "position": 1.083},
+            {"energy": 18.0, "position": 0.824},
+            {"energy": 20.0, "position": 0.737},
+            {"energy": 25.0, "position": 0.58825},
+            {"energy": 25.584, "position": 0.572},
         ],
+        [
+            {"energy": 30.0, "position": 0.751},
+            {"energy": 40.0, "position": 0.751},
+            {"energy": 50.0, "position": 0.751},
+            {"energy": 60.0, "position": 0.751},
+        ],
+        True,
     ),
     (
         "Monochromator_M2Y",
@@ -174,10 +218,20 @@ _AXES: tuple[tuple[str, UUID, str, str, list[dict[str, float]]], ...] = (
         "dmm_m2_y",
         "mm",
         [
-            {"energy": 13.374, "position": 2.0},
-            {"energy": 18.0, "position": 1.5},
-            {"energy": 25.0, "position": 1.0},
+            {"energy": 13.374, "position": 25.1201075},
+            {"energy": 13.574, "position": 24.3201075},
+            {"energy": 18.0, "position": 18.820045},
+            {"energy": 20.0, "position": 17.020045},
+            {"energy": 25.0, "position": 14.220045},
+            {"energy": 25.584, "position": 13.920045},
         ],
+        [
+            {"energy": 30.0, "position": 17.020045},
+            {"energy": 40.0, "position": 17.020045},
+            {"energy": 50.0, "position": 17.020045},
+            {"energy": 60.0, "position": 17.020045},
+        ],
+        True,
     ),
     (
         "SampleSlit_VerticalTop",
@@ -185,10 +239,20 @@ _AXES: tuple[tuple[str, UUID, str, str, list[dict[str, float]]], ...] = (
         "b_slit_top",
         "mm",
         [
-            {"energy": 13.374, "position": 0.5},
-            {"energy": 18.0, "position": 0.3},
-            {"energy": 25.0, "position": 0.1},
+            {"energy": 13.374, "position": 28.804575},
+            {"energy": 13.574, "position": 28.804575},
+            {"energy": 18.0, "position": 28.804575},
+            {"energy": 20.0, "position": 31.144575},
+            {"energy": 25.0, "position": 26.23},
+            {"energy": 25.584, "position": 26.28},
         ],
+        [
+            {"energy": 30.0, "position": 10.0},
+            {"energy": 40.0, "position": 10.0},
+            {"energy": 50.0, "position": 10.0},
+            {"energy": 60.0, "position": 10.0},
+        ],
+        False,
     ),
     (
         "SampleSlit_VerticalBottom",
@@ -196,31 +260,63 @@ _AXES: tuple[tuple[str, UUID, str, str, list[dict[str, float]]], ...] = (
         "b_slit_bot",
         "mm",
         [
-            {"energy": 13.374, "position": -0.5},
-            {"energy": 18.0, "position": -0.3},
-            {"energy": 25.0, "position": -0.1},
+            {"energy": 13.374, "position": 8.804575},
+            {"energy": 13.574, "position": 8.804575},
+            {"energy": 18.0, "position": 8.804575},
+            {"energy": 20.0, "position": 11.144575},
+            {"energy": 25.0, "position": 6.23},
+            {"energy": 25.584, "position": 6.28},
         ],
+        [
+            {"energy": 30.0, "position": -10.0},
+            {"energy": 40.0, "position": -10.0},
+            {"energy": 50.0, "position": -10.0},
+            {"energy": 60.0, "position": -10.0},
+        ],
+        False,
+    ),
+    (
+        "DiagnosticFlag_Y",
+        _DIAGNOSTIC_FLAG_ID,
+        "energy_move_flag",
+        "mm",
+        [
+            {"energy": 13.374, "position": 23.0},
+            {"energy": 13.574, "position": 22.0},
+            {"energy": 18.0, "position": 17.0},
+            {"energy": 20.0, "position": 15.0},
+            {"energy": 25.0, "position": 12.0},
+            {"energy": 25.584, "position": 12.0},
+        ],
+        [
+            {"energy": 30.0, "position": 0.0},
+            {"energy": 40.0, "position": 0.0},
+            {"energy": 50.0, "position": 0.0},
+            {"energy": 60.0, "position": 0.0},
+        ],
+        False,
     ),
 )
 
 
 def _id_queue() -> list[UUID]:
-    """FixedIdGenerator queue: the facility prefix (Unit + FrontEndDrive +
-    Monochromator + SampleSlit + their Families) plus a generous anonymous
-    tail. Facet / calibration / revision ids are captured from handler
-    return values, so the tail just needs to be long enough."""
+    """FixedIdGenerator queue: the facility prefix (Unit + 4 devices + their
+    Families) plus a generous anonymous tail. Facet / calibration / revision
+    ids are captured from handler return values, so the tail just needs to be
+    long enough for the per-axis Mono + Pink calibration setup."""
     return [
         *facility_id_prefix(unit_id=_2BM_UNIT_ID, devices=_DEVICES),
-        *[uuid4() for _ in range(60)],
+        *[uuid4() for _ in range(100)],
     ]
 
 
 @pytest.mark.integration
 async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> None:
-    """Give each of the five energy-driven optic axes a PseudoAxis facet
-    backed by a provisional energy_position_curve Calibration and a keV ->
-    position LookupTable. Assert each facet stream, each calibration stream,
-    and each rule payload (real revision id, keV input, unit_out, invertible)."""
+    """Give each energy-driven axis a PseudoAxis facet backed by a real Mono
+    energy_position_curve (the active LookupTable, per-axis invertible) plus a
+    sibling Pink curve (parked-constant calibration data). Assert each facet
+    stream, the Mono rule payload, and that both Mono and Pink calibrations
+    exist keyed by beam_mode."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
     actor = ActorId(_PRINCIPAL_ID)
 
@@ -240,10 +336,39 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
     )
 
     facet_ids: dict[str, UUID] = {}
-    rev_ids: dict[str, UUID] = {}
-    cal_ids: dict[str, UUID] = {}
+    mono_cal_ids: dict[str, UUID] = {}
+    mono_rev_ids: dict[str, UUID] = {}
+    pink_cal_ids: dict[str, UUID] = {}
 
-    for facet_name, parent_id, axis_designation, unit_out, points in _AXES:
+    async def _curve(
+        facet_id: UUID, axis_designation: str, unit_out: str, beam_mode: str, points: _P
+    ) -> tuple[UUID, UUID]:
+        cal_id = await bind_define_calibration(deps)(
+            DefineCalibration(
+                target_id=facet_id,
+                quantity=CalibrationQuantity.ENERGY_POSITION_CURVE,
+                operating_point={"axis_designation": axis_designation, "beam_mode": beam_mode},
+                description=(
+                    f"Saved store_0 energy -> position curve for {axis_designation} "
+                    f"({beam_mode} mode), from energy2bm.json (ENERGY-1/2/FLAG-1)."
+                ),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+        rev_id = await bind_append_calibration_revision(deps)(
+            AppendCalibrationRevision(
+                calibration_id=cal_id,
+                value={"points": points, "position_unit": unit_out},
+                status=CalibrationStatus.VERIFIED,
+                source=AssertedSource(asserted_by=actor),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+        return cal_id, rev_id
+
+    for facet_name, parent_id, axis_designation, unit_out, mono, pink, invertible in _AXES:
         facet_id = await bind_register_asset(deps)(
             RegisterAsset(name=facet_name, tier=AssetTier.DEVICE, parent_id=parent_id),
             principal_id=_PRINCIPAL_ID,
@@ -255,37 +380,16 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
-        cal_id = await bind_define_calibration(deps)(
-            DefineCalibration(
-                target_id=facet_id,
-                quantity=CalibrationQuantity.ENERGY_POSITION_CURVE,
-                operating_point={"axis_designation": axis_designation, "beam_mode": "mono"},
-                description=(
-                    f"Provisional energy -> position curve for {axis_designation} (2-BM DMM "
-                    "energy-driven axis). Placeholder points pending the real saved store_0 table."
-                ),
-            ),
-            principal_id=_PRINCIPAL_ID,
-            correlation_id=_CORRELATION_ID,
-        )
-        cal_ids[facet_name] = cal_id
-        rev_id = await bind_append_calibration_revision(deps)(
-            AppendCalibrationRevision(
-                calibration_id=cal_id,
-                value={"points": points, "position_unit": unit_out, "provisional": True},
-                status=CalibrationStatus.PROVISIONAL,
-                source=AssertedSource(asserted_by=actor),
-            ),
-            principal_id=_PRINCIPAL_ID,
-            correlation_id=_CORRELATION_ID,
-        )
-        rev_ids[facet_name] = rev_id
+        # Mono curve: the active partition rule (per-axis invertible honesty).
+        mono_cal_id, mono_rev_id = await _curve(facet_id, axis_designation, unit_out, "mono", mono)
+        mono_cal_ids[facet_name] = mono_cal_id
+        mono_rev_ids[facet_name] = mono_rev_id
         await bind_update_asset_partition_rule(deps)(
             UpdateAssetPartitionRule(
                 asset_id=facet_id,
                 partition_rule=LookupTable(
-                    calibration_id=cal_id,
-                    calibration_revision_id=rev_id,
+                    calibration_id=mono_cal_id,
+                    calibration_revision_id=mono_rev_id,
                     interpolation_kind=InterpolationKind.LINEAR,
                     # ERROR, not CLAMP: an energy past the lowest / highest
                     # calibrated point is refused, not silently driven to the
@@ -294,7 +398,14 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
                     # and the inter-mode band (25.584, 30.0) keV is not
                     # bridgeable by interpolation.
                     extrapolation_kind=ExtrapolationKind.ERROR,
-                    invertible=True,
+                    # Per-axis honesty: the Bragg arms + M2Y are monotonic in
+                    # energy (invertible); the non-monotonic slit blades and the
+                    # flat-topped flag are not, so they reconstruct readback from
+                    # the single constituent motor (Identity).
+                    invertible=invertible,
+                    readback_aggregator_kind=(
+                        None if invertible else ReadbackAggregatorKind.IDENTITY
+                    ),
                     unit_in="keV",
                     unit_out=unit_out,
                 ),
@@ -302,10 +413,15 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
+        # Pink curve: parked-constant calibration data, keyed beam_mode=pink.
+        # Not wired as a rule (the facet's rule is the Mono curve); the Mono<->Pink
+        # mode switch that selects between them is the Pink-mode work (MODE-2/3).
+        pink_cal_id, _pink_rev_id = await _curve(facet_id, axis_designation, unit_out, "pink", pink)
+        pink_cal_ids[facet_name] = pink_cal_id
 
     # ===== Assertions =====
 
-    for facet_name, parent_id, _axis_designation, unit_out, _points in _AXES:
+    for facet_name, parent_id, axis_designation, unit_out, _mono, _pink, invertible in _AXES:
         facet_id = facet_ids[facet_name]
         facet_events, _ = await deps.event_store.load("Asset", facet_id)
         assert [e.event_type for e in facet_events] == [
@@ -318,18 +434,33 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
 
         rule = facet_events[2].payload["partition_rule"]
         assert rule["kind"] == "LookupTable", f"{facet_name}: wrong rule kind"
-        assert rule["calibration_id"] == str(cal_ids[facet_name])
-        assert rule["calibration_revision_id"] == str(rev_ids[facet_name])
+        assert rule["calibration_id"] == str(mono_cal_ids[facet_name])
+        assert rule["calibration_revision_id"] == str(mono_rev_ids[facet_name])
         assert rule["unit_in"] == "keV"
         assert rule["unit_out"] == unit_out
-        assert rule["invertible"] is True
+        assert rule["invertible"] is invertible, f"{facet_name}: wrong invertible"
         assert rule["extrapolation_kind"] == "Error"
 
-        cal_events, _ = await deps.event_store.load("Calibration", cal_ids[facet_name])
-        assert [e.event_type for e in cal_events] == [
+        # Mono calibration: the active curve, keyed beam_mode=mono.
+        mono_events, _ = await deps.event_store.load("Calibration", mono_cal_ids[facet_name])
+        assert [e.event_type for e in mono_events] == [
             "CalibrationDefined",
             "CalibrationRevisionAppended",
-        ], f"{facet_name}: unexpected calibration sequence"
-        assert cal_events[0].payload["quantity"] == CalibrationQuantity.ENERGY_POSITION_CURVE.value
-        assert cal_events[0].payload["target_id"] == str(facet_id)
-        assert cal_events[1].payload["status"] == CalibrationStatus.PROVISIONAL.value
+        ], f"{facet_name}: unexpected Mono calibration sequence"
+        assert mono_events[0].payload["quantity"] == CalibrationQuantity.ENERGY_POSITION_CURVE.value
+        assert mono_events[0].payload["target_id"] == str(facet_id)
+        assert mono_events[0].payload["operating_point"] == {
+            "axis_designation": axis_designation,
+            "beam_mode": "mono",
+        }
+
+        # Pink calibration: the parked-constant sibling, keyed beam_mode=pink.
+        pink_events, _ = await deps.event_store.load("Calibration", pink_cal_ids[facet_name])
+        assert [e.event_type for e in pink_events] == [
+            "CalibrationDefined",
+            "CalibrationRevisionAppended",
+        ], f"{facet_name}: unexpected Pink calibration sequence"
+        assert pink_events[0].payload["operating_point"] == {
+            "axis_designation": axis_designation,
+            "beam_mode": "pink",
+        }
