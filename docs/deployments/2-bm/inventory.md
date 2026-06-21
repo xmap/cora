@@ -30,6 +30,8 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `SampleSlit` | `Slit` | (none) | `2-BM` | B-station slits; driven by `FrontEndDrive` | live |
 | `SampleSlit_VerticalTop` | `PseudoAxis` | (none) | `SampleSlit` | energy->top blade beam position (mm) | live |
 | `SampleSlit_VerticalBottom` | `PseudoAxis` | (none) | `SampleSlit` | energy->bottom blade beam position (mm) | live |
+| `SampleSlit_VerticalCenter` | `PseudoAxis` | (none) | `SampleSlit` | derived `MidRange(top, bot)`; beam-walk centre | live |
+| `SampleSlit_VerticalAperture` | `PseudoAxis` | (none) | `SampleSlit` | derived `Difference(top, bot)`; constant 20 mm gap | live |
 | `SampleTop_X` | `LinearStage` | `kohzu_cyat070` | `Rotary` | -10..10 mm, `max_speed=1 mm/s`, `encoder_resolution=0.0005 mm` | live |
 | `SampleTop_Z` | `LinearStage` | `kohzu_cyat070` | `SampleTop_X` | same Model/controller as `SampleTop_X` | live |
 | `HexapodDrive` | `MotionController` | `aerotech_automation1_ixr3` | `2-BM` | serial `486125-01`, `axis_count=6`, `Aerotech_Native` | live |
@@ -215,7 +217,7 @@ Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0,
 | `SampleSlit_VerticalBottom` | `b_slit_bot` | energy -> bottom blade beam-walk | mm |
 | `DiagnosticFlag_Y` | `energy_move_flag` (`2bma:m44`) | energy -> flag height (Mono), parked out in Pink | mm |
 
-- Slit aperture is held constant at 20 mm; only the centre tracks the beam walk (non-monotonically). Exposing the centre / aperture as derived axes (`MidRange` / `Difference` of the two blades) needs constituent port wiring and is a deferred follow-up.
+- Slit aperture is held constant at 20 mm; only the centre tracks the beam walk (non-monotonically). The centre and aperture are modelled as derived axes: `SampleSlit_VerticalCenter` (`Aggregation` `MidRange`) and `SampleSlit_VerticalAperture` (`Aggregation` `Difference`) over the two blades. `Aggregation` is one-way (computed from constituents), so they are read-only views. The rules declare the relationship; binding the two specific blades via constituent port wiring (the hexapod-pose pattern) is deferred with the rest of the per-facet conduct wiring.
 - Not energy axes: `crystal2_z` (M2 Z, `2bma:m8`) is a setup translation the IOC does not drive; the mirror is held constant in Mono. Neither carries a Mono curve.
 - DMM lateral stripe not yet modelled: substrate has two multilayer periods (13.8 / 24 angstrom) on stripes 4 mm apart; upstream/downstream X motors (`2bma:m25` / `2bma:m28`) may select per energy band. Operator-facing selection vs fixed setup is open (`ENERGY-6`).
 - Curves carry the REAL saved `store_0` positions (ENERGY-1/2, FLAG-1): full 6-energy Mono curves plus parked Pink curves. Runtime `eval_lookup_table` is wired; out-of-range refuses (`extrapolation_kind=Error`, staff-confirmed ENERGY-4: the inter-mode band 25.584-30 keV is not bridgeable by interpolation).

@@ -35,10 +35,13 @@ are invertible=False; every parked Pink curve is constant, so it is data
 only and carries no rule.
 
 The constant slit aperture (20 mm) and the centre-tracks-the-beam-walk view
-are recorded in prose here. Exposing them as derived axes
-(SampleSlit_VerticalCenter = MidRange(top, bot), VerticalAperture =
-Difference(top, bot)) needs the constituent port wiring (the hexapod-pose
-pattern) and is a separate slice.
+are also modelled as derived axes: SampleSlit_VerticalCenter =
+MidRange(top, bot) and SampleSlit_VerticalAperture = Difference(top, bot),
+each an Aggregation rule over the two blades. Aggregation is one-way
+(computed from constituents), so these are read-only views, not drivers. The
+rules declare the relationship here; the constituent port wiring that binds
+the two specific blades (the hexapod-pose pattern) is deferred with the rest
+of the per-facet conduct wiring.
 
 ## What this proves (and what it does not)
 
@@ -68,6 +71,8 @@ shape model of the per-device mapping.
     +-- SampleSlit (Device)              Slit           (driven by FrontEndDrive)
     |   +-- SampleSlit_VerticalTop             PseudoAxis  (energy -> b_slit_top mm)
     |   +-- SampleSlit_VerticalBottom          PseudoAxis  (energy -> b_slit_bot mm)
+    |   +-- SampleSlit_VerticalCenter          PseudoAxis  (MidRange(top, bot), derived)
+    |   +-- SampleSlit_VerticalAperture        PseudoAxis  (Difference(top, bot), derived)
     +-- DiagnosticFlag (Device)          Screen         (driven by FrontEndDrive)
         +-- DiagnosticFlag_Y                   PseudoAxis  (energy -> flag Y mm)
 ```
@@ -90,6 +95,8 @@ from cora.calibration.features.define_calibration import DefineCalibration
 from cora.calibration.features.define_calibration import bind as bind_define_calibration
 from cora.calibration.quantities import CalibrationQuantity
 from cora.equipment.aggregates._partition_rule import (
+    Aggregation,
+    AggregatorKind,
     ExtrapolationKind,
     InterpolationKind,
     LookupTable,
@@ -419,6 +426,40 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
         pink_cal_id, _pink_rev_id = await _curve(facet_id, axis_designation, unit_out, "pink", pink)
         pink_cal_ids[facet_name] = pink_cal_id
 
+    # ----- Derived slit centre + aperture (Aggregation readback views) -----
+    #
+    # The two blade curves are the energy drivers; the slit's centre and
+    # aperture are derived from them: centre = MidRange(top, bot) is the
+    # beam-walk trajectory, aperture = Difference(top, bot) reads the constant
+    # 20 mm gap. Aggregation is one-way (computed from constituents), so these
+    # are read-only views, not drivers. The rule declares the relationship; the
+    # constituent port wiring binding the two specific blades (the hexapod-pose
+    # pattern) is deferred with the rest of the per-facet conduct wiring.
+    derived: dict[str, AggregatorKind] = {
+        "SampleSlit_VerticalCenter": AggregatorKind.MID_RANGE,
+        "SampleSlit_VerticalAperture": AggregatorKind.DIFFERENCE,
+    }
+    for facet_name, aggregator_kind in derived.items():
+        facet_id = await bind_register_asset(deps)(
+            RegisterAsset(name=facet_name, tier=AssetTier.DEVICE, parent_id=_SAMPLE_SLIT_ID),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+        facet_ids[facet_name] = facet_id
+        await bind_add_asset_family(deps)(
+            AddAssetFamily(asset_id=facet_id, family_id=_CAP_PSEUDO_AXIS_ID),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+        await bind_update_asset_partition_rule(deps)(
+            UpdateAssetPartitionRule(
+                asset_id=facet_id,
+                partition_rule=Aggregation(aggregator_kind=aggregator_kind, constituent_count=2),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
     # ===== Assertions =====
 
     for facet_name, parent_id, axis_designation, unit_out, _mono, _pink, invertible in _AXES:
@@ -464,3 +505,18 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
             "axis_designation": axis_designation,
             "beam_mode": "pink",
         }
+
+    # Derived slit centre + aperture: Aggregation readback views over the blades.
+    for facet_name, aggregator_kind in derived.items():
+        facet_id = facet_ids[facet_name]
+        facet_events, _ = await deps.event_store.load("Asset", facet_id)
+        assert [e.event_type for e in facet_events] == [
+            "AssetRegistered",
+            "AssetFamilyAdded",
+            "AssetPartitionRuleUpdated",
+        ], f"{facet_name}: unexpected event sequence"
+        assert facet_events[0].payload["parent_id"] == str(_SAMPLE_SLIT_ID)
+        rule = facet_events[2].payload["partition_rule"]
+        assert rule["kind"] == "Aggregation", f"{facet_name}: wrong rule kind"
+        assert rule["aggregator_kind"] == aggregator_kind.value
+        assert rule["constituent_count"] == 2
