@@ -129,6 +129,7 @@ One canonical `(system, number, revision)` triple per Asset, except `Rotary`, wh
 | `Objective_1.1x` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
 | `Scintillator` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
 | `StationShutter` | `41050401-410003` rev `(-)` (P6-50 shutter element; assembly `41050401-500000`) | `ICMS` |
+| `Mask` | `4102020101-240000` (M3-24 front-end exit mask; RSS `02-BM-A-F-01`) | `ICMS` |
 
 Not yet cited: Kohzu `CYAT-070` datasheet (`SampleTop_*`), a FLIR Oryx datasheet (`Camera`).
 

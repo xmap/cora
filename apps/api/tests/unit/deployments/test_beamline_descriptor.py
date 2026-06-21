@@ -191,7 +191,11 @@ def test_markers_promoted_from_comments_to_fields() -> None:
     descriptor = bd.load(_DESCRIPTOR)
     devices = {d.name: d for _name, group in descriptor.groups for d in group.devices}
     assert devices["source"].new is True
-    assert bool(devices["Mask"].confirm) is True
+    assert bool(devices["BeamPositionMonitor"].confirm) is True
+    # Mask carries new (not yet a registered Asset) but no confirm marker: its
+    # values are staff-verified (ALIGN-2).
+    assert devices["Mask"].new is True
+    assert devices["Mask"].confirm is False
     # a solid CORA-modeled device carries neither marker
     assert devices["SampleTop_X"].new is False
     assert devices["SampleTop_X"].confirm is False

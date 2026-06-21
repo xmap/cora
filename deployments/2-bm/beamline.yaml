@@ -77,7 +77,17 @@ front-end:
       water_cooled: true
       z_mm: 24020
       new: true
-      confirm: true
+      vendor_designation: M3-24
+      rss_tag: 02-BM-A-F-01
+      aperture_mm: [44.4, 4.5]   # H x V; staff-corrected from the pre-APS-U 50 x 3 (ALIGN-2, #264)
+      material: OFHC copper
+      drawing: { system: ICMS, number: 4102020101-240000, revision: "(-)" }   # APS_2191941 row 1
+      note: >
+        Fixed front-end exit mask (M3-24), the permanent beam-defining aperture
+        ~24 m from the source that the white-beam alignment routine centres on
+        (item_012). Aperture 44.4 x 4.5 mm H x V, OFHC copper, water-cooled
+        (ALIGN-2). Registering it as a child Asset rides with the
+        passive-beam-path Window slice.
     - name: FrontEndWindow
       family: Window
       passive: true
@@ -279,6 +289,21 @@ beam-defining-and-safety:
         transmission) are deferred with the path reserved, per the passive-beam-path tier
         discipline. Distinct from Slit (a variable four-blade opening) and Mask (a fixed
         passive aperture): this is a fixed-pattern mask actively positioned.
+    - name: AlignmentCamera
+      family: Camera
+      pv: "2bma:m21"
+      controller: FrontEndDrive
+      new: true
+      confirm: true
+      note: >
+        Semi-permanent A-station beam-view camera (FLIR Oryx 5MP, IOC
+        2bmbOryx5MP on host lyra) on a vertical stage 2bma:m21. Permanently
+        installed but rarely engaged (annual / multi-year, for major
+        realignment): the beam reaches it only when an operator manually breaks
+        vacuum and removes an upstream pipe section. A distinct unit from the
+        B-station microscope Camera; exact part likely ORX-10G-51S5M, pending
+        operator confirmation (ALIGN-1). The rare-engagement is a note, not a
+        new lifecycle state.
 
 sample-environment:
   stage: sample
