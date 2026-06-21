@@ -218,7 +218,7 @@ Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0,
 - Not energy axes: `crystal2_z` (M2 Z, `2bma:m8`) is a setup translation the IOC does not drive; the mirror is held constant. Neither carries an energy curve.
 - DMM lateral stripe not yet modelled: substrate has two multilayer periods (13.8 / 24 angstrom) on stripes 4 mm apart; upstream/downstream X motors (`2bma:m25` / `2bma:m28`) may select per energy band. Operator-facing selection vs fixed setup is open (`ENERGY-6`).
 - Seeded curves are PROVISIONAL: x-points are real configured energies, positions are placeholders pending the real `store_0` table (see [Open questions](questions.md#energy-and-the-optics)). Runtime `eval_lookup_table` is wired; out-of-range refuses (`extrapolation_kind=Error`); refuse vs clamp vs menu-only is open (`ENERGY-4`).
-- The `energy_offset` Calibration on `Monochromator` (from the `energy_characterization` Procedure, channel-cut rocking curve, item_022) is kept independent of these curves. Whether the IOC folds the measured offset into `store_0` or applies it separately is open (`ENERGY-8`).
+- Recalibration updates these curves in place: the `energy_characterization` Procedure (channel-cut rocking curve, item_022) re-saves the corrected positions as a new revision of the affected `energy_position_curve`, `MeasuredSource`-cited, preserving the prior revision as history. There is no separate energy offset (`ENERGY-8`).
 
 ### Filter foil selection
 

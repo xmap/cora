@@ -20,7 +20,7 @@ constant, so it is stored in the Calibration module as a
 `blade_throw_scale` quantity, appended with a `MeasuredSource` citing
 this Procedure. This is the same act/value split as
 `center_alignment` -> `rotation_center` and `energy_characterization` ->
-`energy_offset`. See `docs/deployments/2-bm/procedures.md`.
+a new `energy_position_curve` revision. See `docs/deployments/2-bm/procedures.md`.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
