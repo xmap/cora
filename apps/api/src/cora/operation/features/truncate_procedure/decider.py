@@ -1,9 +1,10 @@
 """Pure decider for the `TruncateProcedure` command.
 
-Single-source partial-data terminal: `Running -> Truncated`. Source
-set is just `Running` today (Held / Resumed deferred per pilot need;
-if Held lands, this source set widens to `Running | Held` to mirror
-Run BC's `truncate_run` precedent).
+Multi-source partial-data terminal: `Running | Held -> Truncated`.
+`Held` was added when resumable conduct landed
+([[project_resumable_conduct_design]] Tier 1); truncate widened to
+accept it so a paused-then-de-facto-dead Procedure can be closed
+retroactively. Mirrors Run BC's `truncate_run` (`Running | Held`).
 
 Truncating any terminal (Completed | Aborted | Truncated) raises;
 re-truncating a `Truncated` Procedure raises (strict-not-idempotent).
@@ -29,7 +30,7 @@ Invariants:
     -> InvalidProcedureTruncateReasonError
   - command.interrupted_at, when set, must not be in the future
     -> InvalidProcedureInterruptedAtError
-  - State.status must be in {Running}
+  - State.status must be in {Running, Held}
     -> ProcedureCannotTruncateError(current_status=...)
 """
 
@@ -46,7 +47,10 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.features.truncate_procedure.command import TruncateProcedure
 
-_TRUNCATABLE_STATUSES: tuple[ProcedureStatus, ...] = (ProcedureStatus.RUNNING,)
+_TRUNCATABLE_STATUSES: tuple[ProcedureStatus, ...] = (
+    ProcedureStatus.RUNNING,
+    ProcedureStatus.HELD,
+)
 
 
 def decide(

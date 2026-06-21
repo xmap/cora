@@ -58,6 +58,21 @@ def test_decide_emits_procedure_aborted_when_running() -> None:
 
 
 @pytest.mark.unit
+def test_decide_emits_procedure_aborted_when_held() -> None:
+    """Resumable conduct: a paused (Held) Procedure stays abortable."""
+    proc = _procedure(status=ProcedureStatus.HELD)
+    events = abort_procedure.decide(
+        state=proc,
+        command=AbortProcedure(procedure_id=proc.id, reason="paused then abandoned"),
+        now=_NOW,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], ProcedureAborted)
+    assert events[0].procedure_id == proc.id
+    assert events[0].reason == "paused then abandoned"
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize("kind", ["Physical", "Simulated", "Hybrid"])
 def test_decide_snapshots_actuation_kind_onto_aborted_event(kind: str) -> None:
     """A Dataset off an aborted conduct still carries honest provenance: the

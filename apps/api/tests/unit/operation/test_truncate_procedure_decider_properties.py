@@ -10,8 +10,8 @@ Load-bearing properties:
 
   - state=None always raises `ProcedureNotFoundError` carrying
     command.procedure_id.
-  - The source-state partition is total over `ProcedureStatus`: the
-    sole source `{Running}` emits exactly one `ProcedureTruncated`
+  - The source-state partition is total over `ProcedureStatus`: each
+    source in `{Running, Held}` emits exactly one `ProcedureTruncated`
     (procedure_id=state.id, reason threaded, occurred_at=now); every
     other status raises `ProcedureCannotTruncateError` carrying the
     current status.
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
 
 _REASON = printable_ascii_text(min_size=1, max_size=500)
 
-_TRUNCATABLE_SOURCES = (ProcedureStatus.RUNNING,)
+_TRUNCATABLE_SOURCES = (ProcedureStatus.RUNNING, ProcedureStatus.HELD)
 _DISALLOWED_SOURCES = tuple(s for s in ProcedureStatus if s not in frozenset(_TRUNCATABLE_SOURCES))
 
 
@@ -97,7 +97,7 @@ def test_truncate_from_permitted_source_emits_single_event(
     reason: str,
     now: _datetime,
 ) -> None:
-    """Running emits one ProcedureTruncated with the threaded reason."""
+    """Running or Held emits one ProcedureTruncated with the threaded reason."""
     events = truncate_procedure.decide(
         state=_procedure(procedure_id=procedure_id, status=source),
         command=TruncateProcedure(procedure_id=procedure_id, reason=reason, interrupted_at=None),

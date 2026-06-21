@@ -64,6 +64,25 @@ def test_decide_emits_procedure_truncated_when_running() -> None:
 
 
 @pytest.mark.unit
+def test_decide_emits_procedure_truncated_when_held() -> None:
+    """Resumable conduct: a paused (Held) Procedure that became de-facto
+    dead can be truncated retroactively."""
+    proc = _procedure(status=ProcedureStatus.HELD)
+    events = truncate_procedure.decide(
+        state=proc,
+        command=TruncateProcedure(
+            procedure_id=proc.id,
+            reason="paused over the weekend, hardware died",
+            interrupted_at=None,
+        ),
+        now=_NOW,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], ProcedureTruncated)
+    assert events[0].procedure_id == proc.id
+
+
+@pytest.mark.unit
 def test_decide_accepts_none_interrupted_at() -> None:
     """interrupted_at is optional; None is valid (operator doesn't know when)."""
     proc = _procedure()

@@ -761,33 +761,32 @@ class ProcedureCannotCompleteError(Exception):
 
 
 class ProcedureCannotAbortError(Exception):
-    """Attempted to abort a Procedure not in `Running`.
+    """Attempted to abort a Procedure not in `Running` or `Held`.
 
-    Single-source guard: `abort_procedure` accepts only `Running` today.
-    The `Held` pause-state now exists (resumable conduct); widening the
-    abort source set to `Running | Held` so a paused Procedure stays
-    abortable is a follow-up slice (the abort PBT auto-includes `Held` as
-    a disallowed source until then). Aborting a `Defined` Procedure raises
-    (use a different workflow, for example: never start it, then leave it
-    Defined or extend the FSM with a cancel-defined slice if real);
-    aborting any terminal raises (strict-not-idempotent). Mapped to HTTP 409.
+    Source guard: `abort_procedure` accepts `Running | Held` (a paused
+    conduct stays abortable; resumable conduct widened the set, mirroring
+    Run BC's `abort_run`). Aborting a `Defined` Procedure raises (use a
+    different workflow, for example: never start it, then leave it Defined
+    or extend the FSM with a cancel-defined slice if real); aborting any
+    terminal raises (strict-not-idempotent). Mapped to HTTP 409.
     """
 
     def __init__(self, procedure_id: UUID, current_status: "ProcedureStatus") -> None:
         super().__init__(
             f"Procedure {procedure_id} cannot be aborted: currently in status "
-            f"{current_status.value}, abort requires {ProcedureStatus.RUNNING.value}"
+            f"{current_status.value}, abort requires "
+            f"{ProcedureStatus.RUNNING.value} or {ProcedureStatus.HELD.value}"
         )
         self.procedure_id = procedure_id
         self.current_status = current_status
 
 
 class ProcedureCannotTruncateError(Exception):
-    """Attempted to truncate a Procedure not in `Running`.
+    """Attempted to truncate a Procedure not in `Running` or `Held`.
 
-    Single-source guard: `truncate_procedure` accepts only `Running`
-    today; widening to `Running | Held` (so a paused Procedure can be
-    closed retroactively) is a follow-up slice alongside abort. Mirrors
+    Source guard: `truncate_procedure` accepts `Running | Held` (a paused
+    Procedure that became de-facto dead can be closed retroactively;
+    resumable conduct widened the set alongside abort). Mirrors
     `ProcedureCannotAbortError`'s source set: a Defined Procedure
     hasn't started so there's no execution to truncate; terminal
     Procedures are already closed (re-truncating a `Truncated`
@@ -803,7 +802,8 @@ class ProcedureCannotTruncateError(Exception):
     def __init__(self, procedure_id: UUID, current_status: "ProcedureStatus") -> None:
         super().__init__(
             f"Procedure {procedure_id} cannot be truncated: currently in status "
-            f"{current_status.value}, truncate requires {ProcedureStatus.RUNNING.value}"
+            f"{current_status.value}, truncate requires "
+            f"{ProcedureStatus.RUNNING.value} or {ProcedureStatus.HELD.value}"
         )
         self.procedure_id = procedure_id
         self.current_status = current_status
@@ -902,7 +902,9 @@ class ProcedureCannotEndIterationError(Exception):
     """Attempted to end an iteration that fails an end-gate.
 
     Raised by the `end_iteration` decider when:
-      - The Procedure is not in `Running`.
+      - The Procedure is not in `Running` or `Held` (an open iteration can
+        be closed even while the conduct is paused; resumable conduct
+        widened the source set, but `start_iteration` stays Running-only).
       - No iteration is currently open (`current_iteration_index` is
         None); there is nothing to end.
       - The supplied `iteration_index` does not match the open

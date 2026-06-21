@@ -179,7 +179,7 @@ class RecipeExpansionRecorded:
 
 @dataclass(frozen=True)
 class ProcedureStarted:
-    """A Procedure transitioned out of Defined into Running (10c-b).
+    """A Procedure transitioned out of Defined into Running.
 
     Slim payload by design: the start fact is what the event encodes.
     Status is implicit (`Running`); the evolver sets it. No reason
@@ -266,7 +266,7 @@ class ProcedureActivitiesLogbookOpened:
 
 @dataclass(frozen=True)
 class ProcedureTruncated:
-    """A Procedure reached its partial-data terminal (Running -> Truncated, 10c-c).
+    """A Procedure reached its partial-data terminal (Running | Held -> Truncated).
 
     Cleanup terminal for a Procedure that became de-facto dead through
     interruption (power loss, process crash, hardware fault, weekend
@@ -289,7 +289,7 @@ class ProcedureTruncated:
     emergency exit while the system is still responsive; Truncated is
     a cleanup mechanism for known-dead Procedures. The system itself
     does not detect de-facto-dead Procedures (separate liveness
-    concern, out of scope for 10c-c); operators must invoke truncate
+    concern, out of scope here); operators must invoke truncate
     explicitly. Mirrors `RunTruncated` from Run BC's 6f-4.
     """
 
@@ -301,7 +301,7 @@ class ProcedureTruncated:
 
 @dataclass(frozen=True)
 class ProcedureAborted:
-    """A Procedure reached its emergency-exit terminal (Running -> Aborted).
+    """A Procedure reached its emergency-exit terminal (Running | Held -> Aborted).
 
     `reason` is a free-form string (1-500 chars after trimming),
     captured verbatim from the operator. Mirror of RunAborted.reason
@@ -314,9 +314,9 @@ class ProcedureAborted:
     fold via `payload.get("actuation_kind")` -> None. Carries honest
     provenance for a Dataset produced by an aborted conduct.
 
-    Single-source guard at the decider (Running only). Held/Resumed
-    deferred to 10c-c per pilot need; if Held lands, the abort source
-    set widens to `Running | Held` to match Run BC's precedent.
+    Multi-source guard at the decider: `Running | Held` (a paused
+    conduct stays abortable; resumable conduct widened the source set,
+    matching Run BC's `abort_run`).
     """
 
     procedure_id: UUID

@@ -1,9 +1,13 @@
 """Pure decider for the `EndProcedureIteration` command.
 
-Closes the currently-open convergence-loop iteration on a Running
-Procedure. Iteration is orthogonal to the lifecycle FSM (the Procedure
-stays Running); this folds onto the iteration denorm by clearing the
-open-index marker.
+Closes the currently-open convergence-loop iteration on a Running or
+Held Procedure. Iteration is orthogonal to the lifecycle FSM; this
+folds onto the iteration denorm by clearing the open-index marker.
+
+`Held` is accepted (alongside `Running`) so an iteration left open when
+an operator paused the conduct can still be closed while paused
+([[project_resumable_conduct_design]] Tier 1). `start_iteration` is NOT
+widened: a new iteration cannot be opened while paused (resume first).
 
 `reason` is optional; when present it is trimmed and bounded 1-500
 chars via the shared `validate_bounded_text` helper (matching the
@@ -15,7 +19,7 @@ Invariants:
   - state is None -> ProcedureNotFoundError
   - command.reason, when present, must be 1-500 chars after trimming
     -> InvalidProcedureIterationEndReasonError
-  - status is not Running, OR no iteration is open
+  - status is not in {Running, Held}, OR no iteration is open
     (current_iteration_index is None), OR iteration_index does not equal
     the open current_iteration_index -> ProcedureCannotEndIterationError
 """
@@ -33,6 +37,11 @@ from cora.operation.aggregates.procedure import (
 from cora.operation.features.end_iteration.command import EndProcedureIteration
 from cora.shared.bounded_text import validate_bounded_text
 from cora.shared.text_bounds import REASON_MAX_LENGTH
+
+_ITERATION_ENDABLE_STATUSES: tuple[ProcedureStatus, ...] = (
+    ProcedureStatus.RUNNING,
+    ProcedureStatus.HELD,
+)
 
 
 def decide(
@@ -54,7 +63,7 @@ def decide(
         else None
     )
     if (
-        state.status is not ProcedureStatus.RUNNING
+        state.status not in _ITERATION_ENDABLE_STATUSES
         or state.current_iteration_index is None
         or command.iteration_index != state.current_iteration_index
     ):

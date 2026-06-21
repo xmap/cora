@@ -10,8 +10,8 @@ Load-bearing properties:
 
   - state=None always raises `ProcedureNotFoundError` carrying
     command.procedure_id.
-  - The source-state partition is total over `ProcedureStatus`: the
-    sole source `{Running}` emits exactly one `ProcedureAborted`
+  - The source-state partition is total over `ProcedureStatus`: each
+    source in `{Running, Held}` emits exactly one `ProcedureAborted`
     (procedure_id=state.id, reason threaded, occurred_at=now); every
     other status raises `ProcedureCannotAbortError` carrying the
     current status.
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 
 _REASON = printable_ascii_text(min_size=1, max_size=500)
 
-_ABORTABLE_SOURCES = (ProcedureStatus.RUNNING,)
+_ABORTABLE_SOURCES = (ProcedureStatus.RUNNING, ProcedureStatus.HELD)
 _DISALLOWED_SOURCES = tuple(s for s in ProcedureStatus if s not in frozenset(_ABORTABLE_SOURCES))
 
 
@@ -91,7 +91,7 @@ def test_abort_from_permitted_source_emits_single_event(
     reason: str,
     now: datetime,
 ) -> None:
-    """Running emits one ProcedureAborted with the threaded reason."""
+    """Running or Held emits one ProcedureAborted with the threaded reason."""
     events = abort_procedure.decide(
         state=_procedure(procedure_id=procedure_id, status=source),
         command=AbortProcedure(procedure_id=procedure_id, reason=reason),
@@ -113,7 +113,7 @@ def test_abort_from_disallowed_source_always_raises_cannot_abort(
     reason: str,
     now: datetime,
 ) -> None:
-    """Any non-Running source raises ProcedureCannotAbortError carrying the status.
+    """Any source outside {Running, Held} raises ProcedureCannotAbortError.
 
     A valid reason is supplied so the source-state guard is what fires
     (reason validation runs first in the decider).

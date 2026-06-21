@@ -2,10 +2,10 @@
 
 Universal claims across generated inputs:
 
-  - Running + open iteration + matching index emits exactly one
+  - Running or Held + open iteration + matching index emits exactly one
     ProcedureIterationEnded carrying the verdict/reason verbatim and now.
   - state=None always raises ProcedureNotFoundError.
-  - A non-Running status always raises ProcedureCannotEndIterationError.
+  - A disallowed status (not Running/Held) always raises ProcedureCannotEndIterationError.
   - No open iteration always raises ProcedureCannotEndIterationError.
   - A mismatched index always raises ProcedureCannotEndIterationError.
   - Pure: same (state, command, now) returns the same events.
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
-_NON_RUNNING = st.sampled_from(
+_DISALLOWED_STATUSES = st.sampled_from(
     [
         ProcedureStatus.DEFINED,
         ProcedureStatus.COMPLETED,
@@ -74,6 +74,7 @@ def _procedure(
 @pytest.mark.unit
 @given(
     procedure_id=st.uuids(),
+    status=st.sampled_from([ProcedureStatus.RUNNING, ProcedureStatus.HELD]),
     open_index=st.integers(min_value=1, max_value=500),
     converged=_CONVERGED,
     reason=_REASON,
@@ -81,12 +82,18 @@ def _procedure(
 )
 def test_end_iteration_emits_single_event_carrying_verdict(
     procedure_id: UUID,
+    status: ProcedureStatus,
     open_index: int,
     converged: bool | None,
     reason: str | None,
     now: datetime,
 ) -> None:
-    state = _procedure(procedure_id, iteration_count=open_index, current_iteration_index=open_index)
+    state = _procedure(
+        procedure_id,
+        status=status,
+        iteration_count=open_index,
+        current_iteration_index=open_index,
+    )
     events = end_iteration.decide(
         state=state,
         command=EndProcedureIteration(
@@ -127,11 +134,11 @@ def test_end_iteration_on_none_state_always_raises_not_found(
 @pytest.mark.unit
 @given(
     procedure_id=st.uuids(),
-    status=_NON_RUNNING,
+    status=_DISALLOWED_STATUSES,
     open_index=st.integers(min_value=1, max_value=100),
     now=aware_datetimes(),
 )
-def test_end_iteration_on_non_running_always_raises(
+def test_end_iteration_on_disallowed_status_always_raises(
     procedure_id: UUID, status: ProcedureStatus, open_index: int, now: datetime
 ) -> None:
     state = _procedure(

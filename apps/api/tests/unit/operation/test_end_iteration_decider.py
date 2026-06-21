@@ -66,6 +66,23 @@ def test_decide_emits_iteration_ended_with_verdict() -> None:
 
 
 @pytest.mark.unit
+def test_decide_emits_iteration_ended_when_held() -> None:
+    """Resumable conduct: an iteration left open when the conduct was paused
+    can still be closed while Held (start_iteration stays Running-only)."""
+    proc = _procedure(status=ProcedureStatus.HELD)  # iteration 1 open, paused
+    events = end_iteration.decide(
+        state=proc,
+        command=EndProcedureIteration(
+            procedure_id=proc.id, iteration_index=1, converged=False, reason=None
+        ),
+        now=_NOW,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], ProcedureIterationEnded)
+    assert events[0].iteration_index == 1
+
+
+@pytest.mark.unit
 def test_decide_passes_none_verdict_and_none_reason() -> None:
     proc = _procedure()
     events = end_iteration.decide(

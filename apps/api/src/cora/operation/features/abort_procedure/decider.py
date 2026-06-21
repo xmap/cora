@@ -1,9 +1,10 @@
 """Pure decider for the `AbortProcedure` command.
 
-Single-source emergency-exit terminal: `Running -> Aborted`. Source
-set is just `Running` today (Held / Resumed deferred to 10c-c per
-pilot need; if Held lands, this source set widens to `Running | Held`
-to mirror Run BC's `abort_run` precedent).
+Multi-source emergency-exit terminal: `Running | Held -> Aborted`.
+`Held` was added when resumable conduct landed
+([[project_resumable_conduct_design]] Tier 1); abort widened to accept
+it so a paused Procedure stays abortable rather than stranded. Mirrors
+Run BC's `abort_run` (`Running | Held` source set).
 
 `reason` validation goes through the `ProcedureAbortReason` VO (which
 calls the shared `validate_bounded_text` helper). The on-the-wire
@@ -13,7 +14,7 @@ Invariants:
   - State must not be None  -> ProcedureNotFoundError
   - command.reason must be 1-500 chars after trimming
     -> InvalidProcedureAbortReasonError
-  - State.status must be in {Running}
+  - State.status must be in {Running, Held}
     -> ProcedureCannotAbortError(current_status=...)
 """
 
@@ -29,7 +30,10 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.features.abort_procedure.command import AbortProcedure
 
-_ABORTABLE_STATUSES: tuple[ProcedureStatus, ...] = (ProcedureStatus.RUNNING,)
+_ABORTABLE_STATUSES: tuple[ProcedureStatus, ...] = (
+    ProcedureStatus.RUNNING,
+    ProcedureStatus.HELD,
+)
 
 
 def decide(
