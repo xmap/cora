@@ -10,6 +10,7 @@ from cora.run.ports.run_channel_lookup import (
     RunChannelLatest,
     RunChannelLookup,
     RunChannelSignal,
+    RunFeedHealth,
 )
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "RunChannelLatest",
     "RunChannelLookup",
     "RunChannelSignal",
+    "RunFeedHealth",
 ]

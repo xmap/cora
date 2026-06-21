@@ -22,7 +22,11 @@ from uuid import UUID
 
 import asyncpg
 
-from cora.run.ports.run_channel_lookup import RunChannelLatest, RunChannelSignal
+from cora.run.ports.run_channel_lookup import (
+    RunChannelLatest,
+    RunChannelSignal,
+    RunFeedHealth,
+)
 
 _LATEST_SQL = """
 SELECT channel_name, value, units, sampled_at, recorded_at, is_simulated
@@ -40,6 +44,12 @@ SELECT
     coalesce(bool_or(is_simulated), false) AS is_simulated_window
 FROM entries_run_observations
 WHERE run_id = $1 AND channel_name = $2 AND recorded_at > $3
+"""
+
+_FEED_HEALTH_SQL = """
+SELECT max(recorded_at) AS latest_heartbeat_recorded_at
+FROM entries_run_feed_heartbeats
+WHERE run_id = $1
 """
 
 
@@ -79,3 +89,10 @@ class PostgresRunChannelLookup:
             latest_recorded_at=row["latest_recorded_at"],
             is_simulated_window=row["is_simulated_window"],
         )
+
+    async def read_feed_health(self, *, run_id: UUID) -> RunFeedHealth:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(_FEED_HEALTH_SQL, run_id)
+        # max() over an empty set returns one row with a NULL aggregate.
+        latest = row["latest_heartbeat_recorded_at"] if row is not None else None
+        return RunFeedHealth(latest_heartbeat_recorded_at=latest)

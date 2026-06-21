@@ -82,6 +82,20 @@ class RunChannelSignal:
     True). False when the window is empty."""
 
 
+@dataclass(frozen=True)
+class RunFeedHealth:
+    """Newest feeder heartbeat for a Run (the dead-feeder seam).
+
+    Carries only the raw recorded_at of the most recent heartbeat across
+    all feeder sources (None when no feeder has ever pinged this Run). The
+    decider derives liveness: alive iff this is not None AND
+    now - latest_heartbeat_recorded_at <= the operator-config ceiling. The
+    adapter stays free of the clock and the ceiling.
+    """
+
+    latest_heartbeat_recorded_at: datetime | None
+
+
 class RunChannelLookup(Protocol):
     """Read a live Run's observation channels for the closed-loop rules.
 
@@ -103,6 +117,12 @@ class RunChannelLookup(Protocol):
     ) -> RunChannelSignal:
         """Arrival summary for `channel_name` since the `recorded_at`
         floor `since`. Always returns a signal; `count_since` may be 0."""
+        ...
+
+    async def read_feed_health(self, *, run_id: UUID) -> RunFeedHealth:
+        """Newest feeder heartbeat for `run_id` (across sources). The
+        decider derives liveness from it + the operator-config ceiling so
+        a dead feeder defers the stall rule instead of reading as calm."""
         ...
 
 
@@ -130,6 +150,10 @@ class InMemoryRunChannelLookup:
 
     def __init__(self) -> None:
         self._rows: dict[tuple[UUID, str], list[_SeededRow]] = {}
+        self._heartbeats: dict[UUID, list[datetime]] = {}
+
+    def register_heartbeat(self, *, run_id: UUID, recorded_at: datetime) -> None:
+        self._heartbeats.setdefault(run_id, []).append(recorded_at)
 
     def register(
         self,
@@ -189,10 +213,15 @@ class InMemoryRunChannelLookup:
             is_simulated_window=any(r.is_simulated for r in in_window),
         )
 
+    async def read_feed_health(self, *, run_id: UUID) -> RunFeedHealth:
+        beats = self._heartbeats.get(run_id)
+        return RunFeedHealth(latest_heartbeat_recorded_at=max(beats) if beats else None)
+
 
 __all__ = [
     "InMemoryRunChannelLookup",
     "RunChannelLatest",
     "RunChannelLookup",
     "RunChannelSignal",
+    "RunFeedHealth",
 ]
