@@ -57,6 +57,10 @@ class SiteFacility(BaseModel):
     code: str
     display_name: str
     kind: str
+    # Human title for the rendered page (e.g. "MAX IV"). When unset, the page
+    # falls back to the upper-cased display_name (which equals code), so a
+    # single-word lowercase code like "aps" still renders as "APS".
+    heading: str | None = None
     institution: str | None = None
     sectors: list[str] = []
     beamlines: list[str] = []

@@ -1,11 +1,16 @@
-"""Render the site descriptor into ONE reader-first APS page.
+"""Render a site descriptor into ONE reader-first facility page.
 
-`render_all(site, catalog_methods=...)` returns a {src_uri: markdown} dict with a
-single page, deployments/aps/index.md: a walk through what the facility gives an
-experiment, organized by the reader's journey (techniques -> resources -> safety
-envelope -> who acts), not one page per bounded context. Tables appear inside
-reader-shaped sections with framing prose, mirroring the beamline layout page's
-per-subsystem device tables.
+`render_all(site, slug=..., catalog_methods=..., beamlines=...)` returns a
+{src_uri: markdown} dict with a single page, deployments/<slug>/index.md: a walk
+through what the facility gives an experiment, organized by the reader's journey
+(techniques -> resources -> safety envelope -> who acts), not one page per bounded
+context. Tables appear inside reader-shaped sections with framing prose, mirroring
+the beamline layout page's per-subsystem device tables.
+
+The facility's human title is `facility.heading` when set, else the upper-cased
+`display_name` (which equals `code`); the bound beamlines are passed in by the
+build hook as (label, slug) pairs so the page links to whichever beamlines the
+site actually hosts.
 
 A Practice method links to the generated Catalog Methods page only when the
 catalog defines it (threaded in as `catalog_methods`); methods still pending in
@@ -22,7 +27,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from site_descriptor import Site
 
-SITE_BLOB_URL = "https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml"
+_BLOB_BASE = "https://github.com/xmap/cora/blob/main"
 MODEL_PAGE = "../../architecture/model.md"
 METHODS_PAGE = "../../catalog/methods.md"
 
@@ -38,10 +43,11 @@ def _table(headers: list[str], rows: list[list[str]]) -> str:
     return "\n".join([head, sep, *body])
 
 
-def _banner() -> str:
+def _banner(slug: str) -> str:
+    blob = f"{_BLOB_BASE}/deployments/{slug}/site.yaml"
     return (
         '!!! info "Generated from the site descriptor"\n'
-        f"    This page is generated from [`deployments/aps/site.yaml`]({SITE_BLOB_URL}). "
+        f"    This page is generated from [`deployments/{slug}/site.yaml`]({blob}). "
         "Edit the descriptor, not this page."
     )
 
@@ -52,26 +58,39 @@ def _planned(labels: list[str]) -> list[str]:
     return ["*Planned: " + ", ".join(labels) + ".*"]
 
 
-def _facility(site: Site) -> list[str]:
+def _facility(
+    site: Site,
+    *,
+    slug: str,
+    site_label: str,
+    beamlines: list[tuple[str, str]],
+    primary: str | None,
+) -> list[str]:
     f = site.facility
     rows = [["Facility code", f"`{f.code}`"], ["Kind", f"`{f.kind}`"]]
     if f.institution:
         rows.append(["Institution", f.institution])
     if f.sectors:
         rows.append(["Sectors", ", ".join(f"`{s}`" for s in f.sectors)])
-    if f.beamlines:
-        rows.append(["Beamlines", ", ".join(f"[{b}](../2-bm/index.md)" for b in f.beamlines)])
+    if beamlines:
+        rows.append(
+            ["Beamlines", ", ".join(f"[{label}](../{bslug}/index.md)" for label, bslug in beamlines)]
+        )
+    run_clause = f" {primary} runs at" if primary else " its beamlines run at"
+    exp_clause = f"a {primary} experiment" if primary else "an experiment"
     return [
-        "APS is the synchrotron site 2-BM runs at. This page is the home for the facility-level "
-        "facts a 2-BM experiment inherits but does not own: the techniques adapted here, the "
-        "resources a run draws on, the safety envelope it clears, and the people and agents who "
+        f"{site_label} is the synchrotron site{run_clause}. This page is the home for the "
+        f"facility-level facts {exp_clause} inherits but does not own: the techniques adapted here, "
+        "the resources a run draws on, the safety envelope it clears, and the people and agents who "
         "act in it. The beamline links up to these rather than restating them.",
-        _banner(),
+        _banner(slug),
         _table(["Property", "Value"], rows),
     ]
 
 
-def _techniques(site: Site, catalog_methods: frozenset[str]) -> list[str]:
+def _techniques(
+    site: Site, catalog_methods: frozenset[str], *, site_label: str, run_label: str
+) -> list[str]:
     def _method(name: str) -> str:
         return f"[`{name}`]({METHODS_PAGE})" if name in catalog_methods else f"`{name}`"
 
@@ -79,9 +98,9 @@ def _techniques(site: Site, catalog_methods: frozenset[str]) -> list[str]:
     pending = [p.name for p in site.practices if p.pending]
     blocks = [
         "## The techniques adapted here",
-        f"A Practice is APS's facility-tuned form of a cross-facility [Method]({MODEL_PAGE}): the "
-        "ISA-88 Site Recipe layer. The Method names a technique abstractly in the Catalog; the "
-        "Practice is how 2-BM runs it here. Each row links up to the Method it adapts.",
+        f"A Practice is {site_label}'s facility-tuned form of a cross-facility [Method]({MODEL_PAGE}): "
+        "the ISA-88 Site Recipe layer. The Method names a technique abstractly in the Catalog; the "
+        f"Practice is how {run_label} runs it here. Each row links up to the Method it adapts.",
         _table(["Practice", "Method"], active),
     ]
     blocks += _planned(pending)
@@ -127,7 +146,7 @@ def _safety(site: Site) -> list[str]:
     return blocks
 
 
-def _principals(site: Site) -> list[str]:
+def _principals(site: Site, *, site_label: str) -> list[str]:
     actor_active = [[a.name, f"`{a.kind}`"] for a in site.actors if not a.pending]
     actor_pending = [a.name for a in site.actors if a.pending]
     agent_rows = [
@@ -138,10 +157,10 @@ def _principals(site: Site) -> list[str]:
     agent_pending = [a.name for a in site.agents if a.pending]
     blocks = [
         "## Who acts here",
-        "Every action CORA records is attributed to a principal. At APS those are the people "
-        "registered facility-wide (the operator on shift, safety reviewers, proposal PIs) and the "
-        "autonomous agents. Human display names live in `actor_profile` (the editable, forgettable "
-        "layer), not in the event-sourced Actor record, which carries only id and kind.",
+        f"Every action CORA records is attributed to a principal. At {site_label} those are the "
+        "people registered facility-wide (the operator on shift, safety reviewers, proposal PIs) "
+        "and the autonomous agents. Human display names live in `actor_profile` (the editable, "
+        "forgettable layer), not in the event-sourced Actor record, which carries only id and kind.",
         _table(["Person or service", "Kind"], actor_active),
     ]
     blocks += _planned(actor_pending)
@@ -158,22 +177,36 @@ def _principals(site: Site) -> list[str]:
     return blocks
 
 
-def _modeled() -> list[str]:
+def _modeled(site_label: str) -> list[str]:
     return [
-        "## How APS is modeled",
-        "APS itself is not an Asset: it is a Federation `Facility` with `FacilityKind = Site`. The "
-        "beamlines it hosts are the root Assets, each bound to the Site by `facility_code`; their "
-        f"sub-systems nest below by `parent_id`. See [Assets](assets.md) for that binding and "
-        f"[the CORA model]({MODEL_PAGE}) for the aggregate shapes.",
+        f"## How {site_label} is modeled",
+        f"{site_label} itself is not an Asset: it is a Federation `Facility` with "
+        "`FacilityKind = Site`. The beamlines it hosts are the root Assets, each bound to the Site "
+        "by `facility_code`; their sub-systems nest below by `parent_id`. See "
+        f"[Assets](assets.md) for that binding and [the CORA model]({MODEL_PAGE}) for the "
+        "aggregate shapes.",
     ]
 
 
-def render_all(site: Site, *, catalog_methods: frozenset[str] = frozenset()) -> dict[str, str]:
-    blocks = ["# APS"]
-    blocks += _facility(site)
-    blocks += _techniques(site, catalog_methods)
+def render_all(
+    site: Site,
+    *,
+    slug: str = "aps",
+    catalog_methods: frozenset[str] = frozenset(),
+    beamlines: list[tuple[str, str]] | None = None,
+) -> dict[str, str]:
+    f = site.facility
+    site_label = f.heading or f.display_name.upper()
+    if beamlines is None:
+        beamlines = [(b, b.lower()) for b in f.beamlines]
+    primary = beamlines[0][0] if beamlines else None
+    run_label = primary or "the beamline"
+
+    blocks = [f"# {site_label}"]
+    blocks += _facility(site, slug=slug, site_label=site_label, beamlines=beamlines, primary=primary)
+    blocks += _techniques(site, catalog_methods, site_label=site_label, run_label=run_label)
     blocks += _resources(site)
     blocks += _safety(site)
-    blocks += _principals(site)
-    blocks += _modeled()
-    return {"deployments/aps/index.md": "\n\n".join(blocks) + "\n"}
+    blocks += _principals(site, site_label=site_label)
+    blocks += _modeled(site_label)
+    return {f"deployments/{slug}/index.md": "\n\n".join(blocks) + "\n"}
