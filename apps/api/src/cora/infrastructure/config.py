@@ -209,6 +209,16 @@ class Settings(BaseSettings):
     run_supervisor_resume_enabled: bool = False
     run_supervisor_resume_settle_ticks: int = 2
 
+    # `run_supervisor_advise_enabled` promotes the supervisor's shadow rules
+    # (run-liveness, signal-quality, signal-stall) one rung from observe to
+    # advise: on each breach EDGE the supervisor records ONE
+    # Decision(context=RunSupervision, choice=SupervisionQuieted/Stalled/
+    # Breached) for a human, still issuing NO command. Default off, a further
+    # opt-in above each rule's own enable (a rule with no channel / ceiling
+    # configured stays silent regardless). Shadow logging continues unchanged;
+    # advise only adds the edge-triggered Decision.
+    run_supervisor_advise_enabled: bool = False
+
     # `run_liveness_ceiling_seconds` gates the run-liveness shadow rule
     # inside the RunSupervisor loop: a Run that has been Running longer than this
     # (now - running_since) is flagged as possibly-hung. Default None = OFF (a

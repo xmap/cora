@@ -36,6 +36,7 @@ from cora.api._run_supervisor import (
     run_supervisor_lifespan,
 )
 from cora.decision.aggregates.decision import load_decision
+from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.kernel import Kernel
@@ -326,6 +327,7 @@ async def _tick(
     stall: set[UUID] | None = None,
     stall_streak: dict[UUID, int] | None = None,
     feed_dead_warned: set[UUID] | None = None,
+    advise_enabled: bool = False,
 ) -> None:
     """Call _supervise_tick, defaulting the resume wiring (off) for hold-only tests."""
     if resume_run is None:
@@ -348,6 +350,7 @@ async def _tick(
         resume_enabled=resume_enabled,
         resume_settle_ticks=resume_settle_ticks,
         liveness_ceiling_seconds=liveness_ceiling_seconds,
+        advise_enabled=advise_enabled,
     )
 
 
@@ -1608,3 +1611,165 @@ async def test_shadow_quality_would_flag_log_carries_is_simulated_provenance() -
     assert len(flagged) == 1
     assert flagged[0]["is_simulated"] is True
     assert flagged[0]["run_id"] == str(run_id)
+
+
+# ---------- advise rung: edge-triggered Decision, still no command ----------
+
+
+async def _supervision_decision_choices(kernel: Kernel) -> list[str]:
+    """All RunSupervision Decision choices written to the event store."""
+    choices: list[str] = []
+    store = kernel.event_store
+    assert isinstance(store, InMemoryEventStore)
+    for stream_type, stream_id in store._streams:
+        if stream_type != "Decision":
+            continue
+        decision = await load_decision(store, stream_id)
+        if decision is not None and decision.context.value == "RunSupervision":
+            choices.append(decision.choice.value)
+    return choices
+
+
+@pytest.mark.unit
+async def test_advise_off_quality_breach_records_no_decision() -> None:
+    """Default (advise off): a quality breach logs the shadow would-flag but
+    records NO Decision and issues no command."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    hold_run, hold_calls = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=2.0, recorded_at=_NOW)
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        quality=set(),
+        advise_enabled=False,
+    )
+
+    assert await _supervision_decision_choices(kernel) == []
+    assert hold_calls == []
+
+
+@pytest.mark.unit
+async def test_advise_quality_breach_records_supervision_breached_without_command() -> None:
+    """Advise on: a quality breach records exactly one SupervisionBreached
+    Decision and still issues no command (advise rung)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    hold_run, hold_calls = _make_recording_hold()
+    resume_run, resume_calls = _make_recording_resume()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=2.0, recorded_at=_NOW)
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        resume_run=resume_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        quality=set(),
+        advise_enabled=True,
+    )
+
+    assert await _supervision_decision_choices(kernel) == ["SupervisionBreached"]
+    assert hold_calls == []
+    assert resume_calls == []
+
+
+@pytest.mark.unit
+async def test_advise_quality_breach_is_edge_triggered_single_decision() -> None:
+    """Two ticks with the same standing breach record only ONE Decision
+    (edge-triggered off the shared quality set)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    hold_run, _hold = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=2.0, recorded_at=_NOW)
+    quality: set[UUID] = set()
+
+    for _ in range(2):
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=hold_run,
+            beam_lookup=_BeamOpen(),
+            memory={},
+            channel_lookup=lookup,
+            rules_config=_rules_quality(),
+            quality=quality,
+            advise_enabled=True,
+        )
+
+    assert await _supervision_decision_choices(kernel) == ["SupervisionBreached"]
+
+
+@pytest.mark.unit
+async def test_advise_stall_breach_records_supervision_stalled_without_command() -> None:
+    """Advise on: a stall (alive feeder, beam up, zero arrivals) records one
+    SupervisionStalled Decision once the hysteresis streak is met; no command."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, expected_observation_interval_seconds=10.0)])
+    hold_run, hold_calls = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register_heartbeat(run_id=run_id, recorded_at=_NOW)
+    stall: set[UUID] = set()
+    stall_streak: dict[UUID, int] = {}
+
+    for _ in range(2):  # hysteresis = 2
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=hold_run,
+            beam_lookup=_BeamOpen(),
+            memory={},
+            channel_lookup=lookup,
+            rules_config=_rules_stall(hysteresis=2),
+            stall=stall,
+            stall_streak=stall_streak,
+            advise_enabled=True,
+        )
+
+    assert await _supervision_decision_choices(kernel) == ["SupervisionStalled"]
+    assert hold_calls == []
+
+
+@pytest.mark.unit
+async def test_advise_liveness_stale_records_supervision_quieted_without_command() -> None:
+    """Advise on: a Run past the run-age ceiling records one SupervisionQuieted
+    Decision; no command."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, running_since=_NOW - timedelta(hours=2))])
+    hold_run, hold_calls = _make_recording_hold()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=set(),
+        liveness_ceiling_seconds=3600.0,
+        advise_enabled=True,
+    )
+
+    assert await _supervision_decision_choices(kernel) == ["SupervisionQuieted"]
+    assert hold_calls == []

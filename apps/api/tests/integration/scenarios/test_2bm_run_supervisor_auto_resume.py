@@ -389,6 +389,7 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         stall_streak={},
         feed_dead_warned=set(),
         liveness_ceiling_seconds=None,
+        advise_enabled=False,
         resume_enabled=True,
         resume_settle_ticks=1,
     )
@@ -413,6 +414,7 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         stall_streak={},
         feed_dead_warned=set(),
         liveness_ceiling_seconds=None,
+        advise_enabled=False,
         resume_enabled=True,
         resume_settle_ticks=1,
     )
@@ -465,6 +467,7 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         stall_streak={},
         feed_dead_warned=set(),
         liveness_ceiling_seconds=None,
+        advise_enabled=False,
         resume_enabled=True,
         resume_settle_ticks=1,
     )
@@ -496,6 +499,7 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         stall_streak={},
         feed_dead_warned=set(),
         liveness_ceiling_seconds=None,
+        advise_enabled=False,
         resume_enabled=True,
         resume_settle_ticks=1,
     )
