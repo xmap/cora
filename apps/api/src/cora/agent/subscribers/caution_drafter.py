@@ -311,11 +311,11 @@ class CautionDrafterSubscriber:
         )
 
         # Look up existing Active Cautions for the candidate Assets.
-        # CautionLookup's `find_active_for_run` is the load-bearing
+        # CautionLookup's `find_active_in_scope` is the load-bearing
         # shared port with the non-blocking banner; passing `min_severity="Notice"` so
         # CautionDrafter sees the full picture (banner uses default
         # min_severity="Caution"; this consumer wants everything).
-        existing_caution_refs = await self.caution_lookup.find_active_for_run(
+        existing_caution_refs = await self.caution_lookup.find_active_in_scope(
             asset_ids=plan.asset_ids,
             procedure_ids=frozenset(),
             min_severity="Notice",

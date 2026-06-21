@@ -16,7 +16,7 @@ from cora.infrastructure.ports import AlwaysQuietCautionLookup
 @pytest.mark.unit
 async def test_always_quiet_returns_empty_list_for_empty_scope() -> None:
     lookup = AlwaysQuietCautionLookup()
-    result = await lookup.find_active_for_run(
+    result = await lookup.find_active_in_scope(
         asset_ids=frozenset(),
         procedure_ids=frozenset(),
     )
@@ -26,7 +26,7 @@ async def test_always_quiet_returns_empty_list_for_empty_scope() -> None:
 @pytest.mark.unit
 async def test_always_quiet_returns_empty_list_with_asset_ids() -> None:
     lookup = AlwaysQuietCautionLookup()
-    result = await lookup.find_active_for_run(
+    result = await lookup.find_active_in_scope(
         asset_ids=frozenset({uuid4(), uuid4()}),
         procedure_ids=frozenset(),
     )
@@ -36,7 +36,7 @@ async def test_always_quiet_returns_empty_list_with_asset_ids() -> None:
 @pytest.mark.unit
 async def test_always_quiet_returns_empty_list_with_procedure_ids() -> None:
     lookup = AlwaysQuietCautionLookup()
-    result = await lookup.find_active_for_run(
+    result = await lookup.find_active_in_scope(
         asset_ids=frozenset(),
         procedure_ids=frozenset({uuid4()}),
     )
@@ -47,7 +47,7 @@ async def test_always_quiet_returns_empty_list_with_procedure_ids() -> None:
 async def test_always_quiet_returns_empty_list_with_explicit_min_severity() -> None:
     """min_severity argument is accepted (port contract) but unused."""
     lookup = AlwaysQuietCautionLookup()
-    result = await lookup.find_active_for_run(
+    result = await lookup.find_active_in_scope(
         asset_ids=frozenset({uuid4()}),
         procedure_ids=frozenset(),
         min_severity="Notice",

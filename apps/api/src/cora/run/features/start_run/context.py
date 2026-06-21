@@ -36,7 +36,7 @@ Slice-local module by design: only `start_run` uses it today.
     target references the Run's scope (asset_ids + a future
     procedure_ids when a procedure-driven run shape lands). Loaded
     by the handler via
-    `deps.caution_lookup.find_active_for_run(...)` against the
+    `deps.caution_lookup.find_active_in_scope(...)` against the
     `proj_caution_summary` projection. NON-BLOCKING by construction:
     the decider does NOT partition on this field; it only threads
     the snapshot into the `RunStarted` event payload as

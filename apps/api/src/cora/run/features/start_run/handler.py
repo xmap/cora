@@ -330,7 +330,7 @@ def bind(deps: Kernel) -> Handler:
         # no Procedure scope today; forward-compat for procedure-
         # driven runs (Watch item for the start_procedure consumer).
         active_cautions = tuple(
-            await deps.caution_lookup.find_active_for_run(
+            await deps.caution_lookup.find_active_in_scope(
                 asset_ids=scoped_asset_ids,
                 procedure_ids=frozenset(),
             )

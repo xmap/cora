@@ -22,7 +22,7 @@ first subscriber-hosted cross-BC aggregate write in the agent BC.
   - confidence >= the high band (a SOFT gate: CautionDrafter confidence is
     self-reported / uncalibrated, so Notice-only + reversibility are the real
     safety).
-  - no active Caution already on the target (find_active_for_run with
+  - no active Caution already on the target (find_active_in_scope with
     min_severity="Notice", per-target).
   - the proposed tuple passes Caution VO validation (else deferred, never
     raised, so a bad LLM tuple cannot wedge the shared bookmark).
@@ -249,7 +249,7 @@ class CautionPromoterSubscriber:
         procedure_ids: frozenset[UUID] = (
             frozenset({view.target_id}) if view.target_kind == "Procedure" else frozenset()
         )
-        existing = await self.caution_lookup.find_active_for_run(
+        existing = await self.caution_lookup.find_active_in_scope(
             asset_ids=asset_ids,
             procedure_ids=procedure_ids,
             min_severity="Notice",

@@ -75,7 +75,7 @@ class _FakeLookup:
         self._results = results
         self._retired = retired or []
 
-    async def find_active_for_run(
+    async def find_active_in_scope(
         self,
         *,
         asset_ids: frozenset[UUID],

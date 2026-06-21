@@ -74,7 +74,7 @@ def _register_command(
 async def test_empty_projection_returns_empty_result(db_pool: asyncpg.Pool) -> None:
     """No cautions ever registered for the queried scope -> []."""
     lookup = PostgresCautionLookup(db_pool)
-    result = await lookup.find_active_for_run(
+    result = await lookup.find_active_in_scope(
         asset_ids=frozenset({uuid4()}),
         procedure_ids=frozenset({uuid4()}),
     )
@@ -95,7 +95,7 @@ async def test_single_active_asset_caution_is_returned(db_pool: asyncpg.Pool) ->
     await _drain(db_pool)
 
     lookup = PostgresCautionLookup(db_pool)
-    result = await lookup.find_active_for_run(
+    result = await lookup.find_active_in_scope(
         asset_ids=frozenset({asset_id}),
         procedure_ids=frozenset(),
     )
@@ -127,14 +127,14 @@ async def test_notice_severity_filtered_out_by_default_threshold(
     await _drain(db_pool)
 
     lookup = PostgresCautionLookup(db_pool)
-    result_default = await lookup.find_active_for_run(
+    result_default = await lookup.find_active_in_scope(
         asset_ids=frozenset({asset_id}),
         procedure_ids=frozenset(),
     )
     assert result_default == []
 
     # Explicit Notice threshold lets it through.
-    result_notice = await lookup.find_active_for_run(
+    result_notice = await lookup.find_active_in_scope(
         asset_ids=frozenset({asset_id}),
         procedure_ids=frozenset(),
         min_severity="Notice",
@@ -190,7 +190,7 @@ async def test_retired_and_superseded_cautions_never_returned(
     await _drain(db_pool)
 
     lookup = PostgresCautionLookup(db_pool)
-    result = await lookup.find_active_for_run(
+    result = await lookup.find_active_in_scope(
         asset_ids=frozenset({asset_id}),
         procedure_ids=frozenset(),
     )
@@ -237,7 +237,7 @@ async def test_find_retired_for_target_returns_operator_retired_match(
 
     # A Retired row is NOT returned by the Active lookup.
     assert (
-        await lookup.find_active_for_run(
+        await lookup.find_active_in_scope(
             asset_ids=frozenset({asset_id}), procedure_ids=frozenset(), min_severity="Notice"
         )
         == []
@@ -326,7 +326,7 @@ async def test_procedure_targeted_caution_matched_via_procedure_ids(
     await _drain(db_pool)
 
     lookup = PostgresCautionLookup(db_pool)
-    result = await lookup.find_active_for_run(
+    result = await lookup.find_active_in_scope(
         asset_ids=frozenset({uuid4()}),  # unrelated asset id
         procedure_ids=frozenset({procedure_id}),
     )
@@ -363,7 +363,7 @@ async def test_asset_and_procedure_targets_in_one_call_returns_both(
     await _drain(db_pool)
 
     lookup = PostgresCautionLookup(db_pool)
-    result = await lookup.find_active_for_run(
+    result = await lookup.find_active_in_scope(
         asset_ids=frozenset({asset_id}),
         procedure_ids=frozenset({procedure_id}),
     )
@@ -397,7 +397,7 @@ async def test_sort_order_warning_before_caution_before_notice(
     await _drain(db_pool)
 
     lookup = PostgresCautionLookup(db_pool)
-    result = await lookup.find_active_for_run(
+    result = await lookup.find_active_in_scope(
         asset_ids=frozenset({asset_id}),
         procedure_ids=frozenset(),
         min_severity="Notice",

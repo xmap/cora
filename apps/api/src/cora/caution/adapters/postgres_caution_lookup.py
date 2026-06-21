@@ -119,7 +119,7 @@ class PostgresCautionLookup:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
 
-    async def find_active_for_run(
+    async def find_active_in_scope(
         self,
         *,
         asset_ids: frozenset[UUID],
