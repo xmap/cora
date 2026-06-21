@@ -290,7 +290,7 @@ def bind(deps: Kernel) -> Handler:
         # clearance projection for every clearance whose bindings
         # reference this Run's scope. Decider partitions on Active.
         referencing_clearances = tuple(
-            await deps.clearance_lookup.find_referencing_run(
+            await deps.clearance_lookup.find_covering(
                 run_id=new_id,
                 subject_id=command.subject_id,
                 asset_ids=scoped_asset_ids,

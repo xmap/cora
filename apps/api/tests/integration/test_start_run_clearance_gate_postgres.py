@@ -355,7 +355,7 @@ async def test_run_start_succeeds_when_clearance_binds_controller_via_controller
     """Active Clearance with AssetBinding on a stage Asset's controller
     covers a Run targeting only the stage. Pins the start_run handler's
     scope expansion of `plan.asset_ids` via `Asset.controller_id`
-    back-references before calling `clearance_lookup.find_referencing_run`.
+    back-references before calling `clearance_lookup.find_covering`.
     Without the expansion, the controller-bound Clearance is invisible at
     Run start (the lookup's `$3 && asset_binding_ids` overlap finds
     nothing because the controller id is not in the Plan's asset_ids) and

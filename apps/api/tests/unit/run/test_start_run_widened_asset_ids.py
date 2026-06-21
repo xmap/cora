@@ -223,12 +223,12 @@ async def test_ancestor_walk_failure_propagates_and_refuses_the_run() -> None:
 
 
 class _RecordingClearanceLookup:
-    """Captures find_referencing_run's asset_ids; returns no clearances."""
+    """Captures find_covering's asset_ids; returns no clearances."""
 
     def __init__(self) -> None:
         self.captured: frozenset[UUID] | None = None
 
-    async def find_referencing_run(
+    async def find_covering(
         self,
         *,
         run_id: UUID,

@@ -27,7 +27,7 @@ Slice-local module by design: only `start_run` uses it today.
   - `referencing_clearances`: every Safety clearance
     whose bindings reference this Run's scope (run_id, subject_id,
     asset_ids), regardless of status. Loaded by the handler via
-    `deps.clearance_lookup.find_referencing_run(...)` against the
+    `deps.clearance_lookup.find_covering(...)` against the
     `proj_safety_clearance_summary` projection. Decider partitions
     on `status == "Active"` to distinguish "no clearance at all"
     (`RunRequiresActiveClearanceError`) from "clearance exists but

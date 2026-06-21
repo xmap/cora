@@ -56,7 +56,7 @@ class ClearanceLookupResult:
 
     Carries the minimal columns the start_run decider needs to
     decide pass/fail. Loaded by the handler via
-    `ClearanceLookup.find_referencing_run` and handed to the decider
+    `ClearanceLookup.find_covering` and handed to the decider
     in `RunStartContext.referencing_clearances`.
 
     `status` is the StrEnum value as a plain string (matches the
@@ -74,14 +74,14 @@ class ClearanceLookupResult:
 class ClearanceLookup(Protocol):
     """Cross-BC port: query Safety's clearance projection from Run BC."""
 
-    async def find_referencing_run(
+    async def find_covering(
         self,
         *,
         run_id: UUID,
         subject_id: UUID | None,
         asset_ids: frozenset[UUID],
     ) -> list[ClearanceLookupResult]:
-        """Return every clearance whose bindings reference the Run's scope.
+        """Return every clearance whose bindings cover the requested scope.
 
         "References" means:
           - `run_id` appears in the clearance's `run_binding_ids`, OR
@@ -125,7 +125,7 @@ class AlwaysCoveredClearanceLookup:
     real `PostgresClearanceLookup` adapter, not this stub.
     """
 
-    async def find_referencing_run(
+    async def find_covering(
         self,
         *,
         run_id: UUID,
