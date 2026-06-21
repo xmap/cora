@@ -25,6 +25,7 @@ from cora.data.aggregates.distribution import (
     DistributionByteSizeMismatchError,
     DistributionCannotRegisterOnDiscardedDatasetError,
     DistributionCannotRegisterOnNonStorageSupplyError,
+    DistributionChecksumAlgorithmMismatchError,
     DistributionChecksumMismatchError,
     DistributionStatus,
     DistributionUri,
@@ -69,6 +70,7 @@ def _dataset(
     dataset_id: UUID,
     *,
     checksum_value: str = _GOOD_SHA256,
+    checksum_algorithm: str = "sha256",
     byte_size: int = 1024,
     status: DatasetStatus = DatasetStatus.REGISTERED,
 ) -> Dataset:
@@ -76,7 +78,7 @@ def _dataset(
         id=dataset_id,
         name=DatasetName("seed-dataset"),
         uri=DatasetUri("s3://bucket/seed"),
-        checksum=DatasetChecksum(algorithm="sha256", value=checksum_value),
+        checksum=DatasetChecksum(algorithm=checksum_algorithm, value=checksum_value),
         byte_size=byte_size,
         encoding=DatasetEncoding(media_type="application/x-hdf5"),
         status=status,
@@ -376,6 +378,46 @@ def test_decide_raises_on_byte_size_mismatch() -> None:
         )
     assert exc.value.expected_byte_size == 1024
     assert exc.value.actual_byte_size == 2048
+
+
+@pytest.mark.unit
+def test_decide_raises_on_checksum_algorithm_mismatch() -> None:
+    # Same 64-hex value, but the Dataset is a directory (sha256-tree) and
+    # the command claims a whole-file sha256: not a byte-identical copy.
+    cmd = _good_command(checksum_algorithm="sha256", checksum_value=_GOOD_SHA256)
+    ctx = DistributionRegistrationContext(
+        dataset=_dataset(cmd.dataset_id, checksum_algorithm="sha256-tree"),
+        supply=_supply(cmd.supply_id),
+    )
+    with pytest.raises(DistributionChecksumAlgorithmMismatchError) as exc:
+        register_distribution.decide(
+            state=None,
+            command=cmd,
+            context=ctx,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_REGISTERED_BY,
+        )
+    assert exc.value.expected_algorithm == "sha256-tree"
+    assert exc.value.actual_algorithm == "sha256"
+
+
+@pytest.mark.unit
+def test_decide_accepts_matching_sha256_tree_distribution() -> None:
+    cmd = _good_command(checksum_algorithm="sha256-tree", checksum_value=_GOOD_SHA256)
+    ctx = DistributionRegistrationContext(
+        dataset=_dataset(cmd.dataset_id, checksum_algorithm="sha256-tree"),
+        supply=_supply(cmd.supply_id),
+    )
+    events = register_distribution.decide(
+        state=None,
+        command=cmd,
+        context=ctx,
+        now=_NOW,
+        new_id=uuid4(),
+        registered_by=_REGISTERED_BY,
+    )
+    assert events[0].checksum_algorithm == "sha256-tree"
 
 
 # ---------- Strict-not-idempotent ----------

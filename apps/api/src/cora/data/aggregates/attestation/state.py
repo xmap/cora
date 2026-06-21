@@ -213,6 +213,28 @@ class AttestationKindNotYetSupportedError(Exception):
         self.kind = kind
 
 
+class AttestationTreeChecksumNotYetSupportedError(Exception):
+    """Raised when attesting a Distribution whose checksum is ``sha256-tree``.
+
+    The shipped checksum verifier hashes a whole file; a directory
+    (``sha256-tree``) Distribution's stored digest is a manifest hash, so
+    whole-file evidence would spuriously Mismatch and flip the
+    Distribution to ``Stale``. Recording is refused until the directory
+    ChecksumVerifier ships (deferred). Like
+    ``AttestationKindNotYetSupportedError`` this is a deferral, not a
+    permanent rejection, so it lifts to HTTP 400 with an actionable body.
+    """
+
+    def __init__(self, distribution_id: UUID, algorithm: str) -> None:
+        super().__init__(
+            f"Distribution {distribution_id} has checksum algorithm {algorithm!r}, "
+            "which the whole-file checksum verifier cannot verify; "
+            "tree-checksum attestation is not yet supported."
+        )
+        self.distribution_id = distribution_id
+        self.algorithm = algorithm
+
+
 class AttestationDistributionNotFoundError(Exception):
     """Raised when ``command.distribution_id`` does not resolve.
 

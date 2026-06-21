@@ -61,6 +61,7 @@ from cora.data.aggregates.attestation import (
     AttestationKindNotYetSupportedError,
     AttestationKindRejectsDistributionError,
     AttestationKindRequiresDistributionError,
+    AttestationTreeChecksumNotYetSupportedError,
     InvalidAttestationEvidenceError,
     InvalidAttestationKindError,
     InvalidAttestationOutcomeError,
@@ -96,6 +97,7 @@ from cora.data.aggregates.distribution import (
     DistributionByteSizeMismatchError,
     DistributionCannotRegisterOnDiscardedDatasetError,
     DistributionCannotRegisterOnNonStorageSupplyError,
+    DistributionChecksumAlgorithmMismatchError,
     DistributionChecksumMismatchError,
     DistributionSupplyNotFoundError,
     InvalidAccessProtocolError,
@@ -313,6 +315,7 @@ def register_data_routes(app: FastAPI) -> None:
         InvalidAttestationOutcomeError,
         InvalidAttestationEvidenceError,
         AttestationKindNotYetSupportedError,
+        AttestationTreeChecksumNotYetSupportedError,
         ChecksumVerifierUnsupportedSchemeError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
@@ -382,6 +385,7 @@ def register_data_routes(app: FastAPI) -> None:
         # All 409 with {"detail": str(exc)}.
         DistributionCannotRegisterOnNonStorageSupplyError,
         DistributionCannotRegisterOnDiscardedDatasetError,
+        DistributionChecksumAlgorithmMismatchError,
         DistributionChecksumMismatchError,
         DistributionByteSizeMismatchError,
         # Edition mutation / transition guards. All 409 with

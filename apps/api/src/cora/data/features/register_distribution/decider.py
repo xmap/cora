@@ -35,7 +35,11 @@ the order is local-and-greppable on the decider source):
      `DistributionCannotRegisterOnNonStorageSupplyError`. Per L28
      status-agnostic bind: every Supply lifecycle is acceptable
      so long as kind is Storage.
-  9. `command.checksum_value != context.dataset.checksum.value`
+  9. `command.checksum_algorithm != context.dataset.checksum.algorithm`
+     -> `DistributionChecksumAlgorithmMismatchError` (checked before the
+     value, since two 64-hex values under different algorithms are not
+     comparable).
+  9b. `command.checksum_value != context.dataset.checksum.value`
      -> `DistributionChecksumMismatchError`.
   10. `command.byte_size != context.dataset.byte_size` ->
       `DistributionByteSizeMismatchError`.
@@ -69,6 +73,7 @@ from cora.data.aggregates.distribution import (
     DistributionByteSizeMismatchError,
     DistributionCannotRegisterOnDiscardedDatasetError,
     DistributionCannotRegisterOnNonStorageSupplyError,
+    DistributionChecksumAlgorithmMismatchError,
     DistributionChecksumMismatchError,
     DistributionRegistered,
     DistributionUri,
@@ -109,7 +114,9 @@ def decide(
         -> DistributionCannotRegisterOnDiscardedDatasetError
       - Supply.kind must be "Storage"
         -> DistributionCannotRegisterOnNonStorageSupplyError
-      - Checksum equality vs Dataset
+      - Checksum algorithm equality vs Dataset (checked before value)
+        -> DistributionChecksumAlgorithmMismatchError
+      - Checksum value equality vs Dataset
         -> DistributionChecksumMismatchError
       - byte_size equality vs Dataset
         -> DistributionByteSizeMismatchError
@@ -169,7 +176,16 @@ def decide(
         )
 
     # Steps 9 + 10: byte-identical-copy invariants. The Dataset is
-    # already loaded in the context (free O(1) checks).
+    # already loaded in the context (free O(1) checks). Algorithm is
+    # compared first: two 64-hex values under different algorithms
+    # (sha256 vs sha256-tree) are not comparable, so a value match would
+    # be meaningless without it.
+    if checksum.algorithm != context.dataset.checksum.algorithm:
+        raise DistributionChecksumAlgorithmMismatchError(
+            dataset_id=context.dataset.id,
+            expected_algorithm=context.dataset.checksum.algorithm,
+            actual_algorithm=checksum.algorithm,
+        )
     if checksum.value != context.dataset.checksum.value:
         raise DistributionChecksumMismatchError(
             dataset_id=context.dataset.id,

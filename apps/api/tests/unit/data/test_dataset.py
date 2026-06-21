@@ -190,6 +190,13 @@ def test_dataset_checksum_accepts_canonical_sha256() -> None:
 
 
 @pytest.mark.unit
+def test_dataset_checksum_accepts_sha256_tree() -> None:
+    checksum = DatasetChecksum(algorithm="sha256-tree", value=_GOOD_SHA256)
+    assert checksum.algorithm == "sha256-tree"
+    assert checksum.value == _GOOD_SHA256
+
+
+@pytest.mark.unit
 def test_dataset_checksum_rejects_unsupported_algorithm() -> None:
     with pytest.raises(InvalidDatasetChecksumError) as exc_info:
         DatasetChecksum(algorithm="md5", value="d41d8cd98f00b204e9800998ecf8427e")

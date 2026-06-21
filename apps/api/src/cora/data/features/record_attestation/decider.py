@@ -39,6 +39,9 @@ order is local-and-greppable on the decider source):
       -> ``AttestationDistributionNotFoundError``.
   12. Distribution.dataset_id equality vs command.dataset_id ->
       ``AttestationDistributionDatasetMismatchError``.
+  12b. ``context.distribution.checksum.algorithm == 'sha256-tree'`` ->
+      ``AttestationTreeChecksumNotYetSupportedError`` (the whole-file
+      verifier cannot verify a directory digest; deferred).
   13. Belt-and-braces checksum comparison: ``kind=ChecksumVerified``
       AND ``outcome=Match`` AND ``evidence.computed_checksum !=
       context.distribution.checksum.value`` ->
@@ -62,12 +65,14 @@ from cora.data.aggregates.attestation import (
     AttestationKindRequiresDistributionError,
     AttestationOutcome,
     AttestationRecorded,
+    AttestationTreeChecksumNotYetSupportedError,
     ChecksumVerifiedEvidence,
     InvalidAttestationEvidenceError,
     InvalidAttestationKindError,
     InvalidAttestationOutcomeError,
     build_checksum_verified_evidence_payload,
 )
+from cora.data.aggregates.dataset import DATASET_CHECKSUM_ALGORITHM_SHA256_TREE
 from cora.data.features.record_attestation.command import RecordAttestation
 from cora.data.features.record_attestation.context import (
     AttestationRecordingContext,
@@ -131,6 +136,9 @@ def decide(
       - context.distribution.dataset_id must equal context.dataset.id
         when distribution_id is set
         -> AttestationDistributionDatasetMismatchError
+      - context.distribution.checksum.algorithm must not be 'sha256-tree'
+        (the directory verifier is deferred)
+        -> AttestationTreeChecksumNotYetSupportedError
       - Belt-and-braces: outcome=Match AND evidence.computed_checksum
         != context.distribution.checksum.value
         -> AttestationChecksumEvidenceMismatchError
@@ -216,6 +224,17 @@ def decide(
                 distribution_id=context.distribution.id,
                 expected_dataset_id=context.dataset.id,
                 actual_dataset_id=context.distribution.dataset_id,
+            )
+        # Step 12b: refuse to verify a directory (sha256-tree) Distribution.
+        # The shipped verifier hashes a whole file; a tree digest is a
+        # manifest hash, so whole-file evidence would Match-fail (caught
+        # below) on Match but, worse, record a false Mismatch on
+        # outcome=Mismatch, flipping the Distribution to Stale. Refuse
+        # outright until the directory ChecksumVerifier ships (deferred).
+        if context.distribution.checksum.algorithm == DATASET_CHECKSUM_ALGORITHM_SHA256_TREE:
+            raise AttestationTreeChecksumNotYetSupportedError(
+                distribution_id=context.distribution.id,
+                algorithm=context.distribution.checksum.algorithm,
             )
         # Step 13: belt-and-braces checksum comparison. Only meaningful
         # for ChecksumVerified Match (false-Match is the downstream-

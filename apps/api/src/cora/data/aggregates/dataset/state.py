@@ -134,7 +134,15 @@ DATASET_CONFORMS_TO_MAX_ENTRIES = 16
 DATASET_DERIVED_FROM_MAX_ENTRIES = 64
 DATASET_USED_CALIBRATIONS_MAX_ENTRIES = 64
 DATASET_CHECKSUM_ALGORITHM_SHA256 = "sha256"
+DATASET_CHECKSUM_ALGORITHM_SHA256_TREE = "sha256-tree"
 DATASET_CHECKSUM_SHA256_HEX_LENGTH = 64
+# Both accepted algorithms produce a 64-char lowercase-hex value: sha256 of a
+# single file, or sha256 of a directory's canonical manifest (sha256-tree, the
+# digest a directory-output compute artifact carries). The value-format rules
+# below are therefore identical for both; only the algorithm differs.
+DATASET_CHECKSUM_ALGORITHMS = frozenset(
+    {DATASET_CHECKSUM_ALGORITHM_SHA256, DATASET_CHECKSUM_ALGORITHM_SHA256_TREE}
+)
 RUN_END_STATE_COMPLETED = "Completed"  # raw string match against Run BC's RunStatus.COMPLETED.value
 # Raw string matches against Operation BC's ActuationKind.value. Stored as a
 # string snapshot on the Dataset (the producing BC owns the enum), mirroring
@@ -790,33 +798,36 @@ class DatasetChecksum:
     Deviation from Identifier VO: strict 64-char lowercase-hex value
     invariant beyond Identifier's generic 1-200 bound.
 
-    Only `sha256` accepted for now; the `(algorithm, value)` shape
-    is forward-compatible for adding BLAKE3 / SHA3 / etc. when a
-    real consumer asks. sha256 values must be 64 lowercase hex
-    chars (canonical form).
+    Two algorithms accepted: `sha256` (a single file) and `sha256-tree`
+    (a directory folded into a deterministic sha256 over its canonical
+    manifest, the digest a directory-output compute artifact carries).
+    Both produce a 64-char lowercase-hex value, so the value-format rules
+    are identical; only the algorithm tag distinguishes them. The
+    `(algorithm, value)` shape stays forward-compatible for adding
+    BLAKE3 / SHA3 / etc. when a real consumer asks.
     """
 
     algorithm: str
     value: str
 
     def __post_init__(self) -> None:
-        if self.algorithm != DATASET_CHECKSUM_ALGORITHM_SHA256:
+        if self.algorithm not in DATASET_CHECKSUM_ALGORITHMS:
             raise InvalidDatasetChecksumError(
                 self.algorithm,
                 self.value,
-                f"only {DATASET_CHECKSUM_ALGORITHM_SHA256!r} algorithm is supported today",
+                f"algorithm must be one of {sorted(DATASET_CHECKSUM_ALGORITHMS)}",
             )
         if len(self.value) != DATASET_CHECKSUM_SHA256_HEX_LENGTH:
             raise InvalidDatasetChecksumError(
                 self.algorithm,
                 self.value,
-                f"sha256 value must be {DATASET_CHECKSUM_SHA256_HEX_LENGTH} hex chars",
+                f"checksum value must be {DATASET_CHECKSUM_SHA256_HEX_LENGTH} hex chars",
             )
         if not all(c in "0123456789abcdef" for c in self.value):
             raise InvalidDatasetChecksumError(
                 self.algorithm,
                 self.value,
-                "sha256 value must be lowercase hex (0-9, a-f)",
+                "checksum value must be lowercase hex (0-9, a-f)",
             )
 
 
