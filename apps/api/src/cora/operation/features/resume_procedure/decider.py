@@ -5,10 +5,14 @@ hold (which requires `Running`). Resuming an already-`Running` Procedure
 raises (strict-not-idempotent); resuming a `Defined` or terminal
 Procedure raises. Mirrors `resume_run`.
 
-The off-diagonal guard (refuse while the parent Run is `Held`) is NOT
-in this pure decider: it needs a cross-aggregate Run read and lands in
-the handler in a follow-up slice (it raises the same
-`ProcedureCannotResumeError`). See [[project_resumable_conduct_design]].
+Off-diagonal guard: a Held Procedure whose parent Run is itself `Held`
+cannot resume to `Running` and walk real setpoints while the Run is
+paused. The decider takes a `parent_run_held` fact the handler derives
+from a one-directional Operation -> Run read (tach-legal); there is NO
+cascade from Run-resume into Procedure-resume (that is a Layer-3 saga,
+deferred). `parent_run_held` defaults False, which is correct for a
+standalone Procedure (no parent Run). See
+[[project_resumable_conduct_design]].
 
 Invariants:
   - State must not be None  -> ProcedureNotFoundError
@@ -16,6 +20,8 @@ Invariants:
     -> InvalidProcedureReEstablishmentBoundaryError
   - State.status must be in {Held}
     -> ProcedureCannotResumeError(current_status=...)
+  - parent_run_held must be False
+    -> ProcedureCannotResumeError(parent_run_held=True)
 """
 
 from datetime import datetime
@@ -37,15 +43,25 @@ def decide(
     state: Procedure | None,
     command: ResumeProcedure,
     *,
+    parent_run_held: bool = False,
     now: datetime,
 ) -> list[ProcedureResumed]:
-    """Decide the events produced by resuming a held Procedure."""
+    """Decide the events produced by resuming a held Procedure.
+
+    `parent_run_held` is the handler-derived fact that this Procedure's
+    parent Run is currently `Held`; standalone Procedures (no parent Run)
+    pass the default False.
+    """
     if state is None:
         raise ProcedureNotFoundError(command.procedure_id)
     if command.re_establishment_boundary < 0:
         raise InvalidProcedureReEstablishmentBoundaryError(command.re_establishment_boundary)
     if state.status not in _RESUMABLE_STATUSES:
         raise ProcedureCannotResumeError(state.id, current_status=state.status)
+    if parent_run_held:
+        raise ProcedureCannotResumeError(
+            state.id, current_status=state.status, parent_run_held=True
+        )
     return [
         ProcedureResumed(
             procedure_id=state.id,

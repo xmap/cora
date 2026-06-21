@@ -839,21 +839,39 @@ class ProcedureCannotResumeError(Exception):
         already-`Running` Procedure raises (strict-not-idempotent);
         resuming a `Defined` or terminal Procedure raises. Mirrors
         `RunCannotResumeError`.
-      - off-diagonal guard (added in a later slice): a Held Procedure
+      - off-diagonal guard (`parent_run_held=True`): a Held Procedure
         whose parent Run is itself `Held` cannot resume to `Running`
         and walk real setpoints while the Run is paused. The
         one-directional Operation -> Run read enforces this; there is
         NO cascade from Run-resume into Procedure-resume (that is a
         Layer-3 saga, deferred). See [[project_resumable_conduct_design]].
+
+    `parent_run_held` distinguishes the two for operator-facing
+    messaging; `current_status` is carried in both cases.
     """
 
-    def __init__(self, procedure_id: UUID, current_status: "ProcedureStatus") -> None:
-        super().__init__(
-            f"Procedure {procedure_id} cannot be resumed: currently in status "
-            f"{current_status.value}, resume requires {ProcedureStatus.HELD.value}"
-        )
+    def __init__(
+        self,
+        procedure_id: UUID,
+        current_status: "ProcedureStatus",
+        *,
+        parent_run_held: bool = False,
+    ) -> None:
+        if parent_run_held:
+            message = (
+                f"Procedure {procedure_id} cannot be resumed: its parent Run is "
+                f"{ProcedureStatus.HELD.value}. Resume the Run first; CORA does not "
+                f"cascade a Run resume into its Procedures."
+            )
+        else:
+            message = (
+                f"Procedure {procedure_id} cannot be resumed: currently in status "
+                f"{current_status.value}, resume requires {ProcedureStatus.HELD.value}"
+            )
+        super().__init__(message)
         self.procedure_id = procedure_id
         self.current_status = current_status
+        self.parent_run_held = parent_run_held
 
 
 class ProcedureCannotStartIterationError(Exception):

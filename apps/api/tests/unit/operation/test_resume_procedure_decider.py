@@ -2,8 +2,10 @@
 
 Single-source resume transition: `Held -> Running`. Carries
 `re_establishment_boundary` (>= 0). Mirrors `resume_run`. The
-off-diagonal guard (parent Run Held) is NOT in this pure decider; it
-lands in the handler in a follow-up slice.
+off-diagonal guard (refuse while the parent Run is Held) lives in the
+decider via the `parent_run_held` fact the handler derives from a
+one-directional Operation -> Run read; these tests exercise it with
+the flag directly.
 """
 
 from datetime import UTC, datetime
@@ -71,6 +73,52 @@ def test_decide_threads_decided_by_decision_id() -> None:
         now=_NOW,
     )
     assert events[0].decided_by_decision_id == decision_id
+
+
+@pytest.mark.unit
+def test_decide_rejects_when_parent_run_held() -> None:
+    """Off-diagonal guard: a Held Procedure whose parent Run is Held cannot
+    resume (it would walk real setpoints while the Run is paused)."""
+    proc = _procedure()  # status Held
+    with pytest.raises(ProcedureCannotResumeError) as exc:
+        resume_procedure.decide(
+            state=proc,
+            command=ResumeProcedure(procedure_id=proc.id, re_establishment_boundary=0),
+            parent_run_held=True,
+            now=_NOW,
+        )
+    assert exc.value.parent_run_held is True
+    assert "parent Run is Held" in str(exc.value)
+
+
+@pytest.mark.unit
+def test_decide_allows_when_parent_run_not_held() -> None:
+    """A Held Procedure whose parent Run is NOT Held resumes normally."""
+    proc = _procedure()
+    events = resume_procedure.decide(
+        state=proc,
+        command=ResumeProcedure(procedure_id=proc.id, re_establishment_boundary=0),
+        parent_run_held=False,
+        now=_NOW,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], ProcedureResumed)
+
+
+@pytest.mark.unit
+def test_decide_status_guard_precedes_parent_run_guard() -> None:
+    """A non-Held Procedure raises the status-guard form even if the parent
+    Run is also Held (status checked first; parent_run_held flag not set)."""
+    proc = _procedure(status=ProcedureStatus.RUNNING)
+    with pytest.raises(ProcedureCannotResumeError) as exc:
+        resume_procedure.decide(
+            state=proc,
+            command=ResumeProcedure(procedure_id=proc.id, re_establishment_boundary=0),
+            parent_run_held=True,
+            now=_NOW,
+        )
+    assert exc.value.parent_run_held is False
+    assert exc.value.current_status is ProcedureStatus.RUNNING
 
 
 @pytest.mark.unit

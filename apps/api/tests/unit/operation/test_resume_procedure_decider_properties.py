@@ -159,6 +159,29 @@ def test_resume_from_disallowed_source_always_raises_cannot_resume(
 
 @pytest.mark.unit
 @given(
+    procedure_id=st.uuids(),
+    boundary=_BOUNDARY,
+    now=aware_datetimes(),
+)
+def test_resume_with_parent_run_held_always_raises(
+    procedure_id: UUID,
+    boundary: int,
+    now: datetime,
+) -> None:
+    """Off-diagonal guard: a Held Procedure whose parent Run is Held always
+    raises (the status guard passes, so the parent-Run guard is what fires)."""
+    with pytest.raises(ProcedureCannotResumeError) as exc:
+        resume_procedure.decide(
+            state=_procedure(procedure_id=procedure_id, status=ProcedureStatus.HELD),
+            command=ResumeProcedure(procedure_id=procedure_id, re_establishment_boundary=boundary),
+            parent_run_held=True,
+            now=now,
+        )
+    assert exc.value.parent_run_held is True
+
+
+@pytest.mark.unit
+@given(
     state_procedure_id=st.uuids(),
     command_procedure_id=st.uuids(),
     source=st.sampled_from(_RESUMABLE_SOURCES),
