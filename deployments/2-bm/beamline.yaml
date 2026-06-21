@@ -129,18 +129,17 @@ conditioning-optics:
       family: Filter
       pv: { upstream_paddle: "2bma:m17", downstream_paddle: "2bma:m18" }
       controller: FrontEndDrive
-      foils: ["600 um Al", "150 um Al", "300 um C", "50 um C", "None"]   # downstream paddle (2bma:m18) bindings, in slot order, still valid in the IOC though m18 is currently Faulted; per-slot motor positions live in the index_position_table calibration (see test_2bm_filter_foil_setup.py)
-      confirm: true
+      foils_upstream: ["1 mm C", "150 um Al", "600 um Al", "1 mm Al", "None"]   # upstream paddle (2bma:m17), the OPERATIONAL selector today, in slot order; per-slot motor positions in the index_position_table calibration (see test_2bm_filter_foil_setup.py)
+      foils_downstream: ["600 um Al", "150 um Al", "300 um C", "50 um C", "None"]   # downstream paddle (2bma:m18) bindings, still valid in the IOC though m18 is currently Faulted; positions in the index_position_table calibration
       note: >
-        Two paddles. The upstream paddle (2bma:m17) is the operational filter
-        selector today (1 mm C, 150 um Al, 600 um Al, 1 mm Al, None);
-        downstream (2bma:m18) failed 2026-06-19 (parked 107.19 mm, motor cannot
-        actuate, condition Faulted), its bindings still valid in the IOC and
-        listed in foils above. m18 is not expected to be repaired soon, so m17
-        is the sole operational selector. Unit mm (caget 2bma:m18.EGU). Folding
-        the m18 Faulted condition and registering the m17 selector are the held
-        structural part (FOIL-1, #238); materials/positions per docs2bm +
-        2filter_setup.adl (FOIL-1/FOIL-2).
+        Two paddles, each modelled as a Filter_FoilSelector_* PseudoAxis facet
+        with its own index_position_table calibration (test_2bm_filter_foil_setup.py).
+        The upstream paddle (2bma:m17) is the operational filter selector today;
+        the downstream (2bma:m18) failed 2026-06-19 (parked 107.19 mm, motor
+        cannot actuate), modelled condition Faulted with its bindings retained
+        (lifecycle stays Active). m18 is not expected to be repaired soon, so m17
+        is the sole operational selector. Unit mm (caget 2bma:m18.EGU);
+        materials/positions per docs2bm + 2filter_setup.adl (FOIL-1/FOIL-2).
     - name: DiagnosticFlag
       family: LinearStage
       pv: "2bma:m44"

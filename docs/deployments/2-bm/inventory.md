@@ -23,7 +23,8 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `Monochromator_M2Y` | `PseudoAxis` | (none) | `Monochromator` | energy->M2 vertical offset (mm) | live |
 | `ConditioningSlit` | `Slit` | (none) | `2-BM` | white-beam slits; driven by `FrontEndDrive` | live |
 | `Filter` | `Filter` | (none) | `2-BM` | foil changer; driven by `FrontEndDrive` | live |
-| `Filter_FoilSelector` | `PseudoAxis` | (none) | `Filter` | slot index -> paddle position (Nearest) | live |
+| `Filter_FoilSelector_Upstream` | `PseudoAxis` | (none) | `Filter` | m17 slot index -> position (Nearest); operational selector | live |
+| `Filter_FoilSelector_Downstream` | `PseudoAxis` | (none) | `Filter` | m18 slot index -> position (Nearest); bindings retained | Faulted (m18 failed 2026-06-19) |
 | `DiagnosticFlag` | `LinearStage` | (none) | `2-BM` | `2bma:m44`; raised in Mono, parked in Pink | live |
 | `SampleSlit` | `Slit` | (none) | `2-BM` | B-station slits; driven by `FrontEndDrive` | live |
 | `SampleSlit_VerticalTop` | `PseudoAxis` | (none) | `SampleSlit` | energy->top blade beam position (mm) | live |
@@ -222,7 +223,7 @@ Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0,
 
 ### Filter foil selection
 
-Discrete "pick one of N" move. `Filter_FoilSelector` PseudoAxis under `Filter`, carrying a `LookupTable` rule with `interpolation_kind=Nearest` backed by an `index_position_table` Calibration. `extrapolation_kind=Error` (cannot select an absent foil); `invertible=False` with `readback_aggregator_kind=Identity`. Foil changer has two paddles: the upstream (`2bma:m17`) is the operational selector today; the downstream (`2bma:m18`) failed 2026-06-19 (parked 107.19 mm, condition Faulted), its bindings still valid in the IOC. Runtime proven end-to-end in `apps/api/tests/integration/test_pseudoaxis_roundtrip.py`; model: `test_2bm_filter_foil_setup.py`.
+Discrete "pick one of N" move. Two PseudoAxis facets under `Filter` (`Filter_FoilSelector_Upstream` for the operational `2bma:m17`, `Filter_FoilSelector_Downstream` for the `2bma:m18`), each carrying a `LookupTable` rule with `interpolation_kind=Nearest` backed by its own `index_position_table` Calibration. `extrapolation_kind=Error` (cannot select an absent foil); `invertible=False` with `readback_aggregator_kind=Identity`. The downstream m18 paddle failed 2026-06-19 (parked 107.19 mm), modelled condition `Faulted` with bindings retained and lifecycle still `Active`; m17 is the sole operational selector. Runtime proven end-to-end in `apps/api/tests/integration/test_pseudoaxis_roundtrip.py`; model: `test_2bm_filter_foil_setup.py`.
 
 Downstream-paddle slot positions (REAL, staff-published):
 
