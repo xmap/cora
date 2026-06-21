@@ -1,0 +1,58 @@
+# CORA Site descriptor: the MAX IV site-level surface
+#
+# MAX IV (Lund, Sweden) is the second Site CORA models, and the home of the
+# planned TomoWISE beamline. This file is the single human-readable source for
+# the facility's site-level instances: the Facility itself, the Practices it
+# would run, and the facility principals.
+#
+# Status: MAX IV / TomoWISE is in the design phase. Almost everything below is a
+# design-phase intent carried as `pending`, not an operating fact. Concrete
+# facility details (safety forms, supply names, the operator pool) are deferred
+# to the TomoWISE open questions until MAX IV staff confirm them. Do not invent
+# facility specifics here; carry them as questions.
+#
+# Source-of-truth boundary (same as the APS site):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name
+#     equals code); `heading` carries the human title used on the rendered page.
+
+facility:
+  code: maxiv
+  display_name: maxiv
+  heading: "MAX IV"
+  kind: Site
+  institution: MAX IV Laboratory, Lund University
+  beamlines: [TomoWISE]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All
+# pending in the design phase; each names the cross-facility Method it would
+# adapt. Confirm with MAX IV staff before any becomes active.
+practices:
+  - {name: TomoWISE_microtomography_practice, method: tomography, pending: true, note: "microtomography endstation"}
+  - {name: TomoWISE_nanotomography_practice, method: tomography, pending: true, note: "nanotomography endstation (KB-focused)"}
+  - {name: TomoWISE_laminography_practice, method: tomography, pending: true, note: "laminography tilt on the microtomography endstation"}
+
+# Access BC Actors conceptually facility-wide at MAX IV. Pending until the
+# MAX IV operator and review structure is confirmed.
+actors:
+  - {name: MAX IV beamline staff, kind: human, pending: true, note: "operator and beamline-scientist pool; structure TBD"}
+  - {name: MAX IV safety review, kind: human, pending: true, note: "facility safety review body; membership TBD"}
+
+# Agent BC Agents seeded at this deployment. None declared: the CORA system
+# agents are not yet wired for a MAX IV deployment, and TomoWISE is pre-build.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in design.
+supplies:
+  - {name: Storage-ring beam current, kind: PhotonBeam, pending: true}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true}
+
+# Safety BC: facility-issued Clearances. MAX IV safety-form names are not yet
+# confirmed; carried pending with a note rather than guessed.
+clearances:
+  - {name: MAX IV personal safety system, kind: PSS, pending: true, note: "facility safety-form names TBD; confirm with MAX IV staff"}
+
+# Caution BC: operator tribal knowledge. None yet for a pre-build facility.
+cautions: []

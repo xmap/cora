@@ -111,6 +111,9 @@ nav:
       - APS:
         - deployments/aps/index.md
         - Assets: deployments/aps/assets.md
+      - MAX IV:
+        - deployments/maxiv/index.md
+        - Assets: deployments/maxiv/assets.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
