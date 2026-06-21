@@ -267,6 +267,19 @@ beam-defining-and-safety:
       new: true
       confirm: true
       note: mono-mode only, held out of beam in pink mode
+    - name: Aperture
+      family: Aperture
+      controller: ApertureFineDrive
+      z_mm: 51300                    # 2-BM-B, between SampleSlit (50500) and the sample tower (~52-54 m), upstream of the sample (PIEZO-1, #241)
+      new: true
+      note: >
+        Coded-aperture mask stepped through positions in the beam for
+        compressive-sensing / dithered-sampling tomography, fine-positioned in X/Y by
+        ApertureFineDrive (two NV200D units via a nanoSXY 120 CAP flexure). Registered
+        identity-only: the spatial code pattern and any beam-effect (encoded
+        transmission) are deferred with the path reserved, per the passive-beam-path tier
+        discipline. Distinct from Slit (a variable four-blade opening) and Mask (a fixed
+        passive aperture): this is a fixed-pattern mask actively positioned.
 
 sample-environment:
   stage: sample
@@ -545,24 +558,26 @@ controls:
       protocol: OMS_VME
       axis_count: 91
       note: "a-station crate (ioc2bma); drives the front-end + optics band and also the B-station SampleSlit (2bma:m9-m12). Named for its primary band; the full driven set spans both hutches and lives in the EPICS channel map, not the name."
-    - name: OpticsFineDrive          # PROVISIONAL name; finalizes on PIEZO-1 (what it positions)
-      family: MotionController
-      model: piezosystem_jena_nv100d
-      protocol: EPICS                # arcturus host, IOC JenaNV100D; open-loop V / closed-loop um
-      axis_count: 2
-      note: >-
-        Piezosystem Jena NV100D piezo nanopositioning controller for fine optics positioning
-        (reached from the mct_optics screen). Drives 2 piezo axes (X/Y); the driven XY stages,
-        containment, and final name are deferred (PIEZO-1/2). IPs/PVs: PIEZO-4.
-    - name: SampleFineDrive          # PROVISIONAL name; best-guess element, finalizes on PIEZO-1
+    # NV100D (formerly the provisional OpticsFineDrive): physically present with IOC
+    # support (arcturus, IOC JenaNV100D) but NOT in operational use at 2-BM, because the
+    # NV100D lacks the external trigger mode tomoscan fly-scan needs, so no Run/Procedure
+    # drives it. Recorded as provenance, not modeled as an active controller (PIEZO-1, #241).
+    - name: ApertureFineDrive
       family: MotionController
       model: piezosystem_jena_nv200d
       protocol: EPICS                # arcturus host, IOC JenaNV200D; Xon/Xoff flow control
       axis_count: 2
+      ip_addresses: { x: "10.54.113.126", y: "10.54.113.125" }   # two NV200D units, one per axis (PIEZO-4, #244)
       note: >-
-        Piezosystem Jena NV200D/NET piezo controller; FPGA-triggered step mode for tomography
-        (up to 1024 preloaded positions, one step per TTL edge during camera readout). Complements
-        the NV100D. Driven XY stages + scan use-case deferred (PIEZO-1/2/5).
+        Two independent Piezosystem Jena NV200D/NET single-channel controllers (one per
+        axis, separate IPs above) that fine-position the Aperture coded-mask via a
+        nanoSXY 120 CAP XY flexure stage (part T-223-06D, 120 um nominal / 100 um
+        closed-loop per axis, 12.5 mm clear aperture; PIEZO-2, #242). FPGA-triggered step
+        mode advances a preloaded position list (1024-position buffer max, n=256 default,
+        --random for compressive-sensing dithered sampling). The driven X/Y LinearStage
+        axis Assets are deferred to a follow-up slice; the out2/out3 -> X/Y cable map
+        still needs operator confirmation (PIEZO-5). Renamed from the provisional
+        SampleFineDrive: it does NOT move the sample (PIEZO-1, #241).
   triggering:
     - name: Timing
       family: TimingController

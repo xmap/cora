@@ -41,8 +41,7 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `LaminographyPitch` | `TiltStage` | `kohzu_sa16a` | `Hexapod` | Kohzu SA16A `2bmb:m49`; tomo/lamino = tilt setpoint | live |
 | `PropagationDistanceDrive` | `MotionController` | `aerotech_ensemble_hle` | `2-BM` | serial `228849-02`, `axis_count=1`, `Aerotech_Native` | live |
 | `Timing` | `TimingController` | (none) | `2-BM` | softGlueZynq trigger box; `protocol=EPICS`; no `controller_id` | live |
-| `OpticsFineDrive` | `MotionController` | `piezosystem_jena_nv100d` | `2-BM` | Jena NV100D; drives deferred XY piezo axes | live (provisional name) |
-| `SampleFineDrive` | `MotionController` | `piezosystem_jena_nv200d` | `2-BM` | Jena NV200D; FPGA-stepped via `Timing` | live (provisional name) |
+| `ApertureFineDrive` | `MotionController` | `piezosystem_jena_nv200d` | `2-BM` | two Jena NV200D units; fine-positions the `Aperture` coded-mask; FPGA-stepped via `Timing` | live |
 | `DetectorTable` | `Table` | (none) | `2-BM` | `axis_layout=virtual_pose`, `virtual_record=2bmb:table3` | live |
 | `DetectorTable_X` | `PseudoAxis` | (none) | `DetectorTable` | IOC virtual axis; `2bmb:table3.X` | live |
 | `DetectorTable_Y` | `PseudoAxis` | (none) | `DetectorTable` | IOC virtual axis; `2bmb:table3.Y` | live |
@@ -108,8 +107,7 @@ Models bound to non-microscope 2-BM Assets. Model ids are derived from `(manufac
 | `aerotech_tm3a` | Aerotech | `TM3-A-20B VDC-20B VDC / NO SPLIT / PS24-1 / C1ML-06 / C2ML-09 / US-115VAC` | `RotaryDriveChassis` |
 | `oms_vme58` | Oregon Micro Systems | `VME58` | `SampleStageDrive`, `FrontEndDrive` |
 | `kohzu_cyat070` | Kohzu | `CYAT-070` | `SampleTop_X`, `SampleTop_Z` |
-| `piezosystem_jena_nv100d` | Piezosystem Jena | `NV100D` | `OpticsFineDrive` |
-| `piezosystem_jena_nv200d` | Piezosystem Jena | `NV200D/NET` | `SampleFineDrive` |
+| `piezosystem_jena_nv200d` | Piezosystem Jena | `NV200D/NET` | `ApertureFineDrive` |
 
 Controller back-references: `RotaryDrive`->`Rotary.controller_id`; `HexapodDrive`->`Hexapod.controller_id`; `PropagationDistanceDrive`->`PropagationDistance.controller_id` (IOC `2bmbAERO`); `SampleStageDrive`->`SampleTop_X` (`2bmb:m18`) / `SampleTop_Z` (`2bmb:m17`) + 89 further motors on `ioc2bmb`; `FrontEndDrive`->`Mirror`, `Monochromator`, `ConditioningSlit`, `SampleSlit`, `Filter` on `ioc2bma`. The `Objective_Selector` (`2bmb:m1`) and `Camera_Selector` (`2bmb:m5`) steppers run through the `SampleStageDrive` OMS crate, not distinct controller Assets. The six `Hexapod_*` DoF facets bind no Model (the physical `Hexapod` carries `aerotech_hex300`).
 
@@ -139,19 +137,18 @@ Trigger and step signals are modelled as typed ports plus wires resolved at Plan
 
 ### Fine-positioning piezo controllers
 
-- `OpticsFineDrive` = Jena NV100D (staff item_027), fine optics positioning from the `mct_optics` screen; carries no trigger input (no FPGA stepping).
-- `SampleFineDrive` = Jena NV200D/NET (staff item_028), two piezo axes step under FPGA trigger during tomography.
-- Both run EPICS IOCs on host `arcturus` (`JenaNV100D` / `JenaNV200D`), drive two piezo axes each (X/Y), two static IPs per box (recorded once confirmed).
-- Only the controller boxes are modelled today; the driven XY piezo axes and final controller names are deferred.
+- `ApertureFineDrive` = two Piezosystem Jena NV200D/NET single-channel controllers (staff item_028), one per axis (X `10.54.113.126`, Y `10.54.113.125`), EPICS IOC `JenaNV200D` on host `arcturus`. They fine-position the `Aperture` coded-mask via a nanoSXY 120 CAP XY flexure stage (part `T-223-06D`, 120 um nominal / 100 um closed-loop per axis, 12.5 mm clear aperture); the axes step under FPGA trigger for compressive-sensing dithered sampling (PIEZO-1/2/4).
+- The Jena NV100D (formerly the provisional `OpticsFineDrive`, IOC `JenaNV100D`) is physically present but not in operational use at 2-BM: it lacks the external trigger mode tomoscan fly-scan needs, so no Run drives it. Recorded as provenance, not modelled as an active controller.
+- The driven X/Y `LinearStage` axis Assets and the `Aperture` identity registration are deferred to a follow-up slice; the FPGA `out2`/`out3` -> X/Y cable map needs operator confirmation (PIEZO-5).
 
 ### NV200D trigger wiring
 
 | Asset | Port | Direction | `signal_type` |
 | --- | --- | --- | --- |
 | `Timing` | `out2`, `out3` | OUTPUT | `step_trigger_ttl` |
-| `SampleFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
+| `ApertureFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
 
-- Wires: `Timing.out2 -> SampleFineDrive.step_x_in`, `Timing.out3 -> SampleFineDrive.step_y_in` (JenaX/JenaY land on FPGA `out2`/`out3`, item_028); up to 1024 positions/axis.
+- Wires: `Timing.out2 -> ApertureFineDrive.step_x_in`, `Timing.out3 -> ApertureFineDrive.step_y_in` (JenaX/JenaY land on FPGA `out2`/`out3`, item_028); up to 1024 positions/axis.
 - Gate-delay PVs: `2bmbMZ1:SG:GateDly-3_DLY` (labelled "X axis delay"), `2bmbMZ1:SG:GateDly-2_DLY` (labelled "Y axis delay"); the label-to-cable map appears crossed, recorded verbatim and flagged for confirmation.
 - Ports sit on the controller box today; they migrate onto per-axis Assets when registered.
 

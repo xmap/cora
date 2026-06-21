@@ -67,7 +67,9 @@ families:
   - name: Table
     note: "Support/positioning table Family (the hutch optical tables). One Family spans the 4-DOF sample table (pure translation), the 6-DOF detector table (six virtual axes on record 2bmb:table3), and the mirror table (in operational use, its X axes driven by the energy-change IOC for stripe selection, STAGE-7); the axis set is a per-Asset settings difference, not a Family split. 'Optical' is deliberately not in the name (it would name the contents, not the table's own nature; the OpticalHousing -> Housing precedent). Instances qualify at the Asset layer: SampleTable / DetectorTable / MirrorTable."
   - name: Slit
-    note: "Beam-defining aperture Family (four independently-driven blades forming a horizontal/vertical aperture). 2-BM: ConditioningSlit (A-station L3-20) and SampleSlit (B-station)."
+    note: "Beam-defining four-blade slit Family (four independently-driven blades forming a variable horizontal/vertical opening). 2-BM: ConditioningSlit (A-station L3-20) and SampleSlit (B-station)."
+  - name: Aperture
+    note: "Patterned beam-shaping aperture Family: a fixed-pattern mask positioned in the beam as a unit. Distinct from Slit (a variable opening defined by four driven blades) and from a passive Mask (a fixed beam-defining opening that does not move); the discriminator is the element's nature (a fixed code pattern), not that it is driven. 2-BM: the coded aperture for compressive-sensing tomography, fine-positioned by ApertureFineDrive."
   - name: Mirror
     note: "Beam-steering grazing-incidence mirror optic Family. 2-BM: the Y3-30 mirror (distinct from its MirrorTable support, which is Family Table)."
   - name: Monochromator
@@ -213,10 +215,8 @@ models:
     manufacturer: { name: "Oregon Micro Systems" }
     part_number: "VME58"
     declared_families: [MotionController]
-  - name: piezosystem_jena_nv100d
-    manufacturer: { name: "Piezosystem Jena" }
-    part_number: "NV100D"
-    declared_families: [MotionController]
+  # piezosystem_jena_nv100d removed: the NV100D is present at 2-BM but not in operational
+  # use, so it binds no device (PIEZO-1, #241). Provenance kept in the beamline note.
   - name: piezosystem_jena_nv200d
     manufacturer: { name: "Piezosystem Jena" }
     part_number: "NV200D/NET"
