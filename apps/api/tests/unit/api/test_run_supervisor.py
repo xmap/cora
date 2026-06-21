@@ -40,7 +40,12 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.kernel import Kernel
-from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, UUIDv7Generator
+from cora.infrastructure.ports import (
+    AllowAllAuthorize,
+    FakeClock,
+    FixedIdGenerator,
+    UUIDv7Generator,
+)
 from cora.infrastructure.ports.beam_availability_lookup import (
     BeamAvailabilityLookup,
     BeamAvailabilityLookupResult,
@@ -1853,3 +1858,32 @@ async def test_advise_records_no_decision_when_rule_disabled() -> None:
     )
 
     assert await _supervision_decision_choices(kernel) == []
+
+
+@pytest.mark.unit
+async def test_record_supervision_advice_is_idempotent_on_repeated_id() -> None:
+    """A re-derived advise Decision id (cross-restart re-emission) is a
+    ConcurrencyError no-op, not a crash (mirrors _record_decision)."""
+    from cora.api._run_supervisor import _record_supervision_advice
+
+    shared_id = uuid4()
+    # Each emission mints decision_id then correlation_id; repeat decision_id so
+    # the second append collides on the existing Decision stream.
+    kernel = make_inmemory_kernel(
+        settings=Settings(),  # type: ignore[call-arg]
+        clock=FakeClock(_NOW),
+        id_generator=FixedIdGenerator([shared_id, uuid4(), shared_id, uuid4()]),
+        authz=AllowAllAuthorize(),
+    )
+    run_id = uuid4()
+    for _ in range(2):
+        await _record_supervision_advice(
+            kernel,
+            run_id=run_id,
+            choice="SupervisionStalled",
+            inputs={"channel": "projection_index"},
+            reasoning="stalled (advise rung)",
+        )
+
+    # The second emission re-derived the same id and was swallowed: one Decision.
+    assert await _supervision_decision_choices(kernel) == ["SupervisionStalled"]
