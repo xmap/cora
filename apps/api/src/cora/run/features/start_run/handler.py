@@ -359,7 +359,7 @@ def bind(deps: Kernel) -> Handler:
         # the configured PVs live. The port never raises for substrate
         # disconnects: a bad read surfaces as quality_ok=False and the
         # decider fails closed.
-        beam_availability = await deps.beam_availability_lookup.read_beam_availability()
+        beam_availability = await deps.beam_availability_lookup.read()
 
         context = RunStartContext(
             plan=plan,

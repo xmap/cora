@@ -571,7 +571,7 @@ async def _supervise_tick(
     if not running and not resume_candidates:
         return
 
-    beam = await beam_lookup.read_beam_availability()
+    beam = await beam_lookup.read()
 
     # Hold pass (Running Runs).
     for item in running:

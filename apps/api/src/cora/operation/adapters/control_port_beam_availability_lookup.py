@@ -46,7 +46,7 @@ class ControlPortBeamAvailabilityLookup:
         self._sbs_pv = beam_pvs.get("sbs")
         self._fes_permit_pv = beam_pvs.get("fes_permit")
 
-    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+    async def read(self) -> BeamAvailabilityLookupResult:
         fes_open, fes_ok = await self._read_open(self._fes_pv)
         sbs_open, sbs_ok = await self._read_open(self._sbs_pv)
         fes_permit, permit_ok = await self._read_permit(self._fes_permit_pv)

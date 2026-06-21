@@ -215,7 +215,7 @@ def _kernel(*, enabled: bool = False) -> Kernel:
 
 
 class _BeamDown:
-    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+    async def read(self) -> BeamAvailabilityLookupResult:
         return _beam(fes=False)
 
 
@@ -560,7 +560,7 @@ async def test_loop_survives_a_failing_tick() -> None:
 
 
 class _BeamOpen:
-    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+    async def read(self) -> BeamAvailabilityLookupResult:
         return _beam()
 
 

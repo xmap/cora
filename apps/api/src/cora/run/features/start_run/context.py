@@ -127,7 +127,7 @@ class RunStartContext:
     """Live beam-availability reading at the Run-start instant (BEAM-1),
     or None when the deployment configured no beam PVs (gate skipped,
     beam-by-default). The handler calls
-    `deps.beam_availability_lookup.read_beam_availability()` and threads
+    `deps.beam_availability_lookup.read()` and threads
     the result here; the decider gates on it (fail-closed when
     `quality_ok` is False; refuse when any of `fes_open` / `sbs_open` /
     `fes_permit` is False). The reading is consumed only by the gate and

@@ -208,14 +208,14 @@ def _id_queue() -> list[UUID]:
 
 
 class _BeamDown:
-    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+    async def read(self) -> BeamAvailabilityLookupResult:
         return BeamAvailabilityLookupResult(
             fes_open=False, sbs_open=True, fes_permit=True, quality_ok=True
         )
 
 
 class _BeamOpen:
-    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+    async def read(self) -> BeamAvailabilityLookupResult:
         return BeamAvailabilityLookupResult(
             fes_open=True, sbs_open=True, fes_permit=True, quality_ok=True
         )

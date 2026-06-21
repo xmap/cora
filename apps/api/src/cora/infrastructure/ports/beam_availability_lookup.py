@@ -64,7 +64,7 @@ class BeamAvailabilityLookupResult:
 class BeamAvailabilityLookup(Protocol):
     """Cross-BC port: read current beam availability for the start gate."""
 
-    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+    async def read(self) -> BeamAvailabilityLookupResult:
         """Return the current beam-availability reading.
 
         Never raises for substrate disconnects: a failed / bad-quality
@@ -86,7 +86,7 @@ class AllBeamOpenLookup:
     trivially, preserving the pre-BEAM-1 "no beam gate" behavior.
     """
 
-    async def read_beam_availability(self) -> BeamAvailabilityLookupResult:
+    async def read(self) -> BeamAvailabilityLookupResult:
         return BeamAvailabilityLookupResult(
             fes_open=True, sbs_open=True, fes_permit=True, quality_ok=True
         )
