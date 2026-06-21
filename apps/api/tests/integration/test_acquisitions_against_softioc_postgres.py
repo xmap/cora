@@ -23,7 +23,6 @@ unit tier via the IteratingPort fixture.
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
-import json
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -186,7 +185,7 @@ async def test_conductor_runs_collect_action_against_real_softioc_and_postgres(
             procedure_id,
         )
     assert [r["step_kind"] for r in rows] == ["action"]
-    payload = json.loads(rows[0]["payload"])
+    payload = rows[0]["payload"]
     assert payload["name"] == "collect"
     assert payload["result"] == "ok"
     result_data = payload["result_data"]
@@ -277,7 +276,7 @@ async def test_conductor_runs_discrete_action_walks_axis_with_per_point_collects
             """,
             procedure_id,
         )
-    payload = json.loads(rows[0]["payload"])
+    payload = rows[0]["payload"]
     assert payload["name"] == "discrete"
     assert payload["result"] == "ok"
     result_data = payload["result_data"]
@@ -366,7 +365,7 @@ async def test_conductor_runs_continuous_action_with_axis_sweep_against_softioc(
             """,
             procedure_id,
         )
-    payload = json.loads(rows[0]["payload"])
+    payload = rows[0]["payload"]
     assert payload["name"] == "continuous"
     assert payload["result"] == "ok"
     result_data = payload["result_data"]

@@ -12,7 +12,6 @@ Mirrors `test_append_observations_handler_postgres.py` shape exactly.
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
-import json
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -207,7 +206,7 @@ async def test_append_activities_lazy_open_and_polymorphic_round_trip(
     # recorded_at is DEFAULT now() at the DB layer; must come AFTER occurred_at.
     assert setpoint_row["recorded_at"] >= setpoint_row["occurred_at"]
     # asyncpg returns jsonb as a JSON string for plain SELECT; decode it.
-    setpoint_payload = json.loads(setpoint_row["payload"])
+    setpoint_payload = setpoint_row["payload"]
     assert setpoint_payload == {
         "channel": "T_oven",
         "target_value": 423.0,
@@ -215,10 +214,10 @@ async def test_append_activities_lazy_open_and_polymorphic_round_trip(
         "ramp_rate": 5.0,
     }
 
-    action_payload = json.loads(by_kind["action"]["payload"])
+    action_payload = by_kind["action"]["payload"]
     assert action_payload == {"action_name": "open_valve", "params": {"valve": "V12"}}
 
-    check_payload = json.loads(by_kind["check"]["payload"])
+    check_payload = by_kind["check"]["payload"]
     assert check_payload["passed"] is True
     assert check_payload["actual"] == 422.8
 
@@ -308,7 +307,7 @@ async def test_append_activities_dedups_on_event_id_in_postgres(
     rows = await _read_steps_for_procedure(db_pool, procedure_id)
     assert len(rows) == 1
     assert rows[0]["step_kind"] == "setpoint"
-    payload = json.loads(rows[0]["payload"])
+    payload = rows[0]["payload"]
     assert payload == {"channel": "X", "target_value": 1.0}
 
 
@@ -317,3 +316,57 @@ async def test_postgres_step_store_handles_empty_batch(db_pool: asyncpg.Pool) ->
     """Empty batch is a no-op at the adapter layer (early return)."""
     store = PostgresActivityStore(db_pool)
     await store.append([])  # No exception, no rows touched.
+
+
+@pytest.mark.integration
+async def test_payload_stores_as_real_jsonb_so_server_side_filters_work(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Regression: payload must persist as a real jsonb OBJECT (not a double-
+    encoded jsonb scalar string), so server-side `payload->>'key'` works. When
+    payload was double-encoded (json.dumps bound to a jsonb column with no
+    `::jsonb` cast), `payload->>'result'` returned NULL and the conductor's
+    in-flight-marker filters (`payload->>'result' IS DISTINCT FROM 'in_flight'`)
+    silently no-op'd, leaking marker rows into assertions."""
+    procedure_id = UUID("01900000-0000-7000-8000-0000010c0d01")
+    logbook_id = UUID("01900000-0000-7000-8000-0000010c0d02")
+    open_event_id = UUID("01900000-0000-7000-8000-0000010c0d03")
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[logbook_id, open_event_id])
+    step_store = PostgresActivityStore(db_pool)
+    await _seed_running_procedure(deps.event_store, procedure_id)
+
+    handler = bind_append(deps, step_store=step_store)
+    await handler(
+        AppendProcedureActivities(
+            procedure_id=procedure_id,
+            entries=(
+                _entry(
+                    event_id=UUID("01900000-0000-7000-8000-0000010c0e01"),
+                    step_kind="setpoint",
+                    payload={"address": "2bma:x", "result": "in_flight"},
+                    sampled_at=datetime(2026, 5, 15, 12, 0, 1, tzinfo=UTC),
+                ),
+                _entry(
+                    event_id=UUID("01900000-0000-7000-8000-0000010c0e02"),
+                    step_kind="setpoint",
+                    payload={"address": "2bma:x", "result": "ok"},
+                    sampled_at=datetime(2026, 5, 15, 12, 0, 2, tzinfo=UTC),
+                ),
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    async with db_pool.acquire() as conn:
+        # Server-side extraction returns the actual value (not NULL), so the
+        # marker filter excludes the in_flight row and keeps only the outcome.
+        rows = await conn.fetch(
+            """
+            SELECT payload->>'result' AS result
+            FROM entries_operation_procedure_activities
+            WHERE procedure_id = $1 AND payload->>'result' IS DISTINCT FROM 'in_flight'
+            """,
+            procedure_id,
+        )
+    assert [r["result"] for r in rows] == ["ok"]

@@ -102,7 +102,6 @@ this routine does not manipulate them. They participate in `center`,
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
-import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -689,7 +688,7 @@ async def test_pitch_alignment_plays_out_end_to_end(
     # The convergence Check (iteration 2's 180° check) records the sharpness
     # delta. Iteration is no longer encoded here (no `evidence['iteration']`);
     # it is first-class, asserted via the per-iteration read model below.
-    convergence_check_payload = json.loads(rows[12]["payload"])
+    convergence_check_payload = rows[12]["payload"]
     assert convergence_check_payload["passed"] is True
     assert convergence_check_payload["evidence"]["delta_sharpness"] == 0.02
     assert "iteration" not in convergence_check_payload["evidence"]

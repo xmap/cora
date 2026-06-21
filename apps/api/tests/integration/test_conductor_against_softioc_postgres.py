@@ -169,9 +169,8 @@ async def test_conductor_runs_setpoint_check_against_real_softioc_and_postgres(
             """,
             procedure_id,
         )
-    import json
 
-    parsed = [(r["step_kind"], json.loads(r["payload"])) for r in rows]
+    parsed = [(r["step_kind"], r["payload"]) for r in rows]
     # The setpoint is side-effecting: it records a pre-effect in-flight
     # marker then the `ok` outcome, both round-tripping into Postgres. The
     # check (pure read) records only its outcome -- no marker.

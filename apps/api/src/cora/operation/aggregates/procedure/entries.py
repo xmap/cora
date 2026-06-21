@@ -77,7 +77,6 @@ kinds.
 # adapter class. The dataclass + Protocol stay strictly typed for
 # every caller above the boundary.
 
-import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
@@ -170,12 +169,17 @@ class PostgresActivityStore:
                         row.actor_id,
                         row.command_name,
                         row.step_kind,
-                        # asyncpg encodes Python dict to jsonb when the
-                        # column is jsonb-typed; explicit json.dumps
-                        # keeps the contract obvious and matches the
-                        # decision_reasonings adapter's posture (which
-                        # also has a JSON body column).
-                        json.dumps(row.payload),
+                        # Pass the dict; the pool's jsonb codec (pool.py
+                        # set_type_codec encoder=json.dumps) serializes it ONCE
+                        # into a real jsonb OBJECT, exactly like the event store
+                        # passes event.payload. An EXTRA json.dumps here (the
+                        # former code) double-encoded it into a jsonb SCALAR
+                        # string, which made server-side `payload->>'key'`
+                        # return NULL and silently no-op'd the conductor's
+                        # in-flight-marker filters. (The decision_inferences
+                        # adapter still json.dumps-es into jsonb; harmless only
+                        # while nothing queries its jsonb server-side.)
+                        row.payload,
                         row.sampled_at,
                         row.occurred_at,
                         row.correlation_id,

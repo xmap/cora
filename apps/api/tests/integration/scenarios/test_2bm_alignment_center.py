@@ -85,7 +85,6 @@ companion) for the gaps documented in domain terms. The most consequential surfa
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
-import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -929,7 +928,7 @@ async def test_center_alignment_plays_out_end_to_end(
 
     # The final setpoint records the calibrated rotation-axis pixel position --
     # the artifact a downstream science scan will read.
-    final_setpoint_payload = json.loads(step_rows[-1]["payload"])
+    final_setpoint_payload = step_rows[-1]["payload"]
     assert final_setpoint_payload["channel"] == "RotationCenter"
     assert final_setpoint_payload["target_value"] == 1024.5
     assert final_setpoint_payload["units"] == "px"
@@ -938,7 +937,7 @@ async def test_center_alignment_plays_out_end_to_end(
     # judgment + supporting evidence. Iteration is no longer encoded here
     # (no `evidence['iteration']`); it is first-class, asserted via the
     # per-iteration read model below.
-    convergence_check_payload = json.loads(step_rows[11]["payload"])
+    convergence_check_payload = step_rows[11]["payload"]
     assert convergence_check_payload["passed"] is True
     assert convergence_check_payload["source"] == "live_tomostream_centroid"
     assert convergence_check_payload["evidence"]["offset_px"] == 0.5

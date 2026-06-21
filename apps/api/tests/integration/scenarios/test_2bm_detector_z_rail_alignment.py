@@ -518,9 +518,8 @@ async def test_detector_z_rail_alignment_plays_out_end_to_end(
         "setpoint",
         "setpoint",  # finalize: converged AX + AY
     ]
-    import json
 
-    last = json.loads(step_rows[-1]["payload"])
+    last = step_rows[-1]["payload"]
     assert last["channel"] == "DetectorTable.AY"
     assert last["units"] == "deg"
 

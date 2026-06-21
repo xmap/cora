@@ -100,7 +100,6 @@ this routine does not manipulate them. They participate in the
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
-import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -678,7 +677,7 @@ async def test_roll_alignment_plays_out_end_to_end(
     # judgment + supporting evidence. Iteration is no longer encoded here
     # (no `evidence['iteration']`); it is first-class, asserted via the
     # per-iteration read model below.
-    convergence_check_payload = json.loads(rows[12]["payload"])
+    convergence_check_payload = rows[12]["payload"]
     assert convergence_check_payload["passed"] is True
     assert convergence_check_payload["evidence"]["delta_y_px"] == 0.3
     assert "iteration" not in convergence_check_payload["evidence"]
