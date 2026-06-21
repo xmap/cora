@@ -588,8 +588,10 @@ resources:
     - kind: Power
     - kind: ComputePool
     - kind: LiquidNitrogen        # 2-BM detector LN2 dewar
-    - kind: ProcessGas            # pending: sample-environment gas mix
-    - kind: CompressedAir         # pending: compressed-air supply (kind newly coined; not yet attested in code)
+  # No standing 2-BM gas-mix or compressed-air Supply (SUP-1/SUP-2, #268): sample
+  # gas is per-experiment, ESAF-gated (bottles, typically He/N2/Ar), so it is a
+  # Run-level fact not a beamline Supply; compressed air is the APS facility shop-air
+  # line with no beamline-local spec. Facility-scope ProcessGas stays in aps/site.yaml.
   replaceable_parts:
     # One selector, since CORA has no single asset-revision concept:
     #   recoatable surface  -> Consumable affordance, no separate asset

@@ -9,7 +9,7 @@ Open a short issue at [github.com/xmap/cora/issues](https://github.com/xmap/cora
 > STAGE-6: the laminography-pitch stage is a Kohzu SA16A-RM
 > DET-9: the installed middle objective is 5x
 
-You do not need to edit this file or know where it lives. If you do not use GitHub, send the same thing (the item ID and your answer) to whoever shared this page. A few rows name a different contact: facility utilities (gas, compressed air) for **SUP-1**, **SUP-2**. If a row is really a controls/EPICS, network, or engineering question, route it to the right person or tell us who that is.
+You do not need to edit this file or know where it lives. If you do not use GitHub, send the same thing (the item ID and your answer) to whoever shared this page. If a row is really a controls/EPICS, network, or engineering question, route it to the right person or tell us who that is.
 
 ## How to read a row
 
@@ -155,15 +155,6 @@ BLEPS is the beamline equipment-protection interlock, separate from the PSS: BLE
 | BLEPS-1 | `Nice-to-have` | Which BLEPS faults are utility-level (vacuum via IP/IG/GV, cooling-water via the Flow channels) versus tied to a specific device (for example a mirror or optics trip)? | utility faults map to Supply, device faults to Asset condition; CORA never models the interlock matrix | not yet | [Supplies](operations.md#supplies) |
 | BLEPS-2 | `Nice-to-have` | Are the BLEPS fault / status signals readable as Channel Access PVs for an external observer (the BLEPS EPICS transfer table lists tags such as `A_Fault_Exists`, `GV1.Faulted`, the Flow channels, `FES.Permit` / `SBS.Permit`)? If readable, which PV maps to which utility or device; if not, the integration path. | readable via the BLEPS PLC EPICS interface; exact PV-to-Supply/Asset mapping unknown | not yet | [Supplies](operations.md#supplies) |
 | BLEPS-3 | `Nice-to-have` | Is there a beamline-level "BLEPS tripped / armed / recovering" state that operators act on as a whole, distinct from the individual utility and device faults, that gates a run on its own? | no system-level state needed; decompose onto existing axes | not yet | [Supplies](operations.md#supplies) |
-
-## Supplies
-
-Facility utilities confirm 2-BM's sample-environment gas and compressed air.
-
-| ID | Priority | Question | CORA assumes | Already done? | Resolves |
-| --- | --- | --- | --- | --- | --- |
-| SUP-1 | `Nice-to-have` | The sample-environment gas-mix composition available at 2-BM? Confirmer: facility utilities. | a gas supply exists; mixture unknown; confirmer: facility utilities | not yet | [Supplies](operations.md#supplies) |
-| SUP-2 | `Nice-to-have` | The compressed-air spec at 2-BM (line pressure, flow, quality class)? Confirmer: facility utilities. | air available; specs unknown; confirmer: facility utilities | not yet | [Supplies](operations.md#supplies) |
 
 ## Data storage and transfer
 

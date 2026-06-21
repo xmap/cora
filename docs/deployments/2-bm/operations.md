@@ -25,8 +25,9 @@ facility-scope utilities live at [APS](../aps/index.md#the-resources-you-draw-on
 | --- | --- | --- |
 | `2-BM detector LN2 dewar` | `Beamline` | `LiquidNitrogen` |
 
-Pending beamline Supplies: a sample-environment gas mix (`ProcessGas`, `SUP-1`) and a compressed-air supply
-(`CompressedAir`, `SUP-2`).
+2-BM keeps no standing gas-mix or compressed-air Supply: sample gas is per-experiment and ESAF-gated (a
+Run-level fact, not a beamline Supply), and compressed air is the APS facility shop-air line with no
+beamline-local spec.
 
 The photon beam, cooling water, vacuum, and electrical power are facility-scope utilities, observed through
 BLEPS and recorded at the [APS](../aps/index.md#the-resources-you-draw-on) level rather than as beamline
