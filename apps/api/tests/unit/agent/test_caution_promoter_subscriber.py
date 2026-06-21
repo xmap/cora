@@ -67,8 +67,13 @@ def _kernel() -> Kernel:
 
 
 class _FakeLookup:
-    def __init__(self, results: list[CautionLookupResult]) -> None:
+    def __init__(
+        self,
+        results: list[CautionLookupResult],
+        retired: list[CautionLookupResult] | None = None,
+    ) -> None:
         self._results = results
+        self._retired = retired or []
 
     async def find_active_for_run(
         self,
@@ -79,6 +84,17 @@ class _FakeLookup:
     ) -> list[CautionLookupResult]:
         _ = (asset_ids, procedure_ids, min_severity)
         return self._results
+
+    async def find_retired_for_target(
+        self,
+        *,
+        target_kind: str,
+        target_id: UUID,
+        category: str,
+        authored_by: UUID,
+    ) -> list[CautionLookupResult]:
+        _ = (target_kind, target_id, category, authored_by)
+        return self._retired
 
 
 class _DenyAll:
@@ -199,6 +215,24 @@ async def test_gate_defers_when_authorize_denies() -> None:
     assert out == "PromotionDeferred"
 
 
+@pytest.mark.unit
+async def test_gate_defers_when_matching_notice_previously_retired() -> None:
+    """Operator-retirement-memory guard (Lock 5): a matching Notice the promoter
+    previously registered, since Retired by an operator, vetoes re-promotion."""
+    sub = _sub(_kernel(), lookup=_FakeLookup([], retired=[_conflict_result()]))
+    out, reason = await sub._evaluate(_view(), _decision(confidence=0.9))
+    assert out == "PromotionDeferred"
+    assert "retired" in reason.lower()
+
+
+@pytest.mark.unit
+async def test_gate_promotes_when_no_retired_match() -> None:
+    """With no retired match the guard is silent and a high-confidence Notice promotes."""
+    sub = _sub(_kernel(), lookup=_FakeLookup([], retired=[]))
+    out, _ = await sub._evaluate(_view(), _decision(confidence=0.9))
+    assert out == "Promote"
+
+
 # ---------- apply: end to end ----------
 
 
@@ -317,6 +351,25 @@ async def test_apply_defers_above_notice_writes_no_caution() -> None:
     await seed_caution_promoter_agent(kernel)
     proposal_id, stored = await _write_proposal(kernel, choice="ProposeWarning", severity="Warning")
     sub = _sub(kernel)
+
+    await sub.apply(stored, None)  # type: ignore[arg-type]
+
+    promo = await load_decision(kernel.event_store, _derive_decision_id(proposal_id))
+    assert promo is not None
+    assert promo.choice.value == "PromotionDeferred"
+    assert await load_caution(kernel.event_store, _derive_caution_id(proposal_id)) is None
+
+
+@pytest.mark.unit
+async def test_apply_defers_and_writes_no_caution_when_previously_retired() -> None:
+    """End-to-end Lock 5 guard: a proposal matching a Notice the promoter
+    previously registered + an operator Retired yields a PromotionDeferred
+    Decision and writes NO Caution."""
+    kernel = _kernel()
+    await seed_caution_drafter_agent(kernel)
+    await seed_caution_promoter_agent(kernel)
+    proposal_id, stored = await _write_proposal(kernel)
+    sub = _sub(kernel, lookup=_FakeLookup([], retired=[_conflict_result()]))
 
     await sub.apply(stored, None)  # type: ignore[arg-type]
 

@@ -90,6 +90,28 @@ _SEVERITY_ORDINAL: dict[str, int] = {
     "Warning": 2,
 }
 
+# CautionPromoter retirement-memory guard (Lock 5). Cold read: filtered on
+# status='Retired' (not covered by the Active partial index), but the promoter
+# runs it only for an otherwise-promotable proposal (rare), so a small
+# proj_caution_summary scan is acceptable at pilot scale; no new index until a
+# consumer needs retired-by-target at a hotter cadence.
+_FIND_RETIRED_FOR_TARGET_SQL = """
+SELECT caution_id,
+       target_kind,
+       target_id,
+       category,
+       severity,
+       LEFT(text, 200)       AS text_excerpt,
+       LEFT(workaround, 200) AS workaround_excerpt
+FROM proj_caution_summary
+WHERE status = 'Retired'
+  AND target_kind = $1
+  AND target_id = $2
+  AND category = $3
+  AND authored_by = $4
+ORDER BY registered_at, caution_id
+"""
+
 
 class PostgresCautionLookup:
     """asyncpg-backed `CautionLookup` implementation."""
@@ -118,6 +140,24 @@ class PostgresCautionLookup:
                 sorted(asset_ids, key=str),
                 sorted(procedure_ids, key=str),
                 threshold,
+            )
+        return [_row_to_reference(row) for row in rows]
+
+    async def find_retired_for_target(
+        self,
+        *,
+        target_kind: str,
+        target_id: UUID,
+        category: str,
+        authored_by: UUID,
+    ) -> list[CautionLookupResult]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                _FIND_RETIRED_FOR_TARGET_SQL,
+                target_kind,
+                target_id,
+                category,
+                authored_by,
             )
         return [_row_to_reference(row) for row in rows]
 

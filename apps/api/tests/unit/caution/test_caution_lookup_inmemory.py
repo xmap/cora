@@ -53,3 +53,16 @@ async def test_always_quiet_returns_empty_list_with_explicit_min_severity() -> N
         min_severity="Notice",
     )
     assert result == []
+
+
+@pytest.mark.unit
+async def test_always_quiet_find_retired_for_target_returns_empty_list() -> None:
+    """The retirement-memory lookup stub is also silent (port contract)."""
+    lookup = AlwaysQuietCautionLookup()
+    result = await lookup.find_retired_for_target(
+        target_kind="Asset",
+        target_id=uuid4(),
+        category="OperationalWindow",
+        authored_by=uuid4(),
+    )
+    assert result == []

@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
+from cora.agent.seed_caution_promoter import CAUTION_PROMOTER_AGENT_ID
 from cora.caution._projections import register_caution_projections
 from cora.caution.adapters import PostgresCautionLookup
 from cora.caution.aggregates.caution import (
@@ -199,6 +200,113 @@ async def test_retired_and_superseded_cautions_never_returned(
     assert child_id in returned_ids
     assert retired_id not in returned_ids
     assert parent_id not in returned_ids
+
+
+@pytest.mark.integration
+async def test_find_retired_for_target_returns_operator_retired_match(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """find_retired_for_target surfaces a Retired caution matching
+    target_kind+target_id+category+authored_by (the CautionPromoter GOV-1 guard);
+    a non-matching author / category / target returns nothing."""
+    asset_id = uuid4()
+    retired_id = uuid4()
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[retired_id, uuid4()])
+    await register_caution.bind(deps)(
+        _register_command(target_asset_id=asset_id, category=CautionCategory.WEAR),
+        principal_id=CAUTION_PROMOTER_AGENT_ID,  # authored_by = the promoter
+        correlation_id=_CORRELATION_ID,
+    )
+    deps_later = build_postgres_deps(db_pool, now=_LATER, ids=[uuid4()])
+    await retire_caution.bind(deps_later)(
+        RetireCaution(caution_id=retired_id, reason=CautionRetireReason.RESOLVED),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain(db_pool)
+
+    lookup = PostgresCautionLookup(db_pool)
+    match = await lookup.find_retired_for_target(
+        target_kind="Asset",
+        target_id=asset_id,
+        category="Wear",
+        authored_by=CAUTION_PROMOTER_AGENT_ID,
+    )
+    assert len(match) == 1
+    assert match[0].caution_id == retired_id
+
+    # A Retired row is NOT returned by the Active lookup.
+    assert (
+        await lookup.find_active_for_run(
+            asset_ids=frozenset({asset_id}), procedure_ids=frozenset(), min_severity="Notice"
+        )
+        == []
+    )
+    # Non-matching author, category, and target each return nothing.
+    assert (
+        await lookup.find_retired_for_target(
+            target_kind="Asset", target_id=asset_id, category="Wear", authored_by=uuid4()
+        )
+        == []
+    )
+    assert (
+        await lookup.find_retired_for_target(
+            target_kind="Asset",
+            target_id=asset_id,
+            category="OperationalWindow",
+            authored_by=CAUTION_PROMOTER_AGENT_ID,
+        )
+        == []
+    )
+    assert (
+        await lookup.find_retired_for_target(
+            target_kind="Asset",
+            target_id=uuid4(),
+            category="Wear",
+            authored_by=CAUTION_PROMOTER_AGENT_ID,
+        )
+        == []
+    )
+
+
+@pytest.mark.integration
+async def test_find_retired_for_target_excludes_superseded(db_pool: asyncpg.Pool) -> None:
+    """A Superseded predecessor (status='Superseded', NOT 'Retired') does not
+    veto: find_retired_for_target filters status='Retired' only, so a superseded
+    same-target+category Notice is absent (pins the docstring promise)."""
+    asset_id = uuid4()
+    parent_id = uuid4()
+    deps_p = build_postgres_deps(db_pool, now=_NOW, ids=[parent_id, uuid4()])
+    await register_caution.bind(deps_p)(
+        _register_command(target_asset_id=asset_id, category=CautionCategory.WEAR),
+        principal_id=CAUTION_PROMOTER_AGENT_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    deps_s = build_postgres_deps(db_pool, now=_LATER, ids=[uuid4(), uuid4(), uuid4()])
+    await supersede_caution.bind(deps_s)(
+        SupersedeCaution(
+            parent_id=parent_id,
+            target=AssetTarget(asset_id=asset_id),
+            category=CautionCategory.WEAR,
+            severity=CautionSeverity.CAUTION,
+            text="recalibrated; tighter limit",
+            workaround="run at 0.7 mm/s",
+        ),
+        principal_id=CAUTION_PROMOTER_AGENT_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain(db_pool)
+
+    lookup = PostgresCautionLookup(db_pool)
+    assert (
+        await lookup.find_retired_for_target(
+            target_kind="Asset",
+            target_id=asset_id,
+            category="Wear",
+            authored_by=CAUTION_PROMOTER_AGENT_ID,
+        )
+        == []
+    )
 
 
 @pytest.mark.integration
