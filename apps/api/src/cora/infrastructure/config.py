@@ -218,6 +218,29 @@ class Settings(BaseSettings):
     # Decision and issues no command.
     run_liveness_ceiling_seconds: float | None = None
 
+    # Observation-signal closed-loop rules (SHADOW, inside the RunSupervisor
+    # loop; [[project_observation_signal_port_design]]). Both default OFF and
+    # are a second off-gate above run_supervisor_enabled.
+    #
+    # Rule Q (quality-within-limits) is active for a Run iff
+    # `run_quality_channel_name` is set AND the Run's precomputed snr_limit is
+    # non-NULL. It flags when the channel's latest value is below the limit.
+    #
+    # Rule R (rate-dropout / stall) is active for a Run iff
+    # `run_stall_channel_name` is set AND the Run's precomputed
+    # expected_observation_interval_seconds is non-NULL AND
+    # `run_feed_heartbeat_ceiling_seconds` is set (the dead-feeder anchor). It
+    # flags when no values arrived for `run_stall_window_factor` x the expected
+    # interval, while the beam is up and the feeder heartbeat is fresh, for
+    # `run_stall_hysteresis_ticks` consecutive ticks (anti-flap for top-ups).
+    # The channel names are deployment facts (which PV is the quality / progress
+    # channel); no safe universal default exists.
+    run_quality_channel_name: str | None = None
+    run_stall_channel_name: str | None = None
+    run_stall_window_factor: float = 3.0
+    run_stall_hysteresis_ticks: int = 2
+    run_feed_heartbeat_ceiling_seconds: float | None = None
+
     # `caution_promoter_enabled` gates the CautionPromoter subscriber (the 2nd
     # ACTIVE agent). Default off: it is operational only once the
     # operator-retirement-memory guard lands (it must not re-create a Notice an
@@ -480,6 +503,45 @@ class Settings(BaseSettings):
             msg = (
                 f"run_liveness_ceiling_seconds must be > 0 when set, got {value}; "
                 "None disables the run-liveness rule"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_stall_window_factor")
+    @classmethod
+    def _validate_run_stall_window_factor(cls, value: float) -> float:
+        """Window must be at least one expected interval (>= 1.0): a sub-interval
+        window cannot resolve a gap, so a smaller factor would never be a valid
+        stall measurement."""
+        if value < 1.0:
+            msg = (
+                f"run_stall_window_factor must be >= 1.0, got {value}; "
+                "the stall window must cover at least one expected interval"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_stall_hysteresis_ticks")
+    @classmethod
+    def _validate_run_stall_hysteresis_ticks(cls, value: int) -> int:
+        """At least one tick; the anti-flap streak counts consecutive ticks."""
+        if value < 1:
+            msg = (
+                f"run_stall_hysteresis_ticks must be >= 1, got {value}; "
+                "a stall flag needs at least one stall-condition tick"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_feed_heartbeat_ceiling_seconds")
+    @classmethod
+    def _validate_run_feed_heartbeat_ceiling_seconds(cls, value: float | None) -> float | None:
+        """None disables the stall rule's dead-feeder anchor; a set ceiling must
+        be positive (a non-positive ceiling would read every feeder as dead)."""
+        if value is not None and value <= 0:
+            msg = (
+                f"run_feed_heartbeat_ceiling_seconds must be > 0 when set, got {value}; "
+                "None leaves the stall rule's feeder-health anchor unset (rule defers)"
             )
             raise ValueError(msg)
         return value

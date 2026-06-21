@@ -37,7 +37,7 @@ import asyncpg
 import pytest
 
 from cora.agent.seed_run_supervisor import RUN_SUPERVISOR_AGENT_ID, seed_run_supervisor_agent
-from cora.api._run_supervisor import _MEM_HELD, _supervise_tick
+from cora.api._run_supervisor import _MEM_HELD, ObservationRuleConfig, _supervise_tick
 from cora.campaign.aggregates.campaign import CampaignIntent
 from cora.decision.aggregates.decision import load_decision
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
@@ -50,6 +50,7 @@ from cora.run.features.list_runs import bind as bind_list_runs
 from cora.run.features.resume_run import bind as bind_resume_run
 from cora.run.features.start_run import StartRun
 from cora.run.features.start_run import bind as bind_start_run
+from cora.run.ports import InMemoryRunChannelLookup
 from cora.safety._projections import register_safety_projections
 from cora.safety.adapters import PostgresClearanceLookup
 from cora.safety.aggregates.clearance import SubjectBinding
@@ -91,6 +92,14 @@ from tests.integration.scenarios._tomography_fixture import (
     install_and_activate_tomography_assets,
     recipe_ladder_id_prefix,
     tomography_install_id_prefix,
+)
+
+_RULES_OFF = ObservationRuleConfig(
+    quality_channel_name=None,
+    stall_channel_name=None,
+    stall_window_factor=3.0,
+    stall_hysteresis_ticks=2,
+    feed_heartbeat_ceiling_seconds=None,
 )
 
 _NOW = datetime(2026, 5, 18, 2, 0, 0, tzinfo=UTC)
@@ -373,6 +382,12 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         memory=memory,
         settle=settle,
         liveness=set(),
+        channel_lookup=InMemoryRunChannelLookup(),
+        rules_config=_RULES_OFF,
+        quality=set(),
+        stall=set(),
+        stall_streak={},
+        feed_dead_warned=set(),
         liveness_ceiling_seconds=None,
         resume_enabled=True,
         resume_settle_ticks=1,
@@ -391,6 +406,12 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         memory=memory,
         settle=settle,
         liveness=set(),
+        channel_lookup=InMemoryRunChannelLookup(),
+        rules_config=_RULES_OFF,
+        quality=set(),
+        stall=set(),
+        stall_streak={},
+        feed_dead_warned=set(),
         liveness_ceiling_seconds=None,
         resume_enabled=True,
         resume_settle_ticks=1,
@@ -437,6 +458,12 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         memory=memory,
         settle=settle,
         liveness=set(),
+        channel_lookup=InMemoryRunChannelLookup(),
+        rules_config=_RULES_OFF,
+        quality=set(),
+        stall=set(),
+        stall_streak={},
+        feed_dead_warned=set(),
         liveness_ceiling_seconds=None,
         resume_enabled=True,
         resume_settle_ticks=1,
@@ -462,6 +489,12 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         memory=memory,
         settle=settle,
         liveness=set(),
+        channel_lookup=InMemoryRunChannelLookup(),
+        rules_config=_RULES_OFF,
+        quality=set(),
+        stall=set(),
+        stall_streak={},
+        feed_dead_warned=set(),
         liveness_ceiling_seconds=None,
         resume_enabled=True,
         resume_settle_ticks=1,

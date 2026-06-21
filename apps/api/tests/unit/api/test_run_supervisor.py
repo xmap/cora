@@ -13,6 +13,8 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from cora.agent.seed_run_supervisor import (
     RUN_SUPERVISOR_AGENT_ID,
@@ -22,9 +24,12 @@ from cora.api._run_supervisor import (
     _MEM_DEFERRED,
     _MEM_HELD,
     EnvelopeCheck,
+    ObservationRuleConfig,
     _assemble_and_check_envelope,
     _issue_resume,
     _supervise_tick,
+    decide_quality_signal,
+    decide_signal_stall,
     decide_supervision,
     is_run_stale,
     run_supervisor_lifespan,
@@ -47,6 +52,7 @@ from cora.run.features.list_runs import ListRuns, RunListPage, RunSummaryItem
 from cora.run.features.list_runs.handler import Handler as ListRunsHandler
 from cora.run.features.resume_run import ResumeRun
 from cora.run.features.resume_run.handler import Handler as ResumeRunHandler
+from cora.run.ports import InMemoryRunChannelLookup, RunChannelLookup
 from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 6, 20, 12, 0, 0, tzinfo=UTC)
@@ -288,6 +294,18 @@ def _make_recording_resume() -> tuple[ResumeRunHandler, list[ResumeRun]]:
     return resume_run, calls
 
 
+def _rules_off() -> ObservationRuleConfig:
+    """Observation rules disabled (channel names None): the default for tests
+    that exercise only the beam-Hold / resume / liveness behavior."""
+    return ObservationRuleConfig(
+        quality_channel_name=None,
+        stall_channel_name=None,
+        stall_window_factor=3.0,
+        stall_hysteresis_ticks=2,
+        feed_heartbeat_ceiling_seconds=None,
+    )
+
+
 async def _tick(
     kernel: Kernel,
     *,
@@ -301,6 +319,12 @@ async def _tick(
     resume_settle_ticks: int = 2,
     liveness: set[UUID] | None = None,
     liveness_ceiling_seconds: float | None = None,
+    channel_lookup: RunChannelLookup | None = None,
+    rules_config: ObservationRuleConfig | None = None,
+    quality: set[UUID] | None = None,
+    stall: set[UUID] | None = None,
+    stall_streak: dict[UUID, int] | None = None,
+    feed_dead_warned: set[UUID] | None = None,
 ) -> None:
     """Call _supervise_tick, defaulting the resume wiring (off) for hold-only tests."""
     if resume_run is None:
@@ -311,9 +335,15 @@ async def _tick(
         hold_run=hold_run,
         resume_run=resume_run,
         beam_lookup=beam_lookup,
+        channel_lookup=channel_lookup if channel_lookup is not None else InMemoryRunChannelLookup(),
+        rules_config=rules_config if rules_config is not None else _rules_off(),
         memory=memory,
         settle=settle if settle is not None else {},
         liveness=liveness if liveness is not None else set(),
+        quality=quality if quality is not None else set(),
+        stall=stall if stall is not None else set(),
+        stall_streak=stall_streak if stall_streak is not None else {},
+        feed_dead_warned=feed_dead_warned if feed_dead_warned is not None else set(),
         resume_enabled=resume_enabled,
         resume_settle_ticks=resume_settle_ticks,
         liveness_ceiling_seconds=liveness_ceiling_seconds,
@@ -1138,3 +1168,409 @@ def test_run_liveness_ceiling_accepts_none_and_positive() -> None:
     assert (
         Settings(run_liveness_ceiling_seconds=7200.0).run_liveness_ceiling_seconds == 7200.0  # type: ignore[call-arg]
     )
+
+
+# ---------- pure rules: decide_quality_signal / decide_signal_stall ----------
+
+
+@pytest.mark.unit
+def test_decide_quality_signal_flags_when_value_below_limit() -> None:
+    out = decide_quality_signal(latest_value=3.0, snr_limit=5.0)
+    assert out.would_flag is True
+    assert out.reason == "quality_below_limit"
+
+
+@pytest.mark.unit
+def test_decide_quality_signal_within_limits_does_not_flag() -> None:
+    out = decide_quality_signal(latest_value=8.0, snr_limit=5.0)
+    assert out.would_flag is False
+    assert out.reason == "within_limits"
+
+
+@pytest.mark.unit
+def test_decide_quality_signal_defers_when_limit_none() -> None:
+    out = decide_quality_signal(latest_value=3.0, snr_limit=None)
+    assert out.would_flag is False
+    assert out.reason == "rule_disabled"
+
+
+@pytest.mark.unit
+def test_decide_quality_signal_defers_when_no_observation() -> None:
+    out = decide_quality_signal(latest_value=None, snr_limit=5.0)
+    assert out.would_flag is False
+    assert out.reason == "no_observation"
+
+
+@pytest.mark.unit
+def test_decide_signal_stall_flags_when_zero_arrivals_and_clear() -> None:
+    out = decide_signal_stall(
+        count_since=0, window_seconds=30.0, expected_interval=10.0, feed_alive=True, beam_open=True
+    )
+    assert out.would_flag is True
+    assert out.reason == "stalled"
+
+
+@pytest.mark.unit
+def test_decide_signal_stall_does_not_flag_when_arrivals_present() -> None:
+    out = decide_signal_stall(
+        count_since=2, window_seconds=30.0, expected_interval=10.0, feed_alive=True, beam_open=True
+    )
+    assert out.would_flag is False
+    assert out.reason == "arriving"
+
+
+@pytest.mark.unit
+def test_decide_signal_stall_defers_when_feed_dead() -> None:
+    out = decide_signal_stall(
+        count_since=0, window_seconds=30.0, expected_interval=10.0, feed_alive=False, beam_open=True
+    )
+    assert out.would_flag is False
+    assert out.reason == "feed_dead"
+
+
+@pytest.mark.unit
+def test_decide_signal_stall_defers_when_beam_down() -> None:
+    out = decide_signal_stall(
+        count_since=0, window_seconds=30.0, expected_interval=10.0, feed_alive=True, beam_open=False
+    )
+    assert out.would_flag is False
+    assert out.reason == "beam_down"
+
+
+@pytest.mark.unit
+def test_decide_signal_stall_defers_when_interval_none() -> None:
+    out = decide_signal_stall(
+        count_since=0, window_seconds=30.0, expected_interval=None, feed_alive=True, beam_open=True
+    )
+    assert out.would_flag is False
+    assert out.reason == "rule_disabled"
+
+
+@pytest.mark.unit
+def test_decide_signal_stall_defers_when_interval_degenerate() -> None:
+    out = decide_signal_stall(
+        count_since=0, window_seconds=30.0, expected_interval=0.0, feed_alive=True, beam_open=True
+    )
+    assert out.would_flag is False
+    assert out.reason == "degenerate_interval"
+
+
+@pytest.mark.unit
+def test_decide_signal_stall_defers_when_window_too_short() -> None:
+    out = decide_signal_stall(
+        count_since=0, window_seconds=5.0, expected_interval=10.0, feed_alive=True, beam_open=True
+    )
+    assert out.would_flag is False
+    assert out.reason == "window_too_short"
+
+
+# ---------- property-based: the deciders' invariants ----------
+
+
+@pytest.mark.unit
+@given(
+    value=st.floats(allow_nan=False, allow_infinity=False, width=32),
+    limit=st.floats(min_value=0.001, max_value=1e6, allow_nan=False, allow_infinity=False),
+)
+def test_decide_quality_signal_flags_iff_below_limit(value: float, limit: float) -> None:
+    """With both set, Rule Q flags exactly when the value is below the limit."""
+    out = decide_quality_signal(latest_value=value, snr_limit=limit)
+    assert out.would_flag == (value < limit)
+
+
+@pytest.mark.unit
+@given(
+    count=st.integers(min_value=0, max_value=1000),
+    interval=st.floats(min_value=0.1, max_value=1000.0),
+    factor=st.floats(min_value=1.0, max_value=10.0),
+    beam=st.booleans(),
+)
+def test_decide_signal_stall_defers_whenever_feed_dead(
+    count: int, interval: float, factor: float, beam: bool
+) -> None:
+    """A dead feeder ALWAYS defers, regardless of count / interval / beam: a
+    dead feeder can never be read as a stall (cannot-tell)."""
+    out = decide_signal_stall(
+        count_since=count,
+        window_seconds=interval * factor,
+        expected_interval=interval,
+        feed_alive=False,
+        beam_open=beam,
+    )
+    assert out.would_flag is False
+
+
+@pytest.mark.unit
+@given(
+    count=st.integers(min_value=0, max_value=1000),
+    interval=st.floats(min_value=0.1, max_value=1000.0),
+    factor=st.floats(min_value=1.0, max_value=10.0),
+)
+def test_decide_signal_stall_defers_whenever_beam_down(
+    count: int, interval: float, factor: float
+) -> None:
+    """Beam down ALWAYS defers: a data gap while the beam is down is expected,
+    never a stall."""
+    out = decide_signal_stall(
+        count_since=count,
+        window_seconds=interval * factor,
+        expected_interval=interval,
+        feed_alive=True,
+        beam_open=False,
+    )
+    assert out.would_flag is False
+
+
+@pytest.mark.unit
+@given(
+    count=st.integers(min_value=0, max_value=1000),
+    interval=st.floats(min_value=0.1, max_value=1000.0),
+    factor=st.floats(min_value=1.0, max_value=10.0),
+)
+def test_decide_signal_stall_flags_iff_zero_arrivals_when_clear(
+    count: int, interval: float, factor: float
+) -> None:
+    """When the feed is alive, the beam is up, and the window covers at least
+    one interval, the stall flag is exactly 'no arrivals'."""
+    out = decide_signal_stall(
+        count_since=count,
+        window_seconds=interval * factor,
+        expected_interval=interval,
+        feed_alive=True,
+        beam_open=True,
+    )
+    assert out.would_flag == (count == 0)
+
+
+# ---------- shadow behavioral: observe-only, no command, no decision ----------
+
+
+def _rules_quality(channel: str = "snr") -> ObservationRuleConfig:
+    return ObservationRuleConfig(
+        quality_channel_name=channel,
+        stall_channel_name=None,
+        stall_window_factor=3.0,
+        stall_hysteresis_ticks=2,
+        feed_heartbeat_ceiling_seconds=None,
+    )
+
+
+def _rules_stall(
+    channel: str = "projection_index", *, hysteresis: int = 2, ceiling: float = 120.0
+) -> ObservationRuleConfig:
+    return ObservationRuleConfig(
+        quality_channel_name=None,
+        stall_channel_name=channel,
+        stall_window_factor=3.0,
+        stall_hysteresis_ticks=hysteresis,
+        feed_heartbeat_ceiling_seconds=ceiling,
+    )
+
+
+@pytest.mark.unit
+async def test_shadow_quality_flags_below_limit_without_command_or_decision() -> None:
+    """Rule Q in shadow: a latest value below the operator limit lands the Run in
+    the quality edge-set and logs would_flag, but issues NO command (observe-only)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    hold_run, hold_calls = _make_recording_hold()
+    resume_run, resume_calls = _make_recording_resume()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=3.0, recorded_at=_NOW)
+    quality: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        resume_run=resume_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        quality=quality,
+    )
+
+    assert quality == {run_id}
+    assert hold_calls == []
+    assert resume_calls == []
+
+
+@pytest.mark.unit
+async def test_shadow_quality_does_not_flag_within_limits() -> None:
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    hold_run, _hold = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=9.0, recorded_at=_NOW)
+    quality: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        quality=quality,
+    )
+
+    assert quality == set()
+
+
+@pytest.mark.unit
+async def test_shadow_quality_does_not_flag_when_snr_limit_unset() -> None:
+    """No precomputed snr_limit on the Run disables Rule Q (cannot-tell)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=None)])
+    hold_run, _hold = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=0.1, recorded_at=_NOW)
+    quality: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        quality=quality,
+    )
+
+    assert quality == set()
+
+
+@pytest.mark.unit
+async def test_shadow_stall_flags_after_hysteresis_without_command() -> None:
+    """Rule R in shadow: a stalled channel (alive feeder, beam up, zero arrivals)
+    only flags after the hysteresis streak is met, and issues NO command."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, expected_observation_interval_seconds=10.0)])
+    hold_run, hold_calls = _make_recording_hold()
+    resume_run, resume_calls = _make_recording_resume()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register_heartbeat(run_id=run_id, recorded_at=_NOW)  # feeder alive, no data
+    stall: set[UUID] = set()
+    stall_streak: dict[UUID, int] = {}
+
+    async def _one_tick() -> None:
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=hold_run,
+            resume_run=resume_run,
+            beam_lookup=_BeamOpen(),
+            memory={},
+            channel_lookup=lookup,
+            rules_config=_rules_stall(hysteresis=2),
+            stall=stall,
+            stall_streak=stall_streak,
+        )
+
+    await _one_tick()
+    assert stall == set()  # streak 1 < 2: not yet
+    await _one_tick()
+    assert stall == {run_id}  # streak 2 >= 2: flagged
+    assert hold_calls == []
+    assert resume_calls == []
+
+
+@pytest.mark.unit
+async def test_shadow_stall_defers_when_feed_dead_and_warns() -> None:
+    """A dead feeder (stale heartbeat) defers the stall rule and surfaces a loud
+    feeder_unhealthy warning instead of a silent forever-defer."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, expected_observation_interval_seconds=10.0)])
+    hold_run, _hold = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register_heartbeat(run_id=run_id, recorded_at=_NOW - timedelta(seconds=300))  # stale
+    stall: set[UUID] = set()
+    stall_streak: dict[UUID, int] = {}
+    feed_dead_warned: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_stall(ceiling=120.0),
+        stall=stall,
+        stall_streak=stall_streak,
+        feed_dead_warned=feed_dead_warned,
+    )
+
+    assert stall == set()
+    assert feed_dead_warned == {run_id}
+
+
+@pytest.mark.unit
+async def test_shadow_stall_does_not_flag_when_beam_down() -> None:
+    """A data gap while the beam is down is expected: Rule R must not flag even
+    with zero arrivals and a live feeder."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, expected_observation_interval_seconds=10.0)])
+    hold_run, _hold = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register_heartbeat(run_id=run_id, recorded_at=_NOW)
+    stall: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamDown(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_stall(hysteresis=1),
+        stall=stall,
+        stall_streak={},
+    )
+
+    assert stall == set()
+
+
+@pytest.mark.unit
+async def test_shadow_quality_flag_leaves_beam_hold_memory_untouched() -> None:
+    """The observation rules' edge-sets are walled off from the beam-Hold FSM
+    memory: a Rule Q flag (beam open) leaves `memory` empty (no spurious hold)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    hold_run, hold_calls = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=1.0, recorded_at=_NOW)
+    memory: dict[UUID, str] = {}
+    quality: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory=memory,
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        quality=quality,
+    )
+
+    assert quality == {run_id}
+    assert memory == {}  # beam-Hold FSM memory untouched by the quality rule
+    assert hold_calls == []

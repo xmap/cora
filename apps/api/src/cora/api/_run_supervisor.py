@@ -69,6 +69,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
 
@@ -95,6 +96,7 @@ from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.recipe.aggregates.method import load_method
 from cora.recipe.aggregates.plan import load_plan
 from cora.recipe.aggregates.practice import load_practice
+from cora.run.adapters import PostgresRunChannelLookup
 from cora.run.aggregates.run import (
     RunBeamAvailabilityUnknownError,
     RunCannotHoldError,
@@ -113,6 +115,7 @@ from cora.run.errors import UnauthorizedError
 from cora.run.features.hold_run import HoldRun
 from cora.run.features.list_runs import ListRuns
 from cora.run.features.resume_run import ResumeRun
+from cora.run.ports import InMemoryRunChannelLookup
 from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
@@ -130,6 +133,7 @@ if TYPE_CHECKING:
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
     from cora.run.features.list_runs.query import RunStatusFilter
     from cora.run.features.resume_run.handler import Handler as ResumeRunHandler
+    from cora.run.ports import RunChannelLookup
 
 _log = get_logger(__name__)
 
@@ -269,6 +273,81 @@ def is_run_stale(running_since: datetime | None, now: datetime, ceiling_seconds:
     un-spoofable timestamp set on RunStarted and reset on RunResumed.
     """
     return running_since is not None and (now - running_since).total_seconds() >= ceiling_seconds
+
+
+@dataclass(frozen=True)
+class ObservationRuleConfig:
+    """Operator config for the shadow observation rules (Rule Q + Rule R).
+
+    Both rules are OFF when their channel name is None. Bundled so the tick
+    signature stays legible. Channel names are deployment facts (which channel
+    carries the quality / progress signal); the per-Run thresholds
+    (snr_limit, expected_observation_interval_seconds) ride RunSummaryItem.
+    """
+
+    quality_channel_name: str | None
+    stall_channel_name: str | None
+    stall_window_factor: float
+    stall_hysteresis_ticks: int
+    feed_heartbeat_ceiling_seconds: float | None
+
+
+@dataclass(frozen=True)
+class SignalDisposition:
+    """Result of a shadow observation rule for one Run (pure, no I/O).
+
+    `would_flag` is the merits breach (quality below limit / stalled),
+    computed WITHOUT the simulation gate: shadow mode observes and logs even
+    simulated breaches, which is how the sim feeder exercises the rules end to
+    end. The is_simulated act-disqualify lands with the advise/act rung. Every
+    cannot-tell path (missing signal, disabled rule, dead feeder, beam down,
+    degenerate interval) returns would_flag=False with a reason, never a
+    confident flag (Lock 4: never act on missing data).
+    """
+
+    would_flag: bool
+    reason: str
+
+
+def decide_quality_signal(
+    *, latest_value: float | None, snr_limit: float | None
+) -> SignalDisposition:
+    """Pure Rule Q: flag when a quality channel's latest value is below the
+    operator-set limit. None limit = rule disabled; None value = cannot-tell."""
+    if snr_limit is None:
+        return SignalDisposition(would_flag=False, reason="rule_disabled")
+    if latest_value is None:
+        return SignalDisposition(would_flag=False, reason="no_observation")
+    if latest_value < snr_limit:
+        return SignalDisposition(would_flag=True, reason="quality_below_limit")
+    return SignalDisposition(would_flag=False, reason="within_limits")
+
+
+def decide_signal_stall(
+    *,
+    count_since: int,
+    window_seconds: float,
+    expected_interval: float | None,
+    feed_alive: bool,
+    beam_open: bool,
+) -> SignalDisposition:
+    """Pure Rule R (one tick): flag when no values arrived in a window that
+    covers at least one expected interval, while the beam is up and the feeder
+    heartbeat is fresh. Every cannot-tell branch defers (Lock 4). Multi-tick
+    hysteresis (anti-flap for brief beam pauses / top-ups) is the caller's."""
+    if expected_interval is None:
+        return SignalDisposition(would_flag=False, reason="rule_disabled")
+    if expected_interval <= 0:
+        return SignalDisposition(would_flag=False, reason="degenerate_interval")
+    if window_seconds < expected_interval:
+        return SignalDisposition(would_flag=False, reason="window_too_short")
+    if not feed_alive:
+        return SignalDisposition(would_flag=False, reason="feed_dead")
+    if not beam_open:
+        return SignalDisposition(would_flag=False, reason="beam_down")
+    if count_since == 0:
+        return SignalDisposition(would_flag=True, reason="stalled")
+    return SignalDisposition(would_flag=False, reason="arriving")
 
 
 def _reasoning_for(choice: str) -> str:
@@ -504,6 +583,113 @@ async def _drain_runs(
         cursor = page.next_cursor
 
 
+async def _observe_run_signals(
+    deps: Kernel,
+    channel_lookup: RunChannelLookup,
+    rules_config: ObservationRuleConfig,
+    running: list[RunSummaryItem],
+    beam: BeamAvailabilityLookupResult,
+    *,
+    quality: set[UUID],
+    stall: set[UUID],
+    stall_streak: dict[UUID, int],
+    feed_dead_warned: set[UUID],
+) -> None:
+    """Shadow observation rules (Rule Q + Rule R): OBSERVE-ONLY.
+
+    Logs `run_quality.would_flag` / `run_stall.would_flag`, records NO Decision
+    and issues NO command (byte-identical posture to the run-liveness shadow).
+    Each rule keeps its OWN edge-trigger state (`quality`, `stall` + the
+    `stall_streak` hysteresis counter), walled off from the beam-Hold FSM
+    memory, the liveness set, and each other. Reuses the tick's single beam
+    read for Rule R's beam-awareness.
+    """
+    now = deps.clock.now()
+    beam_open = beam.quality_ok and beam.fes_open and beam.sbs_open and beam.fes_permit
+    for item in running:
+        run_id = item.run_id
+
+        # Rule Q (quality-within-limits): edge-triggered, no hysteresis (a value
+        # below the limit is a stable signal, unlike a missed beam tick).
+        quality_channel = rules_config.quality_channel_name
+        if quality_channel is not None and item.snr_limit is not None:
+            latest = await channel_lookup.read_run_channel_latest(
+                run_id=run_id, channel_name=quality_channel
+            )
+            disp = decide_quality_signal(
+                latest_value=latest.value if latest is not None else None,
+                snr_limit=item.snr_limit,
+            )
+            if disp.would_flag and run_id not in quality:
+                quality.add(run_id)
+                _log.info(
+                    "run_quality.would_flag",
+                    run_id=str(run_id),
+                    channel=quality_channel,
+                    value=latest.value if latest is not None else None,
+                    snr_limit=item.snr_limit,
+                    is_simulated=latest.is_simulated if latest is not None else None,
+                )
+            elif not disp.would_flag:
+                quality.discard(run_id)
+
+        # Rule R (rate-dropout / stall): beam-aware + dead-feeder-aware + multi-
+        # tick hysteresis. Active only when the channel, the per-Run interval,
+        # and the feeder-health ceiling are all set.
+        stall_channel = rules_config.stall_channel_name
+        interval = item.expected_observation_interval_seconds
+        ceiling = rules_config.feed_heartbeat_ceiling_seconds
+        if stall_channel is not None and interval is not None and ceiling is not None:
+            health = await channel_lookup.read_feed_health(run_id=run_id)
+            feed_alive = (
+                health.latest_heartbeat_recorded_at is not None
+                and (now - health.latest_heartbeat_recorded_at).total_seconds() <= ceiling
+            )
+            # Surface a dead / never-seen feeder LOUDLY (edge-triggered) so a
+            # misconfigured deployment is not silently stuck deferring forever.
+            if not feed_alive:
+                if run_id not in feed_dead_warned:
+                    feed_dead_warned.add(run_id)
+                    _log.warning(
+                        "run_stall.feeder_unhealthy",
+                        run_id=str(run_id),
+                        never_seen=health.latest_heartbeat_recorded_at is None,
+                    )
+            else:
+                feed_dead_warned.discard(run_id)
+
+            window_seconds = rules_config.stall_window_factor * interval
+            signal = await channel_lookup.read_run_channel_window(
+                run_id=run_id,
+                channel_name=stall_channel,
+                since=now - timedelta(seconds=window_seconds),
+            )
+            disp = decide_signal_stall(
+                count_since=signal.count_since,
+                window_seconds=window_seconds,
+                expected_interval=interval,
+                feed_alive=feed_alive,
+                beam_open=beam_open,
+            )
+            if disp.would_flag:
+                streak = stall_streak.get(run_id, 0) + 1
+                stall_streak[run_id] = streak
+                if streak >= rules_config.stall_hysteresis_ticks and run_id not in stall:
+                    stall.add(run_id)
+                    _log.info(
+                        "run_stall.would_flag",
+                        run_id=str(run_id),
+                        channel=stall_channel,
+                        window_seconds=window_seconds,
+                        expected_interval=interval,
+                        streak=streak,
+                        is_simulated=signal.is_simulated_window,
+                    )
+            else:
+                stall_streak.pop(run_id, None)
+                stall.discard(run_id)
+
+
 async def _supervise_tick(
     *,
     deps: Kernel,
@@ -511,9 +697,15 @@ async def _supervise_tick(
     hold_run: HoldRunHandler,
     resume_run: ResumeRunHandler,
     beam_lookup: BeamAvailabilityLookup,
+    channel_lookup: RunChannelLookup,
+    rules_config: ObservationRuleConfig,
     memory: dict[UUID, str],
     settle: dict[UUID, int],
     liveness: set[UUID],
+    quality: set[UUID],
+    stall: set[UUID],
+    stall_streak: dict[UUID, int],
+    feed_dead_warned: set[UUID],
     resume_enabled: bool,
     resume_settle_ticks: int,
     liveness_ceiling_seconds: float | None,
@@ -537,6 +729,18 @@ async def _supervise_tick(
     for run_id in list(liveness):
         if run_id not in inflight_ids:
             liveness.discard(run_id)
+    for run_id in list(stall_streak):
+        if run_id not in inflight_ids:
+            del stall_streak[run_id]
+    for run_id in list(quality):
+        if run_id not in inflight_ids:
+            quality.discard(run_id)
+    for run_id in list(stall):
+        if run_id not in inflight_ids:
+            stall.discard(run_id)
+    for run_id in list(feed_dead_warned):
+        if run_id not in inflight_ids:
+            feed_dead_warned.discard(run_id)
 
     # Shadow run-liveness pass (the run-liveness rule, v1): OBSERVE-ONLY. It logs
     # which Running Runs it WOULD flag as implausibly long (now - running_since
@@ -588,6 +792,21 @@ async def _supervise_tick(
         if outcome.issue_hold:
             await _issue_hold(deps, hold_run, run_id=item.run_id, decision_id=decision_id)
 
+    # Shadow observation rules (Rule Q + Rule R): OBSERVE-ONLY, reusing the
+    # single beam read above for Rule R's beam-awareness. No Decision, no
+    # command; own walled-off edge-trigger state.
+    await _observe_run_signals(
+        deps,
+        channel_lookup,
+        rules_config,
+        running,
+        beam,
+        quality=quality,
+        stall=stall,
+        stall_streak=stall_streak,
+        feed_dead_warned=feed_dead_warned,
+    )
+
     # Gated resume pass (Held Runs the supervisor holds).
     for item in resume_candidates:
         check = await _assemble_and_check_envelope(deps, item, beam)
@@ -633,6 +852,8 @@ async def _supervise_loop(
     hold_run: HoldRunHandler,
     resume_run: ResumeRunHandler,
     beam_lookup: BeamAvailabilityLookup,
+    channel_lookup: RunChannelLookup,
+    rules_config: ObservationRuleConfig,
     interval_seconds: float,
     resume_enabled: bool,
     resume_settle_ticks: int,
@@ -642,6 +863,10 @@ async def _supervise_loop(
     memory: dict[UUID, str] = {}
     settle: dict[UUID, int] = {}
     liveness: set[UUID] = set()
+    quality: set[UUID] = set()
+    stall: set[UUID] = set()
+    stall_streak: dict[UUID, int] = {}
+    feed_dead_warned: set[UUID] = set()
     while True:
         try:
             await _supervise_tick(
@@ -650,9 +875,15 @@ async def _supervise_loop(
                 hold_run=hold_run,
                 resume_run=resume_run,
                 beam_lookup=beam_lookup,
+                channel_lookup=channel_lookup,
+                rules_config=rules_config,
                 memory=memory,
                 settle=settle,
                 liveness=liveness,
+                quality=quality,
+                stall=stall,
+                stall_streak=stall_streak,
+                feed_dead_warned=feed_dead_warned,
                 resume_enabled=resume_enabled,
                 resume_settle_ticks=resume_settle_ticks,
                 liveness_ceiling_seconds=liveness_ceiling_seconds,
@@ -664,6 +895,15 @@ async def _supervise_loop(
         await asyncio.sleep(interval_seconds)
 
 
+def _default_channel_lookup(deps: Kernel) -> RunChannelLookup:
+    """Build the BC-local RunChannelLookup: Postgres when a pool is present,
+    else the in-memory stub (app_env=test). Mirrors the wire_run
+    ObservationStore default; not promoted to the Kernel."""
+    if deps.pool is not None:
+        return PostgresRunChannelLookup(deps.pool)
+    return InMemoryRunChannelLookup()
+
+
 @contextlib.asynccontextmanager
 async def run_supervisor_lifespan(
     deps: Kernel,
@@ -672,6 +912,7 @@ async def run_supervisor_lifespan(
     hold_run: HoldRunHandler,
     resume_run: ResumeRunHandler,
     beam_lookup: BeamAvailabilityLookup | None = None,
+    channel_lookup: RunChannelLookup | None = None,
     interval_seconds: float | None = None,
 ) -> AsyncGenerator[None]:
     """Spawn the RunSupervisor loop for the duration of the context.
@@ -679,7 +920,8 @@ async def run_supervisor_lifespan(
     No-op unless `settings.run_supervisor_enabled` is True (default off, so a
     deployment opts in explicitly). The gated wind-up is a separate opt-in
     (`run_supervisor_resume_enabled`, also default off) so a deployment may
-    run auto-hold without auto-resume.
+    run auto-hold without auto-resume. The shadow observation rules are a
+    further opt-in (their channel-name settings, default None).
     """
     if not deps.settings.run_supervisor_enabled:
         _log.info("run_supervisor.skipped", reason="disabled")
@@ -692,14 +934,26 @@ async def run_supervisor_lifespan(
         else deps.settings.run_supervisor_tick_seconds
     )
     lookup = beam_lookup if beam_lookup is not None else deps.beam_availability_lookup
+    # RunChannelLookup is Run-BC-local (not a Kernel field, mirroring the
+    # BC-internal ObservationStore): construct it here at the composition root.
+    channels = channel_lookup if channel_lookup is not None else _default_channel_lookup(deps)
     resume_enabled = deps.settings.run_supervisor_resume_enabled
     resume_settle_ticks = deps.settings.run_supervisor_resume_settle_ticks
     liveness_ceiling_seconds = deps.settings.run_liveness_ceiling_seconds
+    rules_config = ObservationRuleConfig(
+        quality_channel_name=deps.settings.run_quality_channel_name,
+        stall_channel_name=deps.settings.run_stall_channel_name,
+        stall_window_factor=deps.settings.run_stall_window_factor,
+        stall_hysteresis_ticks=deps.settings.run_stall_hysteresis_ticks,
+        feed_heartbeat_ceiling_seconds=deps.settings.run_feed_heartbeat_ceiling_seconds,
+    )
     _log.info(
         "run_supervisor.started",
         interval_seconds=interval,
         resume_enabled=resume_enabled,
         liveness_ceiling_seconds=liveness_ceiling_seconds,
+        quality_channel=rules_config.quality_channel_name,
+        stall_channel=rules_config.stall_channel_name,
     )
     task = asyncio.create_task(
         _supervise_loop(
@@ -708,6 +962,8 @@ async def run_supervisor_lifespan(
             hold_run,
             resume_run,
             lookup,
+            channels,
+            rules_config,
             interval,
             resume_enabled,
             resume_settle_ticks,
@@ -726,7 +982,11 @@ async def run_supervisor_lifespan(
 
 __all__ = [
     "EnvelopeCheck",
+    "ObservationRuleConfig",
+    "SignalDisposition",
     "SupervisionOutcome",
+    "decide_quality_signal",
+    "decide_signal_stall",
     "decide_supervision",
     "is_run_stale",
     "run_supervisor_lifespan",
