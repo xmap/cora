@@ -178,6 +178,15 @@ class ArtifactRef:
     them. The adapter computes the checksum + size from the produced
     file on `fetch_artifact_ref`; `media_type` / `conforms_to` default
     to "unknown" when the substrate cannot infer them.
+
+    The artifact may be a single file OR a directory of files (a default
+    tomopy reconstruction writes a per-slice stack into a `{stem}_rec/`
+    directory). For a single file, `checksum_algorithm` is `sha256` and
+    `entry_count` is None. For a directory, `checksum_algorithm` is
+    `sha256-tree` (a deterministic digest over the whole tree, see
+    `_tree_hash.sha256_tree`), `byte_size` is the summed file sizes, and
+    `entry_count` is the number of files. The 64-hex `checksum_value`
+    format is identical for both, so it feeds `RegisterDataset` unchanged.
     """
 
     uri: str
@@ -186,6 +195,7 @@ class ArtifactRef:
     byte_size: int
     media_type: str | None = None
     conforms_to: tuple[str, ...] = ()
+    entry_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -296,6 +306,24 @@ class ArtifactNotFoundError(Exception):
         self.uri = uri
 
 
+class NonRegularTreeEntryError(Exception):
+    """A directory artifact contains a non-regular, non-symlink entry.
+
+    Raised by the directory tree-hash helper when a socket, fifo, or
+    device node sits under the artifact root: its bytes are not file
+    content, so the tree cannot be digested in a stable way. The
+    local-process adapter catches this and maps it to
+    `ArtifactNotFoundError` so the conduct contract aborts cleanly; it is
+    therefore never surfaced to the runtime directly. It lives here, next
+    to the artifact errors, because the tree-hash helper is an adapter
+    that depends on this port.
+    """
+
+    def __init__(self, path: str) -> None:
+        super().__init__(f"non-regular entry in tree artifact: {path!r}")
+        self.path = path
+
+
 @runtime_checkable
 class ComputePort(Protocol):
     """Domain-shaped job-submission port for compute substrates.
@@ -386,4 +414,5 @@ __all__ = [
     "ComputeTimeoutError",
     "JobId",
     "JobSpec",
+    "NonRegularTreeEntryError",
 ]

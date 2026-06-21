@@ -22,8 +22,12 @@ earned its registry from a third substrate.
   bare `Failed`). Exceeding the ceiling kills the process and returns
   `TimedOut`.
 - `fetch_artifact_ref` resolves `job_spec.output_uri` to a filesystem
-  path, stats it, and computes a sha256 + byte size. A missing output
-  on a succeeded job raises `ArtifactNotFoundError`.
+  path. A single FILE is hashed `sha256` + byte size. A DIRECTORY (a
+  default tomopy tiff stack writes a `{stem}_rec/` directory) is folded
+  into a deterministic `sha256-tree` digest + summed size + file count
+  via `_tree_hash.sha256_tree`. A missing output, an empty directory, or
+  a directory holding a non-regular entry on a succeeded job all raise
+  `ArtifactNotFoundError` (the conduct contract's artifact-side abort).
 - `provide_provenance_payload` stamps `ActuationKind.PHYSICAL`: a real
   subprocess running a real solver is physical actuation, so any Dataset
   it produces is promotable (unlike the simulated in-memory fake).
@@ -44,6 +48,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import unquote, urlparse
 
+from cora.operation.adapters._tree_hash import sha256_tree
 from cora.operation.ports.compute_port import (
     ArtifactNotFoundError,
     ArtifactRef,
@@ -53,6 +58,7 @@ from cora.operation.ports.compute_port import (
     ComputeStatus,
     ComputeSubmitRejectedError,
     JobId,
+    NonRegularTreeEntryError,
 )
 from cora.operation.ports.control_port import ActuationKind
 
@@ -118,7 +124,11 @@ class LocalProcessComputePort:
         if job_spec.output_uri is None:
             raise ArtifactNotFoundError(job_id, "<no output_uri on job spec>")
         path = _path_from_uri(job_spec.output_uri)
-        if path is None or not path.is_file():
+        if path is None or not path.exists():
+            raise ArtifactNotFoundError(job_id, job_spec.output_uri)
+        if path.is_dir():
+            return await self._tree_artifact_ref(job_id, job_spec.output_uri, path)
+        if not path.is_file():
             raise ArtifactNotFoundError(job_id, job_spec.output_uri)
         digest = await asyncio.to_thread(_sha256_of, path)
         return ArtifactRef(
@@ -126,6 +136,30 @@ class LocalProcessComputePort:
             checksum_algorithm="sha256",
             checksum_value=digest,
             byte_size=path.stat().st_size,
+        )
+
+    async def _tree_artifact_ref(self, job_id: JobId, output_uri: str, path: Path) -> ArtifactRef:
+        """Fold a directory output into a `sha256-tree` ArtifactRef.
+
+        A non-regular entry is mapped to `ArtifactNotFoundError` so the
+        conduct contract (which only expects that error from the artifact
+        fetch) aborts the Run cleanly with the offending path in the
+        message. An empty directory is also a missing artifact.
+        """
+        try:
+            digest, byte_size, entry_count = await asyncio.to_thread(sha256_tree, path)
+        except NonRegularTreeEntryError as exc:
+            raise ArtifactNotFoundError(
+                job_id, f"{output_uri} (non-regular entry {exc.path})"
+            ) from exc
+        if entry_count == 0:
+            raise ArtifactNotFoundError(job_id, f"{output_uri} (empty directory)")
+        return ArtifactRef(
+            uri=output_uri,
+            checksum_algorithm="sha256-tree",
+            checksum_value=digest,
+            byte_size=byte_size,
+            entry_count=entry_count,
         )
 
     def provide_provenance_payload(

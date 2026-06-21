@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from cora.operation.adapters._tree_hash import sha256_tree
 from cora.operation.adapters.local_process_compute_port import LocalProcessComputePort
 from cora.operation.ports.compute_port import (
     ArtifactNotFoundError,
@@ -93,6 +94,59 @@ async def test_succeeded_but_missing_output_raises_artifact_not_found(tmp_path: 
     port = LocalProcessComputePort()
     job_id = await port.submit(
         JobSpec(command=(sys.executable, "-c", "pass"), output_uri=missing.as_uri())
+    )
+    assert await port.await_terminal_state(job_id) is ComputeStatus.SUCCEEDED
+    with pytest.raises(ArtifactNotFoundError):
+        await port.fetch_artifact_ref(job_id)
+
+
+def _write_tiff_stack_spec(out_dir: Path, slices: int) -> JobSpec:
+    """A job that writes a `{out_dir}/slice_NNNN.tif` stack and exits 0."""
+    return JobSpec(
+        command=(
+            sys.executable,
+            "-c",
+            (
+                "import pathlib; "
+                f"d = pathlib.Path({str(out_dir)!r}); d.mkdir(parents=True, exist_ok=True); "
+                f"[(d / f'slice_{{i:04d}}.tif').write_bytes(b'slice-%d' % i) "
+                f"for i in range({slices})]"
+            ),
+        ),
+        output_uri=out_dir.as_uri(),
+    )
+
+
+@pytest.mark.integration
+async def test_directory_output_succeeds_with_tree_hash_artifact(tmp_path: Path) -> None:
+    out_dir = tmp_path / "sample_rec"
+    port = LocalProcessComputePort()
+    job_id = await port.submit(_write_tiff_stack_spec(out_dir, slices=5))
+
+    assert await port.await_terminal_state(job_id) is ComputeStatus.SUCCEEDED
+
+    artifact = await port.fetch_artifact_ref(job_id)
+    expected_digest, expected_size, expected_count = sha256_tree(out_dir)
+    assert artifact.checksum_algorithm == "sha256-tree"
+    assert artifact.checksum_value == expected_digest
+    assert artifact.byte_size == expected_size
+    assert artifact.entry_count == expected_count == 5
+    assert artifact.uri == out_dir.as_uri()
+
+
+@pytest.mark.integration
+async def test_empty_directory_output_raises_artifact_not_found(tmp_path: Path) -> None:
+    out_dir = tmp_path / "empty_rec"
+    port = LocalProcessComputePort()
+    job_id = await port.submit(
+        JobSpec(
+            command=(
+                sys.executable,
+                "-c",
+                f"import pathlib; pathlib.Path({str(out_dir)!r}).mkdir(parents=True)",
+            ),
+            output_uri=out_dir.as_uri(),
+        )
     )
     assert await port.await_terminal_state(job_id) is ComputeStatus.SUCCEEDED
     with pytest.raises(ArtifactNotFoundError):
