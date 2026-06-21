@@ -96,12 +96,14 @@ from cora.equipment.features import (
     version_family,
     version_model,
 )
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
 from cora.shared.identifier import PersistentIdentifier, PersistentIdentifierScheme
-from cora.shared.ports.doi_minter import DoiMinter
+from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMinter
 
 _BC = "equipment"
 
@@ -201,43 +203,47 @@ class EquipmentHandlers:
     get_fixture_pidinst: get_fixture_pidinst.Handler
     list_fixtures: list_fixtures.Handler
 
-    doi_minter: DoiMinter
-    """The `DoiMinter` adapter the `assign_asset_persistent_id` handler talks
+    persistent_identifier_minter: PersistentIdentifierMinter
+    """The `PersistentIdentifierMinter` adapter the `assign_asset_persistent_id` handler talks
     to. Surfaced on the bundle so the FastAPI lifespan stashes it on
-    `app.state.equipment.doi_minter` for test-override per
+    `app.state.equipment.persistent_identifier_minter` for test-override per
     [[project-asset-persistent-id-write-design]] Lock 10. F.1 wires
-    `StubDoiMinter` when `Settings.datacite_repository_id` is None;
-    F.2 swaps in `DataCiteDoiMinter` behind the same field."""
+    `StubPersistentIdentifierMinter` when `Settings.datacite_repository_id` is None;
+    F.2 swaps in `DataCitePersistentIdentifierMinter` behind the same field."""
 
 
 def wire_equipment(deps: Kernel) -> EquipmentHandlers:
     """Build the Equipment BC handlers from shared dependencies.
 
     Per [[project-asset-persistent-id-write-design]] Lock 10 the
-    `DoiMinter` is a BC-tier port: wired here from Equipment-local
+    `PersistentIdentifierMinter` is a BC-tier port: wired here from Equipment-local
     settings, never promoted to `Kernel`. When
     `Settings.datacite_repository_id` is None (the dev / test default)
-    the inert `StubDoiMinter` is wired so the assign_asset_persistent_id
+    the inert `StubPersistentIdentifierMinter` is wired so the assign_asset_persistent_id
     slice ships and is testable without DataCite credentials; the
-    production `DataCiteDoiMinter` swap is F.2. The minter is
+    production `DataCitePersistentIdentifierMinter` swap is F.2. The minter is
     attached to a BC-local `deps.equipment` namespace BEFORE the
     `assign_asset_persistent_id` handler binds, so the handler closure
-    reads `deps.equipment.doi_minter` per the BC-tier port-wiring
-    convention. It is also surfaced on `EquipmentHandlers.doi_minter`
-    so the FastAPI lifespan stashes it on `app.state.equipment.doi_minter`
-    for test override (integration tests injecting a `RaisingDoiMinter`
+    reads `deps.equipment.persistent_identifier_minter` per the BC-tier port-wiring
+    convention. It is also surfaced on `EquipmentHandlers.persistent_identifier_minter`
+    so the FastAPI lifespan stashes it on `app.state.equipment.persistent_identifier_minter`
+    for test override (integration tests injecting a `RaisingPersistentIdentifierMinter`
     to exercise the 502 mint-failure path).
     """
     check_pidinst_landing_page_template(deps.settings)
-    # F.2 swaps in `DataCiteDoiMinter` here when
+    # F.2 swaps in `DataCitePersistentIdentifierMinter` here when
     # `Settings.datacite_repository_id` is set; F.1 ships the Stub
     # branch unconditionally because the production adapter is gated
     # on facility credentials.
     if getattr(deps.settings, "datacite_repository_id", None) is None:
-        doi_minter: DoiMinter = StubDoiMinter()
+        persistent_identifier_minter: PersistentIdentifierMinter = StubPersistentIdentifierMinter()
     else:
-        doi_minter = StubDoiMinter()
-    object.__setattr__(deps, "equipment", SimpleNamespace(doi_minter=doi_minter))
+        persistent_identifier_minter = StubPersistentIdentifierMinter()
+    object.__setattr__(
+        deps,
+        "equipment",
+        SimpleNamespace(persistent_identifier_minter=persistent_identifier_minter),
+    )
 
     # Bridge the bulk-mint orchestrator to the single-asset mint slice here, in
     # the composition root, so the orchestrator slice imports no sibling slice
@@ -643,5 +649,5 @@ def wire_equipment(deps: Kernel) -> EquipmentHandlers:
             bc=_BC,
             kind="query",
         ),
-        doi_minter=doi_minter,
+        persistent_identifier_minter=persistent_identifier_minter,
     )

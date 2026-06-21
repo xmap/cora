@@ -6,7 +6,7 @@
   2. EditionNotFoundError (handler load + fold)
   3. EditionCannotPublishError (status != Sealed)
   4. EditionPublishedWithoutContentHashError (defensive invariant)
-  5. Handler DoiMinter.mint -> PersistentIdentifierMintError 502
+  5. Handler PersistentIdentifierMinter.mint -> PersistentIdentifierMintError 502
   6. Handler re-serialize -> sha256 -> published_content_hash
   7. Decider emits EditionPublished
 """

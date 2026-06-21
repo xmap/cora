@@ -2,8 +2,8 @@
 
 Action endpoint at `POST /fixtures/{fixture_id}/assign-persistent-identifier`.
 Thin wire layer: forwards `(fixture_id, scheme, suffix)` to the handler,
-which resolves the `DoiMinter` call and runs the pure decider. The
-route itself does NOT depend on the `DoiMinter` port (server-mint
+which resolves the `PersistentIdentifierMinter` call and runs the pure decider. The
+route itself does NOT depend on the `PersistentIdentifierMinter` port (server-mint
 posture per Lock 5 of [[project-fixture-pidinst-design]] keeps
 non-determinism in the handler closure only).
 

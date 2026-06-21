@@ -106,7 +106,6 @@ from cora.data.aggregates.distribution import (
     UnmappedDistributionUriSchemeError,
 )
 from cora.data.aggregates.edition import (
-    DoiMinterTombstoneError,
     EditionAlreadyExistsError,
     EditionCannotBeEmptyError,
     EditionCannotBindToDiscardedDatasetError,
@@ -133,6 +132,7 @@ from cora.data.aggregates.edition import (
     InvalidEditionWithdrawalReasonError,
     InvalidPublicationYearError,
     InvalidSpdxIdentifierError,
+    PersistentIdentifierMinterTombstoneError,
 )
 from cora.data.errors import UnauthorizedError
 from cora.data.features import (
@@ -153,7 +153,7 @@ from cora.data.features import (
     withdraw_edition,
 )
 from cora.data.ports.checksum_verifier import ChecksumVerifierUnsupportedSchemeError
-from cora.shared.ports.doi_minter import PersistentIdentifierMintError
+from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMintError
 
 
 async def _handle_validation_error(request: Request, exc: Exception) -> JSONResponse:
@@ -231,7 +231,7 @@ async def _handle_cannot_transition(request: Request, exc: Exception) -> JSONRes
 
 
 async def _handle_upstream_port_failure(request: Request, exc: Exception) -> JSONResponse:
-    """502 handler for upstream-port failure (serializer, DoiMinter tombstone)."""
+    """502 handler for upstream-port failure (serializer, PersistentIdentifierMinter tombstone)."""
     _ = request
     return JSONResponse(
         status_code=status.HTTP_502_BAD_GATEWAY,
@@ -413,12 +413,12 @@ def register_data_routes(app: FastAPI) -> None:
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)
     for upstream_port_cls in (
         # Serializer adapter failure at seal / publish time, and
-        # DoiMinter.tombstone failure at withdraw time. Both 502 because
+        # PersistentIdentifierMinter.tombstone failure at withdraw time. Both 502 because
         # the upstream port (serializer / DataCite) is the failure source,
         # not a domain-state conflict.
         EditionSerializerError,
-        DoiMinterTombstoneError,
-        # DoiMinter.mint failure at publish time. 502: the DataCite
+        PersistentIdentifierMinterTombstoneError,
+        # PersistentIdentifierMinter.mint failure at publish time. 502: the DataCite
         # authority (the upstream port) is the failure source.
         PersistentIdentifierMintError,
     ):

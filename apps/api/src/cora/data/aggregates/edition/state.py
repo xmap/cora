@@ -13,7 +13,7 @@ sits one tier below).
   - Carries its own identity (`id`) distinct from member Datasets
   - Has a sealing `content_hash` set at the Sealed transition (sha256
     of the canonical serialized form via `EditionSerializer`)
-  - Optionally carries an `external_pid` (DOI minted via DoiMinter)
+  - Optionally carries an `external_pid` (DOI minted via PersistentIdentifierMinter)
     after the Published transition
   - Can be tombstoned (Withdrawn) without deleting the DOI
 
@@ -524,8 +524,8 @@ class EditionWithdrawnWithoutPersistentIdError(Exception):
         self.edition_id = edition_id
 
 
-class DoiMinterTombstoneError(Exception):
-    """DoiMinter.tombstone raised at withdraw time.
+class PersistentIdentifierMinterTombstoneError(Exception):
+    """PersistentIdentifierMinter.tombstone raised at withdraw time.
 
     Distinct from `PersistentIdentifierMintError` because operator
     remediation differs: mint failure -> retry; tombstone failure ->
@@ -534,7 +534,8 @@ class DoiMinterTombstoneError(Exception):
 
     def __init__(self, persistent_id_value: str, reason: str) -> None:
         super().__init__(
-            f"DoiMinter tombstone failed for persistent_id={persistent_id_value!r}: {reason}"
+            f"PersistentIdentifierMinter tombstone failed for "
+            f"persistent_id={persistent_id_value!r}: {reason}"
         )
         self.persistent_id_value = persistent_id_value
         self.reason = reason
@@ -727,7 +728,6 @@ __all__ = [
     "EDITION_TITLE_MAX_LENGTH",
     "LICENSE_REQUIRED_KINDS",
     "Creator",
-    "DoiMinterTombstoneError",
     "Edition",
     "EditionAlreadyExistsError",
     "EditionCannotBeEmptyError",
@@ -758,6 +758,7 @@ __all__ = [
     "InvalidEditionWithdrawalReasonError",
     "InvalidPublicationYearError",
     "InvalidSpdxIdentifierError",
+    "PersistentIdentifierMinterTombstoneError",
     "SpdxIdentifier",
     "WithdrawalReason",
     "validate_creators",

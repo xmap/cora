@@ -20,9 +20,9 @@ asserts proj_data_edition_summary reflects the new state:
   Withdrawn.
 
 The Edition slices read `deps.data.{distribution_lookup,
-edition_serializers, doi_minter}`; `build_postgres_deps` does not wire
+edition_serializers, persistent_identifier_minter}`; `build_postgres_deps` does not wire
 that BC-local namespace, so the test attaches it (PostgresDistribution
-Lookup + RoCrate12Adapter + StubDoiMinter) per deps build, mirroring
+Lookup + RoCrate12Adapter + StubPersistentIdentifierMinter) per deps build, mirroring
 `wire_data`.
 """
 
@@ -57,7 +57,9 @@ from cora.data.features.register_distribution import RegisterDistribution
 from cora.data.features.register_edition import CreatorEntry, RegisterEdition
 from cora.data.features.seal_edition.command import SealEdition
 from cora.data.features.withdraw_edition.command import WithdrawEdition
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.deps import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.supply._projections import register_supply_projections
@@ -77,7 +79,7 @@ def _attach_data_namespace(deps: Kernel, pool: asyncpg.Pool) -> Kernel:
     """Wire the BC-local `deps.data` namespace the Edition slices read.
 
     Mirrors `wire_data`: PostgresDistributionLookup (pool-backed),
-    the RoCrate serializer map, and the StubDoiMinter.
+    the RoCrate serializer map, and the StubPersistentIdentifierMinter.
     """
     object.__setattr__(
         deps,
@@ -85,7 +87,7 @@ def _attach_data_namespace(deps: Kernel, pool: asyncpg.Pool) -> Kernel:
         SimpleNamespace(
             distribution_lookup=PostgresDistributionLookup(pool),
             edition_serializers={EditionKind.ROCRATE: RoCrate12Adapter()},
-            doi_minter=StubDoiMinter(),
+            persistent_identifier_minter=StubPersistentIdentifierMinter(),
         ),
     )
     return deps

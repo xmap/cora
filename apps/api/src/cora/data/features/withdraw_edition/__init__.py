@@ -1,6 +1,6 @@
 """`withdraw_edition`: tombstones a Published Edition.
 
-Calls `DoiMinter.tombstone` (the DOI stays Findable as a tombstone
+Calls `PersistentIdentifierMinter.tombstone` (the DOI stays Findable as a tombstone
 page; it is NOT deleted, per DataCite DOI-immutability), then emits
 `EditionWithdrawn`. Withdrawn is terminal: re-withdraw is rejected
 with `EditionCannotWithdrawError`. The mandatory withdrawal reason is

@@ -9,8 +9,8 @@ Full status-code matrix per slice F Section 13.2 + Locks L17 / L18 / L19:
   - 409 when asset already carries a persistent_id (set-once)
   - 422 wire-layer validation (empty suffix, oversized suffix, missing
     scheme, unknown scheme value)
-  - 502 when the upstream DoiMinter raises PersistentIdentifierMintError
-    (RaisingDoiMinter fixture from conftest, swapped onto the bound
+  - 502 when the upstream PersistentIdentifierMinter raises PersistentIdentifierMintError
+    (RaisingPersistentIdentifierMinter fixture from conftest, swapped onto the bound
     handler via dataclasses.replace per Lock 10)
   - Event-store persistence pin (the AssetPersistentIdAssigned event
     lands on the Asset stream)
@@ -19,7 +19,7 @@ Full status-code matrix per slice F Section 13.2 + Locks L17 / L18 / L19:
 
 In-memory adapters: `APP_ENV=test` is set in `tests/conftest.py`, so
 `create_app()` builds the kernel with `InMemoryEventStore` and the
-Equipment BC wires `StubDoiMinter` by default (no DataCite credentials
+Equipment BC wires `StubPersistentIdentifierMinter` by default (no DataCite credentials
 present in the test Settings).
 """
 
@@ -36,7 +36,7 @@ from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
 from cora.equipment.features import assign_asset_persistent_id
-from tests.integration.equipment.conftest import RaisingDoiMinter
+from tests.integration.equipment.conftest import RaisingPersistentIdentifierMinter
 
 if TYPE_CHECKING:
     from cora.equipment.wire import EquipmentHandlers
@@ -57,10 +57,10 @@ def _register_asset(client: TestClient, *, name: str = "Detector-X") -> str:
     return asset_id
 
 
-def _swap_doi_minter(app: FastAPI, minter: object) -> None:
+def _swap_persistent_identifier_minter(app: FastAPI, minter: object) -> None:
     """Rebuild the assign_asset_persistent_id handler over a swapped minter.
 
-    The handler closes over `deps.equipment.doi_minter` at bind time, so
+    The handler closes over `deps.equipment.persistent_identifier_minter` at bind time, so
     mutating the SimpleNamespace alone is not enough: the live handler
     on `app.state.equipment.assign_asset_persistent_id` was bound before the
     swap. We mutate the BC-local namespace AND rebind the handler, then
@@ -69,10 +69,12 @@ def _swap_doi_minter(app: FastAPI, minter: object) -> None:
     to the rebound closure.
     """
     deps = app.state.deps
-    object.__setattr__(deps.equipment, "doi_minter", minter)
+    object.__setattr__(deps.equipment, "persistent_identifier_minter", minter)
     rebound = assign_asset_persistent_id.bind(deps)
     handlers: EquipmentHandlers = app.state.equipment
-    app.state.equipment = replace(handlers, assign_asset_persistent_id=rebound, doi_minter=minter)
+    app.state.equipment = replace(
+        handlers, assign_asset_persistent_id=rebound, persistent_identifier_minter=minter
+    )
 
 
 @pytest.mark.integration
@@ -288,9 +290,9 @@ def test_post_assign_persistent_id_writes_persistent_id_to_projection_after_repl
 
 @pytest.mark.integration
 def test_post_assign_persistent_id_with_raising_minter_returns_502(
-    raising_doi_minter: RaisingDoiMinter,
+    raising_persistent_identifier_minter: RaisingPersistentIdentifierMinter,
 ) -> None:
-    """Override the bound minter with RaisingDoiMinter and assert 502.
+    """Override the bound minter with RaisingPersistentIdentifierMinter and assert 502.
 
     Verifies the L11 + L19 mapping wires correctly: a
     `PersistentIdentifierMintError` raised by the upstream port surfaces
@@ -299,7 +301,7 @@ def test_post_assign_persistent_id_with_raising_minter_returns_502(
     app = create_app()
     with TestClient(app) as client:
         asset_id = _register_asset(client)
-        _swap_doi_minter(app, raising_doi_minter)
+        _swap_persistent_identifier_minter(app, raising_persistent_identifier_minter)
         response = client.post(
             f"/assets/{asset_id}/assign-persistent-identifier",
             json={"scheme": "DOI", "suffix": "WILL-FAIL"},

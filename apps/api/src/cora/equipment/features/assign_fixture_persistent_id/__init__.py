@@ -7,10 +7,10 @@ lifecycle FSM today, so there is no decommission-style gate (per
 Section 2.4 of [[project-fixture-pidinst-design]]).
 
 Server-mint posture per Lock 5 of the design memo (reuses the
-Asset-tier `DoiMinter` port unchanged): the route forwards
+Asset-tier `PersistentIdentifierMinter` port unchanged): the route forwards
 `(fixture_id, scheme, suffix)` to the handler, and the handler
 closure resolves the `PersistentIdentifier` from the shared
-`DoiMinter` port before invoking the pure decider.
+`PersistentIdentifierMinter` port before invoking the pure decider.
 
 Module-as-namespace surface:
 

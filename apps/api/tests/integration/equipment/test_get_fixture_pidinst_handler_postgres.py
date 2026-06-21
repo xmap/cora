@@ -7,7 +7,7 @@ then runs the view through `to_fixture_pidinst_record` to produce
 the `PidinstRecord`. This suite pins the handler-tier closure:
 register the upstream chain (Family -> Model -> Asset + owner +
 family -> Assembly -> Fixture), optionally assign each bound Asset a
-persistent_id via the inert `StubDoiMinter`, then load through
+persistent_id via the inert `StubPersistentIdentifierMinter`, then load through
 `get_fixture_pidinst.bind(deps)` and assert against the assembled
 view (and through `to_fixture_pidinst_record` for the URN-fallback
 identifier shape).
@@ -63,7 +63,9 @@ from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_fixture import RegisterFixture
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.config import Settings
 from cora.infrastructure.kernel import Kernel
 from cora.shared.identifier import (
@@ -107,10 +109,14 @@ def _build_deps(
         facility_publisher=_PUBLISHER,
         landing_page_template=_LANDING_TEMPLATE,
     )
-    # The assign_asset_persistent_id handler reads `deps.equipment.doi_minter`;
+    # The assign_asset_persistent_id handler reads `deps.equipment.persistent_identifier_minter`;
     # mirror what `wire_equipment` registers when no DataCite credentials are
     # present (parity with test_get_asset_pidinst_with_persistent_id.py).
-    object.__setattr__(deps, "equipment", SimpleNamespace(doi_minter=StubDoiMinter()))
+    object.__setattr__(
+        deps,
+        "equipment",
+        SimpleNamespace(persistent_identifier_minter=StubPersistentIdentifierMinter()),
+    )
     return deps
 
 

@@ -7,15 +7,15 @@ double without touching the kernel.
 
 Currently exposes:
 
-- `RaisingDoiMinter`: a `DoiMinter`-conforming class whose `mint`
+- `RaisingPersistentIdentifierMinter`: a `PersistentIdentifierMinter`-conforming class whose `mint`
   unconditionally raises `PersistentIdentifierMintError` with the
   reason `"upstream stub failure"`. Used by the 502-path test on
   `POST /assets/{asset_id}/assign-persistent-identifier` to verify
   the upstream-mint-failure exception handler wires correctly
   (per slice F Section 13.2 + Locks L11 + L19).
-- `raising_doi_minter`: function-scoped pytest fixture returning a
-  fresh `RaisingDoiMinter` instance for tests that override
-  `app.state.equipment.doi_minter`.
+- `raising_persistent_identifier_minter`: function-scoped pytest fixture returning a
+  fresh `RaisingPersistentIdentifierMinter` instance for tests that override
+  `app.state.equipment.persistent_identifier_minter`.
 """
 
 import pytest
@@ -24,15 +24,15 @@ from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )
-from cora.shared.ports.doi_minter import PersistentIdentifierMintError
+from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMintError
 
 pytestmark = pytest.mark.timeout(60, method="thread")
 
 
-class RaisingDoiMinter:
-    """Protocol-conforming `DoiMinter` whose `mint` always raises.
+class RaisingPersistentIdentifierMinter:
+    """Protocol-conforming `PersistentIdentifierMinter` whose `mint` always raises.
 
-    Mirrors the `StubDoiMinter` shape but inverts the contract: every
+    Mirrors the `StubPersistentIdentifierMinter` shape but inverts the contract: every
     invocation raises `PersistentIdentifierMintError` with the reason
     `"upstream stub failure"`. The route layer maps this to HTTP 502
     via the standard exception-handler registration in the Equipment
@@ -54,5 +54,5 @@ class RaisingDoiMinter:
 
 
 @pytest.fixture
-def raising_doi_minter() -> RaisingDoiMinter:
-    return RaisingDoiMinter()
+def raising_persistent_identifier_minter() -> RaisingPersistentIdentifierMinter:
+    return RaisingPersistentIdentifierMinter()

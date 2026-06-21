@@ -2,7 +2,7 @@
 
 Server-mint posture (Lock 12): the route forwards `(asset_id, scheme,
 suffix)` to the handler, and the handler closure resolves the
-`PersistentIdentifier` from the `DoiMinter` port BEFORE invoking the
+`PersistentIdentifier` from the `PersistentIdentifierMinter` port BEFORE invoking the
 pure decider. Non-determinism (the minter call) is captured in the
 handler closure per [[project-non-determinism-principle]], NOT at the
 route layer. One minter call site (this handler), not two (route + MCP
@@ -41,7 +41,7 @@ from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.shared.identifier import PersistentIdentifier
 
 if TYPE_CHECKING:
-    from cora.shared.ports.doi_minter import DoiMinter
+    from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMinter
 
 
 class Handler(Protocol):
@@ -61,7 +61,8 @@ class Handler(Protocol):
 def bind(deps: Kernel) -> Handler:
     """Build an assign_asset_persistent_id handler closed over the shared deps.
 
-    Reads the BC-tier `DoiMinter` from `deps.equipment.doi_minter`
+    Reads the BC-tier `PersistentIdentifierMinter` from
+    `deps.equipment.persistent_identifier_minter`
     (wired in `wire_equipment(deps)` per Lock 10). Calls
     `minter.mint(scheme, suffix)` to resolve the `PersistentIdentifier`,
     then runs the pure decider through the existing
@@ -72,7 +73,7 @@ def bind(deps: Kernel) -> Handler:
     # `wire_equipment(deps)` before this handler binds (see Lock 10 in
     # [[project-asset-persistent-id-write-design]]). Pyright can't see the
     # dynamically-set attribute on the frozen Kernel; cast through Any.
-    minter = cast("DoiMinter", deps.equipment.doi_minter)  # type: ignore[attr-defined]
+    minter = cast("PersistentIdentifierMinter", deps.equipment.persistent_identifier_minter)  # type: ignore[attr-defined]
 
     async def handler(
         command: AssignAssetPersistentId,

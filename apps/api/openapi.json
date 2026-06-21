@@ -1522,7 +1522,7 @@
         "type": "string"
       },
       "AssignAssetPersistentIdRequest": {
-        "description": "Body for `POST /assets/{asset_id}/assign-persistent-identifier`.\n\n`scheme` selects the PID scheme; v1 supports DOI and HANDLE.\n`suffix` is the optional operator-supplied local part; when absent\nthe configured `DoiMinter` adapter auto-generates one. No `value`\nfield per the server-mint posture (Lock 12).",
+        "description": "Body for `POST /assets/{asset_id}/assign-persistent-identifier`.\n\n`scheme` selects the PID scheme; v1 supports DOI and HANDLE.\n`suffix` is the optional operator-supplied local part; when absent\nthe configured `PersistentIdentifierMinter` adapter auto-generates one. No `value`\nfield per the server-mint posture (Lock 12).",
         "properties": {
           "scheme": {
             "$ref": "#/components/schemas/PersistentIdentifierScheme",
@@ -1539,7 +1539,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional operator-supplied local part. When absent, the configured DoiMinter adapter auto-generates the suffix; the bare-request flow is the common case for retrospective bulk-mint per F1.4.",
+            "description": "Optional operator-supplied local part. When absent, the configured PersistentIdentifierMinter adapter auto-generates the suffix; the bare-request flow is the common case for retrospective bulk-mint per F1.4.",
             "title": "Suffix"
           }
         },
@@ -1571,7 +1571,7 @@
         "type": "object"
       },
       "AssignFixturePersistentIdRequest": {
-        "description": "Body for `POST /fixtures/{fixture_id}/assign-persistent-identifier`.\n\n`scheme` selects the PID scheme; v1 supports DOI and HANDLE.\n`suffix` is the optional operator-supplied local part; when absent\nthe configured `DoiMinter` adapter auto-generates one. No `value`\nfield per the server-mint posture.",
+        "description": "Body for `POST /fixtures/{fixture_id}/assign-persistent-identifier`.\n\n`scheme` selects the PID scheme; v1 supports DOI and HANDLE.\n`suffix` is the optional operator-supplied local part; when absent\nthe configured `PersistentIdentifierMinter` adapter auto-generates one. No `value`\nfield per the server-mint posture.",
         "properties": {
           "scheme": {
             "$ref": "#/components/schemas/PersistentIdentifierScheme",
@@ -1588,7 +1588,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional operator-supplied local part. When absent, the configured DoiMinter adapter auto-generates the suffix.",
+            "description": "Optional operator-supplied local part. When absent, the configured PersistentIdentifierMinter adapter auto-generates the suffix.",
             "title": "Suffix"
           }
         },
@@ -27451,7 +27451,7 @@
                 }
               }
             },
-            "description": "DoiMinter.mint or EditionSerializer.serialize failed."
+            "description": "PersistentIdentifierMinter.mint or EditionSerializer.serialize failed."
           }
         },
         "summary": "Publish a Sealed Edition",
@@ -27684,7 +27684,7 @@
                 }
               }
             },
-            "description": "DoiMinter.tombstone failed."
+            "description": "PersistentIdentifierMinter.tombstone failed."
           }
         },
         "summary": "Withdraw a Published Edition",

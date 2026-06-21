@@ -9,7 +9,7 @@ single POST endpoint:
 
   - `AssignFixturePersistentIdRequest`: `(scheme, suffix | None)`
     operator intent. The handler resolves the suffix into a full
-    `PersistentIdentifier` via the configured `DoiMinter` port.
+    `PersistentIdentifier` via the configured `PersistentIdentifierMinter` port.
   - `AssignFixturePersistentIdResponse`: `(scheme, value)` echoed back
     so the operator learns the server-minted identifier without a
     follow-up GET (Section 6.5 deviation from the empty-201 convention
@@ -33,7 +33,7 @@ class AssignFixturePersistentIdRequest(BaseModel):
 
     `scheme` selects the PID scheme; v1 supports DOI and HANDLE.
     `suffix` is the optional operator-supplied local part; when absent
-    the configured `DoiMinter` adapter auto-generates one. No `value`
+    the configured `PersistentIdentifierMinter` adapter auto-generates one. No `value`
     field per the server-mint posture.
     """
 
@@ -47,7 +47,7 @@ class AssignFixturePersistentIdRequest(BaseModel):
         max_length=PERSISTENT_IDENTIFIER_VALUE_MAX_LENGTH,
         description=(
             "Optional operator-supplied local part. When absent, the "
-            "configured DoiMinter adapter auto-generates the suffix."
+            "configured PersistentIdentifierMinter adapter auto-generates the suffix."
         ),
     )
 

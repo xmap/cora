@@ -2,7 +2,7 @@
 
 `PublishEditionContext` is built by the publish handler from:
 
-  - The freshly-minted `PersistentIdentifier` from `DoiMinter.mint`
+  - The freshly-minted `PersistentIdentifier` from `PersistentIdentifierMinter.mint`
   - The post-mint `content_hash` from re-serializing the artifact with
     the minted PID baked in
 

@@ -14,7 +14,7 @@ Out of scope
 
 - **Storage tier transitions on Distribution.** The `DistributionStatus` FSM ships its full four-state shape day-one, but only the genesis `Registered` state is reachable today; the `Verified` / `Stale` flips are driven indirectly by Attestation facts through the projection writer, and a request-path `verify` / `mark-stale` / `discard` slice is deferred until a storage-tier consumer ships.
 - **A `Transfer` aggregate.** Moving bytes between backends is modeled as a `Method` + `TransferPort` in the Recipe module, not as a Data aggregate. `Distribution` is the resting materialization, not the transfer log.
-- **Persistent external identifier minting beyond DOI.** `Edition` mints a DOI through the shared `DoiMinter` port at publish time and tombstones it at withdraw. Handle, ARK, and IGSN flows, and DataCite event-data harvesting, are deferred until a real consumer asks.
+- **Persistent external identifier minting beyond DOI.** `Edition` mints a DOI through the shared `PersistentIdentifierMinter` port at publish time and tombstones it at withdraw. Handle, ARK, and IGSN flows, and DataCite event-data harvesting, are deferred until a real consumer asks.
 - **PROV-O vocabulary in the domain core.** In-domain lineage stays as the `derived_from` edge set on each Dataset plus the `Acquisition` capture fact. PROV-O export (`prov:wasDerivedFrom`, `prov:wasGeneratedBy`) lives at an API export adapter when a real consumer asks.
 - **Multi-checksum algorithms.** Only `sha256` is accepted. The `(algorithm, value)` shape is forward-compatible for adding BLAKE3, SHA3, or other algorithms when a real consumer asks.
 - **Re-promotion from Retracted.** Retracted is terminal. Operators who want to publish a corrected version register a new Dataset with `derived_from` pointing at the retracted one.
@@ -228,7 +228,7 @@ The five create-style slices (`register_dataset`, `register_distribution`, `reco
 : `EditionNotFound`, `EditionPublisherNotFound`, `EditionDatasetDistributionNotFound` (404), `EditionCannotSeal`, `EditionCannotBeEmpty`, `EditionDatasetsNotAllProduction`, `EditionCannotSealOnDiscardedDataset`, `EditionLicenseRequiredForKind` (409), `Unauthorized`
 
 `PublishEdition` / `WithdrawEdition`
-: `EditionNotFound` (404), `EditionCannotPublish` / `EditionCannotWithdraw` (409), `EditionSerializerError` / `DoiMinterTombstoneError` / `PersistentIdentifierMintError` (502, port failures), `EditionPublishedWithoutContentHash` / `EditionWithdrawnWithoutPersistentId` (500, invariant breach), `Unauthorized`
+: `EditionNotFound` (404), `EditionCannotPublish` / `EditionCannotWithdraw` (409), `EditionSerializerError` / `PersistentIdentifierMinterTombstoneError` / `PersistentIdentifierMintError` (502, port failures), `EditionPublishedWithoutContentHash` / `EditionWithdrawnWithoutPersistentId` (500, invariant breach), `Unauthorized`
 
 `RecordAttestation`
 : `AttestationDistributionNotFound` (404), `AttestationKindRequiresDistribution`, `AttestationKindRejectsDistribution`, `AttestationDistributionDatasetMismatch`, `AttestationChecksumEvidenceMismatch`, `AttestationAlreadyExists` (409), `AttestationKindNotYetSupported`, `ChecksumVerifierUnsupportedScheme`, invalid `kind` / `outcome` / `evidence` (400), `Unauthorized`
@@ -243,7 +243,7 @@ The five create-style slices (`register_dataset`, `register_distribution`, `reco
 | `ChecksumVerifierPort` | BC-local | `HttpRangeChecksumAdapter` | `record_attestation` (ChecksumVerified): fetches the bytes and recomputes the digest, returning `Match` / `Mismatch` / `Unreachable` |
 | `DistributionLookup` | BC-local | `PostgresDistributionLookup`, `InMemoryDistributionLookup` | `seal_edition`: confirms each member Dataset has a canonical Distribution |
 | `EditionSerializerPort` | BC-local (per-kind) | `RoCrate12Adapter`, stub | `publish_edition`: serializes the citation manifest for the Edition's `kind` |
-| `DoiMinter` | shared (`cora/shared/ports`) | `StubDoiMinter` | `publish_edition` mints, `withdraw_edition` tombstones the DOI |
+| `PersistentIdentifierMinter` | shared (`cora/shared/ports`) | `StubPersistentIdentifierMinter` | `publish_edition` mints, `withdraw_edition` tombstones the DOI |
 | `SupplyLookup` | cross-BC (Supply) | (Supply BC adapters) | `register_distribution`: resolves `supply_id`, requires a storage-kind Supply |
 | `AssetLookup` | cross-BC (Equipment) | (Equipment BC adapters) | `record_acquisition`: resolves `producing_asset_id` and reads `family_affordances` for the `CAPTURING` gate |
 | `FacilityLookup` | cross-BC (Federation) | (Federation BC adapters) | `seal_edition` / `publish_edition`: resolves `publisher_facility_code` |
@@ -439,7 +439,7 @@ The `(distribution_id, attested_at DESC)` partial index is the read the Distribu
 | [Supply](../supply/index.md) | reads-from (via `SupplyLookup`) | `register_distribution` resolves `supply_id` and requires a storage-kind Supply |
 | [Equipment](../equipment/index.md) | reads-from (via `AssetLookup`) | `record_acquisition` resolves `producing_asset_id` and requires its Family to declare the `CAPTURING` affordance |
 | [Federation](../federation/index.md) | reads-from (via `FacilityLookup`) | `seal_edition` / `publish_edition` resolve the publisher `facility_code` |
-| DataCite (external) | mints-via (`DoiMinter`) | `publish_edition` mints a DOI; `withdraw_edition` tombstones it |
+| DataCite (external) | mints-via (`PersistentIdentifierMinter`) | `publish_edition` mints a DOI; `withdraw_edition` tombstones it |
 | [Access](../access/index.md) | shared-id-with | Every Data event carries the actor id on the envelope for principal attribution |
 | Data (self) | reads-from | `Dataset.derived_from` references other Datasets; Distribution / Edition / Acquisition / Attestation all reference `Dataset.id`; an Edition references its members' canonical Distributions; an Attestation references an optional Distribution |
 
@@ -639,7 +639,7 @@ The examples below cover the canonical flow: register a Dataset, materialize it 
     }
     ```
 
-    Returns `201 Created` in `Registered`. `POST /editions/{id}/seal` freezes the member set and computes `content_hash` (every member must be `Production` intent, not `Discarded`, and carry a canonical Distribution). `POST /editions/{id}/publish` mints the DOI through `DoiMinter`, serializes the manifest through the per-kind `EditionSerializerPort`, and records `external_pid` plus `published_content_hash`. `POST /editions/{id}/withdraw` tombstones the DOI.
+    Returns `201 Created` in `Registered`. `POST /editions/{id}/seal` freezes the member set and computes `content_hash` (every member must be `Production` intent, not `Discarded`, and carry a canonical Distribution). `POST /editions/{id}/publish` mints the DOI through `PersistentIdentifierMinter`, serializes the manifest through the per-kind `EditionSerializerPort`, and records `external_pid` plus `published_content_hash`. `POST /editions/{id}/withdraw` tombstones the DOI.
 
 === "MCP"
 

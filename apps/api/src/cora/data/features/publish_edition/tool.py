@@ -27,7 +27,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         name="publish_edition",
         description=(
             "Publish a Sealed Edition: mint a persistent identifier (DOI) "
-            "via the DoiMinter port, re-serialize the artifact with the "
+            "via the PersistentIdentifierMinter port, re-serialize the artifact with the "
             "minted PID baked in, and transition to Published."
         ),
     )

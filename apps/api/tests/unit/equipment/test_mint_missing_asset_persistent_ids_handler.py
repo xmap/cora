@@ -25,7 +25,7 @@ from cora.equipment.features.mint_missing_asset_persistent_ids import (
 )
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.shared.identifier import PersistentIdentifier, PersistentIdentifierScheme
-from cora.shared.ports.doi_minter import PersistentIdentifierMintError
+from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMintError
 from tests.unit._helpers import build_deps
 
 pytestmark = pytest.mark.timeout(60, method="thread")

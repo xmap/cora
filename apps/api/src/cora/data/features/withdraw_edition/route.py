@@ -67,7 +67,7 @@ router = APIRouter(tags=["data"])
         },
         status.HTTP_502_BAD_GATEWAY: {
             "model": ErrorResponse,
-            "description": "DoiMinter.tombstone failed.",
+            "description": "PersistentIdentifierMinter.tombstone failed.",
         },
     },
     summary="Withdraw a Published Edition",

@@ -1,4 +1,4 @@
-"""DoiMinter port: mints and tombstones persistent identifiers.
+"""PersistentIdentifierMinter port: mints and tombstones persistent identifiers.
 
 Shared-kernel port for assigning a PIDINST v1.0 Property 1 persistent
 identifier (DOI or Handle) at an external authority such as DataCite
@@ -21,7 +21,8 @@ the same (prefix, suffix) pair is safe at the wire because DataCite
 treats the PUT as idempotent on the DOI string. The CORA caller does
 not pass an Idempotency-Key header (F5.1).
 
-The Stub adapter (`cora.infrastructure.adapters.stub_doi_minter.StubDoiMinter`)
+The Stub adapter
+(`cora.infrastructure.adapters.stub_persistent_identifier_minter.StubPersistentIdentifierMinter`)
 returns a deterministic test identifier built from a fixed test prefix
 plus the supplied suffix (or a UUID-based suffix when none was
 supplied), and never errors.
@@ -78,7 +79,7 @@ class PersistentIdentifierMintError(Exception):
         self.reason = reason
 
 
-class DoiMinter(Protocol):
+class PersistentIdentifierMinter(Protocol):
     """Mints and tombstones persistent identifiers at an external authority."""
 
     async def mint(
@@ -115,7 +116,7 @@ class DoiMinter(Protocol):
 
         Idempotent at the port: tombstoning an already-tombstoned PID
         is a no-op. Production adapter raises a separate error class
-        (`DoiMinterTombstoneError`, owned by the calling slice's BC)
+        (`PersistentIdentifierMinterTombstoneError`, owned by the calling slice's BC)
         on wire failures.
         """
         ...

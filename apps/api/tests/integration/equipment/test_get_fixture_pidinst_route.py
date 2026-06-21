@@ -72,7 +72,9 @@ from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.equipment.features.register_fixture import RegisterFixture
 from cora.equipment.wire import wire_equipment
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.config import Settings
 from cora.infrastructure.kernel import Kernel
 from tests.integration._equipment_helpers import (
@@ -105,7 +107,11 @@ def _build_deps(db_pool: asyncpg.Pool, *, ids: list[UUID]) -> Kernel:
         facility_publisher=_PUBLISHER,
         landing_page_template=_LANDING_TEMPLATE,
     )
-    object.__setattr__(deps, "equipment", SimpleNamespace(doi_minter=StubDoiMinter()))
+    object.__setattr__(
+        deps,
+        "equipment",
+        SimpleNamespace(persistent_identifier_minter=StubPersistentIdentifierMinter()),
+    )
     return deps
 
 

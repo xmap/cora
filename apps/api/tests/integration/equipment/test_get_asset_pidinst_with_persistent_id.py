@@ -3,7 +3,7 @@
 Slice F (Section 13.2). Three tests pin the URN-fallback to DOI/Handle
 swap that the `_pidinst_serializer._build_identifier` extension makes
 when `view.persistent_id` is populated. The Asset stream is mutated by
-`assign_asset_persistent_id` (server-mint via the inert `StubDoiMinter` wired
+`assign_asset_persistent_id` (server-mint via the inert `StubPersistentIdentifierMinter` wired
 by `wire_equipment`), then `get_asset_pidinst` reads the stream + folds
 + serializes; the resulting `PidinstIdentifier` should carry the DOI or
 Handle scheme byte-for-byte rather than the URN fallback from slice C.
@@ -52,7 +52,9 @@ from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.get_asset_pidinst import GetAssetPidinst
 from cora.equipment.features.register_asset import RegisterAsset
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.config import Settings
 from cora.infrastructure.kernel import Kernel
 from cora.shared.identifier import (
@@ -88,9 +90,13 @@ def _build_deps(
         landing_page_template=_LANDING_TEMPLATE,
     )
     # Attach the BC-local equipment namespace the assign_asset_persistent_id
-    # handler reads (`deps.equipment.doi_minter`). The Stub mirrors what
+    # handler reads (`deps.equipment.persistent_identifier_minter`). The Stub mirrors what
     # `wire_equipment` registers when no DataCite credentials are present.
-    object.__setattr__(deps, "equipment", SimpleNamespace(doi_minter=StubDoiMinter()))
+    object.__setattr__(
+        deps,
+        "equipment",
+        SimpleNamespace(persistent_identifier_minter=StubPersistentIdentifierMinter()),
+    )
     return deps
 
 

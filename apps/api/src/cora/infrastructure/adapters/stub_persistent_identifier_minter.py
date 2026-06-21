@@ -19,7 +19,7 @@ The stub prefixes (`10.0000` for DOI, `20.500.0000` for Handle) are
 reserved in the corresponding registration systems for testing
 purposes and do not resolve to anything real. Hard-coded so the stub
 is deterministic without a config dependency: tests can construct
-`StubDoiMinter()` directly without a Settings object.
+`StubPersistentIdentifierMinter()` directly without a Settings object.
 """
 
 from uuid import uuid4
@@ -33,7 +33,7 @@ _STUB_DOI_PREFIX = "10.0000/cora-stub"
 _STUB_HANDLE_PREFIX = "20.500.0000/cora-stub"
 
 
-class StubDoiMinter:
+class StubPersistentIdentifierMinter:
     """Returns a deterministic test-only PersistentIdentifier."""
 
     async def mint(
@@ -57,4 +57,4 @@ class StubDoiMinter:
         _ = (pid, reason)
 
 
-__all__ = ["StubDoiMinter"]
+__all__ = ["StubPersistentIdentifierMinter"]

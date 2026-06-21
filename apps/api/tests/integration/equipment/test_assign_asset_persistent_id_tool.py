@@ -4,14 +4,14 @@ Registers the slice's tool on a fresh FastMCP server bound to a
 Postgres-backed handler closure, then exercises the registered tool
 function directly so the test does not need to stand up a streamable-
 http request context. The integration tier owns the end-to-end chain:
-MCP tool input parsing through the slice handler through the DoiMinter
+MCP tool input parsing through the slice handler through the PersistentIdentifierMinter
 port through the Postgres event store. The happy-path and domain-
 error mappings are covered here; the wire-protocol envelope (SSE /
 JSON-RPC) is the contract-tier suite's concern.
 
 Mirrors the slice E.1 get_asset_pidinst integration suite shape for
 seeding (register_asset.bind(deps) + Kernel construction) and the
-slice F conftest's `raising_doi_minter` fixture for the upstream
+slice F conftest's `raising_persistent_identifier_minter` fixture for the upstream
 mint-failure path.
 """
 
@@ -40,15 +40,17 @@ from cora.equipment.features.assign_asset_persistent_id import AssignAssetPersis
 from cora.equipment.features.assign_asset_persistent_id.handler import Handler
 from cora.equipment.features.decommission_asset import DecommissionAsset
 from cora.equipment.features.register_asset import RegisterAsset
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.kernel import Kernel
 from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )
-from cora.shared.ports.doi_minter import PersistentIdentifierMintError
+from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMintError
 from tests.integration._helpers import build_postgres_deps
-from tests.integration.equipment.conftest import RaisingDoiMinter
+from tests.integration.equipment.conftest import RaisingPersistentIdentifierMinter
 
 pytestmark = pytest.mark.timeout(60, method="thread")
 
@@ -68,10 +70,10 @@ def _build_deps(
     return build_postgres_deps(db_pool, ids=ids or [], now=now)
 
 
-def _attach_doi_minter(deps: Kernel, minter: object) -> Kernel:
+def _attach_persistent_identifier_minter(deps: Kernel, minter: object) -> Kernel:
     """Replicate `wire_equipment`'s BC-local namespace stamp.
 
-    The slice handler reads `deps.equipment.doi_minter`; the
+    The slice handler reads `deps.equipment.persistent_identifier_minter`; the
     integration helper does not run `wire_equipment`, so the test
     stamps the namespace directly to keep the handler bind path
     Postgres-only without dragging the full Equipment handler bundle
@@ -79,7 +81,7 @@ def _attach_doi_minter(deps: Kernel, minter: object) -> Kernel:
     """
     from types import SimpleNamespace
 
-    object.__setattr__(deps, "equipment", SimpleNamespace(doi_minter=minter))
+    object.__setattr__(deps, "equipment", SimpleNamespace(persistent_identifier_minter=minter))
     return deps
 
 
@@ -133,7 +135,9 @@ async def test_assign_persistent_id_tool_with_doi_scheme_returns_scheme_and_valu
 ) -> None:
     asset_id = uuid4()
     await _register_seed_asset(db_pool, asset_id=asset_id)
-    handler_deps = _attach_doi_minter(_build_deps(db_pool, ids=[uuid4()]), StubDoiMinter())
+    handler_deps = _attach_persistent_identifier_minter(
+        _build_deps(db_pool, ids=[uuid4()]), StubPersistentIdentifierMinter()
+    )
     tool_fn = _registered_tool_fn(assign_asset_persistent_id.bind(handler_deps))
 
     body = await tool_fn(
@@ -151,7 +155,9 @@ async def test_assign_persistent_id_tool_with_handle_scheme_returns_handle_prefi
 ) -> None:
     asset_id = uuid4()
     await _register_seed_asset(db_pool, asset_id=asset_id)
-    handler_deps = _attach_doi_minter(_build_deps(db_pool, ids=[uuid4()]), StubDoiMinter())
+    handler_deps = _attach_persistent_identifier_minter(
+        _build_deps(db_pool, ids=[uuid4()]), StubPersistentIdentifierMinter()
+    )
     tool_fn = _registered_tool_fn(assign_asset_persistent_id.bind(handler_deps))
 
     body = await tool_fn(
@@ -172,7 +178,9 @@ async def test_assign_persistent_id_tool_with_no_suffix_creates_uuid_suffix(
 ) -> None:
     asset_id = uuid4()
     await _register_seed_asset(db_pool, asset_id=asset_id)
-    handler_deps = _attach_doi_minter(_build_deps(db_pool, ids=[uuid4()]), StubDoiMinter())
+    handler_deps = _attach_persistent_identifier_minter(
+        _build_deps(db_pool, ids=[uuid4()]), StubPersistentIdentifierMinter()
+    )
     tool_fn = _registered_tool_fn(assign_asset_persistent_id.bind(handler_deps))
 
     body = await tool_fn(
@@ -190,7 +198,9 @@ async def test_assign_persistent_id_tool_with_no_suffix_creates_uuid_suffix(
 async def test_assign_persistent_id_tool_with_unknown_asset_raises_not_found(
     db_pool: asyncpg.Pool,
 ) -> None:
-    handler_deps = _attach_doi_minter(_build_deps(db_pool, ids=[uuid4()]), StubDoiMinter())
+    handler_deps = _attach_persistent_identifier_minter(
+        _build_deps(db_pool, ids=[uuid4()]), StubPersistentIdentifierMinter()
+    )
     tool_fn = _registered_tool_fn(assign_asset_persistent_id.bind(handler_deps))
 
     with pytest.raises(AssetNotFoundError):
@@ -208,7 +218,9 @@ async def test_assign_persistent_id_tool_on_already_assigned_asset_raises_alread
 ) -> None:
     asset_id = uuid4()
     await _register_seed_asset(db_pool, asset_id=asset_id)
-    first_deps = _attach_doi_minter(_build_deps(db_pool, ids=[uuid4()]), StubDoiMinter())
+    first_deps = _attach_persistent_identifier_minter(
+        _build_deps(db_pool, ids=[uuid4()]), StubPersistentIdentifierMinter()
+    )
     first_handler = assign_asset_persistent_id.bind(first_deps)
     await first_handler(
         AssignAssetPersistentId(
@@ -220,7 +232,9 @@ async def test_assign_persistent_id_tool_on_already_assigned_asset_raises_alread
         correlation_id=_CORRELATION_ID,
     )
 
-    second_deps = _attach_doi_minter(_build_deps(db_pool, ids=[uuid4()]), StubDoiMinter())
+    second_deps = _attach_persistent_identifier_minter(
+        _build_deps(db_pool, ids=[uuid4()]), StubPersistentIdentifierMinter()
+    )
     tool_fn = _registered_tool_fn(assign_asset_persistent_id.bind(second_deps))
     with pytest.raises(AssetPersistentIdAlreadyAssignedError):
         await tool_fn(
@@ -238,7 +252,9 @@ async def test_assign_persistent_id_tool_on_decommissioned_asset_raises_forbidde
     asset_id = uuid4()
     await _register_seed_asset(db_pool, asset_id=asset_id)
     await _decommission_seed_asset(db_pool, asset_id=asset_id)
-    handler_deps = _attach_doi_minter(_build_deps(db_pool, ids=[uuid4()]), StubDoiMinter())
+    handler_deps = _attach_persistent_identifier_minter(
+        _build_deps(db_pool, ids=[uuid4()]), StubPersistentIdentifierMinter()
+    )
     tool_fn = _registered_tool_fn(assign_asset_persistent_id.bind(handler_deps))
 
     with pytest.raises(AssetPersistentIdAssignmentForbiddenError):
@@ -253,11 +269,13 @@ async def test_assign_persistent_id_tool_on_decommissioned_asset_raises_forbidde
 @pytest.mark.integration
 async def test_assign_persistent_id_tool_with_raising_minter_raises_mint_error(
     db_pool: asyncpg.Pool,
-    raising_doi_minter: RaisingDoiMinter,
+    raising_persistent_identifier_minter: RaisingPersistentIdentifierMinter,
 ) -> None:
     asset_id = uuid4()
     await _register_seed_asset(db_pool, asset_id=asset_id)
-    handler_deps = _attach_doi_minter(_build_deps(db_pool, ids=[uuid4()]), raising_doi_minter)
+    handler_deps = _attach_persistent_identifier_minter(
+        _build_deps(db_pool, ids=[uuid4()]), raising_persistent_identifier_minter
+    )
     tool_fn = _registered_tool_fn(assign_asset_persistent_id.bind(handler_deps))
 
     with pytest.raises(PersistentIdentifierMintError):
@@ -275,7 +293,9 @@ async def test_assign_persistent_id_tool_persists_assigned_event_to_event_store(
 ) -> None:
     asset_id = uuid4()
     await _register_seed_asset(db_pool, asset_id=asset_id)
-    handler_deps = _attach_doi_minter(_build_deps(db_pool, ids=[uuid4()]), StubDoiMinter())
+    handler_deps = _attach_persistent_identifier_minter(
+        _build_deps(db_pool, ids=[uuid4()]), StubPersistentIdentifierMinter()
+    )
     tool_fn = _registered_tool_fn(assign_asset_persistent_id.bind(handler_deps))
 
     await tool_fn(
@@ -313,7 +333,9 @@ async def test_assign_persistent_id_tool_returned_value_round_trips_through_stat
 
     asset_id = uuid4()
     await _register_seed_asset(db_pool, asset_id=asset_id)
-    handler_deps = _attach_doi_minter(_build_deps(db_pool, ids=[uuid4()]), StubDoiMinter())
+    handler_deps = _attach_persistent_identifier_minter(
+        _build_deps(db_pool, ids=[uuid4()]), StubPersistentIdentifierMinter()
+    )
     tool_fn = _registered_tool_fn(assign_asset_persistent_id.bind(handler_deps))
 
     body = await tool_fn(

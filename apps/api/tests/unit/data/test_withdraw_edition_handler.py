@@ -2,8 +2,8 @@
 
 Covers handler-level pre-load order: authz deny, EditionNotFound on
 empty stream, the cheap status guard (EditionCannotWithdrawError on a
-non-Published Edition), the happy path (StubDoiMinter.tombstone no-op
--> EditionWithdrawn), and the DoiMinterTombstoneError 502 propagation
+non-Published Edition), the happy path (StubPersistentIdentifierMinter.tombstone no-op
+-> EditionWithdrawn), and the PersistentIdentifierMinterTombstoneError 502 propagation
 via an inline failing-tombstone stub.
 
 The defensive `EditionWithdrawnWithoutPersistentIdError` branch is not
@@ -22,9 +22,9 @@ import pytest
 
 from cora.data import UnauthorizedError
 from cora.data.aggregates.edition import (
-    DoiMinterTombstoneError,
     EditionCannotWithdrawError,
     EditionNotFoundError,
+    PersistentIdentifierMinterTombstoneError,
 )
 from cora.data.aggregates.edition.events import (
     EditionPublished,
@@ -40,7 +40,9 @@ from cora.data.aggregates.edition.events import (
 from cora.data.features import withdraw_edition
 from cora.data.features.withdraw_edition.command import WithdrawEdition
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.event_envelope import to_new_event
 from cora.shared.identifier import (
     PersistentIdentifier,
@@ -61,9 +63,9 @@ _PUBLISHED_HASH = "feedface" * 8
 _PID_VALUE = "10.0000/cora-stub/published-edition"
 
 
-class FailingTombstoneDoiMinter:
+class FailingTombstonePersistentIdentifierMinter:
     """Tombstone arm always raises; mint arm is unused. Drives the
-    withdraw handler's 502 DoiMinterTombstoneError path."""
+    withdraw handler's 502 PersistentIdentifierMinterTombstoneError path."""
 
     async def mint(
         self,
@@ -80,7 +82,7 @@ class FailingTombstoneDoiMinter:
         reason: str,
     ) -> None:
         _ = reason
-        raise DoiMinterTombstoneError(
+        raise PersistentIdentifierMinterTombstoneError(
             persistent_id_value=pid.value,
             reason="datacite tombstone unreachable",
         )
@@ -202,7 +204,7 @@ def _build_withdraw_deps(
     object.__setattr__(
         deps,
         "data",
-        SimpleNamespace(doi_minter=minter or StubDoiMinter()),
+        SimpleNamespace(persistent_identifier_minter=minter or StubPersistentIdentifierMinter()),
     )
     return deps
 
@@ -285,8 +287,8 @@ async def test_handler_raises_cannot_withdraw_when_not_published() -> None:
 async def test_handler_propagates_tombstone_error() -> None:
     store = InMemoryEventStore()
     await _seed_edition_published(store, _EDITION_ID)
-    deps = _build_withdraw_deps(store, minter=FailingTombstoneDoiMinter())
-    with pytest.raises(DoiMinterTombstoneError) as exc:
+    deps = _build_withdraw_deps(store, minter=FailingTombstonePersistentIdentifierMinter())
+    with pytest.raises(PersistentIdentifierMinterTombstoneError) as exc:
         await withdraw_edition.bind(deps)(  # type: ignore[arg-type]
             WithdrawEdition(edition_id=_EDITION_ID, withdrawal_reason="x"),
             principal_id=_PRINCIPAL_ID,

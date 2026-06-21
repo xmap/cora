@@ -26,7 +26,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             "Assign a persistent identifier (PIDINST v1.0 Property 1, "
             "DOI or Handle) to an existing Fixture. Set-once: rejects "
             "when the Fixture already carries a persistent_id. Calls "
-            "DataCite (or the configured DoiMinter adapter) to mint "
+            "DataCite (or the configured PersistentIdentifierMinter adapter) to mint "
             "the identifier server-side; returns the assigned "
             "(scheme, value) pair."
         ),

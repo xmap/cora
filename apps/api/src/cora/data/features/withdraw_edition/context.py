@@ -2,7 +2,7 @@
 
 `WithdrawEditionContext` is empty today: the withdraw decider reads
 only the loaded `Edition` state (passed separately) plus the command.
-The DoiMinter tombstone side effect happens at the handler, not the
+The PersistentIdentifierMinter tombstone side effect happens at the handler, not the
 decider, so no captured port result needs threading through context.
 
 The context class exists for shape-symmetry with the other Edition

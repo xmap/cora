@@ -1,7 +1,7 @@
 """Unit tests for the `publish_edition` application handler.
 
 Covers handler-level pre-load order: authz deny, EditionNotFound on
-empty stream, the happy path (StubDoiMinter mint + StubEditionSerializer
+empty stream, the happy path (StubPersistentIdentifierMinter mint + StubEditionSerializer
 re-serialize -> EditionPublished with the minted PID + re-serialized
 published_content_hash), and the PersistentIdentifierMintError 502
 propagation via an inline failing-mint stub.
@@ -54,14 +54,16 @@ from cora.data.features import publish_edition
 from cora.data.features.publish_edition.command import PublishEdition
 from cora.data.ports.distribution_lookup import CanonicalDistributionLookupResult
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.adapters.stub_doi_minter import StubDoiMinter
+from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
+    StubPersistentIdentifierMinter,
+)
 from cora.infrastructure.event_envelope import to_new_event
 from cora.shared.identifier import (
     PersistentIdentifier,
     PersistentIdentifierScheme,
 )
 from cora.shared.identity import ActorId
-from cora.shared.ports.doi_minter import PersistentIdentifierMintError
+from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMintError
 from tests.unit._helpers import build_deps
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
@@ -77,7 +79,7 @@ _SEAL_HASH = "deadbeef" * 8
 _PUBLISHED_HASH = "feedface" * 8
 
 
-class FailingDoiMinter:
+class FailingPersistentIdentifierMinter:
     """Mint arm always raises; tombstone arm is a no-op. Used to drive
     the publish handler's 502 PersistentIdentifierMintError path."""
 
@@ -246,7 +248,7 @@ def _build_publish_deps(
                 EditionKind.ROCRATE: serializer
                 or StubEditionSerializer(content_hash=_PUBLISHED_HASH),
             },
-            doi_minter=minter or StubDoiMinter(),
+            persistent_identifier_minter=minter or StubPersistentIdentifierMinter(),
         ),
     )
     return deps
@@ -322,7 +324,7 @@ async def test_handler_propagates_persistent_identifier_mint_error() -> None:
     store = InMemoryEventStore()
     await _seed_dataset_production(store, _DATASET_ID)
     await _seed_edition_sealed(store, _EDITION_ID, dataset_ids=(_DATASET_ID,))
-    deps = _build_publish_deps(store, minter=FailingDoiMinter())
+    deps = _build_publish_deps(store, minter=FailingPersistentIdentifierMinter())
     with pytest.raises(PersistentIdentifierMintError) as exc:
         await publish_edition.bind(deps)(  # type: ignore[arg-type]
             PublishEdition(edition_id=_EDITION_ID),

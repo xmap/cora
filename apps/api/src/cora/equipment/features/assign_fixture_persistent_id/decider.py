@@ -4,7 +4,7 @@ The decider sees `(state, command)` with the resolved
 `PersistentIdentifier` passed as a keyword-only argument (server-mint
 posture per Lock 5 of [[project-fixture-pidinst-design]]: the handler
 resolves the minter call and forwards the resolved VO here). The
-decider is PURE: it does NOT call the DoiMinter, does NOT read the
+decider is PURE: it does NOT call the PersistentIdentifierMinter, does NOT read the
 wall clock (caller injects `now`), and does NOT touch any I/O. Non-
 determinism is captured in the handler closure per
 [[project-non-determinism-principle]].
@@ -24,7 +24,7 @@ P2-FITNESS pin: this module MUST NOT import from
 `cora.equipment.ports` or `cora.equipment.adapters`. Any future
 refactor that quietly moves the mint into the decider will fail the
 architecture test (mirrors the Asset-tier
-`test_assign_asset_persistent_id_decider_does_not_import_doi_minter_or_adapters`
+`test_assign_asset_persistent_id_decider_does_not_import_persistent_identifier_minter_or_adapters`
 fitness).
 """
 

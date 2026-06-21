@@ -6,10 +6,10 @@
   2. EditionNotFoundError (handler load + fold)
   3. InvalidEditionWithdrawalReasonError (WithdrawalReason VO)
   4. EditionCannotWithdrawError (status != Published)
-  5. Handler DoiMinter.tombstone -> DoiMinterTombstoneError 502
+  5. Handler PersistentIdentifierMinter.tombstone -> PersistentIdentifierMinterTombstoneError 502
   6. Decider emits EditionWithdrawn
 
-The DoiMinter.tombstone side effect runs at the handler BEFORE the
+The PersistentIdentifierMinter.tombstone side effect runs at the handler BEFORE the
 decider emits, so a tombstone wire failure aborts the command without
 appending an EditionWithdrawn event (the DOI stays Findable; operator
 escalates). The decider re-validates the VO + status guards defensively

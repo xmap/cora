@@ -2,8 +2,9 @@
 
 Operator-facing orchestration entry point: enumerates Assets that lack a
 persistent identifier and delegates each to `assign_asset_persistent_id`,
-which mints via the `DoiMinter` port (`StubDoiMinter` today; the production
-DataCite adapter when credentials land) and folds through the set-once
+which mints via the `PersistentIdentifierMinter` port
+(`StubPersistentIdentifierMinter` today; the production DataCite adapter
+when credentials land) and folds through the set-once
 decider. Returns a structured result; per-asset outcomes are encoded in the
 result, not raised, so a single client code-path covers every outcome.
 Re-run-safe: only Assets missing an id are touched.
