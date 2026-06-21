@@ -289,9 +289,10 @@ async def test_energy_driven_axes_carry_energy_curves(db_pool: asyncpg.Pool) -> 
                     interpolation_kind=InterpolationKind.LINEAR,
                     # ERROR, not CLAMP: an energy past the lowest / highest
                     # calibrated point is refused, not silently driven to the
-                    # endpoint position. This is CORA's conservative default,
-                    # not a staff-confirmed policy; ENERGY-4 is the open
-                    # question on what out-of-range should do.
+                    # endpoint position. Staff-confirmed (ENERGY-4): the IOC
+                    # refuses any energy outside the mode's calibrated range,
+                    # and the inter-mode band (25.584, 30.0) keV is not
+                    # bridgeable by interpolation.
                     extrapolation_kind=ExtrapolationKind.ERROR,
                     invertible=True,
                     unit_in="keV",

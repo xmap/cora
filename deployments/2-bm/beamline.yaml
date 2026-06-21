@@ -172,10 +172,11 @@ conditioning-optics:
         arms (bragg_arm_upstream/downstream) and the M2 vertical offset
         compensator (m2_offset_y); crystal2_z (M2 Z) is a setup translation the
         IOC does NOT drive. The m25-m29 tank/alignment motors ARE in the
-        coordinated move, but the components page names only the Bragg arms and
-        m2_offset_y as varying per energy, so CORA carries energy curves for
-        those alone (m25-m29 not modeled as per-energy curves pending staff
-        confirmation). CORA models each per-axis relationship as a continuous
+        coordinated move but are re-asserted at fixed values, not varied per
+        energy (staff-confirmed ENERGY-5: m25/m28 are constant alignment X in
+        both modes, m26/m27/m29 are two-state in-beam vs retracted by mode), so
+        CORA carries energy curves for the Bragg arms and m2_offset_y alone.
+        CORA models each per-axis relationship as a continuous
         curve interpolating the saved points. Two beam modes (MODE-1): in Mono
         the DMM is inserted (the per-energy axes above); in Pink the DMM Y motors
         drive out (about -10, beam passes straight through) and the Bragg arms
