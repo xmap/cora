@@ -51,11 +51,11 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `DetectorTable_Pitch` | `PseudoAxis` | (none) | `DetectorTable` | IOC virtual axis; raw `AX`; `2bmb:table3.AX` | live |
 | `DetectorTable_Yaw` | `PseudoAxis` | (none) | `DetectorTable` | IOC virtual axis; raw `AY`; `2bmb:table3.AY` | live |
 | `Housing` | `Housing` | (none) | `PropagationDistance` | Microscope chassis; installed into a Mount | live |
-| `Turret` | `LinearStage` | (microscope catalog) | `Housing` | -60.030..58.640 mm, `encoder_resolution=0.0016 mm` | live |
+| `Turret` | `LinearStage` | (microscope catalog) | `Housing` | -60.3784..59.2300 mm (DET-11), `encoder_resolution=0.0016 mm` | live |
 | `Objective_10x` | `Objective` | (microscope catalog) | `Housing` | mag 10.0, NA 0.28, f=20 mm, WD 33.5 mm | live |
 | `Objective_2x` | `Objective` | (microscope catalog) | `Housing` | mag 2.0, NA 0.055, f=100 mm, WD 34 mm | live |
 | `Objective_1.1x` | `Objective` | (microscope catalog) | `Housing` | mag 1.1, NA 0.03, f=200 mm, WD 50 mm | live |
-| `Objective_Selector` | `PseudoAxis` | (none) | `Housing` | writes MCTOptics `LensSelect`; lens->turret partition rule | live |
+| `Objective_Selector` | `PseudoAxis` | (none) | `Housing` | writes MCTOptics `LensSelect`; (lens x camera) turret lookup, Camera 0 column as 1D provenance rule (DET-11) | live |
 | `PropagationDistance` | `LinearStage` | `aerotech_pro225sl` | `DetectorTable` | sample-to-detector rail; driven by `PropagationDistanceDrive` | live |
 | `Camera` | `Camera` | (microscope catalog) | `Housing` | 5 MP FLIR Oryx; 2448x2048, 3.45 um, 12 bit, 162 Hz, CMOS GlobalShutter | live |
 | `Camera_HighRes` | `Camera` | `flir_oryx_31mp` | `Housing` | 31 MP FLIR Oryx; pixel 3.45 um; other settings pending | live (settings pending) |
@@ -88,7 +88,7 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 | `Camera` | `sensor_width=2448 pixel`; `sensor_height=2048 pixel`; `pixel_size=3.45 um`; `bit_depth=12 bit`; `max_framerate_hz=162 Hz`; `sensor_kind=CMOS`; `readout_mode=GlobalShutter`; altids model `Oryx ORX-10G-51S5M`, serial `19173710`, firmware `1710.0.0.0`, EPICS `2bmSP1:` |
 | `Camera_HighRes` | model `Oryx ORX-10G-310S9M`; serial `22150530`; firmware `1904.0.72.0`; EPICS `2bmSP2:`; `pixel_size=3.45 um`; remaining `Camera`-schema settings pending |
 | `Camera_Selector` | Schunk LPTM 30 (`2bmb:m5`); Pos.0=20, Pos.1=15; `min/max/max_speed/encoder_resolution` pending |
-| `Turret` | `min_position=-60.030 mm`; `max_position=58.640 mm`; `encoder_resolution=0.0016 mm`; Nanotec ST4118M1404-B, Heidenhain ERO 1420 encoder; objectives at 1.1x=-60.030 mm, 10x=58.640 mm |
+| `Turret` | `min_position=-60.3784 mm`; `max_position=59.2300 mm`; `encoder_resolution=0.0016 mm`; Nanotec ST4118M1404-B, Heidenhain ERO 1420 encoder; MCTOptics resolves the (lens x camera) position (DET-11), Camera 0 column: 1.1x=-59.8184 mm, 2x=-0.5734 mm, 10x=58.8707 mm |
 | `Objective_10x` | `magnification=10.0`; `numerical_aperture=0.28`; `focal_length=20 mm`; `working_distance=33.5 mm` |
 | `Objective_2x` | `magnification=2.0`; `numerical_aperture=0.055`; `focal_length=100 mm`; `working_distance=34 mm` |
 | `Objective_1.1x` | `magnification=1.1`; `numerical_aperture=0.03`; `focal_length=200 mm`; `working_distance=50 mm` |

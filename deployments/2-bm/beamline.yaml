@@ -393,9 +393,9 @@ detector:
     - name: Turret
       family: LinearStage         # sliding ball-screw objective selector (item_020), not a rotating turret
       model: nanotec_st4118  # motor is a Nanotec stepper (item_020, ST4118M1404-B), not Optique Peter; ball-screw 2 mm/rev
-      pv: "2bmb:m1"               # on the ioc2bmb OMS VME58 crate (SampleStageDrive); MCTOptics commands it via LensSelect, not driven directly (DET-2)
+      pv: "2bmb:m1"               # on the ioc2bmb OMS VME58 crate (SampleStageDrive); MCTOptics commands it from the (lens x camera) lookup, never driven directly (DET-2, DET-11)
       controller: SampleStageDrive
-      range: -60.030..58.64 mm     # selector positions in mm
+      range: -60.3784..59.2300 mm     # selector positions in mm, operator-verified across both cameras 2026-06-19 (DET-11)
       drawing: { system: EDMS, number: MAN-11863, revision: 0521-0465-A }
     - name: Objective_10x
       family: Objective
@@ -440,8 +440,31 @@ detector:
           source: AssertedSource
           status: Provisional
     - name: Objective_Selector
-      family: PseudoAxis          # virtual; writes the MCTOptics LensSelect composite, which sequences turret move + per-lens focus (2bmb:m2/m3/m4) + rotation offsets (DET-2); partition rule records lens positions, MCTOptics actuates
+      family: PseudoAxis          # virtual lens picker; CORA writes LensSelect, MCTOptics owns the (lens x camera) turret/rotation/focus lookup (DET-2, DET-11)
       pv: "2bm:MCTOptics:LensSelect"
+      readback_pv: "2bm:MCTOptics:LensSelected"
+      slot_labels_pv: ["2bm:MCTOptics:LensName0", "2bm:MCTOptics:LensName1", "2bm:MCTOptics:LensName2"]
+      lens_slots: ["1.1x_Mitutoyo", "2x_Mitutoyo", "10x_Mitutoyo"]   # LensSelect index 0/1/2 (DET-11 slot order, operator-verified 2026-06-19)
+      turret_lookup_mm:            # 2bmb:m1 position per (lens x camera); MCTOptics resolves it, CORA never drives 2bmb:m1 (DET-11)
+        camera0: { "1.1x_Mitutoyo": -59.8184, "2x_Mitutoyo": -0.5734, "10x_Mitutoyo": 58.8707 }   # Camera0LensPos{0,1,2}; Camera 0 = 5 MP, in beam
+        camera1: { "1.1x_Mitutoyo": -60.3784, "2x_Mitutoyo": -0.9240, "10x_Mitutoyo": 59.2300 }   # Camera1LensPos{0,1,2}; Camera 1 = 31 MP
+      coupled_lookups:             # two further per-(lens, camera) lookups fire on the same LensSelect/CameraSelect change; MCTOptics-owned, not CORA Assets (DET-11)
+        camera_rotation_pv: { camera0: "2bmb:m7", camera1: "2bmb:m8" }   # Camera{N}Lens{M}Rotation, 6 PVs, rotation-axis preservation
+        per_lens_focus_pv: ["2bmb:m2", "2bmb:m3", "2bmb:m4"]            # Camera{N}Lens{M}Focus, 6 PVs, degenerate (camera0 == camera1) today
+      note: >
+        The lens picker (item_020 MCTOptics). CORA writes the high-level
+        LensSelect, and CameraSelect on the Camera_Selector below; MCTOptics then
+        resolves the turret position (2bmb:m1), the per-camera rotation offset
+        (2bmb:m7 for Camera 0, 2bmb:m8 for Camera 1), and the per-lens focus
+        (2bmb:m2/m3/m4) from a joint (lens x camera) lookup: 18 calibration PVs
+        over six motors, all firing on any LensSelect or CameraSelect change. The
+        turret position depends on BOTH lens AND camera (DET-11, operator-verified
+        2026-06-19); a lens-only model would silently break rotation-axis
+        alignment whenever the camera is switched. CORA drives only LensSelect and
+        CameraSelect, never the six underlying motors. The PseudoAxis partition
+        rule (test_2bm_microscope_setup.py) carries the Camera 0 column as a
+        single-camera provenance record; the full 2D table is documentary here,
+        and true 2D actuation waits for the control-layer slice.
     - name: PropagationDistance
       family: LinearStage         # sample-to-detector distance (propagation) rail, not a focus stage; per-lens fine focus is on 2bmb:m2/m3/m4 (LENS0/1/2_FOCUS, item_020, MCTOptics), offsets in software
       model: aerotech_pro225sl
