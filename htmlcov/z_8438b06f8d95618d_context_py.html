@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_8438b06f8d95618d_decider_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-21 15:59 +0000
+            created at 2026-06-21 16:51 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -111,7 +111,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">  - `referencing_clearances`: every Safety clearance</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">    whose bindings reference this Run's scope (run_id, subject_id,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">    asset_ids), regardless of status. Loaded by the handler via</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">    `deps.clearance_lookup.find_referencing_run(...)` against the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">    `deps.clearance_lookup.find_covering(...)` against the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">    `proj_safety_clearance_summary` projection. Decider partitions</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">    on `status == "Active"` to distinguish "no clearance at all"</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">    (`RunRequiresActiveClearanceError`) from "clearance exists but</span>&nbsp;</span><span class="r"></span></p>
@@ -120,7 +120,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">    target references the Run's scope (asset_ids + a future</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">    procedure_ids when a procedure-driven run shape lands). Loaded</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="str">    by the handler via</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="str">    `deps.caution_lookup.find_active_for_run(...)` against the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="str">    `deps.caution_lookup.find_active_in_scope(...)` against the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t"><span class="str">    `proj_caution_summary` projection. NON-BLOCKING by construction:</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t"><span class="str">    the decider does NOT partition on this field; it only threads</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t"><span class="str">    the snapshot into the `RunStarted` event payload as</span>&nbsp;</span><span class="r"></span></p>
@@ -211,7 +211,7 @@
     <p class="run"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="str">"""Live beam-availability reading at the Run-start instant (BEAM-1),</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t"><span class="str">    or None when the deployment configured no beam PVs (gate skipped,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t"><span class="str">    beam-by-default). The handler calls</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t"><span class="str">    `deps.beam_availability_lookup.read_beam_availability()` and threads</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t"><span class="str">    `deps.beam_availability_lookup.read()` and threads</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t"><span class="str">    the result here; the decider gates on it (fail-closed when</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t"><span class="str">    `quality_ok` is False; refuse when any of `fes_open` / `sbs_open` /</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t"><span class="str">    `fes_permit` is False). The reading is consumed only by the gate and</span>&nbsp;</span><span class="r"></span></p>
@@ -228,7 +228,7 @@
             <a class="nav" href="z_8438b06f8d95618d_decider_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-21 15:59 +0000
+            created at 2026-06-21 16:51 +0000
         </p>
     </div>
 </footer>

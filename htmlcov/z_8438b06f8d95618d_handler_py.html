@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_8438b06f8d95618d_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-21 15:59 +0000
+            created at 2026-06-21 16:51 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -374,7 +374,7 @@
     <p class="pln"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">        <span class="com"># clearance projection for every clearance whose bindings</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t">        <span class="com"># reference this Run's scope. Decider partitions on Active.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t">        <span class="nam">referencing_clearances</span> <span class="op">=</span> <span class="nam">tuple</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t293" href="#t293">293</a></span><span class="t">            <span class="key">await</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">clearance_lookup</span><span class="op">.</span><span class="nam">find_referencing_run</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t293" href="#t293">293</a></span><span class="t">            <span class="key">await</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">clearance_lookup</span><span class="op">.</span><span class="nam">find_covering</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t294" href="#t294">294</a></span><span class="t">                <span class="nam">run_id</span><span class="op">=</span><span class="nam">new_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t295" href="#t295">295</a></span><span class="t">                <span class="nam">subject_id</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">subject_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t296" href="#t296">296</a></span><span class="t">                <span class="nam">asset_ids</span><span class="op">=</span><span class="nam">scoped_asset_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -414,7 +414,7 @@
     <p class="pln"><span class="n"><a id="t330" href="#t330">330</a></span><span class="t">        <span class="com"># no Procedure scope today; forward-compat for procedure-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t331" href="#t331">331</a></span><span class="t">        <span class="com"># driven runs (Watch item for the start_procedure consumer).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t332" href="#t332">332</a></span><span class="t">        <span class="nam">active_cautions</span> <span class="op">=</span> <span class="nam">tuple</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t333" href="#t333">333</a></span><span class="t">            <span class="key">await</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">caution_lookup</span><span class="op">.</span><span class="nam">find_active_for_run</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t333" href="#t333">333</a></span><span class="t">            <span class="key">await</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">caution_lookup</span><span class="op">.</span><span class="nam">find_active_in_scope</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t334" href="#t334">334</a></span><span class="t">                <span class="nam">asset_ids</span><span class="op">=</span><span class="nam">scoped_asset_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t335" href="#t335">335</a></span><span class="t">                <span class="nam">procedure_ids</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t336" href="#t336">336</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -443,7 +443,7 @@
     <p class="pln"><span class="n"><a id="t359" href="#t359">359</a></span><span class="t">        <span class="com"># the configured PVs live. The port never raises for substrate</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t360" href="#t360">360</a></span><span class="t">        <span class="com"># disconnects: a bad read surfaces as quality_ok=False and the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t361" href="#t361">361</a></span><span class="t">        <span class="com"># decider fails closed.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t362" href="#t362">362</a></span><span class="t">        <span class="nam">beam_availability</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">beam_availability_lookup</span><span class="op">.</span><span class="nam">read_beam_availability</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t362" href="#t362">362</a></span><span class="t">        <span class="nam">beam_availability</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">beam_availability_lookup</span><span class="op">.</span><span class="nam">read</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t363" href="#t363">363</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t364" href="#t364">364</a></span><span class="t">        <span class="nam">context</span> <span class="op">=</span> <span class="nam">RunStartContext</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t365" href="#t365">365</a></span><span class="t">            <span class="nam">plan</span><span class="op">=</span><span class="nam">plan</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -566,7 +566,7 @@
             <a class="nav" href="z_8438b06f8d95618d_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-21 15:59 +0000
+            created at 2026-06-21 16:51 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_21bc5c846dc1c9db_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-21 15:59 +0000
+            created at 2026-06-21 16:51 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -90,10 +90,10 @@
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">  2. EditionNotFoundError (handler load + fold)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">  3. InvalidEditionWithdrawalReasonError (WithdrawalReason VO)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">  4. EditionCannotWithdrawError (status != Published)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">  5. Handler DoiMinter.tombstone -> DoiMinterTombstoneError 502</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">  5. Handler PersistentIdentifierMinter.tombstone -> PersistentIdentifierMinterTombstoneError 502</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">  6. Decider emits EditionWithdrawn</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">The DoiMinter.tombstone side effect runs at the handler BEFORE the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">The PersistentIdentifierMinter.tombstone side effect runs at the handler BEFORE the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">decider emits, so a tombstone wire failure aborts the command without</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">appending an EditionWithdrawn event (the DOI stays Findable; operator</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">escalates). The decider re-validates the VO + status guards defensively</span>&nbsp;</span><span class="r"></span></p>
@@ -156,7 +156,7 @@
             <a class="nav" href="z_21bc5c846dc1c9db_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-21 15:59 +0000
+            created at 2026-06-21 16:51 +0000
         </p>
     </div>
 </footer>

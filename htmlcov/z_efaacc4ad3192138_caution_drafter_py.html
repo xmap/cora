@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_efaacc4ad3192138_caution_promoter_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-21 15:59 +0000
+            created at 2026-06-21 16:51 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -395,11 +395,11 @@
     <p class="run run2"><span class="n"><a id="t311" href="#t311">311</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t">        <span class="com"># Look up existing Active Cautions for the candidate Assets.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t">        <span class="com"># CautionLookup's `find_active_for_run` is the load-bearing</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t">        <span class="com"># CautionLookup's `find_active_in_scope` is the load-bearing</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t315" href="#t315">315</a></span><span class="t">        <span class="com"># shared port with the non-blocking banner; passing `min_severity="Notice"` so</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t316" href="#t316">316</a></span><span class="t">        <span class="com"># CautionDrafter sees the full picture (banner uses default</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t317" href="#t317">317</a></span><span class="t">        <span class="com"># min_severity="Caution"; this consumer wants everything).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t318" href="#t318">318</a></span><span class="t">        <span class="nam">existing_caution_refs</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">self</span><span class="op">.</span><span class="nam">caution_lookup</span><span class="op">.</span><span class="nam">find_active_for_run</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t318" href="#t318">318</a></span><span class="t">        <span class="nam">existing_caution_refs</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">self</span><span class="op">.</span><span class="nam">caution_lookup</span><span class="op">.</span><span class="nam">find_active_in_scope</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t319" href="#t319">319</a></span><span class="t">            <span class="nam">asset_ids</span><span class="op">=</span><span class="nam">plan</span><span class="op">.</span><span class="nam">asset_ids</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t320" href="#t320">320</a></span><span class="t">            <span class="nam">procedure_ids</span><span class="op">=</span><span class="nam">frozenset</span><span class="op">(</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t321" href="#t321">321</a></span><span class="t">            <span class="nam">min_severity</span><span class="op">=</span><span class="str">"Notice"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -903,7 +903,7 @@
             <a class="nav" href="z_efaacc4ad3192138_caution_promoter_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-21 15:59 +0000
+            created at 2026-06-21 16:51 +0000
         </p>
     </div>
 </footer>
