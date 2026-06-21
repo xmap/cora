@@ -69,6 +69,17 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             str | None,
             Field(default=None, max_length=64, description="Optional unit string."),
         ] = None,
+        is_simulated: Annotated[
+            bool,
+            Field(
+                default=False,
+                description=(
+                    "Provenance flag. True only when a simulator / replay "
+                    "feeder produced this value; defaults to False (real). "
+                    "Closed-loop rules disqualify simulated values."
+                ),
+            ),
+        ] = False,
     ) -> int:
         handler = get_handler()
         entry = ObservationInput(
@@ -78,6 +89,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             sampled_at=sampled_at,
             sampling_procedure=sampling_procedure,
             units=units,
+            is_simulated=is_simulated,
         )
         return await handler(
             AppendObservations(run_id=run_id, entries=(entry,)),

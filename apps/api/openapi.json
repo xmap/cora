@@ -8157,6 +8157,12 @@
             "title": "Event Id",
             "type": "string"
           },
+          "is_simulated": {
+            "default": false,
+            "description": "Provenance flag. True only when a simulator / replay feeder produced this value; defaults to False (real). Closed-loop rules disqualify simulated values so they cannot act on them as if real.",
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
           "occurred_at": {
             "anyOf": [
               {

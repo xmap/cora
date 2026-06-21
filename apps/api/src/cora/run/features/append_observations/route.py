@@ -102,6 +102,15 @@ class ObservationRequest(BaseModel):
             "their own ingest-time clock can populate explicitly."
         ),
     )
+    is_simulated: bool = Field(
+        default=False,
+        description=(
+            "Provenance flag. True only when a simulator / replay feeder "
+            "produced this value; defaults to False (real). Closed-loop "
+            "rules disqualify simulated values so they cannot act on them "
+            "as if real."
+        ),
+    )
 
     model_config = {"extra": "forbid"}
 
@@ -201,6 +210,7 @@ async def post_runs_readings(
             sampling_procedure=e.sampling_procedure,
             units=e.units,
             occurred_at=e.occurred_at,
+            is_simulated=e.is_simulated,
         )
         for e in body.entries
     )
