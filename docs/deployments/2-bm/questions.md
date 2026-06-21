@@ -98,11 +98,10 @@ The NV200D/NET piezo (now `ApertureFineDrive`) fine-positions the coded `Apertur
 
 ## Energy and the optics
 
-On an energy change the DMM monochromator, its Bragg arms, and the tracking slits move together to saved per-energy positions (now recorded). The remaining items cover the multilayer stripe selection and the channel-cut calibration crystal.
+On an energy change the DMM monochromator, its Bragg arms, and the tracking slits move together to saved per-energy positions (now recorded). The remaining item covers the channel-cut calibration crystal.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| ENERGY-6 | `Nice-to-have` | Per the [DMM page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_021.html) the monochromator substrate carries two multilayer stripes with different periods (13.8 and 24 angstrom, 4 mm apart). Is the active stripe selected per energy by a lateral crystal translation (the upstream / downstream X motors `2bma:m25` / `2bma:m28`, today folded into `ENERGY-5`), and which stripe serves which energies in the Mono menu (13.374 to 25.584 keV)? If it is an operator-facing per-energy selection rather than a fixed setup, CORA would model it as a named DMM stripe selector, the monochromator counterpart of the mirror coating stripe (`MIRROR-1`). | two stripes exist; no DMM stripe / d-spacing selector modelled; `2bma:m25` / `2bma:m28` lateral X carried only as unframed alignment motors | not yet | [Energy-tracking optic axes](inventory.md#energy-tracking-optic-axes) |
 | ENERGY-7 | `Nice-to-have` | Is energy calibration via a channel-cut crystal current 2-BM practice, and which crystal (its lattice spacing 2d; the [calibration page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_022.html) lists 3.84 angstrom)? Is the crystal a removable reference standard (CORA models it as a calibration Subject, like the resolution phantom) or installed equipment, and on what rotation stage is it rocked? | modelled as the `energy_characterization` Procedure with the crystal as a calibration Subject; current practice, crystal, and 2d unconfirmed | yes | [Procedures](procedures.md) |
 
 ## Filters and the mirror stripe

@@ -196,6 +196,10 @@ conditioning-optics:
         inserted_mm: 0.0       # Mono: DMM Y motors in, crystals in the beam
         retracted_mm: -10.0    # Pink: DMM Y motors out, beam passes straight through
         active: inserted       # current operational state
+      stripes:                 # ENERGY-6 (#255): the DMM substrate carries two W-B4C/Si multilayer stripes (5 nm Cr adhesion), 4 mm apart, 140 x 44 mm each; stripe choice is one-time setup, NOT per-energy, so no selector is modeled (item_021)
+        - { period_angstrom: 24.0, layer_pairs: 200 }
+        - { period_angstrom: 13.8, layer_pairs: 150 }
+      active_stripe: 24.0      # period (angstrom) of the in-beam stripe; inferred from Bragg-arm geometry (all 6 Mono energies cluster at d~24A, ENERGY-1). The 13.8A stripe is never calibrated into store_0; switching = a 4 mm lateral substrate move + a full recalibration, not part of any current move (m25/m28 are constant alignment X in both modes, ENERGY-5)
       confirm: true
       note: >
         Energy is set by the energy-change IOC as a discrete coordinated move:
