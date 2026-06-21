@@ -1,11 +1,11 @@
-"""Conduct-manifest replay helper for the `reconduct_procedure` handler.
+"""Resolved-steps replay helper for the `reconduct_procedure` handler.
 
-The resume path replays a halted conduct from a PINNED manifest rather
+The resume path replays a halted conduct from PINNED resolved steps rather
 than re-deriving the step list. This module locates the
 `ResolvedStepsRecorded` provenance event (pinned once at conduct start by
-`conduct_procedure/handler.py` + `manifest.py`) in a Procedure stream so
+`conduct_procedure/handler.py` + `resolved_steps.py`) in a Procedure stream so
 the handler can parse `resolved_steps` back into `Step`s via
-`conductor.steps_from_manifest` and hand them to `Conductor.execute_from`.
+`conductor.steps_from_payload` and hand them to `Conductor.execute_from`.
 
 Sibling of `_recipe_replay.find_recipe_expansion_record` (the recipe
 genesis provenance finder), kept separate because that module's tuple of
@@ -33,7 +33,7 @@ def find_resolved_steps_record(
     Returns `None` when no match. The caller decides whether None is an
     error: the `reconduct_procedure` handler raises
     `ResolvedStepsRecordNotFoundError` (a Held Procedure missing its pinned
-    manifest is corruption, not an operational outcome).
+    resolved steps is corruption, not an operational outcome).
     """
     for event in stored_events:
         if event.event_type == "ResolvedStepsRecorded":

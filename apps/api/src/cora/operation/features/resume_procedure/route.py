@@ -27,7 +27,7 @@ class ResumeProcedureRequest(BaseModel):
         ...,
         ge=0,
         description=(
-            "Index in the pinned conduct manifest from which the resume "
+            "Index in the pinned resolved step list from which the resume "
             "re-drives setpoints and re-runs checks. >= 0 (0 = re-establish "
             "from the first step). NOT a continuity proof."
         ),

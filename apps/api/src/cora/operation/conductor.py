@@ -39,12 +39,12 @@ from a body as success-shaped at this tier.
 
 ## Resume (execute_from)
 
-`execute_from` replays a PINNED conduct manifest from a re-establishment
+`execute_from` replays the PINNED resolved step list from a re-establishment
 boundary rather than re-deriving the step list: re-drive setpoints, re-run
 checks as fresh gates, and halt-for-operator on an acquisition
 (`ActionStep`). It is the Tier-1 resumable-conduct primitive
-([[project_resumable_conduct_design]]); the manifest comes from
-`ResolvedStepsRecorded` parsed via `steps_from_manifest`. Like `execute`
+([[project_resumable_conduct_design]]); the step list comes from
+`ResolvedStepsRecorded` parsed via `steps_from_payload`. Like `execute`
 it drives no FSM transition.
 
 ## Pre-effect in-flight marker (side-effecting steps)
@@ -251,7 +251,7 @@ auto-skipping or auto-rerunning. See [[project_resumable_conduct_design]]."""
 
 
 class ResumePolicy(StrEnum):
-    """How `execute_from` re-establishes state while replaying a manifest tail.
+    """How `execute_from` re-establishes state while replaying a step-list tail.
 
     `RE_ESTABLISH` (the only member today): re-drive setpoints (absolute
     writes are idempotent; CORA has no relative-setpoint type), re-run
@@ -649,24 +649,24 @@ class Conductor:
         procedure_id: UUID,
         principal_id: UUID,
         correlation_id: UUID,
-        manifest: Sequence[Step],
+        steps: Sequence[Step],
         boundary: int,
         policy: ResumePolicy = ResumePolicy.RE_ESTABLISH,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> ConductorResult:
-        """Resume a halted conduct by REPLAYING a pinned manifest from `boundary`.
+        """Resume a halted conduct by REPLAYING the pinned resolved steps from `boundary`.
 
-        `manifest` is the FINAL resolved step list pinned on
+        `steps` is the FINAL resolved step list pinned on
         `ResolvedStepsRecorded` at first conduct (parse the event's
-        `resolved_steps` back via `steps_from_manifest`). Resume NEVER
+        `resolved_steps` back via `steps_from_payload`). Resume NEVER
         re-derives the step list -- a re-derived list could silently skip or
         mis-target a step (the end-of-run "home to 0" aliasing the
         start-of-run "home to 0" after an index shift). It replays
-        `manifest[boundary:]` verbatim:
+        `steps[boundary:]` verbatim:
 
           - `SetpointStep` -> RE-DRIVE (idempotent absolute write). The
-            recorded `step_index` is the ABSOLUTE manifest position, so the
+            recorded `step_index` is the ABSOLUTE position in the step list, so the
             replayed journal lines up with the original conduct.
           - `CheckStep` -> RE-RUN as a fresh gate (a passing check proves
             "now", not "continuously", so it is re-evaluated).
@@ -678,7 +678,7 @@ class Conductor:
 
         `boundary` is the re-establishment boundary from `ProcedureResumed`:
         the index from which re-drive + re-run resumes. `boundary >=
-        len(manifest)` replays an empty tail (a no-op resume). Like
+        len(steps)` replays an empty tail (a no-op resume). Like
         `execute`, this drives no FSM transition; it walks + records.
 
         See [[project_resumable_conduct_design]] Tier 1.
@@ -698,8 +698,8 @@ class Conductor:
         )
         observer = _ActuationObserver(self._control_port)
         completed = 0
-        for index in range(boundary, len(manifest)):
-            step = manifest[index]
+        for index in range(boundary, len(steps)):
+            step = steps[index]
             if isinstance(step, ActionStep):
                 # Halt-for-operator: do not re-run an interrupted acquisition.
                 return ConductorResult(
@@ -901,12 +901,12 @@ class Conductor:
         procedure_id: UUID,
         principal_id: UUID,
         correlation_id: UUID,
-        manifest: Sequence[Step],
+        steps: Sequence[Step],
         boundary: int,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> ConductorResult:
-        """Resume a Held Procedure and REPLAY its pinned manifest from `boundary`.
+        """Resume a Held Procedure and REPLAY its pinned resolved steps from `boundary`.
 
         The resume twin of `conduct()`: where `conduct()` drives
         start -> execute -> complete | abort, this drives
@@ -918,7 +918,7 @@ class Conductor:
              which PROPAGATES (mapped to 409 at the route) rather than landing
              in the result body. A refused resume is a guard outcome, not a
              replay outcome, and no replay has happened yet.
-          2. Call `self.execute_from(manifest, boundary)`: re-drive setpoints,
+          2. Call `self.execute_from(steps, boundary)`: re-drive setpoints,
              re-run checks, halt-for-operator on an acquisition.
           3. Terminalize three-way:
                - clean tail (incl. empty) -> `complete_procedure` (Completed).
@@ -928,7 +928,7 @@ class Conductor:
                  abort itself fails, the original step failure is what
                  surfaces, mirroring `conduct()`).
 
-        `manifest` is the parsed `ResolvedStepsRecorded.resolved_steps`: the
+        `steps` is the parsed `ResolvedStepsRecorded.resolved_steps`: the
         caller locates + parses the PINNED record (resume NEVER re-derives the
         step list). `boundary` is single-sourced: it rides into both
         `ProcedureResumed.re_establishment_boundary` (audit) and
@@ -970,7 +970,7 @@ class Conductor:
             procedure_id=procedure_id,
             principal_id=principal_id,
             correlation_id=correlation_id,
-            manifest=manifest,
+            steps=steps,
             boundary=boundary,
             causation_id=causation_id,
             surface_id=surface_id,
@@ -1281,7 +1281,7 @@ class Conductor:
         `index` is the step's zero-based position in the conducted step
         list; it rides the payload as `step_index` so a future resume
         can map a recorded outcome back to its position in the pinned
-        conduct manifest.
+        resolved step list.
         """
         payload: dict[str, Any] = {**body, "step_index": index, "result": result}
         if error_class is not None:
@@ -1332,11 +1332,11 @@ def _criterion_to_dict(criterion: CheckCriterion) -> dict[str, Any]:
 
 
 def step_to_payload(step: Step) -> dict[str, Any]:
-    """Serialize a `Step` to a JSON-clean dict (inverse of `steps_from_manifest`).
+    """Serialize a `Step` to a JSON-clean dict (inverse of `steps_from_payload`).
 
     Mirrors the conduct route's wire shape (the `kind` discriminator +
     field names) so the resolved step list pinned on `ResolvedStepsRecorded`
-    round-trips back to `Step` objects via `steps_from_manifest` at resume
+    round-trips back to `Step` objects via `steps_from_payload` at resume
     (and via the route's Pydantic `step_from_wire` on the live HTTP path). A
     tuple `value` serializes as a list (JSON has no tuple); the criterion
     reuses `_criterion_to_dict` so the wire shape stays single-sourced.
@@ -1394,11 +1394,11 @@ def _step_from_payload(payload: Mapping[str, Any]) -> Step:
     raise ValueError(msg)
 
 
-def steps_from_manifest(resolved_steps: Sequence[Mapping[str, Any]]) -> tuple[Step, ...]:
+def steps_from_payload(resolved_steps: Sequence[Mapping[str, Any]]) -> tuple[Step, ...]:
     """Parse the pinned `ResolvedStepsRecorded.resolved_steps` back into `Step`s.
 
     The exact inverse of `step_to_payload` (the serialization used to pin the
-    conduct manifest). A resume reads the pinned event's `resolved_steps`,
+    resolved step list). A resume reads the pinned event's `resolved_steps`,
     parses them with this helper, and hands the result to
     `Conductor.execute_from` -- it NEVER re-derives the step list from live
     `Plan.wires` / partition rules. Pure; no Pydantic (that lives at the HTTP
@@ -1494,5 +1494,5 @@ __all__ = [
     "WithinToleranceCriterion",
     "is_acquisition_halt",
     "step_to_payload",
-    "steps_from_manifest",
+    "steps_from_payload",
 ]

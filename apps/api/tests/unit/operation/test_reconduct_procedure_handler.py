@@ -6,7 +6,7 @@ Orchestration handler composing `resume_procedure` + `Conductor.execute_from`
   - clean tail -> resume + auto-complete (Completed)
   - acquisition halt -> resume, NO complete/abort, stays Running, halt in result
   - genuine step failure -> resume + abort (Aborted)
-  - missing pinned manifest -> ResolvedStepsRecordNotFoundError
+  - missing pinned resolved steps -> ResolvedStepsRecordNotFoundError
   - not Held / parent Run Held -> ProcedureCannotResumeError (no replay)
   - authz deny -> UnauthorizedError
 """
@@ -93,16 +93,16 @@ def _make_reconduct(deps: Kernel, port: InMemoryControlPort) -> ReconductHandler
     return reconduct_procedure.bind(deps, conductor=conductor)
 
 
-async def _seed_held_with_manifest(
+async def _seed_held_with_steps(
     store: InMemoryEventStore,
     *,
-    manifest: Sequence[Step],
+    steps: Sequence[Step],
     procedure_id: UUID = _PROCEDURE_ID,
     parent_run_id: UUID | None = None,
 ) -> None:
     """Land a conducted-then-Held Procedure: Registered + ResolvedStepsRecorded
-    (the pinned manifest) + Started + Held."""
-    resolved = tuple(step_to_payload(s) for s in manifest)
+    (the pinned resolved steps) + Started + Held."""
+    resolved = tuple(step_to_payload(s) for s in steps)
     events = [
         ProcedureRegistered(
             procedure_id=procedure_id,
@@ -186,9 +186,9 @@ async def test_clean_tail_resumes_then_auto_completes() -> None:
     port = InMemoryControlPort()
     port.simulate_connect("2bma:a")
     port.simulate_connect("2bma:b")
-    await _seed_held_with_manifest(
+    await _seed_held_with_steps(
         store,
-        manifest=(
+        steps=(
             SetpointStep(address="2bma:a", value=1.0),
             SetpointStep(address="2bma:b", value=2.0),
         ),
@@ -209,9 +209,9 @@ async def test_boundary_replays_only_the_tail_then_completes() -> None:
     store = InMemoryEventStore()
     port = InMemoryControlPort()
     port.simulate_connect("2bma:b")  # only the tail step is re-driven
-    await _seed_held_with_manifest(
+    await _seed_held_with_steps(
         store,
-        manifest=(
+        steps=(
             SetpointStep(address="2bma:a", value=1.0),
             SetpointStep(address="2bma:b", value=2.0),
         ),
@@ -231,9 +231,9 @@ async def test_acquisition_halt_resumes_but_leaves_running() -> None:
     store = InMemoryEventStore()
     port = InMemoryControlPort()
     port.simulate_connect("2bma:a")
-    await _seed_held_with_manifest(
+    await _seed_held_with_steps(
         store,
-        manifest=(
+        steps=(
             SetpointStep(address="2bma:a", value=1.0),
             ActionStep(name="collect", params={"dwell": 0.1}),
         ),
@@ -258,7 +258,7 @@ async def test_acquisition_halt_resumes_but_leaves_running() -> None:
 async def test_genuine_step_failure_resumes_then_aborts() -> None:
     store = InMemoryEventStore()
     port = InMemoryControlPort()  # 2bma:a NOT connected -> write fails
-    await _seed_held_with_manifest(store, manifest=(SetpointStep(address="2bma:a", value=1.0),))
+    await _seed_held_with_steps(store, steps=(SetpointStep(address="2bma:a", value=1.0),))
     deps = _deps(store)
     result = await _call(_make_reconduct(deps, port), 0)
 
@@ -270,7 +270,7 @@ async def test_genuine_step_failure_resumes_then_aborts() -> None:
 
 
 @pytest.mark.unit
-async def test_raises_when_manifest_record_missing() -> None:
+async def test_raises_when_resolved_steps_record_missing() -> None:
     """A Held Procedure with no pinned ResolvedStepsRecorded is corruption."""
     store = InMemoryEventStore()
     # Seed Held WITHOUT a ResolvedStepsRecorded.
@@ -318,9 +318,9 @@ async def test_reconduct_raises_not_found_when_procedure_absent() -> None:
 
 @pytest.mark.unit
 async def test_raises_cannot_resume_when_not_held() -> None:
-    """A Running (not Held) Procedure with a manifest cannot be reconducted."""
+    """A Running (not Held) Procedure with resolved steps cannot be reconducted."""
     store = InMemoryEventStore()
-    # Registered + ResolvedStepsRecorded + Started (Running, has manifest).
+    # Registered + ResolvedStepsRecorded + Started (Running, has resolved steps).
     resolved = (step_to_payload(SetpointStep(address="2bma:a", value=1.0)),)
     events = [
         ProcedureRegistered(
@@ -367,9 +367,9 @@ async def test_raises_cannot_resume_when_parent_run_held() -> None:
     store = InMemoryEventStore()
     parent_run_id = uuid4()
     await _seed_held_run(store, run_id=parent_run_id)
-    await _seed_held_with_manifest(
+    await _seed_held_with_steps(
         store,
-        manifest=(SetpointStep(address="2bma:a", value=1.0),),
+        steps=(SetpointStep(address="2bma:a", value=1.0),),
         parent_run_id=parent_run_id,
     )
     deps = _deps(store)
@@ -381,7 +381,7 @@ async def test_raises_cannot_resume_when_parent_run_held() -> None:
 @pytest.mark.unit
 async def test_raises_unauthorized_on_deny() -> None:
     store = InMemoryEventStore()
-    await _seed_held_with_manifest(store, manifest=(SetpointStep(address="2bma:a", value=1.0),))
+    await _seed_held_with_steps(store, steps=(SetpointStep(address="2bma:a", value=1.0),))
     deps = _deps(store, deny=True)
     with pytest.raises(UnauthorizedError):
         await _call(_make_reconduct(deps, InMemoryControlPort()), 0)

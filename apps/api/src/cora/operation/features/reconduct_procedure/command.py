@@ -1,7 +1,7 @@
 """The `ReconductProcedure` command + result -- intent dataclass for this slice.
 
 Resume-and-replay orchestration: resume a `Held` Procedure and replay its
-PINNED manifest tail from the re-establishment boundary (Tier 1 of
+PINNED step-list tail from the re-establishment boundary (Tier 1 of
 [[project_resumable_conduct_design]]). Mirrors `ConductProcedure` (the
 conduct orchestration) but for the resume path; carries the
 `re_establishment_boundary` (single-sourced -- it rides into both
@@ -16,7 +16,7 @@ from cora.operation.conductor import ConductorFailure
 
 @dataclass(frozen=True)
 class ReconductProcedure:
-    """Resume a held Procedure and replay its pinned manifest tail."""
+    """Resume a held Procedure and replay its pinned step-list tail."""
 
     procedure_id: UUID
     re_establishment_boundary: int

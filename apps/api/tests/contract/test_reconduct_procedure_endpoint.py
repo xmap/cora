@@ -1,19 +1,19 @@
 """Contract tests for `POST /procedures/{procedure_id}/reconduct`.
 
 Resume-and-replay: resumes a Held Procedure and replays its pinned
-manifest tail. 200 with replay outcomes in body; 404/409/422/500 for
+step-list tail. 200 with replay outcomes in body; 404/409/422/500 for
 protocol / guard / corruption faults.
 
 Note on coverage: the 200 happy path (a clean replay that auto-completes)
 requires a `Held` Procedure that carries a PINNED `ResolvedStepsRecorded`
-manifest. The synchronous conduct flow today pins the manifest then runs
+resolved steps. The synchronous conduct flow today pins the resolved steps then runs
 to a terminal state (Completed / Aborted) in one call, so there is no
-API-reachable `Held`+manifest state yet (producing it -- a conduct that
+API-reachable `Held + resolved-steps state yet (producing it -- a conduct that
 pauses to Held instead of aborting on a halt, or a mid-conduct
 cooperative hold -- is a follow-up slice). The clean / halt / step-failure
 replay paths are covered end-to-end in
 `tests/unit/operation/test_reconduct_procedure_handler.py` against a
-seeded Held+manifest state. These contract tests cover the
+seeded Held+resolved steps state. These contract tests cover the
 API-reachable guard / fault surfaces.
 """
 
@@ -52,14 +52,14 @@ def test_post_reconduct_returns_409_for_defined_procedure() -> None:
 
 
 @pytest.mark.contract
-def test_post_reconduct_returns_409_for_completed_procedure_with_manifest() -> None:
-    """A conduct pins a manifest then completes; reconducting the (Completed)
+def test_post_reconduct_returns_409_for_completed_procedure_with_resolved_steps() -> None:
+    """A conduct pins resolved steps then completes; reconducting the (Completed)
     Procedure is refused by the resume status guard (not Held)."""
     with TestClient(create_app()) as client:
         pid = _register(client)
         # Conduct an EMPTY step list: pins ResolvedStepsRecorded, then
         # start -> (no steps) -> complete, leaving the Procedure Completed
-        # WITH a pinned (empty) manifest.
+        # WITH a pinned (empty) resolved steps.
         conducted = client.post(f"/procedures/{pid}/conduct", json={"steps": []})
         assert conducted.status_code == 200
         assert conducted.json()["succeeded"] is True
@@ -70,9 +70,9 @@ def test_post_reconduct_returns_409_for_completed_procedure_with_manifest() -> N
 
 
 @pytest.mark.contract
-def test_post_reconduct_returns_500_for_held_procedure_without_manifest() -> None:
+def test_post_reconduct_returns_500_for_held_procedure_without_resolved_steps() -> None:
     """A Procedure started directly (no conduct) then held is Held WITHOUT a
-    pinned manifest; reconduct cannot locate it (corruption-shaped 500)."""
+    pinned resolved steps; reconduct cannot locate it (corruption-shaped 500)."""
     with TestClient(create_app()) as client:
         pid = _register(client)
         assert client.post(f"/procedures/{pid}/start").status_code == 204

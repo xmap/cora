@@ -2,7 +2,7 @@
 
 Single-source resume transition: `Held -> Running`. The inverse of
 hold_procedure. Carries `re_establishment_boundary`: the index in the
-pinned conduct manifest from which a resume re-drives setpoints and
+pinned resolved step list from which a resume re-drives setpoints and
 re-runs checks (Tier 1 of [[project_resumable_conduct_design]]). It is
 NOT a continuity proof; it is the re-establishment boundary the
 Conductor's `execute_from` replays from.

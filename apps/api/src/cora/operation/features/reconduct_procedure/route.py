@@ -1,7 +1,7 @@
 """HTTP route for the `reconduct_procedure` slice.
 
 `POST /procedures/{procedure_id}/reconduct` resumes a Held Procedure and
-replays its pinned manifest tail from `re_establishment_boundary`.
+replays its pinned step-list tail from `re_establishment_boundary`.
 
 ## Response code: 200, replay outcomes in body
 
@@ -11,7 +11,7 @@ results that land in the body, not HTTP errors. Only protocol / auth /
 guard faults map to HTTP codes: 403 (authz deny), 404 (no procedure),
 409 (Procedure not Held, or parent Run Held -- from the resume guard),
 422 (negative boundary / malformed id), 500 (Held Procedure missing its
-pinned manifest -- corruption).
+pinned resolved steps -- corruption).
 """
 
 from typing import Annotated
@@ -41,7 +41,7 @@ class ReconductProcedureRequest(BaseModel):
         ...,
         ge=0,
         description=(
-            "Index in the pinned conduct manifest from which the resume "
+            "Index in the pinned resolved step list from which the resume "
             "re-drives setpoints and re-runs checks. >= 0 (0 = re-establish "
             "from the first step). NOT a continuity proof."
         ),
@@ -137,10 +137,10 @@ router = APIRouter(tags=["operation"])
         },
         status.HTTP_500_INTERNAL_SERVER_ERROR: {
             "model": ErrorResponse,
-            "description": "Held Procedure is missing its pinned manifest (corruption).",
+            "description": "Held Procedure is missing its pinned resolved steps (corruption).",
         },
     },
-    summary="Resume a held Procedure and replay its pinned manifest tail (Held -> Running)",
+    summary="Resume a held Procedure and replay its pinned step-list tail (Held -> Running)",
 )
 async def post_procedures_reconduct(
     procedure_id: Annotated[UUID, Path(description="Target procedure's id.")],

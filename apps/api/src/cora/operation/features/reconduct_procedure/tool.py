@@ -1,7 +1,7 @@
 """MCP tool for the `reconduct_procedure` slice.
 
 Mirrors the REST route: resumes a Held Procedure and replays its pinned
-manifest tail, returning a structured summary. Replay outcomes (a step
+step-list tail, returning a structured summary. Replay outcomes (a step
 failure, an acquisition halt) land in the return value, not raised; the
 LLM caller inspects `succeeded` / `acquisition_halt` / `failure`.
 """
@@ -42,7 +42,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
     @mcp.tool(
         name="reconduct_procedure",
         description=(
-            "Resume a Held Procedure and replay its pinned manifest tail from "
+            "Resume a Held Procedure and replay its pinned step-list tail from "
             "re_establishment_boundary: re-drive setpoints, re-run checks, and "
             "HALT for an operator decision at an acquisition. On a clean tail "
             "the Procedure auto-completes; on an acquisition halt it stays "
@@ -63,7 +63,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             Field(
                 ge=0,
                 description=(
-                    "Manifest index the resume re-drives setpoints / re-runs "
+                    "Step-list index the resume re-drives setpoints / re-runs "
                     "checks from (>= 0; 0 = from the first step)."
                 ),
             ),

@@ -3,7 +3,7 @@
 The `conduct_procedure` orchestration handler calls this AFTER it has
 resolved the final step list (recipe re-expansion + pseudoaxis +
 constituent resolution) and BEFORE handing the list to the Conductor, so
-every conduct pins its manifest before any step executes.
+every conduct pins its resolved steps before any step executes.
 
 Emitted inline from the conduct flow rather than via a dedicated command
 slice: `ResolvedStepsRecorded` is an internal provenance event with no
@@ -34,7 +34,7 @@ def decide_resolved_steps_recorded(
     (the normal conduct path, before `start_procedure` transitions it to
     `Running`). Returns `[]` when `state` is None or not `Defined`: a
     conduct of a missing / already-running / terminal Procedure records no
-    manifest and lets the Conductor's `start_procedure` produce the normal
+    resolved steps and lets the Conductor's `start_procedure` produce the normal
     lifecycle failure, preserving the conduct route's failures-in-body
     contract instead of raising a fresh HTTP error here.
     """

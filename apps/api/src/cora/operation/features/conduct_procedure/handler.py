@@ -74,7 +74,7 @@ from cora.operation.features.conduct_procedure.command import (
     ConductProcedure,
     ConductProcedureResult,
 )
-from cora.operation.features.conduct_procedure.manifest import (
+from cora.operation.features.conduct_procedure.resolved_steps import (
     decide_resolved_steps_recorded,
 )
 from cora.operation.ports.recipe_expander import RecipeExpander
@@ -230,12 +230,12 @@ def bind(
         # while the Procedure is still Defined and returns [] otherwise,
         # leaving the Conductor's start_procedure to surface a lifecycle
         # failure (keeps the conduct route's failures-in-body contract).
-        manifest_events = decide_resolved_steps_recorded(
+        resolved_steps_events = decide_resolved_steps_recorded(
             procedure,
             tuple(step_to_payload(step) for step in steps),
             now=deps.clock.now(),
         )
-        if manifest_events:
+        if resolved_steps_events:
             _, current_version = await deps.event_store.load(
                 stream_type="Procedure", stream_id=command.procedure_id
             )
@@ -254,7 +254,7 @@ def bind(
                         causation_id=causation_id,
                         principal_id=principal_id,
                     )
-                    for event in manifest_events
+                    for event in resolved_steps_events
                 ],
             )
 

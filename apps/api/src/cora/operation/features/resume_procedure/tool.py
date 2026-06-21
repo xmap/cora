@@ -23,7 +23,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             "Resume a held Procedure conduct (Held -> Running). The inverse of "
             "hold_procedure. Requires the Procedure to currently be in `Held`. "
             "Resuming a `Running` / `Defined` / terminal Procedure raises. "
-            "re_establishment_boundary (>= 0) is the manifest index the resume "
+            "re_establishment_boundary (>= 0) is the step-list index the resume "
             "re-drives setpoints / re-runs checks from."
         ),
     )
@@ -38,7 +38,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             Field(
                 ge=0,
                 description=(
-                    "Index in the pinned conduct manifest the resume re-drives "
+                    "Index in the pinned resolved step list the resume re-drives "
                     "setpoints / re-runs checks from (>= 0; 0 = from the first step)."
                 ),
             ),

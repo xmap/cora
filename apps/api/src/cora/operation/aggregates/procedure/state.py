@@ -475,7 +475,7 @@ class RecipeExpansionRecordNotFoundError(Exception):
 
 
 class ResolvedStepsRecordNotFoundError(Exception):
-    """A Held Procedure cannot locate its pinned `ResolvedStepsRecorded` manifest.
+    """A Held Procedure cannot locate its pinned `ResolvedStepsRecorded` record.
 
     Raised by the `reconduct_procedure` (resume-and-replay) handler when a
     Held Procedure's stream carries no `ResolvedStepsRecorded` event. A
@@ -490,7 +490,7 @@ class ResolvedStepsRecordNotFoundError(Exception):
     def __init__(self, procedure_id: UUID) -> None:
         super().__init__(
             f"Procedure {procedure_id} is Held but its pinned "
-            f"ResolvedStepsRecorded manifest could not be located; resume "
+            f"ResolvedStepsRecorded record could not be located; resume "
             f"replay cannot proceed."
         )
         self.procedure_id = procedure_id
@@ -1180,13 +1180,13 @@ class InvalidProcedureHoldReasonError(ValueError):
 class InvalidProcedureReEstablishmentBoundaryError(ValueError):
     """The supplied resume re-establishment boundary is negative.
 
-    `re_establishment_boundary` is the index in the pinned conduct
-    manifest from which resume re-drives setpoints + re-runs checks. It
+    `re_establishment_boundary` is the index in the pinned resolved
+    step list from which resume re-drives setpoints + re-runs checks. It
     must be >= 0 (a step position; 0 means re-establish from the very
     first step). Validated at the API boundary via Pydantic `ge=0` AND
     defensively at the `resume_procedure` decider. The upper bound
-    (boundary vs manifest length) is enforced by the Conductor's
-    `execute_from` replay, not the decider (the manifest is not folded
+    (boundary vs step-list length) is enforced by the Conductor's
+    `execute_from` replay, not the decider (the step list is not folded
     into Procedure state). Mapped to HTTP 400. See
     [[project_resumable_conduct_design]].
     """

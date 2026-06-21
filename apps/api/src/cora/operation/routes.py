@@ -366,7 +366,7 @@ def register_operation_routes(app: FastAPI) -> None:
         RecipeExpanderVersionMismatchError,
         RecipeExpansionRecordNotFoundError,
         RecipeExpansionReplayMismatchError,
-        # resumable conduct: a Held Procedure missing its pinned manifest
+        # resumable conduct: a Held Procedure missing its pinned resolved steps
         # (corruption); kept out of the reconduct failures-in-body contract.
         ResolvedStepsRecordNotFoundError,
         # PseudoAxis pre-Conductor expansion ([[project-pseudoaxis-design]]

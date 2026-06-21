@@ -1,6 +1,6 @@
 """Behavioural tests for `Conductor.execute_from` (resumable conduct, Tier 1).
 
-`execute_from` REPLAYS a pinned conduct manifest from a re-establishment
+`execute_from` REPLAYS a pinned resolved step list from a re-establishment
 boundary rather than re-deriving the step list:
 
   - setpoint  -> re-drive (idempotent absolute write)
@@ -9,9 +9,9 @@ boundary rather than re-deriving the step list:
 
 Headline acceptance test (per the design memo): replay walks the pinned
 tail BYTE-FOR-BYTE -- two identical setpoints land on the in-memory port,
-identical to what the original conduct wrote. `steps_from_manifest` is the
+identical to what the original conduct wrote. `steps_from_payload` is the
 exact inverse of `step_to_payload`, so the pinned `ResolvedStepsRecorded`
-manifest round-trips into the replayed `Step`s.
+step list round-trips into the replayed `Step`s.
 """
 
 from collections.abc import AsyncIterator, Mapping
@@ -33,7 +33,7 @@ from cora.operation.conductor import (
     Step,
     WithinToleranceCriterion,
     step_to_payload,
-    steps_from_manifest,
+    steps_from_payload,
 )
 from cora.operation.features.append_activities.command import AppendProcedureActivities
 from cora.operation.ports.control_port import ControlNotConnectedError, Reading
@@ -103,8 +103,8 @@ def _good_reading(value: Any) -> Reading:
 def _pin_and_parse(steps: tuple[Step, ...]) -> tuple[Step, ...]:
     """Serialize steps the way conduct pins them, then parse back (the
     ResolvedStepsRecorded round-trip a real resume performs)."""
-    manifest_wire = tuple(step_to_payload(s) for s in steps)
-    return steps_from_manifest(manifest_wire)
+    steps_wire = tuple(step_to_payload(s) for s in steps)
+    return steps_from_payload(steps_wire)
 
 
 # --- headline acceptance: byte-for-byte replay of the pinned tail ----------
@@ -112,13 +112,13 @@ def _pin_and_parse(steps: tuple[Step, ...]) -> tuple[Step, ...]:
 
 @pytest.mark.unit
 async def test_execute_from_replays_pinned_tail_byte_for_byte() -> None:
-    """Two setpoints pinned on the manifest re-drive byte-for-byte on resume."""
+    """Two setpoints pinned on the step list re-drive byte-for-byte on resume."""
     original = (
         SetpointStep(address="2bma:rot:val", value=45.0),
         SetpointStep(address="2bma:cam:exposure", value=0.025),
     )
-    manifest = _pin_and_parse(original)
-    assert manifest == original  # the pinned manifest round-trips to the same Steps
+    steps = _pin_and_parse(original)
+    assert steps == original  # the pinned step list round-trips to the same Steps
 
     port = _RecordingControlPort()
     appender = _FakeAppendStep()
@@ -126,20 +126,20 @@ async def test_execute_from_replays_pinned_tail_byte_for_byte() -> None:
         procedure_id=uuid4(),
         principal_id=uuid4(),
         correlation_id=uuid4(),
-        manifest=manifest,
+        steps=steps,
         boundary=0,
     )
 
     assert result.succeeded is True
     assert result.completed_count == 2
-    # Byte-for-byte: the replayed writes equal the pinned manifest's setpoints.
+    # Byte-for-byte: the replayed writes equal the pinned step list.s setpoints.
     assert port.writes == [("2bma:rot:val", 45.0), ("2bma:cam:exposure", 0.025)]
 
 
 @pytest.mark.unit
 async def test_execute_from_boundary_skips_the_prefix() -> None:
-    """boundary=K re-drives only manifest[K:]; the prefix is not re-driven."""
-    manifest = _pin_and_parse(
+    """boundary=K re-drives only steps[K:]; the prefix is not re-driven."""
+    steps = _pin_and_parse(
         (
             SetpointStep(address="2bma:a", value=1.0),
             SetpointStep(address="2bma:b", value=2.0),
@@ -151,7 +151,7 @@ async def test_execute_from_boundary_skips_the_prefix() -> None:
         procedure_id=uuid4(),
         principal_id=uuid4(),
         correlation_id=uuid4(),
-        manifest=manifest,
+        steps=steps,
         boundary=1,
     )
     assert result.completed_count == 2
@@ -161,8 +161,8 @@ async def test_execute_from_boundary_skips_the_prefix() -> None:
 @pytest.mark.unit
 async def test_execute_from_records_marker_and_outcome_with_absolute_index() -> None:
     """A re-driven setpoint records the in-flight marker + ok outcome, each
-    carrying its ABSOLUTE manifest position (so the replayed journal lines up)."""
-    manifest = _pin_and_parse(
+    carrying its ABSOLUTE position in the step list (so the replayed journal lines up)."""
+    steps = _pin_and_parse(
         (
             SetpointStep(address="2bma:a", value=1.0),
             SetpointStep(address="2bma:b", value=2.0),
@@ -173,7 +173,7 @@ async def test_execute_from_records_marker_and_outcome_with_absolute_index() -> 
         procedure_id=uuid4(),
         principal_id=uuid4(),
         correlation_id=uuid4(),
-        manifest=manifest,
+        steps=steps,
         boundary=1,
     )
     payloads = [c.entries[0].payload for c in appender.calls]
@@ -185,7 +185,7 @@ async def test_execute_from_records_marker_and_outcome_with_absolute_index() -> 
 async def test_execute_from_on_action_requires_operator_decision() -> None:
     """An acquisition (ActionStep) is NOT re-run: resume halts for an operator
     decision; the action and everything after it are untouched."""
-    manifest = _pin_and_parse(
+    steps = _pin_and_parse(
         (
             SetpointStep(address="2bma:a", value=1.0),
             ActionStep(name="collect", params={"dwell": 0.1}),
@@ -197,7 +197,7 @@ async def test_execute_from_on_action_requires_operator_decision() -> None:
         procedure_id=uuid4(),
         principal_id=uuid4(),
         correlation_id=uuid4(),
-        manifest=manifest,
+        steps=steps,
         boundary=0,
     )
     assert result.succeeded is False
@@ -214,7 +214,7 @@ async def test_execute_from_on_action_requires_operator_decision() -> None:
 @pytest.mark.unit
 async def test_execute_from_reruns_check_fresh() -> None:
     """A check in the tail is re-run as a fresh gate (read + evaluate)."""
-    manifest = _pin_and_parse(
+    steps = _pin_and_parse(
         (CheckStep(address="2bma:rbv", criterion=EqualsCriterion(expected=45.0)),)
     )
     port = _RecordingControlPort(readings={"2bma:rbv": _good_reading(45.0)})
@@ -222,7 +222,7 @@ async def test_execute_from_reruns_check_fresh() -> None:
         procedure_id=uuid4(),
         principal_id=uuid4(),
         correlation_id=uuid4(),
-        manifest=manifest,
+        steps=steps,
         boundary=0,
     )
     assert result.succeeded is True
@@ -232,7 +232,7 @@ async def test_execute_from_reruns_check_fresh() -> None:
 @pytest.mark.unit
 async def test_execute_from_check_mismatch_on_rerun_halts() -> None:
     """A re-run check whose criterion no longer matches halts the resume."""
-    manifest = _pin_and_parse(
+    steps = _pin_and_parse(
         (CheckStep(address="2bma:rbv", criterion=EqualsCriterion(expected=45.0)),)
     )
     port = _RecordingControlPort(readings={"2bma:rbv": _good_reading(12.5)})
@@ -240,7 +240,7 @@ async def test_execute_from_check_mismatch_on_rerun_halts() -> None:
         procedure_id=uuid4(),
         principal_id=uuid4(),
         correlation_id=uuid4(),
-        manifest=manifest,
+        steps=steps,
         boundary=0,
     )
     assert result.succeeded is False
@@ -251,14 +251,14 @@ async def test_execute_from_check_mismatch_on_rerun_halts() -> None:
 
 @pytest.mark.unit
 async def test_execute_from_boundary_past_end_is_a_no_op() -> None:
-    """Boundary >= len(manifest) replays an empty tail (a no-op resume)."""
-    manifest = _pin_and_parse((SetpointStep(address="2bma:a", value=1.0),))
+    """Boundary >= len(steps) replays an empty tail (a no-op resume)."""
+    steps = _pin_and_parse((SetpointStep(address="2bma:a", value=1.0),))
     port = _RecordingControlPort()
     result = await _conductor(port, _FakeAppendStep()).execute_from(
         procedure_id=uuid4(),
         principal_id=uuid4(),
         correlation_id=uuid4(),
-        manifest=manifest,
+        steps=steps,
         boundary=5,
     )
     assert result.succeeded is True
@@ -273,7 +273,7 @@ async def test_execute_from_rejects_negative_boundary() -> None:
             procedure_id=uuid4(),
             principal_id=uuid4(),
             correlation_id=uuid4(),
-            manifest=(),
+            steps=(),
             boundary=-1,
         )
 
@@ -281,13 +281,13 @@ async def test_execute_from_rejects_negative_boundary() -> None:
 @pytest.mark.unit
 async def test_execute_from_explicit_re_establish_policy_is_the_default() -> None:
     """Passing the only policy member behaves identically to the default."""
-    manifest = _pin_and_parse((SetpointStep(address="2bma:a", value=1.0),))
+    steps = _pin_and_parse((SetpointStep(address="2bma:a", value=1.0),))
     port = _RecordingControlPort()
     result = await _conductor(port, _FakeAppendStep()).execute_from(
         procedure_id=uuid4(),
         principal_id=uuid4(),
         correlation_id=uuid4(),
-        manifest=manifest,
+        steps=steps,
         boundary=0,
         policy=ResumePolicy.RE_ESTABLISH,
     )
@@ -295,7 +295,7 @@ async def test_execute_from_explicit_re_establish_policy_is_the_default() -> Non
     assert port.writes == [("2bma:a", 1.0)]
 
 
-# --- steps_from_manifest is the exact inverse of step_to_payload -----------
+# --- steps_from_payload is the exact inverse of step_to_payload -----------
 
 
 @pytest.mark.unit
@@ -313,22 +313,22 @@ async def test_execute_from_explicit_re_establish_policy_is_the_default() -> Non
         ),
     ],
 )
-def test_steps_from_manifest_round_trips_step_to_payload(step: Step) -> None:
-    assert steps_from_manifest((step_to_payload(step),)) == (step,)
+def test_steps_from_payload_round_trips_step_to_payload(step: Step) -> None:
+    assert steps_from_payload((step_to_payload(step),)) == (step,)
 
 
 @pytest.mark.unit
-def test_steps_from_manifest_rejects_unknown_kind() -> None:
+def test_steps_from_payload_rejects_unknown_kind() -> None:
     with pytest.raises(ValueError, match="unknown step kind"):
-        steps_from_manifest(({"kind": "bogus"},))
+        steps_from_payload(({"kind": "bogus"},))
 
 
 @pytest.mark.unit
-def test_steps_from_manifest_rejects_unknown_criterion_kind() -> None:
+def test_steps_from_payload_rejects_unknown_criterion_kind() -> None:
     bad: Mapping[str, Any] = {
         "kind": "check",
         "address": "x",
         "criterion": {"kind": "bogus"},
     }
     with pytest.raises(ValueError, match="unknown criterion kind"):
-        steps_from_manifest((bad,))
+        steps_from_payload((bad,))

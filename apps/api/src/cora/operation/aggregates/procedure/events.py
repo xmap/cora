@@ -364,11 +364,11 @@ class ProcedureResumed:
     Inverse of `ProcedureHeld`. Mirrors `RunResumed`. Hold <-> Resume is
     bidirectional and unlimited-cycle within one conduct.
 
-    `re_establishment_boundary` is the index in the pinned conduct
-    manifest from which resume re-drives setpoints + re-runs checks (NOT
+    `re_establishment_boundary` is the index in the pinned resolved
+    step list from which resume re-drives setpoints + re-runs checks (NOT
     a continuity proof; the pre-effect in-flight marker is the only
     continuity fact the aggregate owns). It is `>= 0`; the Conductor's
-    `execute_from` consumes it to replay the pinned manifest tail. Per
+    `execute_from` consumes it to replay the pinned step-list tail. Per
     [[project_resumable_conduct_design]] the field is the
     re-establishment boundary, deliberately NOT a "verified continuity"
     claim.

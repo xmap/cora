@@ -2,7 +2,7 @@
 
 Operator-facing resume-and-replay orchestration: resumes a Held
 Procedure and hands control to the `Conductor` runtime, which replays the
-pinned manifest tail from the re-establishment boundary (re-drive
+pinned step-list tail from the re-establishment boundary (re-drive
 setpoints, re-run checks, halt-for-operator on an acquisition), then
 auto-completes on a clean tail / aborts on a step failure / leaves
 Running on an acquisition halt. Returns a structured

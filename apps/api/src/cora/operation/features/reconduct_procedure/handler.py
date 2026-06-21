@@ -1,7 +1,7 @@
 """Application handler for the `reconduct_procedure` slice.
 
 Resume-and-replay orchestration. Mirrors `conduct_procedure`: a thin
-slice handler that authz-checks + loads + locates the pinned manifest,
+slice handler that authz-checks + loads + locates the pinned resolved steps,
 then delegates the resume + replay + terminalize composition to
 `Conductor.reconduct` (the resume twin of `Conductor.conduct`). No
 `decider.py`: like `conduct_procedure` this is an orchestration entry
@@ -19,14 +19,14 @@ owns lifecycle-handler orchestration.
   1. authz `ReconductProcedure`.
   2. load the Procedure + its raw events.
   3. status guard FIRST: a non-Held Procedure is a `ProcedureCannotResumeError`
-     (409), raised BEFORE the manifest lookup so a Defined / Completed
+     (409), raised BEFORE the step-list lookup so a Defined / Completed
      Procedure is never a misleading 500 and no resume-then-fail partial
      state can occur.
   4. locate the PINNED `ResolvedStepsRecorded` (a conducted, Held Procedure
      ALWAYS has exactly one; its absence is corruption ->
      `ResolvedStepsRecordNotFoundError`, 500) and parse it back into `Step`s
-     via `steps_from_manifest` -- resume NEVER re-derives the step list.
-  5. `Conductor.reconduct(manifest, boundary)`: resume (Held -> Running, with
+     via `steps_from_payload` -- resume NEVER re-derives the step list.
+  5. `Conductor.reconduct(steps, boundary)`: resume (Held -> Running, with
      its own authz + off-diagonal parent-Run-Held guard) -> `execute_from`
      (re-drive setpoints, re-run checks, halt-for-operator on an acquisition)
      -> terminalize (complete on a clean tail / leave Running on an
@@ -55,7 +55,7 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.operation._manifest_replay import find_resolved_steps_record
+from cora.operation._resolved_steps_replay import find_resolved_steps_record
 from cora.operation.aggregates.procedure import (
     ProcedureCannotResumeError,
     ProcedureNotFoundError,
@@ -63,7 +63,7 @@ from cora.operation.aggregates.procedure import (
     ResolvedStepsRecordNotFoundError,
     load_procedure_with_events,
 )
-from cora.operation.conductor import Conductor, is_acquisition_halt, steps_from_manifest
+from cora.operation.conductor import Conductor, is_acquisition_halt, steps_from_payload
 from cora.operation.errors import UnauthorizedError
 from cora.operation.features.reconduct_procedure.command import (
     ReconductProcedure,
@@ -142,26 +142,26 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
 
         # Status guard FIRST (mirrors resume's `{Held}` source set): a
         # non-Held Procedure is a 409, not a 500. This keeps the
-        # manifest-missing case below as genuine corruption (a conducted,
-        # Held Procedure ALWAYS has its pinned manifest) and avoids resuming
-        # then failing to find the manifest. The off-diagonal parent-Run-Held
+        # missing-record case below as genuine corruption (a conducted,
+        # Held Procedure ALWAYS has its pinned resolved steps) and avoids resuming
+        # then failing to find them. The off-diagonal parent-Run-Held
         # guard stays inside Conductor.reconduct's resume call.
         if procedure.status is not ProcedureStatus.HELD:
             raise ProcedureCannotResumeError(command.procedure_id, current_status=procedure.status)
 
-        # Replay the PINNED manifest, never re-derive. A Held Procedure that
+        # Replay the PINNED resolved steps, never re-derive. A Held Procedure that
         # was conducted always has exactly one ResolvedStepsRecorded; its
         # absence here is corruption (500), not an operational outcome.
         record = find_resolved_steps_record(stored_events)
         if record is None:
             raise ResolvedStepsRecordNotFoundError(command.procedure_id)
-        manifest = steps_from_manifest(record.payload["resolved_steps"])
+        steps = steps_from_payload(record.payload["resolved_steps"])
 
         result = await conductor.reconduct(
             procedure_id=command.procedure_id,
             principal_id=principal_id,
             correlation_id=correlation_id,
-            manifest=manifest,
+            steps=steps,
             boundary=command.re_establishment_boundary,
             causation_id=causation_id,
             surface_id=surface_id,
