@@ -1773,3 +1773,83 @@ async def test_advise_liveness_stale_records_supervision_quieted_without_command
 
     assert await _supervision_decision_choices(kernel) == ["SupervisionQuieted"]
     assert hold_calls == []
+
+
+@pytest.mark.unit
+async def test_advise_liveness_stale_is_edge_triggered_single_decision() -> None:
+    """Two ticks with the same standing stale Run record only ONE
+    SupervisionQuieted Decision (edge-triggered off the shared liveness set)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, running_since=_NOW - timedelta(hours=2))])
+    hold_run, _hold = _make_recording_hold()
+    liveness: set[UUID] = set()
+
+    for _ in range(2):
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=hold_run,
+            beam_lookup=_BeamOpen(),
+            memory={},
+            liveness=liveness,
+            liveness_ceiling_seconds=3600.0,
+            advise_enabled=True,
+        )
+
+    assert await _supervision_decision_choices(kernel) == ["SupervisionQuieted"]
+
+
+@pytest.mark.unit
+async def test_advise_records_no_decision_when_quality_channel_has_no_observation() -> None:
+    """Advise on but the quality channel never produced a value: cannot-tell, so
+    no flag and no Decision (the value-None case never emits a SupervisionBreached)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    hold_run, _hold = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()  # no snr value registered for this Run
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        quality=set(),
+        advise_enabled=True,
+    )
+
+    assert await _supervision_decision_choices(kernel) == []
+
+
+@pytest.mark.unit
+async def test_advise_records_no_decision_when_rule_disabled() -> None:
+    """Advise on but the Run has no precomputed snr_limit: Rule Q is disabled for
+    it, so advise stays silent (advise respects each rule's own enable, not just
+    the global advise flag)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=None)])
+    hold_run, _hold = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=0.1, recorded_at=_NOW)
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        quality=set(),
+        advise_enabled=True,
+    )
+
+    assert await _supervision_decision_choices(kernel) == []
