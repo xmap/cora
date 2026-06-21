@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
+import structlog
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -1574,3 +1575,36 @@ async def test_shadow_quality_flag_leaves_beam_hold_memory_untouched() -> None:
     assert quality == {run_id}
     assert memory == {}  # beam-Hold FSM memory untouched by the quality rule
     assert hold_calls == []
+
+
+@pytest.mark.unit
+async def test_shadow_quality_would_flag_log_carries_is_simulated_provenance() -> None:
+    """The run_quality.would_flag log carries is_simulated so an operator doing
+    forensics can tell a real breach from a simulator rehearsal. Locks the audit
+    field in place so a refactor cannot silently drop it."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    hold_run, _hold = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(
+        run_id=run_id, channel_name="snr", value=2.0, recorded_at=_NOW, is_simulated=True
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=hold_run,
+            beam_lookup=_BeamOpen(),
+            memory={},
+            channel_lookup=lookup,
+            rules_config=_rules_quality(),
+            quality=set(),
+        )
+
+    flagged = [e for e in logs if e.get("event") == "run_quality.would_flag"]
+    assert len(flagged) == 1
+    assert flagged[0]["is_simulated"] is True
+    assert flagged[0]["run_id"] == str(run_id)
