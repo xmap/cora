@@ -83,7 +83,7 @@ class ClearanceLookup(Protocol):
     ) -> list[ClearanceLookupResult]:
         """Return every clearance whose bindings cover the requested scope.
 
-        "References" means:
+        "Covers" means:
           - `run_id` appears in the clearance's `run_binding_ids`, OR
           - `subject_id` (when non-None) appears in the clearance's
             `subject_binding_ids`, OR

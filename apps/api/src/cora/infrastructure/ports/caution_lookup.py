@@ -109,7 +109,7 @@ class CautionLookup(Protocol):
     ) -> list[CautionLookupResult]:
         """Return every Active caution whose target is in the requested scope.
 
-        "References" means:
+        "In scope" means:
           - `target_kind == "Asset"` AND `target_id` is in `asset_ids`, OR
           - `target_kind == "Procedure"` AND `target_id` is in `procedure_ids`.
 
