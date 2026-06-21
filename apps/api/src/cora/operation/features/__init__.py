@@ -25,11 +25,18 @@ this is the third update slice):
   - `truncate_procedure` (Running -> Truncated; partial-data terminal
     mirroring RunTruncated; reason + optional interrupted_at)
 
+Resumable-conduct pause/resume pair (Tier 1 of
+[[project_resumable_conduct_design]]; the state name mirrors
+`RunStatus.HELD`):
+  - `hold_procedure` (Running -> Held; operator-pause of a halted
+    conduct, required reason)
+  - `resume_procedure` (Held -> Running; carries the
+    `re_establishment_boundary` the Conductor replays from)
+
 Read side:
   - projection (`proj_operation_procedure_summary`) + `list_procedures`
     (cursor-paginated; status / kind / parent_run_id / target_asset_id
     filters)
-  - Held / Resumed only if pilot operator feedback surfaces a need
 """
 
 from cora.operation.features import (
@@ -37,8 +44,10 @@ from cora.operation.features import (
     append_activities,
     complete_procedure,
     get_procedure,
+    hold_procedure,
     list_procedures,
     register_procedure,
+    resume_procedure,
     start_procedure,
     truncate_procedure,
 )
@@ -48,8 +57,10 @@ __all__ = [
     "append_activities",
     "complete_procedure",
     "get_procedure",
+    "hold_procedure",
     "list_procedures",
     "register_procedure",
+    "resume_procedure",
     "start_procedure",
     "truncate_procedure",
 ]

@@ -36,11 +36,13 @@ from fastapi.responses import JSONResponse
 
 from cora.operation.aggregates.procedure import (
     InvalidProcedureAbortReasonError,
+    InvalidProcedureHoldReasonError,
     InvalidProcedureInterruptedAtError,
     InvalidProcedureIterationCapError,
     InvalidProcedureIterationEndReasonError,
     InvalidProcedureKindError,
     InvalidProcedureNameError,
+    InvalidProcedureReEstablishmentBoundaryError,
     InvalidProcedureTruncateReasonError,
     InvalidRecipeBindingsError,
     InvalidStepKindError,
@@ -50,6 +52,8 @@ from cora.operation.aggregates.procedure import (
     ProcedureCannotAbortError,
     ProcedureCannotCompleteError,
     ProcedureCannotEndIterationError,
+    ProcedureCannotHoldError,
+    ProcedureCannotResumeError,
     ProcedureCannotStartError,
     ProcedureCannotStartIterationError,
     ProcedureCannotTruncateError,
@@ -89,10 +93,12 @@ from cora.operation.features import (
     conduct_procedure,
     end_iteration,
     get_procedure,
+    hold_procedure,
     list_procedure_iterations,
     list_procedures,
     register_procedure,
     register_procedure_from_recipe,
+    resume_procedure,
     start_iteration,
     start_procedure,
     truncate_procedure,
@@ -230,6 +236,8 @@ def register_operation_routes(app: FastAPI) -> None:
     app.include_router(complete_procedure.router)
     app.include_router(abort_procedure.router)
     app.include_router(truncate_procedure.router)
+    app.include_router(hold_procedure.router)
+    app.include_router(resume_procedure.router)
     app.include_router(start_iteration.router)
     app.include_router(end_iteration.router)
     app.include_router(append_activities.router)
@@ -241,10 +249,12 @@ def register_operation_routes(app: FastAPI) -> None:
         InvalidProcedureNameError,
         InvalidProcedureKindError,
         InvalidProcedureAbortReasonError,
+        InvalidProcedureHoldReasonError,
         InvalidProcedureTruncateReasonError,
         InvalidProcedureIterationEndReasonError,
         InvalidProcedureIterationCapError,
         InvalidProcedureInterruptedAtError,
+        InvalidProcedureReEstablishmentBoundaryError,
         InvalidStepKindError,
         # Recipe-driven conduct_procedure path: caller-supplied steps with
         # recipe_id set are rejected up front per the replay-design lock
@@ -267,6 +277,10 @@ def register_operation_routes(app: FastAPI) -> None:
         ProcedureCannotCompleteError,
         ProcedureCannotAbortError,
         ProcedureCannotTruncateError,
+        # resumable-conduct pause/resume guards (Running->Held->Running):
+        # holding a non-Running procedure, or resuming a non-Held one.
+        ProcedureCannotHoldError,
+        ProcedureCannotResumeError,
         # iteration boundary guards (start/end): not-Running, no/already-open
         # iteration, and non-sequential / mismatched operator-supplied index.
         ProcedureCannotStartIterationError,

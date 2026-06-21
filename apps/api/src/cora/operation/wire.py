@@ -74,10 +74,12 @@ from cora.operation.features import (
     conduct_procedure,
     end_iteration,
     get_procedure,
+    hold_procedure,
     list_procedure_iterations,
     list_procedures,
     register_procedure,
     register_procedure_from_recipe,
+    resume_procedure,
     start_iteration,
     start_procedure,
     truncate_procedure,
@@ -103,6 +105,8 @@ class OperationHandlers:
     complete_procedure: complete_procedure.Handler
     abort_procedure: abort_procedure.Handler
     truncate_procedure: truncate_procedure.Handler
+    hold_procedure: hold_procedure.Handler
+    resume_procedure: resume_procedure.Handler
     start_iteration: start_iteration.Handler
     end_iteration: end_iteration.Handler
     append_activities: append_activities.Handler
@@ -233,6 +237,16 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
         truncate_procedure=with_tracing(
             truncate_procedure.bind(deps),
             command_name="TruncateProcedure",
+            bc=_BC,
+        ),
+        hold_procedure=with_tracing(
+            hold_procedure.bind(deps),
+            command_name="HoldProcedure",
+            bc=_BC,
+        ),
+        resume_procedure=with_tracing(
+            resume_procedure.bind(deps),
+            command_name="ResumeProcedure",
             bc=_BC,
         ),
         start_iteration=with_tracing(

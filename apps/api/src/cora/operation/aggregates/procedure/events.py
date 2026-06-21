@@ -23,8 +23,10 @@ persistence-envelope construction (`NewEvent`) lives at
 
 `ProcedureActivitiesLogbookOpened` is the lazy envelope event for the
 per-step logbook table. `ProcedureTruncated` mirrors RunTruncated.
-`ProcedureHeld` / `ProcedureResumed` are deferred until the pilot
-needs the surface.
+`ProcedureHeld` (Running -> Held) / `ProcedureResumed` (Held -> Running)
+are the operator-pause / resume pair for resumable conduct (Tier 1 of
+[[project_resumable_conduct_design]]); the state name mirrors
+`RunStatus.HELD`.
 
 `ProcedureIterationStarted` / `ProcedureIterationEnded` are the
 first-class boundary pair for the convergence-driven iteration loop
@@ -324,6 +326,69 @@ class ProcedureAborted:
 
 
 @dataclass(frozen=True)
+class ProcedureHeld:
+    """A Procedure conduct was operator-paused (Running -> Held).
+
+    Tier 1 of [[project_resumable_conduct_design]]: the operator pauses
+    a halted conduct so it can be re-established and resumed later rather
+    than aborted-and-reseeded. Additive to the Layer-1 FSM; the state
+    name mirrors `RunStatus.HELD` (Procedure is an execution-FSM sibling
+    of Run).
+
+    `reason` is a free-form string (1-500 chars after trimming), captured
+    verbatim. REQUIRED, unlike `RunHeld` (slim, no reason: a routine Run
+    pause): pausing a halted conduct is a deliberate, high-information
+    operator act, matching `AgentSuspended.reason`. Same future-additive
+    structured-taxonomy posture as `ProcedureAborted.reason`.
+
+    `decided_by_decision_id` mirrors `RunHeld`: optional Decision-causation
+    link to the Decision BC record that justified this hold. None for
+    operator-routed holds; set when an in-process agent runtime issues the
+    hold. NO existence check per the cross-BC eventual-consistency stance.
+    Forward-compat via `payload.get("decided_by_decision_id")` -> None.
+
+    Status is NOT carried (the event type encodes the transition); the
+    evolver maps `ProcedureHeld -> HELD`.
+    """
+
+    procedure_id: UUID
+    reason: str
+    occurred_at: datetime
+    decided_by_decision_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class ProcedureResumed:
+    """A held Procedure conduct was resumed (Held -> Running).
+
+    Inverse of `ProcedureHeld`. Mirrors `RunResumed`. Hold <-> Resume is
+    bidirectional and unlimited-cycle within one conduct.
+
+    `re_establishment_boundary` is the index in the pinned conduct
+    manifest from which resume re-drives setpoints + re-runs checks (NOT
+    a continuity proof; the pre-effect in-flight marker is the only
+    continuity fact the aggregate owns). It is `>= 0`; the Conductor's
+    `execute_from` consumes it to replay the pinned manifest tail. Per
+    [[project_resumable_conduct_design]] the field is the
+    re-establishment boundary, deliberately NOT a "verified continuity"
+    claim.
+
+    `decided_by_decision_id` mirrors `RunResumed`: optional
+    Decision-causation link; None for operator-routed resumes, set when
+    an in-process agent runtime issues an autonomous resume. NO existence
+    check (cross-BC eventual-consistency). Forward-compat via
+    `payload.get("decided_by_decision_id")` -> None.
+
+    Status is NOT carried; the evolver maps `ProcedureResumed -> RUNNING`.
+    """
+
+    procedure_id: UUID
+    re_establishment_boundary: int
+    occurred_at: datetime
+    decided_by_decision_id: UUID | None = None
+
+
+@dataclass(frozen=True)
 class ProcedureIterationStarted:
     """One convergence-loop iteration began on a Running Procedure.
 
@@ -418,6 +483,8 @@ ProcedureEvent = (
     | ProcedureCompleted
     | ProcedureAborted
     | ProcedureTruncated
+    | ProcedureHeld
+    | ProcedureResumed
     | ProcedureActivitiesLogbookOpened
     | ProcedureIterationStarted
     | ProcedureIterationEnded
@@ -512,6 +579,34 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "procedure_id": str(procedure_id),
                 "reason": reason,
                 "interrupted_at": interrupted_at_iso,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case ProcedureHeld(
+            procedure_id=procedure_id,
+            reason=reason,
+            occurred_at=occurred_at,
+            decided_by_decision_id=decided_by_decision_id,
+        ):
+            return {
+                "procedure_id": str(procedure_id),
+                "reason": reason,
+                "decided_by_decision_id": (
+                    str(decided_by_decision_id) if decided_by_decision_id is not None else None
+                ),
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case ProcedureResumed(
+            procedure_id=procedure_id,
+            re_establishment_boundary=re_establishment_boundary,
+            occurred_at=occurred_at,
+            decided_by_decision_id=decided_by_decision_id,
+        ):
+            return {
+                "procedure_id": str(procedure_id),
+                "re_establishment_boundary": re_establishment_boundary,
+                "decided_by_decision_id": (
+                    str(decided_by_decision_id) if decided_by_decision_id is not None else None
+                ),
                 "occurred_at": occurred_at.isoformat(),
             }
         case ProcedureActivitiesLogbookOpened(
@@ -690,6 +785,34 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                 )
 
             return deserialize_or_raise("ProcedureTruncated", _build_truncated)
+        case "ProcedureHeld":
+
+            def _build_held() -> ProcedureHeld:
+                raw_decided_by = payload.get("decided_by_decision_id")
+                return ProcedureHeld(
+                    procedure_id=UUID(payload["procedure_id"]),
+                    reason=payload["reason"],
+                    decided_by_decision_id=(
+                        UUID(raw_decided_by) if raw_decided_by is not None else None
+                    ),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                )
+
+            return deserialize_or_raise("ProcedureHeld", _build_held)
+        case "ProcedureResumed":
+
+            def _build_resumed() -> ProcedureResumed:
+                raw_decided_by = payload.get("decided_by_decision_id")
+                return ProcedureResumed(
+                    procedure_id=UUID(payload["procedure_id"]),
+                    re_establishment_boundary=int(payload["re_establishment_boundary"]),
+                    decided_by_decision_id=(
+                        UUID(raw_decided_by) if raw_decided_by is not None else None
+                    ),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                )
+
+            return deserialize_or_raise("ProcedureResumed", _build_resumed)
         case "ProcedureActivitiesLogbookOpened":
             return deserialize_or_raise(
                 "ProcedureActivitiesLogbookOpened",
@@ -759,9 +882,11 @@ __all__ = [
     "ProcedureActivitiesLogbookOpened",
     "ProcedureCompleted",
     "ProcedureEvent",
+    "ProcedureHeld",
     "ProcedureIterationEnded",
     "ProcedureIterationStarted",
     "ProcedureRegistered",
+    "ProcedureResumed",
     "ProcedureStarted",
     "ProcedureTruncated",
     "RecipeExpansionRecorded",

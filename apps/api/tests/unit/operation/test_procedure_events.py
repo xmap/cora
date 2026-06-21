@@ -11,9 +11,11 @@ from cora.operation.aggregates.procedure import (
     ProcedureAborted,
     ProcedureActivitiesLogbookOpened,
     ProcedureCompleted,
+    ProcedureHeld,
     ProcedureIterationEnded,
     ProcedureIterationStarted,
     ProcedureRegistered,
+    ProcedureResumed,
     ProcedureStarted,
     ProcedureTruncated,
     RecipeExpansionRecorded,
@@ -728,6 +730,8 @@ def test_iteration_ended_round_trips(converged: bool | None, reason: str | None)
         "ProcedureCompleted",
         "ProcedureAborted",
         "ProcedureTruncated",
+        "ProcedureHeld",
+        "ProcedureResumed",
         "ProcedureActivitiesLogbookOpened",
         "ProcedureIterationStarted",
         "ProcedureIterationEnded",
@@ -742,3 +746,88 @@ def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:
     in the load path."""
     with pytest.raises(ValueError, match=f"Malformed {event_type} payload"):
         from_stored(_stored(event_type, {}))
+
+
+# --- ProcedureHeld / ProcedureResumed (resumable conduct, Tier 1) ---
+
+
+@pytest.mark.unit
+def test_event_type_names_for_hold_resume() -> None:
+    held = ProcedureHeld(procedure_id=uuid4(), reason="pause", occurred_at=_NOW)
+    resumed = ProcedureResumed(procedure_id=uuid4(), re_establishment_boundary=0, occurred_at=_NOW)
+    assert event_type_name(held) == "ProcedureHeld"
+    assert event_type_name(resumed) == "ProcedureResumed"
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_procedure_held() -> None:
+    pid = uuid4()
+    decision_id = uuid4()
+    payload = to_payload(
+        ProcedureHeld(
+            procedure_id=pid,
+            reason="beam dropped",
+            decided_by_decision_id=decision_id,
+            occurred_at=_NOW,
+        )
+    )
+    assert payload == {
+        "procedure_id": str(pid),
+        "reason": "beam dropped",
+        "decided_by_decision_id": str(decision_id),
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_procedure_resumed_with_null_decision() -> None:
+    pid = uuid4()
+    payload = to_payload(
+        ProcedureResumed(procedure_id=pid, re_establishment_boundary=5, occurred_at=_NOW)
+    )
+    assert payload == {
+        "procedure_id": str(pid),
+        "re_establishment_boundary": 5,
+        "decided_by_decision_id": None,
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("decision_id", [None, uuid4()])
+def test_procedure_held_round_trips(decision_id: UUID | None) -> None:
+    event = ProcedureHeld(
+        procedure_id=uuid4(),
+        reason="investigating fault",
+        decided_by_decision_id=decision_id,
+        occurred_at=_NOW,
+    )
+    rebuilt = from_stored(_stored("ProcedureHeld", to_payload(event)))
+    assert rebuilt == event
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("decision_id", [None, uuid4()])
+def test_procedure_resumed_round_trips(decision_id: UUID | None) -> None:
+    event = ProcedureResumed(
+        procedure_id=uuid4(),
+        re_establishment_boundary=3,
+        decided_by_decision_id=decision_id,
+        occurred_at=_NOW,
+    )
+    rebuilt = from_stored(_stored("ProcedureResumed", to_payload(event)))
+    assert rebuilt == event
+
+
+@pytest.mark.unit
+def test_from_stored_held_without_decided_by_key_folds_to_none() -> None:
+    """Forward-compat: a pre-supervisor stream omits decided_by_decision_id."""
+    pid = uuid4()
+    rebuilt = from_stored(
+        _stored(
+            "ProcedureHeld",
+            {"procedure_id": str(pid), "reason": "pause", "occurred_at": _NOW.isoformat()},
+        )
+    )
+    assert isinstance(rebuilt, ProcedureHeld)
+    assert rebuilt.decided_by_decision_id is None

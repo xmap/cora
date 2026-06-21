@@ -13,10 +13,12 @@ from cora.operation.aggregates.procedure import (
     ProcedureActivitiesLogbookOpened,
     ProcedureCompleted,
     ProcedureEvent,
+    ProcedureHeld,
     ProcedureIterationEnded,
     ProcedureIterationStarted,
     ProcedureName,
     ProcedureRegistered,
+    ProcedureResumed,
     ProcedureStarted,
     ProcedureStatus,
     ProcedureTruncated,
@@ -375,6 +377,126 @@ def test_evolve_procedure_completed_on_empty_state_raises() -> None:
 def test_evolve_procedure_aborted_on_empty_state_raises() -> None:
     with pytest.raises(ValueError, match="ProcedureAborted"):
         evolve(None, ProcedureAborted(procedure_id=uuid4(), reason="x", occurred_at=_NOW))
+
+
+# --- ProcedureHeld / ProcedureResumed arms (resumable conduct, Tier 1) ---
+
+
+def _to_running(prior: Procedure) -> Procedure:
+    return evolve(prior, ProcedureStarted(procedure_id=prior.id, occurred_at=_NOW))
+
+
+@pytest.mark.unit
+def test_evolve_procedure_held_sets_status_to_held() -> None:
+    running = _to_running(_defined())
+    state = evolve(
+        running, ProcedureHeld(procedure_id=running.id, reason="beam dropped", occurred_at=_NOW)
+    )
+    assert state.status is ProcedureStatus.HELD
+
+
+@pytest.mark.unit
+def test_evolve_procedure_resumed_sets_status_to_running() -> None:
+    running = _to_running(_defined())
+    held = evolve(
+        running, ProcedureHeld(procedure_id=running.id, reason="beam dropped", occurred_at=_NOW)
+    )
+    state = evolve(
+        held, ProcedureResumed(procedure_id=held.id, re_establishment_boundary=2, occurred_at=_NOW)
+    )
+    assert state.status is ProcedureStatus.RUNNING
+
+
+@pytest.mark.unit
+def test_evolve_procedure_held_preserves_iteration_denorms_and_actuation_kind() -> None:
+    """The load-bearing carry-forward: the Held arm must not wipe the
+    iteration denorms (the bug class the AST fitness guards)."""
+    running = _to_running(_defined(name="alignment", kind="alignment"))
+    # Open + close an iteration so the denorms are non-default.
+    started_iter = evolve(
+        running,
+        ProcedureIterationStarted(procedure_id=running.id, iteration_index=1, occurred_at=_NOW),
+    )
+    ended_iter = evolve(
+        started_iter,
+        ProcedureIterationEnded(
+            procedure_id=running.id,
+            iteration_index=1,
+            converged=False,
+            reason=None,
+            occurred_at=_NOW,
+        ),
+    )
+    state = evolve(
+        ended_iter, ProcedureHeld(procedure_id=running.id, reason="pause", occurred_at=_NOW)
+    )
+    assert state.status is ProcedureStatus.HELD
+    assert state.iteration_count == ended_iter.iteration_count == 1
+    assert state.current_iteration_index is None
+    assert (
+        state.consecutive_unconverged_iterations
+        == ended_iter.consecutive_unconverged_iterations
+        == 1
+    )
+    assert state.kind == "alignment"
+
+
+@pytest.mark.unit
+def test_evolve_procedure_resumed_preserves_iteration_denorms() -> None:
+    running = _to_running(_defined())
+    started_iter = evolve(
+        running,
+        ProcedureIterationStarted(procedure_id=running.id, iteration_index=1, occurred_at=_NOW),
+    )
+    held = evolve(
+        started_iter, ProcedureHeld(procedure_id=running.id, reason="pause", occurred_at=_NOW)
+    )
+    state = evolve(
+        held, ProcedureResumed(procedure_id=held.id, re_establishment_boundary=0, occurred_at=_NOW)
+    )
+    assert state.status is ProcedureStatus.RUNNING
+    # An iteration left open across the hold stays open on resume.
+    assert state.current_iteration_index == 1
+    assert state.iteration_count == 1
+
+
+@pytest.mark.unit
+def test_fold_hold_resume_cycle_lands_running() -> None:
+    pid = uuid4()
+    state = fold(
+        [
+            ProcedureRegistered(
+                procedure_id=pid,
+                name="alignment",
+                kind="alignment",
+                target_asset_ids=(),
+                parent_run_id=None,
+                occurred_at=_NOW,
+            ),
+            ProcedureStarted(procedure_id=pid, occurred_at=_NOW),
+            ProcedureHeld(procedure_id=pid, reason="first pause", occurred_at=_NOW),
+            ProcedureResumed(procedure_id=pid, re_establishment_boundary=0, occurred_at=_NOW),
+            ProcedureHeld(procedure_id=pid, reason="second pause", occurred_at=_NOW),
+            ProcedureResumed(procedure_id=pid, re_establishment_boundary=3, occurred_at=_NOW),
+        ]
+    )
+    assert state is not None
+    assert state.status is ProcedureStatus.RUNNING
+
+
+@pytest.mark.unit
+def test_evolve_procedure_held_on_empty_state_raises() -> None:
+    with pytest.raises(ValueError, match="ProcedureHeld"):
+        evolve(None, ProcedureHeld(procedure_id=uuid4(), reason="x", occurred_at=_NOW))
+
+
+@pytest.mark.unit
+def test_evolve_procedure_resumed_on_empty_state_raises() -> None:
+    with pytest.raises(ValueError, match="ProcedureResumed"):
+        evolve(
+            None,
+            ProcedureResumed(procedure_id=uuid4(), re_establishment_boundary=0, occurred_at=_NOW),
+        )
 
 
 # --- ProcedureActivitiesLogbookOpened arm ---

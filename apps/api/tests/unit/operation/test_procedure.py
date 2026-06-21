@@ -68,18 +68,22 @@ def test_procedure_name_rejects_over_max_length() -> None:
 
 @pytest.mark.unit
 def test_procedure_status_values_locked() -> None:
-    """Pin the 5-state FSM values; future additions must be a deliberate test edit.
+    """Pin the 6-state FSM values; future additions must be a deliberate test edit.
     The FSM was REVISED from BC map's `Idle/Starting/Running/Verifying/Complete/Aborted`
     per standards-corpus research at [[project_operation_design]]: Verifying is NOT
-    standards-blessed at FSM level; transient states deferred per Run BC precedent."""
+    standards-blessed at FSM level; transient states deferred per Run BC precedent.
+    `Held` lands in Tier 1 of [[project_resumable_conduct_design]] (operator-pause of
+    a halted conduct; mirrors RunStatus.HELD)."""
     assert ProcedureStatus.DEFINED.value == "Defined"
     assert ProcedureStatus.RUNNING.value == "Running"
+    assert ProcedureStatus.HELD.value == "Held"
     assert ProcedureStatus.COMPLETED.value == "Completed"
     assert ProcedureStatus.ABORTED.value == "Aborted"
     assert ProcedureStatus.TRUNCATED.value == "Truncated"
     assert {s.value for s in ProcedureStatus} == {
         "Defined",
         "Running",
+        "Held",
         "Completed",
         "Aborted",
         "Truncated",
@@ -90,7 +94,8 @@ def test_procedure_status_values_locked() -> None:
 def test_procedure_status_is_terminal_partitions_the_fsm() -> None:
     """is_terminal is True exactly for the terminal states. Pinned so a new
     state must consciously classify itself (consumers like register_dataset's
-    terminal-producing-Procedure guard rely on this)."""
+    terminal-producing-Procedure guard rely on this). `Held` is a pause-state,
+    NOT terminal."""
     terminal = {s for s in ProcedureStatus if s.is_terminal}
     assert terminal == {
         ProcedureStatus.COMPLETED,
@@ -99,6 +104,7 @@ def test_procedure_status_is_terminal_partitions_the_fsm() -> None:
     }
     assert not ProcedureStatus.DEFINED.is_terminal
     assert not ProcedureStatus.RUNNING.is_terminal
+    assert not ProcedureStatus.HELD.is_terminal
 
 
 # ---------- Error class shapes ----------

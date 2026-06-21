@@ -71,6 +71,22 @@ def test_projection_does_not_subscribe_to_iteration_ended() -> None:
 
 
 @pytest.mark.unit
+def test_projection_does_not_subscribe_to_hold_resume() -> None:
+    """Tier-1 resumable conduct deliberately leaves the summary read model
+    untouched: the `status` CHECK constraint admits only the 5 non-Held
+    statuses, so subscribing to ProcedureHeld/Resumed would write a value
+    the column rejects. A held Procedure therefore shows its last
+    subscribed status (Running) in `list_procedures`; terminal states are
+    still captured because abort/truncate/complete require resuming to
+    Running first (and those events ARE subscribed). Surfacing `Held` in
+    the read model is a follow-up that needs a forward-only migration to
+    widen the CHECK. See [[project_resumable_conduct_design]]."""
+    proj = ProcedureSummaryProjection()
+    assert "ProcedureHeld" not in proj.subscribed_event_types
+    assert "ProcedureResumed" not in proj.subscribed_event_types
+
+
+@pytest.mark.unit
 async def test_procedure_registered_inserts_with_defined_status_and_null_audit() -> None:
     proj = ProcedureSummaryProjection()
     conn = AsyncMock()

@@ -17,6 +17,7 @@ from cora.operation.features.complete_procedure import tool as complete_procedur
 from cora.operation.features.conduct_procedure import tool as conduct_procedure_tool
 from cora.operation.features.end_iteration import tool as end_iteration_tool
 from cora.operation.features.get_procedure import tool as get_procedure_tool
+from cora.operation.features.hold_procedure import tool as hold_procedure_tool
 from cora.operation.features.list_procedure_iterations import (
     tool as list_procedure_iterations_tool,
 )
@@ -25,6 +26,7 @@ from cora.operation.features.register_procedure import tool as register_procedur
 from cora.operation.features.register_procedure_from_recipe import (
     tool as register_procedure_from_recipe_tool,
 )
+from cora.operation.features.resume_procedure import tool as resume_procedure_tool
 from cora.operation.features.start_iteration import tool as start_iteration_tool
 from cora.operation.features.start_procedure import tool as start_procedure_tool
 from cora.operation.features.truncate_procedure import tool as truncate_procedure_tool
@@ -60,6 +62,14 @@ def register_operation_tools(
     truncate_procedure_tool.register(
         mcp,
         get_handler=lambda: get_handlers().truncate_procedure,
+    )
+    hold_procedure_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().hold_procedure,
+    )
+    resume_procedure_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().resume_procedure,
     )
     start_iteration_tool.register(
         mcp,
