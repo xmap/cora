@@ -33,7 +33,7 @@ observe-stream that does not exist yet (strawman headline). Beam-unknown
 (`quality_ok=False`) takes NO action, per design Lock 4 (never act on
 missing data).
 
-## Shadow Run-liveness pass (RunLivenessWatchdog v1)
+## Shadow run-liveness pass (the run-liveness rule, v1)
 
 A separate OBSERVE-ONLY pass flags a Run that has been Running for an
 implausibly long time (`now - running_since` past an operator ceiling): the
@@ -264,7 +264,7 @@ def is_run_stale(running_since: datetime | None, now: datetime, ceiling_seconds:
 
     Inclusive boundary: elapsed == ceiling FLAGS (`>=`). A Run with no
     `running_since` (legacy row, or one that started before the column existed)
-    is never stale -- it cannot be evaluated, so the watchdog defers (Lock 4:
+    is never stale -- it cannot be evaluated, so the rule defers (Lock 4:
     never act on missing data). The signal is `running_since`, a CORA-owned,
     un-spoofable timestamp set on RunStarted and reset on RunResumed.
     """
@@ -538,7 +538,7 @@ async def _supervise_tick(
         if run_id not in inflight_ids:
             liveness.discard(run_id)
 
-    # Shadow Run-liveness pass (RunLivenessWatchdog v1): OBSERVE-ONLY. It logs
+    # Shadow run-liveness pass (the run-liveness rule, v1): OBSERVE-ONLY. It logs
     # which Running Runs it WOULD flag as implausibly long (now - running_since
     # past the operator ceiling) and records nothing, issues no command. Run
     # before the beam read so it is independent of beam I/O. Off unless the

@@ -209,7 +209,7 @@ class Settings(BaseSettings):
     run_supervisor_resume_enabled: bool = False
     run_supervisor_resume_settle_ticks: int = 2
 
-    # `run_liveness_ceiling_seconds` gates the RunLivenessWatchdog shadow rule
+    # `run_liveness_ceiling_seconds` gates the run-liveness shadow rule
     # inside the RunSupervisor loop: a Run that has been Running longer than this
     # (now - running_since) is flagged as possibly-hung. Default None = OFF (a
     # second off-gate above run_supervisor_enabled). No safe universal default
@@ -474,12 +474,12 @@ class Settings(BaseSettings):
     @field_validator("run_liveness_ceiling_seconds")
     @classmethod
     def _validate_run_liveness_ceiling_seconds(cls, value: float | None) -> float | None:
-        """None disables the Run-liveness watchdog; a set ceiling must be
+        """None disables the run-liveness rule; a set ceiling must be
         positive (a non-positive ceiling would flag every Running Run at once)."""
         if value is not None and value <= 0:
             msg = (
                 f"run_liveness_ceiling_seconds must be > 0 when set, got {value}; "
-                "None disables the Run-liveness watchdog"
+                "None disables the run-liveness rule"
             )
             raise ValueError(msg)
         return value
