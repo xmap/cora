@@ -6,7 +6,7 @@ MAX IV itself is not an Asset: it is a Federation `Facility` with `FacilityKind 
 
 | Asset | Tier | facility_code | Hosts |
 | --- | --- | --- | --- |
-| `TomoWISE` | `Unit` | `maxiv` | TomoWISE microtomography / nanotomography beamline |
+| `TomoWISE` | `Unit` | `maxiv` | [TomoWise](../tomowise/index.md) |
 
 Sub-systems and devices nested under the beamline are Assets with `tier = Component` or `tier = Device`, linked via `parent_id`. Being non-root, they do not carry `facility_code`; they inherit facility scope through the `parent_id` tree.
 
