@@ -4,6 +4,39 @@
 
 The sample stage is two experiment stations in the experiment hutch, sharing one [Detector](detector.md) gantry: a microtomography station (~45 m) and a nanotomography station (~49 m). They are modelled as two sample-stage groups in the [descriptor](../inventory.md), each presenting the specimen to the beam in a different way. Models named "(target)" are the TDR design selections, carried unbound until procurement confirms them.
 
+Unlike the [Detector](detector.md), the sample stage is **not modelled as a catalog Assembly** here: it is a device group, not a composed `Microscope`-style blueprint. (2-BM models its sample positioning as a `SampleTower` Assembly + Fixture; TomoWISE could earn the same once the manipulator firms and a scenario registers it.) So these pages carry the containment trees but no Assembly-to-Fixture composition diagram.
+
+## The model in one picture
+
+The kinematic stacks, base to sample (containment, `Asset.parent_id`). The precise sub-order firms with the mechanical design (TDR manipulator tables 9.1 / 9.5); the trees below are the design-layout intent.
+
+Microtomography (~45 m), mirroring the standard table -> tilt -> rotary -> sample-top order:
+
+```
+TomoWISE  (Unit, Asset)
+└── SampleTable  (Component, Family Table; base, fixed at 45 m, Xt/Yt/beta)
+    ├── LaminographyTilt  (Device, TiltStage; tilts the rotation axis, alpha)
+    │   └── Rotary  (Device, RotaryStage; wy, master rotation + trigger clock)
+    │       ├── SamplePositioning  (Device, LinearStage; Xs/Zs, co-rotates)
+    │       └── SlipRing  (Device, SlipRing; continuous-rotation feedthrough)
+    ├── SampleSlit  (Device, Slit; sample-side, beam-defining)
+    └── FastShutter  (Device, Shutter; sample-side)
+```
+
+Nanotomography (~49 m), the granite carrying the KB optics and the coarse-to-fine manipulator:
+
+```
+TomoWISE  (Unit, Asset)
+└── NanoGranite  (Component, Family Table; granite support, ~49 m)
+    ├── KB  (Device, Mirror; KB focusing pair)
+    └── NanoCoarseZ  (Device, LinearStage; Zt, long-travel into the KB focus)
+        └── NanoCoarseY  (Device, LinearStage; Yt, sample height)
+            └── NanoCoarseX  (Device, LinearStage; Xt, centre-of-rotation)
+                └── NanoTilt  (Device, TiltStage; Tilt X, axis-to-beam)
+                    └── NanoRotary  (Device, RotaryStage; Rot y, continuous rotation)
+                        └── NanoSamplePositioning  (Device, LinearStage; Xs/Zs, fine centring)
+```
+
 ## Microtomography endstation (~45 m)
 
 The workhorse station: a fixed sample table about 45 m from the source carrying the rotation and positioning stack. The `Rotary` stage is also the trigger master clock (see [Controls](controls.md)).
