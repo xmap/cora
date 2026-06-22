@@ -908,7 +908,7 @@
 | src/cora/equipment/features/register\_fixture/\_\_init\_\_.py                            |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/register\_fixture/command.py                                 |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/register\_fixture/context.py                                 |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/equipment/features/register\_fixture/decider.py                                 |       78 |        4 |       48 |        3 |     92.9% |101-102, 108, 192 |
+| src/cora/equipment/features/register\_fixture/decider.py                                 |       78 |        3 |       48 |        3 |     95.2% |102, 108, 192 |
 | src/cora/equipment/features/register\_fixture/handler.py                                 |       56 |        2 |        4 |        1 |     95.0% |   121-129 |
 | src/cora/equipment/features/register\_fixture/route.py                                   |       23 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/features/register\_fixture/tool.py                                    |       22 |        0 |        0 |        0 |    100.0% |           |
@@ -2329,7 +2329,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **47869** | **1035** | **6742** |  **291** | **97.3%** |           |
+| **TOTAL**                                                                                | **47869** | **1034** | **6742** |  **291** | **97.3%** |           |
 
 
 ## Setup coverage badge
