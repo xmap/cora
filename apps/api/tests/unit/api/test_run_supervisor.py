@@ -1887,3 +1887,35 @@ async def test_record_supervision_advice_is_idempotent_on_repeated_id() -> None:
 
     # The second emission re-derived the same id and was swallowed: one Decision.
     assert await _supervision_decision_choices(kernel) == ["SupervisionStalled"]
+
+
+@pytest.mark.unit
+async def test_tick_raises_read_unauthorized_when_drain_denied() -> None:
+    """A Denied ListRuns read (missing grant) surfaces as the scaffold's
+    WatcherReadUnauthorizedError, not a buried generic tick failure -- and the
+    blinded supervisor takes no autonomous action."""
+    from cora.api._flag_watcher import WatcherReadUnauthorizedError
+
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+
+    async def denying_list_runs(
+        query: ListRuns,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> RunListPage:
+        raise UnauthorizedError("supervisor not granted ListRuns")
+
+    hold_run, hold_calls = _make_recording_hold()
+    with pytest.raises(WatcherReadUnauthorizedError) as exc:
+        await _tick(
+            kernel,
+            list_runs=denying_list_runs,
+            hold_run=hold_run,
+            beam_lookup=_BeamDown(),
+            memory={},
+        )
+    assert exc.value.query_name == "ListRuns"
+    assert hold_calls == []

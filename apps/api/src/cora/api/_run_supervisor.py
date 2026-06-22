@@ -75,6 +75,7 @@ from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
 from cora.agent.seed_run_supervisor import RUN_SUPERVISOR_AGENT_ID
+from cora.api._flag_watcher import WatcherReadUnauthorizedError, probe_read_grant
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_RUN_SUPERVISION,
     DecisionChoice,
@@ -142,6 +143,7 @@ _COMMAND_NAME = "RunSupervisorTick"
 _STREAM_TYPE = "Decision"
 _DEFAULT_INTERVAL_SECONDS = 30.0
 _PAGE_LIMIT = 100
+_READ_COMMAND = "ListRuns"
 
 # Per-Run supervisor memory values (in-process, edge-trigger + cool-down).
 _MEM_HELD = "held_by_supervisor"
@@ -816,8 +818,18 @@ async def _supervise_tick(
         # Supervisor not seeded yet, or deactivated by an operator: stand down.
         return
 
-    running = await _drain_runs(list_runs, deps, status="Running")
-    held = await _drain_runs(list_runs, deps, status="Held")
+    try:
+        running = await _drain_runs(list_runs, deps, status="Running")
+        held = await _drain_runs(list_runs, deps, status="Held")
+    except UnauthorizedError as err:
+        # The authz-gated drain was Denied: a missing ListRuns read grant blinds
+        # the supervisor. Re-raise as the scaffold type so the loop warns loudly
+        # (edge-triggered) instead of burying it as a generic tick failure.
+        raise WatcherReadUnauthorizedError(
+            query_name=_READ_COMMAND,
+            principal_id=RUN_SUPERVISOR_AGENT_ID,
+            reason=str(err),
+        ) from err
     inflight_ids = {item.run_id for item in running} | {item.run_id for item in held}
     for run_id in list(memory):
         if run_id not in inflight_ids:
@@ -984,6 +996,7 @@ async def _supervise_loop(
     stall: set[UUID] = set()
     stall_streak: dict[UUID, int] = {}
     feed_dead_warned: set[UUID] = set()
+    read_denied = False
     while True:
         try:
             await _supervise_tick(
@@ -1006,8 +1019,23 @@ async def _supervise_loop(
                 liveness_ceiling_seconds=liveness_ceiling_seconds,
                 advise_enabled=advise_enabled,
             )
+            if read_denied:
+                _log.info("run_supervisor.read_authorized_recovered")
+                read_denied = False
         except asyncio.CancelledError:
             raise
+        except WatcherReadUnauthorizedError as err:
+            # A missing ListRuns grant blinds the supervisor; surface it loudly
+            # (edge-triggered, once per denial episode) rather than as a generic
+            # tick failure. The drain stands down for the tick.
+            if not read_denied:
+                _log.warning(
+                    "run_supervisor.read_unauthorized",
+                    query_name=err.query_name,
+                    principal_id=str(err.principal_id),
+                    reason=err.reason,
+                )
+                read_denied = True
         except Exception:
             _log.exception("run_supervisor.tick_failed")
         await asyncio.sleep(interval_seconds)
@@ -1045,6 +1073,14 @@ async def run_supervisor_lifespan(
         _log.info("run_supervisor.skipped", reason="disabled")
         yield
         return
+
+    await probe_read_grant(
+        deps,
+        agent_id=RUN_SUPERVISOR_AGENT_ID,
+        read_command=_READ_COMMAND,
+        log_prefix="run_supervisor",
+        strict=deps.settings.watcher_authz_strict,
+    )
 
     interval = (
         interval_seconds

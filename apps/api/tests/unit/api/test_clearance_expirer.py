@@ -428,3 +428,34 @@ def test_clearance_expirer_tick_seconds_accepts_valid() -> None:
     assert (
         Settings(clearance_expirer_tick_seconds=120.0).clearance_expirer_tick_seconds == 120.0  # type: ignore[call-arg]
     )
+
+
+@pytest.mark.unit
+async def test_tick_raises_read_unauthorized_when_drain_denied() -> None:
+    """A Denied ListClearances read (missing grant) surfaces as the scaffold's
+    WatcherReadUnauthorizedError, not a buried generic tick failure -- and the
+    blinded expirer issues no autonomous expiry."""
+    from cora.api._clearance_expirer import _expire_tick
+    from cora.api._flag_watcher import WatcherReadUnauthorizedError
+
+    kernel = _kernel()
+    await seed_clearance_expirer_agent(kernel)
+
+    async def denying_list_clearances(
+        query: ListClearances,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ClearanceListPage:
+        raise UnauthorizedError("expirer not granted ListClearances")
+
+    expire_clearance, calls = _make_recording_expire()
+    with pytest.raises(WatcherReadUnauthorizedError) as exc:
+        await _expire_tick(
+            deps=kernel,
+            list_clearances=denying_list_clearances,
+            expire_clearance=expire_clearance,
+        )
+    assert exc.value.query_name == "ListClearances"
+    assert calls == []

@@ -47,6 +47,7 @@ from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
 from cora.agent.seed_clearance_expirer import CLEARANCE_EXPIRER_AGENT_ID
+from cora.api._flag_watcher import WatcherReadUnauthorizedError, probe_read_grant
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_CLEARANCE_EXPIRY,
     DecisionChoice,
@@ -87,6 +88,7 @@ _log = get_logger(__name__)
 
 _RULE = "agent:ClearanceExpirer:v1"
 _COMMAND_NAME = "ClearanceExpirerTick"
+_READ_COMMAND = "ListClearances"
 _STREAM_TYPE = "Decision"
 _PAGE_LIMIT = 100
 _CHOICE_EXPIRE = "Expire"
@@ -249,7 +251,17 @@ async def _expire_tick(
         return
 
     now = deps.clock.now()
-    items = await _drain_active_clearances(list_clearances, deps)
+    try:
+        items = await _drain_active_clearances(list_clearances, deps)
+    except UnauthorizedError as err:
+        # The authz-gated drain was Denied: a missing ListClearances read grant
+        # blinds the expirer. Re-raise as the scaffold type so the loop warns
+        # loudly (edge-triggered) instead of burying it as a generic tick failure.
+        raise WatcherReadUnauthorizedError(
+            query_name=_READ_COMMAND,
+            principal_id=CLEARANCE_EXPIRER_AGENT_ID,
+            reason=str(err),
+        ) from err
     for item in items:
         valid_until = item.valid_until
         if valid_until is None or not is_window_elapsed(valid_until, now):
@@ -270,6 +282,7 @@ async def _expire_loop(
     interval_seconds: float,
 ) -> None:
     """Periodic expiry loop. A failed tick is logged; the next tick retries."""
+    read_denied = False
     while True:
         try:
             await _expire_tick(
@@ -277,8 +290,23 @@ async def _expire_loop(
                 list_clearances=list_clearances,
                 expire_clearance=expire_clearance,
             )
+            if read_denied:
+                _log.info("clearance_expirer.read_authorized_recovered")
+                read_denied = False
         except asyncio.CancelledError:
             raise
+        except WatcherReadUnauthorizedError as err:
+            # A missing ListClearances grant blinds the expirer; surface it loudly
+            # (edge-triggered, once per denial episode) rather than as a generic
+            # tick failure. The drain stands down for the tick.
+            if not read_denied:
+                _log.warning(
+                    "clearance_expirer.read_unauthorized",
+                    query_name=err.query_name,
+                    principal_id=str(err.principal_id),
+                    reason=err.reason,
+                )
+                read_denied = True
         except Exception:
             _log.exception("clearance_expirer.tick_failed")
         await asyncio.sleep(interval_seconds)
@@ -301,6 +329,14 @@ async def clearance_expirer_lifespan(
         _log.info("clearance_expirer.skipped", reason="disabled")
         yield
         return
+
+    await probe_read_grant(
+        deps,
+        agent_id=CLEARANCE_EXPIRER_AGENT_ID,
+        read_command=_READ_COMMAND,
+        log_prefix="clearance_expirer",
+        strict=deps.settings.watcher_authz_strict,
+    )
 
     interval = (
         interval_seconds
