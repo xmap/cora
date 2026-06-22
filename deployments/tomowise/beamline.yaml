@@ -351,27 +351,27 @@ detector:
       cora: "Assembly(Microscope) presenting the Detector Role; Optics sub-assembly = turret + objectives + selector. The camera and propagation_distance slots are left empty (shared cameras + DetectorGantry rail)."
       note: "large-field-of-view microscope; Optique Peter housing, model is the 2-BM candidate pending TomoWISE confirmation (DET-2)"
       constituents:
-        - name: MicLFOV_Turret
+        - name: Turret
           family: LinearStage
           new: true
           confirm: true
           note: "objective changer: switches objectives without intervening in the setup (TDR p57)"
-        - name: MicLFOV_Objective_1x
+        - name: Objective_1x
           family: Objective
           new: true
           confirm: true
           magnification: 1.0
-        - name: MicLFOV_Objective_2x
+        - name: Objective_2x
           family: Objective
           new: true
           confirm: true
           magnification: 2.0
-        - name: MicLFOV_ObjectiveSelector
+        - name: ObjectiveSelector
           family: PseudoAxis
           new: true
           confirm: true
           note: "virtual objective picker over the turret"
-        - name: MicLFOV_Scintillator
+        - name: Scintillator
           family: Scintillator
           new: true
           confirm: true
@@ -387,32 +387,32 @@ detector:
       cora: "Assembly(Microscope) presenting the Detector Role; Optics sub-assembly = turret + objectives + selector. The camera and propagation_distance slots are left empty (shared cameras + DetectorGantry rail)."
       note: "high-resolution microscope; Optique Peter housing, model is the 2-BM candidate pending TomoWISE confirmation (DET-2)"
       constituents:
-        - name: MicHR_Turret
+        - name: Turret
           family: LinearStage
           new: true
           confirm: true
           note: "objective changer: switches objectives without intervening in the setup (TDR p57)"
-        - name: MicHR_Objective_4x
+        - name: Objective_4x
           family: Objective
           new: true
           confirm: true
           magnification: 4.0
-        - name: MicHR_Objective_10x
+        - name: Objective_10x
           family: Objective
           new: true
           confirm: true
           magnification: 10.0
-        - name: MicHR_Objective_20x
+        - name: Objective_20x
           family: Objective
           new: true
           confirm: true
           magnification: 20.0
-        - name: MicHR_ObjectiveSelector
+        - name: ObjectiveSelector
           family: PseudoAxis
           new: true
           confirm: true
           note: "virtual objective picker over the turret"
-        - name: MicHR_Scintillator
+        - name: Scintillator
           family: Scintillator
           new: true
           confirm: true
