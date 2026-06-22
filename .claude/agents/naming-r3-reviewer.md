@@ -90,6 +90,7 @@ No prose preamble. No closing summary. The PR author reads the list, applies the
 - Do not flag test names; tests follow `test_<subject>_<scenario>_<expectation>` per `docs/reference/conventions.md#tests`, not R1-R5.
 - Do not flag projection-table names; they follow `proj_<bc>_<aggregate>_<rowtype>` per `docs/reference/conventions.md#projection-tables`.
 - Do not flag the schema-suffix exception (`parameters_schema`, `settings_schema`).
+- Do not flag the `suspend` / `hold` coexistence across aggregates as an R2 family-symmetry violation. The reversible-pause verb splits by entity kind per `docs/reference/conventions.md` "Reversible-pause verbs split by entity kind": grant-shaped aggregates (Agent, Permit) use `suspend` + `Suspended`; execution / container aggregates (Run, Campaign, Visit) use `hold` + `Held` / `OnHold`. They are two families that share only the `resume` recovery verb, not one family with a split skeleton.
 - Do not flag unit/contract placeholder procedure kinds (`bakeout`, `alignment`, `"a"`, padded whitespace) or the R6 carve-outs (`first_light`, `*_baseline`); only deployment/scenario kinds are in R6 scope.
 - Do not propose renames for things already locked on `main` unless the PR itself is the rename PR.
 
