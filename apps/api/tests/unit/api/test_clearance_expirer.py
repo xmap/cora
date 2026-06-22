@@ -14,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
+import structlog
 
 from cora.agent.seed_clearance_expirer import (
     CLEARANCE_EXPIRER_AGENT_ID,
@@ -458,4 +459,44 @@ async def test_tick_raises_read_unauthorized_when_drain_denied() -> None:
             expire_clearance=expire_clearance,
         )
     assert exc.value.query_name == "ListClearances"
+    assert calls == []
+
+
+@pytest.mark.unit
+async def test_loop_warns_once_per_read_denial_episode_then_recovers() -> None:
+    """The bespoke expiry loop surfaces a read-denial as ONE edge-triggered
+    warning (not a generic tick_failed) and logs recovery when reads resume."""
+    kernel = _kernel(enabled=True)
+    await seed_clearance_expirer_agent(kernel)
+    expire_clearance, calls = _make_recording_expire()
+    state = {"calls": 0}
+    recovered = asyncio.Event()
+
+    async def flaky_list_clearances(
+        query: ListClearances,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ClearanceListPage:
+        state["calls"] += 1
+        if state["calls"] <= 2:  # two denied ticks in one episode
+            raise UnauthorizedError("expirer not granted ListClearances")
+        recovered.set()  # third tick onward: reads succeed
+        return ClearanceListPage(items=[], next_cursor=None)
+
+    with structlog.testing.capture_logs() as logs:
+        async with clearance_expirer_lifespan(
+            kernel,
+            list_clearances=flaky_list_clearances,
+            expire_clearance=expire_clearance,
+            interval_seconds=0.01,
+        ):
+            await asyncio.wait_for(recovered.wait(), timeout=1.0)
+            await asyncio.sleep(0.03)  # let the loop log recovery after the tick returns
+
+    events = [e.get("event") for e in logs]
+    assert events.count("clearance_expirer.read_unauthorized") == 1
+    assert "clearance_expirer.tick_failed" not in events
+    assert "clearance_expirer.read_authorized_recovered" in events
     assert calls == []

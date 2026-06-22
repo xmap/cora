@@ -262,13 +262,17 @@ async def clearance_watcher_lifespan(
         await _watch_tick(deps=deps, list_clearances=list_clearances, get_clearance=get_clearance)
 
     async def startup_probe() -> None:
-        await probe_read_grant(
-            deps,
-            agent_id=CLEARANCE_WATCHER_AGENT_ID,
-            read_command=_READ_COMMAND,
-            log_prefix=_LOG_PREFIX,
-            strict=deps.settings.watcher_authz_strict,
-        )
+        # Both reads are authz-gated: the ListClearances drain AND the per-candidate
+        # GetClearance fold. Probe both so a partial grant (List yes / Get no) is
+        # caught at boot under strict mode, not only at the first UnderReview tick.
+        for read_command in (_READ_COMMAND, _GET_COMMAND):
+            await probe_read_grant(
+                deps,
+                agent_id=CLEARANCE_WATCHER_AGENT_ID,
+                read_command=read_command,
+                log_prefix=_LOG_PREFIX,
+                strict=deps.settings.watcher_authz_strict,
+            )
 
     async with flag_watcher_lifespan(
         enabled=deps.settings.clearance_watcher_enabled,

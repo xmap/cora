@@ -1919,3 +1919,47 @@ async def test_tick_raises_read_unauthorized_when_drain_denied() -> None:
         )
     assert exc.value.query_name == "ListRuns"
     assert hold_calls == []
+
+
+@pytest.mark.unit
+async def test_loop_warns_once_per_read_denial_episode_then_recovers() -> None:
+    """The bespoke supervise loop surfaces a read-denial as ONE edge-triggered
+    warning (not a generic tick_failed) and logs recovery when reads resume."""
+    kernel = _kernel(enabled=True)
+    await seed_run_supervisor_agent(kernel)
+    hold_run, hold_calls = _make_recording_hold()
+    resume_run, _ = _make_recording_resume()
+    state = {"calls": 0}
+    recovered = asyncio.Event()
+
+    async def flaky_list_runs(
+        query: ListRuns,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> RunListPage:
+        if query.status == "Running":
+            state["calls"] += 1
+            if state["calls"] <= 2:  # two denied ticks in one episode
+                raise UnauthorizedError("supervisor not granted ListRuns")
+            recovered.set()  # third tick onward: reads succeed
+        return RunListPage(items=[], next_cursor=None)
+
+    with structlog.testing.capture_logs() as logs:
+        async with run_supervisor_lifespan(
+            kernel,
+            list_runs=flaky_list_runs,
+            hold_run=hold_run,
+            resume_run=resume_run,
+            beam_lookup=_BeamDown(),
+            interval_seconds=0.01,
+        ):
+            await asyncio.wait_for(recovered.wait(), timeout=1.0)
+            await asyncio.sleep(0.03)  # let the loop log recovery after the tick returns
+
+    events = [e.get("event") for e in logs]
+    assert events.count("run_supervisor.read_unauthorized") == 1
+    assert "run_supervisor.tick_failed" not in events
+    assert "run_supervisor.read_authorized_recovered" in events
+    assert hold_calls == []
