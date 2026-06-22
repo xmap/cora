@@ -176,10 +176,12 @@ def test_renders_source_stage_walk_and_no_em_dash() -> None:
     assert "`new`" in markdown
     # the P6-50 nested constituents (a source-stage device) render as their own sub-table
     assert "**SafetyStack constituents**" in markdown
-    # a source family present in the Catalog links up; a pending one renders plain (no fake link)
+    # a source family present in the Catalog links up; a pending one renders plain (no fake link).
+    # Beam is the loose bending-magnet source representation, intentionally never a catalog Family
+    # (see the InsertionDevice family note), so it is a stable "renders plain" example.
     assert "](../../catalog/families.md)" in markdown
-    assert "`Mask`" in markdown
-    assert "[`Mask`](../../catalog/families.md)" not in markdown
+    assert "`Beam`" in markdown
+    assert "[`Beam`](../../catalog/families.md)" not in markdown
     # the folded source-area modelling note and the confirm marker render
     assert "no Conditioner Role" in markdown
     assert "`confirm`" in markdown

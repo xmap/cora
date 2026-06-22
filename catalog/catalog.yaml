@@ -70,6 +70,8 @@ families:
     note: "Beam-defining four-blade slit Family (four independently-driven blades forming a variable horizontal/vertical opening). 2-BM: ConditioningSlit (A-station L3-20) and SampleSlit (B-station)."
   - name: Aperture
     note: "Patterned beam-shaping aperture Family: a fixed-pattern mask positioned in the beam as a unit. Distinct from Slit (a variable opening defined by four driven blades) and from a passive Mask (a fixed beam-defining opening that does not move); the discriminator is the element's nature (a fixed code pattern), not that it is driven. 2-BM: the coded aperture for compressive-sensing tomography, fine-positioned by ApertureFineDrive."
+  - name: Mask
+    note: "Passive beam-defining mask Family: a plain fixed-opening element that shapes or limits the beam, positioned as a unit. Distinct from Slit (a variable opening via four driven blades) and Aperture (a fixed code pattern); the discriminator is the element's nature (a plain fixed opening). One Family spans the permanently-fixed masks and the movable safety-mask variant (movability is a per-Asset setting, the Table / InsertionDevice precedent). 2-BM: the M3-24 front-end exit mask. TomoWISE: the FM1 / FM2 fixed masks and the MSM movable safety mask. Earned in once two deployments shared it; beam-effect modelling stays deferred (the passive beam-path tier)."
   - name: Mirror
     note: "Beam-steering grazing-incidence mirror optic Family. 2-BM: the Y3-30 mirror (distinct from its MirrorTable support, which is Family Table)."
   - name: Monochromator

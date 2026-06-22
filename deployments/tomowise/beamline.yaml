@@ -76,9 +76,9 @@ front-end:
   enclosure: TomoWISE-optics
   intro: "Fixed and movable masks plus the heat absorber that shape the beam and absorb power before the optics hutch."
   note: >
-    z from the CPMU14 source (TDR Table 7.1). Mask/heat-absorber Families are
-    not yet in the catalog (they render as plain text pending the passive
-    beam-path tier); bound loosely here by design intent.
+    z from the CPMU14 source (TDR Table 7.1). Mask is now a shared catalog
+    Family; the heat-absorber Family is not yet in the catalog (it renders as
+    plain text pending the passive beam-path tier), bound loosely by design intent.
   devices:
     - name: FM1
       family: Mask

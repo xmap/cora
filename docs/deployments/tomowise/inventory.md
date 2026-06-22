@@ -42,7 +42,7 @@ Root Asset `TomoWISE` (`tier = Unit`, `facility_code = maxiv`); sub-systems nest
 | `MicLFOV` / `MicHR` | `Device` | Microscope | 1-2x / 4-20x microscopes |
 | `CameraI` ... `CameraIV` | `Device` | Camera | 16-25 / 4 / 4 / 150 Mpix |
 
-Families not yet in the catalog (`Mask`, `HeatAbsorber`, `SlipRing`, `Microscope`) are bound loosely by design intent; they are earned into the catalog when a confirmed device needs them (the beam-path mask/stop tier is tracked below). The nano manipulator reuses the same `TiltStage`, `LinearStage`, `RotaryStage`, and `Table` Families as the micro endstation, so it needs no nano-specific Family.
+`Mask` is now a shared catalog Family (earned in once both 2-BM and TomoWISE used it). The remaining families not yet in the catalog (`HeatAbsorber`, `SlipRing`, `Microscope`) are bound loosely by design intent; they are earned into the catalog when a confirmed device needs them (the beam-path stop tier is tracked below). The nano manipulator reuses the same `TiltStage`, `LinearStage`, `RotaryStage`, and `Table` Families as the micro endstation, so it needs no nano-specific Family.
 
 ## Pending confirmations
 
