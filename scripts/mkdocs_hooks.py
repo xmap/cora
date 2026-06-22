@@ -57,6 +57,14 @@ LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 # architecture/ page, so build it once per process.
 _ARCH_MODEL: object | None = None
 
+# Cached beamline descriptors, one per deployment id, so a deployment's pages
+# share a single parsed descriptor across the build.
+_BEAMLINE_DESCRIPTORS: dict[str, object] = {}
+
+# Cached catalog descriptor: the cross-facility vocabulary is the same for every
+# page, so parse catalog/catalog.yaml once per process.
+_CATALOG: object | None = None
+
 
 def _arch_model() -> object:
     global _ARCH_MODEL
@@ -65,6 +73,31 @@ def _arch_model() -> object:
 
         _ARCH_MODEL = architecture_introspect.introspect(CORA_SRC)
     return _ARCH_MODEL
+
+
+def _beamline_descriptor_for(src_uri: str) -> object:
+    """Load (and cache) the beamline descriptor for the deployment owning a page.
+
+    `src_uri` is deployments/<id>/...; the descriptor is read from
+    deployments/<id>/beamline.yaml. A missing or invalid descriptor raises and
+    fails the build, so a beamline:* marker can never expand from stale data.
+    """
+    deployment_id = Path(src_uri).parts[1]
+    if deployment_id not in _BEAMLINE_DESCRIPTORS:
+        import beamline_descriptor
+
+        path = DEPLOYMENTS_DIR / deployment_id / "beamline.yaml"
+        _BEAMLINE_DESCRIPTORS[deployment_id] = beamline_descriptor.load(path)
+    return _BEAMLINE_DESCRIPTORS[deployment_id]
+
+
+def _catalog() -> object:
+    global _CATALOG
+    if _CATALOG is None:
+        import catalog_descriptor
+
+        _CATALOG = catalog_descriptor.load(CATALOG_PATH)
+    return _CATALOG
 
 
 # Ensure sibling scripts (beamline_descriptor, beamline_pages) are importable
@@ -166,6 +199,25 @@ def on_page_markdown(
         import architecture_pages
 
         markdown = architecture_pages.expand_markers(markdown, model=_arch_model(), src_uri=src_uri)
+    # Deployment pages carry beamline:* markers whose tables are rendered from the
+    # deployment's beamline descriptor (expand before link-rewrite).
+    if src_uri.startswith("deployments/") and "<!-- beamline:" in markdown:
+        import beamline_markers
+
+        markdown = beamline_markers.expand_markers(
+            markdown, descriptor=_beamline_descriptor_for(src_uri), src_uri=src_uri
+        )
+    # Deployment pages also carry catalog:* markers whose vendor-Model tables are
+    # rendered from the catalog (plus the descriptor for the used-by column).
+    if src_uri.startswith("deployments/") and "<!-- catalog:" in markdown:
+        import catalog_markers
+
+        markdown = catalog_markers.expand_markers(
+            markdown,
+            catalog=_catalog(),
+            descriptor=_beamline_descriptor_for(src_uri),
+            src_uri=src_uri,
+        )
     return _rewrite_in_page(src_uri, markdown)
 
 

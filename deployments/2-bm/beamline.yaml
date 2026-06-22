@@ -610,6 +610,7 @@ controls:
       axis_count: 1
       serial_number: "730792/1"            # operator-confirmed (#161); firmware still pending (DRIVE-2)
       chassis: RotaryDriveChassis          # the ML drive card sits in this chassis (#162 DRIVE-4)
+      epics_handle: "2bmb:m100-m102"       # ioc2bmb crate
     - name: RotaryDriveChassis
       family: Housing
       model: aerotech_tm3a
@@ -623,24 +624,28 @@ controls:
       protocol: Aerotech_Native
       axis_count: 6
       serial_number: "486125-01"         # operator-confirmed (#156); firmware still pending (DRIVE-2)
+      epics_handle: "2bmHXP:"
     - name: PropagationDistanceDrive
       family: MotionController
       model: aerotech_ensemble_hle         # Aerotech Ensemble HLe 10-40-A-IO-MXH, 2bmbAERO IOC (#162 DRIVE-4, operator-confirmed 2026-06-16)
       protocol: Aerotech_Native
       axis_count: 1
       serial_number: "228849-02"           # operator-confirmed (#161); firmware still pending (DRIVE-2)
+      epics_handle: "2bmbAERO"
     - name: SampleStageDrive
       family: MotionController
       model: oms_vme58
       protocol: OMS_VME
       axis_count: 91
       note: b-station crate (ioc2bmb), drives 2bmb:m1-m91 including the sample stages
+      epics_handle: "2bmb:m*"
     - name: FrontEndDrive
       family: MotionController
       model: oms_vme58
       protocol: OMS_VME
       axis_count: 91
       note: "a-station crate (ioc2bma); drives the front-end + optics band and also the B-station SampleSlit (2bma:m9-m12). Named for its primary band; the full driven set spans both hutches and lives in the EPICS channel map, not the name."
+      epics_handle: "2bma:m*"
     # NV100D (formerly the provisional OpticsFineDrive): physically present with IOC
     # support (arcturus, IOC JenaNV100D) but NOT in operational use at 2-BM, because the
     # NV100D lacks the external trigger mode tomoscan fly-scan needs, so no Run/Procedure
@@ -651,6 +656,7 @@ controls:
       protocol: EPICS                # arcturus host, IOC JenaNV200D; Xon/Xoff flow control
       axis_count: 2
       ip_addresses: { x: "10.54.113.126", y: "10.54.113.125" }   # two NV200D units, one per axis (PIEZO-4, #244)
+      epics_handle: "JenaNV200D"          # arcturus host
       note: >-
         Two independent Piezosystem Jena NV200D/NET single-channel controllers (one per
         axis, separate IPs above) that fine-position the Aperture coded-mask via a

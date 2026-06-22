@@ -102,18 +102,8 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 
 Models bound to non-microscope 2-BM Assets. Model ids are derived from `(manufacturer, part number)`, so one vendor product converges on one id. Microscope-housing Models are on the [Microscope deployment](equipment/microscope.md#vendor-catalog) page.
 
-| Model | Vendor | Part number | Drives / used by |
-| --- | --- | --- | --- |
-| `aerotech_hex300` | Aerotech | `HEX300-230HL-E1-PL4-TAS` | `Hexapod` |
-| `aerotech_abrs250mp` | Aerotech | `ABRS-250MP-M-AS` | `Rotary` |
-| `aerotech_ensemble_ml` | Aerotech | `ENSEMBLEML 10-40-IO-MXH` | `RotaryDrive` |
-| `aerotech_automation1_ixr3` | Aerotech | `Automation1-iXR3-VL1-VB4-VB4-SB0CT222222-P1P1P1P1P1P1-CO-LC1MT1PSO6-SI0-TAS` | `HexapodDrive` |
-| `aerotech_ensemble_hle` | Aerotech | `EnsembleHLe10-40-A-IO-MXH` | `PropagationDistanceDrive` |
-| `aerotech_pro225sl` | Aerotech | `PRO225SL-1000` | `PropagationDistance` |
-| `aerotech_tm3a` | Aerotech | `TM3-A-20B VDC-20B VDC / NO SPLIT / PS24-1 / C1ML-06 / C2ML-09 / US-115VAC` | `RotaryDriveChassis` |
-| `oms_vme58` | Oregon Micro Systems | `VME58` | `SampleStageDrive`, `FrontEndDrive` |
-| `kohzu_cyat070` | Kohzu | `CYAT-070` | `SampleTop_X`, `SampleTop_Z` |
-| `piezosystem_jena_nv200d` | Piezosystem Jena | `NV200D/NET` | `ApertureFineDrive` |
+<!-- catalog:models models=aerotech_hex300,aerotech_abrs250mp,aerotech_ensemble_ml,aerotech_automation1_ixr3,aerotech_ensemble_hle,aerotech_pro225sl,aerotech_tm3a,oms_vme58,kohzu_cyat070,piezosystem_jena_nv200d show=usedby -->
+<!-- /catalog:models -->
 
 Controller back-references: `RotaryDrive`->`Rotary.controller_id`; `HexapodDrive`->`Hexapod.controller_id`; `PropagationDistanceDrive`->`PropagationDistance.controller_id` (IOC `2bmbAERO`); `SampleStageDrive`->`SampleTop_X` (`2bmb:m18`) / `SampleTop_Z` (`2bmb:m17`) + 89 further motors on `ioc2bmb`; `FrontEndDrive`->`Mirror`, `Monochromator`, `ConditioningSlit`, `SampleSlit`, `Filter` on `ioc2bma`. The `Objective_Selector` (`2bmb:m1`) and `Camera_Selector` (`2bmb:m5`) steppers run through the `SampleStageDrive` OMS crate, not distinct controller Assets. The six `Hexapod_*` DoF facets bind no Model (the physical `Hexapod` carries `aerotech_hex300`).
 

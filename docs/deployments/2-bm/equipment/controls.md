@@ -6,16 +6,10 @@ A controller is an `Asset` like any other, but it relates to the hardware it mov
 
 ## Motion controllers
 
-Each box's bound vendor Model, communication protocol, slot capacity, and EPICS handle. Per-unit identity (serial, firmware) and the full driven-Asset back-references live in the [Inventory settings](../inventory.md#settings) and [vendor catalog](../inventory.md#vendor-catalog-models).
+Each box's communication protocol, axis capacity, and EPICS handle, with the devices it drives derived from their `controller` back-references. The model maps to a vendor in the [vendor catalog](../inventory.md#vendor-catalog-models); per-unit identity (serial, firmware) lives in the [Inventory settings](../inventory.md#settings).
 
-| Controller | Drives | Model | Protocol | Axes | EPICS handle |
-| --- | --- | --- | --- | --- | --- |
-| `RotaryDrive` | `Rotary` | Aerotech `aerotech_ensemble_ml` | `Aerotech_Native` | 1 | `2bmb:m100`-`m102` (`ioc2bmb`) |
-| `HexapodDrive` | `Hexapod` (six DoF) | Aerotech `aerotech_automation1_ixr3` | `Aerotech_Native` | 6 | `2bmHXP:` |
-| `PropagationDistanceDrive` | `PropagationDistance` | Aerotech `aerotech_ensemble_hle` | `Aerotech_Native` | 1 | `2bmbAERO` |
-| `SampleStageDrive` | the sample stages, and the Detector objective / camera selectors | OMS `oms_vme58` | `OMS_VME` | 91 | `ioc2bmb` (`2bmb:m*`) |
-| `FrontEndDrive` | the front-end optics: `Mirror`, `Monochromator`, `ConditioningSlit`, `SampleSlit`, `Filter` | OMS `oms_vme58` | `OMS_VME` | 91 | `ioc2bma` (`2bma:m*`) |
-| `ApertureFineDrive` | the `Aperture` coded-mask (X/Y fine positioning, FPGA-stepped) | Piezosystem Jena `piezosystem_jena_nv200d` (two NV200D units) | `EPICS` | 2 | `JenaNV200D` (host `arcturus`) |
+<!-- beamline:controllers -->
+<!-- /beamline:controllers -->
 
 `SampleStageDrive` reaching the Detector selectors, and `Timing` (below) reaching both the camera and the aperture piezo, are why controls is modelled as a cross-cutting area: nesting these boxes under a single station would mis-attribute most of the graph. The two OMS VME58 cards bind one `oms_vme58` Model row (one product line, two physical boards); the Microscope objective (`2bmb:m1`) and camera (`2bmb:m5`) selector steppers run through the `SampleStageDrive` crate rather than as distinct controller Assets.
 

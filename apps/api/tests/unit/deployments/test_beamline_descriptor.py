@@ -300,26 +300,20 @@ def _count_binding_keys(node: Any) -> dict[str, int]:
     return counts
 
 
-def _model_column_cells(md_path: Path) -> list[str]:
-    # First-column ids of every hand-authored "| Model | ... |" vendor table.
-    cells: list[str] = []
-    in_table = False
+def _catalog_marker_models(md_path: Path) -> list[str]:
+    # Model names listed in every `catalog:models models=...` marker on the page.
+    # The vendor tables are build-generated from these lists, so the marker is the
+    # hand-authored surface a stale Model id would land on.
+    names: list[str] = []
     for line in md_path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
-        if stripped.startswith("| Model |"):
-            in_table = True
+        if not stripped.startswith("<!-- catalog:models"):
             continue
-        if not in_table:
-            continue
-        if not stripped.startswith("|"):
-            in_table = False
-            continue
-        if not stripped.replace("|", "").replace("-", "").strip():
-            continue  # the header separator row
-        cell = stripped.split("|")[1].strip().strip("`")
-        if cell:
-            cells.append(cell)
-    return cells
+        for token in stripped.split():
+            key, _, value = token.partition("=")
+            if key == "models" and value:
+                names.extend(name for name in value.split(",") if name)
+    return names
 
 
 def test_no_unexpected_orphan_catalog_models() -> None:
@@ -357,23 +351,23 @@ def test_no_model_or_family_binding_escapes_the_walk(descriptor_path: Path) -> N
     )
 
 
-def test_doc_vendor_tables_reference_real_catalog_models() -> None:
+def test_doc_catalog_markers_reference_real_catalog_models() -> None:
     catalog = cd.load(_CATALOG)
     model_names = {m.name for m in catalog.models}
     docs_deployments = _REPO_ROOT / "docs" / "deployments"
     stale: list[str] = []
-    tables_seen = 0
+    markers_seen = 0
     for md_path in sorted(docs_deployments.rglob("*.md")):
-        cells = _model_column_cells(md_path)
-        if cells:
-            tables_seen += 1
+        listed = _catalog_marker_models(md_path)
+        if listed:
+            markers_seen += 1
         stale.extend(
-            f"{md_path.relative_to(_REPO_ROOT)}: {cell}"
-            for cell in cells
-            if cell not in model_names
+            f"{md_path.relative_to(_REPO_ROOT)}: {name}"
+            for name in listed
+            if name not in model_names
         )
-    assert tables_seen >= 1, "no hand-authored Model-column vendor tables found to check"
-    assert not stale, f"doc vendor tables reference catalog models that do not exist: {stale}"
+    assert markers_seen >= 1, "no catalog:models markers found to check"
+    assert not stale, f"catalog:models markers reference models that do not exist: {stale}"
 
 
 def test_malformed_descriptor_raises(tmp_path: Path) -> None:

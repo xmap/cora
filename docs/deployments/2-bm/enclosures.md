@@ -6,16 +6,16 @@ An Enclosure models the observed permit status of an access-gated volume: a phys
 
 2-BM has two hutch Enclosures, the optics hutch `2-BM-A` and the experiment hutch `2-BM-B`. Each is its own access-gated volume with its own Personnel Safety System permit, observed independently, and each is anchored to the APS Site via `facility_code = "aps"` (a space contained in a larger space, not a pointer to an equipment Asset).
 
-| Enclosure | Role | Anchored to | Gates |
-| --- | --- | --- | --- |
-| `2-BM-A` | optics hutch | `aps` Site (`facility_code`) | the `front-end` and `conditioning-optics` Devices and their descendants |
-| `2-BM-B` | experiment hutch | `aps` Site (`facility_code`) | the `beam-defining-and-safety`, `sample-environment`, and `detector` Devices and their descendants |
+<!-- beamline:enclosures -->
+<!-- /beamline:enclosures -->
+
+The Gates column derives from the beam-path groups that name each hutch; the permit signal is the search-and-secure PV CORA reads to observe the permit.
 
 Each Device declares which hutch it sits in via `located_in_enclosure_id`. The optics band (`FrontEndDrive` and the mirror, monochromator, conditioning-slit, filter, and diagnostic-flag chain) is in `2-BM-A`; the beam-defining-and-safety stack (including the P6-50 safety stack and its SBS shutter), the sample environment, and the detector are in `2-BM-B`. The Located-in column on [Assets](inventory.md) is the per-Device source of truth.
 
 ## Permit signal and gate
 
-Each hutch's permit maps off one Personnel Safety System search-and-secure PV, the `permit_signal` in the descriptor: `2-BM-A` is Permitted when `S02BM-PSS:StaA:SecureM == 1`, `2-BM-B` when `S02BM-PSS:StaB:SecureM == 1`. CORA reads these read-only: it never drives, holds, or releases the permit or the beam, reading the PVs does not put CORA in the safety chain, and the PSS retains sole interlock authority.
+Each hutch's permit maps off the one Personnel Safety System search-and-secure PV shown as its `permit_signal` above: a hutch is Permitted when that PV reads `1`. CORA reads these read-only: it never drives, holds, or releases the permit or the beam, reading the PVs does not put CORA in the safety chain, and the PSS retains sole interlock authority.
 
 `start_run` and `start_procedure` run an Enclosure pre-flight gate that derives the hutches in scope from the bound Assets and requires each to be Permitted. The chain walk, the error classes, and the HTTP codes are on the [module page](../../architecture/modules/enclosure/index.md#cross-module-boundaries). Because each 2-BM Device names exactly one hutch, an A-only Run gates on `2-BM-A` alone while a cross-hutch Run spanning both needs both Permitted. The `test_2bm_two_hutch_enclosure_gate` and `test_2bm_enclosure_chain_walk` scenarios exercise both shapes; the gate fires the moment the two hutch Enclosures register.
 

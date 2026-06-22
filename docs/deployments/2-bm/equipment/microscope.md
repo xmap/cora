@@ -60,15 +60,8 @@ The Microscope carries **zero `required_wires`**: lens selection is the `Objecti
 
 ## Vendor catalog
 
-| Model | Manufacturer | Part number | Declared Families |
-| --- | --- | --- | --- |
-| `optique_peter_micrx080` | Optique Peter | `MICRX080` | `Housing` |
-| `nanotec_st4118` | Nanotec | `ST4118M1404-B` | `LinearStage` |
-| `mitutoyo_plan_apo` | Mitutoyo | `Plan-Apo-NIR` | `Objective` |
-| `flir_oryx` | FLIR | `ORX-10G-51S5M-C` | `Camera` |
-| `flir_oryx_31mp` | FLIR | `ORX-10G-310S9M` | `Camera` |
-| `schunk_lptm_30` | Schunk | `LPTM-30` | `LinearStage` |
-| `crytur_luag` | Crytur | `LuAG:Ce-100um` | `Scintillator` |
+<!-- catalog:models models=optique_peter_micrx080,nanotec_st4118,mitutoyo_plan_apo,flir_oryx,flir_oryx_31mp,schunk_lptm_30,crytur_luag show=families -->
+<!-- /catalog:models -->
 
 Each Model carries the vendor identity PIDINST needs (Manufacturer + Model). The `Turret` binds the Nanotec Model because the objective-selector motor is a third-party stepper (Nanotec `ST4118M1404-B` with a Heidenhain ERO 1420 encoder) inside the Optique Peter housing, confirmed on the [components page](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html). Mitutoyo Plan Apo NIR carries one part number per magnification, so the single `mitutoyo_plan_apo` row splits into three once those numbers are confirmed.
 
@@ -106,7 +99,11 @@ Writing `Objective_Selector = 1` writes lens index 1 to `2bm:MCTOptics:LensSelec
 
 ## Calibration, drawings, and citation
 
-- **Calibrations (4):** three `magnification` revisions (9.83x / ~2x / 1.10x effective; the 2x figure is nominal, pending re-measurement) and one `effective_thickness` on the LuAG scintillator (100 micrometers). All start `AssertedSource` / `Provisional` and are superseded by `MeasuredSource` revisions when the characterization Procedure runs.
+The detector's empirical calibrations, the magnification per objective and the scintillator effective thickness. All start `AssertedSource` / `Provisional` (the 2x figure is nominal, pending re-measurement) and are superseded by `MeasuredSource` revisions when the characterization Procedure runs.
+
+<!-- beamline:calibrations stage=detection -->
+<!-- /beamline:calibrations -->
+
 - **Drawings:** the Optique Peter MICRX080 manual `(EDMS, MAN-11863, 0521-0465-A)` is the canonical reference for the Assembly, Housing, and Mount; per-Asset drawings are listed on the [Assets inventory](../inventory.md#engineering-drawings).
 - **PIDINST:** the Fixture earns one DOI as a citable station (HZB PEAXIS precedent), and each physical Asset plus the Housing earns its own, linked via `HasComponent` / `IsComponentOf`. `Objective_Selector` is not minted (a virtual axis has no Manufacturer or Owner). DOIs are stub-minted until 2-BM has facility DataCite credentials.
 
