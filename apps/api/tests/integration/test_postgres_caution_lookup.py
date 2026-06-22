@@ -36,6 +36,11 @@ from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
+# Strictly after `_NOW` (so it passes register-time strictly-future
+# validation) yet safely before any real wall-clock `now()` the read
+# filter compares against: valid-at-register, elapsed-at-read.
+_ELAPSED_EXPIRY = datetime(2026, 5, 18, 0, 0, 0, tzinfo=UTC)
+_FAR_FUTURE = datetime(2099, 1, 1, 0, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-00000000d001")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-00000000d002")
 
@@ -54,6 +59,7 @@ def _register_command(
     workaround: str = "run at 0.6 mm/s",
     category: CautionCategory = CautionCategory.WEAR,
     severity: CautionSeverity = CautionSeverity.CAUTION,
+    expires_at: datetime | None = None,
 ) -> RegisterCaution:
     if target_asset_id is not None:
         target = AssetTarget(asset_id=target_asset_id)
@@ -67,6 +73,7 @@ def _register_command(
         severity=severity,
         text=text,
         workaround=workaround,
+        expires_at=expires_at,
     )
 
 
@@ -108,6 +115,65 @@ async def test_single_active_asset_caution_is_returned(db_pool: asyncpg.Pool) ->
     assert entry.severity == "Caution"
     assert entry.text_excerpt == "hexapod stalls below 0.5 mm/s"
     assert entry.workaround_excerpt == "run at 0.6 mm/s"
+
+
+@pytest.mark.integration
+async def test_expired_active_caution_excluded_from_scope(db_pool: asyncpg.Pool) -> None:
+    """An Active caution whose `expires_at` window has elapsed is NOT
+    surfaced: `status='Active'` is not the same as currently-in-effect,
+    and the `expires_at > now()` read filter is what excludes it."""
+    caution_id = uuid4()
+    asset_id = uuid4()
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[caution_id, uuid4()])
+    await register_caution.bind(deps)(
+        _register_command(target_asset_id=asset_id, expires_at=_ELAPSED_EXPIRY),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain(db_pool)
+
+    lookup = PostgresCautionLookup(db_pool)
+    result = await lookup.find_active_in_scope(
+        asset_ids=frozenset({asset_id}),
+        procedure_ids=frozenset(),
+        min_severity="Notice",
+    )
+    assert result == []
+
+
+@pytest.mark.integration
+async def test_future_and_null_expiry_active_cautions_are_returned(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The expiry filter keeps the currently-in-effect set: a future
+    `expires_at` is still in force, and a `NULL` window is indefinite.
+    Both surface; only the elapsed window (covered separately) drops out."""
+    asset_id = uuid4()
+    future_id = uuid4()
+    indefinite_id = uuid4()
+
+    deps_future = build_postgres_deps(db_pool, now=_NOW, ids=[future_id, uuid4()])
+    await register_caution.bind(deps_future)(
+        _register_command(target_asset_id=asset_id, expires_at=_FAR_FUTURE),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    deps_indefinite = build_postgres_deps(db_pool, now=_NOW, ids=[indefinite_id, uuid4()])
+    await register_caution.bind(deps_indefinite)(
+        _register_command(target_asset_id=asset_id, expires_at=None),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain(db_pool)
+
+    lookup = PostgresCautionLookup(db_pool)
+    result = await lookup.find_active_in_scope(
+        asset_ids=frozenset({asset_id}),
+        procedure_ids=frozenset(),
+        min_severity="Notice",
+    )
+    returned_ids = {entry.caution_id for entry in result}
+    assert returned_ids == {future_id, indefinite_id}
 
 
 @pytest.mark.integration

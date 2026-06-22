@@ -18,12 +18,31 @@ asyncpg pool.
 
 ## Query shape
 
-Single SELECT with three filters: target match (Asset OR Procedure),
-status=Active, and a severity-ordinal threshold computed Python-side
-from `min_severity` (Notice->0 / Caution->1 / Warning->2). The
-projection's `proj_caution_summary_target_active_idx` partial index
-on `(target_kind, target_id) WHERE status = 'Active'` covers the hot
-path.
+Single SELECT with four filters: status=Active, the expiry window
+(see below), target match (Asset OR Procedure), and a severity-ordinal
+threshold computed Python-side from `min_severity`
+(Notice->0 / Caution->1 / Warning->2). The projection's
+`proj_caution_summary_target_active_idx` partial index on
+`(target_kind, target_id) WHERE status = 'Active'` covers the hot
+path; the expiry comparison is a cheap residual filter on the
+already-narrowed Active rows (no separate index).
+
+## Expiry window
+
+`status = 'Active'` alone is not "currently in effect": `expires_at`
+is validated strictly-future only at register time and never
+re-checked, so an Active caution whose window has since elapsed stays
+Active in the projection. This read returns the currently-in-effect
+set, so it also filters `expires_at IS NULL OR expires_at > now()`
+(`NULL` = indefinite, always in effect). The strict `> now()` mirrors
+register-time's strictly-future rule: a caution valid through instant
+T expires at T. Without this an elapsed caution would still surface in
+the Run.start banner, the advisory panels, and the CautionDrafter
+context, and would make CautionPromoter wrongly report a dedupe
+conflict against a window that no longer applies. `now()` is the
+DB transaction clock: this is a read, not a decider, so it does not
+take an injected timestamp (see `cora.infrastructure` non-determinism
+guidance, which scopes injection to writes captured in payloads).
 
 Empty `asset_ids` and `procedure_ids` arrays are handled cleanly by
 `ANY($N::uuid[])`: an empty array yields no matches, which is the
@@ -65,6 +84,7 @@ SELECT caution_id,
        LEFT(workaround, 200) AS workaround_excerpt
 FROM proj_caution_summary
 WHERE status = 'Active'
+  AND (expires_at IS NULL OR expires_at > now())
   AND (
     (target_kind = 'Asset'     AND target_id = ANY($1::uuid[]))
     OR (target_kind = 'Procedure' AND target_id = ANY($2::uuid[]))

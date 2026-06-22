@@ -120,10 +120,14 @@ class CautionLookup(Protocol):
         callers wanting the full set (operator-dashboard view, tests)
         pass `min_severity="Notice"` explicitly.
 
-        Only Active cautions are considered; Superseded and Retired
-        cautions never appear in the result. Empty `asset_ids` and
-        `procedure_ids` both yield an empty list (a Run with no
-        Asset/Procedure scope can't surface any cautions).
+        Only Active, currently-in-effect cautions are considered.
+        Superseded and Retired cautions never appear, and neither do
+        Active cautions whose `expires_at` window has elapsed (a
+        `NULL` window is indefinite and always in effect): the result
+        is the set in force right now, not merely the set that is
+        Active in the projection. Empty `asset_ids` and `procedure_ids`
+        both yield an empty list (a Run with no Asset/Procedure scope
+        can't surface any cautions).
 
         Per the Caution design memo (anti-pattern #5), the result is
         NEVER used to gate the decider — only to embed an audit
