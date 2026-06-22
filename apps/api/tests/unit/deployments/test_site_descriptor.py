@@ -202,6 +202,11 @@ def test_renders_single_site_narrative() -> None:
     assert "beam-flux transients" in page  # cautions
     assert "Institution" in page and "Argonne" in page  # facility -> institution (context)
     assert "../argonne/index.md" not in page  # institution is context, not a navigable deployment
+    # the Asset binding is dissolved into this page, not a separate Assets sub-page
+    assert "## How APS is modeled" in page
+    assert "../2-bm/index.md" in page  # beamline root Asset binding, folded in
+    assert "`Unit`" in page  # asset tier column rendered inline
+    assert "assets.md" not in page  # no link-out to a hand-authored Assets page
 
 
 def test_practice_method_links_only_known() -> None:

@@ -177,15 +177,28 @@ def _principals(site: Site, *, site_label: str) -> list[str]:
     return blocks
 
 
-def _modeled(site_label: str) -> list[str]:
-    return [
+def _modeled(
+    site_label: str, *, facility_code: str, beamlines: list[tuple[str, str]]
+) -> list[str]:
+    blocks = [
         f"## How {site_label} is modeled",
         f"{site_label} itself is not an Asset: it is a Federation `Facility` with "
-        "`FacilityKind = Site`. The beamlines it hosts are the root Assets, each bound to the Site "
-        "by `facility_code`; their sub-systems nest below by `parent_id`. See "
-        f"[Assets](assets.md) for that binding and [the CORA model]({MODEL_PAGE}) for the "
-        "aggregate shapes.",
+        f'`FacilityKind = Site` (`facility_code = "{facility_code}"`). The beamlines it hosts are '
+        "the root Assets (`tier = Unit`, `parent_id = None`), each bound to the Site directly by "
+        f"`facility_code`. See [the CORA model]({MODEL_PAGE}) for the aggregate shapes.",
     ]
+    if beamlines:
+        rows = [
+            [f"`{label}`", "`Unit`", f"`{facility_code}`", f"[{label}](../{bslug}/index.md)"]
+            for label, bslug in beamlines
+        ]
+        blocks.append(_table(["Asset", "Tier", "facility_code", "Hosts"], rows))
+    blocks.append(
+        "Sub-systems and devices nested under a beamline are Assets with `tier = Component` or "
+        "`tier = Device`, linked via `parent_id`. Being non-root, they do not carry `facility_code`; "
+        "they inherit facility scope through the `parent_id` tree."
+    )
+    return blocks
 
 
 def render_all(
@@ -208,5 +221,5 @@ def render_all(
     blocks += _resources(site)
     blocks += _safety(site)
     blocks += _principals(site, site_label=site_label)
-    blocks += _modeled(site_label)
+    blocks += _modeled(site_label, facility_code=f.code, beamlines=beamlines)
     return {f"deployments/{slug}/index.md": "\n\n".join(blocks) + "\n"}
