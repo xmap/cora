@@ -10,10 +10,12 @@ TomoWISE has a single detector system on a gantry that travels the experiment hu
 
 ## Microscopes
 
-Interchangeable visible-light microscopes (scintillator, objective, 45 deg mirror, CMOS camera) couple the scintillator image to the cameras, built for sensors up to 60 mm diagonal. The TDR names Optique Peter as the vendor standard, with smaller vendors possible; the specific model is a design decision deferred to project year 2 (DET-2). CORA's catalog already carries one Optique Peter model from 2-BM, `optique_peter_micrx080`, as a candidate; it is not named by the TomoWISE TDR and is not bound here, but it is the natural first option when the model is chosen.
+Interchangeable visible-light microscopes (scintillator, objective, 45 deg mirror, CMOS camera) couple the scintillator image to the cameras, built for sensors up to 60 mm diagonal. Each is **composed as the cross-facility `Microscope` Assembly** that 2-BM also uses, rather than a loose family: a `Housing` anchors an `Optics` sub-assembly (a turret, the objectives, and a virtual objective selector for switching magnification "without intervening in the setup") over a `Scintillator`. The Optique Peter optics model from 2-BM, `optique_peter_micrx080`, is **bound** on each Housing as the design-target candidate (the TDR names only the vendor; confirmation is DET-2).
 
-- **MicLFOV** (Family `Microscope`, not yet in the catalog): large field of view, 1-2x magnification, NA > 0.2.
-- **MicHR** (Family `Microscope`, not yet in the catalog): high resolution, 4x / 10x / 20x, NA > 0.4.
+Because TomoWISE's two microscopes share the four cameras and the one `DetectorGantry` propagation rail, the assembly's `camera` and `propagation_distance` slots are **decoupled**: the catalog assembly was generalized to make both `ZeroOrOne`, and each microscope leaves them empty. The cameras are modelled as separate shared Assets (below); the gantry provides the propagation distance.
+
+- **MicLFOV** (Assembly `Microscope`, Housing model `optique_peter_micrx080`): large field of view, 1-2x magnification, NA > 0.2; objectives 1x / 2x.
+- **MicHR** (Assembly `Microscope`, Housing model `optique_peter_micrx080`): high resolution, 4x / 10x / 20x, NA > 0.4.
 
 ## Cameras
 
@@ -24,4 +26,4 @@ Four cameras span the throughput-versus-speed-versus-resolution trade. The model
 - **Camera III** (Family `Camera`): ~4 Mpix, > 2,000 fps. Streaming.
 - **Camera IV** (Family `Camera`): 150 Mpix, 54 x 40 mm sensor, 3.76 um pixel. Matches the large-sensor device already procured for DanMAX.
 
-The camera models, the microscope vendor, and the trigger path are the main detector-side [open questions](../questions.md). See [Inventory](../inventory.md) for the Asset tree.
+The camera models, the bound microscope-optics model confirmation (DET-2), and the trigger path are the main detector-side [open questions](../questions.md). See [Inventory](../inventory.md) for the Asset tree.

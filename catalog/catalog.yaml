@@ -275,21 +275,28 @@ models:
 assemblies:
   - name: Optics
     note: >-
-      Reusable optics core: turret, objectives, virtual objective selector, and
-      propagation-distance stage. Presents nothing on its own; composed by detector Assemblies.
+      Reusable optics core: turret, objectives, virtual objective selector, and an
+      optional propagation-distance stage. Presents nothing on its own; composed by
+      detector Assemblies. propagation_distance is ZeroOrOne because some deployments
+      drive propagation with a shared facility stage rather than a per-Optics rail
+      (2-BM binds a per-microscope PropagationDistance; TomoWISE shares one detector
+      gantry rail across both microscopes, so its microscopes leave the slot empty).
     presents_as: []
     required_slots:
       - { slot_name: turret, required_families: [LinearStage], cardinality: Exactly1 }
       - { slot_name: objectives, required_families: [Objective], cardinality: OneOrMore }
       - { slot_name: objective_selector, required_families: [PseudoAxis], cardinality: Exactly1 }
-      - { slot_name: propagation_distance, required_families: [LinearStage], cardinality: Exactly1 }
+      - { slot_name: propagation_distance, required_families: [LinearStage], cardinality: ZeroOrOne }
   - name: Microscope
     note: >-
-      Full scintillator-relay detector: the Optics sub-assembly plus camera and
-      scintillator leaf slots. Presents the Detector Role. Zero required_wires in v1.
+      Full scintillator-relay detector: the Optics sub-assembly plus an optional camera
+      and a scintillator leaf slot. Presents the Detector Role. Zero required_wires in v1.
+      camera is ZeroOrOne because a microscope can be camera-agnostic, drawing from a
+      shared camera pool (2-BM binds its camera per microscope; TomoWISE's two microscopes
+      share four interchangeable cameras on one gantry, so each leaves the slot empty).
     presents_as: [Detector]
     required_slots:
-      - { slot_name: camera, required_families: [Camera], cardinality: Exactly1 }
+      - { slot_name: camera, required_families: [Camera], cardinality: ZeroOrOne }
       - { slot_name: scintillator, required_families: [Scintillator], cardinality: Exactly1 }
     required_sub_assemblies:
       - { slot_name: optics, sub_assembly: Optics }

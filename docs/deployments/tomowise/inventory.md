@@ -4,7 +4,7 @@
 
 TomoWISE is in the design phase, so this is the planned Asset shape, not a registered inventory. It is the cross-cutting reference view of the [Source](beamline.md) walk and the [endstation](equipment/endstations.md) and [detector](equipment/detector.md) pages. The shape is generated-honest: it is authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/tomowise/beamline.yaml) descriptor that the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) only. No vendor Models are bound: part numbers are not yet procured, and the "(target)" models named in the TDR are carried as open questions, not bindings. Control handles are omitted because MAX IV runs Tango/Sardana and the names are not yet assigned.
+Devices bind to catalog [Families](../../catalog/families.md). Only one vendor Model is bound: the Optique Peter microscope optics (`optique_peter_micrx080`, reused from 2-BM, pending confirmation); the remaining "(target)" models named in the TDR are carried as open questions, not bindings, because part numbers are not yet procured. Control handles are omitted because MAX IV runs Tango/Sardana and the names are not yet assigned.
 
 ## The Asset tree
 
@@ -38,11 +38,12 @@ Root Asset `TomoWISE` (`tier = Unit`, `facility_code = maxiv`); sub-systems nest
 | `NanoCoarseZ` | `Device` | LinearStage | Zt long-travel (250-300 mm), target Zaber X-LDQ-AE |
 | `NanoRotary` | `Device` | RotaryStage | Rot y, continuous, Abbe < 100 nm, target RT100AS |
 | `NanoSamplePositioning` | `Device` | LinearStage | Xs/Zs centring, +/-6 mm, target XY150B-12 |
-| `DetectorGantry` | `Component` | Table | 7 m floor rails, 45 to 52 m |
-| `MicLFOV` / `MicHR` | `Device` | Microscope | 1-2x / 4-20x microscopes |
-| `CameraI` ... `CameraIV` | `Device` | Camera | 16-25 / 4 / 4 / 150 Mpix |
+| `DetectorGantry` | `Component` | Table | 7 m floor rails, 45 to 52 m (the shared propagation rail) |
+| `MicLFOV` / `MicHR` | `Component` | Housing | Microscope Assemblies; Housing model `optique_peter_micrx080` |
+| `MicLFOV` / `MicHR` constituents | `Device` | LinearStage / Objective / PseudoAxis / Scintillator | turret + objectives (1-2x / 4-20x) + selector + scintillator |
+| `CameraI` ... `CameraIV` | `Device` | Camera | 16-25 / 4 / 4 / 150 Mpix; shared across both microscopes |
 
-`Mask` is now a shared catalog Family (earned in once both 2-BM and TomoWISE used it). The remaining families not yet in the catalog (`HeatAbsorber`, `SlipRing`, `Microscope`) are bound loosely by design intent; they are earned into the catalog when a confirmed device needs them (the beam-path stop tier is tracked below). The nano manipulator reuses the same `TiltStage`, `LinearStage`, `RotaryStage`, and `Table` Families as the micro endstation, so it needs no nano-specific Family.
+`Mask` is now a shared catalog Family (earned in once both 2-BM and TomoWISE used it). The two microscopes compose the shared `Microscope` / `Optics` catalog Assemblies (Housing-anchored), so there is no loose `Microscope` family any more. The remaining families not yet in the catalog (`HeatAbsorber`, `SlipRing`) are bound loosely by design intent; they are earned into the catalog when a confirmed device needs them (the beam-path stop tier is tracked below). The nano manipulator reuses the same `TiltStage`, `LinearStage`, `RotaryStage`, and `Table` Families as the micro endstation, so it needs no nano-specific Family.
 
 ## Pending confirmations
 
@@ -56,7 +57,7 @@ Every value below is a TDR design specification awaiting the beamline team. Each
 | Rotary stage model (RT100AX target) | `Rotary` | `unknown-pending-confirmation` | (STAGE-1) |
 | Sample positioning model (XY150B-12 target) | `SamplePositioning` | `unknown-pending-confirmation` | (STAGE-2) |
 | Camera models I to IV | `CameraI`..`CameraIV` | `unknown-pending-confirmation` | (DET-1) |
-| Microscope optics model (vendor Optique Peter named) | `MicLFOV`, `MicHR` | `unknown-pending-confirmation` | (DET-2) |
+| Microscope optics model (Optique Peter `optique_peter_micrx080` bound, from 2-BM) | `MicLFOV`, `MicHR` | bound, pending confirmation | (DET-2) |
 | Trigger conditioner (direct TTL vs FPGA) | `Triggering` | `unknown-pending-confirmation` | (TRIG-1) |
 | MLM coating (W/SiC vs W/B4C per TDR text; Table 8.3 lists W/Si) | `MLM` | `unknown-pending-confirmation` | (OPT-1) |
 | Layout z reference (source vs straight-section centre) | all devices | `unknown-pending-confirmation` | (LAYOUT-1) |

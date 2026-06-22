@@ -198,6 +198,26 @@ def test_decide_rejects_exactly_one_slot_with_zero_bindings() -> None:
 
 
 @pytest.mark.unit
+def test_decide_allows_zero_or_one_slot_left_unbound() -> None:
+    assembly_id = uuid4()
+    slot = _slot("camera", cardinality=SlotCardinality.ZERO_OR_ONE)
+    context = RegisterFixtureContext(
+        assembly_state=_assembly(assembly_id, slots=frozenset({slot})),
+    )
+    events = register_fixture.decide(
+        state=None,
+        command=RegisterFixture(assembly_id=assembly_id),
+        context=context,
+        now=_NOW,
+        new_id=uuid4(),
+        registered_by=_TEST_ACTOR_ID,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], FixtureRegistered)
+    assert events[0].slot_asset_bindings == frozenset()
+
+
+@pytest.mark.unit
 def test_decide_rejects_unknown_slot_in_bindings() -> None:
     assembly_id = uuid4()
     slot = _slot(

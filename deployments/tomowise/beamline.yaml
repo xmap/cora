@@ -325,7 +325,14 @@ detector:
   stage: detection
   enclosure: TomoWISE-experiment
   intro: "One detector gantry on 7 m floor rails serves both endstations (45 m to the 52 m hutch wall), carrying interchangeable microscopes and cameras. A removable flight tube reduces air scatter."
-  note: "Camera and microscope-optics models are design targets, chosen in project year 2 (DET-1, DET-2)."
+  note: >
+    The two microscopes are composed as Microscope Assemblies (Housing-anchored,
+    reusing the cross-facility catalog assembly): each has a turret, objectives,
+    and a selector over a scintillator. The four cameras and the gantry propagation
+    rail are shared across both microscopes, so the assembly's camera and
+    propagation_distance slots are left empty (ZeroOrOne). Camera models are design
+    targets (DET-1); the Optique Peter optics model is bound from the 2-BM catalog
+    candidate pending confirmation (DET-2).
   devices:
     - name: DetectorGantry
       family: Table
@@ -335,19 +342,82 @@ detector:
       range: 45 m to 52 m
       note: "shared detector gantry"
     - name: MicLFOV
-      family: Microscope
+      family: Housing
+      model: optique_peter_micrx080
       new: true
       confirm: true
       magnification: 1 to 2x
       numerical_aperture: ">0.2"
-      note: "large-field-of-view microscope (DET-2)"
+      cora: "Assembly(Microscope) presenting the Detector Role; Optics sub-assembly = turret + objectives + selector. The camera and propagation_distance slots are left empty (shared cameras + DetectorGantry rail)."
+      note: "large-field-of-view microscope; Optique Peter housing, model is the 2-BM candidate pending TomoWISE confirmation (DET-2)"
+      constituents:
+        - name: MicLFOV_Turret
+          family: LinearStage
+          new: true
+          confirm: true
+          note: "objective changer: switches objectives without intervening in the setup (TDR p57)"
+        - name: MicLFOV_Objective_1x
+          family: Objective
+          new: true
+          confirm: true
+          magnification: 1.0
+        - name: MicLFOV_Objective_2x
+          family: Objective
+          new: true
+          confirm: true
+          magnification: 2.0
+        - name: MicLFOV_ObjectiveSelector
+          family: PseudoAxis
+          new: true
+          confirm: true
+          note: "virtual objective picker over the turret"
+        - name: MicLFOV_Scintillator
+          family: Scintillator
+          new: true
+          confirm: true
+          material: LSO or LuAG:Ce
+          thickness: 7 to 15 um
     - name: MicHR
-      family: Microscope
+      family: Housing
+      model: optique_peter_micrx080
       new: true
       confirm: true
       magnification: 4x / 10x / 20x
       numerical_aperture: ">0.4"
-      note: "high-resolution microscope (DET-2)"
+      cora: "Assembly(Microscope) presenting the Detector Role; Optics sub-assembly = turret + objectives + selector. The camera and propagation_distance slots are left empty (shared cameras + DetectorGantry rail)."
+      note: "high-resolution microscope; Optique Peter housing, model is the 2-BM candidate pending TomoWISE confirmation (DET-2)"
+      constituents:
+        - name: MicHR_Turret
+          family: LinearStage
+          new: true
+          confirm: true
+          note: "objective changer: switches objectives without intervening in the setup (TDR p57)"
+        - name: MicHR_Objective_4x
+          family: Objective
+          new: true
+          confirm: true
+          magnification: 4.0
+        - name: MicHR_Objective_10x
+          family: Objective
+          new: true
+          confirm: true
+          magnification: 10.0
+        - name: MicHR_Objective_20x
+          family: Objective
+          new: true
+          confirm: true
+          magnification: 20.0
+        - name: MicHR_ObjectiveSelector
+          family: PseudoAxis
+          new: true
+          confirm: true
+          note: "virtual objective picker over the turret"
+        - name: MicHR_Scintillator
+          family: Scintillator
+          new: true
+          confirm: true
+          material: LuAG:Ce
+          thickness: 7 to 15 um
     - name: CameraI
       family: Camera
       new: true
