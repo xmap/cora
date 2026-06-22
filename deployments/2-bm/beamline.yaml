@@ -171,9 +171,23 @@ conditioning-optics:
       length: 0.993 m
       water_cooled: true
       replaceable: true          # APS-U spare exists
-      stripes: ["5 nm Pt", "W/Si x50 (b)", "W/Si x50 (c)", "W/Si x50 (d)"]  # recoatable
+      stripes:                 # MIRROR-1/MODE-3 (#259/#262): recoatable; m3 (stripe_select) reaches one stripe per (mode, energy), held at a in Mono and swept per Pink energy. NOT a free pick. Stripe-to-position map from the staff Bragg cross-check at the 2.615 mrad mirror angle.
+        - { label: a, coating: "5 nm Pt single-layer", serves: "Mono (m3 1.0) + Pink 30 keV (m3 3.039)", note: "broadband; Pt critical-angle cutoff ~21 keV" }
+        - { label: b, coating: "W/Si x50", d_spacing_nm: 6.57, serves: "Pink 40 keV (m3 13.0)" }
+        - { label: c, coating: "W/Si x50", d_spacing_nm: 4.76, serves: "Pink 50 keV (m3 39.0)" }
+        - { label: d, coating: "W/Si x50", d_spacing_nm: 3.93, serves: "Pink 60 keV (m3 49.0)", note: "needs coordinated mirror-table X extension to 29 mm (m1mox/m1m2x = 2bma:m1/m4), deferred per 2bm-docs#171" }
       confirm: true
-      note: per docs2bm the stripe selector (2bma:m3) is energy- and mode-dependent (Mono holds it at m3 about 1.0; Pink sweeps it per energy with a coordinated table-X move on 2bma:m1/m4), not a free discrete pick. The page gives a partial Pink m3-position-vs-energy table (30 keV -> 3.039, 40 -> 13.0, 50 -> 39.0, 60 -> 49.0 mm) but NOT which named stripe (a/b/c/d) sits at which position, nor the full saved set (MIRROR-1, MODE-3); CORA models it with the beam-mode work (deferred), not as a filter-style index axis
+      note: >
+        per docs2bm + MIRROR-1/MODE-3 the stripe selector (2bma:m3) is energy-
+        and mode-dependent, NOT a free discrete pick. It is held at stripe a
+        (m3 about 1.0) in Mono, and swept per Pink energy (30 -> 3.039, 40 ->
+        13.0, 50 -> 39.0, 60 -> 49.0 mm). CORA models this as the
+        Mirror_StripeReachX PseudoAxis facet (a constant Mono curve plus a swept
+        Pink sibling energy_position_curve, test_2bm_energy_curves_setup.py); the
+        named-stripe-to-position map is the stripes list above. The coordinated
+        mirror-table X move (m1mox/m1m2x = 2bma:m1/m4) that stripe d at 60 keV
+        needs stays deferred (MirrorTable virtual_pose axes, 2bm-docs#171); the
+        mirror angle itself is constant 2.615 mrad across all modes and energies.
     - name: MirrorTable
       family: Table
       pv: "2bma:table1"

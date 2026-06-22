@@ -104,21 +104,13 @@ On an energy change the DMM monochromator, its Bragg arms, and the tracking slit
 | --- | --- | --- | --- | --- | --- |
 | ENERGY-7 | `Nice-to-have` | Is energy calibration via a channel-cut crystal current 2-BM practice, and which crystal (its lattice spacing 2d; the [calibration page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_022.html) lists 3.84 angstrom)? Is the crystal a removable reference standard (CORA models it as a calibration Subject, like the resolution phantom) or installed equipment, and on what rotation stage is it rocked? | modelled as the `energy_characterization` Procedure with the crystal as a calibration Subject; current practice, crystal, and 2d unconfirmed | yes | [Procedures](procedures.md) |
 
-## Filters and the mirror stripe
-
-This row covers the mirror coating stripe.
-
-| ID | Priority | Question | CORA assumes | Already done? | Resolves |
-| --- | --- | --- | --- | --- | --- |
-| MIRROR-1 | `Nice-to-have` | Is the mirror coating stripe (`2bma:m3`) held at one fixed position in Mono mode and swept per energy in Pink mode (together with the optical-table X stages, driven by the energy-change IOC), rather than a freely-selectable discrete pick? And is there a stripe-to-position mapping (which stripe sits at which `m3` position) we can record? | energy/mode-dependent stripe; held in Mono, swept in Pink; no stripe->position map on file | not yet | [Beam modes](procedures.md#beam-modes) |
-
 ## Beam mode
 
 2-BM runs in two beam modes, and switching between them is a coordinated multi-device move CORA does not yet drive. These confirm the mode model and supply the values it would need.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| MODE-3 | `Blocks-go-live` | The pink-mode per-energy saved positions (the Pink half of `store_0`) for the swept mirror coating stripe (`2bma:m3`) and the mirror-table X stages (`2bma:m1` / `m4`)? The page gives a partial table (30 keV: m3 3.039, table X 8/8; 40: 13.0, 10/10; 50: 39.0, 10/10; 60: 49.0, 29/29 mm); please confirm and complete it, and (the data half of MIRROR-1) tell us which named stripe (a/b/c/d) sits at which `m3` position. | partial pink m3 and table-X positions from the page; stripe-to-label map not on file | not yet | [Beam modes](procedures.md#beam-modes) |
+| MODE-3 | `Blocks-go-live` | The swept mirror coating stripe (`2bma:m3`) is now modelled as the `Mirror_StripeReachX` facet (held at stripe a in Mono, Pink curve 3.039 / 13 / 39 / 49 mm) with the named-stripe map recorded. What remains is the coordinated mirror-table X stages (`2bma:m1` / `m4`, Pink 8 / 10 / 10 / 29 mm): binding them is blocked by the `M1Y=2bma:m3` IOC substitution error ([2bm-docs#171](https://github.com/xray-imaging/2bm-docs/issues/171)). Please confirm that fix so the table-X surface can be bound. | m3 sweep modelled + stripe map on file; table-X values known, modeling deferred on the IOC substitution fix | partly | [Beam modes](procedures.md#beam-modes) |
 
 ## Equipment protection
 
@@ -148,4 +140,4 @@ The [docs2bm item_070 page](https://docs2bm.readthedocs.io/en/latest/source/ops/
 
 ## Not on this page
 
-Hardware CORA has deliberately not described yet (the wider sample-stage motor band, IOC-hosted devices, past high-speed cameras) raises questions here only once CORA starts describing it. The `Mirror` is the exception that proves the rule: it is now a registered Asset ([Inventory](inventory.md#inventory)), so it already raises questions here (`MIRROR-1`, `MODE-3`) even though its coating-stripe physics stay deferred to the beam-mode work.
+Hardware CORA has deliberately not described yet (the wider sample-stage motor band, IOC-hosted devices, past high-speed cameras) raises questions here only once CORA starts describing it. The `Mirror` is the exception that proves the rule: it is a registered Asset ([Inventory](inventory.md#inventory)) and its coating-stripe sweep is now modelled (`Mirror_StripeReachX`); only the coordinated mirror-table X binding stays open (`MODE-3`), blocked on the IOC substitution fix.

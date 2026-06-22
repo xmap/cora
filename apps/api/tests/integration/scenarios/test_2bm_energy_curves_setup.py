@@ -11,11 +11,12 @@ change of energy is a DISCRETE coordinated move (saved per-energy
 positions, store_0, driven together to a configured set of energies). The
 per-energy axes are the DMM Bragg arms (dmm_us_arm/dmm_ds_arm) plus the M2
 vertical offset compensator (dmm_m2_y), the B-station sample-slit vertical
-pair (b_slit_top/b_slit_bot) tracking the resulting beam walk, and the
-diagnostic flag (energy_move_flag) raised to an energy-dependent height in
-Mono. crystal2_z (M2 Z, 2bma:m8) is a setup translation the IOC does NOT
-drive, and the mirror is held constant in Mono - so neither carries a Mono
-curve.
+pair (b_slit_top/b_slit_bot) tracking the resulting beam walk, the diagnostic
+flag (energy_move_flag) raised to an energy-dependent height in Mono, and the
+mirror coating-stripe reach (m1_horizontal / 2bma:m3) - the one axis whose
+ACTIVE sweep is in Pink, held at one stripe in Mono (MIRROR-1, MODE-3).
+crystal2_z (M2 Z, 2bma:m8) is a setup translation the IOC does NOT drive, so
+it carries no curve.
 
 CORA models each per-axis relationship as a curve (a LookupTable backed by
 an energy_position_curve Calibration) interpolating the discrete saved
@@ -30,8 +31,9 @@ mode-switch operation that selects between them is the Pink-mode work
 invertibility is per-axis and honest: the Bragg arms and M2Y are
 monotonic in energy (invertible=True); the slit blades are NOT (the
 aperture is held constant at 20 mm and the centre walks non-monotonically,
-a step pattern), and the flag Y is flat at the top of its range, so both
-are invertible=False; every parked Pink curve is constant, so it is data
+a step pattern), the flag Y is flat at the top of its range, and the mirror
+stripe reach is constant in Mono (held at stripe a), so all three are
+invertible=False; every parked Pink curve is constant, so it is data
 only and carries no rule.
 
 The constant slit aperture (20 mm) and the centre-tracks-the-beam-walk view
@@ -82,7 +84,9 @@ intentional-completeness shape model of the per-device mapping.
     |   +-- SampleSlit_VerticalCenter          PseudoAxis  (MidRange(top, bot), derived)
     |   +-- SampleSlit_VerticalAperture        PseudoAxis  (Difference(top, bot), derived)
     +-- DiagnosticFlag (Device)          Screen         (driven by FrontEndDrive)
-        +-- DiagnosticFlag_Y                   PseudoAxis  (energy -> flag Y mm)
+    |   +-- DiagnosticFlag_Y                   PseudoAxis  (energy -> flag Y mm)
+    +-- Mirror (Device)                  Mirror         (driven by FrontEndDrive)
+        +-- Mirror_StripeReachX                PseudoAxis  (Pink swept, Mono held)
 ```
 """
 
@@ -146,12 +150,13 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000004b0cc1")
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-0000004b0a01")
 
 # Family ids (deterministic uuid5 from the name). MotionController +
-# Monochromator + Slit + Screen are defined by the install; PseudoAxis by
-# this scenario.
+# Monochromator + Slit + Screen + Mirror are defined by the install;
+# PseudoAxis by this scenario.
 _CAP_MOTION_CONTROLLER_ID = family_stream_id(FamilyName("MotionController"))
 _CAP_MONOCHROMATOR_ID = family_stream_id(FamilyName("Monochromator"))
 _CAP_SLIT_ID = family_stream_id(FamilyName("Slit"))
 _CAP_SCREEN_ID = family_stream_id(FamilyName("Screen"))
+_CAP_MIRROR_ID = family_stream_id(FamilyName("Mirror"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 
 # Controller registered first so each device's controller_id back-reference
@@ -160,6 +165,7 @@ _FRONTENDDRIVE_ID = UUID("01900000-0000-7000-8000-0000004b0a31")
 _MONOCHROMATOR_ID = UUID("01900000-0000-7000-8000-0000004b0a12")
 _SAMPLE_SLIT_ID = UUID("01900000-0000-7000-8000-0000004b0a14")
 _DIAGNOSTIC_FLAG_ID = UUID("01900000-0000-7000-8000-0000004b0a16")
+_MIRROR_ID = UUID("01900000-0000-7000-8000-0000004b0a18")
 
 _DEVICES = (
     DeviceSpec("FrontEndDrive", _FRONTENDDRIVE_ID, "MotionController", _CAP_MOTION_CONTROLLER_ID),
@@ -178,6 +184,13 @@ _DEVICES = (
         _DIAGNOSTIC_FLAG_ID,
         "Screen",
         _CAP_SCREEN_ID,
+        controller_id=_FRONTENDDRIVE_ID,
+    ),
+    DeviceSpec(
+        "Mirror",
+        _MIRROR_ID,
+        "Mirror",
+        _CAP_MIRROR_ID,
         controller_id=_FRONTENDDRIVE_ID,
     ),
 )
@@ -314,6 +327,36 @@ _AXES: tuple[tuple[str, UUID, str, str, _P, _P, bool], ...] = (
             {"energy": 40.0, "position": 0.0},
             {"energy": 50.0, "position": 0.0},
             {"energy": 60.0, "position": 0.0},
+        ],
+        False,
+    ),
+    (
+        # Mirror coating-stripe reach (m1_horizontal / 2bma:m3): the one
+        # energy-driven axis whose ACTIVE behaviour is in Pink, not Mono. In Mono
+        # the mirror is held at one stripe (a, Pt), so the Mono curve is constant
+        # (m3 = 1.0); in Pink the IOC sweeps m3 per energy to reach the stripe
+        # whose multilayer cutoff matches (a/b/c/d at 3.039/13/39/49). Same
+        # Mono-active / Pink-sibling convention as the other axes; the named
+        # stripe-to-position map is documentary in beamline.yaml (MIRROR-1, MODE-3).
+        # invertible=False: the active Mono curve is constant (no energy to
+        # recover), so it reconstructs readback from the single motor (Identity).
+        "Mirror_StripeReachX",
+        _MIRROR_ID,
+        "m1_horizontal",
+        "mm",
+        [
+            {"energy": 13.374, "position": 1.0},
+            {"energy": 13.574, "position": 1.0},
+            {"energy": 18.0, "position": 1.0},
+            {"energy": 20.0, "position": 1.0},
+            {"energy": 25.0, "position": 1.0},
+            {"energy": 25.584, "position": 1.0},
+        ],
+        [
+            {"energy": 30.0, "position": 3.039},
+            {"energy": 40.0, "position": 13.0},
+            {"energy": 50.0, "position": 39.0},
+            {"energy": 60.0, "position": 49.0},
         ],
         False,
     ),
