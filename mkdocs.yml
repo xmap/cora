@@ -19,7 +19,6 @@ theme:
     - navigation.indexes
     - navigation.top
     - navigation.tracking
-    - navigation.expand
     - toc.follow
     - search.suggest
     - search.highlight
@@ -121,6 +120,7 @@ nav:
       - Governance: deployments/tomowise/governance.md
       - Model: deployments/tomowise/model.md
     - Facilities:
+      - deployments/facilities/index.md
       - APS: deployments/aps/index.md
       - MAX IV: deployments/maxiv/index.md
   - Catalog:
