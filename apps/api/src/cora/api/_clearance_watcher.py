@@ -59,13 +59,16 @@ from uuid import UUID
 from cora.access.aggregates.actor import load_actor
 from cora.agent.seed_clearance_watcher import CLEARANCE_WATCHER_AGENT_ID
 from cora.api._flag_watcher import (
+    WatcherReadUnauthorizedError,
     derive_watcher_decision_id,
     flag_watcher_lifespan,
     is_stalled,
+    probe_read_grant,
     record_watcher_decision,
 )
 from cora.decision.aggregates.decision import DECISION_CONTEXT_CLEARANCE_PROGRESS
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.safety.errors import UnauthorizedError
 from cora.safety.features.get_clearance import GetClearance
 from cora.safety.features.list_clearances import ListClearances
 
@@ -80,6 +83,8 @@ if TYPE_CHECKING:
     from cora.safety.features.list_clearances.query import ClearanceStatusFilter
 
 _LOG_PREFIX = "clearance_watcher"
+_READ_COMMAND = "ListClearances"
+_GET_COMMAND = "GetClearance"
 _RULE = "agent:ClearanceWatcher:v1"
 _COMMAND_NAME = "ClearanceWatcherTick"
 _PAGE_LIMIT = 100
@@ -192,7 +197,17 @@ async def _watch_tick(
 
     now = deps.clock.now()
     stale_after = deps.settings.clearance_watcher_stale_after_seconds
-    items = await _drain_watched_clearances(list_clearances, deps)
+    try:
+        items = await _drain_watched_clearances(list_clearances, deps)
+    except UnauthorizedError as err:
+        # The authz-gated drain was Denied: a missing read grant blinds the
+        # watchdog. Re-raise as the scaffold type so the loop warns loudly
+        # (edge-triggered) instead of burying it as a generic tick failure.
+        raise WatcherReadUnauthorizedError(
+            query_name=_READ_COMMAND,
+            principal_id=CLEARANCE_WATCHER_AGENT_ID,
+            reason=str(err),
+        ) from err
     for item in items:
         base = item.last_status_changed_at
         if base is None:
@@ -205,8 +220,17 @@ async def _watch_tick(
         last_progress_at = base
         if item.status == _STATUS_UNDER_REVIEW:
             # Looks stale by status ts, but the list projection omits review-step
-            # recency; confirm against the latest ReviewStep before flagging.
-            step_at = await _last_review_step_at(get_clearance, deps, item.clearance_id)
+            # recency; confirm against the latest ReviewStep before flagging. This
+            # get_clearance read is ALSO authz-gated, so a partial grant
+            # (ListClearances yes, GetClearance no) must not silently re-blind.
+            try:
+                step_at = await _last_review_step_at(get_clearance, deps, item.clearance_id)
+            except UnauthorizedError as err:
+                raise WatcherReadUnauthorizedError(
+                    query_name=_GET_COMMAND,
+                    principal_id=CLEARANCE_WATCHER_AGENT_ID,
+                    reason=str(err),
+                ) from err
             if step_at is not None and step_at > last_progress_at:
                 last_progress_at = step_at
             if not is_stalled(last_progress_at, now, stale_after):
@@ -237,12 +261,22 @@ async def clearance_watcher_lifespan(
     async def tick() -> None:
         await _watch_tick(deps=deps, list_clearances=list_clearances, get_clearance=get_clearance)
 
+    async def startup_probe() -> None:
+        await probe_read_grant(
+            deps,
+            agent_id=CLEARANCE_WATCHER_AGENT_ID,
+            read_command=_READ_COMMAND,
+            log_prefix=_LOG_PREFIX,
+            strict=deps.settings.watcher_authz_strict,
+        )
+
     async with flag_watcher_lifespan(
         enabled=deps.settings.clearance_watcher_enabled,
         default_tick_seconds=deps.settings.clearance_watcher_tick_seconds,
         log_prefix=_LOG_PREFIX,
         task_name="clearance-watcher",
         tick=tick,
+        startup_probe=startup_probe,
         interval_seconds=interval_seconds,
     ):
         yield

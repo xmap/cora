@@ -35,6 +35,7 @@ import contextlib
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
 
+from cora.api.errors import WatcherReadUnauthorizedError
 from cora.decision.aggregates.decision import (
     DecisionChoice,
     DecisionConfidenceSource,
@@ -49,7 +50,8 @@ from cora.decision.aggregates.decision import (
 )
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import ConcurrencyError
+from cora.infrastructure.ports import ConcurrencyError, Deny
+from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
@@ -61,6 +63,44 @@ if TYPE_CHECKING:
 _log = get_logger(__name__)
 
 _STREAM_TYPE = "Decision"
+
+
+async def probe_read_grant(
+    deps: Kernel,
+    *,
+    agent_id: UUID,
+    read_command: str,
+    log_prefix: str,
+    strict: bool,
+) -> None:
+    """Startup probe: warn (or, in strict mode, refuse boot) when an ENABLED
+    watcher's agent principal lacks the read grant it needs every tick.
+
+    A no-op under a permissive Authorize (every authorize returns Allow), so dev
+    / test never trip it; under a real policy a missing grant is the silent
+    worse-than-none failure, so it is surfaced loudly at boot when an operator is
+    watching. Probes the exact tuple the runtime drain uses (the read
+    `command_name`, NIL conduit + surface). `strict` (operator opt-in via
+    `settings.watcher_authz_strict`) escalates the warning to a boot refusal.
+    """
+    decision = await deps.authz.authorize(
+        principal_id=agent_id,
+        command_name=read_command,
+        conduit_id=NIL_SENTINEL_ID,
+        surface_id=NIL_SENTINEL_ID,
+    )
+    if not isinstance(decision, Deny):
+        return
+    if strict:
+        raise WatcherReadUnauthorizedError(
+            query_name=read_command, principal_id=agent_id, reason=decision.reason
+        )
+    _log.warning(
+        f"{log_prefix}.read_unauthorized_at_startup",
+        command_name=read_command,
+        principal_id=str(agent_id),
+        reason=decision.reason,
+    )
 
 
 def is_stalled(at: datetime, now: datetime, stale_after_seconds: float) -> bool:
@@ -142,12 +182,33 @@ async def record_watcher_decision(
 async def _watch_loop(
     tick: Callable[[], Awaitable[None]], interval_seconds: float, log_prefix: str
 ) -> None:
-    """Periodic watch loop. A failed tick is logged; the next tick retries."""
+    """Periodic watch loop. A failed tick is logged; the next tick retries.
+
+    A read-denial (`WatcherReadUnauthorizedError`, the watchdog blinded by a
+    missing grant) is a FIRST-CLASS failure mode, caught before the generic
+    handler and surfaced as a distinct, loud, edge-triggered warning: warn once
+    per denial episode (not every tick -> no log spam), and log a recovery when a
+    later tick reads successfully. The `read_denied` flag is a per-task loop local
+    (each watcher runs its own loop), so per-watcher isolation is automatic.
+    """
+    read_denied = False
     while True:
         try:
             await tick()
+            if read_denied:
+                _log.info(f"{log_prefix}.read_authorized_recovered")
+                read_denied = False
         except asyncio.CancelledError:
             raise
+        except WatcherReadUnauthorizedError as err:
+            if not read_denied:
+                _log.warning(
+                    f"{log_prefix}.read_unauthorized",
+                    query_name=err.query_name,
+                    principal_id=str(err.principal_id),
+                    reason=err.reason,
+                )
+                read_denied = True
         except Exception:
             _log.exception(f"{log_prefix}.tick_failed")
         await asyncio.sleep(interval_seconds)
@@ -161,18 +222,25 @@ async def flag_watcher_lifespan(
     log_prefix: str,
     task_name: str,
     tick: Callable[[], Awaitable[None]],
+    startup_probe: Callable[[], Awaitable[None]] | None = None,
     interval_seconds: float | None = None,
 ) -> AsyncGenerator[None]:
     """Spawn a flag-watcher loop for the duration of the context.
 
     No-op unless `enabled` is True (the watchers ship off by default, so a
     deployment opts in explicitly). The caller supplies the `tick` closure and
-    its own settings-derived `enabled` / `default_tick_seconds`.
+    its own settings-derived `enabled` / `default_tick_seconds`. When `enabled`,
+    an optional `startup_probe` (a `probe_read_grant` closure) runs once before
+    the loop spawns, so a missing read grant is surfaced (or, in strict mode,
+    refuses boot) at startup rather than only at the first denied tick.
     """
     if not enabled:
         _log.info(f"{log_prefix}.skipped", reason="disabled")
         yield
         return
+
+    if startup_probe is not None:
+        await startup_probe()
 
     interval = interval_seconds if interval_seconds is not None else default_tick_seconds
     _log.info(f"{log_prefix}.started", interval_seconds=interval)
@@ -187,8 +255,10 @@ async def flag_watcher_lifespan(
 
 
 __all__ = [
+    "WatcherReadUnauthorizedError",
     "derive_watcher_decision_id",
     "flag_watcher_lifespan",
     "is_stalled",
+    "probe_read_grant",
     "record_watcher_decision",
 ]

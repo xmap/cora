@@ -446,3 +446,62 @@ def test_clearance_watcher_settings_accept_valid() -> None:
     )
     assert settings.clearance_watcher_tick_seconds == 120.0
     assert settings.clearance_watcher_stale_after_seconds == 86400.0
+
+
+@pytest.mark.unit
+async def test_tick_raises_read_unauthorized_when_drain_denied() -> None:
+    """A Denied ListClearances read (missing grant) surfaces as the scaffold's
+    WatcherReadUnauthorizedError, not a buried generic tick failure."""
+    from cora.api._clearance_watcher import _watch_tick
+    from cora.api._flag_watcher import WatcherReadUnauthorizedError
+    from cora.safety.errors import UnauthorizedError
+
+    kernel = _kernel()
+    await seed_clearance_watcher_agent(kernel)
+
+    async def denying_list_clearances(
+        query: ListClearances,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ClearanceListPage:
+        raise UnauthorizedError("agent not granted ListClearances")
+
+    with pytest.raises(WatcherReadUnauthorizedError) as exc:
+        await _watch_tick(
+            deps=kernel, list_clearances=denying_list_clearances, get_clearance=_no_get_clearance
+        )
+    assert exc.value.query_name == "ListClearances"
+
+
+@pytest.mark.unit
+async def test_tick_raises_read_unauthorized_when_get_clearance_denied() -> None:
+    """A partial grant (ListClearances yes, GetClearance no) must NOT silently
+    re-blind: the UnderReview fold's denied get_clearance also surfaces loudly."""
+    from cora.api._clearance_watcher import _watch_tick
+    from cora.api._flag_watcher import WatcherReadUnauthorizedError
+    from cora.safety.aggregates.clearance import Clearance
+    from cora.safety.errors import UnauthorizedError
+
+    kernel = _kernel()
+    await seed_clearance_watcher_agent(kernel)
+    cid = uuid4()
+    list_clearances = _make_list_clearances(
+        [_item(cid, status="UnderReview", last_status_changed_at=_OLD)]
+    )
+
+    async def denying_get_clearance(
+        query: GetClearance,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> Clearance | None:
+        raise UnauthorizedError("agent not granted GetClearance")
+
+    with pytest.raises(WatcherReadUnauthorizedError) as exc:
+        await _watch_tick(
+            deps=kernel, list_clearances=list_clearances, get_clearance=denying_get_clearance
+        )
+    assert exc.value.query_name == "GetClearance"

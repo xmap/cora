@@ -274,3 +274,28 @@ def test_calibration_watcher_settings_accept_valid() -> None:
     )
     assert settings.calibration_watcher_tick_seconds == 120.0
     assert settings.calibration_watcher_stale_after_seconds == 86400.0
+
+
+@pytest.mark.unit
+async def test_tick_raises_read_unauthorized_when_drain_denied() -> None:
+    """A Denied ListCalibrations read (missing grant) surfaces as the scaffold's
+    WatcherReadUnauthorizedError, not a buried generic tick failure."""
+    from cora.api._calibration_watcher import _watch_tick
+    from cora.api._flag_watcher import WatcherReadUnauthorizedError
+    from cora.calibration.errors import UnauthorizedError
+
+    kernel = _kernel()
+    await seed_calibration_watcher_agent(kernel)
+
+    async def denying_list_calibrations(
+        query: ListCalibrations,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> CalibrationListPage:
+        raise UnauthorizedError("agent not granted ListCalibrations")
+
+    with pytest.raises(WatcherReadUnauthorizedError) as exc:
+        await _watch_tick(deps=kernel, list_calibrations=denying_list_calibrations)
+    assert exc.value.query_name == "ListCalibrations"

@@ -470,3 +470,32 @@ def test_procedure_watcher_settings_accept_valid() -> None:
     )
     assert settings.procedure_watcher_tick_seconds == 120.0
     assert settings.procedure_watcher_stale_after_seconds == 7200.0
+
+
+@pytest.mark.unit
+async def test_tick_raises_read_unauthorized_when_drain_denied() -> None:
+    """A Denied ListProcedures read (missing grant) surfaces as the scaffold's
+    WatcherReadUnauthorizedError, not a buried generic tick failure."""
+    from cora.api._flag_watcher import WatcherReadUnauthorizedError
+    from cora.api._procedure_watcher import _watch_tick
+    from cora.operation.errors import UnauthorizedError
+
+    kernel = _kernel()
+    await seed_procedure_watcher_agent(kernel)
+
+    async def denying_list_procedures(
+        query: ListProcedures,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ProcedureListPage:
+        raise UnauthorizedError("agent not granted ListProcedures")
+
+    with pytest.raises(WatcherReadUnauthorizedError) as exc:
+        await _watch_tick(
+            deps=kernel,
+            list_procedures=denying_list_procedures,
+            activity_lookup=InMemoryProcedureActivityLookup(),
+        )
+    assert exc.value.query_name == "ListProcedures"

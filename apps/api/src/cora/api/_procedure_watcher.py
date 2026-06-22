@@ -60,9 +60,11 @@ from uuid import UUID
 from cora.access.aggregates.actor import load_actor
 from cora.agent.seed_procedure_watcher import PROCEDURE_WATCHER_AGENT_ID
 from cora.api._flag_watcher import (
+    WatcherReadUnauthorizedError,
     derive_watcher_decision_id,
     flag_watcher_lifespan,
     is_stalled,
+    probe_read_grant,
     record_watcher_decision,
 )
 from cora.decision.aggregates.decision import DECISION_CONTEXT_PROCEDURE_PROGRESS
@@ -70,6 +72,7 @@ from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.adapters.postgres_procedure_activity_lookup import (
     PostgresProcedureActivityLookup,
 )
+from cora.operation.errors import UnauthorizedError
 from cora.operation.features.list_procedures import ListProcedures
 from cora.operation.ports import InMemoryProcedureActivityLookup
 
@@ -84,6 +87,7 @@ if TYPE_CHECKING:
     from cora.operation.ports import ProcedureActivityLookup
 
 _LOG_PREFIX = "procedure_watcher"
+_READ_COMMAND = "ListProcedures"
 _RULE = "agent:ProcedureWatcher:v1"
 _COMMAND_NAME = "ProcedureWatcherTick"
 _PAGE_LIMIT = 100
@@ -185,7 +189,17 @@ async def _watch_tick(
 
     now = deps.clock.now()
     stale_after = deps.settings.procedure_watcher_stale_after_seconds
-    items = await _drain_watched_procedures(list_procedures, deps)
+    try:
+        items = await _drain_watched_procedures(list_procedures, deps)
+    except UnauthorizedError as err:
+        # The authz-gated drain was Denied: a missing read grant blinds the
+        # watchdog. Re-raise as the scaffold type so the loop warns loudly
+        # (edge-triggered) instead of burying it as a generic tick failure.
+        raise WatcherReadUnauthorizedError(
+            query_name=_READ_COMMAND,
+            principal_id=PROCEDURE_WATCHER_AGENT_ID,
+            reason=str(err),
+        ) from err
     for item in items:
         if item.status not in _WATCHED_STATUSES:
             # Defensive guard against a future filter widening: only flag the
@@ -239,12 +253,22 @@ async def procedure_watcher_lifespan(
     async def tick() -> None:
         await _watch_tick(deps=deps, list_procedures=list_procedures, activity_lookup=lookup)
 
+    async def startup_probe() -> None:
+        await probe_read_grant(
+            deps,
+            agent_id=PROCEDURE_WATCHER_AGENT_ID,
+            read_command=_READ_COMMAND,
+            log_prefix=_LOG_PREFIX,
+            strict=deps.settings.watcher_authz_strict,
+        )
+
     async with flag_watcher_lifespan(
         enabled=deps.settings.procedure_watcher_enabled,
         default_tick_seconds=deps.settings.procedure_watcher_tick_seconds,
         log_prefix=_LOG_PREFIX,
         task_name="procedure-watcher",
         tick=tick,
+        startup_probe=startup_probe,
         interval_seconds=interval_seconds,
     ):
         yield

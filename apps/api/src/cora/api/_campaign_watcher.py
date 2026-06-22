@@ -54,11 +54,14 @@ from uuid import UUID
 from cora.access.aggregates.actor import load_actor
 from cora.agent.seed_campaign_watcher import CAMPAIGN_WATCHER_AGENT_ID
 from cora.api._flag_watcher import (
+    WatcherReadUnauthorizedError,
     derive_watcher_decision_id,
     flag_watcher_lifespan,
     is_stalled,
+    probe_read_grant,
     record_watcher_decision,
 )
+from cora.campaign.errors import UnauthorizedError
 from cora.campaign.features.list_campaigns import ListCampaigns
 from cora.decision.aggregates.decision import DECISION_CONTEXT_CAMPAIGN_PROGRESS
 from cora.infrastructure.routing import NIL_SENTINEL_ID
@@ -72,6 +75,7 @@ if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
 
 _LOG_PREFIX = "campaign_watcher"
+_READ_COMMAND = "ListCampaigns"
 _RULE = "agent:CampaignWatcher:v1"
 _COMMAND_NAME = "CampaignWatcherTick"
 _PAGE_LIMIT = 100
@@ -157,7 +161,18 @@ async def _watch_tick(
 
     now = deps.clock.now()
     stale_after = deps.settings.campaign_watcher_stale_after_seconds
-    for item in await _drain_held_campaigns(list_campaigns, deps):
+    try:
+        items = await _drain_held_campaigns(list_campaigns, deps)
+    except UnauthorizedError as err:
+        # The authz-gated drain was Denied: a missing read grant blinds the
+        # watchdog. Re-raise as the scaffold type so the loop warns loudly
+        # (edge-triggered) instead of burying it as a generic tick failure.
+        raise WatcherReadUnauthorizedError(
+            query_name=_READ_COMMAND,
+            principal_id=CAMPAIGN_WATCHER_AGENT_ID,
+            reason=str(err),
+        ) from err
+    for item in items:
         # Defensive: the drain filters to Held, but re-check so a future filter
         # change cannot widen what gets flagged.
         if item.status != _STATUS_HELD:
@@ -192,12 +207,22 @@ async def campaign_watcher_lifespan(
     async def tick() -> None:
         await _watch_tick(deps=deps, list_campaigns=list_campaigns)
 
+    async def startup_probe() -> None:
+        await probe_read_grant(
+            deps,
+            agent_id=CAMPAIGN_WATCHER_AGENT_ID,
+            read_command=_READ_COMMAND,
+            log_prefix=_LOG_PREFIX,
+            strict=deps.settings.watcher_authz_strict,
+        )
+
     async with flag_watcher_lifespan(
         enabled=deps.settings.campaign_watcher_enabled,
         default_tick_seconds=deps.settings.campaign_watcher_tick_seconds,
         log_prefix=_LOG_PREFIX,
         task_name="campaign-watcher",
         tick=tick,
+        startup_probe=startup_probe,
         interval_seconds=interval_seconds,
     ):
         yield

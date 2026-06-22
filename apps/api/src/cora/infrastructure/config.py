@@ -312,6 +312,17 @@ class Settings(BaseSettings):
     campaign_watcher_tick_seconds: float = 300.0
     campaign_watcher_stale_after_seconds: float = 604800.0
 
+    # `watcher_authz_strict` governs every watcher agent's STARTUP read-grant
+    # probe (shared across the flag-only watchers + the acting agents). Each tick
+    # a watcher issues an authz-gated list read; under a real Authorize policy a
+    # missing grant for the agent principal silently blinds the watchdog (a
+    # worse-than-none failure). At startup an ENABLED watcher probes that grant:
+    # default (False) logs a loud `<watcher>.read_unauthorized_at_startup`
+    # warning and starts anyway; True escalates a denied probe to a boot refusal
+    # for any enabled-but-blind watcher. The per-tick runtime warning is emitted
+    # regardless. No-op under a permissive Authorize (dev/test).
+    watcher_authz_strict: bool = False
+
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
     # from. Empty (default) keeps the legacy X-Principal-Id-with-

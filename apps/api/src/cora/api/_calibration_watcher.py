@@ -44,11 +44,14 @@ from uuid import UUID
 from cora.access.aggregates.actor import load_actor
 from cora.agent.seed_calibration_watcher import CALIBRATION_WATCHER_AGENT_ID
 from cora.api._flag_watcher import (
+    WatcherReadUnauthorizedError,
     derive_watcher_decision_id,
     flag_watcher_lifespan,
     is_stalled,
+    probe_read_grant,
     record_watcher_decision,
 )
+from cora.calibration.errors import UnauthorizedError
 from cora.calibration.features.list_calibrations import ListCalibrations
 from cora.decision.aggregates.decision import DECISION_CONTEXT_CALIBRATION_VERIFICATION
 from cora.infrastructure.routing import NIL_SENTINEL_ID
@@ -64,6 +67,7 @@ if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
 
 _LOG_PREFIX = "calibration_watcher"
+_READ_COMMAND = "ListCalibrations"
 _RULE = "agent:CalibrationWatcher:v1"
 _COMMAND_NAME = "CalibrationWatcherTick"
 _PAGE_LIMIT = 100
@@ -155,7 +159,18 @@ async def _watch_tick(
 
     now = deps.clock.now()
     stale_after = deps.settings.calibration_watcher_stale_after_seconds
-    for item in await _drain_provisional_calibrations(list_calibrations, deps):
+    try:
+        items = await _drain_provisional_calibrations(list_calibrations, deps)
+    except UnauthorizedError as err:
+        # The authz-gated drain was Denied: a missing read grant blinds the
+        # watchdog. Re-raise as the scaffold type so the loop warns loudly
+        # (edge-triggered) instead of burying it as a generic tick failure.
+        raise WatcherReadUnauthorizedError(
+            query_name=_READ_COMMAND,
+            principal_id=CALIBRATION_WATCHER_AGENT_ID,
+            reason=str(err),
+        ) from err
+    for item in items:
         # Defensive: the drain filters to Provisional, but re-check so a future
         # filter change cannot widen what gets flagged.
         if item.latest_revision_status != _STATUS_PROVISIONAL:
@@ -187,12 +202,22 @@ async def calibration_watcher_lifespan(
     async def tick() -> None:
         await _watch_tick(deps=deps, list_calibrations=list_calibrations)
 
+    async def startup_probe() -> None:
+        await probe_read_grant(
+            deps,
+            agent_id=CALIBRATION_WATCHER_AGENT_ID,
+            read_command=_READ_COMMAND,
+            log_prefix=_LOG_PREFIX,
+            strict=deps.settings.watcher_authz_strict,
+        )
+
     async with flag_watcher_lifespan(
         enabled=deps.settings.calibration_watcher_enabled,
         default_tick_seconds=deps.settings.calibration_watcher_tick_seconds,
         log_prefix=_LOG_PREFIX,
         task_name="calibration-watcher",
         tick=tick,
+        startup_probe=startup_probe,
         interval_seconds=interval_seconds,
     ):
         yield

@@ -349,3 +349,28 @@ def test_campaign_watcher_settings_accept_valid() -> None:
     )
     assert settings.campaign_watcher_tick_seconds == 120.0
     assert settings.campaign_watcher_stale_after_seconds == 86400.0
+
+
+@pytest.mark.unit
+async def test_tick_raises_read_unauthorized_when_drain_denied() -> None:
+    """A Denied ListCampaigns read (missing grant) surfaces as the scaffold's
+    WatcherReadUnauthorizedError, not a buried generic tick failure."""
+    from cora.api._campaign_watcher import _watch_tick
+    from cora.api._flag_watcher import WatcherReadUnauthorizedError
+    from cora.campaign.errors import UnauthorizedError
+
+    kernel = _kernel()
+    await seed_campaign_watcher_agent(kernel)
+
+    async def denying_list_campaigns(
+        query: ListCampaigns,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> CampaignListPage:
+        raise UnauthorizedError("agent not granted ListCampaigns")
+
+    with pytest.raises(WatcherReadUnauthorizedError) as exc:
+        await _watch_tick(deps=kernel, list_campaigns=denying_list_campaigns)
+    assert exc.value.query_name == "ListCampaigns"
