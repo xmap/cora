@@ -239,6 +239,21 @@ conditioning-optics:
         CORA records this two-state position as the dmm_insertion setting above;
         the coordinated mode-switch move that drives it stays deferred with the
         Pink positions and stripe map (MODE-3, MIRROR-1). Source: docs2bm item_020.
+    - name: AlignmentCamera
+      family: Camera
+      pv: "2bma:m21"
+      controller: FrontEndDrive
+      new: true
+      confirm: true
+      note: >
+        Semi-permanent A-station beam-view camera (FLIR Oryx 5MP, IOC
+        2bmbOryx5MP on host lyra) on a vertical stage 2bma:m21. Permanently
+        installed but rarely engaged (annual / multi-year, for major
+        realignment): the beam reaches it only when an operator manually breaks
+        vacuum and removes an upstream pipe section. A distinct unit from the
+        B-station microscope Camera; exact part likely ORX-10G-51S5M, pending
+        operator confirmation (ALIGN-1). The rare-engagement is a note, not a
+        new lifecycle state.
 
 beam-defining-and-safety:
   stage: source
@@ -318,21 +333,6 @@ beam-defining-and-safety:
         transmission) are deferred with the path reserved, per the passive-beam-path tier
         discipline. Distinct from Slit (a variable four-blade opening) and Mask (a fixed
         passive aperture): this is a fixed-pattern mask actively positioned.
-    - name: AlignmentCamera
-      family: Camera
-      pv: "2bma:m21"
-      controller: FrontEndDrive
-      new: true
-      confirm: true
-      note: >
-        Semi-permanent A-station beam-view camera (FLIR Oryx 5MP, IOC
-        2bmbOryx5MP on host lyra) on a vertical stage 2bma:m21. Permanently
-        installed but rarely engaged (annual / multi-year, for major
-        realignment): the beam reaches it only when an operator manually breaks
-        vacuum and removes an upstream pipe section. A distinct unit from the
-        B-station microscope Camera; exact part likely ORX-10G-51S5M, pending
-        operator confirmation (ALIGN-1). The rare-engagement is a note, not a
-        new lifecycle state.
 
 sample-environment:
   stage: sample
