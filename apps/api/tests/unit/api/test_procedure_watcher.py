@@ -302,11 +302,75 @@ async def test_record_decision_is_idempotent_on_repeated_episode() -> None:
 
 
 @pytest.mark.unit
+async def test_tick_drains_paginated_procedures() -> None:
+    """The drain follows next_cursor across pages, so a stale procedure on a
+    later page is still flagged (pins the cursor-advance against a mutant)."""
+    from cora.api._procedure_watcher import _watch_tick
+
+    kernel = _kernel()
+    await seed_procedure_watcher_agent(kernel)
+    page1_pid, page2_pid = uuid4(), uuid4()
+
+    async def list_procedures(
+        query: ListProcedures,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ProcedureListPage:
+        if query.status != "Running":
+            return ProcedureListPage(items=[], next_cursor=None)
+        if query.cursor is None:
+            return ProcedureListPage(
+                items=[_item(page1_pid, last_status_changed_at=_OLD)], next_cursor="page2"
+            )
+        return ProcedureListPage(
+            items=[_item(page2_pid, last_status_changed_at=_OLD)], next_cursor=None
+        )
+
+    await _watch_tick(
+        deps=kernel,
+        list_procedures=list_procedures,
+        activity_lookup=InMemoryProcedureActivityLookup(),
+    )
+
+    # The page-2 procedure is only reached if the cursor advance ran.
+    assert await load_decision(kernel.event_store, _derive_decision_id(page2_pid, _OLD)) is not None
+
+
+@pytest.mark.unit
 async def test_tick_is_noop_when_watcher_actor_absent() -> None:
     """Revocation gate: with no seeded (active) ProcedureWatcher Actor, do nothing."""
     from cora.api._procedure_watcher import _watch_tick
 
     kernel = _kernel()  # NOT seeded
+    pid = uuid4()
+    list_procedures = _make_list_procedures([_item(pid, last_status_changed_at=_OLD)])
+
+    await _watch_tick(
+        deps=kernel,
+        list_procedures=list_procedures,
+        activity_lookup=InMemoryProcedureActivityLookup(),
+    )
+
+    assert await load_decision(kernel.event_store, _derive_decision_id(pid, _OLD)) is None
+
+
+@pytest.mark.unit
+async def test_tick_is_noop_when_watcher_actor_deactivated() -> None:
+    """Kill switch: an operator deactivating the agent Actor stands the watcher
+    down even while seeded. Pins the `not actor.active` disjunct of the gate."""
+    from cora.access.features import deactivate_actor
+    from cora.access.features.deactivate_actor import DeactivateActor
+    from cora.api._procedure_watcher import _watch_tick
+
+    kernel = _kernel()
+    await seed_procedure_watcher_agent(kernel)
+    await deactivate_actor.bind(kernel)(
+        DeactivateActor(actor_id=PROCEDURE_WATCHER_AGENT_ID),
+        principal_id=PROCEDURE_WATCHER_AGENT_ID,
+        correlation_id=uuid4(),
+    )
     pid = uuid4()
     list_procedures = _make_list_procedures([_item(pid, last_status_changed_at=_OLD)])
 

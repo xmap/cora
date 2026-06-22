@@ -17,11 +17,13 @@ Per [[project-procedure-watcher-design]]:
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template and a sentinel
     `ModelRef` (`provider="deterministic"`), never used to build an LLM (the
     runtime is a periodic staleness comparison over in-conduct procedures).
-  - FLAG-ONLY: the runtime issues NO command. It records one
+  - FLAG-ONLY: the runtime issues NO write command (unlike ClearanceExpirer's
+    expire_clearance), so there is no per-command Policy grant to seed. It does
+    issue an authz-gated `ListProcedures` read each tick, so under a real
+    Authorize policy (not the dev AllowAllAuthorize) the agent principal still
+    needs that read grant or every drain is denied; it records one
     Decision(context=ProcedureProgress, choice=Stall) per stall episode for a
-    human to act on. Permission to record Decisions is granted at
-    agent-definition time (the RunDebriefer stance); there is no
-    authorized-command leg and so no per-command Policy grant to seed.
+    human to act on (the append-only authorship path, the RunDebriefer stance).
 """
 
 from __future__ import annotations
