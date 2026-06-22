@@ -1,4 +1,4 @@
-"""Application handler for the `arrive_visit` slice.
+"""Application handler for the `record_visit_arrival` slice.
 
 Update-style handler. Body lives in the per-aggregate factory at
 `cora.trust._visit_update_handler.make_visit_update_handler`.
@@ -10,16 +10,16 @@ from uuid import UUID
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.trust._visit_update_handler import make_visit_update_handler
-from cora.trust.features.arrive_visit.command import ArriveVisit
-from cora.trust.features.arrive_visit.decider import decide
+from cora.trust.features.record_visit_arrival.command import RecordVisitArrival
+from cora.trust.features.record_visit_arrival.decider import decide
 
 
 class Handler(Protocol):
-    """Callable interface every arrive_visit handler implements."""
+    """Callable interface every record_visit_arrival handler implements."""
 
     async def __call__(
         self,
-        command: ArriveVisit,
+        command: RecordVisitArrival,
         *,
         principal_id: UUID,
         correlation_id: UUID,
@@ -29,10 +29,10 @@ class Handler(Protocol):
 
 
 def bind(deps: Kernel) -> Handler:
-    """Build an arrive_visit handler closed over the shared deps."""
+    """Build an record_visit_arrival handler closed over the shared deps."""
     return make_visit_update_handler(
         deps,
-        command_name="ArriveVisit",
-        log_prefix="arrive_visit",
+        command_name="RecordVisitArrival",
+        log_prefix="record_visit_arrival",
         decide_fn=decide,
     )

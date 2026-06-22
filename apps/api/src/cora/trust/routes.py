@@ -75,7 +75,6 @@ from cora.trust.aggregates.zone import InvalidZoneNameError, ZoneAlreadyExistsEr
 from cora.trust.errors import UnauthorizedError
 from cora.trust.features import (
     abort_visit,
-    arrive_visit,
     cancel_visit,
     check_in_visit,
     check_out_visit,
@@ -91,6 +90,7 @@ from cora.trust.features import (
     list_permissions,
     list_policies,
     list_zones,
+    record_visit_arrival,
     register_visit,
     release_control_of_surface,
     resume_visit,
@@ -196,7 +196,7 @@ def register_trust_routes(app: FastAPI) -> None:
     app.include_router(list_permissions.router)
     # Visit lifecycle slices.
     app.include_router(register_visit.router)
-    app.include_router(arrive_visit.router)
+    app.include_router(record_visit_arrival.router)
     app.include_router(start_visit.router)
     app.include_router(hold_visit.router)
     app.include_router(resume_visit.router)

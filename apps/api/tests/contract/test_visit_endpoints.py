@@ -1,6 +1,6 @@
 """HTTP contract tests for the 13 Visit endpoints.
 
-Consolidated coverage file: covers `register_visit`, `arrive_visit`,
+Consolidated coverage file: covers `register_visit`, `record_visit_arrival`,
 `start_visit`, `hold_visit`, `resume_visit`, `complete_visit`,
 `cancel_visit`, `abort_visit`, `void_visit`, `check_in_visit`,
 `check_out_visit`, `take_control_of_surface`,
@@ -113,7 +113,7 @@ def test_post_visits_returns_422_when_type_is_not_in_closed_enum() -> None:
 def test_full_lifecycle_walk_returns_204_at_each_step() -> None:
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        assert client.post(f"/visits/{vid}/arrive").status_code == 204
+        assert client.post(f"/visits/{vid}/record-arrival").status_code == 204
         assert client.post(f"/visits/{vid}/start").status_code == 204
         assert client.post(f"/visits/{vid}/hold", json={"reason": "beam dump"}).status_code == 204
         assert client.post(f"/visits/{vid}/resume").status_code == 204
@@ -128,7 +128,7 @@ def test_full_lifecycle_walk_returns_204_at_each_step() -> None:
 @pytest.mark.parametrize(
     ("path_suffix", "body"),
     [
-        ("/arrive", None),
+        ("/record-arrival", None),
         ("/start", None),
         ("/hold", {"reason": "r"}),
         ("/resume", None),
@@ -157,7 +157,7 @@ def test_lifecycle_endpoint_returns_404_when_visit_absent(
 def test_cancel_returns_409_when_visit_is_in_progress_must_use_abort() -> None:
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        client.post(f"/visits/{vid}/arrive")
+        client.post(f"/visits/{vid}/record-arrival")
         client.post(f"/visits/{vid}/start")
         response = client.post(f"/visits/{vid}/cancel", json={"reason": "r"})
     assert response.status_code == 409
@@ -180,7 +180,7 @@ def test_abort_returns_409_when_visit_is_planned_must_use_cancel() -> None:
 def test_hold_returns_400_on_whitespace_only_reason() -> None:
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        client.post(f"/visits/{vid}/arrive")
+        client.post(f"/visits/{vid}/record-arrival")
         client.post(f"/visits/{vid}/start")
         response = client.post(f"/visits/{vid}/hold", json={"reason": "   "})
     assert response.status_code == 400
@@ -195,7 +195,7 @@ def test_hold_returns_400_on_whitespace_only_reason() -> None:
 def test_hold_returns_422_when_reason_missing() -> None:
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        client.post(f"/visits/{vid}/arrive")
+        client.post(f"/visits/{vid}/record-arrival")
         client.post(f"/visits/{vid}/start")
         response = client.post(f"/visits/{vid}/hold", json={})
     assert response.status_code == 422
@@ -218,7 +218,7 @@ def test_void_returns_204_from_planned_status() -> None:
 def test_void_returns_409_when_visit_is_already_completed() -> None:
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        client.post(f"/visits/{vid}/arrive")
+        client.post(f"/visits/{vid}/record-arrival")
         client.post(f"/visits/{vid}/start")
         client.post(f"/visits/{vid}/complete")
         response = client.post(f"/visits/{vid}/void", json={"reason": "oops"})
@@ -234,7 +234,7 @@ def test_void_returns_409_when_visit_is_already_completed() -> None:
 def test_check_in_returns_204_after_arrival() -> None:
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        client.post(f"/visits/{vid}/arrive")
+        client.post(f"/visits/{vid}/record-arrival")
         response = client.post(
             f"/visits/{vid}/check-in",
             json={"actor_id": str(uuid4()), "mode": "physical"},
@@ -259,7 +259,7 @@ def test_check_in_returns_409_when_actor_already_checked_in() -> None:
     actor_id = str(uuid4())
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        client.post(f"/visits/{vid}/arrive")
+        client.post(f"/visits/{vid}/record-arrival")
         client.post(f"/visits/{vid}/check-in", json={"actor_id": actor_id, "mode": "physical"})
         response = client.post(
             f"/visits/{vid}/check-in",
@@ -282,7 +282,7 @@ def test_check_in_returns_404_when_visit_absent() -> None:
 def test_check_in_returns_422_when_mode_invalid() -> None:
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        client.post(f"/visits/{vid}/arrive")
+        client.post(f"/visits/{vid}/record-arrival")
         response = client.post(
             f"/visits/{vid}/check-in",
             json={"actor_id": str(uuid4()), "mode": "telepresence"},
@@ -295,7 +295,7 @@ def test_check_out_returns_204_after_check_in() -> None:
     actor_id = str(uuid4())
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        client.post(f"/visits/{vid}/arrive")
+        client.post(f"/visits/{vid}/record-arrival")
         client.post(f"/visits/{vid}/check-in", json={"actor_id": actor_id, "mode": "physical"})
         response = client.post(f"/visits/{vid}/check-out", json={"actor_id": actor_id})
     assert response.status_code == 204, response.text
@@ -305,7 +305,7 @@ def test_check_out_returns_204_after_check_in() -> None:
 def test_check_out_returns_404_when_actor_not_checked_in() -> None:
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        client.post(f"/visits/{vid}/arrive")
+        client.post(f"/visits/{vid}/record-arrival")
         response = client.post(
             f"/visits/{vid}/check-out",
             json={"actor_id": str(uuid4())},
@@ -340,7 +340,7 @@ def _register_in_progress_visit(client: TestClient) -> tuple[str, str]:
         },
     )
     assert response.status_code == 201, response.text
-    assert client.post(f"/visits/{visit_id}/arrive").status_code == 204
+    assert client.post(f"/visits/{visit_id}/record-arrival").status_code == 204
     assert client.post(f"/visits/{visit_id}/start").status_code == 204
     return visit_id, surface_id
 

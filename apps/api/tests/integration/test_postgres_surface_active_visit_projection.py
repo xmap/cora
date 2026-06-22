@@ -33,7 +33,7 @@ from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.trust._projections import register_trust_projections
 from cora.trust.aggregates.visit import VisitType
 from cora.trust.features import (
-    arrive_visit,
+    record_visit_arrival,
     register_visit,
     release_control_of_surface,
     start_visit,
@@ -78,8 +78,8 @@ async def _seed_in_progress_visit(
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    await arrive_visit.bind(_deps(pool, [uuid4()], _T0))(
-        arrive_visit.ArriveVisit(visit_id=visit_id),
+    await record_visit_arrival.bind(_deps(pool, [uuid4()], _T0))(
+        record_visit_arrival.RecordVisitArrival(visit_id=visit_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

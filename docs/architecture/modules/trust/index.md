@@ -85,7 +85,7 @@ The logbook sub-lifecycle on `Conduit` is captured in the events table below; to
 ```mermaid
 stateDiagram-v2
     [*] --> Planned: register_visit
-    Planned --> Arrived: arrive_visit
+    Planned --> Arrived: record_visit_arrival
     Arrived --> InProgress: start_visit
     InProgress --> OnHold: hold_visit
     OnHold --> InProgress: resume_visit
@@ -108,7 +108,7 @@ stateDiagram-v2
 | From | To | Command | Event |
 |---|---|---|---|
 | `[*]` | `Planned` | `register_visit` | `VisitRegistered` |
-| `Planned` | `Arrived` | `arrive_visit` | `VisitArrived` |
+| `Planned` | `Arrived` | `record_visit_arrival` | `VisitArrived` |
 | `Arrived` | `InProgress` | `start_visit` | `VisitStarted` |
 | `InProgress` | `OnHold` | `hold_visit` | `VisitHeld` |
 | `OnHold` | `InProgress` | `resume_visit` | `VisitResumed` |
@@ -143,7 +143,7 @@ The <!-- arch:count kind=event bc=trust agg=visit spell=true -->thirteen<!-- /ar
 | Event | Payload sketch | When emitted |
 |---|---|---|
 | `VisitRegistered` | `visit_id`, `policy_id`, `surface_id`, `type`, `planned_start_at`, `planned_end_at`, `parent_id?`, `external_refs`, `occurred_at` | `register_visit` succeeds (genesis) |
-| `VisitArrived` | `visit_id`, `occurred_at` | `arrive_visit` succeeds |
+| `VisitArrived` | `visit_id`, `occurred_at` | `record_visit_arrival` succeeds |
 | `VisitStarted` | `visit_id`, `occurred_at` | `start_visit` succeeds |
 | `VisitHeld` | `visit_id`, `reason`, `occurred_at` | `hold_visit` succeeds |
 | `VisitResumed` | `visit_id`, `occurred_at` | `resume_visit` succeeds |
@@ -201,7 +201,7 @@ _Generated from the code at build time._
 `RegisterVisit`
 : `InvalidVisitPlannedPeriod`, `InvalidVisitReason`, `VisitAlreadyExists`, `VisitParentNotFound`, `VisitParentMismatchedSurface`, `Unauthorized`
 
-`ArriveVisit` / `StartVisit` / `HoldVisit` / `ResumeVisit` / `CompleteVisit` / `CancelVisit` / `AbortVisit` / `VoidVisit`
+`RecordVisitArrival` / `StartVisit` / `HoldVisit` / `ResumeVisit` / `CompleteVisit` / `CancelVisit` / `AbortVisit` / `VoidVisit`
 : `VisitNotFound`, `VisitCannot<Arrive|Start|Hold|Resume|Complete|Cancel|Abort|Void>`, `InvalidVisitReason` (the reason-bearing transitions: hold, cancel, abort, void), `Unauthorized`
 
 `CheckInVisit` / `CheckOutVisit`

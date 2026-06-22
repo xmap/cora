@@ -51,7 +51,7 @@ audit-trail-visible. Direct application of
 
 ## Bootstrap stance
 
-Visit commands (`RegisterVisit`, `ArriveVisit`, ..., `VoidVisit`) are NOT
+Visit commands (`RegisterVisit`, `RecordVisitArrival`, ..., `VoidVisit`) are NOT
 in the System Bootstrap Policy seed. The bootstrap seed stays at
 `{DefinePolicy, RegisterActor}`; first real admin Policy grants Visit
 commands post-bootstrap. See AuthZ matrix in design memo.
@@ -279,7 +279,7 @@ def _format_visit_cannot_message(
 
 
 class VisitCannotArriveError(Exception):
-    """arrive_visit guard failed: status is not in the permitted source set."""
+    """record_visit_arrival guard failed: status is not in the permitted source set."""
 
     def __init__(
         self,

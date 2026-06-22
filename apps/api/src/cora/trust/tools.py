@@ -11,7 +11,6 @@ from collections.abc import Callable
 from mcp.server.fastmcp import FastMCP
 
 from cora.trust.features.abort_visit import tool as abort_visit_tool
-from cora.trust.features.arrive_visit import tool as arrive_visit_tool
 from cora.trust.features.cancel_visit import tool as cancel_visit_tool
 from cora.trust.features.check_in_visit import tool as check_in_visit_tool
 from cora.trust.features.check_out_visit import tool as check_out_visit_tool
@@ -27,6 +26,7 @@ from cora.trust.features.list_conduits import tool as list_conduits_tool
 from cora.trust.features.list_permissions import tool as list_permissions_tool
 from cora.trust.features.list_policies import tool as list_policies_tool
 from cora.trust.features.list_zones import tool as list_zones_tool
+from cora.trust.features.record_visit_arrival import tool as record_visit_arrival_tool
 from cora.trust.features.register_visit import tool as register_visit_tool
 from cora.trust.features.release_control_of_surface import tool as release_control_of_surface_tool
 from cora.trust.features.resume_visit import tool as resume_visit_tool
@@ -54,7 +54,7 @@ def register_trust_tools(
     list_permissions_tool.register(mcp, get_handler=lambda: get_handlers().list_permissions)
     # Visit lifecycle tools.
     register_visit_tool.register(mcp, get_handler=lambda: get_handlers().register_visit)
-    arrive_visit_tool.register(mcp, get_handler=lambda: get_handlers().arrive_visit)
+    record_visit_arrival_tool.register(mcp, get_handler=lambda: get_handlers().record_visit_arrival)
     start_visit_tool.register(mcp, get_handler=lambda: get_handlers().start_visit)
     hold_visit_tool.register(mcp, get_handler=lambda: get_handlers().hold_visit)
     resume_visit_tool.register(mcp, get_handler=lambda: get_handlers().resume_visit)

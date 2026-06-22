@@ -1,4 +1,4 @@
-"""Decider tests for `arrive_visit` (Planned -> Arrived; explicit gesture)."""
+"""Decider tests for `record_visit_arrival` (Planned -> Arrived; explicit gesture)."""
 
 import pytest
 
@@ -8,8 +8,8 @@ from cora.trust.aggregates.visit import (
     VisitNotFoundError,
     VisitStatus,
 )
-from cora.trust.features.arrive_visit import ArriveVisit
-from cora.trust.features.arrive_visit.decider import decide
+from cora.trust.features.record_visit_arrival import RecordVisitArrival
+from cora.trust.features.record_visit_arrival.decider import decide
 from tests.unit.trust.visit._fixtures import NOW, VISIT_ID, make_visit
 
 
@@ -17,7 +17,7 @@ from tests.unit.trust.visit._fixtures import NOW, VISIT_ID, make_visit
 def test_arrive_from_planned_emits_visit_arrived() -> None:
     events = decide(
         state=make_visit(VisitStatus.PLANNED),
-        command=ArriveVisit(visit_id=VISIT_ID),
+        command=RecordVisitArrival(visit_id=VISIT_ID),
         now=NOW,
     )
     assert len(events) == 1
@@ -30,7 +30,7 @@ def test_arrive_from_planned_emits_visit_arrived() -> None:
 @pytest.mark.unit
 def test_arrive_raises_not_found_on_empty_state() -> None:
     with pytest.raises(VisitNotFoundError):
-        decide(state=None, command=ArriveVisit(visit_id=VISIT_ID), now=NOW)
+        decide(state=None, command=RecordVisitArrival(visit_id=VISIT_ID), now=NOW)
 
 
 @pytest.mark.parametrize(
@@ -46,7 +46,7 @@ def test_arrive_rejects_non_planned_statuses(current_status: VisitStatus) -> Non
     with pytest.raises(VisitCannotArriveError) as exc_info:
         decide(
             state=make_visit(current_status),
-            command=ArriveVisit(visit_id=VISIT_ID),
+            command=RecordVisitArrival(visit_id=VISIT_ID),
             now=NOW,
         )
     assert exc_info.value.current_status == current_status

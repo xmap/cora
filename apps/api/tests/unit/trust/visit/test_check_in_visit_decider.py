@@ -63,7 +63,7 @@ def test_check_in_raises_not_found_on_empty_state() -> None:
 @pytest.mark.unit
 def test_check_in_rejects_planned_status_does_not_auto_arrive() -> None:
     """V6 explicit-gesture lock: presence does NOT auto-transition Planned
-    -> Arrived. Operator must arrive_visit first."""
+    -> Arrived. Operator must record_visit_arrival first."""
     with pytest.raises(VisitCannotCheckInError):
         decide(
             state=make_visit(VisitStatus.PLANNED),

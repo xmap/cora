@@ -1,6 +1,6 @@
-"""Property-based tests for `arrive_visit.decide` (Trust BC, Visit aggregate).
+"""Property-based tests for `record_visit_arrival.decide` (Trust BC, Visit aggregate).
 
-Complements the example-based `visit/test_arrive_visit_decider.py` with
+Complements the example-based `visit/test_record_visit_arrival_decider.py` with
 universal claims across generated inputs. The decider is a pure
 single-source FSM transition
 
@@ -35,8 +35,8 @@ from cora.trust.aggregates.visit import (
     VisitStatus,
     VisitType,
 )
-from cora.trust.features.arrive_visit import ArriveVisit
-from cora.trust.features.arrive_visit.decider import decide
+from cora.trust.features.record_visit_arrival import RecordVisitArrival
+from cora.trust.features.record_visit_arrival.decider import decide
 from tests._strategies import aware_datetimes
 
 _POLICY_ID = UUID("01900000-0000-7000-8000-00000000a002")
@@ -68,7 +68,7 @@ def test_arrive_with_none_state_always_raises_not_found(
 ) -> None:
     """Empty stream always raises `VisitNotFoundError` carrying command.visit_id."""
     with pytest.raises(VisitNotFoundError) as exc:
-        decide(state=None, command=ArriveVisit(visit_id=visit_id), now=now)
+        decide(state=None, command=RecordVisitArrival(visit_id=visit_id), now=now)
     assert exc.value.visit_id == visit_id
 
 
@@ -78,7 +78,7 @@ def test_arrive_from_planned_emits_single_event(visit_id: UUID, now: datetime) -
     """Planned is the only arrivable source; emits one VisitArrived."""
     events = decide(
         state=_visit(visit_id=visit_id, status=VisitStatus.PLANNED),
-        command=ArriveVisit(visit_id=visit_id),
+        command=RecordVisitArrival(visit_id=visit_id),
         now=now,
     )
     assert events == [VisitArrived(visit_id=visit_id, occurred_at=now)]
@@ -99,7 +99,7 @@ def test_arrive_from_disallowed_source_always_raises_cannot_arrive(
     with pytest.raises(VisitCannotArriveError) as exc:
         decide(
             state=_visit(visit_id=visit_id, status=source),
-            command=ArriveVisit(visit_id=visit_id),
+            command=RecordVisitArrival(visit_id=visit_id),
             now=now,
         )
     assert exc.value.current_status is source
@@ -116,7 +116,7 @@ def test_arrive_uses_state_id_not_command_visit_id(
     assume(state_visit_id != command_visit_id)
     events = decide(
         state=_visit(visit_id=state_visit_id, status=VisitStatus.PLANNED),
-        command=ArriveVisit(visit_id=command_visit_id),
+        command=RecordVisitArrival(visit_id=command_visit_id),
         now=now,
     )
     assert events[0].visit_id == state_visit_id
@@ -127,7 +127,7 @@ def test_arrive_uses_state_id_not_command_visit_id(
 def test_arrive_is_pure_same_input_same_output(visit_id: UUID, now: datetime) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _visit(visit_id=visit_id, status=VisitStatus.PLANNED)
-    command = ArriveVisit(visit_id=visit_id)
+    command = RecordVisitArrival(visit_id=visit_id)
     first = decide(state=state, command=command, now=now)
     second = decide(state=state, command=command, now=now)
     assert first == second

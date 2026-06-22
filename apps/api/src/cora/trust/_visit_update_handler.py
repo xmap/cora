@@ -6,7 +6,7 @@ cross-BC `cora.infrastructure.update_handler.make_update_handler`.
 
 ## Hoist trigger
 
-Visit ships eight transition slices day one (`arrive_visit` /
+Visit ships eight transition slices day one (`record_visit_arrival` /
 `start_visit` / `hold_visit` / `resume_visit` / `complete_visit` /
 `cancel_visit` / `abort_visit` / `void_visit`). Eight identical
 longhand bodies fire the rule-of-three signal at slice-creation time,

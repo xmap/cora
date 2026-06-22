@@ -25,7 +25,6 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
 from cora.trust.features import (
     abort_visit,
-    arrive_visit,
     cancel_visit,
     check_in_visit,
     check_out_visit,
@@ -41,6 +40,7 @@ from cora.trust.features import (
     list_permissions,
     list_policies,
     list_zones,
+    record_visit_arrival,
     register_visit,
     release_control_of_surface,
     resume_visit,
@@ -71,7 +71,7 @@ class TrustHandlers:
     define_policy: define_policy.IdempotentHandler
     define_surface: define_surface.IdempotentHandler
     register_visit: register_visit.IdempotentHandler
-    arrive_visit: arrive_visit.Handler
+    record_visit_arrival: record_visit_arrival.Handler
     start_visit: start_visit.Handler
     hold_visit: hold_visit.Handler
     resume_visit: resume_visit.Handler
@@ -154,9 +154,9 @@ def wire_trust(deps: Kernel) -> TrustHandlers:
             command_name="RegisterVisit",
             bc=_BC,
         ),
-        arrive_visit=with_tracing(
-            arrive_visit.bind(deps),
-            command_name="ArriveVisit",
+        record_visit_arrival=with_tracing(
+            record_visit_arrival.bind(deps),
+            command_name="RecordVisitArrival",
             bc=_BC,
         ),
         start_visit=with_tracing(

@@ -39,7 +39,7 @@ def decide(
       - State must not be None -> VisitNotFoundError
       - Status must be Arrived / InProgress / OnHold
         -> VisitCannotCheckInError
-        (operator must arrive_visit first; presence does not auto-arrive)
+        (operator must record_visit_arrival first; presence does not auto-arrive)
       - No open presence entry for this actor -> VisitAlreadyCheckedInError
     """
     if state is None:

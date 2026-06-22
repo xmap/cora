@@ -191,7 +191,7 @@ The two conventions cover different audiences: code-side names live alongside si
 
 When an endpoint manipulates a sub-resource on its parent, the URL nests as `/{parent-id}/{sub-resource}/{verb}`. Examples: `POST /visits/{visit_id}/surface-control/take`, `POST /visits/{visit_id}/surface-control/release`, `POST /federation/seals/{facility_id}/pointer/sign`, `POST /federation/seals/{facility_id}/online-key/rotate`. The noun-resource segment groups related actions; the verb terminates the path.
 
-This nesting is reserved for sub-resources that have multiple actions or own a meaningful name independent of the parent. Single-action endpoints stay flat (`POST /visits/{visit_id}/arrive`).
+This nesting is reserved for sub-resources that have multiple actions or own a meaningful name independent of the parent. Single-action endpoints stay flat (`POST /visits/{visit_id}/record-arrival`).
 
 Multi-word verb-prep URL segments are banned. `take-control-of-surface` was the sole example before commit `bda0d49f1` flipped it to `surface-control/take`; the noun-then-verb shape is the standard.
 

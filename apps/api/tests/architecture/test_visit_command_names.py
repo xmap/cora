@@ -28,7 +28,7 @@ from tests.architecture.conftest import CORA_ROOT
 _VISIT_COMMAND_NAMES: frozenset[str] = frozenset(
     {
         "RegisterVisit",
-        "ArriveVisit",
+        "RecordVisitArrival",
         "StartVisit",
         "HoldVisit",
         "ResumeVisit",

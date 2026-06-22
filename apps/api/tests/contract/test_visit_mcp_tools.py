@@ -1,6 +1,6 @@
 """MCP tool contract tests for the 13 Visit tools.
 
-Consolidated coverage file: covers `register_visit`, `arrive_visit`,
+Consolidated coverage file: covers `register_visit`, `record_visit_arrival`,
 `start_visit`, `hold_visit`, `resume_visit`, `complete_visit`,
 `cancel_visit`, `abort_visit`, `void_visit`, `check_in_visit`,
 `check_out_visit`, `take_control_of_surface`,
@@ -41,7 +41,7 @@ def _register_visit_via_rest(client: TestClient) -> str:
 
 _EXPECTED_TOOL_NAMES = {
     "register_visit",
-    "arrive_visit",
+    "record_visit_arrival",
     "start_visit",
     "hold_visit",
     "resume_visit",
@@ -140,7 +140,7 @@ def test_mcp_lifecycle_tool_returns_iserror_when_visit_not_found(tool_name: str)
 
 
 @pytest.mark.contract
-def test_mcp_arrive_visit_tool_returns_structured_visit_id_on_happy_path() -> None:
+def test_mcp_record_visit_arrival_tool_returns_structured_visit_id_on_happy_path() -> None:
     """Spot-check: lifecycle tools also emit `structuredContent` with visit_id."""
     with TestClient(create_app()) as client:
         visit_id = _register_visit_via_rest(client)
@@ -152,7 +152,7 @@ def test_mcp_arrive_visit_tool_returns_structured_visit_id_on_happy_path() -> No
                 "id": 4,
                 "method": "tools/call",
                 "params": {
-                    "name": "arrive_visit",
+                    "name": "record_visit_arrival",
                     "arguments": {"visit_id": visit_id},
                 },
             },

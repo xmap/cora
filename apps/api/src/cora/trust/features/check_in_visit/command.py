@@ -2,7 +2,7 @@
 
 Adds an open presence entry for `actor_id` to a Visit. Requires
 `Visit.status in {Arrived, InProgress, OnHold}` -- presence is
-orthogonal to lifecycle per V6 (operator must explicitly `arrive_visit`
+orthogonal to lifecycle per V6 (operator must explicitly `record_visit_arrival`
 first; check-in does NOT auto-transition Planned -> Arrived).
 """
 

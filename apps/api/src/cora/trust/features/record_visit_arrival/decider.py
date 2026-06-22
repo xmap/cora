@@ -1,4 +1,4 @@
-"""Pure decider for the `ArriveVisit` command.
+"""Pure decider for the `RecordVisitArrival` command.
 
 Single-source transition: `Planned -> Arrived`. Strict-not-idempotent
 (re-arriving an already-Arrived visit raises).
@@ -13,14 +13,14 @@ from cora.trust.aggregates.visit import (
     VisitNotFoundError,
     VisitStatus,
 )
-from cora.trust.features.arrive_visit.command import ArriveVisit
+from cora.trust.features.record_visit_arrival.command import RecordVisitArrival
 
 _PERMITTED: tuple[VisitStatus, ...] = (VisitStatus.PLANNED,)
 
 
 def decide(
     state: Visit | None,
-    command: ArriveVisit,
+    command: RecordVisitArrival,
     *,
     now: datetime,
 ) -> list[VisitArrived]:

@@ -1,4 +1,4 @@
-"""The `ArriveVisit` command -- intent dataclass.
+"""The `RecordVisitArrival` command -- intent dataclass.
 
 Explicit operator gesture: team is on-site (or remote-checked-in
 in spirit). NO presence collection mutation; that's check_in_visit's
@@ -11,7 +11,7 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
-class ArriveVisit:
+class RecordVisitArrival:
     """Transition Planned -> Arrived."""
 
     visit_id: UUID

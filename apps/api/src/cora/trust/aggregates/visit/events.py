@@ -56,7 +56,7 @@ class VisitArrived:
     """The Visit team has arrived (explicit operator gesture).
 
     Distinct from any presence event (`VisitCheckedIn`).
-    Operator may call `arrive_visit` without any individual actor
+    Operator may call `record_visit_arrival` without any individual actor
     check-in (e.g., team here but specific presences not tracked).
     Defends V6 explicit-gesture lock.
     """
@@ -151,7 +151,7 @@ class VisitCheckedIn:
     """An actor checked in to the Visit in physical or remote mode.
 
     Does NOT change Visit.status -- presence is orthogonal to lifecycle
-    (V6 explicit-gesture lock: operator must `arrive_visit` separately
+    (V6 explicit-gesture lock: operator must `record_visit_arrival` separately
     before any check-in is permitted). Adds one open `PresenceEntry`
     to `presence_entries` via set-union in the evolver.
     """

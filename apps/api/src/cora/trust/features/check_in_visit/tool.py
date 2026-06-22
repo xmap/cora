@@ -30,7 +30,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         description=(
             "Check an actor in to a Visit (physical on-site or remote). "
             "Visit must be Arrived / InProgress / OnHold (presence is "
-            "orthogonal to lifecycle; operator must arrive_visit first). "
+            "orthogonal to lifecycle; operator must record_visit_arrival first). "
             "Actor cannot have an existing open presence entry."
         ),
     )

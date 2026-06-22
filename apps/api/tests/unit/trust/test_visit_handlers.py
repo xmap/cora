@@ -1,6 +1,6 @@
 """Application-handler unit tests for the 13 Visit slices.
 
-Consolidated coverage file: covers `register_visit`, `arrive_visit`,
+Consolidated coverage file: covers `register_visit`, `record_visit_arrival`,
 `start_visit`, `hold_visit`, `resume_visit`, `complete_visit`,
 `cancel_visit`, `abort_visit`, `void_visit`, `check_in_visit`,
 `check_out_visit`, `take_control_of_surface`,
@@ -35,12 +35,12 @@ from cora.trust.aggregates.visit import (
 )
 from cora.trust.features import (
     abort_visit,
-    arrive_visit,
     cancel_visit,
     check_in_visit,
     check_out_visit,
     complete_visit,
     hold_visit,
+    record_visit_arrival,
     register_visit,
     release_control_of_surface,
     resume_visit,
@@ -187,8 +187,8 @@ async def test_register_visit_handler_raises_unauthorized_on_deny() -> None:
 
 _LIFECYCLE_BIND_HAPPY: list[tuple[str, object, VisitStatus, VisitStatus]] = [
     (
-        "arrive_visit",
-        arrive_visit.ArriveVisit(visit_id=_VISIT_ID),
+        "record_visit_arrival",
+        record_visit_arrival.RecordVisitArrival(visit_id=_VISIT_ID),
         VisitStatus.PLANNED,
         VisitStatus.ARRIVED,
     ),
@@ -238,7 +238,7 @@ _LIFECYCLE_BIND_HAPPY: list[tuple[str, object, VisitStatus, VisitStatus]] = [
 
 
 _BIND_FN = {
-    "arrive_visit": arrive_visit.bind,
+    "record_visit_arrival": record_visit_arrival.bind,
     "start_visit": start_visit.bind,
     "hold_visit": hold_visit.bind,
     "resume_visit": resume_visit.bind,
