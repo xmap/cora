@@ -3,7 +3,7 @@
 Hoisted at the rule-of-three trigger: the Agent BC started with 2
 transition slices (`version_agent` + `deprecate_agent`); growth to
 7 (+ `suspend_agent` + `resume_agent` + `grant_tool_to_agent` +
-`revoke_tool_from_agent` + `revise_agent_budget`) put it well past
+`revoke_tool_from_agent` + `update_agent_budget`) put it well past
 the n=3 threshold that triggered the same hoist for Recipe's
 Method / Plan / Practice + Subject + Asset + Supply + Procedure +
 Caution + Clearance + Run + Campaign.

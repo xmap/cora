@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 
 from cora.agent.aggregates.agent.events import (
-    AgentBudgetRevised,
+    AgentBudgetUpdated,
     AgentDefined,
     AgentDeprecated,
     AgentResumed,
@@ -225,10 +225,10 @@ def test_tool_revoked_removes_from_tools_set() -> None:
 
 
 @pytest.mark.unit
-def test_budget_revised_sets_budget_field() -> None:
+def test_budget_updated_sets_budget_field() -> None:
     agent_id = uuid4()
     e1 = _genesis(agent_id=agent_id)
-    e2 = AgentBudgetRevised(
+    e2 = AgentBudgetUpdated(
         agent_id=agent_id,
         monthly_usd_cap=100.0,
         daily_token_cap=500_000,
@@ -240,16 +240,16 @@ def test_budget_revised_sets_budget_field() -> None:
 
 
 @pytest.mark.unit
-def test_budget_revised_with_both_caps_none_clears_budget() -> None:
+def test_budget_updated_with_both_caps_none_clears_budget() -> None:
     agent_id = uuid4()
     e1 = _genesis(agent_id=agent_id)
-    e2 = AgentBudgetRevised(
+    e2 = AgentBudgetUpdated(
         agent_id=agent_id,
         monthly_usd_cap=100.0,
         daily_token_cap=500_000,
         occurred_at=_T1,
     )
-    e3 = AgentBudgetRevised(
+    e3 = AgentBudgetUpdated(
         agent_id=agent_id,
         monthly_usd_cap=None,
         daily_token_cap=None,
@@ -288,7 +288,7 @@ def test_suspended_preserves_unrelated_fields() -> None:
     e1 = _genesis(agent_id=agent_id)
     e2 = AgentVersioned(agent_id=agent_id, version="v1", occurred_at=_T1)
     e3 = AgentToolGranted(agent_id=agent_id, tool_name="read_run", occurred_at=_T1)
-    e4 = AgentBudgetRevised(
+    e4 = AgentBudgetUpdated(
         agent_id=agent_id,
         monthly_usd_cap=100.0,
         daily_token_cap=500_000,
@@ -316,7 +316,7 @@ def test_resumed_preserves_unrelated_fields() -> None:
     e1 = _genesis(agent_id=agent_id)
     e2 = AgentVersioned(agent_id=agent_id, version="v1", occurred_at=_T1)
     e3 = AgentToolGranted(agent_id=agent_id, tool_name="read_run", occurred_at=_T1)
-    e4 = AgentBudgetRevised(
+    e4 = AgentBudgetUpdated(
         agent_id=agent_id,
         monthly_usd_cap=100.0,
         daily_token_cap=500_000,
@@ -346,7 +346,7 @@ def test_tool_revoked_preserves_unrelated_fields() -> None:
     agent_id = uuid4()
     e1 = _genesis(agent_id=agent_id)
     e2 = AgentToolGranted(agent_id=agent_id, tool_name="read_run", occurred_at=_T1)
-    e3 = AgentBudgetRevised(
+    e3 = AgentBudgetUpdated(
         agent_id=agent_id,
         monthly_usd_cap=50.0,
         daily_token_cap=None,
@@ -362,12 +362,12 @@ def test_tool_revoked_preserves_unrelated_fields() -> None:
 
 
 @pytest.mark.unit
-def test_budget_revised_preserves_unrelated_fields() -> None:
-    """BudgetRevised arm must not silently wipe tools/families/description."""
+def test_budget_updated_preserves_unrelated_fields() -> None:
+    """BudgetUpdated arm must not silently wipe tools/families/description."""
     agent_id = uuid4()
     e1 = _genesis(agent_id=agent_id)
     e2 = AgentToolGranted(agent_id=agent_id, tool_name="read_run", occurred_at=_T1)
-    e3 = AgentBudgetRevised(
+    e3 = AgentBudgetUpdated(
         agent_id=agent_id,
         monthly_usd_cap=100.0,
         daily_token_cap=500_000,
@@ -415,9 +415,9 @@ def test_tool_revoked_applied_to_empty_state_raises() -> None:
 
 
 @pytest.mark.unit
-def test_budget_revised_applied_to_empty_state_raises() -> None:
-    e = AgentBudgetRevised(
+def test_budget_updated_applied_to_empty_state_raises() -> None:
+    e = AgentBudgetUpdated(
         agent_id=uuid4(), monthly_usd_cap=10.0, daily_token_cap=None, occurred_at=_T0
     )
-    with pytest.raises(ValueError, match="AgentBudgetRevised"):
+    with pytest.raises(ValueError, match="AgentBudgetUpdated"):
         fold([e])

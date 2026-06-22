@@ -1,25 +1,25 @@
-"""Property-based tests for `revise_agent_budget.decide` (Agent BC).
+"""Property-based tests for `update_agent_budget.decide` (Agent BC).
 
-Complements the example-based `test_revise_agent_budget_decider.py` with
+Complements the example-based `test_update_agent_budget_decider.py` with
 universal claims across generated inputs. The decider is a pure
-budget-revision transition with PUT semantics and no actor kwarg
-(revising identity lives on the event envelope)
+budget-update transition with PUT semantics and no actor kwarg
+(updating identity lives on the event envelope)
 
-    (state, command, now) -> list[AgentBudgetRevised]
+    (state, command, now) -> list[AgentBudgetUpdated]
 
 Load-bearing properties:
 
   - state=None always raises `AgentNotFoundError` carrying
     command.agent_id.
   - The source-state partition is total over `AgentStatus`: only
-    `Deprecated` is disallowed, raising `AgentCannotReviseBudgetError`
+    `Deprecated` is disallowed, raising `AgentCannotUpdateBudgetError`
     carrying the current status; `{Defined, Versioned, Suspended}` are
-    revisable.
-  - From a revisable source, a budget change emits exactly one
-    `AgentBudgetRevised` (agent_id=state.id, occurred_at=now, caps
+    updatable.
+  - From a updatable source, a budget change emits exactly one
+    `AgentBudgetUpdated` (agent_id=state.id, occurred_at=now, caps
     threaded from the command).
   - The emitted event's agent_id is `state.id`, never command.agent_id.
-  - Idempotent: revising to the budget the Agent already holds returns
+  - Idempotent: updating to the budget the Agent already holds returns
     `[]`.
   - Pure: same (state, command, now) returns equal events.
 """
@@ -36,8 +36,8 @@ from hypothesis import strategies as st
 from cora.agent.aggregates.agent import (
     Agent,
     AgentBudget,
-    AgentBudgetRevised,
-    AgentCannotReviseBudgetError,
+    AgentBudgetUpdated,
+    AgentCannotUpdateBudgetError,
     AgentKind,
     AgentName,
     AgentNotFoundError,
@@ -45,20 +45,20 @@ from cora.agent.aggregates.agent import (
     AgentVersion,
     ModelRef,
 )
-from cora.agent.features.revise_agent_budget.command import ReviseAgentBudget
-from cora.agent.features.revise_agent_budget.decider import decide
+from cora.agent.features.update_agent_budget.command import UpdateAgentBudget
+from cora.agent.features.update_agent_budget.decider import decide
 from tests._strategies import aware_datetimes
 
 if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
-_REVISABLE_SOURCES = (
+_UPDATABLE_SOURCES = (
     AgentStatus.DEFINED,
     AgentStatus.VERSIONED,
     AgentStatus.SUSPENDED,
 )
-_DISALLOWED_SOURCES = tuple(s for s in AgentStatus if s not in frozenset(_REVISABLE_SOURCES))
+_DISALLOWED_SOURCES = tuple(s for s in AgentStatus if s not in frozenset(_UPDATABLE_SOURCES))
 
 _VALID_MONTHLY_CAP = 100.0
 _VALID_DAILY_CAP = 1_000_000
@@ -83,7 +83,7 @@ def _agent(
 
 @pytest.mark.unit
 @given(agent_id=st.uuids(), now=aware_datetimes())
-def test_revise_budget_with_none_state_always_raises_not_found(
+def test_update_budget_with_none_state_always_raises_not_found(
     agent_id: UUID,
     now: datetime,
 ) -> None:
@@ -91,7 +91,7 @@ def test_revise_budget_with_none_state_always_raises_not_found(
     with pytest.raises(AgentNotFoundError) as exc:
         decide(
             state=None,
-            command=ReviseAgentBudget(
+            command=UpdateAgentBudget(
                 agent_id=agent_id,
                 monthly_usd_cap=_VALID_MONTHLY_CAP,
                 daily_token_cap=_VALID_DAILY_CAP,
@@ -104,18 +104,18 @@ def test_revise_budget_with_none_state_always_raises_not_found(
 @pytest.mark.unit
 @given(
     agent_id=st.uuids(),
-    source=st.sampled_from(_REVISABLE_SOURCES),
+    source=st.sampled_from(_UPDATABLE_SOURCES),
     now=aware_datetimes(),
 )
-def test_revise_budget_from_revisable_source_emits_single_event(
+def test_update_budget_from_updatable_source_emits_single_event(
     agent_id: UUID,
     source: AgentStatus,
     now: datetime,
 ) -> None:
-    """Each revisable source emits one AgentBudgetRevised with threaded caps."""
+    """Each updatable source emits one AgentBudgetUpdated with threaded caps."""
     events = decide(
         state=_agent(source, agent_id=agent_id),
-        command=ReviseAgentBudget(
+        command=UpdateAgentBudget(
             agent_id=agent_id,
             monthly_usd_cap=_VALID_MONTHLY_CAP,
             daily_token_cap=_VALID_DAILY_CAP,
@@ -123,7 +123,7 @@ def test_revise_budget_from_revisable_source_emits_single_event(
         now=now,
     )
     assert events == [
-        AgentBudgetRevised(
+        AgentBudgetUpdated(
             agent_id=agent_id,
             monthly_usd_cap=_VALID_MONTHLY_CAP,
             daily_token_cap=_VALID_DAILY_CAP,
@@ -138,16 +138,16 @@ def test_revise_budget_from_revisable_source_emits_single_event(
     source=st.sampled_from(_DISALLOWED_SOURCES),
     now=aware_datetimes(),
 )
-def test_revise_budget_from_disallowed_source_always_raises_cannot_revise(
+def test_update_budget_from_disallowed_source_always_raises_cannot_update(
     agent_id: UUID,
     source: AgentStatus,
     now: datetime,
 ) -> None:
-    """Any source other than the revisable set raises, carrying the current status."""
-    with pytest.raises(AgentCannotReviseBudgetError) as exc:
+    """Any source other than the updatable set raises, carrying the current status."""
+    with pytest.raises(AgentCannotUpdateBudgetError) as exc:
         decide(
             state=_agent(source, agent_id=agent_id),
-            command=ReviseAgentBudget(
+            command=UpdateAgentBudget(
                 agent_id=agent_id,
                 monthly_usd_cap=_VALID_MONTHLY_CAP,
                 daily_token_cap=_VALID_DAILY_CAP,
@@ -163,7 +163,7 @@ def test_revise_budget_from_disallowed_source_always_raises_cannot_revise(
     command_agent_id=st.uuids(),
     now=aware_datetimes(),
 )
-def test_revise_budget_uses_state_id_not_command_agent_id(
+def test_update_budget_uses_state_id_not_command_agent_id(
     state_agent_id: UUID,
     command_agent_id: UUID,
     now: datetime,
@@ -172,7 +172,7 @@ def test_revise_budget_uses_state_id_not_command_agent_id(
     assume(state_agent_id != command_agent_id)
     events = decide(
         state=_agent(AgentStatus.VERSIONED, agent_id=state_agent_id),
-        command=ReviseAgentBudget(
+        command=UpdateAgentBudget(
             agent_id=command_agent_id,
             monthly_usd_cap=_VALID_MONTHLY_CAP,
             daily_token_cap=_VALID_DAILY_CAP,
@@ -185,22 +185,22 @@ def test_revise_budget_uses_state_id_not_command_agent_id(
 @pytest.mark.unit
 @given(
     agent_id=st.uuids(),
-    source=st.sampled_from(_REVISABLE_SOURCES),
+    source=st.sampled_from(_UPDATABLE_SOURCES),
     now=aware_datetimes(),
 )
-def test_revise_budget_to_current_budget_emits_no_event(
+def test_update_budget_to_current_budget_emits_no_event(
     agent_id: UUID,
     source: AgentStatus,
     now: datetime,
 ) -> None:
-    """Revising to the budget the Agent already holds is an idempotent no-op."""
+    """Updating to the budget the Agent already holds is an idempotent no-op."""
     budget = AgentBudget(
         monthly_usd_cap=_VALID_MONTHLY_CAP,
         daily_token_cap=_VALID_DAILY_CAP,
     )
     events = decide(
         state=_agent(source, budget=budget, agent_id=agent_id),
-        command=ReviseAgentBudget(
+        command=UpdateAgentBudget(
             agent_id=agent_id,
             monthly_usd_cap=_VALID_MONTHLY_CAP,
             daily_token_cap=_VALID_DAILY_CAP,
@@ -213,10 +213,10 @@ def test_revise_budget_to_current_budget_emits_no_event(
 @pytest.mark.unit
 @given(
     agent_id=st.uuids(),
-    source=st.sampled_from(_REVISABLE_SOURCES),
+    source=st.sampled_from(_UPDATABLE_SOURCES),
     now=aware_datetimes(),
 )
-def test_revise_budget_clear_when_already_cleared_emits_no_event(
+def test_update_budget_clear_when_already_cleared_emits_no_event(
     agent_id: UUID,
     source: AgentStatus,
     now: datetime,
@@ -224,7 +224,7 @@ def test_revise_budget_clear_when_already_cleared_emits_no_event(
     """Clearing an already-cleared budget is an idempotent no-op."""
     events = decide(
         state=_agent(source, budget=None, agent_id=agent_id),
-        command=ReviseAgentBudget(
+        command=UpdateAgentBudget(
             agent_id=agent_id,
             monthly_usd_cap=None,
             daily_token_cap=None,
@@ -236,13 +236,13 @@ def test_revise_budget_clear_when_already_cleared_emits_no_event(
 
 @pytest.mark.unit
 @given(agent_id=st.uuids(), now=aware_datetimes())
-def test_revise_budget_is_pure_same_input_same_output(
+def test_update_budget_is_pure_same_input_same_output(
     agent_id: UUID,
     now: datetime,
 ) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _agent(AgentStatus.VERSIONED, agent_id=agent_id)
-    command = ReviseAgentBudget(
+    command = UpdateAgentBudget(
         agent_id=agent_id,
         monthly_usd_cap=_VALID_MONTHLY_CAP,
         daily_token_cap=_VALID_DAILY_CAP,

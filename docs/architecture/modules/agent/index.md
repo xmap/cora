@@ -120,8 +120,8 @@ stateDiagram-v2
 `deprecate_agent`
 : Source set is `{Defined, Versioned, Suspended}`. `reason` is optional bounded text. Terminal; cannot be re-deprecated.
 
-`grant_tool_to_agent` / `revoke_tool_from_agent` / `revise_agent_budget`
-: All blocked only in `Deprecated`. Open in `Defined`, `Versioned`, and `Suspended` so operators can fix permissions or caps while an agent is paused. Tool grants and revocations are idempotent (a no-op grant or revoke emits no event); budget revision always emits an event.
+`grant_tool_to_agent` / `revoke_tool_from_agent` / `update_agent_budget`
+: All blocked only in `Deprecated`. Open in `Defined`, `Versioned`, and `Suspended` so operators can fix permissions or caps while an agent is paused. Tool grants and revocations are idempotent (a no-op grant or revoke emits no event); budget update always emits an event.
 
 ## Events
 
@@ -134,7 +134,7 @@ stateDiagram-v2
 | `AgentDeprecated` | `agent_id`, `reason?`, `occurred_at` | `deprecate_agent` succeeds; terminal |
 | `AgentToolGranted` | `agent_id`, `tool_name`, `occurred_at` | `grant_tool_to_agent` succeeds (no event on a no-op re-grant) |
 | `AgentToolRevoked` | `agent_id`, `tool_name`, `occurred_at` | `revoke_tool_from_agent` succeeds (no event on a no-op re-revoke) |
-| `AgentBudgetRevised` | `agent_id`, `monthly_usd_cap?`, `daily_token_cap?`, `occurred_at` | `revise_agent_budget` succeeds |
+| `AgentBudgetUpdated` | `agent_id`, `monthly_usd_cap?`, `daily_token_cap?`, `occurred_at` | `update_agent_budget` succeeds |
 
 `define_agent` is the only Agent-BC slice that writes across streams. The other lifecycle events are single-stream. The cross-BC action slices (`regenerate_run_debrief`, `promote_caution_proposal`) do not write to the Agent stream at all: they write a `DecisionRegistered` on the Decision stream and (for the promotion path) a `CautionRegistered` on the Caution stream.
 
@@ -155,8 +155,8 @@ _Generated from the code at build time._
 `GrantToolToAgent` / `RevokeToolFromAgent`
 : `AgentNotFound`, `AgentCannotGrantTool` / `AgentCannotRevokeTool` (blocked in `Deprecated`), `InvalidToolName`, `AgentToolsExceedsLimit` (grant only), `Unauthorized`
 
-`ReviseAgentBudget`
-: `AgentNotFound`, `AgentCannotReviseBudget`, `InvalidAgentBudget`, `Unauthorized`
+`UpdateAgentBudget`
+: `AgentNotFound`, `AgentCannotUpdateBudget`, `InvalidAgentBudget`, `Unauthorized`
 
 `GetAgent`
 : `AgentNotFound`

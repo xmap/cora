@@ -392,16 +392,16 @@ class AgentCannotRevokeToolError(Exception):
         self.current_status = current_status
 
 
-class AgentCannotReviseBudgetError(Exception):
-    """Attempted `revise_agent_budget` against a `Deprecated` agent.
+class AgentCannotUpdateBudgetError(Exception):
+    """Attempted `update_agent_budget` against a `Deprecated` agent.
 
     Same source-set rule as `AgentCannotGrantToolError`.
     """
 
     def __init__(self, agent_id: UUID, current_status: "AgentStatus") -> None:
         super().__init__(
-            f"Agent {agent_id} cannot revise budget: currently in status "
-            f"{current_status.value}; revisions are blocked in "
+            f"Agent {agent_id} cannot update budget: currently in status "
+            f"{current_status.value}; updates are blocked in "
             f"{AgentStatus.DEPRECATED.value}"
         )
         self.agent_id = agent_id

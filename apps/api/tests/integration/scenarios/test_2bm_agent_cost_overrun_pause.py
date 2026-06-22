@@ -16,7 +16,7 @@ Agent operations chain.
 See [[project_pilot_docs_design]] for the phase / file-naming
 taxonomy this scenario fits into. See
 [[project_agent_lifecycle_grants_design]] for the design lock on
-the operator-pause + budget-revise + resume cycle (the canonical
+the operator-pause + budget-update + resume cycle (the canonical
 first-use case documented as "operator-pauses an agent without
 retiring it; cost-overrun, output-spike, model-regression recovery
 surface").
@@ -36,14 +36,14 @@ This scenario exercises that cycle end-to-end:
   - `version_agent` (the seeded RunDebriefer Agent lands in `Defined`
     per `seed_run_debriefer_agent`; the operator explicitly promotes
     it to `Versioned` so the subscriber will pick it up).
-  - `revise_agent_budget` (establishes the initial budget envelope
+  - `update_agent_budget` (establishes the initial budget envelope
     BEFORE any cost issue surfaces; a future scenario could
     co-locate this with `define_agent` at registration time).
   - `suspend_agent` with a `reason` citing the cost overrun (the
     `reason` field is REQUIRED on suspend per the design lock; it
     lands as `AgentSuspended.reason` for the audit trail).
-  - `revise_agent_budget` AGAIN to tighten the caps before resume
-    (PUT semantics: supplied caps ARE the post-revision budget).
+  - `update_agent_budget` AGAIN to tighten the caps before resume
+    (PUT semantics: supplied caps ARE the post-update budget).
   - `resume_agent` (no `reason` field on resume by design —
     "act of resuming is its own signal; rationale lives in
     Decisions").
@@ -59,7 +59,7 @@ This scenario exercises that cycle end-to-end:
      gate (per [[project_run_debrief_design]] security gate-review)
      will treat as paused.
   3. Operator tightens the budget envelope
-     (`revise_agent_budget`): drops `monthly_usd_cap` to the
+     (`update_agent_budget`): drops `monthly_usd_cap` to the
      remaining-budget amount and adds a per-day token cap to
      short-circuit any single-day spike.
   4. Operator resumes the agent (`resume_agent`) once the new
@@ -82,7 +82,7 @@ trails, different motivating use cases.
 
   - **Budget caps are declaration-only.** The
     `AgentBudget` value object lands on the Agent's state via
-    `AgentBudgetRevised`, but no slice or projection reads it to
+    `AgentBudgetUpdated`, but no slice or projection reads it to
     enforce spending. Enforcement is deferred to the 8h Budget BC
     (per [[project_agent_lifecycle_grants_design]]). This scenario
     confirms the wire (the budget round-trips through the
@@ -115,10 +115,10 @@ from cora.agent.aggregates.agent import (
 )
 from cora.agent.features.resume_agent import ResumeAgent
 from cora.agent.features.resume_agent import bind as bind_resume_agent
-from cora.agent.features.revise_agent_budget import ReviseAgentBudget
-from cora.agent.features.revise_agent_budget import bind as bind_revise_budget
 from cora.agent.features.suspend_agent import SuspendAgent
 from cora.agent.features.suspend_agent import bind as bind_suspend_agent
+from cora.agent.features.update_agent_budget import UpdateAgentBudget
+from cora.agent.features.update_agent_budget import bind as bind_update_budget
 from cora.agent.features.version_agent import VersionAgent
 from cora.agent.features.version_agent import bind as bind_version_agent
 from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, seed_run_debriefer_agent
@@ -148,11 +148,11 @@ def _id_queue() -> list[UUID]:
     return [
         # version_agent: event_id
         e(),
-        # revise_agent_budget (initial envelope): event_id
+        # update_agent_budget (initial envelope): event_id
         e(),
         # suspend_agent: event_id
         e(),
-        # revise_agent_budget (tightened caps): event_id
+        # update_agent_budget (tightened caps): event_id
         e(),
         # resume_agent: event_id
         e(),
@@ -166,7 +166,7 @@ async def test_agent_cost_overrun_pause_plays_out_end_to_end(
     """Seed RunDebriefer Agent, promote Defined -> Versioned, set
     initial budget, suspend (with cost-overrun reason), tighten
     budget, resume. Assert FSM cycled Versioned -> Suspended ->
-    Versioned and both budget revisions landed on the aggregate."""
+    Versioned and both budget updates landed on the aggregate."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
 
     # ----- Bootstrap: seed RunDebriefer Agent (lands in Defined) -----
@@ -196,8 +196,8 @@ async def test_agent_cost_overrun_pause_plays_out_end_to_end(
     # Operator declares the initial spend ceiling. Declaration-only;
     # enforcement deferred to the Budget BC.
 
-    await bind_revise_budget(deps)(
-        ReviseAgentBudget(
+    await bind_update_budget(deps)(
+        UpdateAgentBudget(
             agent_id=RUN_DEBRIEFER_AGENT_ID,
             monthly_usd_cap=500.0,
             daily_token_cap=2_000_000,
@@ -236,11 +236,11 @@ async def test_agent_cost_overrun_pause_plays_out_end_to_end(
     assert suspended.status is AgentStatus.SUSPENDED
 
     # ----- Tighten budget caps while paused -----
-    # PUT semantics: the supplied caps ARE the post-revision budget.
+    # PUT semantics: the supplied caps ARE the post-update budget.
     # Drop monthly cap to remaining-amount + halve the daily token cap.
 
-    await bind_revise_budget(deps)(
-        ReviseAgentBudget(
+    await bind_update_budget(deps)(
+        UpdateAgentBudget(
             agent_id=RUN_DEBRIEFER_AGENT_ID,
             monthly_usd_cap=120.0,
             daily_token_cap=1_000_000,
@@ -254,7 +254,7 @@ async def test_agent_cost_overrun_pause_plays_out_end_to_end(
     assert after_tightened.budget is not None
     assert after_tightened.budget.monthly_usd_cap == 120.0
     assert after_tightened.budget.daily_token_cap == 1_000_000
-    # Budget revision is allowed in Suspended state (per design); status
+    # Budget update is allowed in Suspended state (per design); status
     # is unchanged by the budget slice.
     assert after_tightened.status is AgentStatus.SUSPENDED
 
@@ -280,13 +280,13 @@ async def test_agent_cost_overrun_pause_plays_out_end_to_end(
 
     agent_events, _agent_version = await deps.event_store.load("Agent", RUN_DEBRIEFER_AGENT_ID)
     agent_event_types = [e.event_type for e in agent_events]
-    # Seed + version + 2 budget revises + suspend + resume = 6 events.
+    # Seed + version + 2 budget updates + suspend + resume = 6 events.
     assert agent_event_types == [
         "AgentDefined",
         "AgentVersioned",
-        "AgentBudgetRevised",
+        "AgentBudgetUpdated",
         "AgentSuspended",
-        "AgentBudgetRevised",
+        "AgentBudgetUpdated",
         "AgentResumed",
     ]
 

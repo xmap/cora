@@ -2,7 +2,7 @@
 
 Built on the hoisted `make_agent_update_handler` factory along
 with the 4 other Agent transition slices (suspend / resume /
-grant_tool / revoke_tool / revise_budget). Pre-hoist this slice
+grant_tool / revoke_tool / update_budget). Pre-hoist this slice
 had a longhand body; the migration is zero behavior change.
 """
 

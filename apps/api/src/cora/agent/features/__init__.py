@@ -21,7 +21,7 @@ Lifecycle + grants + budget:
                              idempotent re-grant)
   - `revoke_tool_from_agent`(Defined | Versioned | Suspended;
                              idempotent revoke-of-non-granted)
-  - `revise_agent_budget`   (Defined | Versioned | Suspended;
+  - `update_agent_budget`   (Defined | Versioned | Suspended;
                              PUT-semantics; idempotent no-op)
 
 Caution-proposal promotion:
@@ -51,9 +51,9 @@ from cora.agent.features import (
     promote_caution_proposal,
     regenerate_run_debrief,
     resume_agent,
-    revise_agent_budget,
     revoke_tool_from_agent,
     suspend_agent,
+    update_agent_budget,
     version_agent,
 )
 
@@ -66,8 +66,8 @@ __all__ = [
     "promote_caution_proposal",
     "regenerate_run_debrief",
     "resume_agent",
-    "revise_agent_budget",
     "revoke_tool_from_agent",
     "suspend_agent",
+    "update_agent_budget",
     "version_agent",
 ]

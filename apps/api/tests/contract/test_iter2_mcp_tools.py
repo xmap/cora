@@ -1,7 +1,7 @@
 """MCP-tool contract tests for the Agent lifecycle + grants slices.
 
 Covers tools/list visibility + happy-path tools/call for each of the
-five tools (suspend / resume / grant / revoke / revise-budget).
+five tools (suspend / resume / grant / revoke / update-budget).
 The REST endpoints already test the full status-code matrix; the
 MCP layer just needs surface-level coverage that the tool exists,
 returns structuredContent, and surfaces errors via `isError`.
@@ -70,7 +70,7 @@ def test_mcp_lists_all_five_iter2_tools() -> None:
         "resume_agent",
         "grant_tool_to_agent",
         "revoke_tool_from_agent",
-        "revise_agent_budget",
+        "update_agent_budget",
     ):
         assert expected in tools
 
@@ -123,20 +123,20 @@ def test_mcp_grant_then_revoke_cycle_returns_structured_output() -> None:
 
 
 @pytest.mark.contract
-def test_mcp_revise_budget_returns_structured_output() -> None:
+def test_mcp_update_budget_returns_structured_output() -> None:
     with TestClient(create_app()) as client:
         headers = open_session(client)
         define = _call(client, headers, 2, "define_agent", _define_args())
         agent_id = define["result"]["structuredContent"]["agent_id"]
-        revise = _call(
+        update = _call(
             client,
             headers,
             3,
-            "revise_agent_budget",
+            "update_agent_budget",
             {"agent_id": agent_id, "monthly_usd_cap": 100.0, "daily_token_cap": 500000},
         )
-    assert revise["result"]["isError"] is False
-    sc = revise["result"]["structuredContent"]
+    assert update["result"]["isError"] is False
+    sc = update["result"]["structuredContent"]
     assert sc["agent_id"] == agent_id
     assert sc["monthly_usd_cap"] == 100.0
     assert sc["daily_token_cap"] == 500000

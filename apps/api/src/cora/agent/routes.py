@@ -23,7 +23,7 @@ Supply / Safety / Caution loop pattern:
   - 404 (load miss): AgentNotFound
   - 409 (defensive guard for AlreadyExists): AgentAlreadyExists
   - 409 (transition guards): AgentCannot<Verb> family (Version,
-    Deprecate, Suspend, Resume, GrantTool, RevokeTool, ReviseBudget)
+    Deprecate, Suspend, Resume, GrantTool, RevokeTool, UpdateBudget)
 """
 
 from fastapi import FastAPI, Request, status
@@ -34,9 +34,9 @@ from cora.agent.aggregates.agent import (
     AgentCannotDeprecateError,
     AgentCannotGrantToolError,
     AgentCannotResumeError,
-    AgentCannotReviseBudgetError,
     AgentCannotRevokeToolError,
     AgentCannotSuspendError,
+    AgentCannotUpdateBudgetError,
     AgentCannotVersionError,
     AgentDeactivatedError,
     AgentNotFoundError,
@@ -76,9 +76,9 @@ from cora.agent.features import (
     promote_caution_proposal,
     regenerate_run_debrief,
     resume_agent,
-    revise_agent_budget,
     revoke_tool_from_agent,
     suspend_agent,
+    update_agent_budget,
     version_agent,
 )
 
@@ -127,7 +127,7 @@ async def _handle_cannot_transition(request: Request, exc: Exception) -> JSONRes
     """Shared 409 handler for state-transition guards.
 
     Covers the `AgentCannot<Verb>Error` family: Version + Deprecate +
-    Suspend + Resume + GrantTool + RevokeTool + ReviseBudget; plus
+    Suspend + Resume + GrantTool + RevokeTool + UpdateBudget; plus
     `EventAlreadyDismissedError` from `dismiss_event_in_reaction`.
     """
     _ = request
@@ -159,7 +159,7 @@ def register_agent_routes(app: FastAPI) -> None:
     app.include_router(resume_agent.router)
     app.include_router(grant_tool_to_agent.router)
     app.include_router(revoke_tool_from_agent.router)
-    app.include_router(revise_agent_budget.router)
+    app.include_router(update_agent_budget.router)
     app.include_router(get_agent.router)
     app.include_router(regenerate_run_debrief.router)
     app.include_router(promote_caution_proposal.router)
@@ -212,7 +212,7 @@ def register_agent_routes(app: FastAPI) -> None:
         AgentCannotResumeError,
         AgentCannotGrantToolError,
         AgentCannotRevokeToolError,
-        AgentCannotReviseBudgetError,
+        AgentCannotUpdateBudgetError,
         EventAlreadyDismissedError,
     ):
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)

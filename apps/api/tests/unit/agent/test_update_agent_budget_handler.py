@@ -1,4 +1,4 @@
-"""Application-handler tests for the `revise_agent_budget` slice."""
+"""Application-handler tests for the `update_agent_budget` slice."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -6,14 +6,14 @@ from uuid import UUID
 import pytest
 
 from cora.agent.aggregates.agent import (
-    AgentBudgetRevised,
+    AgentBudgetUpdated,
     AgentNotFoundError,
     event_type_name,
     to_payload,
 )
 from cora.agent.errors import UnauthorizedError
-from cora.agent.features import revise_agent_budget
-from cora.agent.features.revise_agent_budget import ReviseAgentBudget
+from cora.agent.features import update_agent_budget
+from cora.agent.features.update_agent_budget import UpdateAgentBudget
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
@@ -26,7 +26,7 @@ _T2 = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 _AGENT_ID = UUID("01900000-0000-7000-8000-00000000b101")
 _GENESIS_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b102")
 _VERSION_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b103")
-_FIRST_REVISE_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b104")
+_FIRST_UPDATE_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b104")
 _NEXT_EVENT_ID = UUID("01900000-0000-7000-8000-00000000b105")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
@@ -46,8 +46,8 @@ def _build_deps(
 
 
 async def _append_initial_budget(store: InMemoryEventStore) -> None:
-    """Append a baseline AgentBudgetRevised event at version 2."""
-    revised = AgentBudgetRevised(
+    """Append a baseline AgentBudgetUpdated event at version 2."""
+    updated = AgentBudgetUpdated(
         agent_id=_AGENT_ID,
         monthly_usd_cap=100.0,
         daily_token_cap=500_000,
@@ -59,11 +59,11 @@ async def _append_initial_budget(store: InMemoryEventStore) -> None:
         expected_version=2,
         events=[
             to_new_event(
-                event_type=event_type_name(revised),
-                payload=to_payload(revised),
-                occurred_at=revised.occurred_at,
-                event_id=_FIRST_REVISE_EVENT_ID,
-                command_name="ReviseAgentBudget",
+                event_type=event_type_name(updated),
+                payload=to_payload(updated),
+                occurred_at=updated.occurred_at,
+                event_id=_FIRST_UPDATE_EVENT_ID,
+                command_name="UpdateAgentBudget",
                 correlation_id=_CORRELATION_ID,
                 causation_id=None,
                 principal_id=_PRINCIPAL_ID,
@@ -86,9 +86,9 @@ async def test_handler_sets_budget_on_a_versioned_agent() -> None:
         versioned_at=_T1,
     )
     deps = _build_deps(event_store=store)
-    handler = revise_agent_budget.bind(deps)
+    handler = update_agent_budget.bind(deps)
     await handler(
-        ReviseAgentBudget(
+        UpdateAgentBudget(
             agent_id=_AGENT_ID,
             monthly_usd_cap=50.0,
             daily_token_cap=100_000,
@@ -98,13 +98,13 @@ async def test_handler_sets_budget_on_a_versioned_agent() -> None:
     )
     events, version = await store.load("Agent", _AGENT_ID)
     assert version == 3
-    assert events[-1].event_type == "AgentBudgetRevised"
+    assert events[-1].event_type == "AgentBudgetUpdated"
     assert events[-1].payload["monthly_usd_cap"] == 50.0
     assert events[-1].payload["daily_token_cap"] == 100_000
 
 
 @pytest.mark.unit
-async def test_handler_idempotent_revise_to_same_budget_does_not_append() -> None:
+async def test_handler_idempotent_update_to_same_budget_does_not_append() -> None:
     store = InMemoryEventStore()
     await seed_versioned_agent(
         store,
@@ -118,9 +118,9 @@ async def test_handler_idempotent_revise_to_same_budget_does_not_append() -> Non
     )
     await _append_initial_budget(store)
     deps = _build_deps(event_store=store)
-    handler = revise_agent_budget.bind(deps)
+    handler = update_agent_budget.bind(deps)
     await handler(
-        ReviseAgentBudget(
+        UpdateAgentBudget(
             agent_id=_AGENT_ID,
             monthly_usd_cap=100.0,
             daily_token_cap=500_000,
@@ -129,7 +129,7 @@ async def test_handler_idempotent_revise_to_same_budget_does_not_append() -> Non
         correlation_id=_CORRELATION_ID,
     )
     _, version = await store.load("Agent", _AGENT_ID)
-    assert version == 3  # untouched after idempotent no-op revise
+    assert version == 3  # untouched after idempotent no-op update
 
 
 @pytest.mark.unit
@@ -147,9 +147,9 @@ async def test_handler_clears_budget() -> None:
     )
     await _append_initial_budget(store)
     deps = _build_deps(event_store=store)
-    handler = revise_agent_budget.bind(deps)
+    handler = update_agent_budget.bind(deps)
     await handler(
-        ReviseAgentBudget(agent_id=_AGENT_ID, monthly_usd_cap=None, daily_token_cap=None),
+        UpdateAgentBudget(agent_id=_AGENT_ID, monthly_usd_cap=None, daily_token_cap=None),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -162,10 +162,10 @@ async def test_handler_clears_budget() -> None:
 @pytest.mark.unit
 async def test_handler_raises_not_found_for_unknown_agent() -> None:
     deps = _build_deps()
-    handler = revise_agent_budget.bind(deps)
+    handler = update_agent_budget.bind(deps)
     with pytest.raises(AgentNotFoundError):
         await handler(
-            ReviseAgentBudget(agent_id=_AGENT_ID, monthly_usd_cap=10.0, daily_token_cap=None),
+            UpdateAgentBudget(agent_id=_AGENT_ID, monthly_usd_cap=10.0, daily_token_cap=None),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -185,10 +185,10 @@ async def test_handler_denied_does_not_write_to_stream() -> None:
         versioned_at=_T1,
     )
     deps = _build_deps(event_store=store, deny=True)
-    handler = revise_agent_budget.bind(deps)
+    handler = update_agent_budget.bind(deps)
     with pytest.raises(UnauthorizedError):
         await handler(
-            ReviseAgentBudget(agent_id=_AGENT_ID, monthly_usd_cap=10.0, daily_token_cap=None),
+            UpdateAgentBudget(agent_id=_AGENT_ID, monthly_usd_cap=10.0, daily_token_cap=None),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

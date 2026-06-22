@@ -12704,39 +12704,6 @@
         "title": "ReviewStepResponse",
         "type": "object"
       },
-      "ReviseAgentBudgetRequest": {
-        "description": "Body for `POST /agents/{agent_id}/budget`.",
-        "properties": {
-          "daily_token_cap": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Daily token cap. Pass null to clear this field. Setting both caps to null clears the entire budget.",
-            "title": "Daily Token Cap"
-          },
-          "monthly_usd_cap": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Monthly USD cap. Pass null to clear this field. Setting both caps to null clears the entire budget.",
-            "title": "Monthly Usd Cap"
-          }
-        },
-        "title": "ReviseAgentBudgetRequest",
-        "type": "object"
-      },
       "RevisionResponse": {
         "description": "Read-side DTO for one CalibrationRevision.",
         "properties": {
@@ -14753,6 +14720,39 @@
         ],
         "title": "UnitSystem",
         "type": "string"
+      },
+      "UpdateAgentBudgetRequest": {
+        "description": "Body for `POST /agents/{agent_id}/budget`.",
+        "properties": {
+          "daily_token_cap": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daily token cap. Pass null to clear this field. Setting both caps to null clears the entire budget.",
+            "title": "Daily Token Cap"
+          },
+          "monthly_usd_cap": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Monthly USD cap. Pass null to clear this field. Setting both caps to null clears the entire budget.",
+            "title": "Monthly Usd Cap"
+          }
+        },
+        "title": "UpdateAgentBudgetRequest",
+        "type": "object"
       },
       "UpdateAssetPartitionRuleRequest": {
         "description": "Body for `POST /assets/{asset_id}/partition-rule`.\n\n`partition_rule` is a discriminated-union Pydantic model covering\nthe 5 PartitionRule shapes (Affine, Aggregation, LookupTable,\nCompositePartition, SolverReference), or null to clear the rule.\n\nThe route converts the Pydantic model to the frozen-dataclass union\nbefore invoking the handler. Pydantic 422 fires on shape mismatch\n(unknown kind, missing required field for kind, etc.).",
@@ -17109,7 +17109,7 @@
     },
     "/agents/{agent_id}/budget": {
       "post": {
-        "operationId": "post_agents_revise_budget_agents__agent_id__budget_post",
+        "operationId": "post_agents_update_budget_agents__agent_id__budget_post",
         "parameters": [
           {
             "description": "Target agent's id.",
@@ -17147,7 +17147,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReviseAgentBudgetRequest"
+                "$ref": "#/components/schemas/UpdateAgentBudgetRequest"
               }
             }
           },
@@ -17201,7 +17201,7 @@
             "description": "Request body or path parameter failed schema validation."
           }
         },
-        "summary": "Revise an Agent's declarative budget caps (PUT semantics; both null clears)",
+        "summary": "Update an Agent's declarative budget caps (PUT semantics; both null clears)",
         "tags": [
           "agent"
         ]

@@ -1,7 +1,7 @@
 """Shared seed helpers for the Agent lifecycle handler tests.
 
 Each new transition slice's handler test (suspend / resume / grant /
-revoke / revise-budget) needs to seed a `Versioned` or `Suspended`
+revoke / update-budget) needs to seed a `Versioned` or `Suspended`
 or `Defined` Agent against an InMemoryEventStore. The helpers keep
 per-test files focused on assertions rather than re-encoding the
 same seed dance.

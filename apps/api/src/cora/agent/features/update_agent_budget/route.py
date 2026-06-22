@@ -1,9 +1,9 @@
-"""HTTP route for the `revise_agent_budget` slice.
+"""HTTP route for the `update_agent_budget` slice.
 
 Action endpoint at `POST /agents/{agent_id}/budget`. Body
 carries `monthly_usd_cap` and `daily_token_cap`, both
 independently nullable. PUT-semantics: the supplied caps ARE
-the post-revision budget. Both None clears the budget.
+the post-update budget. Both None clears the budget.
 
 204 No Content on success (including the idempotent no-op case).
 """
@@ -14,8 +14,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.agent.features.revise_agent_budget.command import ReviseAgentBudget
-from cora.agent.features.revise_agent_budget.handler import Handler
+from cora.agent.features.update_agent_budget.command import UpdateAgentBudget
+from cora.agent.features.update_agent_budget.handler import Handler
 from cora.infrastructure.routing import (
     ErrorResponse,
     get_correlation_id,
@@ -24,7 +24,7 @@ from cora.infrastructure.routing import (
 )
 
 
-class ReviseAgentBudgetRequest(BaseModel):
+class UpdateAgentBudgetRequest(BaseModel):
     """Body for `POST /agents/{agent_id}/budget`."""
 
     monthly_usd_cap: float | None = Field(
@@ -46,7 +46,7 @@ class ReviseAgentBudgetRequest(BaseModel):
 
 
 def _get_handler(request: Request) -> Handler:
-    handler: Handler = request.app.state.agent.revise_agent_budget
+    handler: Handler = request.app.state.agent.update_agent_budget
     return handler
 
 
@@ -77,18 +77,18 @@ router = APIRouter(tags=["agent"])
             "description": "Request body or path parameter failed schema validation.",
         },
     },
-    summary="Revise an Agent's declarative budget caps (PUT semantics; both null clears)",
+    summary="Update an Agent's declarative budget caps (PUT semantics; both null clears)",
 )
-async def post_agents_revise_budget(
+async def post_agents_update_budget(
     agent_id: Annotated[UUID, Path(description="Target agent's id.")],
-    body: ReviseAgentBudgetRequest,
+    body: UpdateAgentBudgetRequest,
     handler: Annotated[Handler, Depends(_get_handler)],
     cid: Annotated[UUID, Depends(get_correlation_id)],
     principal_id: Annotated[UUID, Depends(get_principal_id)],
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> None:
     await handler(
-        ReviseAgentBudget(
+        UpdateAgentBudget(
             agent_id=agent_id,
             monthly_usd_cap=body.monthly_usd_cap,
             daily_token_cap=body.daily_token_cap,

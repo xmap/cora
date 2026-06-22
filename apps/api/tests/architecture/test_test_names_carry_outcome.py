@@ -199,7 +199,7 @@ GRANDFATHERED_NAMES: frozenset[str] = frozenset(
         "tests/contract/test_rate_decision_mcp_tool.py::test_mcp_rate_decision_with_comment",
         "tests/integration/scenarios/test_2bm_streaming_tomography.py::test_streaming_tomography_with_adjust_run",
         "tests/integration/test_acquisitions_against_softioc_postgres.py::test_conductor_runs_continuous_action_with_axis_sweep_against_softioc",
-        "tests/unit/agent/test_revise_agent_budget_decider.py::test_clears_budget_when_both_caps_none",
+        "tests/unit/agent/test_update_agent_budget_decider.py::test_clears_budget_when_both_caps_none",
         "tests/unit/caution/test_caution_events.py::test_deserialize_target_for_asset",
         "tests/unit/caution/test_caution_events.py::test_deserialize_target_for_procedure",
         "tests/unit/caution/test_caution_events.py::test_serialize_target_for_asset",

@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 
 from cora.agent.aggregates.agent.events import (
-    AgentBudgetRevised,
+    AgentBudgetUpdated,
     AgentDefined,
     AgentDeprecated,
     AgentResumed,
@@ -365,9 +365,9 @@ def test_round_trip_agent_tool_revoked() -> None:
 
 
 @pytest.mark.unit
-def test_to_payload_serializes_agent_budget_revised_both_caps() -> None:
+def test_to_payload_serializes_agent_budget_updated_both_caps() -> None:
     agent_id = uuid4()
-    e = AgentBudgetRevised(
+    e = AgentBudgetUpdated(
         agent_id=agent_id,
         monthly_usd_cap=100.0,
         daily_token_cap=500_000,
@@ -382,11 +382,11 @@ def test_to_payload_serializes_agent_budget_revised_both_caps() -> None:
 
 
 @pytest.mark.unit
-def test_round_trip_agent_budget_revised_with_null_caps() -> None:
-    original = AgentBudgetRevised(
+def test_round_trip_agent_budget_updated_with_null_caps() -> None:
+    original = AgentBudgetUpdated(
         agent_id=uuid4(), monthly_usd_cap=None, daily_token_cap=None, occurred_at=_NOW
     )
-    stored = _stored("AgentBudgetRevised", to_payload(original))
+    stored = _stored("AgentBudgetUpdated", to_payload(original))
     assert from_stored(stored) == original
 
 
@@ -473,7 +473,7 @@ def test_from_stored_raises_on_unknown_event_type() -> None:
         "AgentResumed",
         "AgentToolGranted",
         "AgentToolRevoked",
-        "AgentBudgetRevised",
+        "AgentBudgetUpdated",
     ],
 )
 def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:

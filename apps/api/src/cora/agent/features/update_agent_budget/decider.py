@@ -1,15 +1,15 @@
-"""Pure decider for the `ReviseAgentBudget` command.
+"""Pure decider for the `UpdateAgentBudget` command.
 
-PUT-semantics: the supplied caps ARE the post-revision budget.
+PUT-semantics: the supplied caps ARE the post-update budget.
 Source set is `{Defined, Versioned, Suspended}`. Idempotent: a
-revise that produces the same effective budget as the current
+update that produces the same effective budget as the current
 one returns `[]`.
 
 ## Validation
 
   - State must not be None -> `AgentNotFoundError`
   - Current status must not be `Deprecated`
-    -> `AgentCannotReviseBudgetError`
+    -> `AgentCannotUpdateBudgetError`
   - When at least one of the caps is non-None, the resulting
     pair is wrapped via `AgentBudget(...)`; negative caps
     -> `InvalidAgentBudgetError` (the at-least-one-set
@@ -23,35 +23,35 @@ from datetime import datetime
 from cora.agent.aggregates.agent import (
     Agent,
     AgentBudget,
-    AgentBudgetRevised,
-    AgentCannotReviseBudgetError,
+    AgentBudgetUpdated,
+    AgentCannotUpdateBudgetError,
     AgentNotFoundError,
     AgentStatus,
 )
-from cora.agent.features.revise_agent_budget.command import ReviseAgentBudget
+from cora.agent.features.update_agent_budget.command import UpdateAgentBudget
 
 
 def decide(
     state: Agent | None,
-    command: ReviseAgentBudget,
+    command: UpdateAgentBudget,
     *,
     now: datetime,
-) -> list[AgentBudgetRevised]:
-    """Decide the events produced by revising an Agent's budget.
+) -> list[AgentBudgetUpdated]:
+    """Decide the events produced by updating an Agent's budget.
 
     Invariants:
       - State must not be None -> AgentNotFoundError
       - Current status must not be Deprecated
-        -> AgentCannotReviseBudgetError
+        -> AgentCannotUpdateBudgetError
       - When any cap is non-None, the resulting budget must be valid
         -> InvalidAgentBudgetError (via AgentBudget VO)
     """
     if state is None:
         raise AgentNotFoundError(command.agent_id)
     if state.status is AgentStatus.DEPRECATED:
-        raise AgentCannotReviseBudgetError(state.id, state.status)
+        raise AgentCannotUpdateBudgetError(state.id, state.status)
 
-    # Construct the projected post-revision shape eagerly so any
+    # Construct the projected post-update shape eagerly so any
     # invariant violation (negative caps) fires before idempotency
     # short-circuiting. Clearing branch skips the VO (both None
     # is the no-budget shape, not an AgentBudget value).
@@ -68,7 +68,7 @@ def decide(
         return []
 
     return [
-        AgentBudgetRevised(
+        AgentBudgetUpdated(
             agent_id=state.id,
             monthly_usd_cap=command.monthly_usd_cap,
             daily_token_cap=command.daily_token_cap,

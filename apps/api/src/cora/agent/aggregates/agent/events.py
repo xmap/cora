@@ -226,8 +226,8 @@ class AgentToolRevoked:
 
 
 @dataclass(frozen=True)
-class AgentBudgetRevised:
-    """The Agent's declarative budget caps were revised.
+class AgentBudgetUpdated:
+    """The Agent's declarative budget caps were updated.
 
     Both `monthly_usd_cap` and `daily_token_cap` are nullable so
     the same event carries "set both", "set one, clear the other",
@@ -253,7 +253,7 @@ AgentEvent = (
     | AgentResumed
     | AgentToolGranted
     | AgentToolRevoked
-    | AgentBudgetRevised
+    | AgentBudgetUpdated
 )
 
 
@@ -348,7 +348,7 @@ def to_payload(event: AgentEvent) -> dict[str, Any]:
                 "tool_name": tool_name,
                 "occurred_at": occurred_at.isoformat(),
             }
-        case AgentBudgetRevised(
+        case AgentBudgetUpdated(
             agent_id=agent_id,
             monthly_usd_cap=monthly_usd_cap,
             daily_token_cap=daily_token_cap,
@@ -455,10 +455,10 @@ def from_stored(stored: StoredEvent) -> AgentEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
-        case "AgentBudgetRevised":
+        case "AgentBudgetUpdated":
             return deserialize_or_raise(
-                "AgentBudgetRevised",
-                lambda: AgentBudgetRevised(
+                "AgentBudgetUpdated",
+                lambda: AgentBudgetUpdated(
                     agent_id=UUID(payload["agent_id"]),
                     monthly_usd_cap=payload.get("monthly_usd_cap"),
                     daily_token_cap=payload.get("daily_token_cap"),
@@ -471,7 +471,7 @@ def from_stored(stored: StoredEvent) -> AgentEvent:
 
 
 __all__ = [
-    "AgentBudgetRevised",
+    "AgentBudgetUpdated",
     "AgentDefined",
     "AgentDeprecated",
     "AgentEvent",

@@ -1,4 +1,4 @@
-"""Pure-decider tests for the `revise_agent_budget` slice."""
+"""Pure-decider tests for the `update_agent_budget` slice."""
 
 from datetime import UTC, datetime
 from uuid import uuid4
@@ -8,8 +8,8 @@ import pytest
 from cora.agent.aggregates.agent import (
     Agent,
     AgentBudget,
-    AgentBudgetRevised,
-    AgentCannotReviseBudgetError,
+    AgentBudgetUpdated,
+    AgentCannotUpdateBudgetError,
     AgentKind,
     AgentName,
     AgentNotFoundError,
@@ -18,8 +18,8 @@ from cora.agent.aggregates.agent import (
     InvalidAgentBudgetError,
     ModelRef,
 )
-from cora.agent.features.revise_agent_budget.command import ReviseAgentBudget
-from cora.agent.features.revise_agent_budget.decider import decide
+from cora.agent.features.update_agent_budget.command import UpdateAgentBudget
+from cora.agent.features.update_agent_budget.decider import decide
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
@@ -51,7 +51,7 @@ def test_sets_budget_from_unset_in_each_allowed_source_state(
     agent = _agent(status)
     events = decide(
         state=agent,
-        command=ReviseAgentBudget(
+        command=UpdateAgentBudget(
             agent_id=agent.id,
             monthly_usd_cap=100.0,
             daily_token_cap=1_000_000,
@@ -59,7 +59,7 @@ def test_sets_budget_from_unset_in_each_allowed_source_state(
         now=_NOW,
     )
     assert len(events) == 1
-    assert isinstance(events[0], AgentBudgetRevised)
+    assert isinstance(events[0], AgentBudgetUpdated)
     assert events[0].monthly_usd_cap == 100.0
     assert events[0].daily_token_cap == 1_000_000
 
@@ -69,7 +69,7 @@ def test_sets_only_monthly_cap_leaving_daily_unset() -> None:
     agent = _agent(AgentStatus.VERSIONED)
     events = decide(
         state=agent,
-        command=ReviseAgentBudget(agent_id=agent.id, monthly_usd_cap=50.0, daily_token_cap=None),
+        command=UpdateAgentBudget(agent_id=agent.id, monthly_usd_cap=50.0, daily_token_cap=None),
         now=_NOW,
     )
     assert len(events) == 1
@@ -85,7 +85,7 @@ def test_clears_budget_when_both_caps_none() -> None:
     )
     events = decide(
         state=agent,
-        command=ReviseAgentBudget(agent_id=agent.id, monthly_usd_cap=None, daily_token_cap=None),
+        command=UpdateAgentBudget(agent_id=agent.id, monthly_usd_cap=None, daily_token_cap=None),
         now=_NOW,
     )
     assert len(events) == 1
@@ -94,14 +94,14 @@ def test_clears_budget_when_both_caps_none() -> None:
 
 
 @pytest.mark.unit
-def test_idempotent_revise_to_same_budget_emits_no_event() -> None:
+def test_idempotent_update_to_same_budget_emits_no_event() -> None:
     agent = _agent(
         AgentStatus.VERSIONED,
         budget=AgentBudget(monthly_usd_cap=100.0, daily_token_cap=500_000),
     )
     events = decide(
         state=agent,
-        command=ReviseAgentBudget(
+        command=UpdateAgentBudget(
             agent_id=agent.id, monthly_usd_cap=100.0, daily_token_cap=500_000
         ),
         now=_NOW,
@@ -114,7 +114,7 @@ def test_idempotent_clear_when_already_cleared() -> None:
     agent = _agent(AgentStatus.VERSIONED, budget=None)
     events = decide(
         state=agent,
-        command=ReviseAgentBudget(agent_id=agent.id, monthly_usd_cap=None, daily_token_cap=None),
+        command=UpdateAgentBudget(agent_id=agent.id, monthly_usd_cap=None, daily_token_cap=None),
         now=_NOW,
     )
     assert events == []
@@ -125,18 +125,18 @@ def test_not_found_when_state_is_none() -> None:
     with pytest.raises(AgentNotFoundError):
         decide(
             state=None,
-            command=ReviseAgentBudget(agent_id=uuid4(), monthly_usd_cap=10.0, daily_token_cap=None),
+            command=UpdateAgentBudget(agent_id=uuid4(), monthly_usd_cap=10.0, daily_token_cap=None),
             now=_NOW,
         )
 
 
 @pytest.mark.unit
-def test_cannot_revise_when_deprecated() -> None:
+def test_cannot_update_when_deprecated() -> None:
     agent = _agent(AgentStatus.DEPRECATED)
-    with pytest.raises(AgentCannotReviseBudgetError):
+    with pytest.raises(AgentCannotUpdateBudgetError):
         decide(
             state=agent,
-            command=ReviseAgentBudget(
+            command=UpdateAgentBudget(
                 agent_id=agent.id, monthly_usd_cap=10.0, daily_token_cap=None
             ),
             now=_NOW,
@@ -150,7 +150,7 @@ def test_negative_monthly_cap_raises_invalid_budget() -> None:
     with pytest.raises(InvalidAgentBudgetError):
         decide(
             state=agent,
-            command=ReviseAgentBudget(
+            command=UpdateAgentBudget(
                 agent_id=agent.id, monthly_usd_cap=-1.0, daily_token_cap=None
             ),
             now=_NOW,
@@ -164,7 +164,7 @@ def test_zero_caps_allowed() -> None:
     agent = _agent(AgentStatus.VERSIONED)
     events = decide(
         state=agent,
-        command=ReviseAgentBudget(agent_id=agent.id, monthly_usd_cap=0.0, daily_token_cap=0),
+        command=UpdateAgentBudget(agent_id=agent.id, monthly_usd_cap=0.0, daily_token_cap=0),
         now=_NOW,
     )
     assert len(events) == 1

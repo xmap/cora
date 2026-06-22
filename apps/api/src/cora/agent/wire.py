@@ -25,7 +25,7 @@ Subject / Equipment / Supply / Safety / Caution:
   - `resume_agent`            (transition; no idempotency wrap)
   - `grant_tool_to_agent`     (transition; idempotent; no wrap)
   - `revoke_tool_from_agent`  (transition; idempotent; no wrap)
-  - `revise_agent_budget`     (transition; idempotent; no wrap)
+  - `update_agent_budget`     (transition; idempotent; no wrap)
   - `get_agent`               (query)
   - `regenerate_run_debrief`  (operator-triggered; idempotency-wrapped)
   - `dismiss_event_in_reaction` (operator-triggered atomic bookmark
@@ -49,9 +49,9 @@ from cora.agent.features import (
     promote_caution_proposal,
     regenerate_run_debrief,
     resume_agent,
-    revise_agent_budget,
     revoke_tool_from_agent,
     suspend_agent,
+    update_agent_budget,
     version_agent,
 )
 from cora.infrastructure.idempotency import with_idempotency
@@ -72,7 +72,7 @@ class AgentHandlers:
     resume_agent: resume_agent.Handler
     grant_tool_to_agent: grant_tool_to_agent.Handler
     revoke_tool_from_agent: revoke_tool_from_agent.Handler
-    revise_agent_budget: revise_agent_budget.Handler
+    update_agent_budget: update_agent_budget.Handler
     get_agent: get_agent.Handler
     regenerate_run_debrief: regenerate_run_debrief.IdempotentHandler | None
     promote_caution_proposal: promote_caution_proposal.IdempotentHandler
@@ -155,9 +155,9 @@ def wire_agent(deps: Kernel) -> AgentHandlers:
             command_name="RevokeToolFromAgent",
             bc=_BC,
         ),
-        revise_agent_budget=with_tracing(
-            revise_agent_budget.bind(deps),
-            command_name="ReviseAgentBudget",
+        update_agent_budget=with_tracing(
+            update_agent_budget.bind(deps),
+            command_name="UpdateAgentBudget",
             bc=_BC,
         ),
         get_agent=with_tracing(

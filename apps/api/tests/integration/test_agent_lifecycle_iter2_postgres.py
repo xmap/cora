@@ -4,7 +4,7 @@ Exercises the new transition slices against real Postgres to verify:
 
   1. Suspend / Resume FSM cycle persists and re-loads correctly.
   2. Tool grants / revocations persist in `Agent.tools`.
-  3. AgentBudgetRevised persists the budget; clearing zeroes the field.
+  3. AgentBudgetUpdated persists the budget; clearing zeroes the field.
   4. Deprecation source set really does include `Suspended` (the
      widened transition).
 
@@ -35,18 +35,18 @@ from cora.agent.features import (
     deprecate_agent,
     grant_tool_to_agent,
     resume_agent,
-    revise_agent_budget,
     revoke_tool_from_agent,
     suspend_agent,
+    update_agent_budget,
     version_agent,
 )
 from cora.agent.features.define_agent import DefineAgent
 from cora.agent.features.deprecate_agent import DeprecateAgent
 from cora.agent.features.grant_tool_to_agent import GrantToolToAgent
 from cora.agent.features.resume_agent import ResumeAgent
-from cora.agent.features.revise_agent_budget import ReviseAgentBudget
 from cora.agent.features.revoke_tool_from_agent import RevokeToolFromAgent
 from cora.agent.features.suspend_agent import SuspendAgent
+from cora.agent.features.update_agent_budget import UpdateAgentBudget
 from cora.agent.features.version_agent import VersionAgent
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 
@@ -167,8 +167,8 @@ async def test_budget_set_then_clear_persists(db_pool: asyncpg.Pool) -> None:
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(8)])
     agent_id = await _define_and_version(deps, db_pool)
 
-    await revise_agent_budget.bind(deps)(
-        ReviseAgentBudget(agent_id=agent_id, monthly_usd_cap=100.0, daily_token_cap=500_000),
+    await update_agent_budget.bind(deps)(
+        UpdateAgentBudget(agent_id=agent_id, monthly_usd_cap=100.0, daily_token_cap=500_000),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -176,8 +176,8 @@ async def test_budget_set_then_clear_persists(db_pool: asyncpg.Pool) -> None:
     assert after_set is not None
     assert after_set.budget == AgentBudget(monthly_usd_cap=100.0, daily_token_cap=500_000)
 
-    await revise_agent_budget.bind(deps)(
-        ReviseAgentBudget(agent_id=agent_id, monthly_usd_cap=None, daily_token_cap=None),
+    await update_agent_budget.bind(deps)(
+        UpdateAgentBudget(agent_id=agent_id, monthly_usd_cap=None, daily_token_cap=None),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

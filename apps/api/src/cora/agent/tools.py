@@ -24,9 +24,9 @@ from cora.agent.features.regenerate_run_debrief.handler import (
     IdempotentHandler as RegenerateRunDebriefHandler,
 )
 from cora.agent.features.resume_agent import tool as resume_agent_tool
-from cora.agent.features.revise_agent_budget import tool as revise_agent_budget_tool
 from cora.agent.features.revoke_tool_from_agent import tool as revoke_tool_from_agent_tool
 from cora.agent.features.suspend_agent import tool as suspend_agent_tool
+from cora.agent.features.update_agent_budget import tool as update_agent_budget_tool
 from cora.agent.features.version_agent import tool as version_agent_tool
 from cora.agent.wire import AgentHandlers
 
@@ -65,9 +65,9 @@ def register_agent_tools(
         mcp,
         get_handler=lambda: get_handlers().revoke_tool_from_agent,
     )
-    revise_agent_budget_tool.register(
+    update_agent_budget_tool.register(
         mcp,
-        get_handler=lambda: get_handlers().revise_agent_budget,
+        get_handler=lambda: get_handlers().update_agent_budget,
     )
     get_agent_tool.register(
         mcp,
