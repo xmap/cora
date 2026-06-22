@@ -55,7 +55,7 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.operation._resolved_steps_replay import find_resolved_steps_record
+from cora.operation._recipe_expansion import find_resolved_steps_record
 from cora.operation.aggregates.procedure import (
     InvalidProcedureReEstablishmentBoundaryError,
     ProcedureCannotResumeError,

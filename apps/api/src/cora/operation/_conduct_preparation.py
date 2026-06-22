@@ -14,7 +14,7 @@ the same way before handing it to the Conductor, then pin it identically:
 
 A slice cannot import a sibling slice (the cross-slice-independence fitness),
 so this BC-level module owns the shared pipeline, mirroring `_conduct_wire`
-(shared HTTP/MCP shapes) and `_resolved_steps_replay` (the resume-side read).
+(shared HTTP/MCP shapes) and `_recipe_expansion/_resolved_steps_replay` (the resume-side read).
 The pin is emitted inline rather than via a dedicated command slice:
 `ResolvedStepsRecorded` is an internal provenance event with no operator
 entry point, exactly like `RecipeExpansionRecorded`.
@@ -29,7 +29,7 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import EventStore
 from cora.infrastructure.ports.event_store import StoredEvent
-from cora.operation._recipe_replay import (
+from cora.operation._recipe_expansion import (
     find_recipe_expansion_record,
     pins_from_payload,
     verify_bindings_hash,
@@ -58,7 +58,7 @@ from cora.recipe.aggregates.recipe import load_recipe_at_version
 from cora.run.aggregates.run import RunNotFoundError, load_run
 
 if TYPE_CHECKING:
-    from cora.operation._pseudoaxis_expander import ConstituentResolver
+    from cora.operation._pseudoaxis import ConstituentResolver
 
 
 def decide_resolved_steps_recorded(

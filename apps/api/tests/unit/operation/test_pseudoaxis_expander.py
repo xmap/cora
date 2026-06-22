@@ -28,7 +28,7 @@ from cora.equipment.aggregates.asset.events import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.operation._pseudoaxis_expander import expand_pseudoaxis_steps
+from cora.operation._pseudoaxis import expand_pseudoaxis_steps
 from cora.operation.conductor import (
     ActionStep,
     CheckStep,

@@ -24,7 +24,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from cora.infrastructure.ports.event_store import StoredEvent
-from cora.operation._recipe_expansion import steps_to_wire
+from cora.operation._recipe_expansion._expand import steps_to_wire
 from cora.operation.aggregates.procedure import (
     RecipeExpansionRecordNotFoundError,
     RecipeExpansionReplayMismatchError,

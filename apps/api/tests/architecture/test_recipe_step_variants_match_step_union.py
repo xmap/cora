@@ -80,13 +80,13 @@ def test_recipe_expansion_dispatches_every_recipe_step_arm() -> None:
     structural shape).
     """
     expansion_module = pytest.importorskip(
-        "cora.operation._recipe_expansion",
-        reason="_recipe_expansion module not present yet; dispatch-coverage check pending",
+        "cora.operation._recipe_expansion._expand",
+        reason="recipe-expansion module not present yet; dispatch-coverage check pending",
     )
     recipe_arms = get_args(_recipe_body.RecipeStep)
     expander = getattr(expansion_module, "_expand_step", None)
     assert expander is not None, (
-        "cora.operation._recipe_expansion is missing the _expand_step dispatch helper; "
+        "cora.operation._recipe_expansion._expand is missing the _expand_step dispatch helper; "
         "the expansion module must export it so this fitness can verify dispatch coverage."
     )
     source = inspect.getsource(expander)

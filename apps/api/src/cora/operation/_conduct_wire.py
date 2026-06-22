@@ -5,7 +5,7 @@ body and surface the SAME per-step failure shape; this BC-level module owns
 those wire types + converters so both slices reuse them. A slice cannot
 import a sibling slice (the cross-slice-independence fitness), so the shared
 seam lives here, outside `features/`, exactly like the resolved-steps replay
-helper (`_resolved_steps_replay`) and preparation pipeline
+helper (`_recipe_expansion/_resolved_steps_replay`) and preparation pipeline
 (`_conduct_preparation`).
 
 The Conductor's `Step = SetpointStep | ActionStep | CheckStep` and

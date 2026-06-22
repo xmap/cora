@@ -1,4 +1,4 @@
-"""Unit tests for the `_recipe_replay` helpers.
+"""Unit tests for the `_recipe_expansion` replay helpers.
 
 Per [[project-run-procedure-replay-design]] §Operation BC seam
 additions. The helpers locate the genesis `RecipeExpansionRecorded`
@@ -15,11 +15,11 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.infrastructure.ports.event_store import StoredEvent
-from cora.operation._recipe_expansion import steps_to_wire
-from cora.operation._recipe_replay import (
+from cora.operation._recipe_expansion import (
     RecipeExpansionPins,
     find_recipe_expansion_record,
     pins_from_payload,
+    steps_to_wire,
     verify_bindings_hash,
     verify_steps_hash,
 )

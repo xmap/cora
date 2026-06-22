@@ -27,7 +27,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from cora.operation._pseudoaxis_expander import (
+from cora.operation._pseudoaxis import (
     ConstituentResolver,
     expand_pseudoaxis_steps,
 )
@@ -52,7 +52,7 @@ class InMemoryRecipeExpander:
     need to assert provenance carries the expander identity.
 
     `constituent_resolver` defaults to None (the wiring-deferred resolver
-    in `_pseudoaxis_expander`, which raises for any PseudoAxis step). The
+    in `_pseudoaxis/_expander`, which raises for any PseudoAxis step). The
     Plan.wiring-backed resolver is supplied per-call by the
     conduct_procedure handler (loaded from Run.plan_id -> Plan.wires) via
     the `expand_pseudoaxis` `constituent_resolver` kwarg, which takes

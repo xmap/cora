@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from cora.infrastructure.ports import EventStore
-    from cora.operation._pseudoaxis_expander import ConstituentResolver
+    from cora.operation._pseudoaxis import ConstituentResolver
     from cora.operation.conductor import Step
     from cora.recipe.aggregates.recipe import RecipeStep
 

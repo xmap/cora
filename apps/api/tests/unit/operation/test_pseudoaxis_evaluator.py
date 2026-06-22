@@ -39,7 +39,7 @@ from cora.equipment.features.update_asset_partition_rule import (
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.kernel import Kernel
-from cora.operation._pseudoaxis_evaluator import (
+from cora.operation._pseudoaxis import (
     ResolvedSetpoints,
     resolve_pseudoaxis_command,
 )

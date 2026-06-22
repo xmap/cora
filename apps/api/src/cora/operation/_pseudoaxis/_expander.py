@@ -58,7 +58,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from cora.operation._pseudoaxis_evaluator import resolve_pseudoaxis_command
+from cora.operation._pseudoaxis._evaluator import resolve_pseudoaxis_command
 from cora.operation.conductor import (
     SetpointStep,
     Step,
