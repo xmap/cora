@@ -224,13 +224,26 @@ class ControlWriteRejectedError(Exception):
 
 
 class ControlValueCoercionError(Exception):
-    """Adapter cannot unpack the substrate value into a `Reading` shape.
+    """A control value cannot be coerced to the kind a consumer requires.
 
-    Triggered when an adapter sees a novel structured type (e.g., a
-    new EPICS V4 NT variant) or a substrate primitive that does not
-    fit the closed `ReadingKind` set. Carries the substrate's raw
-    type label so operators can extend the kind set in a follow-up
-    rather than silently dropping data.
+    `target_kind` names the kind the value could not satisfy; it is a
+    free-form label, not constrained to `ReadingKind`. Three live cases,
+    all carrying the raw type label so the failure is debuggable rather
+    than a silently dropped value:
+
+      - Adapter read-unpack: an adapter sees a structured type or a
+        substrate primitive that does not fit the closed `ReadingKind`
+        set; `target_kind` is the `ReadingKind` it was unpacking toward.
+      - Adapter write-coercion: a write value cannot be encoded for the
+        substrate; `target_kind` is an operation label (e.g. the PVA
+        adapter's `"pva put"`), not a `ReadingKind`.
+      - Consumer-side: a `Reading` unpacked cleanly but its `value` is
+        the wrong type for a downstream consumer (e.g., an action body
+        needs a numeric axis position but read a categorical leaf). Here
+        `target_kind` is a LOGICAL kind the consumer names (e.g.
+        `"number"`). Action bodies raise this so the Conductor records a
+        structured step failure (it is a member of the Conductor's caught
+        `_CONTROL_ERRORS`) instead of letting a bare `TypeError` escape.
     """
 
     def __init__(self, address: str, raw_type: str, target_kind: str) -> None:

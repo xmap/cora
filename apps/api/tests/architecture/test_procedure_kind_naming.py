@@ -48,14 +48,20 @@ APPROVED_OPERATION_NOUNS = frozenset(
 )
 
 # Whole-kind carve-outs, with rationale:
-#   first_light            - whole-system milestone, no single subject
-#   {dark,flat}_baseline   - capture-and-store; the trailing noun is the
-#                            produced artifact, not the operation
+#   first_light             - whole-system milestone, no single subject
+#   {dark,flat}_baseline    - capture-and-store; the trailing noun is the
+#                             produced artifact, not the operation
+#   normalization_baseline  - the combined darks+flats normalization
+#                             ceremony; same capture-and-store idiom as
+#                             its two predecessors (trailing noun is the
+#                             produced artifact), composing them rather
+#                             than superseding them
 CARVE_OUT_KINDS = frozenset(
     {
         "first_light",
         "dark_baseline",
         "flat_baseline",
+        "normalization_baseline",
     }
 )
 
@@ -66,8 +72,18 @@ def _scenario_files() -> list[Path]:
     )
 
 
+_REGISTRATION_COMMANDS = frozenset({"RegisterProcedure", "RegisterProcedureFromRecipe"})
+"""The two procedure-registration commands that exist today, both carrying
+an identically-shaped ``kind`` field that the noun-LAST convention governs.
+A recipe-driven Procedure (``RegisterProcedureFromRecipe``) must satisfy it
+too, else a verb-first recipe-path kind would slip past the guard. This is
+an explicit enumeration, NOT a verb-agnostic match: a third
+procedure-registration command with a ``kind`` field must be added here, or
+its scenarios escape the scan."""
+
+
 def _register_procedure_kinds(tree: ast.AST) -> list[tuple[int, str]]:
-    """(lineno, kind) for every ``RegisterProcedure(kind="<literal>")`` call.
+    """(lineno, kind) for every ``Register[Procedure|ProcedureFromRecipe](kind="<literal>")`` call.
 
     Non-literal kinds (variables, f-strings) cannot be checked statically
     and are skipped; scenario tests use string literals.
@@ -84,7 +100,7 @@ def _register_procedure_kinds(tree: ast.AST) -> list[tuple[int, str]]:
             if isinstance(func, ast.Attribute)
             else None
         )
-        if name != "RegisterProcedure":
+        if name not in _REGISTRATION_COMMANDS:
             continue
         kind_kw = next((kw for kw in node.keywords if kw.arg == "kind"), None)
         if kind_kw is None:
@@ -112,7 +128,7 @@ def test_scenario_procedure_kinds_follow_noun_last_convention() -> None:
                 violations.append(f"  {path.name}:{lineno}: kind={kind!r}")
 
     assert seen, (
-        "no RegisterProcedure(kind=...) literals found under "
+        "no Register[Procedure|ProcedureFromRecipe](kind=...) literals found under "
         "tests/integration/scenarios/ -- scope regression?"
     )
 

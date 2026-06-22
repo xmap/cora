@@ -87,6 +87,7 @@ from cora.operation.features import (
     try_conduct_procedure,
 )
 from cora.operation.ports.control_port import ControlPort
+from cora.operation.staging import flats
 
 _BC = "operation"
 
@@ -150,7 +151,9 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
     `ControlPortRegistry` with the configured substrate adapters per
     prefix. The action registry is hand-seeded with the three
     substrate-neutral scan-acquisition primitives `collect` +
-    `discrete` + `continuous`. Per-deployment registry-from-config
+    `discrete` + `continuous`, plus the `flats` staging action (a
+    save-and-restore composition over `collect`, from
+    `cora.operation.staging`). Per-deployment registry-from-config
     plumbing remains deferred.
     """
     step_store: ActivityStore = (
@@ -212,7 +215,7 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
         else build_control_port(deps.settings.control_port_routes)
     )
     action_registry = InMemoryActionRegistry(
-        {"collect": collect, "discrete": discrete, "continuous": continuous}
+        {"collect": collect, "discrete": discrete, "continuous": continuous, "flats": flats}
     )
     conductor = Conductor(
         control_port=control_port,

@@ -91,7 +91,7 @@ capabilities:
   - code: cora.capability.acquisition
     name: Acquisition
     description: "The bare frame-stack capture primitive (NeXus NXscan analogue), beneath the specific tomography technique."
-    executor_shapes: [Method]
+    executor_shapes: [Method, Procedure]
   - code: cora.capability.alignment
     name: Alignment
     description: "Iterative tuning toward a target metric; each Method is a step in the rotation-axis alignment chain."
