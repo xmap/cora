@@ -41,6 +41,10 @@ from cora.agent.seed_calibration_watcher import (
     CALIBRATION_WATCHER_AGENT_ID,
     seed_calibration_watcher_agent,
 )
+from cora.agent.seed_campaign_watcher import (
+    CAMPAIGN_WATCHER_AGENT_ID,
+    seed_campaign_watcher_agent,
+)
 from cora.agent.seed_caution_drafter import seed_caution_drafter_agent
 from cora.agent.seed_caution_promoter import (
     CAUTION_PROMOTER_AGENT_ID,
@@ -67,6 +71,7 @@ from cora.agent.wire import AgentHandlers, wire_agent
 
 __all__ = [
     "CALIBRATION_WATCHER_AGENT_ID",
+    "CAMPAIGN_WATCHER_AGENT_ID",
     "CAUTION_PROMOTER_AGENT_ID",
     "CLEARANCE_EXPIRER_AGENT_ID",
     "CLEARANCE_WATCHER_AGENT_ID",
@@ -84,6 +89,7 @@ __all__ = [
     "register_agent_subscribers",
     "register_agent_tools",
     "seed_calibration_watcher_agent",
+    "seed_campaign_watcher_agent",
     "seed_caution_drafter_agent",
     "seed_caution_promoter_agent",
     "seed_clearance_expirer_agent",

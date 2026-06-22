@@ -492,6 +492,30 @@ ProcedureProgressChoice = Literal["Stall"]
 PROCEDURE_PROGRESS_CHOICES: Final = frozenset({"Stall"})
 
 
+# Context for the CampaignWatcher agent's Decisions about the CAMPAIGN-PROGRESS
+# lifecycle dimension it patrols: whether a campaign is still advancing, or has
+# sat Held (operator-paused) past the operator window without being resumed or
+# closed. Open-ended convention identical to ClearanceProgress / ProcedureProgress;
+# the closed choice vocabulary lives in the `CampaignProgressChoice` Literal below.
+# FLAG-ONLY: the agent records one Decision per stuck episode and issues NO
+# command. The context noun is `CampaignProgress` (the lifecycle dimension being
+# judged, family-clean with ClearanceProgress / ProcedureProgress); the agent kind
+# is `CampaignWatcher` (the doer) -- the same dimension-vs-doer asymmetry as the
+# Clearance, Calibration, and Procedure trios.
+DECISION_CONTEXT_CAMPAIGN_PROGRESS = "CampaignProgress"
+
+
+# Closed `choice` value set for `context = "CampaignProgress"` Decisions.
+# Projection-validated, not domain-enforced. Single value today (the agent only
+# ever flags a stuck-Held campaign); the Literal exists for symmetry and so a
+# future qualified disposition can land additively. `Stuck` is globally unique in
+# the shared, filtered DecisionChoice projection column (naming-r3: `Flag` is
+# taken by ClearanceProgress, `Stale` by CalibrationVerification, and `Stall` by
+# ProcedureProgress, so this context owns its own disposition token).
+CampaignProgressChoice = Literal["Stuck"]
+CAMPAIGN_PROGRESS_CHOICES: Final = frozenset({"Stuck"})
+
+
 # acceptance-signal capture: closed 3-value rating set on
 # the new `DecisionRated` event. `useful` and `misleading` are
 # operator-affirmative; `ignored` is a positive marker ("operator saw

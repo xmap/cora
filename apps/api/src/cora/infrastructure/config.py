@@ -301,6 +301,17 @@ class Settings(BaseSettings):
     procedure_watcher_tick_seconds: float = 300.0
     procedure_watcher_stale_after_seconds: float = 3600.0
 
+    # `campaign_watcher_enabled` gates the CampaignWatcher background runtime
+    # (9th seeded agent, deterministic flag-only). Default off: deployments opt in
+    # explicitly. `campaign_watcher_tick_seconds` is the sweep cadence (>= 0.1s).
+    # `campaign_watcher_stale_after_seconds` is how long a campaign may sit Held
+    # (operator-paused) without being resumed or closed before it is flagged; a
+    # forgotten pause is a slow failure, so the default is a week (off by default;
+    # an operator sets the real window on enable).
+    campaign_watcher_enabled: bool = False
+    campaign_watcher_tick_seconds: float = 300.0
+    campaign_watcher_stale_after_seconds: float = 604800.0
+
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
     # from. Empty (default) keeps the legacy X-Principal-Id-with-
@@ -661,6 +672,30 @@ class Settings(BaseSettings):
             msg = (
                 f"procedure_watcher_stale_after_seconds must be > 0, got {value}; "
                 "a non-positive window would flag every in-conduct procedure"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("campaign_watcher_tick_seconds")
+    @classmethod
+    def _validate_campaign_watcher_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight watch-sweep loop."""
+        if value < 0.1:
+            msg = (
+                f"campaign_watcher_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the watcher"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("campaign_watcher_stale_after_seconds")
+    @classmethod
+    def _validate_campaign_watcher_stale_after_seconds(cls, value: float) -> float:
+        """Must be positive: a non-positive window would flag every Held campaign."""
+        if value <= 0:
+            msg = (
+                f"campaign_watcher_stale_after_seconds must be > 0, got {value}; "
+                "a non-positive window would flag every Held campaign"
             )
             raise ValueError(msg)
         return value

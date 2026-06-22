@@ -55,6 +55,7 @@ from cora.agent import (
     register_agent_subscribers,
     register_agent_tools,
     seed_calibration_watcher_agent,
+    seed_campaign_watcher_agent,
     seed_caution_drafter_agent,
     seed_caution_promoter_agent,
     seed_clearance_expirer_agent,
@@ -65,6 +66,7 @@ from cora.agent import (
     wire_agent,
 )
 from cora.api._calibration_watcher import calibration_watcher_lifespan
+from cora.api._campaign_watcher import campaign_watcher_lifespan
 from cora.api._clearance_expirer import clearance_expirer_lifespan
 from cora.api._clearance_watcher import clearance_watcher_lifespan
 from cora.api._compute_runtime import ComputeRuntime
@@ -804,6 +806,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_calibration_watcher_agent(deps)
             # same shape for ProcedureWatcher (deterministic flag-only agent).
             await seed_procedure_watcher_agent(deps)
+            # same shape for CampaignWatcher (deterministic flag-only agent).
+            await seed_campaign_watcher_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -883,6 +887,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     procedure_watcher_lifespan(
                         deps,
                         list_procedures=app.state.operation.list_procedures,
+                    ),
+                    campaign_watcher_lifespan(
+                        deps,
+                        list_campaigns=app.state.campaign.list_campaigns,
                     ),
                 ):
                     yield
