@@ -1,4 +1,4 @@
-# Agent module <span class="md-maturity md-maturity--stable" title="Eleven slices, six seeded agents (LLM: RunDebriefer, CautionDrafter; deterministic: RunSupervisor, CautionPromoter, ClearanceExpirer, ClearanceWatcher), four-state lifecycle, tool grants, and budget declarations">stable</span>
+# Agent module <span class="md-maturity md-maturity--stable" title="Eleven slices, seven seeded agents (LLM: RunDebriefer, CautionDrafter; deterministic: RunSupervisor, CautionPromoter, ClearanceExpirer, ClearanceWatcher, CalibrationWatcher), four-state lifecycle, tool grants, and budget declarations">stable</span>
 
 ## Purpose & Scope
 
@@ -16,13 +16,13 @@ An Agent carries five roles:
 
 ### The agent fleet
 
-Six agents are seeded today. They split two ways. By **how they decide**: the two LLM agents (RunDebriefer, CautionDrafter) call a model; the four deterministic agents (RunSupervisor, CautionPromoter, ClearanceExpirer, ClearanceWatcher) apply a fixed rule and carry a sentinel `model_ref` with no prompt template. By **what they do**: passive agents only advise (they write a Decision and stop); active agents decide and then act, but only by issuing an existing spine command through the same authorized path a human uses, so the resulting record is byte-identical whether a human or the agent acted.
+Seven agents are seeded today. They split two ways. By **how they decide**: the two LLM agents (RunDebriefer, CautionDrafter) call a model; the five deterministic agents (RunSupervisor, CautionPromoter, ClearanceExpirer, ClearanceWatcher, CalibrationWatcher) apply a fixed rule and carry a sentinel `model_ref` with no prompt template. By **what they do**: passive agents only advise (they write a Decision and stop); active agents decide and then act, but only by issuing an existing spine command through the same authorized path a human uses, so the resulting record is byte-identical whether a human or the agent acted.
 
 The runtime that drives an agent takes one of three host shapes:
 
 - **On-demand slice.** A REST/MCP call invokes the agent directly (`regenerate_run_debrief`).
 - **Event-triggered subscriber.** A subscriber in the projection worker reacts to a domain event: RunDebriefer and CautionDrafter on a terminal Run, CautionPromoter on a registered `CautionProposal` Decision.
-- **Composition-root periodic loop.** A background task sweeps on a timer: RunSupervisor watches in-flight Runs and issues `hold_run` / `resume_run` / `stop_run` as facility beam is lost and returns; ClearanceExpirer sweeps Active clearances and issues `expire_clearance` once a validity window has passed; ClearanceWatcher watches front-of-lifecycle clearances (Submitted, UnderReview, Approved) and records a flag Decision when one stalls past an operator window.
+- **Composition-root periodic loop.** A background task sweeps on a timer: RunSupervisor watches in-flight Runs and issues `hold_run` / `resume_run` / `stop_run` as facility beam is lost and returns; ClearanceExpirer sweeps Active clearances and issues `expire_clearance` once a validity window has passed; ClearanceWatcher watches front-of-lifecycle clearances (Submitted, UnderReview, Approved) and records a flag Decision when one stalls past an operator window; CalibrationWatcher watches Provisional calibrations and records a flag Decision when one's newest revision has sat unverified past an operator window.
 
 | Agent | Decides | Host | Acts |
 |---|---|---|---|
@@ -32,8 +32,9 @@ The runtime that drives an agent takes one of three host shapes:
 | CautionPromoter | deterministic | subscriber | registers a Caution + `CautionPromotion` Decision |
 | ClearanceExpirer | deterministic | periodic loop | `expire_clearance` + `ClearanceExpiry` Decision |
 | ClearanceWatcher | deterministic | periodic loop | writes a `ClearanceProgress` flag Decision (passive) |
+| CalibrationWatcher | deterministic | periodic loop | writes a `CalibrationVerification` (Stale) flag Decision (passive) |
 
-The active runtimes (RunSupervisor, CautionPromoter, ClearanceExpirer) ship off by default, gate every actuation through the Authorize port like any principal, and stand down the moment their Actor is deactivated. None of them reaches past the spine onto the real-time floor: an active agent only issues a command the spine already exposes. ClearanceWatcher is passive (it records a flag Decision and issues no command) and likewise ships off by default. RunSupervisor additionally carries shadow observe-only rules (run-liveness, plus signal-quality and signal-stall against a live Run's observation channels) that log a would-flag and take no further action; each is a separate opt-in above the agent's own enable, and advise / act promotions are deferred.
+The active runtimes (RunSupervisor, CautionPromoter, ClearanceExpirer) ship off by default, gate every actuation through the Authorize port like any principal, and stand down the moment their Actor is deactivated. None of them reaches past the spine onto the real-time floor: an active agent only issues a command the spine already exposes. ClearanceWatcher and CalibrationWatcher are passive (each records a flag Decision and issues no command) and likewise ship off by default. RunSupervisor additionally carries shadow observe-only rules (run-liveness, plus signal-quality and signal-stall against a live Run's observation channels) that log a would-flag and take no further action; each is a separate opt-in above the agent's own enable, and advise / act promotions are deferred.
 
 <div class="cora-aside cora-aside--deferred" markdown>
 
