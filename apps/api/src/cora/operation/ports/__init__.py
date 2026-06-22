@@ -44,6 +44,11 @@ from cora.operation.ports.control_port import (
     Reading,
     ReadingKind,
 )
+from cora.operation.ports.procedure_activity_lookup import (
+    InMemoryProcedureActivityLookup,
+    ProcedureActivityLookup,
+    ProcedureActivityRecency,
+)
 
 __all__ = [
     "ArtifactNotFoundError",
@@ -62,9 +67,12 @@ __all__ = [
     "ControlTimeoutError",
     "ControlValueCoercionError",
     "ControlWriteRejectedError",
+    "InMemoryProcedureActivityLookup",
     "JobId",
     "JobSpec",
     "NoAdapterForAddressError",
+    "ProcedureActivityLookup",
+    "ProcedureActivityRecency",
     "Quality",
     "Reading",
     "ReadingKind",

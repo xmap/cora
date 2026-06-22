@@ -1,0 +1,105 @@
+"""Unit tests for the ProcedureWatcher Agent bootstrap seed.
+
+ProcedureWatcher is the eighth seeded agent and (with ClearanceWatcher and
+CalibrationWatcher) a deterministic flag-only watcher: no prompt template and a
+sentinel ModelRef (it is rule-based, a periodic staleness comparison, never
+builds an LLM). These tests pin that shape alongside the shared seed scaffolding.
+"""
+
+from datetime import UTC, datetime
+
+import pytest
+
+from cora.agent.aggregates.agent import load_agent
+from cora.agent.seed_procedure_watcher import (
+    PROCEDURE_WATCHER_AGENT_ID,
+    PROCEDURE_WATCHER_AGENT_KIND,
+    PROCEDURE_WATCHER_AGENT_NAME,
+    PROCEDURE_WATCHER_AGENT_VERSION,
+    seed_procedure_watcher_agent,
+)
+from cora.infrastructure.config import Settings
+from cora.infrastructure.deps import make_inmemory_kernel
+from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, FixedIdGenerator
+
+
+def _kernel() -> Kernel:
+    settings = Settings()  # type: ignore[call-arg]
+    return make_inmemory_kernel(
+        settings=settings,
+        clock=FakeClock(datetime(2026, 6, 22, 14, 0, 0, tzinfo=UTC)),
+        id_generator=FixedIdGenerator([]),
+        authz=AllowAllAuthorize(),
+    )
+
+
+@pytest.mark.unit
+async def test_seed_creates_procedure_watcher_at_pinned_id() -> None:
+    kernel = _kernel()
+    await seed_procedure_watcher_agent(kernel)
+
+    agent = await load_agent(kernel.event_store, PROCEDURE_WATCHER_AGENT_ID)
+    assert agent is not None
+    assert agent.id == PROCEDURE_WATCHER_AGENT_ID
+    assert agent.name.value == PROCEDURE_WATCHER_AGENT_NAME
+    assert agent.kind.value == PROCEDURE_WATCHER_AGENT_KIND
+    assert agent.version.value == PROCEDURE_WATCHER_AGENT_VERSION
+
+
+@pytest.mark.unit
+async def test_seed_is_deterministic_no_prompt_sentinel_model() -> None:
+    """Deterministic agent: no prompt template, sentinel (non-LLM) model_ref."""
+    kernel = _kernel()
+    await seed_procedure_watcher_agent(kernel)
+
+    agent = await load_agent(kernel.event_store, PROCEDURE_WATCHER_AGENT_ID)
+    assert agent is not None
+    assert agent.prompt_template_id is None
+    assert agent.model_ref.provider == "deterministic"
+    assert agent.model_ref.model == "agent:ProcedureWatcher:v1"
+
+
+@pytest.mark.unit
+async def test_seed_creates_co_registered_actor() -> None:
+    """The cross-BC genesis: Actor (kind=agent) at the pinned id."""
+    from cora.access.aggregates.actor import load_actor
+
+    kernel = _kernel()
+    await seed_procedure_watcher_agent(kernel)
+
+    actor = await load_actor(kernel.event_store, PROCEDURE_WATCHER_AGENT_ID)
+    assert actor is not None
+    assert actor.id == PROCEDURE_WATCHER_AGENT_ID
+    assert actor.kind.value == "agent"
+
+
+@pytest.mark.unit
+async def test_seed_is_idempotent() -> None:
+    """Re-running the seed is a no-op (ConcurrencyError-as-success pattern)."""
+    kernel = _kernel()
+    await seed_procedure_watcher_agent(kernel)
+    await seed_procedure_watcher_agent(kernel)
+
+
+@pytest.mark.unit
+async def test_procedure_watcher_id_distinct_from_all_prior_agents() -> None:
+    """The eight seeded agents share the UUID-range scheme but must NOT collide."""
+    from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID
+    from cora.agent.seed_calibration_watcher import CALIBRATION_WATCHER_AGENT_ID
+    from cora.agent.seed_caution_drafter import CAUTION_DRAFTER_AGENT_ID
+    from cora.agent.seed_caution_promoter import CAUTION_PROMOTER_AGENT_ID
+    from cora.agent.seed_clearance_expirer import CLEARANCE_EXPIRER_AGENT_ID
+    from cora.agent.seed_clearance_watcher import CLEARANCE_WATCHER_AGENT_ID
+    from cora.agent.seed_run_supervisor import RUN_SUPERVISOR_AGENT_ID
+
+    prior = {
+        RUN_DEBRIEFER_AGENT_ID,
+        CAUTION_DRAFTER_AGENT_ID,
+        RUN_SUPERVISOR_AGENT_ID,
+        CAUTION_PROMOTER_AGENT_ID,
+        CLEARANCE_EXPIRER_AGENT_ID,
+        CLEARANCE_WATCHER_AGENT_ID,
+        CALIBRATION_WATCHER_AGENT_ID,
+    }
+    assert PROCEDURE_WATCHER_AGENT_ID not in prior

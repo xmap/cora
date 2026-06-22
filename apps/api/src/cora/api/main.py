@@ -59,6 +59,7 @@ from cora.agent import (
     seed_caution_promoter_agent,
     seed_clearance_expirer_agent,
     seed_clearance_watcher_agent,
+    seed_procedure_watcher_agent,
     seed_run_debriefer_agent,
     seed_run_supervisor_agent,
     wire_agent,
@@ -71,6 +72,7 @@ from cora.api._conduct_run_route import register_conduct_run_routes
 from cora.api._conduct_run_tool import register_conduct_run_tools
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._inference_recorder import DelegatingInferenceRecorder
+from cora.api._procedure_watcher import procedure_watcher_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
@@ -800,6 +802,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_clearance_watcher_agent(deps)
             # same shape for CalibrationWatcher (deterministic flag-only agent).
             await seed_calibration_watcher_agent(deps)
+            # same shape for ProcedureWatcher (deterministic flag-only agent).
+            await seed_procedure_watcher_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -875,6 +879,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     calibration_watcher_lifespan(
                         deps,
                         list_calibrations=app.state.calibration.list_calibrations,
+                    ),
+                    procedure_watcher_lifespan(
+                        deps,
+                        list_procedures=app.state.operation.list_procedures,
                     ),
                 ):
                     yield

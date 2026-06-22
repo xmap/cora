@@ -466,6 +466,32 @@ CalibrationVerificationChoice = Literal["Stale"]
 CALIBRATION_VERIFICATION_CHOICES: Final = frozenset({"Stale"})
 
 
+# Context for the ProcedureWatcher agent's Decisions about the PROCEDURE-PROGRESS
+# lifecycle dimension it patrols: whether an in-conduct procedure is still
+# advancing, or has sat in Running / Held past the operator window without
+# progressing. Open-ended convention identical to ClearanceProgress /
+# CalibrationVerification; the closed choice vocabulary lives in the
+# `ProcedureProgressChoice` Literal below. FLAG-ONLY: the agent records one
+# Decision per stall episode and issues NO command. The context noun is
+# `ProcedureProgress` (the lifecycle dimension being judged, family-clean with
+# ClearanceProgress; naming-r3 chose it over the state-noun `ProcedureStall` and
+# over the existing conduct-decision context `ProcedureExecution`); the agent kind
+# is `ProcedureWatcher` (the doer) -- the same dimension-vs-doer asymmetry as the
+# Clearance and Calibration pairs.
+DECISION_CONTEXT_PROCEDURE_PROGRESS = "ProcedureProgress"
+
+
+# Closed `choice` value set for `context = "ProcedureProgress"` Decisions.
+# Projection-validated, not domain-enforced. Single value today (the agent only
+# ever flags a stalled procedure); the Literal exists for symmetry and so a
+# future qualified disposition can land additively. `Stall` is globally unique in
+# the shared, filtered DecisionChoice projection column (naming-r3: `Flag` is
+# taken by ClearanceProgress and `Stale` by CalibrationVerification, so this
+# context owns its own disposition token).
+ProcedureProgressChoice = Literal["Stall"]
+PROCEDURE_PROGRESS_CHOICES: Final = frozenset({"Stall"})
+
+
 # acceptance-signal capture: closed 3-value rating set on
 # the new `DecisionRated` event. `useful` and `misleading` are
 # operator-affirmative; `ignored` is a positive marker ("operator saw

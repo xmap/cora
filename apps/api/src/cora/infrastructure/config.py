@@ -290,6 +290,17 @@ class Settings(BaseSettings):
     calibration_watcher_tick_seconds: float = 300.0
     calibration_watcher_stale_after_seconds: float = 2592000.0
 
+    # `procedure_watcher_enabled` gates the ProcedureWatcher background runtime
+    # (8th seeded agent, deterministic flag-only). Default off: deployments opt in
+    # explicitly. `procedure_watcher_tick_seconds` is the sweep cadence (>= 0.1s).
+    # `procedure_watcher_stale_after_seconds` is how long an in-conduct procedure
+    # (Running / Held) may sit without progressing before it is flagged; live
+    # conduct is far shorter-lived than a clearance or calibration, so the default
+    # is an hour (off by default; an operator sets the real window on enable).
+    procedure_watcher_enabled: bool = False
+    procedure_watcher_tick_seconds: float = 300.0
+    procedure_watcher_stale_after_seconds: float = 3600.0
+
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
     # from. Empty (default) keeps the legacy X-Principal-Id-with-
@@ -625,6 +636,31 @@ class Settings(BaseSettings):
             msg = (
                 f"calibration_watcher_stale_after_seconds must be > 0, got {value}; "
                 "a non-positive window would flag every Provisional calibration"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("procedure_watcher_tick_seconds")
+    @classmethod
+    def _validate_procedure_watcher_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight watch-sweep loop."""
+        if value < 0.1:
+            msg = (
+                f"procedure_watcher_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the watcher"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("procedure_watcher_stale_after_seconds")
+    @classmethod
+    def _validate_procedure_watcher_stale_after_seconds(cls, value: float) -> float:
+        """Must be positive: a non-positive window would flag every in-conduct
+        procedure."""
+        if value <= 0:
+            msg = (
+                f"procedure_watcher_stale_after_seconds must be > 0, got {value}; "
+                "a non-positive window would flag every in-conduct procedure"
             )
             raise ValueError(msg)
         return value
