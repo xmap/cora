@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f1ac8c6ddb1dc2b2_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-22 14:52 +0000
+            created at 2026-06-22 16:08 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -98,7 +98,7 @@
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">  - `AgentResumed`       -> VERSIONED  (single-source: Suspended only)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">  - `AgentToolGranted`   -> status unchanged (additive set mutation)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">  - `AgentToolRevoked`   -> status unchanged (subtractive set mutation)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">  - `AgentBudgetRevised` -> status unchanged (budget field replace)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">  - `AgentBudgetUpdated` -> status unchanged (budget field replace)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">Source-state guards live at the decider, NOT here; the evolver trusts</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">the event log (folded events have already passed their decider).</span>&nbsp;</span><span class="r"></span></p>
@@ -116,7 +116,7 @@
     <p class="run"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="key">from</span> <span class="nam">typing</span> <span class="key">import</span> <span class="nam">assert_never</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">agent</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">agent</span><span class="op">.</span><span class="nam">events</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">    <span class="nam">AgentBudgetRevised</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">    <span class="nam">AgentBudgetUpdated</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">    <span class="nam">AgentDefined</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="nam">AgentDeprecated</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="nam">AgentEvent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -331,12 +331,12 @@
     <p class="run run2"><span class="n"><a id="t247" href="#t247">247</a></span><span class="t">                <span class="nam">suspended_by</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">suspended_by</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t248" href="#t248">248</a></span><span class="t">                <span class="nam">resumed_by</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">resumed_by</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t249" href="#t249">249</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t250" href="#t250">250</a></span><span class="t">        <span class="key">case</span> <span class="nam">AgentBudgetRevised</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t250" href="#t250">250</a></span><span class="t">        <span class="key">case</span> <span class="nam">AgentBudgetUpdated</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t251" href="#t251">251</a></span><span class="t">            <span class="nam">monthly_usd_cap</span><span class="op">=</span><span class="nam">monthly_usd_cap</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t252" href="#t252">252</a></span><span class="t">            <span class="nam">daily_token_cap</span><span class="op">=</span><span class="nam">daily_token_cap</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t253" href="#t253">253</a></span><span class="t">            <span class="nam">occurred_at</span><span class="op">=</span><span class="nam">_</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t254" href="#t254">254</a></span><span class="t">        <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t">            <span class="nam">prior</span> <span class="op">=</span> <span class="nam">require_state</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="str">"AgentBudgetRevised"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t">            <span class="nam">prior</span> <span class="op">=</span> <span class="nam">require_state</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="str">"AgentBudgetUpdated"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t">            <span class="key">return</span> <span class="nam">Agent</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t">                <span class="nam">id</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t">                <span class="nam">kind</span><span class="op">=</span><span class="nam">prior</span><span class="op">.</span><span class="nam">kind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -393,7 +393,7 @@
             <a class="nav" href="z_f1ac8c6ddb1dc2b2_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-22 14:52 +0000
+            created at 2026-06-22 16:08 +0000
         </p>
     </div>
 </footer>

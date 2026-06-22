@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f1ac8c6ddb1dc2b2_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-22 14:52 +0000
+            created at 2026-06-22 16:08 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -310,8 +310,8 @@
     <p class="pln"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t227" href="#t227">227</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t228" href="#t228">228</a></span><span class="t"><span class="op">@</span><span class="nam">dataclass</span><span class="op">(</span><span class="nam">frozen</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t229" href="#t229">229</a></span><span class="t"><span class="key">class</span> <span class="nam">AgentBudgetRevised</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t230" href="#t230">230</a></span><span class="t">    <span class="str">"""The Agent's declarative budget caps were revised.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t229" href="#t229">229</a></span><span class="t"><span class="key">class</span> <span class="nam">AgentBudgetUpdated</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t230" href="#t230">230</a></span><span class="t">    <span class="str">"""The Agent's declarative budget caps were updated.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t231" href="#t231">231</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t232" href="#t232">232</a></span><span class="t"><span class="str">    Both `monthly_usd_cap` and `daily_token_cap` are nullable so</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t233" href="#t233">233</a></span><span class="t"><span class="str">    the same event carries "set both", "set one, clear the other",</span>&nbsp;</span><span class="r"></span></p>
@@ -337,7 +337,7 @@
     <p class="run run2"><span class="n"><a id="t253" href="#t253">253</a></span><span class="t">    <span class="op">|</span> <span class="nam">AgentResumed</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t254" href="#t254">254</a></span><span class="t">    <span class="op">|</span> <span class="nam">AgentToolGranted</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t">    <span class="op">|</span> <span class="nam">AgentToolRevoked</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t">    <span class="op">|</span> <span class="nam">AgentBudgetRevised</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t">    <span class="op">|</span> <span class="nam">AgentBudgetUpdated</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -432,7 +432,7 @@
     <p class="run run2"><span class="n"><a id="t348" href="#t348">348</a></span><span class="t">                <span class="str">"tool_name"</span><span class="op">:</span> <span class="nam">tool_name</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t349" href="#t349">349</a></span><span class="t">                <span class="str">"occurred_at"</span><span class="op">:</span> <span class="nam">occurred_at</span><span class="op">.</span><span class="nam">isoformat</span><span class="op">(</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t350" href="#t350">350</a></span><span class="t">            <span class="op">}</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t351" href="#t351">351</a></span><span class="t">        <span class="key">case</span> <span class="nam">AgentBudgetRevised</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t351" href="#t351">351</a></span><span class="t">        <span class="key">case</span> <span class="nam">AgentBudgetUpdated</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t352" href="#t352">352</a></span><span class="t">            <span class="nam">agent_id</span><span class="op">=</span><span class="nam">agent_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t353" href="#t353">353</a></span><span class="t">            <span class="nam">monthly_usd_cap</span><span class="op">=</span><span class="nam">monthly_usd_cap</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t354" href="#t354">354</a></span><span class="t">            <span class="nam">daily_token_cap</span><span class="op">=</span><span class="nam">daily_token_cap</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -539,10 +539,10 @@
     <p class="run run2"><span class="n"><a id="t455" href="#t455">455</a></span><span class="t">                    <span class="nam">occurred_at</span><span class="op">=</span><span class="nam">datetime</span><span class="op">.</span><span class="nam">fromisoformat</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"occurred_at"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t456" href="#t456">456</a></span><span class="t">                <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t457" href="#t457">457</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t458" href="#t458">458</a></span><span class="t">        <span class="key">case</span> <span class="str">"AgentBudgetRevised"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t458" href="#t458">458</a></span><span class="t">        <span class="key">case</span> <span class="str">"AgentBudgetUpdated"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t459" href="#t459">459</a></span><span class="t">            <span class="key">return</span> <span class="nam">deserialize_or_raise</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t460" href="#t460">460</a></span><span class="t">                <span class="str">"AgentBudgetRevised"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t461" href="#t461">461</a></span><span class="t">                <span class="key">lambda</span><span class="op">:</span> <span class="nam">AgentBudgetRevised</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t460" href="#t460">460</a></span><span class="t">                <span class="str">"AgentBudgetUpdated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t461" href="#t461">461</a></span><span class="t">                <span class="key">lambda</span><span class="op">:</span> <span class="nam">AgentBudgetUpdated</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t462" href="#t462">462</a></span><span class="t">                    <span class="nam">agent_id</span><span class="op">=</span><span class="nam">UUID</span><span class="op">(</span><span class="nam">payload</span><span class="op">[</span><span class="str">"agent_id"</span><span class="op">]</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t463" href="#t463">463</a></span><span class="t">                    <span class="nam">monthly_usd_cap</span><span class="op">=</span><span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"monthly_usd_cap"</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t464" href="#t464">464</a></span><span class="t">                    <span class="nam">daily_token_cap</span><span class="op">=</span><span class="nam">payload</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"daily_token_cap"</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -555,7 +555,7 @@
     <p class="pln"><span class="n"><a id="t471" href="#t471">471</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t472" href="#t472">472</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t473" href="#t473">473</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t474" href="#t474">474</a></span><span class="t">    <span class="str">"AgentBudgetRevised"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t474" href="#t474">474</a></span><span class="t">    <span class="str">"AgentBudgetUpdated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t475" href="#t475">475</a></span><span class="t">    <span class="str">"AgentDefined"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t476" href="#t476">476</a></span><span class="t">    <span class="str">"AgentDeprecated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t477" href="#t477">477</a></span><span class="t">    <span class="str">"AgentEvent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -579,7 +579,7 @@
             <a class="nav" href="z_f1ac8c6ddb1dc2b2_evolver_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-22 14:52 +0000
+            created at 2026-06-22 16:08 +0000
         </p>
     </div>
 </footer>

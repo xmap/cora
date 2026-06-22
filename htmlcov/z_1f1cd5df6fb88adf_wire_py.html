@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f875772e35c93dd9__calibration_watcher_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-22 14:52 +0000
+            created at 2026-06-22 16:08 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -109,7 +109,7 @@
     <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">  - `resume_agent`            (transition; no idempotency wrap)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">  - `grant_tool_to_agent`     (transition; idempotent; no wrap)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">  - `revoke_tool_from_agent`  (transition; idempotent; no wrap)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">  - `revise_agent_budget`     (transition; idempotent; no wrap)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">  - `update_agent_budget`     (transition; idempotent; no wrap)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">  - `get_agent`               (query)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">  - `regenerate_run_debrief`  (operator-triggered; idempotency-wrapped)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">  - `dismiss_event_in_reaction` (operator-triggered atomic bookmark</span>&nbsp;</span><span class="r"></span></p>
@@ -133,9 +133,9 @@
     <p class="run run2"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">    <span class="nam">promote_caution_proposal</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">    <span class="nam">regenerate_run_debrief</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">    <span class="nam">resume_agent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="nam">revise_agent_budget</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">    <span class="nam">revoke_tool_from_agent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">    <span class="nam">suspend_agent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="nam">revoke_tool_from_agent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">    <span class="nam">suspend_agent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">    <span class="nam">update_agent_budget</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="nam">version_agent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">idempotency</span> <span class="key">import</span> <span class="nam">with_idempotency</span>&nbsp;</span><span class="r"></span></p>
@@ -156,7 +156,7 @@
     <p class="pln"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">    <span class="nam">resume_agent</span><span class="op">:</span> <span class="nam">resume_agent</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">    <span class="nam">grant_tool_to_agent</span><span class="op">:</span> <span class="nam">grant_tool_to_agent</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="nam">revoke_tool_from_agent</span><span class="op">:</span> <span class="nam">revoke_tool_from_agent</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="nam">revise_agent_budget</span><span class="op">:</span> <span class="nam">revise_agent_budget</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="nam">update_agent_budget</span><span class="op">:</span> <span class="nam">update_agent_budget</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="nam">get_agent</span><span class="op">:</span> <span class="nam">get_agent</span><span class="op">.</span><span class="nam">Handler</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">    <span class="nam">regenerate_run_debrief</span><span class="op">:</span> <span class="nam">regenerate_run_debrief</span><span class="op">.</span><span class="nam">IdempotentHandler</span> <span class="op">|</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="nam">promote_caution_proposal</span><span class="op">:</span> <span class="nam">promote_caution_proposal</span><span class="op">.</span><span class="nam">IdempotentHandler</span>&nbsp;</span><span class="r"></span></p>
@@ -239,9 +239,9 @@
     <p class="run run2"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="str">"RevokeToolFromAgent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">            <span class="nam">bc</span><span class="op">=</span><span class="nam">_BC</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">        <span class="nam">revise_agent_budget</span><span class="op">=</span><span class="nam">with_tracing</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">            <span class="nam">revise_agent_budget</span><span class="op">.</span><span class="nam">bind</span><span class="op">(</span><span class="nam">deps</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="str">"ReviseAgentBudget"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">        <span class="nam">update_agent_budget</span><span class="op">=</span><span class="nam">with_tracing</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">            <span class="nam">update_agent_budget</span><span class="op">.</span><span class="nam">bind</span><span class="op">(</span><span class="nam">deps</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="str">"UpdateAgentBudget"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">            <span class="nam">bc</span><span class="op">=</span><span class="nam">_BC</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t">        <span class="nam">get_agent</span><span class="op">=</span><span class="nam">with_tracing</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -278,7 +278,7 @@
             <a class="nav" href="z_f875772e35c93dd9__calibration_watcher_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-22 14:52 +0000
+            created at 2026-06-22 16:08 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1f1cd5df6fb88adf_build_llm_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-22 14:52 +0000
+            created at 2026-06-22 16:08 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -476,16 +476,16 @@
     <p class="run"><span class="n"><a id="t392" href="#t392">392</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">current_status</span> <span class="op">=</span> <span class="nam">current_status</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t393" href="#t393">393</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t394" href="#t394">394</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t395" href="#t395">395</a></span><span class="t"><span class="key">class</span> <span class="nam">AgentCannotReviseBudgetError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t396" href="#t396">396</a></span><span class="t">    <span class="str">"""Attempted `revise_agent_budget` against a `Deprecated` agent.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t395" href="#t395">395</a></span><span class="t"><span class="key">class</span> <span class="nam">AgentCannotUpdateBudgetError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t396" href="#t396">396</a></span><span class="t">    <span class="str">"""Attempted `update_agent_budget` against a `Deprecated` agent.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t397" href="#t397">397</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t398" href="#t398">398</a></span><span class="t"><span class="str">    Same source-set rule as `AgentCannotGrantToolError`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t399" href="#t399">399</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t400" href="#t400">400</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t401" href="#t401">401</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">agent_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span> <span class="nam">current_status</span><span class="op">:</span> <span class="str">"AgentStatus"</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t402" href="#t402">402</a></span><span class="t">        <span class="nam">super</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">__init__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t403" href="#t403">403</a></span><span class="t">            <span class="fst">f"</span><span class="fst">Agent </span><span class="op">{</span><span class="nam">agent_id</span><span class="op">}</span><span class="fst"> cannot revise budget: currently in status </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t404" href="#t404">404</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">current_status</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">; revisions are blocked in </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t403" href="#t403">403</a></span><span class="t">            <span class="fst">f"</span><span class="fst">Agent </span><span class="op">{</span><span class="nam">agent_id</span><span class="op">}</span><span class="fst"> cannot update budget: currently in status </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t404" href="#t404">404</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">current_status</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">; updates are blocked in </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t405" href="#t405">405</a></span><span class="t">            <span class="fst">f"</span><span class="op">{</span><span class="nam">AgentStatus</span><span class="op">.</span><span class="nam">DEPRECATED</span><span class="op">.</span><span class="nam">value</span><span class="op">}</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t406" href="#t406">406</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t407" href="#t407">407</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">agent_id</span> <span class="op">=</span> <span class="nam">agent_id</span>&nbsp;</span><span class="r"></span></p>
@@ -913,7 +913,7 @@
             <a class="nav" href="z_1f1cd5df6fb88adf_build_llm_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-22 14:52 +0000
+            created at 2026-06-22 16:08 +0000
         </p>
     </div>
 </footer>

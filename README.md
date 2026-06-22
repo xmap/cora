@@ -116,12 +116,6 @@
 | src/cora/agent/features/resume\_agent/handler.py                                         |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/resume\_agent/route.py                                           |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/resume\_agent/tool.py                                            |       17 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/agent/features/revise\_agent\_budget/\_\_init\_\_.py                            |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/agent/features/revise\_agent\_budget/command.py                                 |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/agent/features/revise\_agent\_budget/decider.py                                 |       14 |        0 |        8 |        0 |    100.0% |           |
-| src/cora/agent/features/revise\_agent\_budget/handler.py                                 |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/agent/features/revise\_agent\_budget/route.py                                   |       17 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/agent/features/revise\_agent\_budget/tool.py                                    |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/revoke\_tool\_from\_agent/\_\_init\_\_.py                        |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/revoke\_tool\_from\_agent/command.py                             |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/revoke\_tool\_from\_agent/decider.py                             |       12 |        0 |        6 |        0 |    100.0% |           |
@@ -134,6 +128,12 @@
 | src/cora/agent/features/suspend\_agent/handler.py                                        |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/suspend\_agent/route.py                                          |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/suspend\_agent/tool.py                                           |       18 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/agent/features/update\_agent\_budget/\_\_init\_\_.py                            |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/agent/features/update\_agent\_budget/command.py                                 |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/agent/features/update\_agent\_budget/decider.py                                 |       14 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/agent/features/update\_agent\_budget/handler.py                                 |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/agent/features/update\_agent\_budget/route.py                                   |       17 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/agent/features/update\_agent\_budget/tool.py                                    |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/version\_agent/\_\_init\_\_.py                                   |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/version\_agent/command.py                                        |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/version\_agent/decider.py                                        |        9 |        0 |        4 |        0 |    100.0% |           |
@@ -2201,12 +2201,6 @@
 | src/cora/trust/features/abort\_visit/handler.py                                          |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/abort\_visit/route.py                                            |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/abort\_visit/tool.py                                             |       18 |        1 |        0 |        0 |     94.4% |        55 |
-| src/cora/trust/features/arrive\_visit/\_\_init\_\_.py                                    |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/arrive\_visit/command.py                                         |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/arrive\_visit/decider.py                                         |        9 |        0 |        4 |        0 |    100.0% |           |
-| src/cora/trust/features/arrive\_visit/handler.py                                         |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/arrive\_visit/route.py                                           |       13 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/arrive\_visit/tool.py                                            |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/cancel\_visit/\_\_init\_\_.py                                    |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/cancel\_visit/command.py                                         |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/cancel\_visit/decider.py                                         |       13 |        0 |        6 |        0 |    100.0% |           |
@@ -2291,6 +2285,12 @@
 | src/cora/trust/features/list\_zones/query.py                                             |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/list\_zones/route.py                                             |       20 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/list\_zones/tool.py                                              |       21 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/record\_visit\_arrival/\_\_init\_\_.py                           |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/record\_visit\_arrival/command.py                                |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/record\_visit\_arrival/decider.py                                |        9 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/trust/features/record\_visit\_arrival/handler.py                                |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/record\_visit\_arrival/route.py                                  |       13 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/record\_visit\_arrival/tool.py                                   |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/register\_visit/\_\_init\_\_.py                                  |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/register\_visit/command.py                                       |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/register\_visit/context.py                                       |        4 |        0 |        0 |        0 |    100.0% |           |
