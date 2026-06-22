@@ -50,7 +50,6 @@ practices:
   - {name: Per-objective resolution variant, method: resolution_alignment, pending: true, note: "Mitutoyo 1.1x / 2x / 10x objectives"}
   - {name: 2BM_energy_characterization_practice, method: energy_characterization, pending: true}
   - {name: 2BM_ioc_restart_practice, method: ioc_restart, pending: true}
-  - {name: 2BM_vibration_baseline_practice, method: vibration_baseline, pending: true}
   - {name: 2BM_mirror_recoat_practice, method: mirror_recoat_return, pending: true}
 
 # Access BC Actors that are conceptually facility-wide at APS. Actor display

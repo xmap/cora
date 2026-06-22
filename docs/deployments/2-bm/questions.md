@@ -131,13 +131,6 @@ CORA will read proposal and user information from the APS scheduling system (the
 | SCHED-2 | `Nice-to-have` | Is the beamline staff contact (local contact) for a beamtime listed among that experiment's users in the scheduling system, or tracked separately as a beamline-side assignment? | listed as one of the beamtime's people | not yet | [2-BM index](index.md) |
 | SCHED-3 | `Nice-to-have` | Are APS badge numbers ever reused or reassigned to a different person over time, or is a badge number stable for life per person? And under APS data governance, is a badge number classified as personal data subject to deletion on request? Confirmer: APS User Office / data-management contact. | badge stable per person; classified as deletable personal data | not yet | [2-BM index](index.md) |
 
-## Vibration and beam stability
-
-The [docs2bm item_070 page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_070.html) documents three characterization measurements of the beamline itself: a high-speed vibration baseline, an air-handler shutdown test, and a multi-hour flat-field stability run. CORA models these as subject-less characterization captures, the Pending [`vibration_baseline`](procedures.md) Procedure / Run / Dataset and two operator [Cautions](cautions.md); the FFT and stripe-motion analysis stays downstream. These rows confirm the real-beamline facts that turn those stubs into records. Source: the staff-authored item_070 page.
-
-| ID | Priority | Question | CORA assumes | Already done? | Resolves |
-| --- | --- | --- | --- | --- | --- |
-
 ## Not on this page
 
 Hardware CORA has deliberately not described yet (the wider sample-stage motor band, IOC-hosted devices, past high-speed cameras) raises questions here only once CORA starts describing it. The `Mirror` is the exception that proves the rule: it is a registered Asset ([Inventory](inventory.md#inventory)) and its coating-stripe sweep is now modelled (`Mirror_StripeReachX`); only the coordinated mirror-table X binding stays open (`MODE-3`), blocked on the IOC substitution fix.

@@ -558,6 +558,13 @@ detector:
       firmware_version: "1710.0.0.0"
       part_number_reported: "Oryx ORX-10G-51S5M"   # IOC-reported; catalog SKU ORX-10G-51S5M-C is the same class (10G vs 10GS = form factor only)
       replaceable: true
+      note: >-
+        This same physical camera (serial 19173710) also serves the 2-BM
+        vibration / flat-field-stability characterization: that is a high-frame-
+        rate operating mode (about 99 fps, 1000-frame HDF5 stream), not separate
+        hardware (VIB-1, #265). The February 2026 vibration study (item_070) was a
+        one-off, inconclusive investigation, so no standing vibration Procedure or
+        Caution is modeled (VIB-2..7, #267).
     - name: Camera_HighRes
       family: Camera             # camera 1 (item_020): FLIR Oryx 31 MP, the alternate detector selected by Camera_Selector
       model: flir_oryx_31mp
