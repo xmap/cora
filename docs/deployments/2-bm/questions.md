@@ -102,7 +102,7 @@ On an energy change the DMM monochromator, its Bragg arms, and the tracking slit
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| ENERGY-7 | `Nice-to-have` | Is energy calibration via a channel-cut crystal current 2-BM practice, and which crystal (its lattice spacing 2d; the [calibration page](https://docs2bm.readthedocs.io/en/latest/source/ops/item_022.html) lists 3.84 angstrom)? Is the crystal a removable reference standard (CORA models it as a calibration Subject, like the resolution phantom) or installed equipment, and on what rotation stage is it rocked? | modelled as the `energy_characterization` Procedure with the crystal as a calibration Subject; current practice, crystal, and 2d unconfirmed | yes | [Procedures](procedures.md) |
+| ENERGY-7 | `Nice-to-have` | Channel-cut energy calibration is confirmed current practice (2d = 3.84 angstrom, 36 x 3 mm removable crystal, modelled as a calibration Subject). Two residual confirms: (a) the answer names the rocking stage as an Aerotech **ABRS-150MP**, but CORA's `Rotary` is an **ABRS-250MP** (datasheet-confirmed, #164): is the crystal rocked on that same sample rotation stage, and is its model 150MP or 250MP? (b) explicit confirmation the crystal is **Si(220)** (only Si(220) matches 2d = 3.84) and how often calibration is re-run. | calibration + 2d + removable confirmed (#256); rocking-stage model (150 vs 250 MP) + Si(220) + re-run cadence open | partly | [Procedures](procedures.md) |
 
 ## Beam mode
 

@@ -157,6 +157,10 @@ methods:
     capability: cora.capability.characterization
     purpose: "Pre-step measuring motor-sensitivity constants empirically (bump an axis by a known delta, observe centroid shift, K = shift/bump)."
     needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+  - name: energy_characterization
+    capability: cora.capability.characterization
+    purpose: "Energy calibration via a channel-cut crystal: rock a crystal of known 2d through its Bragg peak, fit the peak angle, recover the true beam energy, and re-save the corrected per-energy curve as a new revision (ENERGY-7)."
+    needed_families: [Monochromator, RotaryStage]
   - name: streaming_tomography
     capability: cora.capability.tomography
     purpose: "Live-reconstruction tomography supporting mid-flight adjust_run steering on observed reco quality."
