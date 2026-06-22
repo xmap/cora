@@ -31,5 +31,5 @@ TomoWISE is in the design phase, so this page is long by design: almost every va
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DET-1 | Blocks-go-live | Which camera models will be procured for cameras I to IV? (Chosen in project year 2.) | Four cameras at the stated design-target sensors/speeds; models unbound. | The camera Model bindings. |
-| DET-2 | Blocks-go-live | Which microscope optics model? The TDR names Optique Peter as the vendor standard (smaller vendors possible); the model is chosen in project year 2. | Two microscopes (MicLFOV, MicHR) at the stated magnifications; vendor Optique Peter, model unbound. | The microscope Model bindings. |
+| DET-2 | Blocks-go-live | Which microscope optics model? The TDR names Optique Peter as the vendor standard (smaller vendors possible); the model is chosen in project year 2. | Two microscopes (MicLFOV, MicHR) at the stated magnifications; vendor Optique Peter, model unbound (the catalog carries one Optique Peter candidate from 2-BM, `optique_peter_micrx080`). | The microscope Model bindings. |
 | TRIG-1 | Blocks-go-live | Will the rotary TTL (3600 pulses/rev) feed the camera triggers directly, or is an FPGA conditioner needed? | Direct TTL, no conditioner; may evolve once camera trigger requirements are firm. | The trigger/sync chain. |
