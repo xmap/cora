@@ -25,6 +25,7 @@ import pytest
 from cora.infrastructure.ports.clock import FakeClock
 from cora.operation.conductor import (
     ActionStep,
+    CaptureStep,
     CheckStep,
     Conductor,
     EqualsCriterion,
@@ -37,6 +38,7 @@ from cora.operation.conductor import (
 )
 from cora.operation.features.append_activities.command import AppendProcedureActivities
 from cora.operation.ports.control_port import ControlNotConnectedError, Reading
+from cora.recipe.aggregates.recipe.body import CaptureRef
 
 _FIXED_NOW = datetime(2026, 6, 21, 9, 0, 0, tzinfo=UTC)
 
@@ -279,6 +281,55 @@ async def test_execute_from_rejects_negative_boundary() -> None:
 
 
 @pytest.mark.unit
+async def test_execute_from_capture_ref_before_boundary_loud_fails() -> None:
+    """Captures start EMPTY on resume: a CaptureStep in the skipped prefix is not
+    replayed, so a later CaptureRef setpoint resolves against nothing and fails
+    loud rather than restoring against a stale value. Nothing is actuated."""
+    steps = _pin_and_parse(
+        (
+            CaptureStep(address="2bma:sample:x", capture_name="home"),
+            SetpointStep(address="2bma:sample:x", value=CaptureRef("home")),
+        )
+    )
+    port = _RecordingControlPort()
+    result = await _conductor(port, _FakeAppendStep()).execute_from(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=steps,
+        boundary=1,  # skip the CaptureStep@0, replay only the CaptureRef setpoint
+    )
+    assert result.succeeded is False
+    assert result.completed_count == 0
+    assert result.failure is not None
+    assert result.failure.error_class == "UnresolvedCaptureRef"
+    assert port.writes == []
+
+
+@pytest.mark.unit
+async def test_execute_from_capture_in_tail_reseeds_then_restores() -> None:
+    """A CaptureStep WITHIN the replayed tail re-reads and seeds captures, so a
+    following CaptureRef setpoint resolves and re-drives on resume."""
+    steps = _pin_and_parse(
+        (
+            CaptureStep(address="2bma:sample:x", capture_name="home"),
+            SetpointStep(address="2bma:sample:x", value=CaptureRef("home")),
+        )
+    )
+    port = _RecordingControlPort(readings={"2bma:sample:x": _good_reading(12.5)})
+    result = await _conductor(port, _FakeAppendStep()).execute_from(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=steps,
+        boundary=0,  # replay both: capture re-reads 12.5, restore writes 12.5
+    )
+    assert result.succeeded is True
+    assert result.completed_count == 2
+    assert port.writes == [("2bma:sample:x", 12.5)]
+
+
+@pytest.mark.unit
 async def test_execute_from_explicit_re_establish_policy_is_the_default() -> None:
     """Passing the only policy member behaves identically to the default."""
     steps = _pin_and_parse((SetpointStep(address="2bma:a", value=1.0),))
@@ -311,10 +362,27 @@ async def test_execute_from_explicit_re_establish_policy_is_the_default() -> Non
             address="2bma:temp",
             criterion=WithinToleranceCriterion(expected=100.0, tolerance=0.5),
         ),
+        CaptureStep(address="2bma:sample:x", capture_name="home"),
+        SetpointStep(address="2bma:sample:x", value=CaptureRef("home")),
     ],
 )
 def test_steps_from_payload_round_trips_step_to_payload(step: Step) -> None:
     assert steps_from_payload((step_to_payload(step),)) == (step,)
+
+
+@pytest.mark.unit
+def test_step_to_payload_encodes_capture_ref_setpoint_as_a_sentinel() -> None:
+    """A CaptureRef setpoint value pins as the {"__capture__": name} sentinel,
+    distinct from any literal, so resume reconstructs the ref not a bare value."""
+    payload = step_to_payload(SetpointStep(address="2bma:sample:x", value=CaptureRef("home")))
+    assert payload["value"] == {"__capture__": "home"}
+
+
+@pytest.mark.unit
+def test_step_to_payload_encodes_capture_step_with_capture_kind() -> None:
+    payload = step_to_payload(CaptureStep(address="2bma:sample:x", capture_name="home"))
+    assert payload["kind"] == "capture"
+    assert payload["capture_name"] == "home"
 
 
 @pytest.mark.unit

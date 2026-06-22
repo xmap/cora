@@ -19,6 +19,7 @@ from typing import Any
 
 from cora.operation.conductor import (
     ActionStep,
+    CaptureStep,
     CheckStep,
     EqualsCriterion,
     SetpointStep,
@@ -27,11 +28,21 @@ from cora.operation.conductor import (
 )
 from cora.recipe.aggregates.recipe import (
     RecipeActionStep,
+    RecipeCaptureStep,
     RecipeSetpointStep,
     RecipeStep,
 )
-from cora.recipe.aggregates.recipe.body import resolve_value
+from cora.recipe.aggregates.recipe.body import CaptureRef, resolve_value
 from cora.shared.canonical_json import canonical_json_bytes
+
+_CAPTURE_WIRE_KEY = "__capture__"
+"""Stable sentinel key for a `CaptureRef` in the expanded-steps hash form.
+
+A `CaptureRef` survives `expand` (unlike `BindingRef`, which `resolve_value`
+substitutes away), so the hash serializer must encode it deterministically.
+This serializer's hash is compared only against itself (re-expand vs the
+pinned `steps_hash`), so the key need only be internally stable; it mirrors
+the Recipe BC / Conductor `__capture__` sentinel for readability."""
 
 
 def _criterion_from_wire(
@@ -69,6 +80,8 @@ def _expand_step(step: RecipeStep, bindings: Mapping[str, Any]) -> Step:
             name=step.name,
             params={key: resolve_value(val, bindings) for key, val in step.params.items()},
         )
+    if isinstance(step, RecipeCaptureStep):
+        return CaptureStep(address=step.address, capture_name=step.capture_name)
     # RecipeCheckStep: criterion is a wire-format dict (kept dict-shaped
     # in Recipe BC to avoid an Operation -> Recipe import).
     return CheckStep(
@@ -107,10 +120,15 @@ def _criterion_to_wire(
 
 def _step_to_wire(step: Step) -> dict[str, Any]:
     if isinstance(step, SetpointStep):
+        value: Any = (
+            {_CAPTURE_WIRE_KEY: step.value.capture_name}
+            if isinstance(step.value, CaptureRef)
+            else step.value
+        )
         return {
             "kind": "setpoint",
             "address": step.address,
-            "value": step.value,
+            "value": value,
             "verify": step.verify,
         }
     if isinstance(step, ActionStep):
@@ -118,6 +136,12 @@ def _step_to_wire(step: Step) -> dict[str, Any]:
             "kind": "action",
             "name": step.name,
             "params": dict(step.params),
+        }
+    if isinstance(step, CaptureStep):
+        return {
+            "kind": "capture",
+            "address": step.address,
+            "capture_name": step.capture_name,
         }
     return {
         "kind": "check",

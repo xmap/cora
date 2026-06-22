@@ -68,6 +68,7 @@ from cora.operation.errors import (
     PartitionRuleNotFoundError,
     PseudoAxisEvaluationFailedError,
 )
+from cora.recipe.aggregates.recipe.body import CaptureRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.ports import EventStore
@@ -203,6 +204,15 @@ async def expand_pseudoaxis_steps(
     for step in steps:
         if isinstance(step, SetpointStep) and _is_pseudoaxis_address(step.address):
             asset_id = _parse_pseudoaxis_asset_id(step.address)
+            if isinstance(step.value, CaptureRef):
+                raise PseudoAxisEvaluationFailedError(
+                    asset_id=asset_id,
+                    kind=None,
+                    reason=(
+                        "a CaptureRef value is not supported on a pseudo-axis "
+                        "(a capture restores a real axis, not a virtual one)"
+                    ),
+                )
             commanded = _coerce_commanded_value(asset_id, step.value)
             constituent_asset_ids = constituent_resolver(asset_id)
             resolved = await resolve_pseudoaxis_command(
@@ -225,10 +235,11 @@ async def expand_pseudoaxis_steps(
                     )
                 )
         else:
-            # ActionStep / CheckStep / non-PseudoAxis SetpointStep pass
-            # through. Step is a closed union (SetpointStep | ActionStep
-            # | CheckStep), so a future variant would land here as a
-            # type-check error at the Conductor boundary.
+            # ActionStep / CheckStep / CaptureStep / non-PseudoAxis
+            # SetpointStep pass through. Step is a closed union
+            # (SetpointStep | ActionStep | CheckStep | CaptureStep), so a
+            # future variant would land here as a type-check error at the
+            # Conductor boundary.
             rewritten.append(step)
     return tuple(rewritten)
 

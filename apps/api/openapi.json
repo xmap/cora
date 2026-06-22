@@ -9765,7 +9765,8 @@
             "enum": [
               "setpoint",
               "action",
-              "check"
+              "check",
+              "capture"
             ],
             "title": "Step Kind",
             "type": "string"

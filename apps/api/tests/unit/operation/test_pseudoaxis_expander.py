@@ -31,12 +31,14 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.operation._pseudoaxis import expand_pseudoaxis_steps
 from cora.operation.conductor import (
     ActionStep,
+    CaptureStep,
     CheckStep,
     EqualsCriterion,
     SetpointStep,
     Step,
 )
-from cora.operation.errors import PartitionRuleNotFoundError
+from cora.operation.errors import PartitionRuleNotFoundError, PseudoAxisEvaluationFailedError
+from cora.recipe.aggregates.recipe.body import CaptureRef
 from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 6, 5, 12, 0, 0, tzinfo=UTC)
@@ -171,6 +173,36 @@ async def test_expander_passes_through_non_pseudoaxis_setpoint_unchanged() -> No
     )
 
     assert result == steps
+
+
+@pytest.mark.unit
+async def test_expander_rejects_capture_ref_value_on_pseudoaxis() -> None:
+    """A capture restores a real axis, not a virtual one: a CaptureRef value on a
+    pseudo-axis address fails loud rather than coercing to a number."""
+    store = InMemoryEventStore()
+    steps: tuple[Step, ...] = (
+        SetpointStep(address=_pseudoaxis_address(_AFFINE_ASSET_ID), value=CaptureRef("home")),
+    )
+    with pytest.raises(PseudoAxisEvaluationFailedError, match="CaptureRef"):
+        await expand_pseudoaxis_steps(
+            steps,
+            event_store=store,
+            correlation_id=_CORRELATION_ID,
+            constituent_resolver=lambda _aid: (_AFFINE_CONSTITUENT_ID,),
+        )
+
+
+@pytest.mark.unit
+async def test_expander_passes_capture_step_through_unchanged() -> None:
+    """A CaptureStep is not a pseudo-axis setpoint; it passes through untouched."""
+    store = InMemoryEventStore()
+    capture = CaptureStep(address="epics_ca://real-axis/rbv", capture_name="home")
+    result = await expand_pseudoaxis_steps(
+        (capture,),
+        event_store=store,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert result == (capture,)
 
 
 @pytest.mark.unit

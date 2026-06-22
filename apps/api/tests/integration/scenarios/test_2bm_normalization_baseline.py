@@ -6,20 +6,19 @@ bc_primary: Operation
 bc_touches: Data, Operation, Recipe
 
 Scenario test for the combined dark + flat normalization ceremony,
-modeled as a deployment Recipe and run as the first deliberate consumer
-of the Procedure Conductor. The ceremony is a Recipe (a templated step
-list) realizing the existing `cora.capability.acquisition`; an operator
-registers a Procedure from it (`register_procedure_from_recipe`), and the
-conduct handler re-expands the recipe into conduct steps and drives them
-through the ControlPort against a soft IOC. It composes the two shipped
-record-path captures (`dark_baseline` + `flat_baseline`) into one
-conducted, modeled ceremony that produces the normalization baseline
-every tomographic Run normalizes against (darks are subtracted, flats
-divide).
+modeled as a deployment Recipe and run through the Procedure Conductor.
+The ceremony is a Recipe (a templated step list) realizing the existing
+`cora.capability.acquisition`; an operator registers a Procedure from it
+(`register_procedure_from_recipe`), and the conduct handler re-expands the
+recipe into conduct steps and drives them through the ControlPort against
+a soft IOC. It composes the two shipped record-path captures
+(`dark_baseline` + `flat_baseline`) into one conducted, modeled ceremony
+that produces the normalization baseline every tomographic Run normalizes
+against (darks are subtracted, flats divide).
 
-See [[project_flat_dark_prologue_design]] for the design lock and
-[[project_resumable_conduct_design]] for the re-establishment-prologue
-model this ceremony is the buildable-now first instance of. See
+See [[project_value_capture_stage0_design]] for the runtime-value-capture
+design this scenario is the first consumer of, and
+[[project_flat_dark_prologue_design]] for the ceremony design lock. See
 [[project_seam_model]] for why this is a deliberate Actuate-axis move
 (CORA conducts), not the record-path the live 2-BM seam uses today.
 
@@ -27,19 +26,18 @@ model this ceremony is the buildable-now first instance of. See
 
 A conduct-path "101" that exercises the whole modeled ladder end to end:
 Capability -> Recipe (step template) -> Procedure (register-from-recipe)
--> expand -> Conductor -> ControlPort -> soft IOC, with zero
-live-hardware risk, before the more complex consumers (fly-scan resume,
-autonomous control) ride the same rails.
+-> expand -> Conductor -> ControlPort -> soft IOC.
 
   1. First scenario that drives the Procedure Conductor, AND the first
      end-to-end exercise of the recipe-driven conduct path (define recipe
      -> register-from-recipe -> conduct re-expands the pinned template).
      Every other 2-BM scenario is record-path (hand-built
      `append_activities` entries, no Conductor).
-  2. First use of the `flats` staging action: a save-and-restore capture
-     that reads the sample axis, retracts it off the beam by a clearance,
-     collects, and restores the axis. It lives in `cora.operation.staging`
-     (a composition over `collect`), not among the scan primitives.
+  2. First use of RUNTIME VALUE CAPTURE: a `CaptureStep` reads the sample
+     axis at execute time into the `captures` slot "sample_home", and a
+     later `SetpointStep` with a `CaptureRef` restores the axis to it. The
+     save-and-restore is plain recipe steps, not a bespoke action body
+     (the retired `staging.flats`).
   3. First Dataset whose `producing_actuation_kind` is derived from a
      conducted Procedure: the soft IOC is a declared simulator, so the
      conduct observes `Simulated` and that provenance rides through the
@@ -54,19 +52,21 @@ practice but is staff-confirm-pending per the design lock's open
 questions on transit-safety ordering and ceremony ORDER / FREQUENCY:
 
   1. Close the shutter; acquire N dark frames (detector dark current).
-  2. Open the shutter; retract the sample off the beam; acquire N flat
-     frames (the beam profile through empty optics); restore the sample.
+  2. Open the shutter; CAPTURE the sample's aligned position; retract the
+     sample to a known out-of-beam position; acquire N flat frames; RESTORE
+     the sample to the captured aligned position.
   3. Close the shutter (return to the safe state).
   4. Store the baseline so future Runs can normalize against it.
 
-The ceremony starts sample-in and ends sample-in (the `flats` body
-restores), and ends shutter-closed (matching the `flat_baseline` sibling
-and recipes.md return-to-safe). The sample transits the live beam during
-both the flat retraction and the restore (the shutter closes only after
-the flats step), which follows TomoScan's open-beam practice at 2-BM
-(SBS as the per-scan fast shutter); confirm before any live wiring.
+The ceremony starts sample-in and ends sample-in (the restore returns the
+axis to the captured aligned position), and ends shutter-closed (matching
+the `flat_baseline` sibling and recipes.md return-to-safe). The sample
+transits the live beam during both the retraction and the restore (the
+shutter closes only after the flats), which follows TomoScan's open-beam
+practice at 2-BM (SBS as the per-scan fast shutter); confirm before any
+live wiring.
 
-## Stand-in PVs (illustrative-pending-staff)
+## Stand-in PVs + values (illustrative-pending-staff)
 
 The soft IOC carries generic test PVs, NOT production 2-BM addresses.
 This mapping is illustrative and MUST be confirmed with staff before any
@@ -76,8 +76,10 @@ live-EPICS wiring:
     shutter is a PSS-owned categorical leaf (S02BM-PSS:SBS family) with
     an INVERTED sense; its leaf name and closed-code are unconfirmed and
     safety-load-bearing, so this scenario uses a neutral binary stand-in.
-  - sample-out axis -> `double_value` (the SampleTop_X analog). The real
-    retract axis, clearance, and any theta-park coupling are unconfirmed.
+  - sample axis -> `double_value` (the SampleTop_X analog). The aligned
+    home is CAPTURED at runtime; the out-of-beam position is a literal
+    (Option A: a fixed safe park, not a relative nudge). The real axis,
+    the out position, and any theta-park coupling are unconfirmed.
   - detector -> `cam1` (the areaDetector ADCore PV family).
 
 Frame counts and dwell are illustrative (tiny, to keep the test fast);
@@ -85,14 +87,14 @@ real per-campaign values are operator-bound.
 
 ## What this scenario surfaces (gap-finding intent)
 
-  - **The ceremony is a modeled Recipe, not an inline step list.** The
-    darks-then-flats template lives in a Recipe realizing the acquisition
-    Capability; conduct re-expands the pinned template. This is the
-    artifact the design lock specified.
-  - **The save-and-restore needs a body today.** `flats` brackets a
-    collect with an absolute read-then-restore because conduct steps are
-    static (no runtime variable binding). Conduct variable binding is the
-    designated next design; it would retire the body.
+  - **The save-and-restore is plain recipe steps.** A `CaptureStep`
+    records the observed aligned position; a `CaptureRef` setpoint returns
+    to it. No opaque action body hides the motion (the retired
+    `staging.flats` anti-pattern). The capture is journaled, so the
+    observed value is auditable.
+  - **Capture reads the OBSERVED value.** The restore returns the axis to
+    where it actually was (the readback), not a commanded number; the
+    restore setpoint uses `verify=True` so its landed value is recorded.
   - **Conducted provenance flows to the artifact.** The Dataset carries
     `producing_actuation_kind="Simulated"` derived from the conduct, the
     fact that gates `promote_dataset` later. A live (non-simulated)
@@ -125,9 +127,10 @@ from cora.operation.features.register_procedure_from_recipe import RegisterProce
 from cora.operation.features.register_procedure_from_recipe import bind as bind_register_from_recipe
 from cora.operation.features.start_procedure import bind as bind_start
 from cora.operation.ports.control_port import ActuationKind
-from cora.operation.staging import flats
 from cora.recipe.aggregates.recipe import (
+    CaptureRef,
     RecipeActionStep,
+    RecipeCaptureStep,
     RecipeCheckStep,
     RecipeSetpointStep,
 )
@@ -140,13 +143,14 @@ _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-0000020e0099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000020e00aa")
 _CAPABILITY_ID = UUID("01900000-0000-7000-8000-0000020e0c01")
 
-# Illustrative-pending-staff stand-in codes (see module docstring).
+# Illustrative-pending-staff stand-in codes / values (see module docstring).
 _SHUTTER_CLOSED = 0
 _SHUTTER_OPEN = 1
 _DARK_FRAMES = 3
 _FLAT_FRAMES = 3
 _DWELL_S = 0.05
-_CLEARANCE_MM = 5.0
+_SAMPLE_HOME_MM = 12.5
+_SAMPLE_OUT_MM = 20.0
 
 
 @pytest.mark.integration
@@ -154,9 +158,10 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
     db_pool: asyncpg.Pool,
     softioc: str,
 ) -> None:
-    """Define the ceremony Recipe, register a Procedure from it, conduct it to
-    Completed against the soft IOC, then register the baseline Dataset with the
-    conduct's Simulated provenance derived onto it."""
+    """Define the ceremony Recipe (capture-based save-and-restore), register a
+    Procedure from it, conduct it to Completed against the soft IOC, and confirm
+    the sample axis is restored to its captured aligned position, then register
+    the baseline Dataset with the conduct's Simulated provenance derived onto it."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
 
     shutter = f"{softioc}long_value"
@@ -165,10 +170,10 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
 
     # ----- Recipe BC: the acquisition Capability + the ceremony Recipe -----
     #
-    # The Recipe realizes the EXISTING cora.capability.acquisition (seeded
-    # with both executor shapes; register-from-recipe requires Procedure).
-    # The template is all-literal (no BindingRef), so no parameters_schema
-    # or operator bindings are needed for this calibration ceremony.
+    # The Recipe realizes the EXISTING cora.capability.acquisition. The flats
+    # save-and-restore is expressed as a CaptureStep ("sample_home") + a
+    # CaptureRef restore setpoint, not an action body. All-literal otherwise
+    # (no BindingRef), so no parameters_schema / operator bindings.
     await seed_capability_postgres(
         deps.event_store,
         _CAPABILITY_ID,
@@ -194,21 +199,25 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
                         "dwell": _DWELL_S,
                     },
                 ),
-                # flats: shutter open, then retract sample, collect, restore
+                # flats: shutter open, remember home, retract to a fixed out
+                # position, collect, restore to the captured home
                 RecipeSetpointStep(address=shutter, value=_SHUTTER_OPEN, verify=True),
                 RecipeCheckStep(
                     address=shutter, criterion={"kind": "equals", "expected": _SHUTTER_OPEN}
                 ),
+                RecipeCaptureStep(address=axis, capture_name="sample_home"),
+                RecipeSetpointStep(address=axis, value=_SAMPLE_OUT_MM, verify=True),
                 RecipeActionStep(
-                    name="flats",
+                    name="collect",
                     params={
                         "detector": detector,
                         "trigger_mode": "Internal",
-                        "axis": axis,
-                        "clearance": _CLEARANCE_MM,
                         "repetitions": _FLAT_FRAMES,
                         "dwell": _DWELL_S,
                     },
+                ),
+                RecipeSetpointStep(
+                    address=axis, value=CaptureRef(capture_name="sample_home"), verify=True
                 ),
                 # return to safe: shutter closed
                 RecipeSetpointStep(address=shutter, value=_SHUTTER_CLOSED, verify=True),
@@ -238,9 +247,9 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
 
     # ----- Conduct: the handler re-expands the pinned recipe + drives the soft IOC -----
     #
-    # The soft IOC is a declared simulator (a real CA speaker that is not
-    # real hardware); routing through the registry with is_simulated=True is
-    # what makes the conduct observe Simulated.
+    # The soft IOC is a declared simulator (a real CA speaker that is not real
+    # hardware); routing through the registry with is_simulated=True makes the
+    # conduct observe Simulated.
     port = EpicsCaControlPort()
     registry = ControlPortRegistry()
     registry.register(softioc, port, is_simulated=True)
@@ -250,7 +259,7 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
         append_step=bind_append(deps, step_store=step_store),
         clock=deps.clock,
         id_generator=deps.id_generator,
-        action_registry=InMemoryActionRegistry({"collect": collect, "flats": flats}),
+        action_registry=InMemoryActionRegistry({"collect": collect}),
         start_procedure=bind_start(deps),
         complete_procedure=bind_complete(deps),
         abort_procedure=bind_abort(deps),
@@ -258,6 +267,8 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
     conduct = bind_conduct(deps, conductor=conductor, expansion_port=expander)
 
     try:
+        # The aligned home the CaptureStep observes + the restore returns to.
+        await port.write(axis, _SAMPLE_HOME_MM, wait=True)
         # Recipe-driven: caller steps are empty; the handler re-expands the
         # pinned template (non-empty caller steps are forbidden here).
         result = await conduct(
@@ -268,13 +279,13 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
     finally:
         await registry.aclose()
 
-    # ----- Conduct outcome: all eight steps ran, conduct observed Simulated -----
+    # ----- Conduct outcome: all eleven steps ran, conduct observed Simulated -----
 
     assert result.succeeded is True
-    assert result.completed_count == 8
+    assert result.completed_count == 11
     assert result.actuation_kind == ActuationKind.SIMULATED.value
 
-    # ----- Procedure FSM stream: Defined -> Running -> (logbook) -> Completed -----
+    # ----- Procedure FSM stream: Registered (from recipe) -> ... -> Completed -----
 
     events, _ = await deps.event_store.load("Procedure", procedure_id)
     event_types = [e.event_type for e in events]
@@ -284,14 +295,14 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
     assert "ProcedureStarted" in event_types
     assert event_types[-1] == "ProcedureCompleted"
 
-    # ----- Journal: eight logical step entries + five pre-effect markers -----
+    # ----- Journal: eleven logical step entries + seven pre-effect markers -----
     #
     # The clock is frozen so all entries share sampled_at; assert on the
-    # order-independent multiset AND the clock/id-independent step_index set
-    # (closing the kind-preserving-misorder gap). Setpoint + action are
-    # side-effecting (one pre-effect in_flight marker each); checks are pure
-    # reads (no marker). Eight steps: 3 setpoints (idx 0,3,6), 3 checks
-    # (idx 1,4,7), 2 actions (idx 2,5); markers on the 5 side-effecting ones.
+    # order-independent multiset AND the clock/id-independent step_index set.
+    # Eleven steps: 5 setpoints (idx 0,3,6,8,9), 3 checks (1,4,10), 2 actions
+    # (2,7), 1 capture (5). Setpoints + actions are side-effecting (one
+    # pre-effect in_flight marker each = 7); checks + capture are reads (no
+    # marker).
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(
             "SELECT step_kind, payload FROM entries_operation_procedure_activities "
@@ -300,9 +311,35 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
         )
     logical = [r for r in rows if r["payload"]["result"] != "in_flight"]
     markers = [r for r in rows if r["payload"]["result"] == "in_flight"]
-    assert Counter(r["step_kind"] for r in logical) == {"setpoint": 3, "check": 3, "action": 2}
-    assert {r["payload"]["step_index"] for r in logical} == {0, 1, 2, 3, 4, 5, 6, 7}
-    assert {r["payload"]["step_index"] for r in markers} == {0, 2, 3, 5, 6}
+    assert Counter(r["step_kind"] for r in logical) == {
+        "setpoint": 5,
+        "check": 3,
+        "action": 2,
+        "capture": 1,
+    }
+    assert {r["payload"]["step_index"] for r in logical} == set(range(11))
+    assert {r["payload"]["step_index"] for r in markers} == {0, 2, 3, 6, 7, 8, 9}
+
+    # ----- The capture recorded the OBSERVED home, and the CaptureRef restore
+    #       resolved to it (the runtime-value-capture round-trip) -----
+    capture_entry = next(r for r in logical if r["step_kind"] == "capture")
+    assert capture_entry["payload"]["capture_name"] == "sample_home"
+    assert capture_entry["payload"]["captured_value"] == pytest.approx(_SAMPLE_HOME_MM)
+
+    restore_entry = next(
+        r
+        for r in logical
+        if r["step_kind"] == "setpoint" and r["payload"].get("capture_ref") == "sample_home"
+    )
+    assert restore_entry["payload"]["value"] == pytest.approx(_SAMPLE_HOME_MM)
+
+    # The axis is back at the captured aligned home (the restore landed).
+    readback_port = EpicsCaControlPort()
+    try:
+        axis_final = await readback_port.read(axis)
+        assert axis_final.value == pytest.approx(_SAMPLE_HOME_MM)
+    finally:
+        await readback_port.aclose()
 
     # ----- Data BC: the normalization baseline Dataset (terminal-gated) -----
     #
@@ -332,6 +369,6 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
     payload = dataset_events[0].payload
     assert payload["producing_procedure_id"] == str(procedure_id)
     assert payload["subject_id"] is None
-    # The conduct's Simulated provenance is derived onto the Dataset (the
-    # fact promote_dataset gates on).
+    # The conduct's Simulated provenance is derived onto the Dataset (the fact
+    # promote_dataset gates on).
     assert payload["producing_actuation_kind"] == ActuationKind.SIMULATED.value

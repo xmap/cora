@@ -34,6 +34,7 @@ from cora.recipe.aggregates.recipe import (
     fold,
     from_stored,
     to_payload,
+    validate_capture_refs,
     validate_recipe_steps_against_capability_schema,
 )
 from cora.recipe.errors import UnauthorizedError
@@ -115,6 +116,7 @@ def bind(deps: Kernel) -> Handler:
         if capability is None:
             raise CapabilityNotFoundError(state.capability_id)
         validate_recipe_steps_against_capability_schema(command.steps, capability.parameters_schema)
+        validate_capture_refs(command.steps)
 
         domain_events = decide(state=state, command=command, now=now)
 

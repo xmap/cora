@@ -118,15 +118,14 @@ class CollectParams(BaseModel):
         return self
 
 
-async def run_collect_cycle(ctx: ActionContext, params: CollectParams) -> Mapping[str, Any]:
+async def _run_collect_cycle(ctx: ActionContext, params: CollectParams) -> Mapping[str, Any]:
     """One collect cycle: configure detector, arm, poll until Done, read state.
 
     Shared helper used by the `collect` action body and the composing
-    bodies `discrete` / `continuous` (this module) and `flats`
-    (`cora.operation.staging`). Takes a validated `CollectParams` (or any
-    subclass that exposes the same fields, e.g., `DiscreteParams` /
-    `FlatsParams` inherit all of them), so the callers don't re-validate or
-    re-wrap `ActionContext` per cycle.
+    `discrete` / `continuous` bodies. Takes a validated `CollectParams`
+    (or any subclass that exposes the same fields, e.g., `DiscreteParams`
+    inherits all of them), so the callers don't re-validate or re-wrap
+    `ActionContext` per cycle.
     Returns the same evidence Mapping the `collect` action body returns,
     so per-point composition stays uniform.
     """
@@ -180,7 +179,7 @@ async def collect(ctx: ActionContext) -> Mapping[str, Any]:
     `source` as evidence-only fields (the trigger EMITTER is configured
     by caller-authored setpoint steps before this action step).
     """
-    return await run_collect_cycle(ctx, CollectParams.model_validate(ctx.params))
+    return await _run_collect_cycle(ctx, CollectParams.model_validate(ctx.params))
 
 
 class DiscreteParams(CollectParams):
@@ -237,7 +236,7 @@ async def discrete(ctx: ActionContext) -> Mapping[str, Any]:
         await ctx.control_port.write(params.axis, point, wait=True)
         if params.wait > 0:
             await asyncio.sleep(params.wait)
-        cycle = await run_collect_cycle(ctx, params)
+        cycle = await _run_collect_cycle(ctx, params)
         results.append({"point": point, "collect": cycle})
     return {
         "axis": params.axis,
@@ -363,5 +362,4 @@ __all__ = [
     "collect",
     "continuous",
     "discrete",
-    "run_collect_cycle",
 ]

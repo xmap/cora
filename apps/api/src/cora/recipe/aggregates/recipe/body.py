@@ -73,16 +73,38 @@ class BindingRef:
 
 
 @dataclass(frozen=True)
+class CaptureRef:
+    """Sentinel value: substitute with the value captured into `capture_name`.
+
+    The runtime sibling of `BindingRef`. Where `BindingRef` resolves at
+    EXPANSION time against the frozen operator `bindings` (a pure lookup
+    inside the determinism-gated `expand`), a `CaptureRef` resolves at
+    EXECUTE time against the Conductor's per-conduct `captures` dict,
+    which a prior `CaptureStep` filled with a live reading. `expand`
+    passes it through UNCHANGED (it is not a `BindingRef`, so
+    `resolve_value` returns it verbatim), so it rides into the conduct
+    `Step` and the determinism hash as an opaque sentinel; only the
+    Conductor resolves it. `capture_name` must be declared by a
+    `RecipeCaptureStep` earlier in the same Recipe (see
+    `validate_capture_refs`).
+    """
+
+    capture_name: str
+
+
+@dataclass(frozen=True)
 class RecipeSetpointStep:
-    """Setpoint step template: `value` may be a literal or a `BindingRef`.
+    """Setpoint step template: `value` is a literal, a `BindingRef`, or a `CaptureRef`.
 
     `address` is hardcoded per Recipe (no parameterization at v1 per
     the v1 scope note in the module docstring); `value` is the only
     bindable position. `verify` mirrors `SetpointStep.verify` exactly.
+    A `CaptureRef` value rides through expansion unresolved and is
+    resolved by the Conductor at execute time against the captured value.
     """
 
     address: str
-    value: int | float | bool | str | tuple[Any, ...] | BindingRef
+    value: int | float | bool | str | tuple[Any, ...] | BindingRef | CaptureRef
     verify: bool = False
 
 
@@ -93,6 +115,9 @@ class RecipeActionStep:
     `name` is the registered action-body name; not parameterized.
     `params` values may individually be `BindingRef` sentinels; the
     expansion function walks the mapping and substitutes per-key.
+    `CaptureRef` is NOT supported in `params` at v1 (only in
+    `RecipeSetpointStep.value`); action-param capture is deferred until a
+    consumer needs it.
     """
 
     name: str
@@ -117,7 +142,21 @@ class RecipeCheckStep:
     criterion: Mapping[str, Any]
 
 
-RecipeStep = RecipeSetpointStep | RecipeActionStep | RecipeCheckStep
+@dataclass(frozen=True)
+class RecipeCaptureStep:
+    """Capture step template: read `address` at execute time into `capture_name`.
+
+    The recipe-template twin of the Conductor's `CaptureStep`. It carries
+    no bindable value (the read is the value); `address` is hardcoded per
+    Recipe like the other steps. A later step references the captured
+    value via `CaptureRef(capture_name)`.
+    """
+
+    address: str
+    capture_name: str
+
+
+RecipeStep = RecipeSetpointStep | RecipeActionStep | RecipeCheckStep | RecipeCaptureStep
 """Closed discriminated union of templated step shapes; parallels `Step` arm-for-arm."""
 
 
@@ -155,26 +194,36 @@ wire format does not currently support escaping. If a future deployment
 needs to bind a dict-typed parameter that happens to carry this exact
 key, widen the escape rule then (no current consumer)."""
 
+_CAPTURE_KEY = "__capture__"
+"""Wire-format key distinguishing a `CaptureRef` from a literal dict value.
 
-def _value_to_wire(value: Any | BindingRef) -> Any:
-    """Serialize one value (literal or BindingRef) to a JSON-friendly form."""
+Same escape caveat as `_BINDING_KEY`: a literal `dict` value MUST NOT
+carry this key at v1."""
+
+
+def _value_to_wire(value: Any | BindingRef | CaptureRef) -> Any:
+    """Serialize one value (literal, BindingRef, or CaptureRef) to JSON-friendly form."""
     if isinstance(value, BindingRef):
         return {_BINDING_KEY: value.name}
+    if isinstance(value, CaptureRef):
+        return {_CAPTURE_KEY: value.capture_name}
     return value
 
 
 def _value_from_wire(value: Any) -> Any:
-    """Deserialize one wire value; reconstruct BindingRef from sentinel dict.
+    """Deserialize one wire value; reconstruct a BindingRef / CaptureRef sentinel.
 
-    Returns either the original value (literal) or a `BindingRef`
-    instance. Signature widens to `Any` because callers store the
-    result into mappings whose value-type is also `Any`; narrowing to
-    `Any | BindingRef` does not help downstream type-checking.
+    Returns the original value (literal) or the reconstructed sentinel VO.
+    Signature widens to `Any` because callers store the result into
+    mappings whose value-type is also `Any`; a narrower union does not
+    help downstream type-checking.
     """
     if isinstance(value, dict):
         typed = cast("dict[str, Any]", value)
         if set(typed.keys()) == {_BINDING_KEY}:
             return BindingRef(name=typed[_BINDING_KEY])
+        if set(typed.keys()) == {_CAPTURE_KEY}:
+            return CaptureRef(capture_name=typed[_CAPTURE_KEY])
     return cast("Any", value)
 
 
@@ -191,6 +240,12 @@ def _step_to_wire(step: RecipeStep) -> dict[str, Any]:
             "kind": "action",
             "name": step.name,
             "params": {key: _value_to_wire(val) for key, val in step.params.items()},
+        }
+    if isinstance(step, RecipeCaptureStep):
+        return {
+            "kind": "capture",
+            "address": step.address,
+            "capture_name": step.capture_name,
         }
     return {
         "kind": "check",
@@ -215,6 +270,11 @@ def _step_from_wire(payload: dict[str, Any]) -> RecipeStep:
             return RecipeActionStep(
                 name=payload["name"],
                 params={key: _value_from_wire(val) for key, val in payload["params"].items()},
+            )
+        if kind == "capture":
+            return RecipeCaptureStep(
+                address=payload["address"],
+                capture_name=payload["capture_name"],
             )
         if kind == "check":
             return RecipeCheckStep(
@@ -268,15 +328,72 @@ def resolve_value(value: Any | BindingRef, bindings: Mapping[str, Any]) -> Any:
     return value
 
 
+class UnboundRecipeCaptureError(Exception):
+    """A `CaptureRef.capture_name` is not declared by a preceding `RecipeCaptureStep`.
+
+    Family: `Invalid<X>`. HTTP 422. A `CaptureRef` must reference a value
+    captured EARLIER in the same Recipe; a forward or missing reference is
+    an authoring error caught at define-recipe time.
+    """
+
+    def __init__(self, capture_name: str) -> None:
+        super().__init__(
+            f"capture reference {capture_name!r} not declared by a preceding capture step"
+        )
+        self.capture_name = capture_name
+
+
+class DuplicateRecipeCaptureError(Exception):
+    """A `RecipeCaptureStep` re-declares a `capture_name` already captured.
+
+    Family: `Invalid<X>`. HTTP 422. Re-capturing into an already-filled
+    name within one Recipe is rejected as an authoring error (the lock):
+    a second capture of the same name is almost certainly a mistake.
+    """
+
+    def __init__(self, capture_name: str) -> None:
+        super().__init__(f"capture name {capture_name!r} declared more than once")
+        self.capture_name = capture_name
+
+
+def _check_capture_ref(value: Any, declared: set[str]) -> None:
+    if isinstance(value, CaptureRef) and value.capture_name not in declared:
+        raise UnboundRecipeCaptureError(value.capture_name)
+
+
+def validate_capture_refs(steps: tuple[RecipeStep, ...]) -> None:
+    """Every `CaptureRef` must reference a `capture_name` declared earlier.
+
+    Pure structural check (no I/O), run at define-recipe time. Walks the
+    steps in order: a `RecipeCaptureStep` declares its `capture_name`
+    (duplicate declaration -> `DuplicateRecipeCaptureError`); a `CaptureRef`
+    in a later setpoint value or action param must reference an
+    already-declared name (forward / missing -> `UnboundRecipeCaptureError`).
+    """
+    declared: set[str] = set()
+    for step in steps:
+        if isinstance(step, RecipeCaptureStep):
+            if step.capture_name in declared:
+                raise DuplicateRecipeCaptureError(step.capture_name)
+            declared.add(step.capture_name)
+        elif isinstance(step, RecipeSetpointStep):
+            _check_capture_ref(step.value, declared)
+
+
 __all__ = [
     "BindingRef",
+    "CaptureRef",
+    "DuplicateRecipeCaptureError",
     "InvalidRecipeStepShapeError",
     "RecipeActionStep",
+    "RecipeCaptureStep",
     "RecipeCheckStep",
     "RecipeSetpointStep",
     "RecipeStep",
     "UnboundRecipeBindingError",
+    "UnboundRecipeCaptureError",
     "from_dict",
     "resolve_value",
     "to_dict",
+    "validate_capture_refs",
 ]

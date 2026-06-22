@@ -227,9 +227,11 @@ def test_procedure_asset_decommissioned_error_carries_ids() -> None:
 
 @pytest.mark.unit
 def test_step_kind_values_locked() -> None:
-    """Pin the 3 step kinds; future additions must be a deliberate test edit.
-    Reflects CORA's rename of ISA-106's Command/Perform/Verify triplet."""
-    assert frozenset({"setpoint", "action", "check"}) == STEP_KIND_VALUES
+    """Pin the step kinds; future additions must be a deliberate test edit.
+    setpoint/action/check rename ISA-106's Command/Perform/Verify triplet;
+    capture (read a value into the conduct `captures` slot) was added for
+    runtime value capture."""
+    assert frozenset({"setpoint", "action", "check", "capture"}) == STEP_KIND_VALUES
 
 
 @pytest.mark.unit

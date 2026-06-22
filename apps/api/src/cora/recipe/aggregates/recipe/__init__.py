@@ -14,13 +14,18 @@ events, and error types.
 
 from cora.recipe.aggregates.recipe.body import (
     BindingRef,
+    CaptureRef,
+    DuplicateRecipeCaptureError,
     InvalidRecipeStepShapeError,
     RecipeActionStep,
+    RecipeCaptureStep,
     RecipeCheckStep,
     RecipeSetpointStep,
     RecipeStep,
     UnboundRecipeBindingError,
+    UnboundRecipeCaptureError,
     resolve_value,
+    validate_capture_refs,
 )
 from cora.recipe.aggregates.recipe.body import (
     from_dict as steps_from_dict,
@@ -70,6 +75,8 @@ __all__ = [
     "RECIPE_NAME_MAX_LENGTH",
     "RECIPE_VERSION_TAG_MAX_LENGTH",
     "BindingRef",
+    "CaptureRef",
+    "DuplicateRecipeCaptureError",
     "EmptyRecipeStepsError",
     "InvalidRecipeNameError",
     "InvalidRecipeStepShapeError",
@@ -80,6 +87,7 @@ __all__ = [
     "RecipeBindingReferencesUnknownParameterError",
     "RecipeCannotDeprecateError",
     "RecipeCannotVersionError",
+    "RecipeCaptureStep",
     "RecipeCheckStep",
     "RecipeDefined",
     "RecipeDeprecated",
@@ -94,6 +102,7 @@ __all__ = [
     "RecipeVersionNotFoundError",
     "RecipeVersioned",
     "UnboundRecipeBindingError",
+    "UnboundRecipeCaptureError",
     "collect_binding_names",
     "event_type_name",
     "evolve",
@@ -106,5 +115,6 @@ __all__ = [
     "steps_from_dict",
     "steps_to_dict",
     "to_payload",
+    "validate_capture_refs",
     "validate_recipe_steps_against_capability_schema",
 ]

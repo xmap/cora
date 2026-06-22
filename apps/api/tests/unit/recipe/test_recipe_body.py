@@ -4,14 +4,19 @@ import pytest
 
 from cora.recipe.aggregates.recipe import (
     BindingRef,
+    CaptureRef,
+    DuplicateRecipeCaptureError,
     InvalidRecipeStepShapeError,
     RecipeActionStep,
+    RecipeCaptureStep,
     RecipeCheckStep,
     RecipeSetpointStep,
     UnboundRecipeBindingError,
+    UnboundRecipeCaptureError,
     resolve_value,
     steps_from_dict,
     steps_to_dict,
+    validate_capture_refs,
 )
 
 
@@ -72,6 +77,85 @@ def test_to_dict_from_dict_roundtrip_preserves_setpoint_binding_ref() -> None:
     head = rebuilt[0]
     assert isinstance(head, RecipeSetpointStep)
     assert isinstance(head.value, BindingRef)
+
+
+@pytest.mark.unit
+def test_capture_ref_is_a_value_object() -> None:
+    a = CaptureRef("home")
+    b = CaptureRef("home")
+    c = CaptureRef("out")
+    assert a == b
+    assert a != c
+
+
+@pytest.mark.unit
+def test_recipe_setpoint_step_accepts_capture_ref_value() -> None:
+    step = RecipeSetpointStep(address="dev:sample:x", value=CaptureRef("home"))
+    assert isinstance(step.value, CaptureRef)
+    assert step.value.capture_name == "home"
+
+
+@pytest.mark.unit
+def test_resolve_value_passes_capture_ref_through_unchanged() -> None:
+    """Expansion relies on this: a CaptureRef is NOT resolved at expansion time."""
+    ref = CaptureRef("home")
+    assert resolve_value(ref, {"home": 12.5}) is ref
+
+
+@pytest.mark.unit
+def test_to_dict_from_dict_roundtrip_preserves_capture_step() -> None:
+    steps = (RecipeCaptureStep(address="dev:sample:x", capture_name="home"),)
+    rebuilt = steps_from_dict(steps_to_dict(steps))
+    assert rebuilt == steps
+
+
+@pytest.mark.unit
+def test_to_dict_from_dict_roundtrip_preserves_setpoint_capture_ref() -> None:
+    steps = (RecipeSetpointStep(address="dev:sample:x", value=CaptureRef("home")),)
+    rebuilt = steps_from_dict(steps_to_dict(steps))
+    assert rebuilt == steps
+    head = rebuilt[0]
+    assert isinstance(head, RecipeSetpointStep)
+    assert isinstance(head.value, CaptureRef)
+    assert head.value.capture_name == "home"
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_accepts_capture_declared_before_use() -> None:
+    steps = (
+        RecipeCaptureStep(address="dev:sample:x", capture_name="home"),
+        RecipeSetpointStep(address="dev:sample:x", value=20.0),
+        RecipeSetpointStep(address="dev:sample:x", value=CaptureRef("home")),
+    )
+    validate_capture_refs(steps)  # does not raise
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_rejects_forward_or_missing_reference() -> None:
+    steps = (RecipeSetpointStep(address="dev:sample:x", value=CaptureRef("home")),)
+    with pytest.raises(UnboundRecipeCaptureError, match="home"):
+        validate_capture_refs(steps)
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_rejects_use_before_its_own_capture() -> None:
+    """A CaptureRef must reference a capture EARLIER in the sequence, not later."""
+    steps = (
+        RecipeSetpointStep(address="dev:sample:x", value=CaptureRef("home")),
+        RecipeCaptureStep(address="dev:sample:x", capture_name="home"),
+    )
+    with pytest.raises(UnboundRecipeCaptureError):
+        validate_capture_refs(steps)
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_rejects_duplicate_capture_name() -> None:
+    steps = (
+        RecipeCaptureStep(address="dev:sample:x", capture_name="home"),
+        RecipeCaptureStep(address="dev:sample:x", capture_name="home"),
+    )
+    with pytest.raises(DuplicateRecipeCaptureError, match="home"):
+        validate_capture_refs(steps)
 
 
 @pytest.mark.unit

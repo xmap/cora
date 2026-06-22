@@ -128,8 +128,8 @@ LOGBOOK_KIND_OBSERVATION from Run BC."""
 # code edits, not migrations (table column is plain TEXT, not a
 # CHECK-constrained enum, mirroring Run BC's sampling_procedure
 # precedent).
-StepKind = Literal["setpoint", "action", "check"]
-STEP_KIND_VALUES: frozenset[str] = frozenset({"setpoint", "action", "check"})
+StepKind = Literal["setpoint", "action", "check", "capture"]
+STEP_KIND_VALUES: frozenset[str] = frozenset({"setpoint", "action", "check", "capture"})
 
 # Schema declaration for the steps logbook. Documentation-grade per
 # [[project_logbook_entry_storage]]: declares the entry-row column

@@ -112,6 +112,7 @@ a fake without standing up the full handler machinery.
 
 import asyncio
 import contextlib
+import math
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
@@ -155,6 +156,7 @@ from cora.operation.ports.control_port import (
     NoAdapterForAddressError,
     Reading,
 )
+from cora.recipe.aggregates.recipe.body import CaptureRef
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _CONTROL_ERRORS: tuple[type[Exception], ...] = (
@@ -197,6 +199,23 @@ in the result body as a structured lifecycle failure."""
 _STEP_KIND_SETPOINT = "setpoint"
 _STEP_KIND_ACTION = "action"
 _STEP_KIND_CHECK = "check"
+_STEP_KIND_CAPTURE = "capture"
+
+_ERROR_UNRESOLVED_CAPTURE = "UnresolvedCaptureRef"
+"""error_class for a SetpointStep CaptureRef whose name was never captured
+in this conduct (e.g. resumed past the capturing step). Loud-fail label,
+not an exception type: the failure is recorded + returned, not raised."""
+
+_ERROR_DUPLICATE_CAPTURE = "DuplicateCapture"
+"""error_class for a CaptureStep re-capturing an already-filled name within
+one conduct (an authoring error the recipe validation also rejects)."""
+
+_CAPTURE_REF_KEY = "__capture__"
+"""Wire-format sentinel key for a `CaptureRef` value in the pinned conduct
+step payload (mirrors the Recipe BC's `__capture__` form). A `SetpointStep`
+whose value is a `CaptureRef` serializes to `{"__capture__": name}` so it
+rides `ResolvedStepsRecorded` + the determinism hash as an opaque sentinel
+and round-trips at resume; the Conductor resolves it at execute time."""
 """Closed-set discriminator from [[project_operation_design]]
 (`setpoint | action | check`). Source of truth for these values is
 `STEP_KIND_VALUES` on the Procedure aggregate (re-imported above);
@@ -286,10 +305,17 @@ class SetpointStep:
     Conductor. The write already succeeded; the evidence is incomplete
     but not failed. Operators who need HALT-on-mismatch use a
     `CheckStep` right after the setpoint instead.
+
+    `value` may be a `CaptureRef`, which the Conductor resolves at execute
+    time against the per-conduct `captures` dict (filled by an earlier
+    `CaptureStep`) before writing. The ref rides through recipe expansion
+    and the determinism hash as an opaque sentinel; only execution
+    resolves it. A `CaptureRef` whose name was never captured halts the
+    step with a recorded failure.
     """
 
     address: str
-    value: int | float | bool | str | tuple[Any, ...]
+    value: int | float | bool | str | tuple[Any, ...] | CaptureRef
     verify: bool = False
 
 
@@ -367,13 +393,54 @@ class CheckStep:
     criterion: CheckCriterion
 
 
-Step = SetpointStep | ActionStep | CheckStep
+@dataclass(frozen=True)
+class CaptureStep:
+    """Read `address` at execute time and store the value into `capture_name`.
+
+    A capture is fundamentally a READ (it reuses the same `ControlPort.read`
+    path as a `CheckStep`), distinct from a `SetpointStep` (which commands)
+    and a `CheckStep` (which reads and gates). It OBSERVES where the axis
+    actually is and records that value in the Conductor's per-conduct
+    `captures` dict, so a later `SetpointStep` with a `CaptureRef` can
+    return to it. The captured value is the readback (the truth on the
+    wire), not the commanded value.
+
+    The read must yield a finite number (`captures` exist for arithmetic-
+    free restore, but the finite guard catches a non-numeric / NaN read
+    before it poisons a later setpoint); a non-finite or non-numeric read,
+    a `Control*Error`, or a re-capture into an already-filled name halts
+    the step with a recorded failure.
+    """
+
+    address: str
+    capture_name: str
+
+
+Step = SetpointStep | ActionStep | CheckStep | CaptureStep
 """The closed discriminated union of step kinds the Conductor walks.
 
 Mirrors the open `StepKind` Literal in the Procedure aggregate
-(`"setpoint" | "action" | "check"`); the Conductor enforces tighter
-typing via this union so a malformed step is a type error, not a
+(`"setpoint" | "action" | "check" | "capture"`); the Conductor enforces
+tighter typing via this union so a malformed step is a type error, not a
 runtime branch."""
+
+
+def _require_finite_number(value: Any, address: str) -> float:
+    """Return `value` as a finite number or raise a Conductor-recordable failure.
+
+    A captured axis read feeds a later restore setpoint, so it must be a
+    finite number. `Reading.value` is typed `Any`; a non-numeric read (a
+    categorical / mis-addressed leaf) or a non-finite float (NaN / +-inf,
+    e.g. an EPICS UDF) would otherwise propagate silently. Mapping it to
+    `ControlValueCoercionError` (a member of `_CONTROL_ERRORS`) lets the
+    Conductor record a structured step failure instead of letting a bare
+    `TypeError` escape or a NaN poison a downstream setpoint.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ControlValueCoercionError(address, type(value).__name__, "number")
+    if not math.isfinite(value):
+        raise ControlValueCoercionError(address, repr(value), "finite number")
+    return value
 
 
 @dataclass(frozen=True)
@@ -633,6 +700,7 @@ class Conductor:
             surface_id=surface_id,
         )
         observer = _ActuationObserver(self._control_port)
+        captures: dict[str, Any] = {}
         completed = 0
         for index, step in enumerate(steps):
             # Bind correlation_id to the ContextVar scoped per dispatch so
@@ -641,7 +709,9 @@ class Conductor:
             # the why; contextvars survive each `await` inside `_dispatch`
             # and reset cleanly on exception.
             with with_dispatch_correlation_id(correlation_id):
-                failure = await self._dispatch(step, index=index, envelope=envelope, port=observer)
+                failure = await self._dispatch(
+                    step, index=index, envelope=envelope, port=observer, captures=captures
+                )
             if failure is not None:
                 return ConductorResult(
                     procedure_id=procedure_id,
@@ -710,6 +780,11 @@ class Conductor:
             surface_id=surface_id,
         )
         observer = _ActuationObserver(self._control_port)
+        # Captured slots start EMPTY on resume: a CaptureStep before the
+        # boundary is not replayed, so a CaptureRef into it fails loud rather
+        # than resolving against stale data. Persisting captures across a hold
+        # (seed this dict from a ValueCaptured event) is the deferred resume leg.
+        captures: dict[str, Any] = {}
         completed = 0
         for index in range(boundary, len(steps)):
             step = steps[index]
@@ -734,7 +809,11 @@ class Conductor:
             with with_dispatch_correlation_id(correlation_id):
                 if isinstance(step, SetpointStep):
                     failure = await self._run_setpoint(
-                        step, index=index, envelope=envelope, port=observer
+                        step, index=index, envelope=envelope, port=observer, captures=captures
+                    )
+                elif isinstance(step, CaptureStep):
+                    failure = await self._run_capture(
+                        step, index=index, envelope=envelope, port=observer, captures=captures
                     )
                 else:
                     failure = await self._run_check(
@@ -1215,17 +1294,26 @@ class Conductor:
         index: int,
         envelope: "_Envelope",
         port: ControlPort,
+        captures: dict[str, Any],
     ) -> ConductorFailure | None:
         """Run one step + record outcome; return ConductorFailure on halt-condition.
 
         `port` is the per-conduct observing wrapper around the
         Conductor's ControlPort; every dispatch goes through it so
         actuation provenance is captured once for the whole conduct.
+        `captures` is the per-conduct slot dict: a `CaptureStep` fills it,
+        a `SetpointStep` with a `CaptureRef` value reads it.
         """
         if isinstance(step, SetpointStep):
-            return await self._run_setpoint(step, index=index, envelope=envelope, port=port)
+            return await self._run_setpoint(
+                step, index=index, envelope=envelope, port=port, captures=captures
+            )
         if isinstance(step, ActionStep):
             return await self._run_action(step, index=index, envelope=envelope, port=port)
+        if isinstance(step, CaptureStep):
+            return await self._run_capture(
+                step, index=index, envelope=envelope, port=port, captures=captures
+            )
         return await self._run_check(step, index=index, envelope=envelope, port=port)
 
     async def _run_setpoint(
@@ -1235,8 +1323,43 @@ class Conductor:
         index: int,
         envelope: "_Envelope",
         port: ControlPort,
+        captures: dict[str, Any],
     ) -> ConductorFailure | None:
-        payload_body: dict[str, Any] = {"address": step.address, "value": step.value}
+        # Resolve a CaptureRef value against the per-conduct captures BEFORE
+        # any effect: an unseeded ref (e.g. resumed past the capturing step)
+        # loud-fails with a recorded entry, no marker, nothing actuated.
+        value = step.value
+        if isinstance(value, CaptureRef):
+            if value.capture_name not in captures:
+                msg = (
+                    f"setpoint at {step.address!r} references capture "
+                    f"{value.capture_name!r} not captured before this step"
+                )
+                await self._record(
+                    envelope=envelope,
+                    index=index,
+                    step_kind=_STEP_KIND_SETPOINT,
+                    body={"address": step.address, "capture_ref": value.capture_name},
+                    result=_RESULT_FAILED,
+                    error_class=_ERROR_UNRESOLVED_CAPTURE,
+                    message=msg,
+                )
+                return ConductorFailure(
+                    step_index=index,
+                    source_kind=_STEP_KIND_SETPOINT,
+                    target=step.address,
+                    error_class=_ERROR_UNRESOLVED_CAPTURE,
+                    message=msg,
+                )
+            resolved: Any = captures[value.capture_name]
+            payload_body: dict[str, Any] = {
+                "address": step.address,
+                "value": resolved,
+                "capture_ref": value.capture_name,
+            }
+        else:
+            resolved = value
+            payload_body = {"address": step.address, "value": resolved}
         # Pre-effect in-flight marker (side-effecting step): record intent
         # BEFORE the write so a halt mid-write leaves a marker-without-outcome
         # the resume reader can identify. See `_RESULT_IN_FLIGHT`.
@@ -1248,7 +1371,7 @@ class Conductor:
             result=_RESULT_IN_FLIGHT,
         )
         try:
-            await port.write(step.address, step.value, wait=True)
+            await port.write(step.address, resolved, wait=True)
         except _CONTROL_ERRORS as exc:
             await self._record(
                 envelope=envelope,
@@ -1451,6 +1574,111 @@ class Conductor:
         )
         return None
 
+    async def _run_capture(
+        self,
+        step: CaptureStep,
+        *,
+        index: int,
+        envelope: "_Envelope",
+        port: ControlPort,
+        captures: dict[str, Any],
+    ) -> ConductorFailure | None:
+        # A capture is a READ (no in-flight marker: not side-effecting). It
+        # OBSERVES the live value and stores it for a later CaptureRef. The
+        # read must be Good-quality + finite-numeric to be a safe restore
+        # target; re-capture into a filled name is rejected.
+        payload_body: dict[str, Any] = {
+            "address": step.address,
+            "capture_name": step.capture_name,
+        }
+        if step.capture_name in captures:
+            msg = (
+                f"capture {step.capture_name!r} already captured in this conduct "
+                "(re-capture rejected)"
+            )
+            await self._record(
+                envelope=envelope,
+                index=index,
+                step_kind=_STEP_KIND_CAPTURE,
+                body=payload_body,
+                result=_RESULT_FAILED,
+                error_class=_ERROR_DUPLICATE_CAPTURE,
+                message=msg,
+            )
+            return ConductorFailure(
+                step_index=index,
+                source_kind=_STEP_KIND_CAPTURE,
+                target=step.capture_name,
+                error_class=_ERROR_DUPLICATE_CAPTURE,
+                message=msg,
+            )
+        try:
+            reading = await port.read(step.address)
+        except _CONTROL_ERRORS as exc:
+            await self._record(
+                envelope=envelope,
+                index=index,
+                step_kind=_STEP_KIND_CAPTURE,
+                body=payload_body,
+                result=_RESULT_FAILED,
+                error_class=type(exc).__name__,
+                message=str(exc),
+            )
+            return ConductorFailure(
+                step_index=index,
+                source_kind=_STEP_KIND_CAPTURE,
+                target=step.address,
+                error_class=type(exc).__name__,
+                message=str(exc),
+            )
+        body_with_reading = {**payload_body, "reading": _reading_to_dict(reading)}
+        if reading.quality != _QUALITY_GOOD:
+            quality_exc = CheckFailedError(step.address, f"quality={reading.quality}")
+            await self._record(
+                envelope=envelope,
+                index=index,
+                step_kind=_STEP_KIND_CAPTURE,
+                body=body_with_reading,
+                result=_RESULT_FAILED,
+                error_class=type(quality_exc).__name__,
+                message=str(quality_exc),
+            )
+            return ConductorFailure(
+                step_index=index,
+                source_kind=_STEP_KIND_CAPTURE,
+                target=step.address,
+                error_class=type(quality_exc).__name__,
+                message=str(quality_exc),
+            )
+        try:
+            captured_value = _require_finite_number(reading.value, step.address)
+        except _CONTROL_ERRORS as exc:
+            await self._record(
+                envelope=envelope,
+                index=index,
+                step_kind=_STEP_KIND_CAPTURE,
+                body=body_with_reading,
+                result=_RESULT_FAILED,
+                error_class=type(exc).__name__,
+                message=str(exc),
+            )
+            return ConductorFailure(
+                step_index=index,
+                source_kind=_STEP_KIND_CAPTURE,
+                target=step.address,
+                error_class=type(exc).__name__,
+                message=str(exc),
+            )
+        captures[step.capture_name] = captured_value
+        await self._record(
+            envelope=envelope,
+            index=index,
+            step_kind=_STEP_KIND_CAPTURE,
+            body={**body_with_reading, "captured_value": captured_value},
+            result=_RESULT_OK,
+        )
+        return None
+
     async def _record(
         self,
         *,
@@ -1533,7 +1761,12 @@ def step_to_payload(step: Step) -> dict[str, Any]:
     reuses `_criterion_to_dict` so the wire shape stays single-sourced.
     """
     if isinstance(step, SetpointStep):
-        value: Any = list(step.value) if isinstance(step.value, tuple) else step.value
+        if isinstance(step.value, CaptureRef):
+            value: Any = {_CAPTURE_REF_KEY: step.value.capture_name}
+        elif isinstance(step.value, tuple):
+            value = list(step.value)
+        else:
+            value = step.value
         return {
             "kind": "setpoint",
             "address": step.address,
@@ -1542,6 +1775,12 @@ def step_to_payload(step: Step) -> dict[str, Any]:
         }
     if isinstance(step, ActionStep):
         return {"kind": "action", "name": step.name, "params": dict(step.params)}
+    if isinstance(step, CaptureStep):
+        return {
+            "kind": "capture",
+            "address": step.address,
+            "capture_name": step.capture_name,
+        }
     return {
         "kind": "check",
         "address": step.address,
@@ -1569,14 +1808,21 @@ def _step_from_payload(payload: Mapping[str, Any]) -> Step:
     """Rebuild one `Step` from its `step_to_payload` wire shape."""
     kind = payload["kind"]
     if kind == "setpoint":
-        value: Any = payload["value"]
-        if isinstance(value, list):
-            value = cast("tuple[Any, ...]", tuple(value))  # pyright: ignore[reportUnknownArgumentType]
+        raw: Any = payload["value"]
+        value: int | float | bool | str | tuple[Any, ...] | CaptureRef
+        if isinstance(raw, dict) and set(cast("dict[str, Any]", raw)) == {_CAPTURE_REF_KEY}:
+            value = CaptureRef(capture_name=str(cast("dict[str, Any]", raw)[_CAPTURE_REF_KEY]))
+        elif isinstance(raw, list):
+            value = tuple(cast("list[Any]", raw))
+        else:
+            value = cast("int | float | bool | str", raw)
         return SetpointStep(
             address=payload["address"], value=value, verify=payload.get("verify", False)
         )
     if kind == "action":
         return ActionStep(name=payload["name"], params=dict(payload.get("params", {})))
+    if kind == "capture":
+        return CaptureStep(address=payload["address"], capture_name=payload["capture_name"])
     if kind == "check":
         return CheckStep(
             address=payload["address"], criterion=_criterion_from_dict(payload["criterion"])
@@ -1688,6 +1934,7 @@ __all__ = [
     "ActionContext",
     "ActionRegistry",
     "ActionStep",
+    "CaptureStep",
     "CheckCriterion",
     "CheckStep",
     "Conductor",
