@@ -123,13 +123,13 @@ BLEPS is the beamline equipment-protection interlock, separate from the PSS: BLE
 | BLEPS-3 | `Nice-to-have` | Is there a beamline-level "BLEPS tripped / armed / recovering" state that operators act on as a whole, distinct from the individual utility and device faults, that gates a run on its own? | no system-level state needed; decompose onto existing axes | not yet | [Supplies](operations.md#supplies) |
 ## Proposals, users and scheduling
 
-CORA will read proposal and user information from the APS scheduling system (the `beam-api` / DMagic data the beamline already uses) to label each run with its proposal and notify the right people. These help us get the design right before we build it. Confirmer: the beamline scientist, except SCHED-3 (APS User Office / data-management contact).
+CORA will read proposal and user information from the APS scheduling system (the `beam-api` / DMagic data the beamline already uses) to label each run with its proposal and notify the right people. These help us get the design right before we build it.
+
+Confirmed design basis (SCHED-1/2/3a, #269): a scheduled beamtime window is **immutable once users are on-site** (only pre-arrival shifts happen; mid-run beam outages are Run-level "beam unavailable T1-T2" annotations, not schedule changes). The **local contact is a beamline-side assignment, distinct from the proposal user list** (CORA's earlier "listed as one of the beamtime's people" assumption was wrong; model it as a separate beamline-assigned field). Per-person identity uses two stable, never-reused keys: **ORCID** (primary, cross-institution, already CORA's actor key) plus the **APS badge number** (APS-internal join key for `beam-api` / DMagic correlation). The 2-BM scheduling integration itself is a future slice; these facts are its inputs.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| SCHED-1 | `Nice-to-have` | Once a user group is on-site for their beamtime, does APS ever move their scheduled time window (earlier or later) before they start, or do time changes only happen before they arrive? | time changes happen only before arrival | not yet | [2-BM index](index.md) |
-| SCHED-2 | `Nice-to-have` | Is the beamline staff contact (local contact) for a beamtime listed among that experiment's users in the scheduling system, or tracked separately as a beamline-side assignment? | listed as one of the beamtime's people | not yet | [2-BM index](index.md) |
-| SCHED-3 | `Nice-to-have` | Are APS badge numbers ever reused or reassigned to a different person over time, or is a badge number stable for life per person? And under APS data governance, is a badge number classified as personal data subject to deletion on request? Confirmer: APS User Office / data-management contact. | badge stable per person; classified as deletable personal data | not yet | [2-BM index](index.md) |
+| SCHED-3b | `Nice-to-have` | Under APS data governance, is the APS badge number classified as personal data subject to deletion on request (so CORA scrubs it via the same forget-actor path as other PII)? The badge-reuse and identifier questions are settled (#269); only this classification routes to data-management. Confirmer: APS User Office / data-management contact. | treated as deletable personal data (PII-vault scrubbed), pending the governance ruling | not yet | [2-BM index](index.md) |
 
 ## Not on this page
 
