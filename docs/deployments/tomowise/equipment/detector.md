@@ -10,7 +10,7 @@ TomoWISE has a single detector system on a gantry that travels the experiment hu
 
 ## Microscopes
 
-Interchangeable visible-light microscopes couple the scintillator image to the cameras. The optics vendor is a design decision deferred to project year 2 (DET-2); the Optique Peter MICRX080 is the reference.
+Interchangeable visible-light microscopes (scintillator, objective, 45 deg mirror, CMOS camera) couple the scintillator image to the cameras, built for sensors up to 60 mm diagonal. The TDR names Optique Peter as the vendor standard, with smaller vendors possible; the specific model is a design decision deferred to project year 2 (DET-2).
 
 - **MicLFOV** (Family `Microscope`, not yet in the catalog): large field of view, 1-2x magnification, NA > 0.2.
 - **MicHR** (Family `Microscope`, not yet in the catalog): high resolution, 4x / 10x / 20x, NA > 0.4.

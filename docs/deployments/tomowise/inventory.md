@@ -17,7 +17,7 @@ Root Asset `TomoWISE` (`tier = Unit`, `facility_code = maxiv`); sub-systems nest
 | `3T3PW` | `Device` | InsertionDevice | three-pole wiggler, 3 T, 1.6 kW |
 | `FM1` / `FM2` | `Device` | Mask | fixed masks, 1.1 mrad apertures |
 | `MSM` | `Device` | Mask | movable safety mask |
-| `HeatAbsorber` | `Device` | HeatAbsorber | 4 kW budget; with movable masks MM1/MM2 |
+| `HeatAbsorber` | `Device` | HeatAbsorber | 4 kW budget; front-end, protects the safety shutter |
 | `CVD` | `Device` | Filter | 0.35 mm CVD diamond |
 | `PFU` | `Device` | Filter | two Si wedges, 0.2 to 25 mm effective |
 | `MLM` | `Device` | Monochromator | 20 to 65 keV, dE/E ~ 1.8% |
@@ -32,12 +32,17 @@ Root Asset `TomoWISE` (`tier = Unit`, `facility_code = maxiv`); sub-systems nest
 | `FastShutter` | `Device` | Shutter | <5 ms / <10 ms reference designs |
 | `SlipRing` | `Device` | SlipRing | 30 to 40 channels, up to 1000 rpm |
 | `KB` | `Device` | Mirror | KB pair, 205 x 196 nm focus @ 30 keV |
-| `NanoSampleStage` | `Device` | NanoPositioner | nanotomography stage, not yet specified |
+| `NanoGranite` | `Component` | Table | granite support for the nano manipulator |
+| `NanoTilt` | `Device` | TiltStage | Tilt X, 2 deg, target Huber 5202.80 |
+| `NanoCoarseX` / `NanoCoarseY` | `Device` | LinearStage | Xt/Yt coarse, target Huber 5101.20 / 5103.A20-90 |
+| `NanoCoarseZ` | `Device` | LinearStage | Zt long-travel (250-300 mm), target Zaber X-LDQ-AE |
+| `NanoRotary` | `Device` | RotaryStage | Rot y, continuous, Abbe < 100 nm, target RT100AS |
+| `NanoSamplePositioning` | `Device` | LinearStage | Xs/Zs centring, +/-6 mm, target XY150B-12 |
 | `DetectorGantry` | `Component` | Table | 7 m floor rails, 45 to 52 m |
 | `MicLFOV` / `MicHR` | `Device` | Microscope | 1-2x / 4-20x microscopes |
 | `CameraI` ... `CameraIV` | `Device` | Camera | 16-25 / 4 / 4 / 150 Mpix |
 
-Families not yet in the catalog (`Mask`, `HeatAbsorber`, `SlipRing`, `Microscope`, `NanoPositioner`) are bound loosely by design intent; they are earned into the catalog when a confirmed device needs them (the beam-path mask/stop tier and the nano stage are tracked below).
+Families not yet in the catalog (`Mask`, `HeatAbsorber`, `SlipRing`, `Microscope`) are bound loosely by design intent; they are earned into the catalog when a confirmed device needs them (the beam-path mask/stop tier is tracked below). The nano manipulator reuses the same `TiltStage`, `LinearStage`, `RotaryStage`, and `Table` Families as the micro endstation, so it needs no nano-specific Family.
 
 ## Pending confirmations
 
@@ -47,11 +52,11 @@ Every value below is a TDR design specification awaiting the beamline team. Each
 | --- | --- | --- | --- |
 | Control handles (Tango/Sardana device/attribute names) | all devices | `unknown-pending-confirmation` | (CTRL-1) |
 | Hutch PSS permit signals | both enclosures | `unknown-pending-confirmation` | (PSS-1) |
-| Nanotomography sample stage (model, travel, resolution) | `NanoSampleStage` | `unknown-pending-confirmation` | (NANO-1) |
+| Nanotomography stage model bindings (TDR Table 9.5 names a target per axis) | the nano `*` stages | `unknown-pending-confirmation` | (NANO-1) |
 | Rotary stage model (RT100AX target) | `Rotary` | `unknown-pending-confirmation` | (STAGE-1) |
 | Sample positioning model (XY150B-12 target) | `SamplePositioning` | `unknown-pending-confirmation` | (STAGE-2) |
 | Camera models I to IV | `CameraI`..`CameraIV` | `unknown-pending-confirmation` | (DET-1) |
-| Microscope optics vendor and model | `MicLFOV`, `MicHR` | `unknown-pending-confirmation` | (DET-2) |
+| Microscope optics model (vendor Optique Peter named) | `MicLFOV`, `MicHR` | `unknown-pending-confirmation` | (DET-2) |
 | Trigger conditioner (direct TTL vs FPGA) | `Triggering` | `unknown-pending-confirmation` | (TRIG-1) |
-| MLM coating (W/Si vs W/B4C) | `MLM` | `unknown-pending-confirmation` | (OPT-1) |
+| MLM coating (W/SiC vs W/B4C per TDR text; Table 8.3 lists W/Si) | `MLM` | `unknown-pending-confirmation` | (OPT-1) |
 | Layout z reference (source vs straight-section centre) | all devices | `unknown-pending-confirmation` | (LAYOUT-1) |

@@ -15,14 +15,14 @@ TomoWISE is in the design phase, so this page is long by design: almost every va
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| OPT-1 | Nice-to-have | Which MLM coating is selected, W/Si or W/B4C? | The MLM is one Monochromator Asset; coating is a setting. | The MLM coating setting. |
+| OPT-1 | Nice-to-have | Which MLM coating is selected? The TDR text lists W/SiC or W/B4C; Table 8.3 lists W/Si. | The MLM is one Monochromator Asset; coating is a setting. | The MLM coating setting. |
 | LAYOUT-1 | Nice-to-have | What is the single z-coordinate reference for the layout? The TDR mixes "from the CPMU14 source" (front end) and "from the straight-section centre" (optics and downstream), about 505 mm apart. | z values are carried as approximate from-source and flagged confirm. | Exact device z positions. |
 
 ## Endstations
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| NANO-1 | Blocks-build | What is the nanotomography sample stage (model, travel, resolution)? The TDR defers it to procurement. | A nano sample stage exists but is unspecified. | The nanotomography endstation sample positioning. |
+| NANO-1 | Blocks-go-live | Are the nanotomography sample-manipulator model bindings final? The TDR specifies the six-axis stack in Table 9.5 (tilt, coarse X/Y/Z, continuous rotary, fine Xs/Zs); only the per-axis model procurement remains. | The TDR-specified stack, reusing the micro-endstation Families, with a "(target)" model per axis carried unbound. | The nanotomography stage Model bindings. |
 | STAGE-1 | Blocks-go-live | Is the rotary stage the Lab Motion Systems RT100AX, and are its specs final? | The "(target)" RT100AX, used as the trigger master clock. | The rotary stage Model binding. |
 | STAGE-2 | Nice-to-have | Is the sample positioning stage the Lab Motion Systems XY150B-12? | The "(target)" XY150B-12. | The sample positioning Model binding. |
 
@@ -31,5 +31,5 @@ TomoWISE is in the design phase, so this page is long by design: almost every va
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DET-1 | Blocks-go-live | Which camera models will be procured for cameras I to IV? (Chosen in project year 2.) | Four cameras at the stated design-target sensors/speeds; models unbound. | The camera Model bindings. |
-| DET-2 | Blocks-go-live | Which microscope optics vendor and model (Optique Peter MICRX080 reference, or a smaller vendor)? | Two microscopes (MicLFOV, MicHR) at the stated magnifications; vendor unbound. | The microscope Model bindings. |
+| DET-2 | Blocks-go-live | Which microscope optics model? The TDR names Optique Peter as the vendor standard (smaller vendors possible); the model is chosen in project year 2. | Two microscopes (MicLFOV, MicHR) at the stated magnifications; vendor Optique Peter, model unbound. | The microscope Model bindings. |
 | TRIG-1 | Blocks-go-live | Will the rotary TTL (3600 pulses/rev) feed the camera triggers directly, or is an FPGA conditioner needed? | Direct TTL, no conditioner; may evolve once camera trigger requirements are firm. | The trigger/sync chain. |

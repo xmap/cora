@@ -109,7 +109,7 @@ front-end:
       new: true
       confirm: true
       power_budget: 4 kW
-      note: "heat absorber; movable masks MM1/MM2 alongside"
+      note: "front-end heat absorber protecting the safety shutter; a second, near-identical heat absorber sits in the optics-hutch safety unit (SU) with SS1/SS2 (TDR Table 8.1), not separately modelled here"
 
 optics-hutch:
   stage: source
@@ -133,8 +133,7 @@ optics-hutch:
       z_mm: 24280
       new: true
       confirm: true
-      opening: 60 urad
-      note: "white-beam slits (DM1)"
+      note: "water-cooled white-beam slits (WBS) in DM1; DM1 also carries a separate beam-defining mask (BM, water-cooled Cu, 60 urad opening matching the MLM acceptance) and a bremsstrahlung collimator, not separately modelled here"
     - name: PFU
       family: Filter
       z_mm: 25200
@@ -148,7 +147,7 @@ optics-hutch:
       z_mm: 25900
       new: true
       confirm: true
-      coating: W/Si or W/B4C bilayers, d=2.5 nm, 140 bilayers (OPT-1)
+      coating: W/SiC or W/B4C bilayers (TDR text); Table 8.3 lists W/Si; d=2.5 nm, 140 bilayers (OPT-1)
       energy_range: 20 to 65 keV
       bandwidth: dE/E ~ 1.8%
       bragg_range: 3.84 to 12.6 mrad
@@ -165,7 +164,7 @@ optics-hutch:
       new: true
       confirm: true
       transmission: 1e-4 to 1
-      note: "metal filter unit (third filter stage); on the experiment-hutch end wall"
+      note: "metal filter unit (third filter stage, Fe/Cu carriages, NanoMAX design); at the beginning of the experiment hutch"
 
 safety-shutters:
   stage: source
@@ -247,8 +246,15 @@ microtomography-endstation:
 nanotomography-endstation:
   stage: sample
   enclosure: TomoWISE-experiment
-  intro: "The nanotomography endstation, ~49-51 m from source: the KB mirror pair focuses the undulator beam for 200-nm-class cone-beam imaging. The sample stage is not yet specified."
-  note: "Mirror Family reused for the KB pair. The nano sample stage is deferred to procurement (NANO-1)."
+  intro: "The nanotomography endstation, ~49-51 m from source: the KB mirror pair focuses the undulator beam for 200-nm-class cone-beam imaging. The sample manipulator is a six-axis stack on a granite support, conceptually similar to the microtomography endstation but about a factor of ten more precise."
+  note: >
+    Mirror Family reused for the KB pair. The TDR specifies the sample
+    manipulator in Table 9.5 (it is NOT deferred to procurement): the stack
+    reuses the same Families as the microtomography endstation (Table,
+    TiltStage, LinearStage, RotaryStage), with a "(target)" model per axis
+    carried as model_target pending procurement (NANO-1). The most critical
+    axis is the rotary: Abbe error from wobble and eccentricity must not
+    exceed 100 nm at 100 mm sample height.
   devices:
     - name: KB
       family: Mirror
@@ -258,11 +264,60 @@ nanotomography-endstation:
       type: fixed-curvature graded-multilayer KB pair
       focal_spot: 205 x 196 nm @ 30 keV; 196 x 80 nm @ 45 keV
       note: "Kirkpatrick-Baez focusing mirrors for nanotomography"
-    - name: NanoSampleStage
-      family: NanoPositioner
+    - name: NanoGranite
+      family: Table
+      z_mm: 49000
       new: true
-      confirm: "specification deferred to procurement (NANO-1); must meet Abbe error compatible with 200 nm resolution"
-      note: "nanotomography sample stage; not yet specified in the TDR"
+      confirm: true
+      note: "single granite support housing the KB optics, the sample manipulator, and the detector stage"
+    - name: NanoTilt
+      family: TiltStage
+      new: true
+      confirm: true
+      travel: 2 deg
+      resolution: 5 mdeg
+      model_target: Huber 5202.80 (NANO-1)
+      note: "Tilt X; aligns the rotation axis to the beam vertical angle"
+    - name: NanoCoarseX
+      family: LinearStage
+      new: true
+      confirm: true
+      travel: 50 mm
+      model_target: Huber 5101.20 (NANO-1)
+      note: "Xt; centre-of-rotation alignment and flat-field acquisition"
+    - name: NanoCoarseY
+      family: LinearStage
+      new: true
+      confirm: true
+      travel: 50 to 100 mm
+      model_target: Huber 5103.A20-90 (NANO-1)
+      note: "Yt; sample height adjustment"
+    - name: NanoCoarseZ
+      family: LinearStage
+      new: true
+      confirm: true
+      travel: 250 to 300 mm
+      resolution: <0.5 um
+      model_target: Zaber X-LDQ-AE (NANO-1)
+      note: "Zt; brings the rotation axis into the KB focus, then translates toward the detector"
+    - name: NanoRotary
+      family: RotaryStage
+      new: true
+      confirm: true
+      max_speed: ">60 rpm"
+      resolution: 1 mdeg
+      eccentricity: <100 nm at sample height
+      encoder: TTL, 3600 pulses per rotation
+      model_target: Lab Motion Systems RT100AS (NANO-1)
+      note: "Rot y; continuous nanotomographic rotation, radial error <100 nm / axial error <50 nm"
+    - name: NanoSamplePositioning
+      family: LinearStage
+      new: true
+      confirm: true
+      travel: +/-6 mm (Xs, Zs)
+      resolution: 0.1 um
+      model_target: Lab Motion Systems XY150B-12 (NANO-1)
+      note: "Xs/Zs sample-to-CoR centring; same model as the micro endstation positioning"
 
 # --- DETECTION STAGE: the shared detector gantry ---
 
