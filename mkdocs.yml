@@ -113,7 +113,7 @@ nav:
       - The beamline:
         - deployments/tomowise/equipment/index.md
         - Source: deployments/tomowise/beamline.md
-        - Endstations: deployments/tomowise/equipment/endstations.md
+        - Sample: deployments/tomowise/equipment/sample.md
         - Detector: deployments/tomowise/equipment/detector.md
         - Controls: deployments/tomowise/equipment/controls.md
         - Inventory: deployments/tomowise/inventory.md

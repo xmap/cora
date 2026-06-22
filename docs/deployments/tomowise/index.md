@@ -20,7 +20,7 @@ The systems in three areas the beam passes through, plus the controls that drive
 Along the beam, in order:
 
 - [Source](beamline.md): the beam delivery shared by both endstations (insertion devices, front-end masks, optics-hutch filters and multilayer monochromator, safety shutters), rendered as the generated source-stage device walk.
-- [Endstations](equipment/endstations.md): the two experiment stations, microtomography (~45 m) and nanotomography (~49 m, KB-focused), and the sample environment each carries.
+- [Sample](equipment/sample.md): the two experiment stations, microtomography (~45 m) and nanotomography (~49 m, KB-focused), and the sample environment each carries.
 - [Detector](equipment/detector.md): one detector gantry on 7 m rails serving both stations, with interchangeable microscopes and cameras.
 
 Cutting across all three:

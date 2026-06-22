@@ -2,7 +2,7 @@
 
 *The CORA Asset model for TomoWISE: the planned device tree and what still needs confirming.*
 
-TomoWISE is in the design phase, so this is the planned Asset shape, not a registered inventory. It is the cross-cutting reference view of the [Source](beamline.md) walk and the [endstation](equipment/endstations.md) and [detector](equipment/detector.md) pages. The shape is generated-honest: it is authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/tomowise/beamline.yaml) descriptor that the Source page renders from.
+TomoWISE is in the design phase, so this is the planned Asset shape, not a registered inventory. It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages. The shape is generated-honest: it is authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/tomowise/beamline.yaml) descriptor that the Source page renders from.
 
 Devices bind to catalog [Families](../../catalog/families.md). Only one vendor Model is bound: the Optique Peter microscope optics (`optique_peter_micrx080`, reused from 2-BM, pending confirmation); the remaining "(target)" models named in the TDR are carried as open questions, not bindings, because part numbers are not yet procured. Control handles are omitted because MAX IV runs Tango/Sardana and the names are not yet assigned.
 
