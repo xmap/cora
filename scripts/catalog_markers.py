@@ -33,6 +33,14 @@ if TYPE_CHECKING:
 
 _SHOW_KINDS = frozenset({"families", "usedby"})
 
+REPO_BLOB = "https://github.com/xmap/cora/blob/main/"
+_CATALOG_URL = f"{REPO_BLOB}catalog/catalog.yaml"
+_SOURCE_NOTE = (
+    '!!! info "Generated from the catalog"\n'
+    f"    This table is generated from [`catalog/catalog.yaml`]({_CATALOG_URL}). "
+    "Edit the catalog, not this table."
+)
+
 
 class CatalogMarkerError(ValueError):
     """A catalog marker is malformed, unknown, or renders empty."""
@@ -167,7 +175,7 @@ def expand_markers(
             raise CatalogMarkerError(f"{src_uri}: catalog:{kind} rendered empty")
         open_marker = f"<!-- catalog:{kind}{m.group('args')} -->"
         close_marker = f"<!-- /catalog:{kind} -->"
-        return f"{open_marker}\n{body}\n{close_marker}"
+        return f"{open_marker}\n{_SOURCE_NOTE}\n\n{body}\n{close_marker}"
 
     out = _MARKER_RE.sub(_repl, markdown)
     opens = len(re.findall(r"<!--\s*catalog:", markdown))

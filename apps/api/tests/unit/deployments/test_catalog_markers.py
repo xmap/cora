@@ -98,6 +98,9 @@ def test_microscope_page_uses_catalog_marker_and_expands() -> None:
     )
     assert "| Model | Manufacturer | Part number | Declared families |" in expanded
     assert "`MICRX080`" in expanded
+    # The vendor table carries the "edit the catalog, not this table" note.
+    assert '!!! info "Generated from the catalog"' in expanded
+    assert "catalog/catalog.yaml" in expanded
 
 
 def test_inventory_page_uses_catalog_marker_and_expands() -> None:

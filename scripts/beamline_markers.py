@@ -28,6 +28,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from beamline_descriptor import BeamlineDescriptor, Device
 
+REPO_BLOB = "https://github.com/xmap/cora/blob/main/"
+
 # Controllers list both real motion controllers and the passive chassis that
 # houses them; only the MotionController family renders as a driven-box row.
 _MOTION_CONTROLLER_FAMILY = "MotionController"
@@ -39,6 +41,17 @@ _STAGES = frozenset({"source", "sample", "detection"})
 
 class BeamlineMarkerError(ValueError):
     """A beamline marker is malformed, unknown, or renders empty."""
+
+
+def _source_note(slug: str) -> str:
+    """The "generated from the descriptor" admonition prepended to each table,
+    the per-table counterpart of the banner on the generated beamline.md page."""
+    url = f"{REPO_BLOB}deployments/{slug}/beamline.yaml"
+    return (
+        '!!! info "Generated from the descriptor"\n'
+        f"    This table is generated from [`deployments/{slug}/beamline.yaml`]({url}). "
+        "Edit the descriptor, not this table."
+    )
 
 
 def _esc(text: str) -> str:
@@ -243,6 +256,8 @@ def expand_markers(markdown: str, *, descriptor: BeamlineDescriptor, src_uri: st
     descriptor. Raises BeamlineMarkerError on any malformed, unknown, unpaired,
     or empty-rendering marker so the build fails loudly."""
     matched = 0
+    slug = src_uri.split("/")[1] if "/" in src_uri else src_uri
+    note = _source_note(slug)
 
     def _repl(m: re.Match[str]) -> str:
         nonlocal matched
@@ -256,7 +271,7 @@ def expand_markers(markdown: str, *, descriptor: BeamlineDescriptor, src_uri: st
             raise BeamlineMarkerError(f"{src_uri}: beamline:{kind} rendered empty")
         open_marker = f"<!-- beamline:{kind}{m.group('args')} -->"
         close_marker = f"<!-- /beamline:{kind} -->"
-        return f"{open_marker}\n{body}\n{close_marker}"
+        return f"{open_marker}\n{note}\n\n{body}\n{close_marker}"
 
     out = _MARKER_RE.sub(_repl, markdown)
     opens = len(re.findall(r"<!--\s*beamline:", markdown))

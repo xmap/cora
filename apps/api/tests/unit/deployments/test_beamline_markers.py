@@ -103,6 +103,9 @@ def test_controls_page_marker_expands_to_the_table() -> None:
     expanded = bm.expand_markers(source, descriptor=_descriptor(), src_uri=_CONTROLS_SRC_URI)
     assert "| Controller | Drives | Model | Protocol | Axes | EPICS handle |" in expanded
     assert "RotaryDriveChassis" not in expanded
+    # Each generated table carries the "edit the descriptor, not this table" note.
+    assert '!!! info "Generated from the descriptor"' in expanded
+    assert "deployments/2-bm/beamline.yaml" in expanded
 
 
 def test_calibrations_marker_renders_detector_calibrations_from_descriptor() -> None:
