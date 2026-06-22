@@ -164,6 +164,30 @@ _METHOD_PARAMETERS_SCHEMA: dict[str, Any] = {
     "required": ["energy"],
 }
 
+# The energy_change CAPABILITY declares the SUPER-SET contract: energy plus the
+# optional beam_mode (mono | pink, the same key the energy curves carry as an
+# operating_point). The beamline_energy_change Method above declares the {energy}
+# SUBSET (mono-implicit today); a future mode-aware Method specializes the
+# contract by also taking beam_mode. The cross-BC subset guard validates the
+# Method's {energy} against this at UpdateMethodParametersSchema and it passes
+# (energy matches; beam_mode is contract-only, omission is fine). The evaluator
+# does not read beam_mode yet, so this is the declarative keystone for the
+# deferred beam_mode_change (MODE-1), not a live mode switch.
+_CAPABILITY_PARAMETERS_SCHEMA: dict[str, Any] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "energy": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100,
+            "unit": {"system": "udunits", "code": "keV"},
+        },
+        "beam_mode": {"type": "string", "enum": ["mono", "pink"]},
+    },
+    "required": ["energy"],
+}
+
 
 def _id_queue() -> list[UUID]:
     """FixedIdGenerator queue: facility prefix + a generous anonymous tail. The
@@ -270,6 +294,7 @@ async def test_energy_setting_records_a_coordinated_move(db_pool: asyncpg.Pool) 
         code="cora.capability.energy_change",
         name="Energy Change",
         shapes=frozenset({ExecutorShape.METHOD, ExecutorShape.PROCEDURE}),
+        parameters_schema=_CAPABILITY_PARAMETERS_SCHEMA,
     )
     method_id = await bind_define_method(deps)(
         DefineMethod(
@@ -350,6 +375,23 @@ async def test_energy_setting_records_a_coordinated_move(db_pool: asyncpg.Pool) 
     assert genesis["kind"] == "energy_setting"
     assert genesis["capability_id"] == str(_CAPABILITY_ENERGY_CHANGE_ID)
     assert set(genesis["target_asset_ids"]) == {str(fid) for fid in facet_ids.values()}
+
+    # The energy_change Capability carries the beam_mode super-set contract, and
+    # the beamline_energy_change Method binds the {energy} subset within it (the
+    # cross-BC subset guard accepted it at UpdateMethodParametersSchema). beam_mode
+    # is the declarative keystone for the deferred mode switch; the Method stays
+    # mono-implicit free-keV today.
+    capability_events, _ = await deps.event_store.load("Capability", _CAPABILITY_ENERGY_CHANGE_ID)
+    cap_schema = capability_events[0].payload["parameters_schema"]
+    assert cap_schema["properties"]["beam_mode"]["enum"] == ["mono", "pink"]
+    assert "energy" in cap_schema["properties"]
+    method_events, _ = await deps.event_store.load("Method", method_id)
+    method_schema_events = [
+        e for e in method_events if e.event_type == "MethodParametersSchemaUpdated"
+    ]
+    assert method_schema_events, "Method missing parameters-schema update"
+    method_schema = method_schema_events[-1].payload["parameters_schema"]
+    assert set(method_schema["properties"]) == {"energy"}
 
     await _drain(db_pool)
     async with db_pool.acquire() as conn:

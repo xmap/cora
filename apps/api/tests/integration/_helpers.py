@@ -139,6 +139,7 @@ async def seed_capability_postgres(
     code: str = "cora.capability.test",
     name: str = "TestCapability",
     shapes: object | None = None,
+    parameters_schema: dict[str, Any] | None = None,
     now: datetime | None = None,
     correlation_id: UUID = _DEFAULT_SEED_CORRELATION_ID,
     principal_id: UUID = _DEFAULT_SEED_PRINCIPAL_ID,
@@ -152,6 +153,11 @@ async def seed_capability_postgres(
     (eventual-consistency: handler raises `CapabilityNotFoundError`
     when the stream is missing). Defaults to both METHOD + PROCEDURE
     executor shapes so the same seed serves both binding paths.
+
+    `parameters_schema` is the Capability's declarative parameter contract
+    (default None = no contract, the Method-subset check is then skipped).
+    Pass a schema to exercise the cross-BC subset guard: a bound Method's
+    parameters_schema must be a subset of this.
     """
     import contextlib
     from uuid import uuid4 as _uuid4
@@ -182,6 +188,7 @@ async def seed_capability_postgres(
         required_affordances=frozenset(),
         executor_shapes=shapes_set,
         occurred_at=occurred_at,
+        parameters_schema=parameters_schema,
     )
     # Idempotent seed: another test in the same PG db_pool may have
     # already seeded this capability_id; tolerated via contextlib.suppress
