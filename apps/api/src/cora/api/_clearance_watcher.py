@@ -3,8 +3,11 @@
 A periodic background task, hosted at the composition root (`cora.api`) because
 it reads the Safety BC AND composes Decision BC events; only `cora.api` may
 depend on both (same placement rationale as `_clearance_expirer`,
-`_run_supervisor`, and `_enclosure_permit_observer`). See
-[[project-clearance-watcher-design]].
+`_run_supervisor`, and `_enclosure_permit_observer`). The agent-invariant
+mechanics (the staleness rule, the per-episode Decision id, the
+DecisionRegistered envelope, and the periodic loop / lifespan) live in
+`cora.api._flag_watcher`; this module owns only what is specific to clearances,
+chiefly the UnderReview review-step fold. See [[project-clearance-watcher-design]].
 
 ## What v1 does
 
@@ -49,33 +52,22 @@ deactivating the agent Actor stops it. Off by default
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid5
+from uuid import UUID
 
 from cora.access.aggregates.actor import load_actor
 from cora.agent.seed_clearance_watcher import CLEARANCE_WATCHER_AGENT_ID
-from cora.decision.aggregates.decision import (
-    DECISION_CONTEXT_CLEARANCE_PROGRESS,
-    DecisionChoice,
-    DecisionConfidenceSource,
-    DecisionContext,
-    DecisionRegistered,
-    DecisionRule,
-    event_type_name,
-    to_payload,
-    validate_confidence,
-    validate_inputs,
-    validate_reasoning,
+from cora.api._flag_watcher import (
+    derive_watcher_decision_id,
+    flag_watcher_lifespan,
+    is_stalled,
+    record_watcher_decision,
 )
-from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import ConcurrencyError
+from cora.decision.aggregates.decision import DECISION_CONTEXT_CLEARANCE_PROGRESS
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.safety.features.get_clearance import GetClearance
 from cora.safety.features.list_clearances import ListClearances
-from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -87,11 +79,9 @@ if TYPE_CHECKING:
     from cora.safety.features.list_clearances.handler import Handler as ListClearancesHandler
     from cora.safety.features.list_clearances.query import ClearanceStatusFilter
 
-_log = get_logger(__name__)
-
+_LOG_PREFIX = "clearance_watcher"
 _RULE = "agent:ClearanceWatcher:v1"
 _COMMAND_NAME = "ClearanceWatcherTick"
-_STREAM_TYPE = "Decision"
 _PAGE_LIMIT = 100
 _CHOICE_FLAG = "Flag"
 _STATUS_UNDER_REVIEW = "UnderReview"
@@ -107,18 +97,9 @@ _WATCHED_STATUSES: tuple[ClearanceStatusFilter, ...] = ("Submitted", "UnderRevie
 _DECISION_NAMESPACE = UUID("01900000-0000-7000-8000-0000ffff0002")
 
 
-def is_stalled(last_progress_at: datetime, now: datetime, stale_after_seconds: float) -> bool:
-    """Pure rule: a front-of-lifecycle clearance is stalled once it has sat past
-    the staleness window without progress.
-
-    Inclusive boundary: elapsed == window FLAGS (`>=`).
-    """
-    return (now - last_progress_at).total_seconds() >= stale_after_seconds
-
-
 def _derive_decision_id(clearance_id: UUID, last_progress_at: datetime) -> UUID:
     """Deterministic ClearanceProgress Decision id for one stall episode."""
-    return uuid5(_DECISION_NAMESPACE, f"decision:{clearance_id}:{last_progress_at.isoformat()}")
+    return derive_watcher_decision_id(_DECISION_NAMESPACE, clearance_id, last_progress_at)
 
 
 async def _record_decision(
@@ -129,61 +110,31 @@ async def _record_decision(
     last_progress_at: datetime,
     now: datetime,
 ) -> None:
-    """Append one DecisionRegistered(context=ClearanceProgress, choice=Flag).
-
-    Idempotent: the deterministic id makes a re-flag of the same stall episode a
-    ConcurrencyError no-op (mirrors `_clearance_expirer._record_decision`).
-    """
-    decision_id = _derive_decision_id(clearance_id, last_progress_at)
+    """Append one DecisionRegistered(context=ClearanceProgress, choice=Flag)."""
     stalled_seconds = int((now - last_progress_at).total_seconds())
-    domain_event = DecisionRegistered(
-        decision_id=decision_id,
-        decided_by=ActorId(CLEARANCE_WATCHER_AGENT_ID),
-        context=DecisionContext(DECISION_CONTEXT_CLEARANCE_PROGRESS).value,
-        choice=DecisionChoice(_CHOICE_FLAG).value,
-        parent_id=None,
-        override_kind=None,
-        rule=DecisionRule(_RULE).value,
-        reasoning=validate_reasoning(
+    await record_watcher_decision(
+        deps,
+        agent_id=CLEARANCE_WATCHER_AGENT_ID,
+        context=DECISION_CONTEXT_CLEARANCE_PROGRESS,
+        choice=_CHOICE_FLAG,
+        rule=_RULE,
+        command_name=_COMMAND_NAME,
+        decision_id=_derive_decision_id(clearance_id, last_progress_at),
+        entity_id=clearance_id,
+        now=now,
+        reasoning=(
             f"Clearance has been {status} for {stalled_seconds}s without progressing "
             "toward Active (past the staleness window); surfaced for operator follow-up."
         ),
-        confidence=validate_confidence(None),
-        confidence_source=DecisionConfidenceSource.SELF_REPORTED,
-        alternatives=(),
-        inputs=validate_inputs(
-            {
-                "clearance_id": str(clearance_id),
-                "status": status,
-                "last_progress_at": last_progress_at.isoformat(),
-                "stalled_seconds": str(stalled_seconds),
-                "occurred_at": now.isoformat(),
-            }
-        ),
-        reasoning_signature=None,
-        occurred_at=now,
+        inputs={
+            "clearance_id": str(clearance_id),
+            "status": status,
+            "last_progress_at": last_progress_at.isoformat(),
+            "stalled_seconds": str(stalled_seconds),
+            "occurred_at": now.isoformat(),
+        },
+        log_prefix=_LOG_PREFIX,
     )
-    new_event = to_new_event(
-        event_type=event_type_name(domain_event),
-        payload=to_payload(domain_event),
-        occurred_at=now,
-        event_id=uuid5(decision_id, "event:0"),
-        command_name=_COMMAND_NAME,
-        correlation_id=deps.id_generator.new_id(),
-        causation_id=None,
-        principal_id=CLEARANCE_WATCHER_AGENT_ID,
-    )
-    try:
-        await deps.event_store.append(
-            stream_type=_STREAM_TYPE,
-            stream_id=decision_id,
-            expected_version=0,
-            events=[new_event],
-        )
-    except ConcurrencyError:
-        _log.info("clearance_watcher.decision_already_written", clearance_id=str(clearance_id))
-        return
-    _log.info("clearance_watcher.flagged", clearance_id=str(clearance_id), status=status)
 
 
 async def _drain_watched_clearances(
@@ -269,27 +220,6 @@ async def _watch_tick(
         )
 
 
-async def _watch_loop(
-    deps: Kernel,
-    list_clearances: ListClearancesHandler,
-    get_clearance: GetClearanceHandler,
-    interval_seconds: float,
-) -> None:
-    """Periodic watch loop. A failed tick is logged; the next tick retries."""
-    while True:
-        try:
-            await _watch_tick(
-                deps=deps,
-                list_clearances=list_clearances,
-                get_clearance=get_clearance,
-            )
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            _log.exception("clearance_watcher.tick_failed")
-        await asyncio.sleep(interval_seconds)
-
-
 @contextlib.asynccontextmanager
 async def clearance_watcher_lifespan(
     deps: Kernel,
@@ -303,28 +233,19 @@ async def clearance_watcher_lifespan(
     No-op unless `settings.clearance_watcher_enabled` is True (default off, so a
     deployment opts in explicitly).
     """
-    if not deps.settings.clearance_watcher_enabled:
-        _log.info("clearance_watcher.skipped", reason="disabled")
-        yield
-        return
 
-    interval = (
-        interval_seconds
-        if interval_seconds is not None
-        else deps.settings.clearance_watcher_tick_seconds
-    )
-    _log.info("clearance_watcher.started", interval_seconds=interval)
-    task = asyncio.create_task(
-        _watch_loop(deps, list_clearances, get_clearance, interval),
-        name="clearance-watcher",
-    )
-    try:
+    async def tick() -> None:
+        await _watch_tick(deps=deps, list_clearances=list_clearances, get_clearance=get_clearance)
+
+    async with flag_watcher_lifespan(
+        enabled=deps.settings.clearance_watcher_enabled,
+        default_tick_seconds=deps.settings.clearance_watcher_tick_seconds,
+        log_prefix=_LOG_PREFIX,
+        task_name="clearance-watcher",
+        tick=tick,
+        interval_seconds=interval_seconds,
+    ):
         yield
-    finally:
-        task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
-        _log.info("clearance_watcher.stopped")
 
 
 __all__ = ["clearance_watcher_lifespan", "is_stalled"]

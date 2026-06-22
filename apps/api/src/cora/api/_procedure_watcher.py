@@ -3,8 +3,11 @@
 A periodic background task, hosted at the composition root (`cora.api`) because
 it reads the Operation BC AND composes Decision BC events; only `cora.api` may
 depend on both (same placement rationale as `_clearance_watcher`,
-`_calibration_watcher`, and `_run_supervisor`). See
-[[project-procedure-watcher-design]].
+`_calibration_watcher`, and `_run_supervisor`). The agent-invariant mechanics
+(the staleness rule, the per-episode Decision id, the DecisionRegistered
+envelope, and the periodic loop / lifespan) live in `cora.api._flag_watcher`;
+this module owns only what is specific to procedures, chiefly the Running
+activity-recency fold. See [[project-procedure-watcher-design]].
 
 ## What v1 does
 
@@ -50,36 +53,25 @@ deactivating the agent Actor stops it. Off by default
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid5
+from uuid import UUID
 
 from cora.access.aggregates.actor import load_actor
 from cora.agent.seed_procedure_watcher import PROCEDURE_WATCHER_AGENT_ID
-from cora.decision.aggregates.decision import (
-    DECISION_CONTEXT_PROCEDURE_PROGRESS,
-    DecisionChoice,
-    DecisionConfidenceSource,
-    DecisionContext,
-    DecisionRegistered,
-    DecisionRule,
-    event_type_name,
-    to_payload,
-    validate_confidence,
-    validate_inputs,
-    validate_reasoning,
+from cora.api._flag_watcher import (
+    derive_watcher_decision_id,
+    flag_watcher_lifespan,
+    is_stalled,
+    record_watcher_decision,
 )
-from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import ConcurrencyError
+from cora.decision.aggregates.decision import DECISION_CONTEXT_PROCEDURE_PROGRESS
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.adapters.postgres_procedure_activity_lookup import (
     PostgresProcedureActivityLookup,
 )
 from cora.operation.features.list_procedures import ListProcedures
 from cora.operation.ports import InMemoryProcedureActivityLookup
-from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -91,11 +83,9 @@ if TYPE_CHECKING:
     from cora.operation.features.list_procedures.query import ProcedureStatusFilter
     from cora.operation.ports import ProcedureActivityLookup
 
-_log = get_logger(__name__)
-
+_LOG_PREFIX = "procedure_watcher"
 _RULE = "agent:ProcedureWatcher:v1"
 _COMMAND_NAME = "ProcedureWatcherTick"
-_STREAM_TYPE = "Decision"
 _PAGE_LIMIT = 100
 _CHOICE_STALL = "Stall"
 _STATUS_RUNNING = "Running"
@@ -111,18 +101,9 @@ _WATCHED_STATUSES: tuple[ProcedureStatusFilter, ...] = ("Running", "Held")
 _DECISION_NAMESPACE = UUID("01900000-0000-7000-8000-00000c0c0002")
 
 
-def is_stalled(last_progress_at: datetime, now: datetime, stale_after_seconds: float) -> bool:
-    """Pure rule: an in-conduct procedure is stalled once it has sat past the
-    staleness window without progress.
-
-    Inclusive boundary: elapsed == window FLAGS (`>=`).
-    """
-    return (now - last_progress_at).total_seconds() >= stale_after_seconds
-
-
 def _derive_decision_id(procedure_id: UUID, last_progress_at: datetime) -> UUID:
     """Deterministic ProcedureProgress Decision id for one stall episode."""
-    return uuid5(_DECISION_NAMESPACE, f"decision:{procedure_id}:{last_progress_at.isoformat()}")
+    return derive_watcher_decision_id(_DECISION_NAMESPACE, procedure_id, last_progress_at)
 
 
 def _default_activity_lookup(deps: Kernel) -> ProcedureActivityLookup:
@@ -141,62 +122,32 @@ async def _record_decision(
     last_progress_at: datetime,
     now: datetime,
 ) -> None:
-    """Append one DecisionRegistered(context=ProcedureProgress, choice=Stall).
-
-    Idempotent: the deterministic id makes a re-flag of the same stall episode a
-    ConcurrencyError no-op (mirrors `_calibration_watcher._record_decision`).
-    """
-    decision_id = _derive_decision_id(procedure_id, last_progress_at)
+    """Append one DecisionRegistered(context=ProcedureProgress, choice=Stall)."""
     stalled_seconds = int((now - last_progress_at).total_seconds())
-    domain_event = DecisionRegistered(
-        decision_id=decision_id,
-        decided_by=ActorId(PROCEDURE_WATCHER_AGENT_ID),
-        context=DecisionContext(DECISION_CONTEXT_PROCEDURE_PROGRESS).value,
-        choice=DecisionChoice(_CHOICE_STALL).value,
-        parent_id=None,
-        override_kind=None,
-        rule=DecisionRule(_RULE).value,
-        reasoning=validate_reasoning(
+    await record_watcher_decision(
+        deps,
+        agent_id=PROCEDURE_WATCHER_AGENT_ID,
+        context=DECISION_CONTEXT_PROCEDURE_PROGRESS,
+        choice=_CHOICE_STALL,
+        rule=_RULE,
+        command_name=_COMMAND_NAME,
+        decision_id=_derive_decision_id(procedure_id, last_progress_at),
+        entity_id=procedure_id,
+        now=now,
+        reasoning=(
             f"Procedure has been {status} for {stalled_seconds}s without progressing "
             "(past the staleness window, no recent activity); surfaced for operator "
             "follow-up."
         ),
-        confidence=validate_confidence(None),
-        confidence_source=DecisionConfidenceSource.SELF_REPORTED,
-        alternatives=(),
-        inputs=validate_inputs(
-            {
-                "procedure_id": str(procedure_id),
-                "status": status,
-                "last_progress_at": last_progress_at.isoformat(),
-                "stalled_seconds": str(stalled_seconds),
-                "occurred_at": now.isoformat(),
-            }
-        ),
-        reasoning_signature=None,
-        occurred_at=now,
+        inputs={
+            "procedure_id": str(procedure_id),
+            "status": status,
+            "last_progress_at": last_progress_at.isoformat(),
+            "stalled_seconds": str(stalled_seconds),
+            "occurred_at": now.isoformat(),
+        },
+        log_prefix=_LOG_PREFIX,
     )
-    new_event = to_new_event(
-        event_type=event_type_name(domain_event),
-        payload=to_payload(domain_event),
-        occurred_at=now,
-        event_id=uuid5(decision_id, "event:0"),
-        command_name=_COMMAND_NAME,
-        correlation_id=deps.id_generator.new_id(),
-        causation_id=None,
-        principal_id=PROCEDURE_WATCHER_AGENT_ID,
-    )
-    try:
-        await deps.event_store.append(
-            stream_type=_STREAM_TYPE,
-            stream_id=decision_id,
-            expected_version=0,
-            events=[new_event],
-        )
-    except ConcurrencyError:
-        _log.info("procedure_watcher.decision_already_written", procedure_id=str(procedure_id))
-        return
-    _log.info("procedure_watcher.flagged", procedure_id=str(procedure_id), status=status)
 
 
 async def _drain_watched_procedures(
@@ -269,27 +220,6 @@ async def _watch_tick(
         )
 
 
-async def _watch_loop(
-    deps: Kernel,
-    list_procedures: ListProceduresHandler,
-    activity_lookup: ProcedureActivityLookup,
-    interval_seconds: float,
-) -> None:
-    """Periodic watch loop. A failed tick is logged; the next tick retries."""
-    while True:
-        try:
-            await _watch_tick(
-                deps=deps,
-                list_procedures=list_procedures,
-                activity_lookup=activity_lookup,
-            )
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            _log.exception("procedure_watcher.tick_failed")
-        await asyncio.sleep(interval_seconds)
-
-
 @contextlib.asynccontextmanager
 async def procedure_watcher_lifespan(
     deps: Kernel,
@@ -304,29 +234,20 @@ async def procedure_watcher_lifespan(
     deployment opts in explicitly). `activity_lookup` defaults to the BC-local
     `_default_activity_lookup(deps)` (Postgres when a pool is present).
     """
-    if not deps.settings.procedure_watcher_enabled:
-        _log.info("procedure_watcher.skipped", reason="disabled")
-        yield
-        return
-
     lookup = activity_lookup if activity_lookup is not None else _default_activity_lookup(deps)
-    interval = (
-        interval_seconds
-        if interval_seconds is not None
-        else deps.settings.procedure_watcher_tick_seconds
-    )
-    _log.info("procedure_watcher.started", interval_seconds=interval)
-    task = asyncio.create_task(
-        _watch_loop(deps, list_procedures, lookup, interval),
-        name="procedure-watcher",
-    )
-    try:
+
+    async def tick() -> None:
+        await _watch_tick(deps=deps, list_procedures=list_procedures, activity_lookup=lookup)
+
+    async with flag_watcher_lifespan(
+        enabled=deps.settings.procedure_watcher_enabled,
+        default_tick_seconds=deps.settings.procedure_watcher_tick_seconds,
+        log_prefix=_LOG_PREFIX,
+        task_name="procedure-watcher",
+        tick=tick,
+        interval_seconds=interval_seconds,
+    ):
         yield
-    finally:
-        task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
-        _log.info("procedure_watcher.stopped")
 
 
 __all__ = ["is_stalled", "procedure_watcher_lifespan"]
