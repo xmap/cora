@@ -167,7 +167,7 @@
 | src/cora/api/\_conduct\_run\_tool.py                                                     |       33 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/\_enclosure\_permit\_observer.py                                            |       61 |        0 |       16 |        0 |    100.0% |           |
 | src/cora/api/\_inference\_recorder.py                                                    |       19 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/api/\_run\_supervisor.py                                                        |      319 |       16 |      132 |       14 |     92.0% |238, 505, 508, 514, 516, 542-543, 633-\>639, 651-\>661, 734, 736-737, 739-740, 742-743, 842-\>811, 892, 903 |
+| src/cora/api/\_run\_supervisor.py                                                        |      337 |       15 |      138 |       13 |     93.3% |238, 564, 567, 573, 575, 601-602, 731-\>741, 833, 836, 838-839, 841-842, 958-\>927, 1010, 1021 |
 | src/cora/api/main.py                                                                     |      297 |        0 |       26 |        3 |     99.1% |330-\>329, 899-\>904, 906-\>909 |
 | src/cora/api/middleware.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/api/protected\_resource\_metadata.py                                            |       30 |        0 |        8 |        1 |     97.4% | 127-\>125 |
@@ -1278,7 +1278,7 @@
 | src/cora/infrastructure/auth/config.py                                                   |       56 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/exception\_handlers.py                                      |       44 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/idp\_registry.py                                            |       48 |        0 |       18 |        0 |    100.0% |           |
-| src/cora/infrastructure/config.py                                                        |      155 |        6 |       28 |        3 |     95.1% |517-521, 529-533, 542-546 |
+| src/cora/infrastructure/config.py                                                        |      156 |        6 |       28 |        3 |     95.1% |527-531, 539-543, 552-556 |
 | src/cora/infrastructure/control\_port\_route.py                                          |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/deps.py                                                          |      107 |        0 |       14 |        1 |     99.2% | 996-\>992 |
 | src/cora/infrastructure/event\_envelope.py                                               |        7 |        0 |        0 |        0 |    100.0% |           |
@@ -2327,7 +2327,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **47725** | **1034** | **6720** |  **291** | **97.3%** |           |
+| **TOTAL**                                                                                | **47744** | **1033** | **6726** |  **290** | **97.3%** |           |
 
 
 ## Setup coverage badge
