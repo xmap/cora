@@ -19,8 +19,11 @@ Per [[project-clearance-window-expirer-design]]:
   - Authorization: the runtime issues `expire_clearance` through the
     Authorize port like any principal. Under the default AllowAllAuthorize
     it is permitted; under TrustAuthorize the operator's single configured
-    Policy must include this principal + {ExpireClearance}. No separate
-    Policy is seeded: TrustAuthorize evaluates exactly ONE configured
+    Policy must include this principal + {ListClearances, ExpireClearance}.
+    ListClearances is the per-tick drain read: without it the expirer is
+    blinded (it warns `clearance_expirer.read_unauthorized` and expires
+    nothing). No separate Policy is seeded: TrustAuthorize evaluates exactly
+    ONE configured
     policy, so a separate ClearanceExpirer policy would never be consulted.
 """
 

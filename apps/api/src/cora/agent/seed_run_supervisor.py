@@ -23,9 +23,11 @@ Per [[project-run-supervisor-design]]:
   - Authorization: the runtime issues commands through the Authorize
     port like any principal. Under the default AllowAllAuthorize it is
     permitted; under TrustAuthorize the operator's single configured
-    Policy must include this principal + {HoldRun, StopRun, AbortRun,
-    ResumeRun} (ResumeRun only matters when the gated wind-up is enabled;
-    without the grant an autonomous resume is a logged no-op).
+    Policy must include this principal + {ListRuns, HoldRun, StopRun,
+    AbortRun, ResumeRun}. ListRuns is the per-tick drain read: without it
+    the supervisor is blinded (it warns `run_supervisor.read_unauthorized`
+    and takes no action). ResumeRun only matters when the gated wind-up is
+    enabled; without the grant an autonomous resume is a logged no-op.
     No separate Policy is seeded: TrustAuthorize evaluates exactly ONE
     configured policy, so a separate RunSupervisor policy would never be
     consulted (it is operator-config, not seed config).

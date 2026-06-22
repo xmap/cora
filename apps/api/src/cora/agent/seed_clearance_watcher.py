@@ -17,11 +17,13 @@ Per [[project-clearance-watcher-design]]:
     (`prompt_template_id=None`) and a sentinel `ModelRef`
     (`provider="deterministic"`), never used to build an LLM (the runtime is a
     periodic loop applying a staleness clock comparison).
-  - FLAG-ONLY: the runtime issues NO command. It records one
+  - FLAG-ONLY: the runtime issues NO write command. It records one
     Decision(context=ClearanceProgress, choice=Flag) per stall episode for a
     human to act on. Permission to record Decisions is granted at
-    agent-definition time (the RunDebriefer stance); there is no
-    authorized-command leg and so no per-command Policy grant to seed.
+    agent-definition time (the RunDebriefer stance); there is no write-command leg
+    and so no per-command Policy grant to seed, though it does issue authz-gated
+    ListClearances + GetClearance reads each tick (under a real Authorize policy
+    the agent principal needs those read grants or the drain/fold is denied).
 """
 
 from __future__ import annotations

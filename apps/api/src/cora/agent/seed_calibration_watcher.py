@@ -16,11 +16,13 @@ Per [[project-calibration-watcher-design]]:
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template and a sentinel
     `ModelRef` (`provider="deterministic"`), never used to build an LLM (the
     runtime is a periodic staleness comparison).
-  - FLAG-ONLY: the runtime issues NO command. It records one
+  - FLAG-ONLY: the runtime issues NO write command. It records one
     Decision(context=CalibrationVerification, choice=Stale) per stale-calibration
     episode for a human to act on. Permission to record Decisions is granted at
-    agent-definition time (the RunDebriefer stance); there is no
-    authorized-command leg and so no per-command Policy grant to seed.
+    agent-definition time (the RunDebriefer stance); there is no write-command leg
+    and so no per-command Policy grant to seed, though it does issue an
+    authz-gated ListCalibrations read each tick (under a real Authorize policy the
+    agent principal needs that read grant or the drain is denied).
 """
 
 from __future__ import annotations
