@@ -443,6 +443,29 @@ ClearanceProgressChoice = Literal["Flag"]
 CLEARANCE_PROGRESS_CHOICES: Final = frozenset({"Flag"})
 
 
+# Context for the CalibrationWatcher agent's Decisions about the calibration-
+# VERIFICATION lifecycle dimension it patrols. Open-ended convention identical to
+# ClearanceProgress / CautionPromotion; the closed choice vocabulary lives in the
+# `CalibrationVerificationChoice` Literal below. FLAG-ONLY: the agent records one
+# Decision per stale-calibration episode (a Provisional revision that has sat
+# unverified past the operator window) and issues NO command. The context noun is
+# `CalibrationVerification` (the lifecycle dimension being judged, family-clean
+# with ClearanceProgress; naming-r3 chose it over the state-noun
+# `CalibrationStaleness`); the agent kind is `CalibrationWatcher` (the doer) --
+# the same Progress-vs-Watcher / context-vs-doer asymmetry as the Clearance pair.
+DECISION_CONTEXT_CALIBRATION_VERIFICATION = "CalibrationVerification"
+
+
+# Closed `choice` value set for `context = "CalibrationVerification"` Decisions.
+# Projection-validated, not domain-enforced. Single value today (the agent only
+# ever flags a stale calibration); the Literal exists for symmetry and so a
+# future qualified disposition can land additively. `Stale` is globally unique in
+# the shared, filtered DecisionChoice projection column (naming-r3: `Flag` is
+# taken by ClearanceProgress, so this context owns its own disposition token).
+CalibrationVerificationChoice = Literal["Stale"]
+CALIBRATION_VERIFICATION_CHOICES: Final = frozenset({"Stale"})
+
+
 # acceptance-signal capture: closed 3-value rating set on
 # the new `DecisionRated` event. `useful` and `misleading` are
 # operator-affirmative; `ignored` is a positive marker ("operator saw

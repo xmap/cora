@@ -27,6 +27,7 @@ from cora.decision.aggregates.decision.events import (
 from cora.decision.aggregates.decision.evolver import evolve, fold
 from cora.decision.aggregates.decision.read import load_decision
 from cora.decision.aggregates.decision.state import (
+    CALIBRATION_VERIFICATION_CHOICES,
     CAUTION_PROMOTION_CHOICES,
     CAUTION_PROPOSAL_CHOICES,
     CLEARANCE_EXPIRY_CHOICES,
@@ -37,6 +38,7 @@ from cora.decision.aggregates.decision.state import (
     DECISION_ALTERNATIVE_ENTRY_MAX_LENGTH,
     DECISION_ALTERNATIVES_MAX_ENTRIES,
     DECISION_CHOICE_MAX_LENGTH,
+    DECISION_CONTEXT_CALIBRATION_VERIFICATION,
     DECISION_CONTEXT_CAUTION_PROMOTION,
     DECISION_CONTEXT_CAUTION_PROPOSAL,
     DECISION_CONTEXT_CLEARANCE_EXPIRY,
@@ -61,6 +63,7 @@ from cora.decision.aggregates.decision.state import (
     LOGBOOK_KIND_INFERENCE,
     RUN_DEBRIEF_CHOICES,
     RUN_SUPERVISION_CHOICES,
+    CalibrationVerificationChoice,
     CautionPromotionChoice,
     CautionProposalChoice,
     ClearanceExpiryChoice,
@@ -104,6 +107,7 @@ from cora.decision.aggregates.decision.state import (
 )
 
 __all__ = [
+    "CALIBRATION_VERIFICATION_CHOICES",
     "CAUTION_PROMOTION_CHOICES",
     "CAUTION_PROPOSAL_CHOICES",
     "CLEARANCE_EXPIRY_CHOICES",
@@ -114,6 +118,7 @@ __all__ = [
     "DECISION_ALTERNATIVES_MAX_ENTRIES",
     "DECISION_ALTERNATIVE_ENTRY_MAX_LENGTH",
     "DECISION_CHOICE_MAX_LENGTH",
+    "DECISION_CONTEXT_CALIBRATION_VERIFICATION",
     "DECISION_CONTEXT_CAUTION_PROMOTION",
     "DECISION_CONTEXT_CAUTION_PROPOSAL",
     "DECISION_CONTEXT_CLEARANCE_EXPIRY",
@@ -145,6 +150,7 @@ __all__ = [
     "LOGBOOK_KIND_INFERENCE",
     "RUN_DEBRIEF_CHOICES",
     "RUN_SUPERVISION_CHOICES",
+    "CalibrationVerificationChoice",
     "CautionPromotionChoice",
     "CautionProposalChoice",
     "ClearanceExpiryChoice",
