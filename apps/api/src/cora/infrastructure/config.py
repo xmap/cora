@@ -278,6 +278,18 @@ class Settings(BaseSettings):
     clearance_watcher_tick_seconds: float = 300.0
     clearance_watcher_stale_after_seconds: float = 604800.0
 
+    # `calibration_watcher_enabled` gates the CalibrationWatcher background
+    # runtime (7th seeded agent, deterministic flag-only). Default off:
+    # deployments opt in explicitly. `calibration_watcher_tick_seconds` is the
+    # sweep cadence (>= 0.1s). `calibration_watcher_stale_after_seconds` is how
+    # long a Provisional calibration may sit unverified (measured from its newest
+    # revision) before it is flagged; the real re-verification interval is a
+    # facility fact, so the default is only a placeholder (off by default; an
+    # operator sets it on enable).
+    calibration_watcher_enabled: bool = False
+    calibration_watcher_tick_seconds: float = 300.0
+    calibration_watcher_stale_after_seconds: float = 2592000.0
+
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
     # from. Empty (default) keeps the legacy X-Principal-Id-with-
@@ -588,6 +600,31 @@ class Settings(BaseSettings):
             msg = (
                 f"clearance_watcher_stale_after_seconds must be > 0, got {value}; "
                 "a non-positive window would flag every front-of-lifecycle clearance"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("calibration_watcher_tick_seconds")
+    @classmethod
+    def _validate_calibration_watcher_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight watch-sweep loop."""
+        if value < 0.1:
+            msg = (
+                f"calibration_watcher_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the watcher"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("calibration_watcher_stale_after_seconds")
+    @classmethod
+    def _validate_calibration_watcher_stale_after_seconds(cls, value: float) -> float:
+        """Must be positive: a non-positive window would flag every Provisional
+        calibration."""
+        if value <= 0:
+            msg = (
+                f"calibration_watcher_stale_after_seconds must be > 0, got {value}; "
+                "a non-positive window would flag every Provisional calibration"
             )
             raise ValueError(msg)
         return value
