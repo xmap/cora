@@ -46,7 +46,7 @@ from cora.data.aggregates.distribution import (
 from cora.data.features import record_attestation
 from cora.data.features.record_attestation import (
     AttestationRecordingContext,
-    RecordAttestation,
+    AttestationRecordingInput,
 )
 from cora.shared.identity import ActorId
 
@@ -59,7 +59,7 @@ _DISTRIBUTION_ID = UUID("01900000-0000-7000-8000-0000000d1571")
 _SUPPLY_ID = UUID("01900000-0000-7000-8000-000000005519")
 
 
-def _good_command(**overrides: object) -> RecordAttestation:
+def _good_command(**overrides: object) -> AttestationRecordingInput:
     base: dict[str, object] = {
         "dataset_id": _DATASET_ID,
         "distribution_id": _DISTRIBUTION_ID,
@@ -73,7 +73,7 @@ def _good_command(**overrides: object) -> RecordAttestation:
         "evidence_error_detail": None,
     }
     base.update(overrides)
-    return RecordAttestation(**base)  # type: ignore[arg-type]
+    return AttestationRecordingInput(**base)  # type: ignore[arg-type]
 
 
 def _dataset(

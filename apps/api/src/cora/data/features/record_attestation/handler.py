@@ -1,45 +1,65 @@
 """Application handler for the ``record_attestation`` slice.
 
-Genesis-style create handler. Pre-loads two cross-aggregate refs:
+Verifier-port-driven create handler. CORA computes the checksum itself
+rather than trusting a caller-asserted one:
 
-  1. The parent Dataset (always; ``load_dataset(command.dataset_id)``).
-  2. The bound Distribution (only when ``command.distribution_id`` is
-     not None; ``load_distribution(command.distribution_id)``).
+  1. Load the parent Dataset (always) and the bound Distribution (required
+     for the only supported kind, ChecksumVerified).
+  2. Dispatch on the Distribution URI scheme to a ChecksumVerifier adapter
+     (http/https, or file:// when ``posix_checksum_roots`` is configured);
+     an unsupported scheme raises ``ChecksumVerifierUnsupportedSchemeError``.
+  3. Call ``verify(...)`` to walk the bytes and compute the digest, then map
+     the discriminated result to an outcome + evidence and assemble an
+     ``AttestationRecordingInput`` for the pure decider.
 
-Both pre-loads happen BEFORE invoking the pure decider per L15 + L17.
-The ``AttestationKindNotYetSupportedError`` rejection runs at the
-handler tier (before any event-store reads) so unsupported kinds do
-not leak information about Dataset / Distribution existence.
+The verifier port runs HERE (it does I/O); the decider stays pure and its
+invariants run as defense-in-depth over the computed evidence. ``attested_by``
+is the calling principal (the operator/agent that asked CORA to verify); the
+adapter that computed the digest is recorded in the evidence's ``verifier_kind``.
 
 ## No ``load_attestation(new_id)``
 
-``new_id`` is a freshly-allocated UUIDv7 from the IdGenerator port, so
-the Attestation stream is guaranteed empty; the decider is invoked
-with ``state=None`` and the same-stream-id race at append time is
-caught by Postgres ``ConcurrencyError``.
+``new_id`` is a freshly-allocated UUIDv7 from the IdGenerator port, so the
+Attestation stream is guaranteed empty; the decider is invoked with
+``state=None`` and the same-stream-id race at append time is caught by
+Postgres ``ConcurrencyError``.
 """
 
-from typing import Protocol
+from typing import Protocol, assert_never, cast
 from uuid import UUID
 
 from cora.data.aggregates.attestation import (
     AttestationDistributionNotFoundError,
     AttestationKind,
     AttestationKindNotYetSupportedError,
+    AttestationKindRequiresDistributionError,
+    AttestationOutcome,
+    AttestationTreeChecksumNotYetSupportedError,
     event_type_name,
     to_payload,
 )
 from cora.data.aggregates.dataset import (
+    DATASET_CHECKSUM_ALGORITHM_SHA256_TREE,
     DatasetNotFoundError,
     load_dataset,
 )
 from cora.data.aggregates.distribution import load_distribution
 from cora.data.errors import UnauthorizedError
-from cora.data.features.record_attestation.command import RecordAttestation
+from cora.data.features.record_attestation.command import (
+    AttestationRecordingInput,
+    RecordAttestation,
+)
 from cora.data.features.record_attestation.context import (
     AttestationRecordingContext,
 )
 from cora.data.features.record_attestation.decider import decide
+from cora.data.ports.checksum_verifier import (
+    ChecksumVerifier,
+    ChecksumVerifierUnsupportedSchemeError,
+    Match,
+    Mismatch,
+    Unreachable,
+)
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
@@ -82,6 +102,13 @@ class IdempotentHandler(Protocol):
     ) -> UUID: ...
 
 
+def _scheme_of(uri: str) -> str:
+    """Return the lowercase URI scheme used for verifier dispatch."""
+    from urllib.parse import urlparse
+
+    return urlparse(uri).scheme.lower()
+
+
 def bind(deps: Kernel) -> Handler:
     """Build a record_attestation handler closed over the shared deps."""
 
@@ -101,7 +128,6 @@ def bind(deps: Kernel) -> Handler:
                 str(command.distribution_id) if command.distribution_id is not None else None
             ),
             kind=command.kind,
-            outcome=command.outcome,
             principal_id=str(principal_id),
             correlation_id=str(correlation_id),
             causation_id=str(causation_id) if causation_id is not None else None,
@@ -142,12 +168,59 @@ def bind(deps: Kernel) -> Handler:
         if dataset is None:
             raise DatasetNotFoundError(command.dataset_id)
 
-        # Pre-load Distribution (only when distribution_id is set).
-        distribution = None
-        if command.distribution_id is not None:
-            distribution = await load_distribution(deps.event_store, command.distribution_id)
-            if distribution is None:
-                raise AttestationDistributionNotFoundError(command.distribution_id)
+        # ChecksumVerified needs a byte-copy to verify; without a
+        # distribution_id there is nothing to walk.
+        if command.distribution_id is None:
+            raise AttestationKindRequiresDistributionError(command.kind)
+        distribution = await load_distribution(deps.event_store, command.distribution_id)
+        if distribution is None:
+            raise AttestationDistributionNotFoundError(command.distribution_id)
+
+        # Refuse a directory (sha256-tree) Distribution: the whole-file
+        # verifiers cannot reproduce a manifest digest, and a false Mismatch
+        # would flip the Distribution to Stale. (The decider guards this too.)
+        if distribution.checksum.algorithm == DATASET_CHECKSUM_ALGORITHM_SHA256_TREE:
+            raise AttestationTreeChecksumNotYetSupportedError(
+                distribution_id=distribution.id,
+                algorithm=distribution.checksum.algorithm,
+            )
+
+        scheme = _scheme_of(distribution.uri.value)
+        verifiers = cast(
+            "dict[str, ChecksumVerifier]",
+            deps.data.checksum_verifiers,  # type: ignore[attr-defined]
+        )
+        verifier = verifiers.get(scheme)
+        if verifier is None:
+            raise ChecksumVerifierUnsupportedSchemeError(scheme)
+
+        result = await verifier.verify(
+            distribution_uri=distribution.uri.value,
+            expected_checksum=distribution.checksum.value,
+            supply_id=distribution.supply_id,
+        )
+        match result:
+            case Match(computed_checksum=digest):
+                outcome, computed, error_detail = AttestationOutcome.MATCH.value, digest, None
+            case Mismatch(computed_checksum=digest):
+                outcome, computed, error_detail = AttestationOutcome.MISMATCH.value, digest, None
+            case Unreachable(error_detail=detail):
+                outcome, computed, error_detail = AttestationOutcome.UNREACHABLE.value, None, detail
+            case _:  # pragma: no cover - the result union is closed
+                assert_never(result)
+
+        recording_input = AttestationRecordingInput(
+            dataset_id=command.dataset_id,
+            distribution_id=command.distribution_id,
+            kind=command.kind,
+            outcome=outcome,
+            evidence_expected_checksum=distribution.checksum.value,
+            evidence_computed_checksum=computed,
+            evidence_algorithm="sha256",
+            evidence_verifier_supply_id=distribution.supply_id,
+            evidence_verifier_kind=verifier.kind,
+            evidence_error_detail=error_detail,
+        )
 
         context = AttestationRecordingContext(dataset=dataset, distribution=distribution)
 
@@ -156,7 +229,7 @@ def bind(deps: Kernel) -> Handler:
 
         domain_events = decide(
             state=None,
-            command=command,
+            command=recording_input,
             context=context,
             now=now,
             new_id=new_id,
@@ -188,11 +261,10 @@ def bind(deps: Kernel) -> Handler:
             command_name=_COMMAND_NAME,
             attestation_id=str(new_id),
             dataset_id=str(command.dataset_id),
-            distribution_id=(
-                str(command.distribution_id) if command.distribution_id is not None else None
-            ),
+            distribution_id=str(command.distribution_id),
             kind=command.kind,
-            outcome=command.outcome,
+            outcome=outcome,
+            verifier_kind=verifier.kind,
             principal_id=str(principal_id),
             correlation_id=str(correlation_id),
             event_count=len(new_events),

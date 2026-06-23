@@ -1646,16 +1646,6 @@
         "title": "AttestationKind",
         "type": "string"
       },
-      "AttestationOutcome": {
-        "description": "The outcome of a verifier run.\n\nClosed StrEnum with all 3 values day-one. Other outcomes (Pending,\nPartial, Error) are exception-shaped failures, not recorded\noutcomes.\n\n  - ``Match``: verifier completed AND observed value byte-equals\n    the canonical value.\n  - ``Mismatch``: verifier completed AND observed value disagrees\n    with the canonical value.\n  - ``Unreachable``: verifier could not complete (transport\n    timeout, 5xx, missing credentials). Distinct from\n    ``Mismatch`` because bytes' integrity is unknown, not\n    refuted.",
-        "enum": [
-          "Match",
-          "Mismatch",
-          "Unreachable"
-        ],
-        "title": "AttestationOutcome",
-        "type": "string"
-      },
       "BindAssetToFacilityRequest": {
         "description": "Body for `POST /assets/{asset_id}/bind-to-facility`.",
         "properties": {
@@ -3006,76 +2996,6 @@
           "value"
         ],
         "title": "ChecksumResponse",
-        "type": "object"
-      },
-      "ChecksumVerifiedEvidenceRequest": {
-        "additionalProperties": false,
-        "description": "Nested evidence body for kind=ChecksumVerified.",
-        "properties": {
-          "algorithm": {
-            "const": "sha256",
-            "description": "Checksum algorithm name. Only 'sha256' is accepted today; future algorithms add additional literal members.",
-            "title": "Algorithm",
-            "type": "string"
-          },
-          "computed_checksum": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "minLength": 64,
-                "pattern": "^[0-9a-f]{64}$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Checksum the verifier computed. Required for outcome=Match or outcome=Mismatch; null only for outcome=Unreachable.",
-            "title": "Computed Checksum"
-          },
-          "error_detail": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Human-readable failure summary. Required for outcome=Unreachable; null otherwise.",
-            "title": "Error Detail"
-          },
-          "expected_checksum": {
-            "description": "Canonical 64-char lowercase sha256 hex (the Distribution's expected value).",
-            "maxLength": 64,
-            "minLength": 64,
-            "pattern": "^[0-9a-f]{64}$",
-            "title": "Expected Checksum",
-            "type": "string"
-          },
-          "verifier_kind": {
-            "description": "Short adapter name (e.g. 'HttpRangeChecksum'). Forensic provenance.",
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Verifier Kind",
-            "type": "string"
-          },
-          "verifier_supply_id": {
-            "description": "Identifies the Supply (or other adapter-resident endpoint) the verifier walked. Forensic provenance.",
-            "format": "uuid",
-            "title": "Verifier Supply Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "algorithm",
-          "expected_checksum",
-          "verifier_supply_id",
-          "verifier_kind"
-        ],
-        "title": "ChecksumVerifiedEvidenceRequest",
         "type": "object"
       },
       "ClearanceListResponse": {
@@ -10538,27 +10458,17 @@
                 "type": "null"
               }
             ],
-            "description": "Identifier of the bound Distribution byte-copy. Required for byte-level kinds (ChecksumVerified, FormatValidated, BitRotChecked); null only for ConformsToValidated.",
+            "description": "Identifier of the bound Distribution byte-copy whose bytes CORA will read and checksum. Required for byte-level kinds (ChecksumVerified today); null only for ConformsToValidated.",
             "title": "Distribution Id"
-          },
-          "evidence": {
-            "$ref": "#/components/schemas/ChecksumVerifiedEvidenceRequest",
-            "description": "Per-kind evidence object. Today only the ChecksumVerified shape is concrete (the other three kinds are not yet supported)."
           },
           "kind": {
             "$ref": "#/components/schemas/AttestationKind",
-            "description": "What property was attested. Closed enum; today only 'ChecksumVerified' is implemented."
-          },
-          "outcome": {
-            "$ref": "#/components/schemas/AttestationOutcome",
-            "description": "The outcome of the verifier run. Closed enum: Match, Mismatch, Unreachable."
+            "description": "What property to attest. Closed enum; today only 'ChecksumVerified' is implemented."
           }
         },
         "required": [
           "dataset_id",
-          "kind",
-          "outcome",
-          "evidence"
+          "kind"
         ],
         "title": "RecordAttestationRequest",
         "type": "object"
@@ -21100,7 +21010,7 @@
                 }
               }
             },
-            "description": "Domain invariant violated: malformed evidence VO, unsupported algorithm, kind not yet implemented in this release."
+            "description": "Domain invariant violated: kind not yet implemented in this release, or no checksum verifier is configured for the Distribution's URI scheme (e.g. globus://, or file:// with no posix_checksum_roots set)."
           },
           "403": {
             "content": {
@@ -21130,13 +21040,13 @@
                 }
               }
             },
-            "description": "Dual-binding violation (kind requires/forbids distribution_id; Distribution's parent Dataset does not match; verifier evidence contradicts Distribution canonical checksum) or strict-not-idempotent same-id re-issue."
+            "description": "Dual-binding violation (kind requires/forbids distribution_id; Distribution's parent Dataset does not match) or strict-not-idempotent same-id re-issue."
           },
           "422": {
             "description": "Request body failed schema validation OR Idempotency-Key was reused with a different request body."
           }
         },
-        "summary": "Record a new Attestation fact",
+        "summary": "Verify a Distribution and record an Attestation fact",
         "tags": [
           "data"
         ]

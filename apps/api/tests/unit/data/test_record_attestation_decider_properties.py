@@ -53,7 +53,7 @@ from cora.data.aggregates.distribution import (
 from cora.data.features import record_attestation
 from cora.data.features.record_attestation import (
     AttestationRecordingContext,
-    RecordAttestation,
+    AttestationRecordingInput,
 )
 from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes
@@ -142,7 +142,7 @@ def test_record_attestation_happy_match_emits_one_event(
     new_id: UUID,
     attested_by: UUID,
 ) -> None:
-    cmd = RecordAttestation(
+    cmd = AttestationRecordingInput(
         dataset_id=dataset_id,
         distribution_id=distribution_id,
         kind="ChecksumVerified",
@@ -196,7 +196,7 @@ def test_record_attestation_on_existing_state_always_raises_already_exists(
     now: datetime,
     new_id: UUID,
 ) -> None:
-    cmd = RecordAttestation(
+    cmd = AttestationRecordingInput(
         dataset_id=dataset_id,
         distribution_id=distribution_id,
         kind="ChecksumVerified",
@@ -243,7 +243,7 @@ def test_record_attestation_unsupported_byte_level_kind_always_raises(
     now: datetime,
     new_id: UUID,
 ) -> None:
-    cmd = RecordAttestation(
+    cmd = AttestationRecordingInput(
         dataset_id=dataset_id,
         distribution_id=distribution_id,
         kind=kind,
@@ -286,7 +286,7 @@ def test_record_attestation_conforms_to_with_distribution_always_raises_rejects(
     now: datetime,
     new_id: UUID,
 ) -> None:
-    cmd = RecordAttestation(
+    cmd = AttestationRecordingInput(
         dataset_id=dataset_id,
         distribution_id=distribution_id,
         kind="ConformsToValidated",
@@ -336,7 +336,7 @@ def test_record_attestation_match_with_differing_computed_raises_belt_and_braces
     # any differing value raises").
     if computed == _GOOD_SHA:
         return
-    cmd = RecordAttestation(
+    cmd = AttestationRecordingInput(
         dataset_id=dataset_id,
         distribution_id=distribution_id,
         kind="ChecksumVerified",
@@ -381,7 +381,7 @@ def test_record_attestation_is_pure_same_input_same_output(
     new_id: UUID,
     attested_by: UUID,
 ) -> None:
-    cmd = RecordAttestation(
+    cmd = AttestationRecordingInput(
         dataset_id=dataset_id,
         distribution_id=distribution_id,
         kind="ChecksumVerified",

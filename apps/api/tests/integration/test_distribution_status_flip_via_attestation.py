@@ -17,6 +17,7 @@ and writes ``proj_data_distribution_summary.status`` to:
 
 from dataclasses import replace
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -31,6 +32,12 @@ from cora.data.features import (
 from cora.data.features.record_attestation import RecordAttestation
 from cora.data.features.register_dataset import RegisterDataset
 from cora.data.features.register_distribution import RegisterDistribution
+from cora.data.ports.checksum_verifier import (
+    AlwaysMatchingChecksumVerifier,
+    AlwaysMismatchingChecksumVerifier,
+    AlwaysUnreachableChecksumVerifier,
+    ChecksumVerifier,
+)
 from cora.infrastructure.deps import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.supply._projections import register_supply_projections
@@ -40,10 +47,24 @@ from cora.supply.features.register_supply import RegisterSupply
 from tests.integration._helpers import build_postgres_deps
 
 _GOOD_SHA = "a" * 64
-_OTHER_SHA = "b" * 64
 _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
+_HTTPS_URI = "https://store.example/runs/recon.h5"
+
+
+def _with_verifier(deps: Kernel, verifier: ChecksumVerifier, *, scheme: str = "https") -> Kernel:
+    """Attach a stub verifier map onto deps.data (after any replace())."""
+    object.__setattr__(deps, "data", SimpleNamespace(checksum_verifiers={scheme: verifier}))
+    return deps
+
+
+def _command(dataset_id: UUID, distribution_id: UUID) -> RecordAttestation:
+    return RecordAttestation(
+        dataset_id=dataset_id,
+        distribution_id=distribution_id,
+        kind="ChecksumVerified",
+    )
 
 
 async def _drain_supply(db_pool: asyncpg.Pool) -> None:
@@ -99,13 +120,13 @@ async def _seed_distribution(
         RegisterDistribution(
             dataset_id=dataset_id,
             supply_id=supply_id,
-            uri="s3://aps/runs/recon.h5",
+            uri=_HTTPS_URI,
             checksum_algorithm="sha256",
             checksum_value=_GOOD_SHA,
             byte_size=1024,
             media_type="application/x-hdf5",
             conforms_to=frozenset(),
-            access_protocol="S3",
+            access_protocol="HTTPS",
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -128,24 +149,14 @@ async def _read_distribution_status(db_pool: asyncpg.Pool, distribution_id: UUID
 async def test_match_attestation_flips_distribution_status_to_verified(
     db_pool: asyncpg.Pool,
 ) -> None:
-    dataset_id, supply_id, distribution_id = await _seed_distribution(db_pool)
+    dataset_id, _supply_id, distribution_id = await _seed_distribution(db_pool)
     await _drain_data(db_pool)
     assert await _read_distribution_status(db_pool, distribution_id) == "Registered"
 
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4(), uuid4()])
+    deps = _with_verifier(deps, AlwaysMatchingChecksumVerifier())
     await record_attestation.bind(deps)(
-        RecordAttestation(
-            dataset_id=dataset_id,
-            distribution_id=distribution_id,
-            kind="ChecksumVerified",
-            outcome="Match",
-            evidence_expected_checksum=_GOOD_SHA,
-            evidence_computed_checksum=_GOOD_SHA,
-            evidence_algorithm="sha256",
-            evidence_verifier_supply_id=supply_id,
-            evidence_verifier_kind="HttpRangeChecksum",
-            evidence_error_detail=None,
-        ),
+        _command(dataset_id, distribution_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -157,23 +168,13 @@ async def test_match_attestation_flips_distribution_status_to_verified(
 async def test_mismatch_attestation_flips_distribution_status_to_stale(
     db_pool: asyncpg.Pool,
 ) -> None:
-    dataset_id, supply_id, distribution_id = await _seed_distribution(db_pool)
+    dataset_id, _supply_id, distribution_id = await _seed_distribution(db_pool)
     await _drain_data(db_pool)
 
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4(), uuid4()])
+    deps = _with_verifier(deps, AlwaysMismatchingChecksumVerifier())
     await record_attestation.bind(deps)(
-        RecordAttestation(
-            dataset_id=dataset_id,
-            distribution_id=distribution_id,
-            kind="ChecksumVerified",
-            outcome="Mismatch",
-            evidence_expected_checksum=_GOOD_SHA,
-            evidence_computed_checksum=_OTHER_SHA,
-            evidence_algorithm="sha256",
-            evidence_verifier_supply_id=supply_id,
-            evidence_verifier_kind="HttpRangeChecksum",
-            evidence_error_detail=None,
-        ),
+        _command(dataset_id, distribution_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -185,23 +186,15 @@ async def test_mismatch_attestation_flips_distribution_status_to_stale(
 async def test_unreachable_attestation_leaves_distribution_status_unchanged(
     db_pool: asyncpg.Pool,
 ) -> None:
-    dataset_id, supply_id, distribution_id = await _seed_distribution(db_pool)
+    dataset_id, _supply_id, distribution_id = await _seed_distribution(db_pool)
     await _drain_data(db_pool)
 
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4(), uuid4()])
+    deps = _with_verifier(
+        deps, AlwaysUnreachableChecksumVerifier(error_detail="HEAD timeout after 30s")
+    )
     await record_attestation.bind(deps)(
-        RecordAttestation(
-            dataset_id=dataset_id,
-            distribution_id=distribution_id,
-            kind="ChecksumVerified",
-            outcome="Unreachable",
-            evidence_expected_checksum=_GOOD_SHA,
-            evidence_computed_checksum=None,
-            evidence_algorithm="sha256",
-            evidence_verifier_supply_id=supply_id,
-            evidence_verifier_kind="HttpRangeChecksum",
-            evidence_error_detail="HEAD timeout after 30s",
-        ),
+        _command(dataset_id, distribution_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -24,13 +24,16 @@ primitive and does no peer loads (no cross-BC cascade per
 [[project-dataset-demote-design]] lock).
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from types import SimpleNamespace
 from uuid import UUID
 
+from cora.data.adapters.http_range_checksum import HttpRangeChecksumAdapter
 from cora.data.adapters.in_memory_distribution_lookup import (
     InMemoryDistributionLookup,
 )
+from cora.data.adapters.posix_checksum import PosixChecksumAdapter
 from cora.data.adapters.postgres_distribution_lookup import (
     PostgresDistributionLookup,
 )
@@ -53,6 +56,7 @@ from cora.data.features import (
     seal_edition,
     withdraw_edition,
 )
+from cora.data.ports.checksum_verifier import ChecksumVerifier
 from cora.data.ports.distribution_lookup import DistributionLookup
 from cora.data.ports.edition_serializer import EditionSerializer
 from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
@@ -104,6 +108,25 @@ def _build_persistent_identifier_minter() -> PersistentIdentifierMinter:
     return StubPersistentIdentifierMinter()
 
 
+def _build_checksum_verifiers(deps: Kernel) -> Mapping[str, ChecksumVerifier]:
+    """Per-scheme ChecksumVerifier map for `record_attestation`.
+
+    http/https -> `HttpRangeChecksumAdapter` (always). file:// ->
+    `PosixChecksumAdapter` only when `posix_checksum_roots` is configured;
+    with no roots the deployment cannot reach local bytes, so a file:// URI
+    is absent from the map and the handler raises
+    `ChecksumVerifierUnsupportedSchemeError` (HTTP 400). A scheme not in the
+    map means "no verifier for this scheme yet" (globus / s3 stay deferred
+    per the rule-of-three; see `cora.data.ports.checksum_verifier`).
+    """
+    http = HttpRangeChecksumAdapter()
+    verifiers: dict[str, ChecksumVerifier] = {"http": http, "https": http}
+    roots = deps.settings.posix_checksum_roots
+    if roots:
+        verifiers["file"] = PosixChecksumAdapter(allowed_roots=roots)
+    return verifiers
+
+
 def wire_data(deps: Kernel) -> DataHandlers:
     """Build the Data BC handlers from shared dependencies."""
     # Attach BC-local adapters BEFORE binding handlers that read them.
@@ -118,6 +141,7 @@ def wire_data(deps: Kernel) -> DataHandlers:
                 distribution_lookup=_build_distribution_lookup(deps),
                 edition_serializers=_build_edition_serializers(),
                 persistent_identifier_minter=_build_persistent_identifier_minter(),
+                checksum_verifiers=_build_checksum_verifiers(deps),
             ),
         )
     return DataHandlers(

@@ -1,11 +1,14 @@
 """Unit tests for the ``record_attestation`` application handler.
 
-Mirror of ``register_distribution`` handler test shape: VOs validated,
-authz called, idempotency-not-tested (wire decorator's job),
-cross-aggregate context loaded from a real in-memory event store.
+The handler is verifier-port-driven: it dispatches on the Distribution URI
+scheme to a ChecksumVerifier, walks the bytes, and records the computed
+outcome. These tests inject the in-module verifier stubs via a
+``deps.data.checksum_verifiers`` map (the BC-local adapter namespace
+``wire_data`` would otherwise build) so no real I/O runs.
 """
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
@@ -14,6 +17,8 @@ from cora.data import DataHandlers, UnauthorizedError, wire_data
 from cora.data.aggregates.attestation import (
     AttestationDistributionNotFoundError,
     AttestationKindNotYetSupportedError,
+    AttestationKindRequiresDistributionError,
+    AttestationTreeChecksumNotYetSupportedError,
 )
 from cora.data.aggregates.dataset import DatasetNotFoundError
 from cora.data.aggregates.dataset.events import (
@@ -36,13 +41,22 @@ from cora.data.aggregates.distribution.events import (
 )
 from cora.data.features import record_attestation
 from cora.data.features.record_attestation import RecordAttestation
+from cora.data.ports.checksum_verifier import (
+    AlwaysMatchingChecksumVerifier,
+    AlwaysMismatchingChecksumVerifier,
+    AlwaysUnreachableChecksumVerifier,
+    ChecksumVerifier,
+    ChecksumVerifierUnsupportedSchemeError,
+)
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
+from cora.infrastructure.kernel import Kernel
 from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps
 
 _GOOD_SHA = "a" * 64
 _OTHER_SHA = "b" * 64
+_MISMATCH_SHA = "f" * 64  # AlwaysMismatchingChecksumVerifier's fixed digest
 _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
 _ATTESTATION_ID = UUID("01900000-0000-7000-8000-00000000a771")
 _REG_EVENT_ID = UUID("01900000-0000-7000-8000-00000000a772")
@@ -52,22 +66,32 @@ _DATASET_ID = UUID("01900000-0000-7000-8000-00000000da7a")
 _DISTRIBUTION_ID = UUID("01900000-0000-7000-8000-0000000d1571")
 _SUPPLY_ID = UUID("01900000-0000-7000-8000-000000005519")
 
+_HTTPS_URI = "https://store.example/data/k.h5"
+
 
 def _good_command(**overrides: object) -> RecordAttestation:
     base: dict[str, object] = {
         "dataset_id": _DATASET_ID,
         "distribution_id": _DISTRIBUTION_ID,
         "kind": "ChecksumVerified",
-        "outcome": "Match",
-        "evidence_expected_checksum": _GOOD_SHA,
-        "evidence_computed_checksum": _GOOD_SHA,
-        "evidence_algorithm": "sha256",
-        "evidence_verifier_supply_id": _SUPPLY_ID,
-        "evidence_verifier_kind": "HttpRangeChecksum",
-        "evidence_error_detail": None,
     }
     base.update(overrides)
     return RecordAttestation(**base)  # type: ignore[arg-type]
+
+
+def _bind(
+    deps: Kernel,
+    *,
+    verifier: ChecksumVerifier | None = None,
+    scheme: str = "https",
+) -> record_attestation.Handler:
+    """Attach a stub verifier map onto deps.data and bind the handler.
+
+    A ``None`` verifier installs an empty map (every scheme unsupported).
+    """
+    verifiers: dict[str, ChecksumVerifier] = {} if verifier is None else {scheme: verifier}
+    object.__setattr__(deps, "data", SimpleNamespace(checksum_verifiers=verifiers))
+    return record_attestation.bind(deps)
 
 
 async def _seed_dataset(
@@ -112,18 +136,21 @@ async def _seed_distribution(
     *,
     dataset_id: UUID = _DATASET_ID,
     checksum_value: str = _GOOD_SHA,
+    checksum_algorithm: str = "sha256",
+    uri: str = _HTTPS_URI,
+    access_protocol: str = "HTTPS",
 ) -> None:
     event = DistributionRegistered(
         distribution_id=distribution_id,
         dataset_id=dataset_id,
         supply_id=_SUPPLY_ID,
-        uri="s3://b/k.h5",
-        checksum_algorithm="sha256",
+        uri=uri,
+        checksum_algorithm=checksum_algorithm,
         checksum_value=checksum_value,
         byte_size=1024,
         media_type="application/x-hdf5",
         conforms_to=frozenset(),
-        access_protocol="S3",
+        access_protocol=access_protocol,
         occurred_at=_NOW,
         registered_by=ActorId(_PRINCIPAL_ID),
     )
@@ -144,16 +171,16 @@ async def _seed_distribution(
     )
 
 
-# ---------- Happy path ----------
+# ---------- Happy paths (verifier-computed outcome) ----------
 
 
 @pytest.mark.unit
-async def test_handler_returns_new_attestation_id_on_success() -> None:
+async def test_handler_returns_new_attestation_id_on_match() -> None:
     store = InMemoryEventStore()
     await _seed_dataset(store)
     await _seed_distribution(store)
     deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
-    attestation_id = await record_attestation.bind(deps)(
+    attestation_id = await _bind(deps, verifier=AlwaysMatchingChecksumVerifier())(
         _good_command(),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -162,12 +189,12 @@ async def test_handler_returns_new_attestation_id_on_success() -> None:
 
 
 @pytest.mark.unit
-async def test_handler_appends_attestation_recorded_event_with_canonical_payload() -> None:
+async def test_handler_records_computed_match_payload() -> None:
     store = InMemoryEventStore()
     await _seed_dataset(store)
     await _seed_distribution(store)
     deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
-    await record_attestation.bind(deps)(
+    await _bind(deps, verifier=AlwaysMatchingChecksumVerifier())(
         _good_command(),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -185,10 +212,50 @@ async def test_handler_appends_attestation_recorded_event_with_canonical_payload
     assert payload["kind"] == "ChecksumVerified"
     assert payload["outcome"] == "Match"
     assert payload["evidence"]["algorithm"] == "sha256"
+    # The computed digest is CORA's, sourced from the verifier (here the
+    # AlwaysMatching stub returns the Distribution's canonical checksum).
     assert payload["evidence"]["value"] == _GOOD_SHA
     assert payload["evidence"]["verifier_supply_id"] == str(_SUPPLY_ID)
-    assert payload["evidence"]["verifier_kind"] == "HttpRangeChecksum"
+    # verifier_kind records WHICH adapter computed the digest (the stub here).
+    assert payload["evidence"]["verifier_kind"] == "AlwaysMatching"
+    # attested_by is the caller (the operator/agent who asked CORA to verify).
     assert payload["attested_by"] == str(_PRINCIPAL_ID)
+
+
+@pytest.mark.unit
+async def test_handler_records_mismatch_when_verifier_disagrees() -> None:
+    store = InMemoryEventStore()
+    await _seed_dataset(store)
+    await _seed_distribution(store)
+    deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
+    await _bind(deps, verifier=AlwaysMismatchingChecksumVerifier())(
+        _good_command(),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    events, _ = await store.load("Attestation", _ATTESTATION_ID)
+    payload = events[0].payload
+    assert payload["outcome"] == "Mismatch"
+    assert payload["evidence"]["value"] == _MISMATCH_SHA
+
+
+@pytest.mark.unit
+async def test_handler_records_unreachable_when_verifier_cannot_walk() -> None:
+    store = InMemoryEventStore()
+    await _seed_dataset(store)
+    await _seed_distribution(store)
+    deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
+    verifier = AlwaysUnreachableChecksumVerifier(error_detail="HEAD 503")
+    await _bind(deps, verifier=verifier)(
+        _good_command(),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    events, _ = await store.load("Attestation", _ATTESTATION_ID)
+    payload = events[0].payload
+    assert payload["outcome"] == "Unreachable"
+    assert payload["evidence"]["value"] is None
+    assert payload["evidence"]["error_detail"] == "HEAD 503"
 
 
 @pytest.mark.unit
@@ -198,7 +265,7 @@ async def test_handler_propagates_causation_id_to_appended_event() -> None:
     await _seed_dataset(store)
     await _seed_distribution(store)
     deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
-    await record_attestation.bind(deps)(
+    await _bind(deps, verifier=AlwaysMatchingChecksumVerifier())(
         _good_command(),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -206,6 +273,43 @@ async def test_handler_propagates_causation_id_to_appended_event() -> None:
     )
     events, _ = await store.load("Attestation", _ATTESTATION_ID)
     assert events[0].causation_id == causation
+
+
+# ---------- Scheme dispatch ----------
+
+
+@pytest.mark.unit
+async def test_handler_raises_unsupported_scheme_when_no_verifier_for_uri() -> None:
+    store = InMemoryEventStore()
+    await _seed_dataset(store)
+    await _seed_distribution(store, uri="globus://endpoint/data/k.h5", access_protocol="Globus")
+    deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
+    # Only an https verifier is configured; a globus:// Distribution has none.
+    with pytest.raises(ChecksumVerifierUnsupportedSchemeError) as exc:
+        await _bind(deps, verifier=AlwaysMatchingChecksumVerifier(), scheme="https")(
+            _good_command(),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc.value.scheme == "globus"
+    events, _ = await store.load("Attestation", _ATTESTATION_ID)
+    assert events == []
+
+
+@pytest.mark.unit
+async def test_handler_refuses_tree_checksum_distribution() -> None:
+    store = InMemoryEventStore()
+    await _seed_dataset(store)
+    await _seed_distribution(store, checksum_algorithm="sha256-tree")
+    deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
+    with pytest.raises(AttestationTreeChecksumNotYetSupportedError):
+        await _bind(deps, verifier=AlwaysMatchingChecksumVerifier())(
+            _good_command(),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    events, _ = await store.load("Attestation", _ATTESTATION_ID)
+    assert events == []
 
 
 # ---------- Authz ----------
@@ -223,7 +327,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
         deny=True,
     )
     with pytest.raises(UnauthorizedError):
-        await record_attestation.bind(deps)(
+        await _bind(deps, verifier=AlwaysMatchingChecksumVerifier())(
             _good_command(),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
@@ -242,7 +346,7 @@ async def test_handler_raises_kind_not_yet_supported_before_loading_dataset() ->
     # before the Dataset pre-load to avoid information leakage.
     deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
     with pytest.raises(AttestationKindNotYetSupportedError):
-        await record_attestation.bind(deps)(
+        await _bind(deps, verifier=AlwaysMatchingChecksumVerifier())(
             _good_command(kind="FormatValidated"),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
@@ -259,8 +363,21 @@ async def test_handler_raises_dataset_not_found_when_dataset_missing() -> None:
     deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
     missing = uuid4()
     with pytest.raises(DatasetNotFoundError):
-        await record_attestation.bind(deps)(
+        await _bind(deps, verifier=AlwaysMatchingChecksumVerifier())(
             _good_command(dataset_id=missing),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+
+@pytest.mark.unit
+async def test_handler_raises_requires_distribution_when_id_missing() -> None:
+    store = InMemoryEventStore()
+    await _seed_dataset(store)
+    deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
+    with pytest.raises(AttestationKindRequiresDistributionError):
+        await _bind(deps, verifier=AlwaysMatchingChecksumVerifier())(
+            _good_command(distribution_id=None),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -273,7 +390,7 @@ async def test_handler_raises_distribution_not_found_when_missing() -> None:
     # NOTE: no seed_distribution call.
     deps = build_deps(ids=[_ATTESTATION_ID, _REG_EVENT_ID], now=_NOW, event_store=store)
     with pytest.raises(AttestationDistributionNotFoundError):
-        await record_attestation.bind(deps)(
+        await _bind(deps, verifier=AlwaysMatchingChecksumVerifier())(
             _good_command(),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,

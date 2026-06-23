@@ -46,9 +46,10 @@ order is local-and-greppable on the decider source):
       AND ``outcome=Match`` AND ``evidence.computed_checksum !=
       context.distribution.checksum.value`` ->
       ``AttestationChecksumEvidenceMismatchError``.
-  14. (handler) Scheme dispatch happens in the handler when the caller
-      asks for verifier-port-driven recording; this decider takes the
-      command's evidence as authoritative.
+  14. (handler) Scheme dispatch + ``ChecksumVerifier.verify()`` run in the
+      handler, which assembles this ``AttestationRecordingInput`` from the
+      computed result; the decider takes its evidence as authoritative
+      (the cross-checks above are defense-in-depth for an in-process bypass).
   15. Emit ``AttestationRecorded``.
 """
 
@@ -73,7 +74,7 @@ from cora.data.aggregates.attestation import (
     build_checksum_verified_evidence_payload,
 )
 from cora.data.aggregates.dataset import DATASET_CHECKSUM_ALGORITHM_SHA256_TREE
-from cora.data.features.record_attestation.command import RecordAttestation
+from cora.data.features.record_attestation.command import AttestationRecordingInput
 from cora.data.features.record_attestation.context import (
     AttestationRecordingContext,
 )
@@ -99,7 +100,7 @@ _KINDS_REJECTING_DISTRIBUTION: frozenset[AttestationKind] = frozenset(
 
 def decide(
     state: Attestation | None,
-    command: RecordAttestation,
+    command: AttestationRecordingInput,
     *,
     context: AttestationRecordingContext,
     now: datetime,

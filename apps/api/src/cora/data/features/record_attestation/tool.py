@@ -1,26 +1,19 @@
 """MCP tool for the ``record_attestation`` slice.
 
-Surfaces the same handler the REST route uses, exposed as a Model
-Context Protocol tool. The MCP tool flattens the nested ``evidence``
-object into discrete arguments because FastMCP's tool-arg JSON Schema
-is easier for LLM consumers to fill correctly when fields are flat;
-the REST route preserves the nested shape for typed clients.
+Surfaces the same handler the REST route uses, exposed as a Model Context
+Protocol tool. The tool is slim: ``dataset_id`` + ``distribution_id`` +
+``kind``. CORA reads the Distribution's bytes itself and computes the
+checksum, so the caller does not assert an outcome or any evidence.
 """
 
 from collections.abc import Callable
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 from uuid import UUID
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.data.aggregates.attestation import (
-    ATTESTATION_ERROR_DETAIL_MAX_LENGTH,
-    ATTESTATION_VERIFIER_KIND_MAX_LENGTH,
-    AttestationKind,
-    AttestationOutcome,
-)
-from cora.data.aggregates.dataset import DATASET_CHECKSUM_SHA256_HEX_LENGTH
+from cora.data.aggregates.attestation import AttestationKind
 from cora.data.features.record_attestation.command import RecordAttestation
 from cora.data.features.record_attestation.handler import IdempotentHandler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
@@ -40,13 +33,13 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
     @mcp.tool(
         name="record_attestation",
         description=(
-            "Record a new Attestation fact about a Dataset (always) and "
-            "optionally a specific Distribution byte-copy. Today only "
-            "kind='ChecksumVerified' is implemented; the other three kinds "
-            "are reserved. Match/Mismatch outcomes require computed_checksum; "
-            "Unreachable requires error_detail. The decider belt-and-braces "
-            "compares evidence against the Distribution's canonical checksum "
-            "to catch verifier-adapter bugs."
+            "Verify a Distribution's bytes and record an Attestation fact about "
+            "a Dataset (always) and a specific Distribution byte-copy. CORA reads "
+            "the bytes via its checksum verifier (HTTP/HTTPS, or local file:// when "
+            "configured) and computes the digest itself; you do not supply an "
+            "outcome or checksum. Today only kind='ChecksumVerified' is implemented; "
+            "the other three kinds are reserved. A Distribution stored on a scheme "
+            "with no configured verifier is rejected."
         ),
     )
     async def record_attestation_tool(  # pyright: ignore[reportUnusedFunction]
@@ -59,45 +52,9 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             AttestationKind,
             Field(
                 description=(
-                    "What was attested. Closed enum: ChecksumVerified, "
+                    "What to attest. Closed enum: ChecksumVerified, "
                     "FormatValidated, ConformsToValidated, BitRotChecked."
                 )
-            ),
-        ],
-        outcome: Annotated[
-            AttestationOutcome,
-            Field(description=("Verifier outcome. Closed enum: Match, Mismatch, Unreachable.")),
-        ],
-        evidence_expected_checksum: Annotated[
-            str,
-            Field(
-                min_length=DATASET_CHECKSUM_SHA256_HEX_LENGTH,
-                max_length=DATASET_CHECKSUM_SHA256_HEX_LENGTH,
-                pattern="^[0-9a-f]{64}$",
-                description=(
-                    "Canonical 64-char lowercase sha256 hex (the Distribution's expected value)."
-                ),
-            ),
-        ],
-        evidence_algorithm: Annotated[
-            Literal["sha256"],
-            Field(description="Checksum algorithm. Only 'sha256' supported today."),
-        ],
-        evidence_verifier_supply_id: Annotated[
-            UUID,
-            Field(
-                description=(
-                    "Identifies the Supply (or other adapter-resident endpoint) "
-                    "the verifier walked. Forensic provenance."
-                )
-            ),
-        ],
-        evidence_verifier_kind: Annotated[
-            str,
-            Field(
-                min_length=1,
-                max_length=ATTESTATION_VERIFIER_KIND_MAX_LENGTH,
-                description=("Short adapter name (e.g. 'HttpRangeChecksum'). Forensic provenance."),
             ),
         ],
         distribution_id: Annotated[
@@ -105,34 +62,9 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             Field(
                 default=None,
                 description=(
-                    "Identifier of the bound Distribution byte-copy. Required "
-                    "for byte-level kinds; null only for ConformsToValidated."
-                ),
-            ),
-        ] = None,
-        evidence_computed_checksum: Annotated[
-            str | None,
-            Field(
-                default=None,
-                min_length=DATASET_CHECKSUM_SHA256_HEX_LENGTH,
-                max_length=DATASET_CHECKSUM_SHA256_HEX_LENGTH,
-                pattern="^[0-9a-f]{64}$",
-                description=(
-                    "Checksum the verifier computed. Required for "
-                    "outcome=Match or outcome=Mismatch; null only for "
-                    "outcome=Unreachable."
-                ),
-            ),
-        ] = None,
-        evidence_error_detail: Annotated[
-            str | None,
-            Field(
-                default=None,
-                min_length=1,
-                max_length=ATTESTATION_ERROR_DETAIL_MAX_LENGTH,
-                description=(
-                    "Human-readable failure summary. Required for "
-                    "outcome=Unreachable; null otherwise."
+                    "Identifier of the bound Distribution byte-copy whose bytes "
+                    "CORA reads and checksums. Required for byte-level kinds; "
+                    "null only for ConformsToValidated."
                 ),
             ),
         ] = None,
@@ -143,13 +75,6 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 dataset_id=dataset_id,
                 distribution_id=distribution_id,
                 kind=kind.value,
-                outcome=outcome.value,
-                evidence_expected_checksum=evidence_expected_checksum,
-                evidence_computed_checksum=evidence_computed_checksum,
-                evidence_algorithm=evidence_algorithm,
-                evidence_verifier_supply_id=evidence_verifier_supply_id,
-                evidence_verifier_kind=evidence_verifier_kind,
-                evidence_error_detail=evidence_error_detail,
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

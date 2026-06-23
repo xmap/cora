@@ -1,23 +1,25 @@
 """Contract tests for ``POST /attestations``.
 
-Genesis create-style endpoint. Body carries dual binding (dataset_id
-always; distribution_id optional), kind/outcome closed enums, and a
-nested evidence object discriminated by kind.
+Genesis create-style endpoint. The body is slim: ``dataset_id`` (always),
+``distribution_id`` (optional), and ``kind``. CORA computes the checksum
+itself, so the request carries no outcome or evidence.
 
 ## Scope
 
-In a TestClient app the Distribution stream is not pre-seeded;
-without manual seeding the handler's distribution_id pre-load returns
-None. We exercise:
+In a TestClient app the Distribution stream is not pre-seeded (the
+in-memory SupplyLookup stub cannot resolve a Supply, so a Distribution
+cannot be registered without Postgres). We exercise the boundary reachable
+in-memory:
 
   - 404: dataset_id never seeded; distribution_id never seeded.
   - 400: kind not yet supported (handler-tier rejection).
-  - 422: Pydantic schema failures (unknown kind, unknown outcome,
-         missing required evidence field, malformed checksum hex,
-         extra top-level key).
+  - 422: Pydantic schema failures (unknown kind, extra top-level key,
+         invalid UUID).
+
+The verifier-driven paths (Match/Mismatch/Unreachable, unsupported-scheme
+400) require a real Distribution and are covered by the integration suite.
 """
 
-from typing import cast
 from uuid import uuid4
 
 import pytest
@@ -53,14 +55,6 @@ def _good_body(
         "dataset_id": dataset_id or str(uuid4()),
         "distribution_id": distribution_id or str(uuid4()),
         "kind": "ChecksumVerified",
-        "outcome": "Match",
-        "evidence": {
-            "algorithm": "sha256",
-            "expected_checksum": _GOOD_SHA,
-            "computed_checksum": _GOOD_SHA,
-            "verifier_supply_id": str(uuid4()),
-            "verifier_kind": "HttpRangeChecksum",
-        },
     }
     base.update(overrides)
     return base
@@ -125,64 +119,10 @@ def test_post_attestations_rejects_unknown_kind_with_422() -> None:
 
 
 @pytest.mark.contract
-def test_post_attestations_rejects_unknown_outcome_with_422() -> None:
-    with TestClient(create_app()) as client:
-        response = client.post(
-            "/attestations",
-            json=_good_body(outcome="Pending"),
-        )
-    assert response.status_code == 422
-
-
-@pytest.mark.contract
-def test_post_attestations_rejects_missing_expected_checksum_with_422() -> None:
-    with TestClient(create_app()) as client:
-        body = _good_body()
-        evidence = cast("dict[str, object]", dict(body["evidence"]))  # type: ignore[arg-type]
-        del evidence["expected_checksum"]
-        body["evidence"] = evidence
-        response = client.post("/attestations", json=body)
-    assert response.status_code == 422
-
-
-@pytest.mark.contract
-def test_post_attestations_rejects_malformed_expected_checksum_with_422() -> None:
-    with TestClient(create_app()) as client:
-        body = _good_body()
-        evidence = cast("dict[str, object]", dict(body["evidence"]))  # type: ignore[arg-type]
-        evidence["expected_checksum"] = "not-hex"
-        body["evidence"] = evidence
-        response = client.post("/attestations", json=body)
-    assert response.status_code == 422
-
-
-@pytest.mark.contract
-def test_post_attestations_rejects_uppercase_checksum_hex_with_422() -> None:
-    with TestClient(create_app()) as client:
-        body = _good_body()
-        evidence = cast("dict[str, object]", dict(body["evidence"]))  # type: ignore[arg-type]
-        evidence["expected_checksum"] = "A" * 64
-        body["evidence"] = evidence
-        response = client.post("/attestations", json=body)
-    assert response.status_code == 422
-
-
-@pytest.mark.contract
 def test_post_attestations_rejects_extra_top_level_field_with_422() -> None:
     with TestClient(create_app()) as client:
         body = _good_body()
         body["extra_field"] = "boom"
-        response = client.post("/attestations", json=body)
-    assert response.status_code == 422
-
-
-@pytest.mark.contract
-def test_post_attestations_rejects_extra_evidence_field_with_422() -> None:
-    with TestClient(create_app()) as client:
-        body = _good_body()
-        evidence = cast("dict[str, object]", dict(body["evidence"]))  # type: ignore[arg-type]
-        evidence["unknown_key"] = "boom"
-        body["evidence"] = evidence
         response = client.post("/attestations", json=body)
     assert response.status_code == 422
 
