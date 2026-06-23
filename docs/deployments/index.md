@@ -4,12 +4,13 @@
 
 A deployment is a beamline pilot: one instrument where the recipe ladder, BCs, and trust boundaries meet real users. Vertical before horizontal. CORA's domain model only contains what at least one real deployment forced into it; until a beamline demands a shape, the shape stays out.
 
-CORA's operational pilot today is 2-BM, a bending-magnet micro-CT beamline at APS. Two further deployments are in the design phase, each modelled from its design report ahead of construction, so their pages describe an intended shape, not a running instrument: TomoWise at MAX IV (a new Site) and 19-BM-FACT at APS (a second beamline at the existing Site). These pages are framed from the beamline outward: the beamline first, then the facility it runs at.
+CORA's operational pilot today is 2-BM, a bending-magnet micro-CT beamline at APS. Three more deployments are in the design phase, each modelled from its design report ahead of construction, so their pages describe an intended shape, not a running instrument: TomoWise at MAX IV (a new Site), 7-BM at APS (a multi-technique flow and combustion imaging beamline being recommissioned for APS-U), and 19-BM-FACT at APS (a bending-magnet autonomous high-throughput tomography beamline). These pages are framed from the beamline outward: the beamline first, then the facility it runs at.
 
 | Beamline | Site | Status |
 | --- | --- | --- |
 | [2-BM](2-bm/index.md) | [APS](aps/index.md), Argonne | Pilot |
 | [TomoWise](tomowise/index.md) | [MAX IV](maxiv/index.md), Lund | In design |
+| [7-BM](7-bm/index.md) | [APS](aps/index.md), Argonne | In design |
 | [19-BM](19-bm/index.md) | [APS](aps/index.md), Argonne | In design |
 
 ## The facilities

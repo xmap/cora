@@ -1,0 +1,287 @@
+# CORA Beamline descriptor: 7-BM (APS), design phase
+#
+# 7-BM is a multi-technique flow and combustion imaging beamline at the APS
+# (Argonne). It is bound to the APS Site (deployments/aps/site.yaml), the same
+# Site the operational 2-BM pilot runs at; 7-BM is a separate beamline in its
+# own sector, not a part of 2-BM.
+#
+# STATUS: design phase. 7-BM is being recommissioned for APS-U and its operations
+# documentation is partial (the source xray-imaging/7bm-docs has empty technique
+# stubs and "to be completed once APS-U operation starts" sections). So this file
+# is a SHAPE, not a commissioned record: every device carries `new: true` (not yet
+# modelled in CORA) and `confirm: true` (a value taken from the 7-BM docs or
+# inferred, to be verified by 7-BM staff). No `model` is bound (vendors are named
+# in the docs but not procured into CORA's catalog), and no `pv` handle is invented.
+#
+# What makes 7-BM a different shape from 2-BM, the questions it raises, and what
+# CORA reuses unchanged are written up in docs/deployments/7-bm/. Items deferred to
+# staff are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/7-bm/questions.md.
+#
+# Two things this scaffold does NOT do, on purpose:
+#   - No z positions. The 7-BM docs carry no beam-layout table, so z_span_mm and
+#     per-device z_mm are omitted rather than invented (contrast TomoWISE, whose
+#     TDR gave z values).
+#   - No new catalog Families. The genuinely-new device anatomies (the chopper, the
+#     flow controllers, the point and energy-dispersive detectors) are bound to
+#     loose design-intent family names that render as plain text, exactly as
+#     TomoWISE bound HeatAbsorber / SlipRing; each is tagged with the open question
+#     that decides whether it is earned into the catalog or folds into an existing
+#     Family plus settings.
+
+beamline:
+  name: "7-BM"
+  facility: aps                 # APS, a Site-level Facility (facility_code: aps)
+  sector: "Sector 7"            # organizational label, not a registered asset today
+  tier: Unit
+  parent: null
+  source: bending-magnet
+  source_confirm: "historically a bending-magnet source; the post-APS-U source for 7-BM is not stated in the docs (SRC-1)"
+
+enclosures:
+  # Two access-gated hutches. 7-BM-A holds the conditioning optics; 7-BM-B is the
+  # experiment hutch (flow, combustion, the endstations and detectors). The PSS
+  # permit signals are APS facility signals, not named in the 7-BM docs (PSS-1).
+  - name: 7-BM-A
+    role: optics-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure permit signal for 7-BM-A, to be named (PSS-1)"}
+  - name: 7-BM-B
+    role: experiment-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure permit signal for 7-BM-B, to be named (PSS-1)"}
+
+# ===========================================================================
+# The beam path: source -> sample -> detection
+# ===========================================================================
+
+front-end:
+  stage: source
+  enclosure: 7-BM-A
+  intro: "The source and the first station shutter that admits beam to the optics hutch."
+  note: >
+    7-BM runs white, monochromatic, and focused beam in different modes; the beam
+    mode is a per-technique choice, not a fixed property of the source (BEAM-1).
+    The source itself is carried loosely as the bending-magnet beam, mirroring the
+    2-BM source representation, never a catalog Family.
+  devices:
+    - name: Source
+      family: Beam
+      new: true
+      confirm: true
+      note: "the storage-ring source feeding 7-BM; bending-magnet historically, post-APS-U source to confirm (SRC-1)"
+    - name: StationShutterA
+      family: Shutter
+      new: true
+      confirm: true
+      note: "7-BM-A station shutter; closed before the filters are moved (optics.rst)"
+
+beam-conditioning:
+  stage: source
+  enclosure: 7-BM-A
+  intro: "The filters, chopper, and white-beam slits that shape the white beam and manage its heat load before the optics."
+  note: >
+    White-beam heat load is a 7-BM-specific concern absent at the monochromatic
+    2-BM pilot: prolonged white beam cracks scintillators and damages samples, so
+    filtering and the rotary chopper duty-cycle reduction are routine mitigations.
+  devices:
+    - name: Filters
+      family: Filter
+      new: true
+      confirm: true
+      note: "water-cooled filter set in 7-BM-A; two filter units, up to two filters at once (optics.rst)"
+    - name: Chopper
+      family: Chopper
+      new: true
+      confirm: true
+      note: >
+        rotary chopper: two notched copper disks on a stepper (Motor 27), two
+        notches per disk so the beam transmits twice per rotation; relative disk
+        rotation sets the duty cycle; a 12 VDC photoeye picks off position and feeds
+        DG645 #2. Reduces white-beam duty cycle to protect samples and scintillators.
+        Bound to a loose Chopper family pending the decision on whether this is a new
+        catalog Family or an existing Shutter / RotaryStage plus settings (CHOP-1).
+    - name: WhiteBeamSlit
+      family: Slit
+      new: true
+      confirm: true
+      note: "white-beam slits; horizontal centre and size are repositioned per monochromator stripe (optics.rst)"
+
+optics:
+  stage: source
+  enclosure: 7-BM-A
+  intro: "The energy-selecting and focusing optics that condition the beam delivered to the experiment hutch."
+  note: >
+    Which of these optics sit in the routine pilot path, and the dual-energy
+    split-stripe mode of the monochromator, are open (OPT-1). The polycapillary
+    optics (for confocal fluorescence) and the channel-cut calibration crystals
+    named in the docs are deferred until a confirmed technique needs them, and are
+    not modelled here.
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      new: true
+      confirm: true
+      note: "double multilayer monochromator (DMM), 6 to 18 keV; two Rigaku-coated Si substrates with three stripes (2.0 nm, 3.5 nm, split mixed) (optics.rst)"
+    - name: MultilayerMirror
+      family: Mirror
+      new: true
+      confirm: true
+      note: "7-BM-B single-bounce multilayer mirror; 2.1 nm and 4.0 nm coatings on a 200 mm Si substrate; white-beam mode, requires hutch DI cooling water (optics.rst)"
+    - name: FocusingMirrors
+      family: Mirror
+      new: true
+      confirm: true
+      note: "Kirkpatrick-Baez focusing mirror pair (IDT, Si, Rh-coated, dynamically bendable); monochromatic focused-beam mode, requires a helium purge (optics.rst)"
+
+safety-shutters:
+  stage: source
+  enclosure: 7-BM-A
+  intro: "The safety shutter gating the beam between the optics hutch and the experiment hutch."
+  note: "PSS permit signals are APS facility signals, not named in the docs (PSS-1)."
+  devices:
+    - name: SafetyShutter
+      family: Shutter
+      new: true
+      confirm: true
+      note: "safety shutter gating beam from 7-BM-A into the 7-BM-B experiment hutch"
+
+sample-environment:
+  stage: sample
+  enclosure: 7-BM-B
+  intro: "The sample stage in the experiment hutch: tomography rotation and sample positioning, the energy-dispersive gauge slits, and the flow / combustion sample environment that distinguishes 7-BM."
+  note: >
+    7-BM hosts several techniques over partly-shared, partly-distinct sample-side
+    apparatus (TECH-1). The flow and combustion sample environment (compressed-air
+    plant, vacuum, process gases) is a 7-BM-specific axis the 2-BM pilot has nothing
+    like; the continuously-available services are carried as Supplies in `resources`
+    below, and the settable flow control as a device here. The combustion / spray
+    rig itself is not modelled until staff confirm an installed device (ENV-1).
+  devices:
+    - name: TomographyRotation
+      family: RotaryStage
+      new: true
+      confirm: true
+      note: "sample rotation for tomography; tomoScan-driven, the same scanning engine 2-BM uses"
+    - name: SamplePositioning
+      family: LinearStage
+      new: true
+      confirm: true
+      note: "sample centring and translation stage"
+    - name: EDDSlit
+      family: Slit
+      new: true
+      confirm: true
+      note: "energy-dispersive-diffraction gauge-volume slits; two tungsten-carbide blocks 511 mm apart, curved for a 3 degree full scattering angle at 150 mm working distance (edd.rst)"
+    - name: FlowController
+      family: FlowController
+      new: true
+      confirm: true
+      note: >
+        Sierra Smart-Trak mass-flow controllers (three units; Kr / N2 ranges) metering
+        process gas to the flow and combustion experiments. A SETTABLE actuator with a
+        commanded setpoint and a flow readback, unlike any 2-BM device. Whether CORA
+        commands the setpoint (versus reading it back only), and whether a FlowController
+        Family is earned versus deferred, are open (FLOW-1).
+
+# ===========================================================================
+# Detection: the multiple detector modalities 7-BM runs
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 7-BM-B
+  intro: "7-BM runs several detector modalities, not the single 2D camera path of the 2-BM micro-CT pilot: an indirect-imaging camera for tomography, a high-speed movie camera, a point photodiode for time-resolved radiography, and an energy-dispersive detector for diffraction."
+  note: >
+    The tomography path (scintillator plus visible optics plus area camera) reuses the
+    2-BM detector shape and could later compose the cross-facility Microscope Assembly;
+    it is left as plain devices in this scaffold. The point photodiode and the
+    energy-dispersive detector both present the Sensor Role (a scalar or short-vector
+    Reading, not a 2D frame); they are bound to loose family names pending the decision
+    on whether each is a new catalog Family or a deployment-local Sensor device.
+  devices:
+    - name: Scintillator
+      family: Scintillator
+      new: true
+      confirm: true
+      note: "scintillator crystal for indirect x-ray imaging; subject to thermal cracking under white beam (high_speed_imaging.rst)"
+    - name: TomographyCamera
+      family: Camera
+      new: true
+      confirm: true
+      note: "area camera coupled to the scintillator through visible optics for tomography and radiographic imaging"
+    - name: HighSpeedCamera
+      family: Camera
+      new: true
+      confirm: true
+      note: >
+        high-speed movie camera (Photron Nova S16 in the docs); captures short movie
+        bursts, one per chopper opening, hardware-gated by the DG645 timing chain and
+        optionally synced to the storage ring at 271 kHz. The acquisition unit (one
+        burst as one Run / Dataset) and top-up blanking are open (HSI-1).
+    - name: Photodiode
+      family: Photodiode
+      new: true
+      confirm: true
+      note: >
+        PIN photodiode for time-resolved radiography (focused beam, ~8 keV); presents the
+        Sensor Role (a scalar intensity Reading), read out through a high-speed digitizer
+        (ADQ14) or oscilloscope plus the DataGrabber program, not as a camera frame. The
+        detector Family question and the data unit (one trace as one Dataset) are open (RAD-1).
+    - name: EnergyDispersiveSpectrometer
+      family: EnergyDispersiveSpectrometer
+      new: true
+      confirm: true
+      note: >
+        germanium energy-dispersive detector for energy-dispersive diffraction; records a
+        per-photon energy spectrum (an MCA histogram), not a 2D frame, and presents the
+        Sensor Role. Whether this is the same physical detector as the fluorescence MCA,
+        and whether it is a new Family or a deployment-local Sensor device, are open (DET-1).
+
+# Cross-cutting timing and triggering. 7-BM's floor carries several technique-specific
+# orchestrators (tomoScan, DataGrabber, the ADQ14 Python scripts, the EPICS scan
+# record, the high-speed-imaging string sequence); these are control-system software,
+# listed here for the record, not modelled as CORA Assets.
+controls:
+  intro: >
+    Timing and synchronization run on two Stanford DG645 delay generators plus a
+    softGlue FPGA, referenced to the storage-ring P0 signal from the Machine Status
+    Link, with a top-up inhibit that vetoes acquisition during ring top-up. EPICS PV
+    handles are not invented here (CTRL-1).
+  triggering:
+    - name: Timing
+      family: TimingController
+      new: true
+      confirm: true
+      note: >
+        two Stanford DG645 delay generators (one ring-synced at 271 kHz, one delaying the
+        chopper-to-camera trigger) plus a softGlue FPGA and the Machine Status Link P0
+        reference; a top-up inhibit signal vetoes data during ring top-up. Modelled as one
+        TimingController carrying the scheme, mirroring the 2-BM Timing device (TIMING-1).
+  software_iocs_not_modeled:
+    - "tomoScan: the tomography scanning engine (single / vertical / horizontal / mosaic), shared with 2-BM"
+    - "DataGrabber: Java oscilloscope driver for time-resolved radiography, handshaking over the EPICS busy record 7bmb1:rad:get_data"
+    - "ADQ14 acquisition: custom Python (scan_script2.py) bridging the EPICS scan record to the digitizer soft IOC"
+    - "EPICS scan record: the step-scanning framework (linear / table / relative, daisy-chained for multidimensional scans)"
+    - "high-speed-imaging string sequence: sequences the chopper-gated movie-burst acquisition"
+    - "RecordSaver: EPICS record save and restore by PV prefix"
+    - "DMagic / APS Data Management: data movement and the scheduling-system bridge"
+
+# Continuously-available facility resources a run draws on. The flow and combustion
+# utilities (compressed air, vacuum, process gas) are the 7-BM-specific additions over
+# the 2-BM supply set; all carried pending confirmation in the design phase.
+resources:
+  intro: >
+    The continuously-available facility resources a 7-BM run needs present before it can
+    start. The compressed-air plant, the vacuum system, and the process gases serve the
+    flow and combustion experiments and have no 2-BM analogue.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CompressedAir
+      note: "high-volume compressed-air plant (Kaeser BS61 compressor, accumulator tanks, electronic regulator) for flow and combustion (flow_infrastructure.rst)"
+    - kind: Vacuum
+      note: "high-volume vacuum system, two rotary-claw pumps (flow_infrastructure.rst)"
+    - kind: ProcessGas
+      note: "He / N2 / Ar / Kr cylinders, with a ventilated flammable-gas cabinet (safety, operations)"
+    - kind: CoolingWater
+      note: "hutch DI cooling water for the multilayer mirror and filters"

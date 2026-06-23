@@ -8,16 +8,19 @@ authors = [{ name = "Doga Gursoy" }]
 license = { text = "Apache-2.0" }
 
 dependencies = [
-    "fastapi>=0.136.3,<0.137",
+    "fastapi>=0.138.0,<0.139",
     "asyncpg>=0.31.0,<0.32",
     "pydantic>=2.13.4,<3",
-    "pydantic-settings>=2.14.1,<3",
-    "mcp>=1.27.2,<2",
+    "pydantic-settings>=2.14.2,<3",
+    "mcp>=1.28.0,<2",
     "uvicorn[standard]>=0.49.0",
     "structlog>=26.1.0",
-    "uuid-utils>=0.16.0",
+    "uuid-utils>=0.16.2",
     "prometheus-client>=0.21.0,<1",
-    "prometheus-fastapi-instrumentator>=7.0.0,<8",
+    # 8.x is the first release that handles FastAPI 0.138's lazy
+    # include_router routing (the `_IncludedRouter` BaseRoute carries no
+    # `.path`); 7.x raises AttributeError per-request under 0.138.
+    "prometheus-fastapi-instrumentator>=8.0.1,<9",
     # OpenTelemetry: api/sdk are 1.x stable; instrumentations and semconv
     # ship as 0.x companions on the same release cadence (0.62b1 ↔ 1.41.1
     # at time of pin). Pin api/sdk to <2 (next major would be breaking);
@@ -35,7 +38,7 @@ dependencies = [
     # subscribers + tests use the port + `FakeLLM`. Pin <1 to flag a future
     # major SDK shift in CI
     # before it lands silently.
-    "anthropic>=0.109.1,<1",
+    "anthropic>=0.111.0,<1",
     # cryptography: explicit top-level floor pin. Previously pulled
     # transitively at 48.x via pyjwt[crypto]. Pinned explicitly to
     # >=46,<47 ahead of the federation wire-tier adapters (python-cwt
@@ -76,14 +79,21 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.3,<10",
+    "pytest>=9.1.1,<10",
     "pytest-asyncio>=1.4.0,<2",
     "pytest-cov>=7.1.0,<8",
     "coverage[toml]>=7.14.1,<8",
     "diff-cover>=10.3.0,<11",
-    "ruff>=0.15.17,<0.16",
+    "ruff>=0.15.18,<0.16",
     "pyright>=1.1.410,<2",
     "httpx>=0.28.0",
+    # httpx2: starlette 1.x routes its TestClient through httpx2 (it does
+    # `import httpx2 as httpx` under TYPE_CHECKING), so without it pyright
+    # resolves every client.post/.json/.status_code to Unknown and the
+    # strict-typing gate fails across the contract suite. Runtime also warns
+    # and prefers httpx2 when present. src/ keeps the httpx pin above (two
+    # adapters import httpx directly).
+    "httpx2>=2.4.0,<3",
     "asgi-lifespan>=2.1.0,<3",
     "pre-commit>=4.0.0,<5",
     "testcontainers[postgres]>=4.14.2,<5",
@@ -128,7 +138,7 @@ dev = [
     # tests/conftest.py and auto-activates on CI=true to derandomize the seed
     # and disable the local example database, sidestepping xdist seed
     # collisions across worker processes.
-    "hypothesis>=6.155.2,<7",
+    "hypothesis>=6.155.7,<7",
     # hypothesis-jsonschema: Hypothesis strategy builder driven by JSON
     # Schema documents. Used by `tests/contract/test_mcp_tools_fuzz.py`
     # (Iter H of the testing-techniques rollout) to generate
