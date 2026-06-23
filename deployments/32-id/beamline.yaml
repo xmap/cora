@@ -148,7 +148,7 @@ optics-hutch:
       new: true
       confirm: true
       note: "white-beam stop positioned and locked per mode change (safety_001); loose Family pending the passive beam-path tier"
-    - name: MonoBeamStop
+    - name: MonochromaticBeamStop
       family: BeamStop
       new: true
       confirm: true
@@ -201,7 +201,7 @@ txm-endstation:
       confirm: true
       note: "sample centring and alignment stack (Kohzu assumed); axes and travel unconfirmed (TXM-1)"
     - name: Condenser
-      family: CondenserOptic
+      family: Condenser
       new: true
       confirm: true
       note: "beam-condensing optic upstream of the sample (capillary or condenser zone plate); type unconfirmed (OPTICS-1). Loose Family"

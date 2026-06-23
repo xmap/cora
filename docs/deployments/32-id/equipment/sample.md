@@ -13,7 +13,7 @@ The stack, base to sample (containment, `Asset.parent_id`). The precise sub-orde
 ```
 32-ID  (Unit, Asset)
 └── TXMGranite  (Component, Family Table; granite sample-and-optic support, 32-ID-C)
-    ├── Condenser  (Device, loose Family CondenserOptic; conditions the beam onto the sample)
+    ├── Condenser  (Device, loose Family Condenser; conditions the beam onto the sample)
     ├── TXMRotary  (Device, RotaryStage; tomographic rotation)
     │   └── TXMSamplePositioning  (Device, LinearStage; sample centring, co-rotates)
     ├── ZonePlate  (Device, loose Family ZonePlate; objective, forms the magnified image)
@@ -29,7 +29,7 @@ The in-house nano-tomography instrument: a Fresnel zone plate magnifies the tran
 | `TXMGranite` | `Table` | granite stage support carrying the TXM sample system and optics |
 | `TXMRotary` | `RotaryStage` | tomographic rotation axis; model and encoder unconfirmed (`TXM-1`) |
 | `TXMSamplePositioning` | `LinearStage` | sample centring and alignment stack; axes and travel unconfirmed (`TXM-1`) |
-| `Condenser` | `CondenserOptic` (loose) | beam-condensing optic; capillary or condenser zone plate, unconfirmed (`OPTICS-1`) |
+| `Condenser` | `Condenser` (loose) | beam-condensing optic; capillary or condenser zone plate, unconfirmed (`OPTICS-1`) |
 | `ZonePlate` | `ZonePlate` (loose) | objective Fresnel zone plate; outermost-zone width and diameter unconfirmed (`OPTICS-2`) |
 | `PhaseRing` | `PhaseRing` (loose) | Zernike phase ring; inserted or retracted, details unconfirmed (`OPTICS-3`) |
 

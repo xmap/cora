@@ -20,12 +20,12 @@ Root Asset `32-ID` (`tier = Unit`, `facility_code = aps`); sub-systems nest belo
 | `WhiteBeamSlit` | `Device` | Slit | JJ X-Ray four-motor compact slits (Beckhoff) |
 | `Monochromator` | `Device` | Monochromator | Si(111) DCM, 7 to 40 keV; bypassed in white-beam mode |
 | `ModeShutter` | `Device` | Shutter | P4-50 mode shutter (white vs mono) |
-| `WhiteBeamStop` / `MonoBeamStop` | `Device` | BeamStop | set and locked per mode change; loose Family |
+| `WhiteBeamStop` / `MonochromaticBeamStop` | `Device` | BeamStop | set and locked per mode change; loose Family |
 | `StationShutter` | `Device` | Shutter | PSS safety shutter into the experimental hutches |
 | `TXMGranite` | `Component` | Table | granite sample-and-optic stage support (32-ID-C) |
 | `TXMRotary` | `Device` | RotaryStage | tomographic rotation axis |
 | `TXMSamplePositioning` | `Device` | LinearStage | sample centring and alignment stack |
-| `Condenser` | `Device` | CondenserOptic | beam-condensing optic; loose Family |
+| `Condenser` | `Device` | Condenser | beam-condensing optic; loose Family |
 | `ZonePlate` | `Device` | ZonePlate | objective Fresnel zone plate; loose Family |
 | `PhaseRing` | `Device` | PhaseRing | Zernike phase ring; loose Family |
 | `TXMDetectorSupport` | `Component` | Table | granite detector support and follower mechanics |
@@ -33,7 +33,7 @@ Root Asset `32-ID` (`tier = Unit`, `facility_code = aps`); sub-systems nest belo
 | `TXMScintillator` | `Device` | Scintillator | X-ray to visible conversion |
 | `TXMCamera` | `Device` | Camera | detector camera |
 
-Families reused from the catalog: `InsertionDevice`, `Mask`, `Slit`, `Monochromator`, `Shutter`, `Table`, `RotaryStage`, `LinearStage`, `Objective`, `Scintillator`, `Camera`. Bound to loose Family strings (not yet in the catalog): `Window`, `BeamStop`, `CondenserOptic`, `ZonePlate`, `PhaseRing`. These are earned into the catalog only when a confirmed device registers and a naming review accepts the name; that does not happen in a design-phase scaffold. `Window` and `BeamStop` are tracked separately under the passive beam-path tier.
+Families reused from the catalog: `InsertionDevice`, `Mask`, `Slit`, `Monochromator`, `Shutter`, `Table`, `RotaryStage`, `LinearStage`, `Objective`, `Scintillator`, `Camera`. Bound to loose Family strings (not yet in the catalog): `Window`, `BeamStop`, `Condenser`, `ZonePlate`, `PhaseRing`. These are earned into the catalog only when a confirmed device registers and a naming review accepts the name; that does not happen in a design-phase scaffold. `Window` and `BeamStop` are tracked separately under the passive beam-path tier.
 
 ## Pending confirmations
 
