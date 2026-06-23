@@ -17,8 +17,8 @@ references back to whatever produced or describes the data.
 
 
 Minimal Dataset: id + name + uri + checksum + byte_size + encoding
-+ optional cross-refs (producing_run_id, subject_id, derived_from)
-+ status (defaults `Registered`).
++ optional cross-refs (producing_run_id, producing_procedure_id,
+subject_id, derived_from) + status (defaults `Registered`).
 
 7a shipped Registered as the genesis state. 7b adds the Discarded
 terminal: a Registered Dataset can transition to Discarded with a
@@ -55,11 +55,15 @@ which the export adapter maps to when one ships.
 
 ## Cross-aggregate references
 
-Three optional refs:
+Four optional refs:
 
   - `producing_run_id: UUID | None`: the Run that produced this
     Dataset. None for externally-sourced data, uploaded reference
     sets, or pre-existing data being newly registered.
+  - `producing_procedure_id: UUID | None`: the conducted Procedure
+    that produced this Dataset (the secondary producer arm; most
+    Datasets come from a Run). None for non-conducted / external
+    Datasets.
   - `subject_id: UUID | None`: the Subject the Dataset is "about."
     None for calibration / dark-field / synthetic data with no
     sample.
