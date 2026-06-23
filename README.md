@@ -167,13 +167,13 @@
 | src/cora/api/\_campaign\_watcher.py                                                      |       61 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_clearance\_expirer.py                                                     |      109 |        1 |       14 |        0 |     99.2% |       297 |
 | src/cora/api/\_clearance\_watcher.py                                                     |       79 |        1 |       22 |        1 |     98.0% |       162 |
-| src/cora/api/\_compute\_runtime.py                                                       |       72 |        6 |        2 |        0 |     91.9% |174-179, 191-192 |
 | src/cora/api/\_conduct\_run\_route.py                                                    |       88 |        3 |       16 |        3 |     94.2% |184, 187, 236 |
 | src/cora/api/\_conduct\_run\_tool.py                                                     |       33 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/\_enclosure\_permit\_observer.py                                            |       61 |        0 |       16 |        0 |    100.0% |           |
 | src/cora/api/\_flag\_watcher.py                                                          |       69 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_inference\_recorder.py                                                    |       19 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/\_procedure\_watcher.py                                                     |       78 |        0 |       22 |        0 |    100.0% |           |
+| src/cora/api/\_reckoner.py                                                               |       72 |        6 |        2 |        0 |     91.9% |174-179, 191-192 |
 | src/cora/api/\_run\_supervisor.py                                                        |      351 |       15 |      142 |       13 |     93.5% |240, 566, 569, 575, 577, 603-604, 733-\>743, 845, 848, 850-851, 853-854, 970-\>939, 1026, 1049 |
 | src/cora/api/errors.py                                                                   |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/main.py                                                                     |      303 |        0 |       26 |        3 |     99.1% |336-\>335, 923-\>928, 930-\>933 |
@@ -1293,7 +1293,7 @@
 | src/cora/infrastructure/event\_payload.py                                                |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/evolver.py                                                       |        6 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/idempotency.py                                                   |       98 |        1 |       38 |        1 |     98.5% |115, 332-\>exit |
-| src/cora/infrastructure/idempotency\_pruner.py                                           |       34 |        1 |        4 |        0 |     97.4% |        95 |
+| src/cora/infrastructure/idempotency\_pruner.py                                           |       34 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/infrastructure/kernel.py                                                        |       25 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/list\_query.py                                                   |       94 |        0 |       30 |        0 |    100.0% |           |
 | src/cora/infrastructure/logging.py                                                       |       18 |        0 |        0 |        0 |    100.0% |           |
@@ -2339,7 +2339,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **48291** | **1020** | **6844** |  **290** | **97.4%** |           |
+| **TOTAL**                                                                                | **48291** | **1019** | **6844** |  **290** | **97.4%** |           |
 
 
 ## Setup coverage badge

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for src/cora/api/_compute_runtime.py: 91.9%</title>
+    <title>Coverage for src/cora/api/_reckoner.py: 91.9%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
@@ -11,7 +11,7 @@
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>api<span class="sep">/</span>_compute_runtime.py</b>:
+            <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>api<span class="sep">/</span>_reckoner.py</b>:
             <span class="pc_cov">91.9%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -62,12 +62,12 @@
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
         </h2>
         <p class="text">
-            <a id="prevFileLink" class="nav" href="z_f875772e35c93dd9__clearance_watcher_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a id="prevFileLink" class="nav" href="z_f875772e35c93dd9__procedure_watcher_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a id="nextFileLink" class="nav" href="z_f875772e35c93dd9__conduct_run_route_py.html">&#xbb; next</a>
+            <a id="nextFileLink" class="nav" href="z_f875772e35c93dd9__run_supervisor_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-22 19:06 +0000
+            created at 2026-06-23 04:45 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -84,7 +84,7 @@
 <main id="source">
     <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Composition-root runtime: conduct a compute Run via ComputePort.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">`ComputeRuntime` is the CONDUCT-side L2 edge runtime for compute Runs,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">`Reckoner` is the CONDUCT-side L2 edge runtime for compute Runs,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">peer to the Operation BC's Procedure `Conductor`. The Conductor drives</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">a Procedure FSM via `ControlPort`; this drives a Run FSM via</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">`ComputePort`. It submits a compute job, awaits its terminal state,</span>&nbsp;</span><span class="r"></span></p>
@@ -163,8 +163,8 @@
     <p class="pln"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="op">@</span><span class="nam">dataclass</span><span class="op">(</span><span class="nam">frozen</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="key">class</span> <span class="nam">ComputeRunResult</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">    <span class="str">"""Outcome of a `ComputeRuntime.conduct` call.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="key">class</span> <span class="nam">ReckonerResult</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">    <span class="str">"""Outcome of a `Reckoner.conduct` call.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="str">    `status` is the job's terminal `ComputeStatus`, or None when the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t"><span class="str">    job never started (submit was rejected / the substrate was</span>&nbsp;</span><span class="r"></span></p>
@@ -187,7 +187,7 @@
     <p class="run"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">        <span class="key">return</span> <span class="nam">self</span><span class="op">.</span><span class="nam">status</span> <span class="key">is</span> <span class="nam">ComputeStatus</span><span class="op">.</span><span class="nam">SUCCEEDED</span> <span class="key">and</span> <span class="nam">self</span><span class="op">.</span><span class="nam">failure</span> <span class="key">is</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t"><span class="key">class</span> <span class="nam">ComputeRuntime</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t"><span class="key">class</span> <span class="nam">Reckoner</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">    <span class="str">"""Drive one compute Run's conduct: submit -> await -> complete | abort."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">    <span class="key">def</span> <span class="nam">__init__</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -210,7 +210,7 @@
     <p class="run run2"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">        <span class="nam">correlation_id</span><span class="op">:</span> <span class="nam">UUID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">        <span class="nam">causation_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">        <span class="nam">surface_id</span><span class="op">:</span> <span class="nam">UUID</span> <span class="op">=</span> <span class="nam">NIL_SENTINEL_ID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">    <span class="op">)</span> <span class="op">-></span> <span class="nam">ComputeRunResult</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">    <span class="op">)</span> <span class="op">-></span> <span class="nam">ReckonerResult</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">        <span class="str">"""Conduct an already-`Running` Run to its terminal via ComputePort.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t"><span class="str">        Submits `job_spec`, awaits the terminal state, and transitions</span>&nbsp;</span><span class="r"></span></p>
@@ -233,7 +233,7 @@
     <p class="run"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">        <span class="key">except</span> <span class="op">(</span><span class="nam">ComputeSubmitRejectedError</span><span class="op">,</span> <span class="nam">ComputeNotAvailableError</span><span class="op">)</span> <span class="key">as</span> <span class="nam">exc</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">            <span class="nam">reason</span> <span class="op">=</span> <span class="nam">_bounded</span><span class="op">(</span><span class="fst">f"</span><span class="fst">compute submit failed: </span><span class="op">{</span><span class="nam">exc</span><span class="op">}</span><span class="fst">"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">            <span class="key">await</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_best_effort_abort</span><span class="op">(</span><span class="nam">run_id</span><span class="op">,</span> <span class="nam">reason</span><span class="op">,</span> <span class="key">None</span><span class="op">,</span> <span class="key">None</span><span class="op">,</span> <span class="nam">envelope</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">            <span class="key">return</span> <span class="nam">ComputeRunResult</span><span class="op">(</span><span class="nam">run_id</span><span class="op">=</span><span class="nam">run_id</span><span class="op">,</span> <span class="nam">status</span><span class="op">=</span><span class="key">None</span><span class="op">,</span> <span class="nam">failure</span><span class="op">=</span><span class="nam">reason</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">            <span class="key">return</span> <span class="nam">ReckonerResult</span><span class="op">(</span><span class="nam">run_id</span><span class="op">=</span><span class="nam">run_id</span><span class="op">,</span> <span class="nam">status</span><span class="op">=</span><span class="key">None</span><span class="op">,</span> <span class="nam">failure</span><span class="op">=</span><span class="nam">reason</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">        <span class="com"># --- await terminal state ---</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">        <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -287,7 +287,7 @@
     <p class="run run2"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">                <span class="op">**</span><span class="nam">envelope</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t">        <span class="key">except</span> <span class="nam">Exception</span> <span class="key">as</span> <span class="nam">exc</span><span class="op">:</span>  <span class="com"># lifecycle handler rejected the complete</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t">            <span class="key">return</span> <span class="nam">ComputeRunResult</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t">            <span class="key">return</span> <span class="nam">ReckonerResult</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t207" href="#t207">207</a></span><span class="t">                <span class="nam">run_id</span><span class="op">=</span><span class="nam">run_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t208" href="#t208">208</a></span><span class="t">                <span class="nam">status</span><span class="op">=</span><span class="nam">status</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t209" href="#t209">209</a></span><span class="t">                <span class="nam">job_id</span><span class="op">=</span><span class="nam">job_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -295,7 +295,7 @@
     <p class="run run2"><span class="n"><a id="t211" href="#t211">211</a></span><span class="t">                <span class="nam">actuation_kind</span><span class="op">=</span><span class="nam">provenance</span><span class="op">.</span><span class="nam">actuation_kind</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t212" href="#t212">212</a></span><span class="t">                <span class="nam">failure</span><span class="op">=</span><span class="nam">_bounded</span><span class="op">(</span><span class="fst">f"</span><span class="fst">complete_run rejected: </span><span class="op">{</span><span class="nam">exc</span><span class="op">}</span><span class="fst">"</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">        <span class="key">return</span> <span class="nam">ComputeRunResult</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">        <span class="key">return</span> <span class="nam">ReckonerResult</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">            <span class="nam">run_id</span><span class="op">=</span><span class="nam">run_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">            <span class="nam">status</span><span class="op">=</span><span class="nam">status</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">            <span class="nam">job_id</span><span class="op">=</span><span class="nam">job_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -310,14 +310,14 @@
     <p class="run run2"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t">        <span class="nam">status</span><span class="op">:</span> <span class="nam">ComputeStatus</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t227" href="#t227">227</a></span><span class="t">        <span class="nam">detail</span><span class="op">:</span> <span class="nam">str</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t228" href="#t228">228</a></span><span class="t">        <span class="nam">envelope</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t229" href="#t229">229</a></span><span class="t">    <span class="op">)</span> <span class="op">-></span> <span class="nam">ComputeRunResult</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t229" href="#t229">229</a></span><span class="t">    <span class="op">)</span> <span class="op">-></span> <span class="nam">ReckonerResult</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t230" href="#t230">230</a></span><span class="t">        <span class="str">"""Capture provenance for a failed job and best-effort abort the Run."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t231" href="#t231">231</a></span><span class="t">        <span class="nam">provenance</span> <span class="op">=</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_compute_port</span><span class="op">.</span><span class="nam">provide_provenance_payload</span><span class="op">(</span><span class="nam">job_id</span><span class="op">,</span> <span class="nam">status</span><span class="op">,</span> <span class="key">None</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t232" href="#t232">232</a></span><span class="t">        <span class="nam">reason</span> <span class="op">=</span> <span class="nam">_bounded</span><span class="op">(</span><span class="nam">detail</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t233" href="#t233">233</a></span><span class="t">        <span class="key">await</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_best_effort_abort</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t234" href="#t234">234</a></span><span class="t">            <span class="nam">run_id</span><span class="op">,</span> <span class="nam">reason</span><span class="op">,</span> <span class="nam">provenance</span><span class="op">.</span><span class="nam">actuation_kind</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span> <span class="nam">str</span><span class="op">(</span><span class="nam">job_id</span><span class="op">)</span><span class="op">,</span> <span class="nam">envelope</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t235" href="#t235">235</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t236" href="#t236">236</a></span><span class="t">        <span class="key">return</span> <span class="nam">ComputeRunResult</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t236" href="#t236">236</a></span><span class="t">        <span class="key">return</span> <span class="nam">ReckonerResult</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">            <span class="nam">run_id</span><span class="op">=</span><span class="nam">run_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t238" href="#t238">238</a></span><span class="t">            <span class="nam">status</span><span class="op">=</span><span class="nam">status</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">            <span class="nam">job_id</span><span class="op">=</span><span class="nam">job_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -373,17 +373,17 @@
     <p class="exc show_exc"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t">    <span class="key">return</span> <span class="nam">trimmed</span><span class="op">[</span><span class="op">:</span> <span class="nam">_REASON_MAX</span> <span class="op">-</span> <span class="num">3</span><span class="op">]</span> <span class="op">+</span> <span class="str">"..."</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span><span class="str">"ComputeRunResult"</span><span class="op">,</span> <span class="str">"ComputeRuntime"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span><span class="str">"Reckoner"</span><span class="op">,</span> <span class="str">"ReckonerResult"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
         <p>
-            <a class="nav" href="z_f875772e35c93dd9__clearance_watcher_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a class="nav" href="z_f875772e35c93dd9__procedure_watcher_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a class="nav" href="z_f875772e35c93dd9__conduct_run_route_py.html">&#xbb; next</a>
+            <a class="nav" href="z_f875772e35c93dd9__run_supervisor_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.2">coverage.py v7.14.2</a>,
-            created at 2026-06-22 19:06 +0000
+            created at 2026-06-23 04:45 +0000
         </p>
     </div>
 </footer>
