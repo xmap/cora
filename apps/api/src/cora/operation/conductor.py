@@ -110,7 +110,6 @@ handler's `Handler` Protocol, not a concrete binding, so tests inject
 a fake without standing up the full handler machinery.
 """
 
-import asyncio
 import contextlib
 import math
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
@@ -119,6 +118,7 @@ from enum import StrEnum
 from typing import Any, Protocol, cast
 from uuid import UUID
 
+from cora.infrastructure.edge_runtime import abort_orphan_on_cancel
 from cora.infrastructure.ports.clock import Clock
 from cora.infrastructure.ports.event_store import ConcurrencyError
 from cora.infrastructure.ports.id_generator import IdGenerator
@@ -905,7 +905,21 @@ class Conductor:
                     message=str(exc),
                 ),
             )
-        try:
+        # Bind the abort handler locally (the guard above proved it non-None)
+        # for the cancel-orphan cleanup. If execute() is cancelled mid-flight
+        # the Procedure is left non-terminal in `Running` with partial step
+        # history; abort_orphan_on_cancel best-effort transitions it to Aborted
+        # then re-raises so the caller's task still sees the cancellation. No
+        # ConductorResult exists on cancellation, so the observed kind is
+        # unrecoverable and the abort records None (a Dataset off a cancelled
+        # conduct carries no proven kind).
+        abort_procedure = self._abort_procedure
+        async with abort_orphan_on_cancel(
+            lambda: abort_procedure(
+                AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
+                **envelope_kwargs,
+            )
+        ):
             result = await self.execute(
                 procedure_id=procedure_id,
                 principal_id=principal_id,
@@ -914,26 +928,6 @@ class Conductor:
                 causation_id=causation_id,
                 surface_id=surface_id,
             )
-        except asyncio.CancelledError:
-            # The execute() call was cancelled mid-flight (caller cancelled
-            # the conducting task or the loop is shutting down). The
-            # Procedure is now in `Running` with partial step history; if
-            # we let the cancellation propagate untouched, the FSM would
-            # be orphaned. Best-effort transition to Aborted so operator
-            # state reflects what happened. Re-raise so the caller's task
-            # still sees the cancellation - this keeps signals + shutdown
-            # behaving normally.
-            with contextlib.suppress(Exception):
-                # No ConductorResult is available on cancellation (execute()
-                # raised before returning), so the observed actuation kind is
-                # unrecoverable here: abort records None. Conservative residual
-                # documented in the activation design; a Dataset off a
-                # cancelled conduct carries no proven kind.
-                await self._abort_procedure(
-                    AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
-                    **envelope_kwargs,
-                )
-            raise
         if result.succeeded:
             try:
                 await self._complete_procedure(
@@ -1059,7 +1053,16 @@ class Conductor:
                     message=str(exc),
                 ),
             )
-        try:
+        # Mirror conduct(): a mid-execute cancellation best-effort aborts so the
+        # FSM is not orphaned in Running, then re-raises. A cancellation is not a
+        # recoverable step failure, so it aborts rather than pausing to Held.
+        abort_procedure = self._abort_procedure
+        async with abort_orphan_on_cancel(
+            lambda: abort_procedure(
+                AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
+                **envelope_kwargs,
+            )
+        ):
             result = await self.execute(
                 procedure_id=procedure_id,
                 principal_id=principal_id,
@@ -1068,16 +1071,6 @@ class Conductor:
                 causation_id=causation_id,
                 surface_id=surface_id,
             )
-        except asyncio.CancelledError:
-            # Mirror conduct(): best-effort abort so the FSM is not orphaned in
-            # Running, then re-raise. A cancellation is not a recoverable step
-            # failure, so it aborts rather than pausing to Held.
-            with contextlib.suppress(Exception):
-                await self._abort_procedure(
-                    AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
-                    **envelope_kwargs,
-                )
-            raise
         actuation_kind = result.actuation_kind.value if result.actuation_kind is not None else None
         if result.succeeded:
             try:

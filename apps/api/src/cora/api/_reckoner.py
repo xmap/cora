@@ -42,11 +42,11 @@ caller starts the Run, then hands its id here to conduct.
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from cora.infrastructure.edge_runtime import abort_orphan_on_cancel
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.ports.compute_port import (
     ArtifactNotFoundError,
@@ -153,15 +153,13 @@ class Reckoner:
 
         # --- await terminal state ---
         try:
-            status = await self._compute_port.await_terminal_state(job_id)
-        except asyncio.CancelledError:
-            # Conduct cancelled mid-flight (caller cancelled the task or
-            # the loop is shutting down). The Run is Running with a job
-            # in an unknown state; best-effort abort so operator state
-            # reflects the cancellation, then re-raise (signals + shutdown
-            # behave normally). Observed kind is unrecoverable here.
-            with contextlib.suppress(Exception):
-                await self._abort_run(
+            # Conduct cancelled mid-flight leaves the Run in `Running` with a
+            # job in an unknown state; abort_orphan_on_cancel best-effort aborts
+            # so operator state reflects the cancellation, then re-raises
+            # (signals + shutdown behave normally). The observed kind is
+            # unrecoverable on cancellation, so the abort records None.
+            async with abort_orphan_on_cancel(
+                lambda: self._abort_run(
                     AbortRun(
                         run_id=run_id,
                         reason="cancelled mid-compute",
@@ -170,7 +168,8 @@ class Reckoner:
                     ),
                     **envelope,
                 )
-            raise
+            ):
+                status = await self._compute_port.await_terminal_state(job_id)
         except ComputeTimeoutError as exc:
             return await self._abort_conduct(
                 run_id, job_id, ComputeStatus.TIMED_OUT, str(exc), envelope
