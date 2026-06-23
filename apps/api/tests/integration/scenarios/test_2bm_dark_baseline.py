@@ -8,7 +8,7 @@ bc_touches: Data, Equipment, Operation, Recipe
 Scenario test for the dark-baseline routine: with the shutter closed,
 acquire a stack of N dark frames, compute a pixel-wise mean + std,
 and register the resulting baseline as a Dataset for downstream
-reconstruction to subtract. Runs after `first_light` but before any
+reconstruction to subtract. Runs after commissioning but before any
 science Run; produces the baseline that every subsequent Run consumes
 to remove detector dark current.
 
@@ -24,10 +24,9 @@ Three firsts in CORA's 2-BM doc tree:
   2. First scenario where a Procedure produces a downstream artifact
      captured as a Dataset, validating the "Procedure logs the
      operator actions; Dataset registers the artifact" pattern.
-  3. First commissioning-phase Procedure that depends on a prior
-     commissioning Procedure (`first_light`). The dependency is a
-     documentation claim on `procedures.md`, not an enforced
-     invariant in code.
+  3. The capture runs after beamline commissioning but before any
+     science Run; that ordering is a documentation claim on
+     `procedures.md`, not an enforced invariant in code.
 
 ## Domain shape (universal across CT facilities)
 
@@ -49,7 +48,7 @@ above ~5x the median std flag pixels to mask in reconstruction.
 
 ## Asset stack (shutter + image chain)
 
-Same as `first_light`: StationShutter, Camera, Scintillator.
+StationShutter, Camera, Scintillator.
 Dark baseline does not move any motors.
 
 ## What this scenario surfaces (gap-finding intent)

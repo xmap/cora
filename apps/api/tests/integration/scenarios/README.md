@@ -11,7 +11,7 @@ A doc page may only name an aggregate that some scenario here has registered. Th
 Where:
 
 - `<beamline-or-facility>` is `aps`, `2bm`, `7bm`, `maxiv`, ... (lowercase, no dashes). It maps directly to `docs/deployments/<beamline-or-facility>/`.
-- `<routine>` is the operator routine in snake_case (`motor_homing`, `alignment_center`, `dark_baseline`, `first_light`, `facility`).
+- `<routine>` is the operator routine in snake_case (`motor_homing`, `alignment_center`, `dark_baseline`, `facility`).
 
 The `scenarios/` folder is the marker; no `_scenario.py` suffix.
 
