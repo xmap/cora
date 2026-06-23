@@ -21,14 +21,16 @@ different prefix and the ControlPort registry resolves it.
 
 The list of constituent Asset ids belonging to a PseudoAxis Asset is
 NOT carried on the partition rule today (the rule shapes are pure
-math); the wiring lives on `Plan.wiring`, which the conduct_procedure
-handler does not load. The expander accepts a `constituent_resolver`
-callable so the resolution can be deferred without changing the
-expander's signature when the wiring lands. The default resolver
-raises `PartitionRuleNotFoundError` with a message naming
-`Plan.wiring` as the wiring follow-up; tests and the foundation-only
-deployment can pass a stub resolver that returns a frozen tuple per
-PseudoAxis Asset id.
+math); the wiring lives on `Plan.wires`. For a Phase-of-Run Procedure
+the conduct_procedure handler DOES load it, walking
+`parent_run_id -> Run.plan_id -> Plan` and passing a
+`constituent_resolver` built from `constituents_from_wires`. The
+expander takes the resolver as a callable so it stays substrate- and
+wiring-agnostic. When no resolver is supplied (a standalone or
+recipe-only Procedure with no `parent_run_id`, or the foundation-only
+deployment), the default resolver raises `PartitionRuleNotFoundError`
+naming `Plan.wires` as the source; tests can pass a stub resolver that
+returns a frozen tuple per PseudoAxis Asset id.
 
 ## Setpoint addressing
 
