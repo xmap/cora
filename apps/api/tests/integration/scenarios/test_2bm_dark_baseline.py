@@ -107,6 +107,10 @@ from cora.recipe.features.define_plan import DefinePlan
 from cora.recipe.features.define_plan import bind as bind_define_plan
 from cora.recipe.features.define_practice import DefinePractice
 from cora.recipe.features.define_practice import bind as bind_define_practice
+from cora.run.features.complete_run import CompleteRun
+from cora.run.features.complete_run import bind as bind_complete_run
+from cora.run.features.start_run import StartRun
+from cora.run.features.start_run import bind as bind_start_run
 from tests.integration._helpers import (
     build_postgres_deps,
     make_pg_profile_store,
@@ -181,6 +185,9 @@ def _id_queue() -> list[UUID]:
         # define_plan
         _PLAN_DARK_ID,
         e(),
+        # start_run (run stream + RunStarted event)
+        e(),
+        e(),
         # register_procedure
         _PROCEDURE_ID,
         e(),
@@ -190,6 +197,8 @@ def _id_queue() -> list[UUID]:
         _STEPS_LOGBOOK_ID,
         _STEPS_OPEN_EVENT_ID,
         # complete_procedure
+        e(),
+        # complete_run
         e(),
         # register_dataset
         _DATASET_DARK_BASELINE_ID,
@@ -340,7 +349,23 @@ async def test_dark_baseline_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Operation BC: register + start the Procedure -----
+    # ----- Run BC: a subject-less acquisition Run produces the baseline Dataset -----
+    #
+    # The boundary rule: a Dataset-of-record makes the act a Run. The record-path
+    # Procedure below is the conducting/record phase of this Run (parent_run_id);
+    # the Dataset is attributed to the Run, not the Procedure.
+    run_id = await bind_start_run(deps)(
+        StartRun(
+            name="2-BM dark baseline (subject-less acquisition Run)",
+            plan_id=_PLAN_DARK_ID,
+            subject_id=None,
+            trigger_source="operator-manual; pre-scan dark baseline",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # ----- Operation BC: register + start the Procedure (a phase of the Run) -----
 
     await bind_register_procedure(deps)(
         RegisterProcedure(
@@ -349,6 +374,7 @@ async def test_dark_baseline_plays_out_end_to_end(
             target_asset_ids=frozenset(
                 {_ASSET_SHUTTER_2BM_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
             ),
+            parent_run_id=run_id,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -410,11 +436,19 @@ async def test_dark_baseline_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Data BC: register the dark-baseline Dataset (out-of-Procedure artifact) -----
+    # ----- Run BC: complete the subject-less Run (record-path, no actuation kind) -----
+
+    await bind_complete_run(deps)(
+        CompleteRun(run_id=run_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # ----- Data BC: register the dark-baseline Dataset (produced by the Run) -----
     #
-    # `subject_id=None` per the design doc: calibration / dark-field / synthetic
-    # data with no sample has no Subject. `producing_run_id=None`: no Run was
-    # opened (commissioning Procedures stand alone outside a science Run).
+    # `subject_id=None` is the calibration idiom (dark-field data has no sample).
+    # `producing_run_id` attributes the baseline to the subject-less Run; the
+    # boundary rule makes the data-producing act a Run, not the conducting phase.
 
     await bind_register_dataset(deps)(
         RegisterDataset(
@@ -425,7 +459,7 @@ async def test_dark_baseline_plays_out_end_to_end(
             byte_size=2448 * 2048 * 2 * 50,
             media_type="application/x-hdf5",
             conforms_to=frozenset({"https://www.nexusformat.org/NXdark_field"}),
-            producing_run_id=None,
+            producing_run_id=run_id,
             subject_id=None,
             derived_from=frozenset(),
         ),
@@ -443,6 +477,17 @@ async def test_dark_baseline_plays_out_end_to_end(
         "ProcedureActivitiesLogbookOpened",
         "ProcedureCompleted",
     ]
+    # The conducting Procedure is a phase of the subject-less acquisition Run:
+    # its genesis carries parent_run_id back to the Run, and the Run reaches
+    # RunCompleted with no Subject.
+    registered = next(e for e in events if e.event_type == "ProcedureRegistered")
+    assert registered.payload["parent_run_id"] == str(run_id)
+
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    run_event_types = [e.event_type for e in run_events]
+    assert run_event_types[0] == "RunStarted"
+    assert "RunCompleted" in run_event_types
+    assert run_events[0].payload["subject_id"] is None
 
     # ----- Assert: each target Asset reached Active lifecycle -----
 
@@ -482,4 +527,5 @@ async def test_dark_baseline_plays_out_end_to_end(
     assert dataset_payload["name"] == "2BM_dark_baseline_2026-04-17"
     assert dataset_payload["encoding"]["media_type"] == "application/x-hdf5"
     assert dataset_payload["subject_id"] is None
-    assert dataset_payload["producing_run_id"] is None
+    assert dataset_payload["producing_run_id"] == str(run_id)
+    assert dataset_payload["producing_procedure_id"] is None
