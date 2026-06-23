@@ -87,6 +87,13 @@ dev = [
     "ruff>=0.15.18,<0.16",
     "pyright>=1.1.410,<2",
     "httpx>=0.28.0",
+    # httpx2: starlette 1.x routes its TestClient through httpx2 (it does
+    # `import httpx2 as httpx` under TYPE_CHECKING), so without it pyright
+    # resolves every client.post/.json/.status_code to Unknown and the
+    # strict-typing gate fails across the contract suite. Runtime also warns
+    # and prefers httpx2 when present. src/ keeps the httpx pin above (two
+    # adapters import httpx directly).
+    "httpx2>=2.4.0,<3",
     "asgi-lifespan>=2.1.0,<3",
     "pre-commit>=4.0.0,<5",
     "testcontainers[postgres]>=4.14.2,<5",
