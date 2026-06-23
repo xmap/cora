@@ -36,7 +36,6 @@ practices:
   - {name: 2BM_alignment_practice, method: center_alignment}
   - {name: 2BM_roll_practice, method: roll_alignment}
   - {name: 2BM_pitch_practice, method: pitch_alignment}
-  - {name: 2BM_first_light_practice, method: first_light}
   - {name: 2BM_dark_baseline_practice, method: dark_baseline}
   - {name: 2BM_flat_baseline_practice, method: flat_baseline}
   - {name: 2BM_sensitivity_characterization_practice, method: sensitivity_characterization}

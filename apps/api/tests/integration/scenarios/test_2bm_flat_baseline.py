@@ -59,7 +59,7 @@ confirming consistent beam delivery.
 
 ## Asset stack (shutter + image chain)
 
-Same as `first_light` and `dark_baseline`:
+Same as `dark_baseline`:
 StationShutter, Camera, Scintillator.
 
 ## What this scenario surfaces (gap-finding intent)

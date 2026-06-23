@@ -50,9 +50,9 @@ intake (O-1) opens the beamtime context. Each is separable.
 Tomography needs the rotation axis + sample-X correction motor +
 detector chain (camera + scintillator). All four Devices register
 and activate before the scan starts. The shutter is omitted (this
-scenario assumes the beam is open via first_light / commissioning
-ceremony pre-conditions; opening the shutter is not part of the
-scan routine itself).
+scenario assumes the beam is open via commissioning ceremony
+pre-conditions; opening the shutter is not part of the scan routine
+itself).
 
 ## What this scenario surfaces (gap-finding intent)
 

@@ -17,7 +17,6 @@ The operational tasks CORA models now, grouped by kind: homing, alignment, chara
 | Kind | Procedure | Target Assets |
 | --- | --- | --- |
 | Homing | `motor_homing` | `Rotary`, `SampleTop_X` |
-| Alignment | `first_light` | `StationShutter` + image chain |
 | Alignment | `resolution_alignment` | `PropagationDistance` + image chain |
 | Alignment | `focus_alignment` | `SampleTop_Z` + image chain |
 | Alignment | `center_alignment` | `Rotary`, `SampleTop_X` + image chain |

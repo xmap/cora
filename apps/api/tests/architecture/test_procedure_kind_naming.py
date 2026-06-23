@@ -48,7 +48,6 @@ APPROVED_OPERATION_NOUNS = frozenset(
 )
 
 # Whole-kind carve-outs, with rationale:
-#   first_light             - whole-system milestone, no single subject
 #   {dark,flat}_baseline    - capture-and-store; the trailing noun is the
 #                             produced artifact, not the operation
 #   normalization_baseline  - the combined darks+flats normalization
@@ -58,7 +57,6 @@ APPROVED_OPERATION_NOUNS = frozenset(
 #                             than superseding them
 CARVE_OUT_KINDS = frozenset(
     {
-        "first_light",
         "dark_baseline",
         "flat_baseline",
         "normalization_baseline",

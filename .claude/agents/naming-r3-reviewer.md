@@ -61,7 +61,7 @@ A `Procedure.kind` reads `<subject>_<operation-noun>` with the operation noun LA
 - `center_and_close_slits` -- FLAG (verb-phrase first); fold to `slit_centering`
 - `blade_throw_calibration` -- FLAG (act named for its value); the act is `blade_throw_characterization`, the value is the `blade_throw_scale` Calibration
 
-Carve-outs, do NOT flag: `first_light` (whole-system milestone, no single subject) and `dark_baseline` / `flat_baseline` / `vibration_baseline` (capture-and-store; the trailing noun is the produced artifact).
+Carve-outs, do NOT flag: `dark_baseline` / `flat_baseline` / `vibration_baseline` (capture-and-store; the trailing noun is the produced artifact).
 
 Scope: deployment procedure kinds (the `kind=` literals under `tests/integration/scenarios/` and the procedures docs). Do NOT flag unit/contract placeholder kinds (`bakeout`, `alignment`, `"a"`, padded whitespace) -- those exercise aggregate mechanics, not the deployment vocabulary. The fitness test `tests/architecture/test_procedure_kind_naming.py` enforces noun-LAST in CI; you catch what it cannot: whether a new operation noun is genuinely well-formed English rather than a verb smuggled into noun position.
 
@@ -91,7 +91,7 @@ No prose preamble. No closing summary. The PR author reads the list, applies the
 - Do not flag projection-table names; they follow `proj_<bc>_<aggregate>_<rowtype>` per `docs/reference/conventions.md#projection-tables`.
 - Do not flag the schema-suffix exception (`parameters_schema`, `settings_schema`).
 - Do not flag the `suspend` / `hold` coexistence across aggregates as an R2 family-symmetry violation. The reversible-pause verb splits by entity kind per `docs/reference/conventions.md` "Reversible-pause verbs split by entity kind": grant-shaped aggregates (Agent, Permit) use `suspend` + `Suspended`; execution / container aggregates (Run, Campaign, Visit) use `hold` + `Held` / `OnHold`. They are two families that share only the `resume` recovery verb, not one family with a split skeleton.
-- Do not flag unit/contract placeholder procedure kinds (`bakeout`, `alignment`, `"a"`, padded whitespace) or the R6 carve-outs (`first_light`, `*_baseline`); only deployment/scenario kinds are in R6 scope.
+- Do not flag unit/contract placeholder procedure kinds (`bakeout`, `alignment`, `"a"`, padded whitespace) or the R6 carve-out (`*_baseline`); only deployment/scenario kinds are in R6 scope.
 - Do not propose renames for things already locked on `main` unless the PR itself is the rename PR.
 
 ## References
