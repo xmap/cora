@@ -22,8 +22,8 @@ facility:
   display_name: aps
   kind: Site
   institution: Argonne
-  sectors: [Sector 2, Sector 7]
-  beamlines: [2-BM, 7-BM]
+  sectors: [Sector 2, Sector 7, Sector 32]
+  beamlines: [2-BM, 7-BM, 32-ID]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. A method
 # that exists in the Catalog renders as a link; a method still pending in the
