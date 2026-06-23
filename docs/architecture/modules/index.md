@@ -114,7 +114,7 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     ---
 
-    <!-- arch:count kind=aggregate bc=recipe spell=true cap=true -->Four<!-- /arch:count --> aggregates of the abstract-to-bound recipe ladder: <!-- arch:bc-aggregates bc=recipe case=type -->`Capability`, `Method`, `Practice`, `Plan`<!-- /arch:bc-aggregates -->. ISA-88 General/Site/Master/Control recipe progression; the "what we plan to do" layer above Run.
+    <!-- arch:count kind=aggregate bc=recipe spell=true cap=true -->Four<!-- /arch:count --> aggregates of CORA's planning side: <!-- arch:bc-aggregates bc=recipe case=type -->`Capability`, `Method`, `Practice`, `Plan`<!-- /arch:bc-aggregates -->. `Capability` is the executor-agnostic template above the recipe ladder; `Method`, `Practice`, and `Plan` are its upper rungs (ISA-88 general/site/master recipe), and `Recipe` is the deployment-bound step body. The control-recipe rung, Run, is the "what actually happened" layer below.
 
     [Read →](recipe/index.md)
 

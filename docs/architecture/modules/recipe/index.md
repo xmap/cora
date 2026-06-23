@@ -2,11 +2,46 @@
 
 ## Purpose & Scope
 
-The Recipe module owns the abstract description of how to run an experiment, from the universal operations template down to the asset-bound plan that a Run will execute. <!-- arch:count kind=aggregate bc=recipe spell=true cap=true -->Five<!-- /arch:count --> aggregates carry the responsibility. Four form the abstract-to-bound ladder: `Capability` is the universal declarative template that says what a class of operation does; `Method` is the science-community technique class; `Practice` is the facility's curated adaptation; and `Plan` binds a Practice to specific Asset instances and wires their ports together. The ladder follows the ISA-88 General → Site → Master/Control Recipe progression, with Capability sitting above the ladder as the executor-agnostic template that both Method-shaped science recipes and Procedure-shaped operational ceremonies (in the [Operation module](../operation/index.md)) realize.
+The Recipe module owns the abstract declaration of how to run an experiment, from the universal operations template down to the asset-bound `Plan` that a Run will execute. Enacting that declaration belongs to the execution edge outside this module: the [Operation module](../operation/index.md)'s Conductor walks the expanded steps, and the [Run module](../run/index.md) drives the Plan-bound batch. <!-- arch:count kind=aggregate bc=recipe spell=true cap=true -->Five<!-- /arch:count --> aggregates carry the responsibility. `Capability` is the universal declarative template that says what a class of operation does, and it sits above the recipe ladder rather than on it. Three more are this BC's rungs of that ladder, narrowing toward execution: `Method` is the science-community technique class (the ISA-88 general recipe), `Practice` is the facility's curated adaptation (site recipe), and `Plan` binds a Practice to specific Asset instances and wires their ports together (master recipe). The ladder's executing bottom rung, `Run` (control recipe), lives in the [Run module](../run/index.md); both Method-shaped science recipes and Procedure-shaped operational ceremonies (in the [Operation module](../operation/index.md)) realize the Capability above it.
 
 The fifth aggregate, `Recipe`, is the executable body: a deployment-bound, ordered tuple of templated steps that references one `Capability` by `capability_id` and, once an operator supplies parameter bindings, expands into the flat step list the Operation Conductor walks. Recipe sits beside Capability (which declares the contract) rather than inside the bind ladder; it iterates faster than Capability and carries the body, while Method stays the technique-class contract and Plan stays the Asset-bound binding.
 
-Recipe is the "what we plan to do" layer. The "what actually happened" layer lives in the [Run module](../run/index.md), which takes a `Plan` and runs it. Recipe knows nothing about scheduling, execution, or runtime parameter capture; it knows about declaration, versioning, deprecation, and the cross-aggregate validation that catches mismatches at bind time.
+`Capability` sits on top as the executor-agnostic template; the ladder descends from it to execution, and the shapes that realize it branch off (dashed = optional; `Run` and `Procedure` belong to neighbouring modules):
+
+```mermaid
+flowchart TD
+    C[Capability<br/>universal template]
+    C -- realized by --> M[Method<br/>technique class]
+    C -- realized by --> Re[Recipe<br/>executable steps]
+    C -. realized by (optional) .-> Pr[Procedure<br/>Operation module]
+    M -- adapted by --> Pra[Practice<br/>facility curation]
+    Pra -- bound by --> Pl[Plan<br/>Asset-wired]
+    Pl -- executed as --> Run[Run<br/>Run module]
+    Re -- expands into --> Pr
+    Pr -. phase of: parent_run_id .-> Run
+```
+
+The Recipe module is the "what we plan to do" layer, along two axes: the abstract-to-bound ladder plans which equipment a Run uses (`Plan` is its equipment-bound rung), and the `Recipe` aggregate plans the step-by-step body a `Procedure` conducts. The "what actually happened" layer lives in the [Run module](../run/index.md), which takes a `Plan` and runs it, and in the [Operation module](../operation/index.md), which conducts a `Procedure`. The Recipe module itself knows nothing about scheduling, execution, or runtime parameter capture; it knows about declaration, versioning, deprecation, and the cross-aggregate validation that catches mismatches at bind time.
+
+To make the two tracks concrete, here is a simple tomography session placed on the diagram: the acts that leave data on the Run side, the prep that readies the instrument on the Procedure side.
+
+The scan itself is a `Run` (science track), `Capability` down to `Run`:
+
+| Rung | What it is, for this scan |
+| --- | --- |
+| `Capability` | `cora.capability.tomography`: the contract. Provides tomography, requires a Detector and a Positioner, and its parameters include the projection count and the exposure. |
+| `Method` | `tomography`: the portable technique. Step-scan projections over a rotation, written against the Detector and Positioner roles, naming no hardware. |
+| `Practice` | a facility's curated adaptation of that Method, carrying the local know-how that makes it operable. |
+| `Plan` | binds the Practice to that facility's actual detector and positioner Assets, wires their ports, and sets default parameter values. |
+| `Run` | one operator-started execution of the Plan, one afternoon against one sample, producing a Dataset and recording what actually happened. |
+
+The prep that readies the instrument is the operational track (`Procedure`): homing the motors and recovering a stuck controller ([`hexapod_reboot`](../../../deployments/2-bm/recipes.md#hexapod_reboot)) are state changes that leave no Dataset, and aligning the rotation center leaves a `rotation_center` `Calibration`, not a Dataset (a measured calibration can only be sourced from a Procedure). Each conducts Setpoint / Action / Check steps and records a step log. A Procedure may also run as a phase of a Run (`parent_run_id`, an alignment performed mid-scan).
+
+The split is data-of-record vs not, not read-versus-actuate. Aligning rotates the stage and reads frames (heavy actuation and reads) yet is a Procedure, because its output of record is the `rotation_center` value and the frames are transient working data; a reconstruction does no actuation at all yet is a Run, because it leaves a reconstructed Dataset. A separate, orthogonal axis decides who drives the hardware: CORA's `Conductor` over `ControlPort` and `ComputeRuntime` over `ComputePort`, or a facility tool that CORA only records (at 2-BM, TomoScan owns the scan loop). See the [Run vs Procedure boundary](../../../reference/modeling.md#run-vs-procedure-boundary) rule.
+
+One question decides the track: does the act leave a Dataset of record? Yes (acquired or computed, sample or not) -> Run; no (a calibration value or only a state change) -> Procedure. Dark and flat baselines sit on that boundary, they leave a baseline Dataset, so the rule classifies them as subject-less Runs, though the 2-BM deployment still models them as acquisition recipes today.
+
+One Capability can be realized more than one way: `cora.capability.energy_change` is realized by the portable `beamline_energy_change` Method and by a deployment-bound energy-change Recipe. Every realizer points up to the one shared Capability, which is why the diagram fans out as a tree from Capability rather than closing into a cycle.
 
 <div class="cora-aside cora-aside--deferred" markdown>
 

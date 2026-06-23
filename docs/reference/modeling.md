@@ -96,3 +96,30 @@ Why flat: Pydantic / MCP schemas read naturally; event payloads are append-only;
 5. In a cleanup commit, remove the flat fields.
 
 Event payloads stay flat; the holder is a state-side ergonomic.
+
+## Run vs Procedure boundary
+
+Two spine aggregates record planned work, and the same act must have exactly one home. Select on the act's **output of record**, not its Subject and not whether CORA drives it.
+
+**An act is a `Run` iff its reason-for-existing is to leave a finite, identity-bearing primary `Dataset`** (a measurement or a computed / reconstructed lot, Subject present or absent). **Otherwise it is a `Procedure`**: it changes or verifies equipment state, and its output of record, if any, is a `Calibration` revision or an incidental diagnostic, never a Dataset-of-record.
+
+The one-question test: *does the act leave a Dataset of record?* Yes (acquired or computed, sample or not) -> Run. No (a calibration value, or only a state change) -> Procedure. `subject_id` is metadata on a Run (`UUID | None`), not the discriminator: calibration captures are subject-less Runs.
+
+Two structural facts already enforce most of this, so it is mostly derivation, not decree:
+
+- A **measured `Calibration` can only be sourced from a Procedure.** `CalibrationSource = MeasuredSource(procedure_id) | ComputedSource(dataset_id) | AssertedSource(asserted_by)` has no `run_id` arm. Any act whose output of record is a measured calibration (alignment, characterization) is a Procedure by construction.
+- A `Run` requires a `plan_id` and is the batch producer with AsShot calibration pinning; a `Procedure` carries `target_asset_ids` plus a Setpoint / Action / Check step log.
+
+**Data that merely transits an act is not a Dataset of record.** An alignment rotates and reads frames to compute a centroid, but it registers the `rotation_center` value, not the frames (the fit lives at the edge). A Procedure that does retain frames registers them on the secondary `Dataset.producing_procedure_id` arm as a diagnostic; its output of record stays the Calibration.
+
+Orthogonal axes, do not conflate with selection:
+
+- **Conducted vs recorded** (who drives the act): the `Conductor` over `ControlPort` and `ComputeRuntime` over `ComputePort` are L2 edge runtimes that drive either spine aggregate; an externally-driven act (a scan loop a facility tool runs) is recorded. Both Runs and Procedures span both modes.
+- **Compute** homes by the same test: a reconstruction leaves a Dataset, so it is a Run (driven by `ComputeRuntime`); its provenance is the Dataset's `derived_from` plus `used_calibration_ids`.
+- **Transfer** moves bytes onto a `Distribution` and leaves no new Dataset of record, so it is an edge job, not a spine aggregate, until a publish / custody invariant earns it one.
+
+The one genuinely undecidable shape is an act whose registered Dataset and Calibration are co-equal deliverables. No shipped act crosses that seam today; resolve it then by a declared primary output, not now.
+
+Boundary case in migration: subject-less data captures (dark / flat baselines) leave a baseline Dataset, so the rule classifies them as **subject-less Runs**. The 2-BM deployment still models them as acquisition recipes / Procedures; that is the one case the rule reclassifies, pending the migration.
+
+Why: selecting on a single observable fact (the produced Dataset of record) keeps five-year ledger queries unique. Reproduce-this-result walks the Run plus Dataset lineage; how-did-the-instrument-behave walks the Procedure plus Calibration history; and the same act never lands in two places. Corpus precedent (ISA-88 finite-lot, Bluesky `open_run` bracket, PROV / schema.org generated-entity, SciCat raw / derived) converges on the produced-data-lot as the axis and rejects Subject as the axis.

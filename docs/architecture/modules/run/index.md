@@ -4,6 +4,8 @@
 
 The Run module records the execution layer of CORA's recipe ladder. Where Method, Practice, and Plan describe *what* should be done and *how*, a Run records *what actually happened*: one Run is one execution instance, with batch identity, a finite lifecycle, an immutable audit trail, and references to the bound Plan and (optionally) Subject. Every sensor reading, every parameter adjustment, every operator hold or termination during the execution lands on the Run's event stream.
 
+What makes an act a Run rather than a Procedure is its produced output of record (a `Dataset`), not its Subject; see the [Run vs Procedure boundary](../../../reference/modeling.md#run-vs-procedure-boundary) rule.
+
 A Run carries five roles:
 
 - **Identity** for one execution. The Run id is the stable handle that all downstream artifacts (datasets, reports, decisions, calibration citations) reference.
