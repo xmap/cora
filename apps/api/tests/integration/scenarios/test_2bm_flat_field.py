@@ -1,86 +1,119 @@
-"""Detector flat-field baseline at APS 2-BM.
+"""Flat-field capture at APS 2-BM, CORA-conducted from a Recipe.
 
 cluster: Commissioning
 archetype: routine
 bc_primary: Operation
-bc_touches: Data, Equipment, Operation, Recipe
+bc_touches: Data, Operation, Recipe
 
-Scenario test for the flat-field baseline routine: with the shutter
-open and NO sample in the beam, acquire a stack of N flat frames,
-compute a pixel-wise mean, and register the resulting baseline as a
-Dataset for downstream reconstruction to divide by. Sibling to
-`dark_field`; same structural shape with the shutter
-state and analytic operation inverted.
+Scenario test for the flat-field capture, modeled as a deployment Recipe and run
+through the Procedure Conductor. The ceremony is a Recipe (a templated step list)
+realizing the existing `cora.capability.acquisition`; an operator registers a
+Procedure from it (`register_procedure_from_recipe`), and the conduct handler
+re-expands the recipe into conduct steps and drives them through the ControlPort
+against a soft IOC. The captured flat field is the illumination-plus-gain
+reference a tomographic Run divides by; its dark sibling (`dark_field`, the
+no-beam reference subtracted before the division) is a separate capture. Running
+both is a Plan that composes the two captures; "normalization" is the downstream
+reduction, not a CORA act.
 
-See [[project_pilot_docs_design]] for the phase / file-naming
-taxonomy this scenario fits into.
+See [[project_value_capture_stage0_design]] for the runtime-value-capture design
+this scenario consumes, and [[project_flat_dark_prologue_design]] for the
+ceremony design lock. See [[project_seam_model]] for why this is a deliberate
+Actuate-axis move (CORA conducts), not the record-path the live 2-BM seam uses
+today.
 
 ## Why this scenario exists
 
-To complete the dark + flat pair that every CT reconstruction
-requires:
+A conduct-path "101" that exercises the whole modeled ladder end to end:
+Capability -> Recipe (step template) -> Procedure (register-from-recipe) ->
+expand -> Conductor -> ControlPort -> soft IOC.
 
-  reconstructed_projection = (raw - dark) / (flat - dark)
+  1. Drives the Procedure Conductor on the recipe-driven conduct path (define
+     recipe -> register-from-recipe -> conduct re-expands the pinned template).
+     The `dark_field` sibling is record-path (hand-built `append_activities`
+     entries, no Conductor); flats need conduct because the sample must move.
+  2. RUNTIME VALUE CAPTURE: a `CaptureStep` reads the sample axis at execute
+     time into the `captures` slot "sample_home", and a later `SetpointStep`
+     with a `CaptureRef` restores the axis to it. The save-and-restore is the
+     reason a flat capture is CORA-conducted: the sample must leave the beam for
+     the flat and return to its aligned position afterward, which is live value
+     capture, not a literal setpoint. No bespoke action body (the retired
+     `staging.flats`).
+  3. The flat field is a subject-less acquisition Run whose conducting phase
+     Procedure (`parent_run_id`) drives the steps; the Dataset is attributed to
+     the Run (`producing_run_id`), per the Run vs Procedure boundary rule.
+     The soft IOC is a declared simulator, so the conduct observes `Simulated`.
+     NOTE: the Conductor autonomously stamps that kind on the *Procedure*
+     terminal, not the Run, so here the scenario threads `result.actuation_kind`
+     into `complete_run` BY HAND, standing in for the deferred AcquisitionRuntime
+     (the conduct-to-Run-completion kind bridge) that production will need. What
+     this proves is the Run-fallback derivation in `register_dataset` (Run kind
+     -> `producing_actuation_kind` -> the promote gate), not an autonomous
+     production guarantee. Until that bridge exists a CORA-conducted capture Run
+     completes with `actuation_kind=None`; see the deferred item in the boundary
+     memo. 2-BM's live captures are TomoScan record-path, so this is exploratory.
 
-Dark removes additive detector offset; flat removes multiplicative
-beam-profile non-uniformity. Without both baselines registered as
-Datasets, the operations-phase science Runs have nothing to
-normalize against.
+## Domain shape
 
-## Distinction from `dark_field`
+The DATA need is universal across CT facilities: every pipeline (tomopy, ASTRA,
+plain numpy) flat-field corrects raw projections against a flat reference (and a
+dark reference). The CONCRETE sequence below follows TomoScan / 2-BM practice but
+is staff-confirm-pending per the design lock's open questions on transit-safety
+ordering and ceremony ORDER / FREQUENCY:
 
-  - Dark: shutter CLOSED, no beam reaches detector. Captures dark
-    current + read noise.
-  - Flat: shutter OPEN, no sample in beam path. Captures the
-    incoming beam's spatial profile + scintillator response + camera
-    gain map.
+  1. Open the shutter; CAPTURE the sample's aligned position; retract the sample
+     to a known out-of-beam position; acquire N flat frames; RESTORE the sample
+     to the captured aligned position.
+  2. Close the shutter (return to the safe state).
+  3. Store the flat field so future Runs can divide by it.
 
-Both produce a Dataset attributed to a subject-less Run (subject_id=None,
-producing_run_id set, producing_procedure_id=None); both are Trial intent
-initially and require `promote_dataset` (deferred) to reach Production.
+The ceremony starts sample-in and ends sample-in (the restore returns the axis
+to the captured aligned position), and ends shutter-closed (return to safe). The
+sample transits the live beam during both the retraction and the restore (the
+shutter closes only after the flats), which follows TomoScan's open-beam practice
+at 2-BM (SBS as the per-scan fast shutter); confirm before any live wiring.
 
-## Domain shape (universal across CT facilities)
+## Stand-in PVs + values (illustrative-pending-staff)
 
-  1. Verify the safety shutter is closed (safe starting state).
-  2. Confirm sample is OUT of the beam path. The scenario captures
-     this as an operator-asserted Check; in production CORA could
-     query a Subject's mount status, but this scenario does not
-     model that.
-  3. Open the shutter. Acquire N flat frames at the same exposure
-     that science projections will use.
-  4. Compute pixel-wise mean across the stack. The mean image is
-     the flat baseline.
-  5. Close the shutter to safe state.
-  6. Register the baseline as a Dataset.
+The soft IOC carries generic test PVs, NOT production 2-BM addresses. This
+mapping is illustrative and MUST be confirmed with staff before any live-EPICS
+wiring:
 
-Typical: 50 frames at 200 ms each. Mean count should match the
-first-light light frame (above ~5000 cnt for the standard setup),
-confirming consistent beam delivery.
+  - shutter -> `long_value` (0 = closed, 1 = open). The real station shutter is
+    a PSS-owned categorical leaf (S02BM-PSS:SBS family) with an INVERTED sense;
+    its leaf name and closed-code are unconfirmed and safety-load-bearing, so
+    this scenario uses a neutral binary stand-in.
+  - sample axis -> `double_value` (the SampleTop_X analog). The aligned home is
+    CAPTURED at runtime; the out-of-beam position is a literal (Option A: a fixed
+    safe park, not a relative nudge). The real axis, the out position, and any
+    theta-park coupling are unconfirmed.
+  - detector -> `cam1` (the areaDetector ADCore PV family).
 
-## Asset stack (shutter + image chain)
-
-Same as `dark_field`:
-StationShutter, Camera, Scintillator.
+Frame counts and dwell are illustrative (tiny, to keep the test fast); real
+per-campaign values are operator-bound.
 
 ## What this scenario surfaces (gap-finding intent)
 
-  - **"Sample out of beam" is an operator assertion, not a CORA
-    invariant.** The scenario records the assertion as a Check
-    entry but cannot verify it. Whether the Subject BC should
-    model "in-beam" / "out-of-beam" mount status (and gate
-    flat-field acquisition on it) is a watch item.
-  - **Dark and flat lineage on Datasets.** This baseline does not
-    declare `derived_from` even though, in some pipelines, the
-    flat is dark-subtracted before storage. The scenario keeps the
-    raw flat separate; a later scenario could register a
-    dark-subtracted-flat with `derived_from` pointing at both this
-    flat and the dark baseline.
+  - **The save-and-restore is plain recipe steps.** A `CaptureStep` records the
+    observed aligned position; a `CaptureRef` setpoint returns to it. No opaque
+    action body hides the motion (the retired `staging.flats` anti-pattern). The
+    capture is journaled, so the observed value is auditable.
+  - **Capture reads the OBSERVED value.** The restore returns the axis to where
+    it actually was (the readback), not a commanded number; the restore setpoint
+    uses `verify=True` so its landed value is recorded.
+  - **Conducted provenance flows to the artifact (via a test-orchestrated
+    bridge).** The Dataset carries `producing_actuation_kind="Simulated"`, the
+    fact that gates `promote_dataset` later. The conduct stamps that kind on the
+    Procedure terminal autonomously; the scenario then threads it onto the Run's
+    `complete_run` by hand (the deferred AcquisitionRuntime's job), so this
+    exercises the `register_dataset` Run-fallback, not an autonomous deployment
+    path. A live conduct would carry `Physical` and clear the gate.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
+from collections import Counter
 from datetime import UTC, datetime
-from typing import Any
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -88,397 +121,346 @@ import pytest
 
 from cora.data.features.register_dataset import RegisterDataset
 from cora.data.features.register_dataset import bind as bind_register_dataset
+from cora.equipment.aggregates.asset import AssetTier
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
-from cora.equipment.features.activate_asset import ActivateAsset
-from cora.equipment.features.activate_asset import bind as bind_activate_asset
-from cora.infrastructure.projection import ProjectionRegistry, drain_projections
-from cora.operation._projections import register_operation_projections
-from cora.operation.features.append_activities import (
-    ActivityInput,
-    AppendProcedureActivities,
-)
-from cora.operation.features.append_activities import bind as bind_append_step
-from cora.operation.features.complete_procedure import CompleteProcedure
+from cora.equipment.features.add_asset_family import AddAssetFamily
+from cora.equipment.features.add_asset_family import bind as bind_add_asset_family
+from cora.equipment.features.define_family import DefineFamily
+from cora.equipment.features.define_family import bind as bind_define_family
+from cora.equipment.features.register_asset import RegisterAsset
+from cora.equipment.features.register_asset import bind as bind_register_asset
+from cora.operation.acquisitions import collect
+from cora.operation.adapters.control_port_registry import ControlPortRegistry
+from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
+from cora.operation.adapters.in_memory_recipe_expander import InMemoryRecipeExpander
+from cora.operation.aggregates.procedure import PostgresActivityStore
+from cora.operation.conductor import Conductor, InMemoryActionRegistry
+from cora.operation.features.abort_procedure import bind as bind_abort
+from cora.operation.features.append_activities import bind as bind_append
 from cora.operation.features.complete_procedure import bind as bind_complete
-from cora.operation.features.register_procedure import RegisterProcedure
-from cora.operation.features.register_procedure import bind as bind_register_procedure
-from cora.operation.features.start_procedure import StartProcedure
+from cora.operation.features.conduct_procedure import ConductProcedure
+from cora.operation.features.conduct_procedure import bind as bind_conduct
+from cora.operation.features.register_procedure_from_recipe import RegisterProcedureFromRecipe
+from cora.operation.features.register_procedure_from_recipe import bind as bind_register_from_recipe
 from cora.operation.features.start_procedure import bind as bind_start
+from cora.operation.ports.control_port import ActuationKind
 from cora.recipe.aggregates.method import ExecutionPattern
+from cora.recipe.aggregates.recipe import (
+    CaptureRef,
+    RecipeActionStep,
+    RecipeCaptureStep,
+    RecipeCheckStep,
+    RecipeSetpointStep,
+)
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_plan import DefinePlan
 from cora.recipe.features.define_plan import bind as bind_define_plan
 from cora.recipe.features.define_practice import DefinePractice
 from cora.recipe.features.define_practice import bind as bind_define_practice
+from cora.recipe.features.define_recipe import DefineRecipe
+from cora.recipe.features.define_recipe import bind as bind_define_recipe
 from cora.run.features.complete_run import CompleteRun
 from cora.run.features.complete_run import bind as bind_complete_run
 from cora.run.features.start_run import StartRun
 from cora.run.features.start_run import bind as bind_start_run
-from tests.integration._helpers import (
-    build_postgres_deps,
-    make_pg_profile_store,
-    seed_capability_postgres,
-)
-from tests.integration.scenarios._facility_fixture import (
-    DeviceSpec,
-    facility_id_prefix,
-    install_aps_unit,
-    operator_for,
-)
+from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 
-_NOW = datetime(2026, 5, 17, 14, 15, 0, tzinfo=UTC)
-_PRINCIPAL_ID = operator_for(__file__)
-_CORRELATION_ID = UUID("01900000-0000-7000-8000-00000003b5bb")
+_NOW = datetime(2026, 6, 22, 10, 0, 0, tzinfo=UTC)
+_PRINCIPAL_ID = UUID("01900000-0000-7000-8000-0000020e0099")
+_CORRELATION_ID = UUID("01900000-0000-7000-8000-0000020e00aa")
+_CAPABILITY_ID = UUID("01900000-0000-7000-8000-0000020e0c01")
+_SITE_ID = UUID("01900000-0000-7000-8000-0000020e0c02")
+_FAMILY_CAMERA_ID = family_stream_id(FamilyName("Camera"))
 
-# Facility hierarchy
-_ACTOR_OPERATOR_ID = _PRINCIPAL_ID
-_APS_SITE_ID = UUID("01900000-0000-7000-8000-00000035b501")
-_2BM_UNIT_ID = UUID("01900000-0000-7000-8000-00000035ba01")
-
-# Capabilities
-_CAP_SHUTTER_ID = family_stream_id(FamilyName("Shutter"))
-_CAP_CAMERA_ID = family_stream_id(FamilyName("Camera"))
-_CAP_SCINTILLATOR_ID = family_stream_id(FamilyName("Scintillator"))
-
-# Devices
-_ASSET_SHUTTER_2BM_ID = UUID("01900000-0000-7000-8000-00000035ba11")
-_ASSET_ORYX_5MP_ID = UUID("01900000-0000-7000-8000-00000035ba21")
-_ASSET_SCINTILLATOR_LUAG_ID = UUID("01900000-0000-7000-8000-00000035ba31")
-
-# Recipe ladder
-_METHOD_FLAT_ID = UUID("01900000-0000-7000-8000-00000035bd01")
-_CAPABILITY_ID = UUID("01900000-0000-7000-8000-000000c0e61f")
-_PRACTICE_FLAT_ID = UUID("01900000-0000-7000-8000-00000035bd11")
-_PLAN_FLAT_ID = UUID("01900000-0000-7000-8000-00000035bd21")
-
-# Procedure + lazy steps logbook
-_PROCEDURE_ID = UUID("01900000-0000-7000-8000-00000035bf01")
-_STEPS_LOGBOOK_ID = UUID("01900000-0000-7000-8000-00000035bf11")
-_STEPS_OPEN_EVENT_ID = UUID("01900000-0000-7000-8000-00000035bf12")
-
-# Dataset (the artifact this Procedure produces)
-_DATASET_FLAT_BASELINE_ID = UUID("01900000-0000-7000-8000-00000035bf21")
-
-
-_DEVICES = (
-    DeviceSpec("StationShutter", _ASSET_SHUTTER_2BM_ID, "Shutter", _CAP_SHUTTER_ID),
-    DeviceSpec("Camera", _ASSET_ORYX_5MP_ID, "Camera", _CAP_CAMERA_ID),
-    DeviceSpec("Scintillator", _ASSET_SCINTILLATOR_LUAG_ID, "Scintillator", _CAP_SCINTILLATOR_ID),
-)
-
-
-def _id_queue() -> list[UUID]:
-    """Pre-allocated FixedIdGenerator queue (head-first consumption)."""
-    e = uuid4
-    return [
-        *facility_id_prefix(
-            unit_id=_2BM_UNIT_ID,
-            devices=_DEVICES,
-        ),
-        # activate_asset x 3
-        e(),
-        e(),
-        e(),
-        # define_method
-        _METHOD_FLAT_ID,
-        e(),
-        # define_practice
-        _PRACTICE_FLAT_ID,
-        e(),
-        # define_plan
-        _PLAN_FLAT_ID,
-        e(),
-        # start_run (run stream + RunStarted event)
-        e(),
-        e(),
-        # register_procedure
-        _PROCEDURE_ID,
-        e(),
-        # start_procedure
-        e(),
-        # append_activities (lazy open): logbook_id, open_event_id
-        _STEPS_LOGBOOK_ID,
-        _STEPS_OPEN_EVENT_ID,
-        # complete_procedure
-        e(),
-        # complete_run
-        e(),
-        # register_dataset
-        _DATASET_FLAT_BASELINE_ID,
-        e(),
-    ]
-
-
-def _shutter(
-    *, state: str, role: str, sampled_at: datetime, note: str | None = None
-) -> ActivityInput:
-    payload: dict[str, Any] = {
-        "channel": "StationShutter",
-        "target_value": state,
-        "units": "state",
-        "role": role,
-    }
-    if note is not None:
-        payload["note"] = note
-    return ActivityInput(
-        event_id=uuid4(),
-        step_kind="setpoint",
-        payload=payload,
-        sampled_at=sampled_at,
-    )
-
-
-def _acquire_flat_stack(*, n_frames: int, exposure_ms: int, sampled_at: datetime) -> ActivityInput:
-    return ActivityInput(
-        event_id=uuid4(),
-        step_kind="action",
-        payload={
-            "action_name": "acquire_flat_stack",
-            "params": {"n_frames": n_frames, "exposure_ms": exposure_ms},
-        },
-        sampled_at=sampled_at,
-    )
-
-
-def _compute_baseline(*, algorithm: str, sampled_at: datetime) -> ActivityInput:
-    return ActivityInput(
-        event_id=uuid4(),
-        step_kind="action",
-        payload={
-            "action_name": "compute_baseline",
-            "params": {"algorithm": algorithm},
-        },
-        sampled_at=sampled_at,
-    )
-
-
-def _check(
-    *,
-    channel: str,
-    passed: bool,
-    source: str,
-    sampled_at: datetime,
-    evidence: dict[str, Any],
-) -> ActivityInput:
-    return ActivityInput(
-        event_id=uuid4(),
-        step_kind="check",
-        payload={
-            "channel": channel,
-            "passed": passed,
-            "source": source,
-            "evidence": evidence,
-        },
-        sampled_at=sampled_at,
-    )
-
-
-async def _drain(db_pool: asyncpg.Pool) -> None:
-    registry = ProjectionRegistry()
-    register_operation_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
-
-
-def _postgres_step_store(db_pool: asyncpg.Pool):
-    from cora.operation.aggregates.procedure import PostgresActivityStore
-
-    return PostgresActivityStore(db_pool)
+# Illustrative-pending-staff stand-in codes / values (see module docstring).
+_SHUTTER_CLOSED = 0
+_SHUTTER_OPEN = 1
+_FLAT_FRAMES = 3
+_DWELL_S = 0.05
+_SAMPLE_HOME_MM = 12.5
+_SAMPLE_OUT_MM = 20.0
 
 
 @pytest.mark.integration
-async def test_flat_field_plays_out_end_to_end(
+async def test_flat_field_recipe_conducts_flats_against_softioc(
     db_pool: asyncpg.Pool,
+    softioc: str,
 ) -> None:
-    """Seed facility + image chain, confirm sample out, open shutter,
-    acquire 50 flat frames, compute pixel-wise mean baseline, close
-    shutter, register the resulting Dataset for downstream Runs to
-    divide by."""
-    deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
+    """Define the flat-field Recipe (capture-based save-and-restore), register a
+    Procedure from it, conduct it to Completed against the soft IOC, and confirm
+    the sample axis is restored to its captured aligned position, then register
+    the flat-field Dataset with the conduct's Simulated provenance derived onto it."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
 
-    # ----- Install the 2-BM facility hierarchy + the 3 Devices -----
+    shutter = f"{softioc}long_value"
+    axis = f"{softioc}double_value"
+    detector = f"{softioc}cam1"
 
-    await install_aps_unit(
-        deps,
-        profile_store=make_pg_profile_store(db_pool),
-        correlation_id=_CORRELATION_ID,
-        unit_id=_2BM_UNIT_ID,
-        devices=_DEVICES,
-    )
-
-    # ----- Equipment BC: activate all 3 Devices -----
-
-    for asset_id in (_ASSET_SHUTTER_2BM_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID):
-        await bind_activate_asset(deps)(
-            ActivateAsset(asset_id=asset_id),
-            principal_id=_PRINCIPAL_ID,
-            correlation_id=_CORRELATION_ID,
-        )
-
-    # ----- Recipe BC: Method + Practice + Plan for the flat-baseline routine -----
-
+    # ----- Recipe BC: the acquisition Capability + the flat-field Recipe -----
+    #
+    # The Recipe realizes the EXISTING cora.capability.acquisition. The flats
+    # save-and-restore is expressed as a CaptureStep ("sample_home") + a
+    # CaptureRef restore setpoint, not an action body. All-literal otherwise
+    # (no BindingRef), so no parameters_schema / operator bindings.
     await seed_capability_postgres(
         deps.event_store,
         _CAPABILITY_ID,
         code="cora.capability.acquisition",
         name="Acquisition",
     )
-
-    await bind_define_method(deps)(
-        DefineMethod(
-            execution_pattern=ExecutionPattern.BATCH,
+    recipe_id = await bind_define_recipe(deps)(
+        DefineRecipe(
+            name="2BM_flat_field_recipe",
             capability_id=_CAPABILITY_ID,
+            steps=(
+                # flats: shutter open, remember home, retract to a fixed out
+                # position, collect, restore to the captured home
+                RecipeSetpointStep(address=shutter, value=_SHUTTER_OPEN, verify=True),
+                RecipeCheckStep(
+                    address=shutter, criterion={"kind": "equals", "expected": _SHUTTER_OPEN}
+                ),
+                RecipeCaptureStep(address=axis, capture_name="sample_home"),
+                RecipeSetpointStep(address=axis, value=_SAMPLE_OUT_MM, verify=True),
+                RecipeActionStep(
+                    name="collect",
+                    params={
+                        "detector": detector,
+                        "trigger_mode": "Internal",
+                        "repetitions": _FLAT_FRAMES,
+                        "dwell": _DWELL_S,
+                    },
+                ),
+                RecipeSetpointStep(
+                    address=axis, value=CaptureRef(capture_name="sample_home"), verify=True
+                ),
+                # return to safe: shutter closed
+                RecipeSetpointStep(address=shutter, value=_SHUTTER_CLOSED, verify=True),
+                RecipeCheckStep(
+                    address=shutter, criterion={"kind": "equals", "expected": _SHUTTER_CLOSED}
+                ),
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # ----- Recipe ladder + a subject-less acquisition Run to wrap the conduct -----
+    #
+    # Under the Run vs Procedure boundary rule the flat-field Dataset-of-record
+    # makes the act a Run; the conducted ceremony below is a phase of that Run
+    # (parent_run_id), and the Dataset is attributed to the Run. The Plan binds a
+    # minimal detector Asset; the conduct itself drives the literal soft-IOC PVs, so
+    # the Plan's asset set is illustrative-pending-staff, like the PV mapping.
+    await bind_define_family(deps)(
+        DefineFamily(name="Camera", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    detector_asset_id = await bind_register_asset(deps)(
+        RegisterAsset(
+            name="2bm-detector", tier=AssetTier.DEVICE, parent_id=None, facility_code="cora"
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_add_asset_family(deps)(
+        AddAssetFamily(asset_id=detector_asset_id, family_id=_FAMILY_CAMERA_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    method_id = await bind_define_method(deps)(
+        DefineMethod(
             name="flat_field",
-            needed_family_ids=frozenset({_CAP_SHUTTER_ID, _CAP_CAMERA_ID, _CAP_SCINTILLATOR_ID}),
+            capability_id=_CAPABILITY_ID,
+            execution_pattern=ExecutionPattern.BATCH,
+            needed_family_ids=frozenset({_FAMILY_CAMERA_ID}),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    await bind_define_practice(deps)(
-        DefinePractice(
-            name="2BM_flat_field_practice",
-            method_id=_METHOD_FLAT_ID,
-            site_id=_APS_SITE_ID,
-        ),
+    practice_id = await bind_define_practice(deps)(
+        DefinePractice(name="2BM_flat_field_practice", method_id=method_id, site_id=_SITE_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    await bind_define_plan(deps)(
+    plan_id = await bind_define_plan(deps)(
         DefinePlan(
             name="2BM_flat_field_plan",
-            practice_id=_PRACTICE_FLAT_ID,
-            asset_ids=frozenset(
-                {_ASSET_SHUTTER_2BM_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
-            ),
+            practice_id=practice_id,
+            asset_ids=frozenset({detector_asset_id}),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-
-    # ----- Run BC: a subject-less acquisition Run produces the baseline Dataset -----
-    #
-    # The boundary rule: a Dataset-of-record makes the act a Run. The record-path
-    # Procedure below is the conducting/record phase of this Run (parent_run_id);
-    # the Dataset is attributed to the Run, not the Procedure.
     run_id = await bind_start_run(deps)(
         StartRun(
-            name="2-BM flat baseline (subject-less acquisition Run)",
-            plan_id=_PLAN_FLAT_ID,
+            name="2-BM flat field (subject-less acquisition Run)",
+            plan_id=plan_id,
             subject_id=None,
-            trigger_source="operator-manual; pre-scan flat baseline",
+            trigger_source="operator-manual; pre-scan flat field",
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Operation BC: register + start the Procedure (a phase of the Run) -----
-
-    await bind_register_procedure(deps)(
-        RegisterProcedure(
-            name="2-BM flat-field baseline (50 frames @ 200ms, Apr-2026 campaign)",
+    # ----- Operation BC: register a Procedure from the Recipe (lands Defined) -----
+    expander = InMemoryRecipeExpander()
+    procedure_id = await bind_register_from_recipe(deps, expansion_port=expander)(
+        RegisterProcedureFromRecipe(
+            name="2-BM flat field (conducted, illustrative campaign)",
             kind="flat_field",
-            target_asset_ids=frozenset(
-                {_ASSET_SHUTTER_2BM_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
-            ),
+            target_asset_ids=(),
             parent_run_id=run_id,
+            recipe_id=recipe_id,
+            bindings={},
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    await bind_start(deps)(
-        StartProcedure(procedure_id=_PROCEDURE_ID),
-        principal_id=_PRINCIPAL_ID,
-        correlation_id=_CORRELATION_ID,
+
+    # ----- Conduct: the handler re-expands the pinned recipe + drives the soft IOC -----
+    #
+    # The soft IOC is a declared simulator (a real CA speaker that is not real
+    # hardware); routing through the registry with is_simulated=True makes the
+    # conduct observe Simulated.
+    port = EpicsCaControlPort()
+    registry = ControlPortRegistry()
+    registry.register(softioc, port, is_simulated=True)
+    step_store = PostgresActivityStore(db_pool)
+    conductor = Conductor(
+        control_port=registry,
+        append_step=bind_append(deps, step_store=step_store),
+        clock=deps.clock,
+        id_generator=deps.id_generator,
+        action_registry=InMemoryActionRegistry({"collect": collect}),
+        start_procedure=bind_start(deps),
+        complete_procedure=bind_complete(deps),
+        abort_procedure=bind_abort(deps),
     )
+    conduct = bind_conduct(deps, conductor=conductor, expansion_port=expander)
 
-    # ----- Procedure step entries: verify sample-out, open + acquire + close, compute -----
+    try:
+        # The aligned home the CaptureStep observes + the restore returns to.
+        await port.write(axis, _SAMPLE_HOME_MM, wait=True)
+        # Recipe-driven: caller steps are empty; the handler re-expands the
+        # pinned template (non-empty caller steps are forbidden here).
+        result = await conduct(
+            ConductProcedure(procedure_id=procedure_id, steps=()),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    finally:
+        await registry.aclose()
 
-    t = _NOW
-    all_entries = (
-        _check(
-            channel="sample_in_beam",
-            passed=True,
-            source="operator_visual",
-            sampled_at=t,
-            evidence={"asserted": False, "note": "operator confirmed sample stage retracted"},
-        ),
-        _shutter(
-            state="closed", role="verify_safe_state", sampled_at=t, note="starting safe state"
-        ),
-        _shutter(
-            state="open",
-            role="open_for_flat_field",
-            sampled_at=t,
-            note="admit beam, no sample in path",
-        ),
-        _acquire_flat_stack(n_frames=50, exposure_ms=200, sampled_at=t),
-        _check(
-            channel="flat_stack_acquired",
-            passed=True,
-            source="tomopy.misc.morph",
-            sampled_at=t,
-            evidence={
-                "frames_captured": 50,
-                "flat_pixel_mean": 8430.0,
-                "flat_pixel_std": 142.0,
-                "uniformity_cov": 0.017,
-            },
-        ),
-        _shutter(
-            state="closed",
-            role="return_to_safe_state",
-            sampled_at=t,
-            note="close after acquisition",
-        ),
-        _compute_baseline(algorithm="mean_pixel_wise", sampled_at=t),
-        _check(
-            channel="baseline_quality",
-            passed=True,
-            source="tomopy.misc.morph",
-            sampled_at=t,
-            evidence={
-                "baseline_pixel_mean": 8430.0,
-                "ready_for_division": True,
-            },
-        ),
+    # ----- Conduct outcome: all eight steps ran, conduct observed Simulated -----
+
+    assert result.succeeded is True
+    assert result.completed_count == 8
+    assert result.actuation_kind == ActuationKind.SIMULATED.value
+
+    # ----- Procedure FSM stream: Registered (from recipe) -> ... -> Completed -----
+
+    events, _ = await deps.event_store.load("Procedure", procedure_id)
+    event_types = [e.event_type for e in events]
+    assert event_types[0] == "ProcedureRegistered"
+    # the recipe-driven genesis pins a template-expansion provenance event
+    assert "RecipeExpansionRecorded" in event_types
+    assert "ProcedureStarted" in event_types
+    assert event_types[-1] == "ProcedureCompleted"
+    # The Procedure is a phase of the acquisition Run (the headline modeling
+    # claim): its genesis carries parent_run_id back to the Run.
+    registered = next(e for e in events if e.event_type == "ProcedureRegistered")
+    assert registered.payload["parent_run_id"] == str(run_id)
+
+    # ----- Run FSM stream: the subject-less acquisition Run that wraps the phase -----
+    #
+    # The Run is started subject-less here; it reaches RunCompleted only after
+    # the conduct, asserted below once complete_run runs.
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert run_events[0].event_type == "RunStarted"
+    assert run_events[0].payload["subject_id"] is None
+
+    # ----- Journal: eight logical step entries + five pre-effect markers -----
+    #
+    # The clock is frozen so all entries share sampled_at; assert on the
+    # order-independent multiset AND the clock/id-independent step_index set.
+    # Eight steps: 4 setpoints (idx 0,3,5,6), 2 checks (1,7), 1 action (4),
+    # 1 capture (2). Setpoints + actions are side-effecting (one pre-effect
+    # in_flight marker each = 5); checks + capture are reads (no marker).
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT step_kind, payload FROM entries_operation_procedure_activities "
+            "WHERE procedure_id = $1",
+            procedure_id,
+        )
+    logical = [r for r in rows if r["payload"]["result"] != "in_flight"]
+    markers = [r for r in rows if r["payload"]["result"] == "in_flight"]
+    assert Counter(r["step_kind"] for r in logical) == {
+        "setpoint": 4,
+        "check": 2,
+        "action": 1,
+        "capture": 1,
+    }
+    assert {r["payload"]["step_index"] for r in logical} == set(range(8))
+    assert {r["payload"]["step_index"] for r in markers} == {0, 3, 4, 5, 6}
+
+    # ----- The capture recorded the OBSERVED home, and the CaptureRef restore
+    #       resolved to it (the runtime-value-capture round-trip) -----
+    capture_entry = next(r for r in logical if r["step_kind"] == "capture")
+    assert capture_entry["payload"]["capture_name"] == "sample_home"
+    assert capture_entry["payload"]["captured_value"] == pytest.approx(_SAMPLE_HOME_MM)
+
+    restore_entry = next(
+        r
+        for r in logical
+        if r["step_kind"] == "setpoint" and r["payload"].get("capture_ref") == "sample_home"
     )
-    assert len(all_entries) == 8
+    assert restore_entry["payload"]["value"] == pytest.approx(_SAMPLE_HOME_MM)
 
-    count = await bind_append_step(deps, step_store=_postgres_step_store(db_pool))(
-        AppendProcedureActivities(procedure_id=_PROCEDURE_ID, entries=all_entries),
-        principal_id=_PRINCIPAL_ID,
-        correlation_id=_CORRELATION_ID,
-    )
-    assert count == 8
+    # The axis is back at the captured aligned home (the restore landed).
+    readback_port = EpicsCaControlPort()
+    try:
+        axis_final = await readback_port.read(axis)
+        assert axis_final.value == pytest.approx(_SAMPLE_HOME_MM)
+    finally:
+        await readback_port.aclose()
 
-    # ----- Operation BC: complete the Procedure -----
-
-    await bind_complete(deps)(
-        CompleteProcedure(procedure_id=_PROCEDURE_ID),
-        principal_id=_PRINCIPAL_ID,
-        correlation_id=_CORRELATION_ID,
-    )
-
-    # ----- Run BC: complete the subject-less Run (record-path, no actuation kind) -----
-
+    # ----- Complete the subject-less Run, carrying the conduct's actuation kind -----
+    #
+    # The phase Procedure conducted the steps; the Run is the producing batch.
+    # TEST-ORCHESTRATED: the Conductor stamps the observed kind on the Procedure
+    # terminal, not the Run, so we thread `result.actuation_kind` into complete_run
+    # by hand here, standing in for the deferred AcquisitionRuntime (the
+    # conduct-to-Run-completion bridge). This exercises the register_dataset
+    # Run-fallback; production needs that bridge before a conducted capture Run
+    # carries the kind autonomously. See the boundary memo's deferred item.
     await bind_complete_run(deps)(
-        CompleteRun(run_id=run_id),
+        CompleteRun(run_id=run_id, actuation_kind=result.actuation_kind),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Data BC: register the flat-field-baseline Dataset (produced by the Run) -----
+    # The Run now reaches its terminal: RunStarted -> RunCompleted.
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert [e.event_type for e in run_events] == ["RunStarted", "RunCompleted"]
 
-    await bind_register_dataset(deps)(
+    # ----- Data BC: the flat-field Dataset (Run-produced) -----
+    #
+    # producing_run_id attributes the flat field to the producing Run (the boundary
+    # rule: a Dataset-of-record makes the act a Run; the conducting Procedure
+    # produces no Dataset). subject_id=None is the calibration idiom (no sample).
+    dataset_id = await bind_register_dataset(deps)(
         RegisterDataset(
-            name="2BM_flat_field_2026-04-17",
-            uri="file:///data/2bm/2026-04/flat_field.h5",
+            name="2BM_flat_field_2026-06-22",
+            uri="file:///data/2bm/2026-06/flat_field.h5",
             checksum_algorithm="sha256",
-            checksum_value="f" * 64,
-            byte_size=2448 * 2048 * 2 * 50,
+            checksum_value="a" * 64,
+            byte_size=2448 * 2048 * 2 * _FLAT_FRAMES,
             media_type="application/x-hdf5",
-            conforms_to=frozenset({"https://www.nexusformat.org/NXflat_field"}),
+            conforms_to=frozenset(),
             producing_run_id=run_id,
+            producing_procedure_id=None,
             subject_id=None,
             derived_from=frozenset(),
         ),
@@ -486,71 +468,12 @@ async def test_flat_field_plays_out_end_to_end(
         correlation_id=_CORRELATION_ID,
     )
 
-    # ----- Assert: Procedure stream lifecycle -----
-
-    events, version = await deps.event_store.load("Procedure", _PROCEDURE_ID)
-    assert version == 4
-    assert [e.event_type for e in events] == [
-        "ProcedureRegistered",
-        "ProcedureStarted",
-        "ProcedureActivitiesLogbookOpened",
-        "ProcedureCompleted",
-    ]
-    # The conducting Procedure is a phase of the subject-less acquisition Run:
-    # its genesis carries parent_run_id back to the Run, and the Run reaches
-    # RunCompleted with no Subject.
-    registered = next(e for e in events if e.event_type == "ProcedureRegistered")
-    assert registered.payload["parent_run_id"] == str(run_id)
-
-    run_events, _ = await deps.event_store.load("Run", run_id)
-    run_event_types = [e.event_type for e in run_events]
-    assert run_event_types[0] == "RunStarted"
-    assert "RunCompleted" in run_event_types
-    assert run_events[0].payload["subject_id"] is None
-
-    # ----- Assert: target Assets reached Active lifecycle -----
-
-    for asset_id in (_ASSET_SHUTTER_2BM_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID):
-        asset_events, _ = await deps.event_store.load("Asset", asset_id)
-        assert [e.event_type for e in asset_events] == [
-            "AssetRegistered",
-            "AssetFamilyAdded",
-            "AssetActivated",
-        ]
-
-    # ----- Assert: 8 step entries land in the projection in canonical order -----
-
-    await _drain(db_pool)
-    async with db_pool.acquire() as conn:
-        rows = await conn.fetch(
-            "SELECT step_kind FROM entries_operation_procedure_activities "
-            "WHERE procedure_id = $1 "
-            "AND payload->>'result' IS DISTINCT FROM 'in_flight' "
-            "ORDER BY sampled_at",
-            _PROCEDURE_ID,
-        )
-    assert len(rows) == 8
-    assert [r["step_kind"] for r in rows] == [
-        "check",  # sample-out assertion
-        "setpoint",  # verify shutter closed (safe start)
-        "setpoint",  # open shutter
-        "action",  # acquire flat stack
-        "check",  # stack acquired
-        "setpoint",  # close shutter (safe state)
-        "action",  # compute baseline
-        "check",  # baseline quality
-    ]
-
-    # ----- Assert: Dataset stream landed -----
-
-    dataset_events, dataset_version = await deps.event_store.load(
-        "Dataset", _DATASET_FLAT_BASELINE_ID
-    )
-    assert dataset_version == 1
+    dataset_events, _ = await deps.event_store.load("Dataset", dataset_id)
     assert [e.event_type for e in dataset_events] == ["DatasetRegistered"]
-    dataset_payload = dataset_events[0].payload
-    assert dataset_payload["name"] == "2BM_flat_field_2026-04-17"
-    assert dataset_payload["encoding"]["media_type"] == "application/x-hdf5"
-    assert dataset_payload["subject_id"] is None
-    assert dataset_payload["producing_run_id"] == str(run_id)
-    assert dataset_payload["producing_procedure_id"] is None
+    payload = dataset_events[0].payload
+    assert payload["producing_run_id"] == str(run_id)
+    assert payload["producing_procedure_id"] is None
+    assert payload["subject_id"] is None
+    # The conduct's Simulated provenance flows onto the Dataset via the Run
+    # (Run-fallback derivation; the fact promote_dataset gates on).
+    assert payload["producing_actuation_kind"] == ActuationKind.SIMULATED.value

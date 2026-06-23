@@ -49,17 +49,16 @@ APPROVED_OPERATION_NOUNS = frozenset(
 
 # Whole-kind carve-outs, with rationale:
 #   {dark,flat}_field       - capture-and-store; the trailing noun is the
-#                             produced artifact (the field), not the operation
-#   normalization_baseline  - the combined darks+flats normalization
-#                             ceremony; same capture-and-store idiom as
-#                             its two predecessors (trailing noun is the
-#                             produced artifact), composing them rather
-#                             than superseding them
+#                             produced artifact (the field), not the operation.
+#                             flat_field CORA-drives the sample retract/restore
+#                             (value capture); dark_field is record-path. The
+#                             combined darks-plus-flats grab is a Plan running
+#                             both, not a kind; "normalization" is the downstream
+#                             reduction, not a capture.
 CARVE_OUT_KINDS = frozenset(
     {
         "dark_field",
         "flat_field",
-        "normalization_baseline",
     }
 )
 
