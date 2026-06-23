@@ -99,11 +99,11 @@ Event payloads stay flat; the holder is a state-side ergonomic.
 
 ## Run vs Procedure boundary
 
-Two spine aggregates record planned work, and the same act must have exactly one home. Select on the act's **output of record**, not its Subject and not whether CORA drives it.
+Two spine aggregates record planned work, and the same act must have exactly one home. Select on the act's **output of record**, not on whether CORA drives it.
 
-**An act is a `Run` iff its reason-for-existing is to leave a finite, identity-bearing primary `Dataset`** (a measurement or a computed / reconstructed lot, Subject present or absent). **Otherwise it is a `Procedure`**: it changes or verifies equipment state, and its output of record, if any, is a `Calibration` revision or an incidental diagnostic, never a Dataset-of-record.
+**An act is a `Run` iff its reason-for-existing is to leave a finite, identity-bearing primary `Dataset`** (a measurement or a computed / reconstructed lot). **Otherwise it is a `Procedure`**: it changes or verifies equipment state, and its output of record, if any, is a `Calibration` revision or an incidental diagnostic, never a Dataset-of-record.
 
-The one-question test: *does the act leave a Dataset of record?* Yes (acquired or computed, sample or not) -> Run. No (a calibration value, or only a state change) -> Procedure. `subject_id` is metadata on a Run (`UUID | None`), not the discriminator: calibration captures are subject-less Runs.
+The one-question test: *does the act leave a Dataset of record?* Yes (acquired or computed) -> Run. No (a calibration value, or only a state change) -> Procedure. `subject_id` is plain optional metadata on a Run (`UUID | None`); it never enters the selection.
 
 Two structural facts already enforce most of this, so it is mostly derivation, not decree:
 
@@ -120,6 +120,6 @@ Orthogonal axes, do not conflate with selection:
 
 The one genuinely undecidable shape is an act whose registered Dataset and Calibration are co-equal deliverables. No shipped act crosses that seam today; resolve it then by a declared primary output, not now.
 
-Boundary case: subject-less data captures (dark / flat baselines) leave a baseline Dataset, so they are **subject-less Runs**, with the conducting Procedure (record-path or conducted) carried as a phase of the Run via `parent_run_id` and the Dataset attributed to the Run. The 2-BM scenarios model them this way.
+A dark- or flat-field capture leaves a baseline Dataset, so it is a Run by the same test, with any conducting Procedure carried as a phase via `parent_run_id` and the Dataset attributed to the Run. The 2-BM scenarios model them this way; the absence of a `subject_id` changes nothing.
 
 Why: selecting on a single observable fact (the produced Dataset of record) keeps five-year ledger queries unique. Reproduce-this-result walks the Run plus Dataset lineage; how-did-the-instrument-behave walks the Procedure plus Calibration history; and the same act never lands in two places. Corpus precedent (ISA-88 finite-lot, Bluesky `open_run` bracket, PROV / schema.org generated-entity, SciCat raw / derived) converges on the produced-data-lot as the axis and rejects Subject as the axis.
