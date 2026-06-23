@@ -38,10 +38,19 @@ Capability -> Recipe (step template) -> Procedure (register-from-recipe)
      later `SetpointStep` with a `CaptureRef` restores the axis to it. The
      save-and-restore is plain recipe steps, not a bespoke action body
      (the retired `staging.flats`).
-  3. First Dataset whose `producing_actuation_kind` is derived from a
-     conducted Procedure: the soft IOC is a declared simulator, so the
-     conduct observes `Simulated` and that provenance rides through the
-     terminal event onto the registered baseline Dataset.
+  3. The baseline is a subject-less acquisition Run whose conducting phase
+     Procedure (`parent_run_id`) drives the steps; the Dataset is attributed
+     to the Run (`producing_run_id`), per the Run vs Procedure boundary rule.
+     The soft IOC is a declared simulator, so the conduct observes `Simulated`.
+     NOTE: the Conductor autonomously stamps that kind on the *Procedure*
+     terminal, not the Run, so here the scenario threads `result.actuation_kind`
+     into `complete_run` BY HAND, standing in for the deferred AcquisitionRuntime
+     (the conduct-to-Run-completion kind bridge) that production will need. What
+     this proves is the Run-fallback derivation in `register_dataset` (Run kind
+     -> `producing_actuation_kind` -> the promote gate), not an autonomous
+     production guarantee. Until that bridge exists a CORA-conducted baseline Run
+     completes with `actuation_kind=None`; see the deferred item in the boundary
+     memo. 2-BM's live baselines are TomoScan record-path, so this is exploratory.
 
 ## Domain shape
 
@@ -95,10 +104,13 @@ real per-campaign values are operator-bound.
   - **Capture reads the OBSERVED value.** The restore returns the axis to
     where it actually was (the readback), not a commanded number; the
     restore setpoint uses `verify=True` so its landed value is recorded.
-  - **Conducted provenance flows to the artifact.** The Dataset carries
-    `producing_actuation_kind="Simulated"` derived from the conduct, the
-    fact that gates `promote_dataset` later. A live (non-simulated)
-    conduct would carry `Physical` and clear that gate.
+  - **Conducted provenance flows to the artifact (via a test-orchestrated
+    bridge).** The Dataset carries `producing_actuation_kind="Simulated"`, the
+    fact that gates `promote_dataset` later. The conduct stamps that kind on the
+    Procedure terminal autonomously; the scenario then threads it onto the Run's
+    `complete_run` by hand (the deferred AcquisitionRuntime's job), so this
+    exercises the `register_dataset` Run-fallback, not an autonomous deployment
+    path. A live conduct would carry `Physical` and clear the gate.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -112,6 +124,14 @@ import pytest
 
 from cora.data.features.register_dataset import RegisterDataset
 from cora.data.features.register_dataset import bind as bind_register_dataset
+from cora.equipment.aggregates.asset import AssetTier
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
+from cora.equipment.features.add_asset_family import AddAssetFamily
+from cora.equipment.features.add_asset_family import bind as bind_add_asset_family
+from cora.equipment.features.define_family import DefineFamily
+from cora.equipment.features.define_family import bind as bind_define_family
+from cora.equipment.features.register_asset import RegisterAsset
+from cora.equipment.features.register_asset import bind as bind_register_asset
 from cora.operation.acquisitions import collect
 from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
@@ -127,6 +147,7 @@ from cora.operation.features.register_procedure_from_recipe import RegisterProce
 from cora.operation.features.register_procedure_from_recipe import bind as bind_register_from_recipe
 from cora.operation.features.start_procedure import bind as bind_start
 from cora.operation.ports.control_port import ActuationKind
+from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.aggregates.recipe import (
     CaptureRef,
     RecipeActionStep,
@@ -134,14 +155,26 @@ from cora.recipe.aggregates.recipe import (
     RecipeCheckStep,
     RecipeSetpointStep,
 )
+from cora.recipe.features.define_method import DefineMethod
+from cora.recipe.features.define_method import bind as bind_define_method
+from cora.recipe.features.define_plan import DefinePlan
+from cora.recipe.features.define_plan import bind as bind_define_plan
+from cora.recipe.features.define_practice import DefinePractice
+from cora.recipe.features.define_practice import bind as bind_define_practice
 from cora.recipe.features.define_recipe import DefineRecipe
 from cora.recipe.features.define_recipe import bind as bind_define_recipe
+from cora.run.features.complete_run import CompleteRun
+from cora.run.features.complete_run import bind as bind_complete_run
+from cora.run.features.start_run import StartRun
+from cora.run.features.start_run import bind as bind_start_run
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 
 _NOW = datetime(2026, 6, 22, 10, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-0000020e0099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000020e00aa")
 _CAPABILITY_ID = UUID("01900000-0000-7000-8000-0000020e0c01")
+_SITE_ID = UUID("01900000-0000-7000-8000-0000020e0c02")
+_FAMILY_CAMERA_ID = family_stream_id(FamilyName("Camera"))
 
 # Illustrative-pending-staff stand-in codes / values (see module docstring).
 _SHUTTER_CLOSED = 0
@@ -230,6 +263,67 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
         correlation_id=_CORRELATION_ID,
     )
 
+    # ----- Recipe ladder + a subject-less acquisition Run to wrap the conduct -----
+    #
+    # Under the Run vs Procedure boundary rule the baseline Dataset-of-record makes
+    # the act a Run; the conducted ceremony below is a phase of that Run
+    # (parent_run_id), and the Dataset is attributed to the Run. The Plan binds a
+    # minimal detector Asset; the conduct itself drives the literal soft-IOC PVs, so
+    # the Plan's asset set is illustrative-pending-staff, like the PV mapping.
+    await bind_define_family(deps)(
+        DefineFamily(name="Camera", affordances=frozenset()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    detector_asset_id = await bind_register_asset(deps)(
+        RegisterAsset(
+            name="2bm-detector", tier=AssetTier.DEVICE, parent_id=None, facility_code="cora"
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_add_asset_family(deps)(
+        AddAssetFamily(asset_id=detector_asset_id, family_id=_FAMILY_CAMERA_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    method_id = await bind_define_method(deps)(
+        DefineMethod(
+            name="normalization_baseline",
+            capability_id=_CAPABILITY_ID,
+            execution_pattern=ExecutionPattern.BATCH,
+            needed_family_ids=frozenset({_FAMILY_CAMERA_ID}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    practice_id = await bind_define_practice(deps)(
+        DefinePractice(
+            name="2BM_normalization_baseline_practice", method_id=method_id, site_id=_SITE_ID
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    plan_id = await bind_define_plan(deps)(
+        DefinePlan(
+            name="2BM_normalization_baseline_plan",
+            practice_id=practice_id,
+            asset_ids=frozenset({detector_asset_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    run_id = await bind_start_run(deps)(
+        StartRun(
+            name="2-BM normalization baseline (subject-less acquisition Run)",
+            plan_id=plan_id,
+            subject_id=None,
+            trigger_source="operator-manual; pre-scan normalization baseline",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
     # ----- Operation BC: register a Procedure from the Recipe (lands Defined) -----
     expander = InMemoryRecipeExpander()
     procedure_id = await bind_register_from_recipe(deps, expansion_port=expander)(
@@ -237,7 +331,7 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
             name="2-BM normalization baseline (darks + flats, illustrative campaign)",
             kind="normalization_baseline",
             target_asset_ids=(),
-            parent_run_id=None,
+            parent_run_id=run_id,
             recipe_id=recipe_id,
             bindings={},
         ),
@@ -294,6 +388,18 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
     assert "RecipeExpansionRecorded" in event_types
     assert "ProcedureStarted" in event_types
     assert event_types[-1] == "ProcedureCompleted"
+    # The Procedure is a phase of the acquisition Run (the headline modeling
+    # claim): its genesis carries parent_run_id back to the Run.
+    registered = next(e for e in events if e.event_type == "ProcedureRegistered")
+    assert registered.payload["parent_run_id"] == str(run_id)
+
+    # ----- Run FSM stream: the subject-less acquisition Run that wraps the phase -----
+    #
+    # The Run is started subject-less here; it reaches RunCompleted only after
+    # the conduct, asserted below once complete_run runs.
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert run_events[0].event_type == "RunStarted"
+    assert run_events[0].payload["subject_id"] is None
 
     # ----- Journal: eleven logical step entries + seven pre-effect markers -----
     #
@@ -341,11 +447,30 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
     finally:
         await readback_port.aclose()
 
-    # ----- Data BC: the normalization baseline Dataset (terminal-gated) -----
+    # ----- Complete the subject-less Run, carrying the conduct's actuation kind -----
     #
-    # producing_procedure_id links the artifact to the conduct and exercises
-    # the register_dataset terminal gate (the Procedure is Completed, so it
-    # passes). subject_id=None is the calibration idiom (no sample Subject).
+    # The phase Procedure conducted the steps; the Run is the producing batch.
+    # TEST-ORCHESTRATED: the Conductor stamps the observed kind on the Procedure
+    # terminal, not the Run, so we thread `result.actuation_kind` into complete_run
+    # by hand here, standing in for the deferred AcquisitionRuntime (the
+    # conduct-to-Run-completion bridge). This exercises the register_dataset
+    # Run-fallback; production needs that bridge before a conducted baseline Run
+    # carries the kind autonomously. See the boundary memo's deferred item.
+    await bind_complete_run(deps)(
+        CompleteRun(run_id=run_id, actuation_kind=result.actuation_kind),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # The Run now reaches its terminal: RunStarted -> RunCompleted.
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert [e.event_type for e in run_events] == ["RunStarted", "RunCompleted"]
+
+    # ----- Data BC: the normalization baseline Dataset (Run-produced) -----
+    #
+    # producing_run_id attributes the baseline to the producing Run (the boundary
+    # rule: a Dataset-of-record makes the act a Run; the conducting Procedure
+    # produces no Dataset). subject_id=None is the calibration idiom (no sample).
     dataset_id = await bind_register_dataset(deps)(
         RegisterDataset(
             name="2BM_normalization_baseline_2026-06-22",
@@ -355,8 +480,8 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
             byte_size=2448 * 2048 * 2 * (_DARK_FRAMES + _FLAT_FRAMES),
             media_type="application/x-hdf5",
             conforms_to=frozenset(),
-            producing_procedure_id=procedure_id,
-            producing_run_id=None,
+            producing_run_id=run_id,
+            producing_procedure_id=None,
             subject_id=None,
             derived_from=frozenset(),
         ),
@@ -367,8 +492,9 @@ async def test_normalization_baseline_recipe_conducts_darks_and_flats_against_so
     dataset_events, _ = await deps.event_store.load("Dataset", dataset_id)
     assert [e.event_type for e in dataset_events] == ["DatasetRegistered"]
     payload = dataset_events[0].payload
-    assert payload["producing_procedure_id"] == str(procedure_id)
+    assert payload["producing_run_id"] == str(run_id)
+    assert payload["producing_procedure_id"] is None
     assert payload["subject_id"] is None
-    # The conduct's Simulated provenance is derived onto the Dataset (the fact
-    # promote_dataset gates on).
+    # The conduct's Simulated provenance flows onto the Dataset via the Run
+    # (Run-fallback derivation; the fact promote_dataset gates on).
     assert payload["producing_actuation_kind"] == ActuationKind.SIMULATED.value
