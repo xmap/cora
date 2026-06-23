@@ -11,7 +11,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 | Filtered white-beam tomography | `tomography` | the standard micron-resolution CT scan |
 | Continuous-rotation tomography | `continuous_rotation_tomography` | high-throughput acquisition, the autonomous workhorse |
 | Streaming tomography | `streaming_tomography` | live reconstruction feedback |
-| Dark / flat baselines | `dark_baseline`, `flat_baseline` | the reference frames every reconstruction needs |
+| Dark / flat fields | `dark_field`, `flat_field` | the reference frames every reconstruction needs |
 | First light | `first_light` | commissioning the beam onto the detector |
 
 A few points of intent shape the model:
