@@ -11,7 +11,7 @@ A doc page may only name an aggregate that some scenario here has registered. Th
 Where:
 
 - `<beamline-or-facility>` is `aps`, `2bm`, `7bm`, `maxiv`, ... (lowercase, no dashes). It maps directly to `docs/deployments/<beamline-or-facility>/`.
-- `<routine>` is the operator routine in snake_case (`motor_homing`, `alignment_center`, `dark_baseline`, `facility`).
+- `<routine>` is the operator routine in snake_case (`motor_homing`, `alignment_center`, `dark_field`, `facility`).
 
 The `scenarios/` folder is the marker; no `_scenario.py` suffix.
 
@@ -80,4 +80,4 @@ The `conftest.py` hook at this folder collects these into `site_data/scenarios.j
 
 ## Template
 
-Copy from a recent sibling. [`test_2bm_dark_baseline.py`](test_2bm_dark_baseline.py) and [`test_2bm_alignment_resolution.py`](test_2bm_alignment_resolution.py) are good starting points; both consume [`_facility_fixture.py`](_facility_fixture.py) for the standard install ceremony.
+Copy from a recent sibling. [`test_2bm_dark_field.py`](test_2bm_dark_field.py) and [`test_2bm_alignment_resolution.py`](test_2bm_alignment_resolution.py) are good starting points; both consume [`_facility_fixture.py`](_facility_fixture.py) for the standard install ceremony.

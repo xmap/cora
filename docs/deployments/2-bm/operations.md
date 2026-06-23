@@ -11,7 +11,7 @@ are Permitted and its resources are available.
 - Ready the beam: confirm the hutch permits, pick the beam mode (Mono or Pink), open the shutters.
 - Set the energy: [`energy_setting`](recipes.md#energy_setting) drives the optic curves to a configured energy.
 - Mount and align: `motor_homing` and the `*_alignment` [Procedures](procedures.md).
-- Scan: capture [`dark_baseline`](recipes.md#dark_baseline) and [`flat_baseline`](recipes.md#flat_baseline),
+- Scan: capture [`dark_field`](recipes.md#dark_field) and [`flat_field`](recipes.md#flat_field),
   then run the tomography Plan.
 - Recover: the [Cautions](cautions.md) name the fix (a locked hexapod clears with
   [`hexapod_reboot`](recipes.md#hexapod_reboot)).

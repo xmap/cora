@@ -61,7 +61,7 @@ A `Procedure.kind` reads `<subject>_<operation-noun>` with the operation noun LA
 - `center_and_close_slits` -- FLAG (verb-phrase first); fold to `slit_centering`
 - `blade_throw_calibration` -- FLAG (act named for its value); the act is `blade_throw_characterization`, the value is the `blade_throw_scale` Calibration
 
-Carve-outs, do NOT flag: `dark_baseline` / `flat_baseline` / `vibration_baseline` (capture-and-store; the trailing noun is the produced artifact).
+Carve-outs, do NOT flag: `dark_field` / `flat_field` / `vibration_baseline` (capture-and-store; the trailing noun is the produced artifact).
 
 Scope: deployment procedure kinds (the `kind=` literals under `tests/integration/scenarios/` and the procedures docs). Do NOT flag unit/contract placeholder kinds (`bakeout`, `alignment`, `"a"`, padded whitespace) -- those exercise aggregate mechanics, not the deployment vocabulary. The fitness test `tests/architecture/test_procedure_kind_naming.py` enforces noun-LAST in CI; you catch what it cannot: whether a new operation noun is genuinely well-formed English rather than a verb smuggled into noun position.
 

@@ -22,22 +22,22 @@ facility:
   display_name: aps
   kind: Site
   institution: Argonne
-  sectors: [Sector 2, Sector 7, Sector 19]
-  beamlines: [2-BM, 7-BM, 19-BM]
+  sectors: [Sector 2, Sector 7, Sector 32, Sector 19]
+  beamlines: [2-BM, 7-BM, 32-ID, 19-BM]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. A method
 # that exists in the Catalog renders as a link; a method still pending in the
 # Catalog renders unlinked.
 practices:
-  - {name: APS_standard_dark_baseline_practice, method: dark_baseline}
+  - {name: APS_standard_dark_field_practice, method: dark_field}
   - {name: APS_motor_homing_practice, method: motor_homing}
   - {name: 2BM_resolution_practice, method: resolution_alignment}
   - {name: 2BM_focus_practice, method: focus_alignment}
   - {name: 2BM_alignment_practice, method: center_alignment}
   - {name: 2BM_roll_practice, method: roll_alignment}
   - {name: 2BM_pitch_practice, method: pitch_alignment}
-  - {name: 2BM_dark_baseline_practice, method: dark_baseline}
-  - {name: 2BM_flat_baseline_practice, method: flat_baseline}
+  - {name: 2BM_dark_field_practice, method: dark_field}
+  - {name: 2BM_flat_field_practice, method: flat_field}
   - {name: 2BM_sensitivity_characterization_practice, method: sensitivity_characterization}
   - {name: 2BM_hexapod_reboot_practice, method: hexapod_reboot}
   - {name: 2BM_tomography_practice, method: tomography}
@@ -61,8 +61,8 @@ practices:
   # tomography Methods adapted for the new beamline, carried pending until the
   # beamline is operating. White-beam only: no energy or mono practices.
   - {name: 19BM_first_light_practice, method: first_light, pending: true, note: "19-BM-FACT design phase"}
-  - {name: 19BM_dark_baseline_practice, method: dark_baseline, pending: true, note: "19-BM-FACT design phase"}
-  - {name: 19BM_flat_baseline_practice, method: flat_baseline, pending: true, note: "19-BM-FACT design phase"}
+  - {name: 19BM_dark_field_practice, method: dark_field, pending: true, note: "19-BM-FACT design phase"}
+  - {name: 19BM_flat_field_practice, method: flat_field, pending: true, note: "19-BM-FACT design phase"}
   - {name: 19BM_tomography_practice, method: tomography, pending: true, note: "19-BM-FACT design phase"}
   - {name: 19BM_continuous_rotation_practice, method: continuous_rotation_tomography, pending: true, note: "19-BM-FACT high-throughput autonomous CT"}
   - {name: 19BM_streaming_tomography_practice, method: streaming_tomography, pending: true, note: "19-BM-FACT design phase"}

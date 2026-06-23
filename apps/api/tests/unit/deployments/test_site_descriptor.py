@@ -173,7 +173,7 @@ def test_site_guards_reject_bad_data(tmp_path: Path) -> None:
 
 def test_renders_single_site_narrative() -> None:
     site = sd.load(_SITE)
-    pages = sp.render_all(site, catalog_methods=frozenset({"tomography", "dark_baseline"}))
+    pages = sp.render_all(site, catalog_methods=frozenset({"tomography", "dark_field"}))
     # one reader-first narrative, NOT one page per bounded context
     assert set(pages) == {"deployments/aps/index.md"}
     page = pages["deployments/aps/index.md"]
