@@ -22,8 +22,8 @@ facility:
   display_name: aps
   kind: Site
   institution: Argonne
-  sectors: [Sector 2]
-  beamlines: [2-BM]
+  sectors: [Sector 2, Sector 7]
+  beamlines: [2-BM, 7-BM]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. A method
 # that exists in the Catalog renders as a link; a method still pending in the
@@ -50,6 +50,13 @@ practices:
   - {name: 2BM_energy_characterization_practice, method: energy_characterization}
   - {name: 2BM_ioc_restart_practice, method: ioc_restart, pending: true}
   - {name: 2BM_mirror_recoat_practice, method: mirror_recoat_return, pending: true}
+  # 7-BM Practices (design phase). Tomography reuses the existing catalog Methods;
+  # the white-beam techniques reference Methods not yet in the catalog (they render
+  # unlinked) and are carried pending until the technique enters the pilot scope (TECH-1).
+  - {name: 7BM_tomography_practice, method: tomography, pending: true, note: "reuses the 2-BM tomoScan tomography Method"}
+  - {name: 7BM_high_speed_imaging_practice, method: high_speed_imaging, pending: true, note: "white-beam chopper-gated movie bursts; Method not yet in catalog (TECH-1)"}
+  - {name: 7BM_radiography_practice, method: radiography, pending: true, note: "focused-beam time-resolved point radiography; Method not yet in catalog (TECH-1)"}
+  - {name: 7BM_energy_dispersive_diffraction_practice, method: energy_dispersive_diffraction, pending: true, note: "white-beam EDD; Method not yet in catalog (TECH-1)"}
 
 # Access BC Actors that are conceptually facility-wide at APS. Actor display
 # names live in actor_profile (the PII vault), not in event-sourced Actor state.
@@ -66,6 +73,7 @@ actors:
   - {name: Sample-of-opportunity PI, kind: human}
   - {name: Named APS scientific staff, kind: human, pending: true, note: "cross-beamline duties"}
   - {name: Real ESRB membership, kind: human, pending: true, note: "vs committee-as-actor"}
+  - {name: 7-BM Beamline Scientist, kind: human, pending: true, note: "7-BM beamline-bound staff"}
 
 # Agent BC Agents seeded at this deployment. Each Agent's id is shared with an
 # Access BC Actor (kind=agent) via a cross-BC atomic write. This list mirrors
@@ -84,6 +92,8 @@ supplies:
   - {name: Storage-ring beam current, kind: PhotonBeam, pending: true}
   - {name: Liquid nitrogen, kind: LiquidNitrogen, pending: true}
   - {name: Gas mixtures, kind: ProcessGas, pending: true, note: sample environments}
+  - {name: 7-BM compressed air, kind: CompressedAir, pending: true, note: "high-volume plant for 7-BM flow and combustion experiments"}
+  - {name: 7-BM vacuum system, kind: Vacuum, pending: true, note: "rotary-claw vacuum for 7-BM flow experiments"}
 
 # Safety BC: facility-issued Clearances. Each carries a facility safety-form kind and binds to one
 # or more aggregates or external references.
@@ -92,9 +102,13 @@ clearances:
   - {name: Per-experiment ESAFs, kind: ESAF, pending: true, note: per-proposal Subject + Run}
   - {name: Synchrotron access, kind: SAF, pending: true}
   - {name: Door interlocks, kind: DOOR, pending: true}
+  - {name: 7-BM flammable-gas experiment ESAF, kind: ESAF, pending: true, note: "per-experiment authorization for 7-BM combustion / flammable-gas work; whether a hazard workflow beyond ESAF is needed is HAZ-1"}
 
 # Caution BC: operator tribal knowledge carried on a facility-level target.
 cautions:
   - {target: APS Site Asset, category: OperationalWindow, severity: Notice, text: "Top-up injections cause brief beam-flux transients (~0.5s) every few minutes"}
   - {target: APS Site Asset, text: "Storage-ring scheduled downtimes", pending: true}
   - {target: Shared optics, text: "Calibration drift on shared optics", pending: true}
+  - {target: 7-BM beam path, text: "White beam can crack scintillators and damage samples; filter and use the chopper to limit duty cycle", pending: true}
+  - {target: 7-BM sample environment, text: "Flammable-gas and combustion handling; ventilated cabinet, low-volume delivery line", pending: true}
+  - {target: 7-BM sample environment, text: "Oxygen-deficiency hazard from inert and process-gas flows", pending: true}

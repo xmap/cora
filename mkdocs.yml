@@ -119,6 +119,19 @@ nav:
       - Techniques: deployments/tomowise/techniques.md
       - Governance: deployments/tomowise/governance.md
       - Model: deployments/tomowise/model.md
+    - 7-BM:
+      - deployments/7-bm/index.md
+      - Open questions: deployments/7-bm/questions.md
+      - The beamline:
+        - deployments/7-bm/equipment/index.md
+        - Source: deployments/7-bm/beamline.md
+        - Sample: deployments/7-bm/equipment/sample.md
+        - Detector: deployments/7-bm/equipment/detector.md
+        - Controls: deployments/7-bm/equipment/controls.md
+        - Inventory: deployments/7-bm/inventory.md
+      - Techniques: deployments/7-bm/techniques.md
+      - Governance: deployments/7-bm/governance.md
+      - Model: deployments/7-bm/model.md
     - Facilities:
       - deployments/facilities/index.md
       - APS: deployments/aps/index.md
