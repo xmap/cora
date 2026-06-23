@@ -6,7 +6,7 @@ A Recipe is an ordered, parameterized step sequence (setpoint / check / action) 
 
 Addresses confirmed in [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) are shown plain; records not yet in the descriptor are marked *(illustrative)* and tracked on [Open questions](questions.md).
 
-The four recipes below are 2-BM's operational arc, each realizing one [Capability](../../catalog/capabilities.md) as a flat setpoint/check/action sequence with only operator values bound and no feedback loop: two subject-less calibration captures that feed reconstruction (`dark_baseline`, `flat_baseline`, `acquisition`), one coordinated optic-configuration change (`energy_setting`, `energy_change`), and one controller recovery (`hexapod_reboot`, `maintenance`).
+The four recipes below are 2-BM's operational arc, each realizing one [Capability](../../catalog/capabilities.md) as a flat setpoint/check/action sequence with only operator values bound and no feedback loop: two baseline captures that feed reconstruction (`dark_baseline`, `flat_baseline`, `acquisition`), one coordinated optic-configuration change (`energy_setting`, `energy_change`), and one controller recovery (`hexapod_reboot`, `maintenance`).
 
 | Recipe | Realizes | Target | Binds | Status |
 | --- | --- | --- | --- | --- |
@@ -19,7 +19,7 @@ The four recipes below are 2-BM's operational arc, each realizing one [Capabilit
 
 ## Acquisition baselines
 
-Both baselines are subject-less calibration captures that feed reconstruction, and both reuse the registered `collect` action body (acquire a frame stack, poll until done), so they are conductible today. The pixel-wise baseline math (mean / std) is downstream data reduction, not a recipe step (per the catalog convention: pixel-wise baseline reduction stays in external pipelines, while a heavier compute step like reconstruction is a recorded compute Method); the captured stack becomes a baseline [Dataset](experiment.md), which makes each capture a subject-less calibration [Run](experiment.md) (a Dataset-of-record makes the act a Run; see the [Run vs Procedure boundary](../../reference/modeling.md#run-vs-procedure-boundary) rule). The recipe is the as-data form of the capture sequence the Run conducts.
+Both baselines are calibration captures that feed reconstruction, and both reuse the registered `collect` action body (acquire a frame stack, poll until done), so they are conductible today. The pixel-wise baseline math (mean / std) is downstream data reduction, not a recipe step (per the catalog convention: pixel-wise baseline reduction stays in external pipelines, while a heavier compute step like reconstruction is a recorded compute Method); the captured stack becomes a baseline [Dataset](experiment.md), which makes each capture a [Run](experiment.md) (a Dataset-of-record makes the act a Run; see the [Run vs Procedure boundary](../../reference/modeling.md#run-vs-procedure-boundary) rule). The recipe is the as-data form of the capture sequence the Run conducts.
 
 ### `dark_baseline`
 
