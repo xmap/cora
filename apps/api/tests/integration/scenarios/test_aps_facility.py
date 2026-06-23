@@ -139,7 +139,7 @@ def _id_queue() -> list[UUID]:
         # define_family (generic Probe, for Method to declare): event_id only
         # (stream id is now derived from the name, not popped)
         e(),
-        # define_method (dark_baseline): method_id, event_id
+        # define_method (dark_field): method_id, event_id
         _METHOD_DARK_BASELINE_ID,
         e(),
         # define_practice (APS dark-baseline practice, site_id=APS): practice_id, event_id
@@ -229,7 +229,7 @@ async def test_facility_install_plays_out_end_to_end(
         DefineMethod(
             execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
-            name="dark_baseline",
+            name="dark_field",
             needed_family_ids=frozenset({_CAP_GENERIC_PROBE_ID}),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -237,7 +237,7 @@ async def test_facility_install_plays_out_end_to_end(
     )
     await bind_define_practice(deps)(
         DefinePractice(
-            name="APS_standard_dark_baseline_practice",
+            name="APS_standard_dark_field_practice",
             method_id=_METHOD_DARK_BASELINE_ID,
             site_id=_APS_SITE_ID,
         ),

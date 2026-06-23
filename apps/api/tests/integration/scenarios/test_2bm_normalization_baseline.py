@@ -12,7 +12,7 @@ The ceremony is a Recipe (a templated step list) realizing the existing
 (`register_procedure_from_recipe`), and the conduct handler re-expands the
 recipe into conduct steps and drives them through the ControlPort against
 a soft IOC. It composes the two shipped record-path captures
-(`dark_baseline` + `flat_baseline`) into one conducted, modeled ceremony
+(`dark_field` + `flat_field`) into one conducted, modeled ceremony
 that produces the normalization baseline every tomographic Run normalizes
 against (darks are subtracted, flats divide).
 
@@ -69,7 +69,7 @@ questions on transit-safety ordering and ceremony ORDER / FREQUENCY:
 
 The ceremony starts sample-in and ends sample-in (the restore returns the
 axis to the captured aligned position), and ends shutter-closed (matching
-the `flat_baseline` sibling and recipes.md return-to-safe). The sample
+the `flat_field` sibling and recipes.md return-to-safe). The sample
 transits the live beam during both the retraction and the restore (the
 shutter closes only after the flats), which follows TomoScan's open-beam
 practice at 2-BM (SBS as the per-scan fast shutter); confirm before any

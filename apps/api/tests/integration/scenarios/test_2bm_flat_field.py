@@ -9,7 +9,7 @@ Scenario test for the flat-field baseline routine: with the shutter
 open and NO sample in the beam, acquire a stack of N flat frames,
 compute a pixel-wise mean, and register the resulting baseline as a
 Dataset for downstream reconstruction to divide by. Sibling to
-`dark_baseline`; same structural shape with the shutter
+`dark_field`; same structural shape with the shutter
 state and analytic operation inverted.
 
 See [[project_pilot_docs_design]] for the phase / file-naming
@@ -27,7 +27,7 @@ beam-profile non-uniformity. Without both baselines registered as
 Datasets, the operations-phase science Runs have nothing to
 normalize against.
 
-## Distinction from `dark_baseline`
+## Distinction from `dark_field`
 
   - Dark: shutter CLOSED, no beam reaches detector. Captures dark
     current + read noise.
@@ -59,7 +59,7 @@ confirming consistent beam delivery.
 
 ## Asset stack (shutter + image chain)
 
-Same as `dark_baseline`:
+Same as `dark_field`:
 StationShutter, Camera, Scintillator.
 
 ## What this scenario surfaces (gap-finding intent)
@@ -287,7 +287,7 @@ def _postgres_step_store(db_pool: asyncpg.Pool):
 
 
 @pytest.mark.integration
-async def test_flat_baseline_plays_out_end_to_end(
+async def test_flat_field_plays_out_end_to_end(
     db_pool: asyncpg.Pool,
 ) -> None:
     """Seed facility + image chain, confirm sample out, open shutter,
@@ -328,7 +328,7 @@ async def test_flat_baseline_plays_out_end_to_end(
         DefineMethod(
             execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
-            name="flat_baseline",
+            name="flat_field",
             needed_family_ids=frozenset({_CAP_SHUTTER_ID, _CAP_CAMERA_ID, _CAP_SCINTILLATOR_ID}),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -336,7 +336,7 @@ async def test_flat_baseline_plays_out_end_to_end(
     )
     await bind_define_practice(deps)(
         DefinePractice(
-            name="2BM_flat_baseline_practice",
+            name="2BM_flat_field_practice",
             method_id=_METHOD_FLAT_ID,
             site_id=_APS_SITE_ID,
         ),
@@ -345,7 +345,7 @@ async def test_flat_baseline_plays_out_end_to_end(
     )
     await bind_define_plan(deps)(
         DefinePlan(
-            name="2BM_flat_baseline_plan",
+            name="2BM_flat_field_plan",
             practice_id=_PRACTICE_FLAT_ID,
             asset_ids=frozenset(
                 {_ASSET_SHUTTER_2BM_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
@@ -376,7 +376,7 @@ async def test_flat_baseline_plays_out_end_to_end(
     await bind_register_procedure(deps)(
         RegisterProcedure(
             name="2-BM flat-field baseline (50 frames @ 200ms, Apr-2026 campaign)",
-            kind="flat_baseline",
+            kind="flat_field",
             target_asset_ids=frozenset(
                 {_ASSET_SHUTTER_2BM_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
             ),
@@ -471,8 +471,8 @@ async def test_flat_baseline_plays_out_end_to_end(
 
     await bind_register_dataset(deps)(
         RegisterDataset(
-            name="2BM_flat_baseline_2026-04-17",
-            uri="file:///data/2bm/2026-04/flat_baseline.h5",
+            name="2BM_flat_field_2026-04-17",
+            uri="file:///data/2bm/2026-04/flat_field.h5",
             checksum_algorithm="sha256",
             checksum_value="f" * 64,
             byte_size=2448 * 2048 * 2 * 50,
@@ -549,7 +549,7 @@ async def test_flat_baseline_plays_out_end_to_end(
     assert dataset_version == 1
     assert [e.event_type for e in dataset_events] == ["DatasetRegistered"]
     dataset_payload = dataset_events[0].payload
-    assert dataset_payload["name"] == "2BM_flat_baseline_2026-04-17"
+    assert dataset_payload["name"] == "2BM_flat_field_2026-04-17"
     assert dataset_payload["encoding"]["media_type"] == "application/x-hdf5"
     assert dataset_payload["subject_id"] is None
     assert dataset_payload["producing_run_id"] == str(run_id)

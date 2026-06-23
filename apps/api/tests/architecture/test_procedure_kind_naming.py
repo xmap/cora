@@ -48,8 +48,8 @@ APPROVED_OPERATION_NOUNS = frozenset(
 )
 
 # Whole-kind carve-outs, with rationale:
-#   {dark,flat}_baseline    - capture-and-store; the trailing noun is the
-#                             produced artifact, not the operation
+#   {dark,flat}_field       - capture-and-store; the trailing noun is the
+#                             produced artifact (the field), not the operation
 #   normalization_baseline  - the combined darks+flats normalization
 #                             ceremony; same capture-and-store idiom as
 #                             its two predecessors (trailing noun is the
@@ -57,8 +57,8 @@ APPROVED_OPERATION_NOUNS = frozenset(
 #                             than superseding them
 CARVE_OUT_KINDS = frozenset(
     {
-        "dark_baseline",
-        "flat_baseline",
+        "dark_field",
+        "flat_field",
         "normalization_baseline",
     }
 )

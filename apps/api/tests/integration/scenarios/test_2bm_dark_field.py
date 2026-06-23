@@ -281,7 +281,7 @@ def _postgres_step_store(db_pool: asyncpg.Pool):
 
 
 @pytest.mark.integration
-async def test_dark_baseline_plays_out_end_to_end(
+async def test_dark_field_plays_out_end_to_end(
     db_pool: asyncpg.Pool,
 ) -> None:
     """Seed facility + image chain, acquire 50 dark frames with shutter
@@ -321,7 +321,7 @@ async def test_dark_baseline_plays_out_end_to_end(
         DefineMethod(
             execution_pattern=ExecutionPattern.BATCH,
             capability_id=_CAPABILITY_ID,
-            name="dark_baseline",
+            name="dark_field",
             needed_family_ids=frozenset({_CAP_SHUTTER_ID, _CAP_CAMERA_ID, _CAP_SCINTILLATOR_ID}),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -329,7 +329,7 @@ async def test_dark_baseline_plays_out_end_to_end(
     )
     await bind_define_practice(deps)(
         DefinePractice(
-            name="2BM_dark_baseline_practice",
+            name="2BM_dark_field_practice",
             method_id=_METHOD_DARK_ID,
             site_id=_APS_SITE_ID,
         ),
@@ -338,7 +338,7 @@ async def test_dark_baseline_plays_out_end_to_end(
     )
     await bind_define_plan(deps)(
         DefinePlan(
-            name="2BM_dark_baseline_plan",
+            name="2BM_dark_field_plan",
             practice_id=_PRACTICE_DARK_ID,
             asset_ids=frozenset(
                 {_ASSET_SHUTTER_2BM_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
@@ -369,7 +369,7 @@ async def test_dark_baseline_plays_out_end_to_end(
     await bind_register_procedure(deps)(
         RegisterProcedure(
             name="2-BM dark baseline (50 frames @ 200ms, Apr-2026 campaign)",
-            kind="dark_baseline",
+            kind="dark_field",
             target_asset_ids=frozenset(
                 {_ASSET_SHUTTER_2BM_ID, _ASSET_ORYX_5MP_ID, _ASSET_SCINTILLATOR_LUAG_ID}
             ),
@@ -451,8 +451,8 @@ async def test_dark_baseline_plays_out_end_to_end(
 
     await bind_register_dataset(deps)(
         RegisterDataset(
-            name="2BM_dark_baseline_2026-04-17",
-            uri="file:///data/2bm/2026-04/dark_baseline.h5",
+            name="2BM_dark_field_2026-04-17",
+            uri="file:///data/2bm/2026-04/dark_field.h5",
             checksum_algorithm="sha256",
             checksum_value="d" * 64,
             byte_size=2448 * 2048 * 2 * 50,
@@ -523,7 +523,7 @@ async def test_dark_baseline_plays_out_end_to_end(
     assert dataset_version == 1
     assert [e.event_type for e in dataset_events] == ["DatasetRegistered"]
     dataset_payload = dataset_events[0].payload
-    assert dataset_payload["name"] == "2BM_dark_baseline_2026-04-17"
+    assert dataset_payload["name"] == "2BM_dark_field_2026-04-17"
     assert dataset_payload["encoding"]["media_type"] == "application/x-hdf5"
     assert dataset_payload["subject_id"] is None
     assert dataset_payload["producing_run_id"] == str(run_id)

@@ -135,11 +135,11 @@ methods:
     capability: cora.capability.alignment
     purpose: "The pitch step, iterative 0/180 sharpness-delta correction so the rotation axis is perpendicular to the beam."
     needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
-  - name: dark_baseline
+  - name: dark_field
     capability: cora.capability.acquisition
     purpose: "Dark-frame stack plus pixel-wise baseline, producing a Dataset for reconstruction subtraction."
     needed_families: [Shutter, Camera, Scintillator]
-  - name: flat_baseline
+  - name: flat_field
     capability: cora.capability.acquisition
     purpose: "Flat-field stack (shutter open, no sample) plus pixel-wise baseline, producing a Dataset for reconstruction division."
     needed_families: [Shutter, Camera, Scintillator]

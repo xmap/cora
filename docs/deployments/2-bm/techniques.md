@@ -33,5 +33,5 @@ Run as [Procedures](procedures.md) and [Recipes](recipes.md) under [Operations](
 | --- | --- |
 | `alignment` | `resolution_alignment`, `focus_alignment`, `center_alignment`, `roll_alignment`, `pitch_alignment` |
 | `characterization` | `sensitivity_characterization`, `energy_characterization` |
-| `acquisition` | `dark_baseline`, `flat_baseline` |
+| `acquisition` | `dark_field`, `flat_field` |
 | `maintenance` | `motor_homing`, `hexapod_reboot` |

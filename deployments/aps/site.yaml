@@ -29,15 +29,15 @@ facility:
 # that exists in the Catalog renders as a link; a method still pending in the
 # Catalog renders unlinked.
 practices:
-  - {name: APS_standard_dark_baseline_practice, method: dark_baseline}
+  - {name: APS_standard_dark_field_practice, method: dark_field}
   - {name: APS_motor_homing_practice, method: motor_homing}
   - {name: 2BM_resolution_practice, method: resolution_alignment}
   - {name: 2BM_focus_practice, method: focus_alignment}
   - {name: 2BM_alignment_practice, method: center_alignment}
   - {name: 2BM_roll_practice, method: roll_alignment}
   - {name: 2BM_pitch_practice, method: pitch_alignment}
-  - {name: 2BM_dark_baseline_practice, method: dark_baseline}
-  - {name: 2BM_flat_baseline_practice, method: flat_baseline}
+  - {name: 2BM_dark_field_practice, method: dark_field}
+  - {name: 2BM_flat_field_practice, method: flat_field}
   - {name: 2BM_sensitivity_characterization_practice, method: sensitivity_characterization}
   - {name: 2BM_hexapod_reboot_practice, method: hexapod_reboot}
   - {name: 2BM_tomography_practice, method: tomography}
