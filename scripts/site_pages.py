@@ -212,7 +212,10 @@ def render_all(
     site_label = f.heading or f.display_name.upper()
     if beamlines is None:
         beamlines = [(b, b.lower()) for b in f.beamlines]
-    primary = beamlines[0][0] if beamlines else None
+    # A single-beamline site reads naturally in the singular ("X runs at"); a
+    # site hosting several (APS hosts 2-BM and 19-BM) uses neutral phrasing so
+    # no one beamline is privileged by glob order.
+    primary = beamlines[0][0] if len(beamlines) == 1 else None
     run_label = primary or "the beamline"
 
     blocks = [f"# {site_label}"]

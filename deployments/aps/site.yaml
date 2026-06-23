@@ -22,8 +22,8 @@ facility:
   display_name: aps
   kind: Site
   institution: Argonne
-  sectors: [Sector 2]
-  beamlines: [2-BM]
+  sectors: [Sector 2, Sector 19]
+  beamlines: [2-BM, 19-BM]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. A method
 # that exists in the Catalog renders as a link; a method still pending in the
@@ -50,6 +50,15 @@ practices:
   - {name: 2BM_energy_characterization_practice, method: energy_characterization}
   - {name: 2BM_ioc_restart_practice, method: ioc_restart, pending: true}
   - {name: 2BM_mirror_recoat_practice, method: mirror_recoat_return, pending: true}
+  # 19-BM-FACT (Sector 19) is pre-build; its Practices are the same portable
+  # tomography Methods adapted for the new beamline, carried pending until the
+  # beamline is operating. White-beam only: no energy or mono practices.
+  - {name: 19BM_first_light_practice, method: first_light, pending: true, note: "19-BM-FACT design phase"}
+  - {name: 19BM_dark_baseline_practice, method: dark_baseline, pending: true, note: "19-BM-FACT design phase"}
+  - {name: 19BM_flat_baseline_practice, method: flat_baseline, pending: true, note: "19-BM-FACT design phase"}
+  - {name: 19BM_tomography_practice, method: tomography, pending: true, note: "19-BM-FACT design phase"}
+  - {name: 19BM_continuous_rotation_practice, method: continuous_rotation_tomography, pending: true, note: "19-BM-FACT high-throughput autonomous CT"}
+  - {name: 19BM_streaming_tomography_practice, method: streaming_tomography, pending: true, note: "19-BM-FACT design phase"}
 
 # Access BC Actors that are conceptually facility-wide at APS. Actor display
 # names live in actor_profile (the PII vault), not in event-sourced Actor state.
@@ -59,6 +68,7 @@ actors:
   - {name: Run Debrief, kind: agent}
   - {name: APS Experiment Safety Review Board, kind: human}
   - {name: 2-BM Beamline Scientist, kind: human}
+  - {name: 19-BM Beamline Scientist, kind: human, pending: true, note: "19-BM-FACT (Sector 19), pre-build; operator pool TBD"}
   - {name: Proposal 2026-1234 PI, kind: human}
   - {name: Proposal 2026-1235 PI, kind: human}
   - {name: Proposal 2026-1236 PI, kind: human}
