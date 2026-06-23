@@ -26,6 +26,7 @@ Postgres ``ConcurrencyError``.
 """
 
 from typing import Protocol, assert_never, cast
+from urllib.parse import urlparse
 from uuid import UUID
 
 from cora.data.aggregates.attestation import (
@@ -104,8 +105,6 @@ class IdempotentHandler(Protocol):
 
 def _scheme_of(uri: str) -> str:
     """Return the lowercase URI scheme used for verifier dispatch."""
-    from urllib.parse import urlparse
-
     return urlparse(uri).scheme.lower()
 
 
@@ -216,6 +215,10 @@ def bind(deps: Kernel) -> Handler:
             outcome=outcome,
             evidence_expected_checksum=distribution.checksum.value,
             evidence_computed_checksum=computed,
+            # All current verifiers are sha256-only; a directory (sha256-tree)
+            # Distribution is rejected above, so this literal is safe. When a
+            # non-sha256 verifier lands, carry the algorithm on the verify()
+            # result instead of hardcoding it here.
             evidence_algorithm="sha256",
             evidence_verifier_supply_id=distribution.supply_id,
             evidence_verifier_kind=verifier.kind,

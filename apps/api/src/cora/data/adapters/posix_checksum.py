@@ -100,7 +100,11 @@ class PosixChecksumAdapter:
                 distribution_uri,
                 supply_id,
             )
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
+            # ValueError covers an embedded null byte in the decoded path
+            # (a URI like file:///x%00y is fully printable yet decodes to a
+            # null path that os.path.realpath / open reject). The port
+            # contract is never-raise: surface it as Unreachable, not a 500.
             _log.warning(
                 "posix_checksum.read_failed",
                 distribution_uri=distribution_uri,

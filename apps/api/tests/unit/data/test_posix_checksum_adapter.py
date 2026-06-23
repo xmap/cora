@@ -149,5 +149,62 @@ async def test_verify_with_no_configured_roots_refuses_every_path(tmp_path: Path
     assert isinstance(result, Unreachable)
 
 
+async def test_verify_returns_unreachable_for_embedded_null_byte(tmp_path: Path) -> None:
+    # A fully-printable URI (file:///.../scan%00.h5) decodes to a path with a
+    # null byte; os.path.realpath / open raise ValueError. The port contract
+    # is never-raise, so this must surface as Unreachable, not a crash.
+    root = tmp_path / "root"
+    root.mkdir()
+    uri = f"file://{root}/scan%00.h5"
+
+    result = await _adapter(root).verify(
+        distribution_uri=uri,
+        expected_checksum="a" * 64,
+        supply_id=_SUPPLY_ID,
+    )
+
+    assert isinstance(result, Unreachable)
+
+
+async def test_verify_returns_unreachable_for_remote_host(tmp_path: Path) -> None:
+    result = await _adapter(tmp_path).verify(
+        distribution_uri="file://otherhost/data/scan.h5",
+        expected_checksum="a" * 64,
+        supply_id=_SUPPLY_ID,
+    )
+
+    assert isinstance(result, Unreachable)
+    assert "remote host" in result.error_detail
+
+
+async def test_verify_returns_unreachable_for_empty_path(tmp_path: Path) -> None:
+    result = await _adapter(tmp_path).verify(
+        distribution_uri="file://",
+        expected_checksum="a" * 64,
+        supply_id=_SUPPLY_ID,
+    )
+
+    assert isinstance(result, Unreachable)
+
+
+async def test_verify_does_not_confuse_prefix_sibling_root(tmp_path: Path) -> None:
+    # A root of /.../data must NOT also contain /.../data2 (string-prefix trap).
+    root = tmp_path / "data"
+    sibling = tmp_path / "data2"
+    root.mkdir()
+    sibling.mkdir()
+    target = sibling / "scan.h5"
+    target.write_bytes(b"sibling")
+
+    result = await _adapter(root).verify(
+        distribution_uri=target.as_uri(),
+        expected_checksum=_sha256(b"sibling"),
+        supply_id=_SUPPLY_ID,
+    )
+
+    assert isinstance(result, Unreachable)
+    assert "outside the allowed roots" in result.error_detail
+
+
 def test_adapter_advertises_its_kind() -> None:
     assert PosixChecksumAdapter(allowed_roots=()).kind == "PosixChecksum"

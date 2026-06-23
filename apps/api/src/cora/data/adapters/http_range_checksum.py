@@ -78,7 +78,11 @@ class HttpRangeChecksumAdapter:
         try:
             try:
                 head = await client.head(distribution_uri, follow_redirects=True)
-            except httpx.HTTPError as exc:
+            except (httpx.HTTPError, httpx.InvalidURL) as exc:
+                # InvalidURL (a malformed URI, e.g. an embedded null / control
+                # char) is NOT an httpx.HTTPError subclass; catch it here so
+                # the port's never-raise contract holds and a bad URI becomes
+                # an Unreachable recorded fact, not a 500.
                 _log.warning(
                     "http_range_checksum.head_failed",
                     distribution_uri=distribution_uri,
@@ -114,7 +118,7 @@ class HttpRangeChecksumAdapter:
                         headers={"Range": range_header},
                         follow_redirects=True,
                     )
-                except httpx.HTTPError as exc:
+                except (httpx.HTTPError, httpx.InvalidURL) as exc:
                     _log.warning(
                         "http_range_checksum.range_failed",
                         distribution_uri=distribution_uri,
