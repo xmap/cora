@@ -143,6 +143,26 @@ def test_no_clearance_raises_requires_active() -> None:
 
 
 @pytest.mark.unit
+def test_compute_shaped_scope_still_requires_active_clearance() -> None:
+    """A compute-shaped Run (empty Asset scope: no enclosures, no needed
+    supplies, no beam PVs) makes the physical interlocks vacuous, but the
+    clearance gate stays fail-closed: a Run with no active clearance is refused
+    even when every other dimension is empty. This is the cross-port safety
+    asymmetry a future per-port envelope split must preserve, compute Runs are
+    not clearance-exempt.
+    """
+    with pytest.raises(RunRequiresActiveClearanceError):
+        check_safety_envelope(
+            run_id=_RUN_ID,
+            referencing_clearances=(),
+            needed_supplies_snapshot=frozenset(),
+            needed_supplies_satisfaction={},
+            referencing_enclosures=(),
+            beam_availability=None,
+        )
+
+
+@pytest.mark.unit
 def test_clearance_present_but_none_active_raises_coverage_mismatch() -> None:
     with pytest.raises(RunClearanceCoverageMismatchError):
         _check(referencing_clearances=(_clearance("Expired"), _clearance("Superseded")))

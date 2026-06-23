@@ -63,6 +63,12 @@ def check_safety_envelope(
     # consensus (Khononov / Dudycz / Herberto Graca 2024-2025): cross-
     # context gating queries a replicated read model (here:
     # proj_safety_clearance_summary), not the upstream aggregate.
+    #
+    # Cross-port invariant: this clearance gate stays fail-closed for EVERY
+    # Run, including a compute Run whose empty Asset scope makes the enclosure
+    # / beam interlocks below vacuous. Any future per-port envelope split must
+    # not exempt compute from clearance (see
+    # test_compute_shaped_scope_still_requires_active_clearance).
     if not referencing_clearances:
         raise RunRequiresActiveClearanceError(run_id)
     active_clearances = [c for c in referencing_clearances if c.status == "Active"]
