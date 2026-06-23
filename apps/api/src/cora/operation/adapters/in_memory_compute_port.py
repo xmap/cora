@@ -13,7 +13,7 @@ the same `ComputePort` Protocol against a real subprocess.
 
 The compute design memo banned an `InMemoryComputePort` because at
 RECORD-only time there was no consumer for a compute fake. That
-justification ended when the CONDUCT runtime (`ComputeRuntime`) landed:
+justification ended when the CONDUCT runtime (`Reckoner`) landed:
 the fake now serves the unit and scenario tiers exactly as
 `InMemoryControlPort` serves the Conductor's tests. The fake is
 justified once a consumer exists, on CORA's own standard

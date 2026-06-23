@@ -1,6 +1,6 @@
 """Composition-root runtime: conduct a compute Run via ComputePort.
 
-`ComputeRuntime` is the CONDUCT-side L2 edge runtime for compute Runs,
+`Reckoner` is the CONDUCT-side L2 edge runtime for compute Runs,
 peer to the Operation BC's Procedure `Conductor`. The Conductor drives
 a Procedure FSM via `ControlPort`; this drives a Run FSM via
 `ComputePort`. It submits a compute job, awaits its terminal state,
@@ -79,8 +79,8 @@ _REASON_MAX = 480
 
 
 @dataclass(frozen=True)
-class ComputeRunResult:
-    """Outcome of a `ComputeRuntime.conduct` call.
+class ReckonerResult:
+    """Outcome of a `Reckoner.conduct` call.
 
     `status` is the job's terminal `ComputeStatus`, or None when the
     job never started (submit was rejected / the substrate was
@@ -103,7 +103,7 @@ class ComputeRunResult:
         return self.status is ComputeStatus.SUCCEEDED and self.failure is None
 
 
-class ComputeRuntime:
+class Reckoner:
     """Drive one compute Run's conduct: submit -> await -> complete | abort."""
 
     def __init__(
@@ -126,7 +126,7 @@ class ComputeRuntime:
         correlation_id: UUID,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
-    ) -> ComputeRunResult:
+    ) -> ReckonerResult:
         """Conduct an already-`Running` Run to its terminal via ComputePort.
 
         Submits `job_spec`, awaits the terminal state, and transitions
@@ -149,7 +149,7 @@ class ComputeRuntime:
         except (ComputeSubmitRejectedError, ComputeNotAvailableError) as exc:
             reason = _bounded(f"compute submit failed: {exc}")
             await self._best_effort_abort(run_id, reason, None, None, envelope)
-            return ComputeRunResult(run_id=run_id, status=None, failure=reason)
+            return ReckonerResult(run_id=run_id, status=None, failure=reason)
 
         # --- await terminal state ---
         try:
@@ -203,7 +203,7 @@ class ComputeRuntime:
                 **envelope,
             )
         except Exception as exc:  # lifecycle handler rejected the complete
-            return ComputeRunResult(
+            return ReckonerResult(
                 run_id=run_id,
                 status=status,
                 job_id=job_id,
@@ -211,7 +211,7 @@ class ComputeRuntime:
                 actuation_kind=provenance.actuation_kind,
                 failure=_bounded(f"complete_run rejected: {exc}"),
             )
-        return ComputeRunResult(
+        return ReckonerResult(
             run_id=run_id,
             status=status,
             job_id=job_id,
@@ -226,14 +226,14 @@ class ComputeRuntime:
         status: ComputeStatus,
         detail: str,
         envelope: dict[str, Any],
-    ) -> ComputeRunResult:
+    ) -> ReckonerResult:
         """Capture provenance for a failed job and best-effort abort the Run."""
         provenance = self._compute_port.provide_provenance_payload(job_id, status, None)
         reason = _bounded(detail)
         await self._best_effort_abort(
             run_id, reason, provenance.actuation_kind.value, str(job_id), envelope
         )
-        return ComputeRunResult(
+        return ReckonerResult(
             run_id=run_id,
             status=status,
             job_id=job_id,
@@ -289,4 +289,4 @@ def _bounded(text: str) -> str:
     return trimmed[: _REASON_MAX - 3] + "..."
 
 
-__all__ = ["ComputeRunResult", "ComputeRuntime"]
+__all__ = ["Reckoner", "ReckonerResult"]

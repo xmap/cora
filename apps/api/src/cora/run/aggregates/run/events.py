@@ -345,7 +345,7 @@ class RunCompleted:
 
     Was slim by design (gate-review Q3): substantive run summary was
     deferred only because nothing could source it yet. The compute
-    CONDUCT runtime (`ComputeRuntime`) is now that source for a
+    CONDUCT runtime (`Reckoner`) is now that source for a
     conducted Run, which is exactly the condition Q3 named, so the
     conduct-observed provenance lands here. The payload stays slim for
     a normal acquisition Run (every compute field is None); only a
@@ -399,7 +399,7 @@ class RunAborted:
     pre-Phase-1 streams.
 
     Compute-conduct provenance (None for operator aborts; populated
-    when `ComputeRuntime` aborts a Run after a failed / cancelled /
+    when `Reckoner` aborts a Run after a failed / cancelled /
     timed-out compute job): `actuation_kind` is the raw `ActuationKind`
     the runtime observed (folded onto `Run.actuation_kind`, so even a
     failed conduct taints any Dataset that references the Run);

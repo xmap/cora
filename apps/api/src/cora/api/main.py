@@ -69,12 +69,12 @@ from cora.api._calibration_watcher import calibration_watcher_lifespan
 from cora.api._campaign_watcher import campaign_watcher_lifespan
 from cora.api._clearance_expirer import clearance_expirer_lifespan
 from cora.api._clearance_watcher import clearance_watcher_lifespan
-from cora.api._compute_runtime import ComputeRuntime
 from cora.api._conduct_run_route import register_conduct_run_routes
 from cora.api._conduct_run_tool import register_conduct_run_tools
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.api._procedure_watcher import procedure_watcher_lifespan
+from cora.api._reckoner import Reckoner
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
@@ -531,8 +531,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         handlers: RunHandlers = fastapi_app.state.run
         return handlers
 
-    def _get_compute_runtime() -> ComputeRuntime:
-        runtime: ComputeRuntime = fastapi_app.state.compute_runtime
+    def _get_reckoner() -> Reckoner:
+        runtime: Reckoner = fastapi_app.state.reckoner
         return runtime
 
     def _get_deps() -> Kernel:
@@ -596,7 +596,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_calibration_tools(mcp, get_handlers=_get_calibration_handlers)
     register_campaign_tools(mcp, get_handlers=_get_campaign_handlers)
     register_agent_tools(mcp, get_handlers=_get_agent_handlers)
-    register_conduct_run_tools(mcp, get_runtime=_get_compute_runtime, get_deps=_get_deps)
+    register_conduct_run_tools(mcp, get_runtime=_get_reckoner, get_deps=_get_deps)
     mcp_app = mcp.streamable_http_app()
 
     @asynccontextmanager
@@ -700,7 +700,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 )
             )
             app.state.compute_port = compute_port
-            app.state.compute_runtime = ComputeRuntime(
+            app.state.reckoner = Reckoner(
                 compute_port=compute_port,
                 complete_run=app.state.run.complete_run,
                 abort_run=app.state.run.abort_run,

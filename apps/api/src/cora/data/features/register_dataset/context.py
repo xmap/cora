@@ -22,7 +22,7 @@ CONTRIBUTING.md).
     Run, its `actuation_kind` (the fallback source of
     `producing_actuation_kind` when there is no producing Procedure).
     Both are server-observed terminal facts (recorded by the
-    ComputeRuntime on the Run stream), so deriving them here keeps the
+    Reckoner on the Run stream), so deriving them here keeps the
     gate unforgeable.
   - `producing_procedure`: the conducted Procedure that produced
     this Dataset. None when the command's `producing_procedure_id`

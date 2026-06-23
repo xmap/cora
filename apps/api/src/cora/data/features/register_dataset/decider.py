@@ -193,7 +193,7 @@ def decide(
     # terminal state (per non-determinism principle: capture, don't recompute;
     # mirrors producing_run_end_state). Two conduct sources carry the
     # observed kind on their terminal event: a Procedure (Conductor-driven
-    # hardware actuation) and a Run (ComputeRuntime-driven compute job).
+    # hardware actuation) and a Run (Reckoner-driven compute job).
     # Prefer the Procedure when both are present; fall back to the Run's
     # `actuation_kind` for compute-conducted Datasets. None when neither
     # was conducted (external / non-conducted Datasets) or the conduct

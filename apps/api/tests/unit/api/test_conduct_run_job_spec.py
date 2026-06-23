@@ -9,13 +9,13 @@ from uuid import uuid4
 
 import pytest
 
-from cora.api._compute_runtime import ComputeRunResult
 from cora.api._conduct_run_route import (
     ComputeResourcesRequest,
     ConductRunRequest,
     build_job_spec,
     result_to_wire,
 )
+from cora.api._reckoner import ReckonerResult
 from cora.operation.ports.compute_port import (
     ArtifactRef,
     ComputeResources,
@@ -73,7 +73,7 @@ def test_result_to_wire_surfaces_directory_tree_hash_artifact_fields() -> None:
         byte_size=4096,
         entry_count=512,
     )
-    result = ComputeRunResult(
+    result = ReckonerResult(
         run_id=uuid4(),
         status=ComputeStatus.SUCCEEDED,
         job_id=JobId("local-1-1"),
@@ -99,7 +99,7 @@ def test_result_to_wire_single_file_artifact_has_no_entry_count() -> None:
         checksum_value="b" * 64,
         byte_size=2048,
     )
-    result = ComputeRunResult(
+    result = ReckonerResult(
         run_id=uuid4(),
         status=ComputeStatus.SUCCEEDED,
         job_id=JobId("local-1-1"),
@@ -116,7 +116,7 @@ def test_result_to_wire_single_file_artifact_has_no_entry_count() -> None:
 
 @pytest.mark.unit
 def test_result_to_wire_failure_has_no_artifact_fields() -> None:
-    result = ComputeRunResult(
+    result = ReckonerResult(
         run_id=uuid4(),
         status=ComputeStatus.FAILED,
         job_id=JobId("local-1-1"),

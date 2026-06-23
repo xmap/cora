@@ -1,4 +1,4 @@
-"""Unit tests for the composition-root `ComputeRuntime`.
+"""Unit tests for the composition-root `Reckoner`.
 
 Drives `conduct()` over the in-memory event store with the
 `InMemoryComputePort` fake (plus tiny purpose-built fakes for the
@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.api._compute_runtime import ComputeRuntime
+from cora.api._reckoner import Reckoner
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
@@ -52,11 +52,11 @@ async def _seed_run_started(store: InMemoryEventStore, run_id: UUID) -> None:
     await store.append(stream_type="Run", stream_id=run_id, expected_version=0, events=[new_event])
 
 
-def _runtime(store: InMemoryEventStore, compute_port: object) -> ComputeRuntime:
+def _runtime(store: InMemoryEventStore, compute_port: object) -> Reckoner:
     from tests.unit._helpers import build_deps
 
     deps = build_deps(ids=[uuid4() for _ in range(8)], now=_NOW, event_store=store)
-    return ComputeRuntime(
+    return Reckoner(
         compute_port=compute_port,  # type: ignore[arg-type]
         complete_run=complete_run.bind(deps),
         abort_run=abort_run.bind(deps),

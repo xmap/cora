@@ -1,6 +1,6 @@
 """Contract tests for `POST /runs/{run_id}/conduct`.
 
-The external entry to the ComputeRuntime. The default wire-up uses the
+The external entry to the Reckoner. The default wire-up uses the
 in-memory (Simulated) ComputePort, so a conduct succeeds without a real
 subprocess. Covers: happy path (run completes, Simulated provenance on
 the body), round-trip into GET /runs, failure-in-body (conducting a

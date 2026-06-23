@@ -3,7 +3,7 @@
 Mirrors the REST contract (same wire shape, same in-process wire-up).
 Covers tool listing and a structured failure-in-body result. The happy
 path (a real Running Run conducted to Completed) is covered by the REST
-contract test and the ComputeRuntime unit tests; here we prove the tool
+contract test and the Reckoner unit tests; here we prove the tool
 is registered, accepts the body schema, reaches the wired runtime, and
 returns a structured result rather than raising.
 """

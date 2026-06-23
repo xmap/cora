@@ -3,7 +3,7 @@
 Single-source happy-path terminal: `Running -> Completed`. The bare
 operator-facing form is just `run_id`; no body at the API layer. The
 optional conduct-provenance fields are server-supplied by the compute
-CONDUCT runtime (`ComputeRuntime`), never operator input, mirroring
+CONDUCT runtime (`Reckoner`), never operator input, mirroring
 `CompleteProcedure.actuation_kind`.
 
 Per-event timestamping (`occurred_at`) and the new event id are

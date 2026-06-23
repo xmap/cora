@@ -1205,7 +1205,7 @@ class Run:
     pinned_calibration_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
     # conduct-observed actuation provenance. None until a terminal
     # event sets it: only RunCompleted / RunAborted issued by the
-    # compute CONDUCT runtime (`ComputeRuntime`) carry a non-None
+    # compute CONDUCT runtime (`Reckoner`) carry a non-None
     # `actuation_kind` (the raw `ActuationKind` value Physical /
     # Simulated / Hybrid). A normal acquisition Run and any non-
     # conducted Run fold to None. Read back by the Data BC at Dataset
