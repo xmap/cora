@@ -1,0 +1,290 @@
+# CORA Beamline descriptor: 19-BM-FACT (APS), design phase
+#
+# 19-BM-FACT (Fast Autonomous Computed Tomography) is a planned filtered
+# white-beam bending-magnet imaging beamline at the APS (Sector 19), bound to
+# the existing APS Site (deployments/aps/site.yaml). It is built for
+# high-throughput, autonomous, micron-resolution CT with robotic sample
+# handling.
+#
+# STATUS: design phase. The beamline was under construction when the Final
+# Design Report (Alan Kastengren, IMG/XSD, 6 June 2026) was written; first
+# light is targeted for the 2026-3 beam cycle. Every value here is an FDR
+# design specification, not a commissioned measurement, so every device carries
+# `new: true` (not yet modelled in CORA) and `confirm: true` (value to be
+# verified by 19-BM staff). EPICS PV names are mostly TBD until the control
+# system is brought up, so no `pv` field is invented (CTRL-1). Devices bind to
+# catalog Families only, with no `model`, because vendors/part-numbers are not
+# yet procured; reused-equipment notes (K1-20, A359-K2, F3-30 from 1-ID) carry
+# provenance, not bindings.
+#
+# Items the FDR defers are tagged inline with a (QUESTION-ID) that is answered
+# on docs/deployments/19-bm/questions.md.
+#
+# Source of truth for the values below: the 19-BM FDR and the docs at
+# docs19bm.readthedocs.io. APS sketch ids (A359-Mxx / A359-Kxx / K1-20 / F3-30)
+# and ICMS document numbers (PSS APS_1181415, BLEPS APS_2388098) come from the
+# FDR; they are carried as plain spec lines, not as typed drawing refs.
+
+beamline:
+  name: 19-BM
+  facility: aps
+  sector: Sector 19
+  tier: Unit
+  parent: null
+  source: bending-magnet
+  source_confirm: "APS bending magnet (M3); 0.8 mrad horizontal acceptance, referenced to an alternate centerline 0.4 mrad inboard of the default new-BM centerline (FDR design phase)"
+  z_span_mm: [0, 55000]
+  z_span_confirm: true
+
+# Three access-gated enclosures. 19-BM-A is the front-end optics enclosure;
+# 19-BM-C is a pure shielded UHV transport with no beam intercepts; 19-BM-D is
+# the endstation. 19-BM-C and 19-BM-D share a downstream-wall guillotine held
+# open during operation, so they act as one shielded volume from a
+# radiation-safety perspective (ENC-1). PSS permit signals are APS facility
+# signals, not yet named (PSS-1).
+enclosures:
+  - name: 19-BM-A
+    role: front-end-optics
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS permit signal TBD (PSS-1)"}
+    note: "FOE: exit mask, slits, filters, bremsstrahlung control, gate valve, UHV transport"
+  - name: 19-BM-C
+    role: transport
+    facility_code: aps
+    permit_signal: {confirm: "shares the 19-BM-D search/secure volume via the held-open guillotine; permit arrangement TBD (ENC-1, PSS-1)"}
+    note: "shielded UHV transport only; the beam passes through entirely in vacuum, no intercepts, so no Device Assets are registered here"
+  - name: 19-BM-D
+    role: endstation
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS permit signal TBD (PSS-1)"}
+    note: "endstation: Be + Kapton windows, in-air sample stage, indirect-detection imaging, downstream beam stops"
+
+# --- SOURCE STAGE: beam delivery and conditioning in 19-BM-A (FOE) ---
+
+source:
+  stage: source
+  enclosure: 19-BM-A
+  intro: "The bending-magnet source. 19-BM accepts 0.8 mrad of the available horizontal BM fan, referenced to an alternate centerline 0.4 mrad inboard of the default new-BM centerline. The source is recorded as a Supply (PhotonBeam), not an Asset."
+  note: >
+    Filtered white-beam only: there is no monochromator and no mirror optics, so
+    the spectrum is set entirely by the filter unit, not by optic moves. All
+    19-BM components that intercept synchrotron radiation are water-cooled and
+    covered by the APSU bending-magnet thermal-analysis waiver (ICMS
+    APSU_2286907).
+  devices:
+    - name: Source
+      family: Beam
+      new: true
+      confirm: true
+      kind: "APS bending magnet (M3 magnet)"
+      max_fan: "2.7 mrad horizontal (front-end first-mask limit 2.5 mrad)"
+      used_acceptance: "0.8 mrad horizontal"
+      centerline_offset: "0.4 mrad inboard of the default new-BM centerline"
+      note: "bending-magnet source, recorded as a Supply(kind=PhotonBeam), not an Asset; renders as a loose family"
+
+front-end:
+  stage: source
+  enclosure: 19-BM-A
+  intro: "The front-end termination and beam-defining apertures in 19-BM-A: the single exit Be window bolted to the exit mask, the bremsstrahlung collimators, the white-beam slits, the filter unit, and the vacuum isolation gate valve."
+  note: >
+    The 19-BM design removes one of the two front-end Be windows at ~23 m (to
+    minimise wavefront-distorting scatter) and in exchange terminates the
+    beamline vacuum at ~50 m with the water-cooled Be window at the entrance of
+    19-BM-D. The only components that intercept the beam in 19-BM-A are the exit
+    mask, the slits, and the filters.
+  devices:
+    - name: FEExitWindow
+      family: Window
+      z_mm: 23000
+      new: true
+      confirm: true
+      material: beryllium (FE-standard thickness)
+      cooling: integrated with the front end
+      note: "single front-end exit Be window; bolted rigidly to the exit mask A359-M20 so the two share one survey fiducial"
+    - name: ExitMask
+      family: Mask
+      z_mm: 23000
+      new: true
+      confirm: true
+      passive: true
+      sketch: A359-M20
+      acceptance: "0.8 mrad horizontal (of 2.5 mrad available from the FE)"
+      centerline_offset: "0.4 mrad inboard of the default new-BM centerline"
+      cooling: water-cooled (APSU BM thermal-waiver scope)
+      classification: "RSS component; PSS-tracked under ICMS APS_1181415"
+      survey: "fiducialised before installation; cannot be re-aligned in place"
+      note: "first in-line aperture; limits the transmitted fan to the 0.8 mrad acceptance"
+    - name: UpstreamCollimator
+      family: Collimator
+      new: true
+      confirm: true
+      passive: true
+      sketch: K1-20
+      material: Pb
+      note: "first lead bremsstrahlung collimator (reused former insertion-device front-end collimator); immediately downstream of the exit mask"
+    - name: WhiteBeamSlit
+      family: Slit
+      new: true
+      confirm: true
+      cooling: water-cooled (intercepts white beam)
+      note: "defines the horizontal and vertical beam footprint; also a vacuum conductance limit sufficient to maintain control during a downstream breach"
+    - name: FilterUnit
+      family: Filter
+      new: true
+      confirm: true
+      sketch: F3-30
+      materials: "Si, Ge, and Cu filter media in two selectable banks"
+      cooling: water-cooled
+      banks: "Bank 1 (Open / Si 1000 / Ge 330 / Ge 830 / Cu 2000 um); Bank 2 (Open / Si 1000 / Ge 500 / Ge 1000 / slot 5 TBD um); combining gives Si 1000/2000, Ge 330/500/830/1000/1330/1830, Cu 2000 um equivalent (FILTER-1)"
+      note: "modified F3-30 carriage reused from 1-ID; filters the white beam to the desired spectrum and reduces downstream heat load"
+    - name: BeamlineVacuum
+      family: Vacuum
+      new: true
+      confirm: true
+      vacuum: "UHV, ion-pumped, no water-to-vacuum joints (APS Engineering Standard APS_2018473)"
+      gate_valve: "isolates 19-BM-A from the rest of the beamline; interlocked to vacuum sensors and coordinated with the FE exit valve by the BLEPS (ICMS APS_2388098) (BLEPS-1)"
+      note: "the vacuum system and its isolation gate valve, recorded as a Supply(kind=Vacuum) observation rather than an actuatable Asset, following 2-BM"
+    - name: DownstreamCollimator
+      family: Collimator
+      new: true
+      confirm: true
+      passive: true
+      sketch: A359-K2
+      material: Pb
+      note: "second lead bremsstrahlung collimator, after the gate valve (reused first-collimator assembly from the previous 19-BM beamline)"
+
+# --- SAMPLE STAGE: the in-air endstation in 19-BM-D ---
+# 19-BM-C carries the shielded UHV transport only and registers no devices; it
+# is declared above as an enclosure.
+
+endstation:
+  stage: sample
+  enclosure: 19-BM-D
+  intro: "The in-air sample environment in 19-BM-D. The beamline vacuum terminates at the water-cooled Be window; a short rough-vacuum section protects that window before the Kapton window transitions to air, where the sample stage sits in the white beam."
+  note: >
+    The detailed sample-manipulator design and the future robotic sample
+    changer are out of FDR scope and are carried as questions (STAGE-1,
+    ROBOT-1); they expand as the endstation is commissioned.
+  devices:
+    - name: DEntryWindow
+      family: Window
+      z_mm: 50000
+      new: true
+      confirm: true
+      material: beryllium, 250 um
+      cooling: "water-cooled, in series with the downstream photon stop A359-M100; flow monitored by the BLEPS (BLEPS-1)"
+      note: "beamline-vacuum terminus at the entrance to 19-BM-D; separates UHV from the rough-vacuum / air section"
+    - name: RoughVacuumSection
+      family: Vacuum
+      new: true
+      confirm: true
+      note: "short rough-vacuum volume just downstream of the Be window, to protect it from oxidation in the warm air of the experimental enclosure"
+    - name: KaptonWindow
+      family: Window
+      new: true
+      confirm: true
+      material: Kapton
+      note: "transition from the rough-vacuum protective section to the in-air experimental volume"
+    - name: SampleRotary
+      family: RotaryStage
+      new: true
+      confirm: "sample-manipulator design out of FDR scope; rotary + linear stack, model TBD (STAGE-1)"
+      note: "tomographic rotation axis, in air; the candidate master clock for high-throughput triggering (TRIG-1)"
+    - name: SamplePositioning
+      family: LinearStage
+      new: true
+      confirm: "sample-manipulator design out of FDR scope; model TBD (STAGE-1)"
+      note: "sample centring / positioning stage carried on the rotation stack; designed to host the robotic sample changer (ROBOT-1)"
+
+# --- DETECTION STAGE: the indirect-detection imaging system in 19-BM-D ---
+
+detector:
+  stage: detection
+  enclosure: 19-BM-D
+  intro: "The indirect-detection imaging system: a scintillator converts the transmitted X-ray image to visible light, visible-light microscope optics relay it, and a camera records 2-D projections that are reconstructed off-line into 3-D micron-resolution tomograms."
+  note: >
+    Specific scintillator, microscope-optics, and camera selections are procured
+    after the FDR and are carried as questions (DET-1). The microscope composes
+    the cross-facility `Microscope` Assembly (scintillator + optics + camera
+    presenting the Detector Role), the same blueprint 2-BM uses; it is not a
+    Family of its own.
+  devices:
+    - name: DetectorStage
+      family: Table
+      new: true
+      confirm: true
+      note: "positions the indirect-detection system in air, downstream of the sample; axis layout TBD"
+    - name: Scintillator
+      family: Scintillator
+      new: true
+      confirm: "scintillator selection procured post-FDR (DET-1)"
+      note: "converts the X-ray projection to a visible-light image"
+    - name: Microscope
+      family: Microscope
+      new: true
+      confirm: "microscope-optics selection procured post-FDR (DET-1)"
+      note: "visible-light relay optics; composes the cross-facility Microscope Assembly, presenting the Detector Role (renders as a loose family until the Fixture is registered)"
+    - name: Camera
+      family: Camera
+      new: true
+      confirm: "camera selection procured post-FDR (DET-1)"
+      note: "records 2-D projection images for off-line reconstruction"
+
+beam-stops:
+  stage: detection
+  enclosure: 19-BM-D
+  intro: "The photon and bremsstrahlung stops at the downstream end of 19-BM-D, plus the extra downstream-wall shielding required for a white-beam BM station."
+  note: "all RSS / safety elements at the downstream wall; the guillotines provide the APS TB-44 extra lead area."
+  devices:
+    - name: PhotonStop
+      family: BeamStop
+      new: true
+      confirm: true
+      passive: true
+      sketch: A359-M100
+      material: water-cooled copper block
+      cooling: "water-cooled, in series with the upstream Be window; flow monitored by the BLEPS (BLEPS-1)"
+      note: "absorbs the transmitted white beam after the sample / detector region"
+    - name: BremsstrahlungStop
+      family: BeamStop
+      new: true
+      confirm: true
+      passive: true
+      sketch: A359-K3
+      material: chevron stack of lead bricks
+      note: "absorbs bremsstrahlung behind the photon stop, at the downstream wall"
+    - name: DownstreamGuillotines
+      family: Shielding
+      new: true
+      confirm: true
+      passive: true
+      material: "Pb, >= 12 mm thick each (two guillotines)"
+      note: "movable PSS-grade shielding on the inside of the downstream wall; the 1 x 1 m2 extra-lead area required by APS TB-44; aligned in place (no internal fiducialisation). One is held open during operation, coupling 19-BM-C and 19-BM-D into one shielded volume (ENC-1)"
+
+# Cross-cutting drive electronics and triggering. 19-BM runs EPICS (APS
+# standard); PV names and the trigger scheme are TBD.
+controls:
+  intro: >
+    The control stack is EPICS (APS standard), expected to follow the 2-BM
+    TomoScan / MCTOptics idioms; PV names are not yet assigned (CTRL-1).
+  triggering:
+    - name: Triggering
+      family: TimingController
+      new: true
+      confirm: "high-throughput trigger/sync scheme TBD; the sample rotary TTL encoder is the candidate master clock, possibly with PSO-style fly-scan triggering (TRIG-1)"
+      note: "trigger/sync hardware for autonomous high-throughput acquisition"
+  software_iocs_not_modeled:
+    - "EPICS IOCs (TomoScan, area-detector, motion) are referenced by PV prefix once assigned, never registered as Assets (CTRL-1)"
+
+# Continuously-available resources a run draws on (design phase). The facility
+# tracks their availability; equipment-protection (BLEPS) folds vacuum and
+# cooling-water faults into the beam-availability signal (BLEPS-1).
+resources:
+  intro: >
+    The continuously-available APS facility resources a run needs present before
+    it can start. Availability is observed through the BLEPS for the
+    equipment-protection legs (vacuum, cooling water).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
