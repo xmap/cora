@@ -13,12 +13,12 @@ What holds what, downstream of the sample (containment, `Asset.parent_id`):
 ```
 19-BM  (Unit, Asset)
 └── DetectorStage  (Component, Family Table; positions the system in air)
-    └── Microscope  (Component, Microscope Assembly; presents the Detector Role)
+    └── Microscope  (Component, Family Housing; anchors the Microscope Assembly, presents the Detector Role)
         ├── Scintillator  (Device, Scintillator; X-ray to visible)
         └── Camera        (Device, Camera; records projections)
 ```
 
-The microscope composes the cross-facility `Microscope` Assembly, the same blueprint 2-BM uses: a scintillator and visible-light optics presenting the Detector Role. It is not a Family of its own. No Fixture is registered yet (19-BM is design-phase, and no scenario binds Assets to slots), so this is the planned composition, not a materialized Fixture.
+The microscope chassis is a `Housing` that anchors the cross-facility `Microscope` Assembly, the same blueprint 2-BM uses: a scintillator and visible-light optics presenting the Detector Role. The `Microscope` itself is an Assembly, not a Family, so the chassis binds the `Housing` Family (matching 2-BM and TomoWISE). No Fixture is registered yet (19-BM is design-phase, and no scenario binds Assets to slots), so this is the planned composition, not a materialized Fixture.
 
 ## Detector
 
@@ -26,7 +26,7 @@ The microscope composes the cross-facility `Microscope` Assembly, the same bluep
 | --- | --- | --- |
 | `DetectorStage` | `Table` | positions the indirect-detection system in air, downstream of the sample; axis layout TBD |
 | `Scintillator` | `Scintillator` | converts the X-ray projection to a visible-light image; selection TBD (DET-1) |
-| `Microscope` | `Microscope` (Assembly) | visible-light relay optics presenting the Detector Role; selection TBD (DET-1) |
+| `Microscope` | `Housing` (Microscope Assembly) | visible-light relay optics chassis presenting the Detector Role; selection TBD (DET-1) |
 | `Camera` | `Camera` | records 2-D projections for off-line reconstruction; selection TBD (DET-1) |
 
 ## Downstream beam stops
@@ -41,6 +41,6 @@ At the downstream wall of 19-BM-D, the white beam is absorbed and the station is
 
 ## Families
 
-The active detector families are reused, none new: `Table` (the detector stage), `Scintillator`, and `Camera`, composed through the cross-facility `Microscope` Assembly. The beam stops and guillotines bind the loose passive families `BeamStop` and `Shielding`, which render as plain text (they are not yet in the catalog).
+The active detector families are reused, none new: `Table` (the detector stage), `Housing` (the microscope chassis), `Scintillator`, and `Camera`, composed through the cross-facility `Microscope` Assembly. The beam stops and guillotines bind the loose passive families `BeamStop` and `Shielding`, which render as plain text (they are not yet in the catalog).
 
 The detector hardware selections and the trigger path are the main detector-side [open questions](../questions.md). See [Inventory](../inventory.md) for the Asset tree.

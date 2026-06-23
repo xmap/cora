@@ -28,14 +28,14 @@ Root Asset `19-BM` (`tier = Unit`, `facility_code = aps`); sub-systems nest belo
 | `SamplePositioning` | `Device` | LinearStage | sample centring; hosts the robotic sample changer |
 | `DetectorStage` | `Component` | Table | positions the indirect-detection system in air |
 | `Scintillator` | `Device` | Scintillator | X-ray-to-visible conversion |
-| `Microscope` | `Component` | Microscope (Assembly) | visible-light relay optics, presenting the Detector Role |
+| `Microscope` | `Component` | Housing (Microscope Assembly) | visible-light relay optics chassis, presenting the Detector Role |
 | `Camera` | `Device` | Camera | records 2-D projections |
 | `PhotonStop` | `Device` | BeamStop | A359-M100, water-cooled Cu; water in series with the Be window |
 | `BremsstrahlungStop` | `Device` | BeamStop | A359-K3, chevron Pb-brick stack |
 | `DownstreamGuillotines` | `Device` | Shielding | two movable Pb guillotines (>= 12 mm), APS TB-44 |
 | `Triggering` | (controls) | TimingController | high-throughput trigger / sync scheme |
 
-The passive beam-path families (`Beam`, `Window`, `Mask`, `Collimator`, `BeamStop`, `Shielding`, `Vacuum`) and the loose `Microscope` family render as plain text: they are bound by intent and are not yet in the catalog. 19-BM pushes `Window` (two more Be windows) and `Collimator` (two more Pb collimators) past the rule-of-three threshold; whether either is promoted to a catalog Family is a separate decision, not blocking for first light. The indirect detector reuses the cross-facility `Microscope` Assembly (scintillator + optics + camera presenting the Detector Role), the same blueprint 2-BM uses.
+The passive beam-path families (`Beam`, `Window`, `Mask`, `Collimator`, `BeamStop`, `Shielding`, `Vacuum`) render as plain text: they are bound by intent and are not yet in the catalog. 19-BM pushes `Window` (two more Be windows) and `Collimator` (two more Pb collimators) past the rule-of-three threshold; whether either is promoted to a catalog Family is a separate decision, not blocking for first light. The indirect detector reuses the cross-facility `Microscope` Assembly (a `Housing` anchoring scintillator + optics + camera, presenting the Detector Role), the same blueprint 2-BM uses.
 
 ## Pending confirmations
 

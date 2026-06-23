@@ -220,10 +220,10 @@ detector:
       confirm: "scintillator selection procured post-FDR (DET-1)"
       note: "converts the X-ray projection to a visible-light image"
     - name: Microscope
-      family: Microscope
+      family: Housing
       new: true
       confirm: "microscope-optics selection procured post-FDR (DET-1)"
-      note: "visible-light relay optics; composes the cross-facility Microscope Assembly, presenting the Detector Role (renders as a loose family until the Fixture is registered)"
+      note: "the visible-light microscope chassis: a Housing that anchors the cross-facility Microscope Assembly (scintillator + optics + camera) presenting the Detector Role; the Fixture is registered once hardware is chosen"
     - name: Camera
       family: Camera
       new: true
