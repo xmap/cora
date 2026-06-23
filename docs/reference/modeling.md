@@ -120,6 +120,6 @@ Orthogonal axes, do not conflate with selection:
 
 The one genuinely undecidable shape is an act whose registered Dataset and Calibration are co-equal deliverables. No shipped act crosses that seam today; resolve it then by a declared primary output, not now.
 
-Boundary case in migration: subject-less data captures (dark / flat baselines) leave a baseline Dataset, so the rule classifies them as **subject-less Runs**. The 2-BM deployment still models them as acquisition recipes / Procedures; that is the one case the rule reclassifies, pending the migration.
+Boundary case: subject-less data captures (dark / flat baselines) leave a baseline Dataset, so they are **subject-less Runs**, with the conducting Procedure (record-path or conducted) carried as a phase of the Run via `parent_run_id` and the Dataset attributed to the Run. The 2-BM scenarios model them this way.
 
 Why: selecting on a single observable fact (the produced Dataset of record) keeps five-year ledger queries unique. Reproduce-this-result walks the Run plus Dataset lineage; how-did-the-instrument-behave walks the Procedure plus Calibration history; and the same act never lands in two places. Corpus precedent (ISA-88 finite-lot, Bluesky `open_run` bracket, PROV / schema.org generated-entity, SciCat raw / derived) converges on the produced-data-lot as the axis and rejects Subject as the axis.
