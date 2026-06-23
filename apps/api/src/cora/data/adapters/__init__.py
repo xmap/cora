@@ -11,6 +11,9 @@ or an in-process dict for the canonical Distribution row per Dataset.
 `HttpRangeChecksumAdapter`: implements `ChecksumVerifier` over
 HTTP / HTTPS via range-read in 1 MiB chunks.
 
+`PosixChecksumAdapter`: implements `ChecksumVerifier` over local /
+mounted files via `file://` URIs, root-gated by `posix_checksum_roots`.
+
 Test-only stub adapters live alongside the production adapters for
 reuse across unit + contract + integration tests:
 
@@ -27,6 +30,7 @@ from cora.data.adapters.http_range_checksum import HttpRangeChecksumAdapter
 from cora.data.adapters.in_memory_distribution_lookup import (
     InMemoryDistributionLookup,
 )
+from cora.data.adapters.posix_checksum import PosixChecksumAdapter
 from cora.data.adapters.postgres_distribution_lookup import (
     PostgresDistributionLookup,
 )
@@ -42,6 +46,7 @@ __all__ = [
     "HttpRangeChecksumAdapter",
     "InMemoryDistributionLookup",
     "PerKindEditionSerializer",
+    "PosixChecksumAdapter",
     "PostgresDistributionLookup",
     "RoCrate12Adapter",
     "StubEditionSerializer",

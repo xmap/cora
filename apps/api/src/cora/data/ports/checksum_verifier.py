@@ -27,10 +27,13 @@ the handler has to duplicate.
 
 ## Rule-of-three
 
-Today ships one adapter (``HttpRangeChecksumAdapter``). Generalization
-of the port to a multi-scheme dispatcher waits until the 3rd adapter
-lands per [[feedback_port_generalization_trigger]] (POSIX-mmap +
-Globus server-side + S3-ETag are the likely next three).
+Ships two adapters (``HttpRangeChecksumAdapter`` over http/https,
+``PosixChecksumAdapter`` over file://); the ``record_attestation``
+handler dispatches on the Distribution URI scheme to a small per-scheme
+map. Generalization of the port to a registry-style multi-scheme
+dispatcher waits until the 3rd adapter lands per
+[[feedback_port_generalization_trigger]] (Globus server-side + S3-ETag
+are the likely next two).
 """
 
 from dataclasses import dataclass
@@ -80,6 +83,13 @@ ChecksumVerificationResult = Match | Mismatch | Unreachable
 class ChecksumVerifier(Protocol):
     """Data BC port: compute a checksum over a Distribution's bytes."""
 
+    kind: str
+    """Short adapter-kind label stamped onto the recorded evidence as
+    ``verifier_kind`` (e.g. ``"HttpRangeChecksum"``, ``"PosixChecksum"``).
+    Forensic provenance: records WHICH verifier computed the digest. A
+    class attribute on each adapter, not a per-call value.
+    """
+
     async def verify(
         self,
         *,
@@ -112,9 +122,11 @@ class ChecksumVerifier(Protocol):
 class ChecksumVerifierUnsupportedSchemeError(Exception):
     """Raised by the handler when no adapter is registered for a URI scheme.
 
-    Today only HTTPS is supported (``HttpRangeChecksumAdapter``); a
-    ``globus://`` or ``s3://`` URI lands here until those adapters
-    ship. Lifts to HTTP 400 per the handler-tier
+    Today http/https (``HttpRangeChecksumAdapter``) and, when the
+    deployment configures ``posix_checksum_roots``, file://
+    (``PosixChecksumAdapter``) are supported; a ``globus://`` or ``s3://``
+    URI (or file:// with no roots configured) lands here until those
+    adapters ship / are enabled. Lifts to HTTP 400 per the handler-tier
     ``Invalid<X>`` family.
     """
 
@@ -125,6 +137,8 @@ class ChecksumVerifierUnsupportedSchemeError(Exception):
 
 class AlwaysMatchingChecksumVerifier:
     """Test stub: every ``verify`` call returns ``Match(expected_checksum)``."""
+
+    kind = "AlwaysMatching"
 
     async def verify(
         self,
@@ -145,6 +159,8 @@ class AlwaysMismatchingChecksumVerifier:
     mismatch shape use ``ConfiguredChecksumVerifier``.
     """
 
+    kind = "AlwaysMismatching"
+
     async def verify(
         self,
         *,
@@ -158,6 +174,8 @@ class AlwaysMismatchingChecksumVerifier:
 
 class AlwaysUnreachableChecksumVerifier:
     """Test stub: every ``verify`` call returns ``Unreachable``."""
+
+    kind = "AlwaysUnreachable"
 
     def __init__(self, error_detail: str = "stub: always unreachable") -> None:
         self._error_detail = error_detail
@@ -179,6 +197,8 @@ class ConfiguredChecksumVerifier:
     Construct with a mapping ``{distribution_uri: result}``; unmapped
     URIs raise ``KeyError`` (loud surface for test misconfiguration).
     """
+
+    kind = "Configured"
 
     def __init__(self, configured_results: dict[str, ChecksumVerificationResult]) -> None:
         self._configured = dict(configured_results)

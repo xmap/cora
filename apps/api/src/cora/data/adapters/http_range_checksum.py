@@ -52,6 +52,8 @@ _DEFAULT_MAX_WALK_SECONDS = 60.0
 class HttpRangeChecksumAdapter:
     """``ChecksumVerifier`` over HTTP / HTTPS via range-read sha256."""
 
+    kind = "HttpRangeChecksum"
+
     def __init__(
         self,
         *,

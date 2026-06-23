@@ -376,6 +376,22 @@ class Settings(BaseSettings):
     #   - resolved Supply not Available -> NOT_AVAILABLE
     self_facility_default_storage_supply_code: str | None = None
 
+    # Data BC — in-band checksum verification (record_attestation).
+    # `posix_checksum_roots` is the allowlist of absolute filesystem roots
+    # the POSIX (file://) ChecksumVerifier may read. Empty (default)
+    # disables POSIX verification entirely: a file:// Distribution URI then
+    # lands at ChecksumVerifierUnsupportedSchemeError (HTTP 400), so a
+    # deployment whose host cannot reach the bytes ships nothing readable
+    # by accident. Set it ONLY where CORA's host actually mounts the
+    # storage; the adapter refuses any path whose resolved realpath is
+    # outside these roots (path-traversal and symlink-escape safe). Read
+    # from POSIX_CHECKSUM_ROOTS as JSON, for example:
+    #
+    #   POSIX_CHECKSUM_ROOTS='["/gpfs/2bm/archive","/local/data"]'
+    #
+    # See `cora.data.adapters.posix_checksum`.
+    posix_checksum_roots: tuple[str, ...] = ()
+
     # Equipment BC — PIDINST integration (slice E.1)
     # `facility_publisher` is the institutional `publisher` field emitted
     # on every PIDINST record produced by `GET /assets/{asset_id}/pidinst`
