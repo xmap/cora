@@ -1,0 +1,43 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: 16-BM
+  facility: aps
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 16-BM-D
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: shutter
+    family: Shutter
+    new: true
+    confirm: no prefix and no resolvable axes; enclosure unresolved from prefix or
+      labels; ophyd class 'SimulatedApsPssShutterWithStatus' not found in devices/*.py
+    labels:
+    - shutters
+    source_class: apstools.devices.SimulatedApsPssShutterWithStatus
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: scaler1
+    family: GenericProbe
+    pv: 16bmd:scaler1
+    enclosure: 16-BM-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      ophyd class ''ScalerCH'' not found in devices/*.py'
+    labels:
+    - scalers
+    - detectors
+    role_hints:
+    - Detector
+    source_class: ophyd.scaler.ScalerCH

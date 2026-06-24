@@ -1,0 +1,1118 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: 9-ID
+  facility: aps
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 9-ID-A
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 9-ID-D
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: shutter
+    family: Shutter
+    new: true
+    confirm: no prefix and no resolvable axes; enclosure unresolved from prefix or
+      labels; ophyd class 'SimulatedApsPssShutterWithStatus' not found in devices/*.py
+    labels:
+    - shutters
+    source_class: apstools.devices.SimulatedApsPssShutterWithStatus
+  - name: undulator
+    family: InsertionDevice
+    pv: 'S09ID:DSID:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      enclosure unresolved from prefix or labels; ophyd class ''PlanarUndulator''
+      not found in devices/*.py'
+    source_class: apstools.devices.aps_undulator.PlanarUndulator
+  - name: slit1
+    family: HHLApertureWBA
+    pv: '9ida:SL-1:'
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''HHLApertureWBA''; needs a CORA Family'
+    labels:
+    - slits
+    - baseline
+    source_class: common_9id.devices.HHLApertureWBA
+  - name: slit2
+    family: HHLApertureWBA
+    pv: '9ida:SL-2:'
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''HHLApertureWBA''; needs a CORA Family'
+    labels:
+    - slits
+    - baseline
+    source_class: common_9id.devices.HHLApertureWBA
+  - name: mr1_piezo
+    family: EpicsMotor
+    pv: 9ida:FMBO:Piezo:m1
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; ophyd class
+      ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: mr2_piezo
+    family: EpicsMotor
+    pv: 9ida:FMBO:Piezo:m2
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; ophyd class
+      ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: mr1_y
+    family: AcsMotor
+    pv: 9ida:FMBO:m2
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: mr1_x
+    family: AcsMotor
+    pv: 9ida:FMBO:m4
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: mr1_pitch
+    family: AcsMotor
+    pv: 9ida:FMBO:m6
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: mr2_y
+    family: AcsMotor
+    pv: 9ida:FMBO:m1
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: mr2_x
+    family: AcsMotor
+    pv: 9ida:FMBO:m3
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: mr2_pitch
+    family: AcsMotor
+    pv: 9ida:FMBO:m5
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: mr2_bender1
+    family: AcsMotor
+    pv: 9ida:FMBO:m7
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: mr1_bender2
+    family: AcsMotor
+    pv: 9ida:FMBO:m8
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: flag1_mot
+    family: AcsMotor
+    pv: 9ida:CR9A1:m5
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: flag2_mot
+    family: AcsMotor
+    pv: 9ida:CR9A1:m13
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: flag3_mot
+    family: AcsMotor
+    pv: 9ida:MONO:m3
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: flag4_mot
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m10
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: damm_hor
+    family: AcsMotor
+    pv: 9ida:CR9A1:m6
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: damm_vert
+    family: AcsMotor
+    pv: 9ida:CR9A1:m7
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: bd3_base_hor
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m7
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: bd3_base_vert
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m8
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: bd5_base_hor
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m23
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: bd5_base_vert
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m24
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: slit3_base_hor
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m5
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: slit3_base_vert
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m6
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: slit4_base_hor
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m15
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: slit4_base_vert
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m16
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: slit5_base_hor
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m21
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: slit5_base_vert
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m22
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: kb_cssi_granite
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m29
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: kb_ver_us
+    family: FlexCombinedCap
+    pv: '9idKB:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''FlexCombinedCap''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; cap: FormattedComponent suffix resolved at
+      runtime'
+    labels:
+    - motors
+    - baseline
+    source_class: common_9id.devices.FlexCombinedCap
+  - name: kb_ver_ds
+    family: FlexCombinedCap
+    pv: '9idKB:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''FlexCombinedCap''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; cap: FormattedComponent suffix resolved at
+      runtime'
+    labels:
+    - motors
+    - baseline
+    source_class: common_9id.devices.FlexCombinedCap
+  - name: kb_hor_us
+    family: FlexCombinedCap
+    pv: '9idKB:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''FlexCombinedCap''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; cap: FormattedComponent suffix resolved at
+      runtime'
+    labels:
+    - motors
+    - baseline
+    source_class: common_9id.devices.FlexCombinedCap
+  - name: kb_hor_ds
+    family: FlexCombinedCap
+    pv: '9idKB:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''FlexCombinedCap''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; cap: FormattedComponent suffix resolved at
+      runtime'
+    labels:
+    - motors
+    - baseline
+    source_class: common_9id.devices.FlexCombinedCap
+  - name: slit3
+    family: Slit
+    pv: 9idd:Slit3
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm'
+    labels:
+    - slits
+    - baseline
+    source_class: common_9id.devices.Optics2Slit2D_soft
+  - name: slit4
+    family: Slit
+    pv: 9idd:Slit4
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm'
+    labels:
+    - slits
+    - baseline
+    source_class: common_9id.devices.Optics2Slit2D_soft
+  - name: slit5
+    family: Slit
+    pv: 9idd:Slit5
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm'
+    labels:
+    - slits
+    - baseline
+    source_class: common_9id.devices.Optics2Slit2D_soft
+  - name: idt_mono
+    family: Monochromator
+    pv: '9ida:'
+    enclosure: 9-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      ophyd class ''KohzuSeqCtl_Monochromator'' not found in devices/*.py'
+    labels:
+    - mono
+    - baseline
+    source_class: apstools.devices.KohzuSeqCtl_Monochromator
+  - name: fl1
+    family: AVSfilters
+    pv: '9idPyFilter:FL1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AVSfilters''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; index: FormattedComponent suffix resolved
+      at runtime; attenuation: FormattedComponent suffix resolved at runtime; transmission:
+      FormattedComponent suffix resolved at runtime; translation: FormattedComponent
+      suffix resolved at runtime'
+    labels:
+    - filters
+    - baseline
+    source_class: common_9id.devices.AVSfilters
+  - name: crl9id2x
+    family: JJtransfocator2xZ
+    pv: '9idPyCRL:CRL9ID:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''JJtransfocator2xZ''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; z2: FormattedComponent suffix resolved at
+      runtime'
+    labels:
+    - transfocators
+    - baseline
+    source_class: common_9id.devices.JJtransfocator2xZ
+  - name: tetramm1
+    family: MyTetrAMM
+    pv: '9idTetra:QUAD1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MyTetrAMM''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; conf: non-literal or absent component suffix'
+    labels:
+    - tetramm
+    source_class: common_9id.devices.MyTetrAMM
+  - name: file_name
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: file_path
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: metadata_full_path
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: qmap_file
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: analysis_machine
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: workflow_name
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: experiment_name
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: cycle_name
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: sample_name
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: spec_file
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: analysis_type
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: start_bluesky
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: user_description
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: user_comments
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: scattering_orientation
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: measurement_num
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: qnw_index
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: uscope_x
+    family: EpicsMotor
+    pv: 9idCSSI:CR9D1M2:m5
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: uscope_y
+    family: EpicsMotor
+    pv: 9idCSSI:CR9D1M2:m9
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motors
+    - baseline
+    source_class: ophyd.EpicsMotor
+  - name: uscope_z
+    family: EpicsMotor
+    pv: 9idCSSI:CR9D1M2:m6
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: uscope_focus
+    family: EpicsMotor
+    pv: 9idCSSI:CR9D1M2:m10
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: cssi_flyz
+    family: EpicsMotor
+    pv: 9idANT95:aero:c0:m1
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: cssi_theta_x2
+    family: EpicsMotor
+    pv: 9idCSSI:mcs2-01:m1
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: cssi_Z4
+    family: EpicsMotor
+    pv: 9idCSSI:mcs2-01:m2
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: cssi_Y4
+    family: EpicsMotor
+    pv: 9idCSSI:mcs2-01:m3
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: cssi_X4
+    family: EpicsMotor
+    pv: 9idCSSI:mcs2-01:m4
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: kohzu_linear
+    family: EpicsMotor
+    pv: 9idCSSI:CR9D1M2:m1
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: kohzu_rotate
+    family: EpicsMotor
+    pv: 9idCSSI:CR9D1M2:m2
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: eiger_x
+    family: EpicsMotor
+    pv: 9idGT:m11
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: eiger_y
+    family: EpicsMotor
+    pv: 9idGT:m12
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: carriage_hor_bs_y
+    family: EpicsMotor
+    pv: 9idGT:m1
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: carriage_bs_bot
+    family: EpicsMotor
+    pv: 9idGT:mcs2-02:m3
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: gixs_sam_x
+    family: EpicsMotor
+    pv: 9idd:CR9D4M1:m3
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; ophyd class
+      ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: aerorot_1
+    family: EpicsMotor
+    pv: 9idAerotech2:R1:m1
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motors
+    - baseline
+    source_class: ophyd.EpicsMotor
+  - name: hexapod1
+    family: aerotechHexapod
+    pv: '9idAerotech:HP1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''aerotechHexapod''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; x: FormattedComponent suffix resolved at runtime;
+      y: FormattedComponent suffix resolved at runtime; z: FormattedComponent suffix
+      resolved at runtime; ax: FormattedComponent suffix resolved at runtime; ay:
+      FormattedComponent suffix resolved at runtime; az: FormattedComponent suffix
+      resolved at runtime'
+    labels:
+    - hexapod
+    - motors
+    - baseline
+    source_class: common_9id.devices.aerotechHexapod
+  - name: hexapod2
+    family: aerotechHexapod
+    pv: '9idAerotech2:HP2:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''aerotechHexapod''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; x: FormattedComponent suffix resolved at runtime;
+      y: FormattedComponent suffix resolved at runtime; z: FormattedComponent suffix
+      resolved at runtime; ax: FormattedComponent suffix resolved at runtime; ay:
+      FormattedComponent suffix resolved at runtime; az: FormattedComponent suffix
+      resolved at runtime'
+    labels:
+    - hexapod
+    - motors
+    - baseline
+    source_class: common_9id.devices.aerotechHexapod
+  - name: mux_2_sel_signal
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    source_class: ophyd.EpicsSignal
+  - name: xpbm1_sum
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: xpbm1_xpos
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: xpbm1_ypos
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: xpbm2_sum
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: xpbm2_xpos
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: xpbm2_ypos
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    labels:
+    - metadataPV
+    source_class: ophyd.EpicsSignal
+  - name: cssi_y2
+    family: FlexCombinedEnc
+    pv: '9idCSSI:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''FlexCombinedEnc''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; enc: FormattedComponent suffix resolved at
+      runtime'
+    labels:
+    - motors
+    - baseline
+    source_class: common_9id.devices.FlexCombinedEnc
+  - name: cssi_z2
+    family: FlexCombinedEnc
+    pv: '9idCSSI:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''FlexCombinedEnc''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; enc: FormattedComponent suffix resolved at
+      runtime'
+    labels:
+    - motors
+    - baseline
+    source_class: common_9id.devices.FlexCombinedEnc
+  - name: cssi_x2
+    family: FlexCombinedCap
+    pv: '9idCSSI:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''FlexCombinedCap''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; cap: FormattedComponent suffix resolved at
+      runtime'
+    labels:
+    - motors
+    - baseline
+    source_class: common_9id.devices.FlexCombinedCap
+  - name: cssi_theta3
+    family: FlexCombinedCap
+    pv: '9idCSSI:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''FlexCombinedCap''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; cap: FormattedComponent suffix resolved at
+      runtime'
+    labels:
+    - motors
+    - baseline
+    source_class: common_9id.devices.FlexCombinedCap
+  - name: b_stop_x
+    family: AcsMotor
+    pv: 9idd:CR9D4M1:m14
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: b_stop_z
+    family: AcsMotor
+    pv: 9idd:CR9D4M1:m15
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: waxs_x_gixs_ped1
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m31
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+  - name: waxs_y_gixs_ped2
+    family: AcsMotor
+    pv: 9idd:CR9D1M1:m32
+    enclosure: 9-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AcsMotor''; needs a CORA Family'
+    labels:
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: common_9id.devices.AcsMotor
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: pilatus1m
+    family: Camera
+    pv: 'PILATUS_1MF:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      enclosure unresolved from prefix or labels; factory device (ad_creator): plugins
+      and file paths need a human; ophyd class ''ad_creator'' not found in devices/*.py'
+    labels:
+    - area_detector
+    - detectors
+    role_hints:
+    - Detector
+    source_class: apstools.devices.ad_creator

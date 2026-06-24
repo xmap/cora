@@ -1,0 +1,33 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: tomo-bits
+  facility: aps
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures: []
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: shutter
+    family: Shutter
+    new: true
+    confirm: no prefix and no resolvable axes; enclosure unresolved from prefix or
+      labels; ophyd class 'SimulatedApsPssShutterWithStatus' not found in devices/*.py
+    labels:
+    - shutters
+    source_class: apstools.devices.SimulatedApsPssShutterWithStatus
+  - name: optics
+    family: MCTOptics
+    pv: '2bm:MCTOptics:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MCTOptics''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    labels:
+    - optics
+    source_class: tomo_instrument.devices.mct_optics.MCTOptics

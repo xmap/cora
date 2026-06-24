@@ -19,6 +19,30 @@ mirror. This matches the project's intentional-modeling and docs-drift rules: fo
 facts defer to descriptors plus the external source plus the operator, never to CORA's own
 internal consistency.
 
+## The extraction pass
+
+`scripts/reverse_engineer/` turns a `*-bits` repo into candidate CORA deployment facts. It
+reads the Guarneri `devices.yml`, AST-walks the ophyd device classes, parses
+`user_group_permissions.yaml`, and emits candidates only: it never writes to `deployments/`
+or `catalog/`. Anything not statically resolvable is flagged `confirm`. Run it from the repo
+root (scripts/ is not a package, so use PYTHONPATH):
+
+    PYTHONPATH=scripts python3 -m reverse_engineer.cli --repo BCDA-APS/8id-bits
+
+`extracted/<repo>/` holds the per-repo `facts.md` (inventory with PV/axis maps, candidate
+enclosures, Role hints, and Trust hints from the queueserver permissions) and
+`beamline.candidate.yaml` (a draft fragment that self-validates against the real
+`scripts/beamline_descriptor.py` loader). `recurrence.md` is the cross-fleet frequency report:
+a suggested family in two or more repos is a catalog Family graduation candidate (human and
+naming-r3 gated), and families already in `catalog.yaml` are marked graduated. The pass ran
+over eleven BCDA-APS `*-bits` repos; the labels and ophyd-class frequency tables in
+`recurrence.md` carry the cleanest graduation signal, since the family table mixes confident
+suggestions with class-name fallbacks.
+
+This is step 1 of the roadmap in the approved plan
+(`~/.claude/plans/iridescent-gathering-elephant.md`): extraction, then catalog graduation,
+then per-beamline curation. Candidates are inputs to that human-gated modeling, not outputs.
+
 ## What is here
 
 - `apsbss-to-external-refs-adapter.md` (a): the field-level shapes of the `BCDA-APS/apsbss`
