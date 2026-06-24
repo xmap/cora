@@ -27,7 +27,7 @@ facility:
   heading: "Diamond Light Source"
   kind: Site
   institution: Diamond Light Source Ltd, Harwell Campus, Didcot, UK
-  beamlines: [I22, I03, I15-1]
+  beamlines: [I22, I03, I15-1, I11]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All
 # pending in the design phase. I22 is a scattering beamline, so its practices
@@ -41,6 +41,7 @@ practices:
   - {name: I03_grid_scan_practice, method: grid_scan, pending: true, note: "fast grid scan for sample location/centring via the Zebra/PandA fast-grid-scan (TECH-1)"}
   - {name: I03_autonomous_sample_exchange_practice, method: sample_exchange, pending: true, note: "unattended robot load/centre/collect/unmount loop; a Procedure over the spine + a Subject custody thread (ROBOT-1)"}
   - {name: I15-1_total_scattering_practice, method: total_scattering, pending: true, note: "XPDF / pair-distribution-function total scattering on the bent-Laue mono + Eiger; new Capability not yet in the catalog (TECH-1)"}
+  - {name: I11_powder_diffraction_practice, method: powder_diffraction, pending: true, note: "high-resolution powder diffraction on the diffractometer + Mythen3 strip detector + spinner, often with a temperature ramp; new Capability not yet in the catalog (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at Diamond. Pending until the
 # Diamond operator and review structure is confirmed.
