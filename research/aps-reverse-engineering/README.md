@@ -52,6 +52,11 @@ then per-beamline curation. Candidates are inputs to that human-gated modeling, 
   model against the working tomography instrument `BCDA-APS/tomo-bits`
   (`devices/mct_optics.py`). CORA is a strict superset; the diff surfaces a short list of
   genuine enrichment questions for 2-BM staff.
+- `catalog-graduation-decisions.md`: step 2 of the roadmap. The intentional
+  graduate / Assembly / fold / leave-loose decision per recurring candidate from
+  `recurrence.md`, with the naming-r3 gate applied to every proposed name. Net result: no
+  speculative catalog edits; Diffractometer is an Assembly (not a Family), and the genuine new
+  Families graduate coupled to the first deployment that references them (step 3).
 
 ## Relation to existing CORA designs (important)
 
