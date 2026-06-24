@@ -64,6 +64,11 @@ _ORCHESTRATION_SLICES: frozenset[str] = frozenset(
         # (start + execute + complete/hold/abort); no direct event emission.
         # See [[project_resumable_conduct_design]].
         "cora.operation.features.try_conduct_procedure",
+        # AUTO-align convergence-loop entry: delegates
+        # Conductor.conduct_until_converged (start + { start_iteration +
+        # execute + end_iteration } * + complete/abort); no direct event
+        # emission. See [[project_align_auto_6c_stage1_design]].
+        "cora.operation.features.conduct_until_converged",
         # Bulk-mint sweep: enumerates Assets missing a persistent id and
         # delegates each to the assign_asset_persistent_id handler; no direct
         # event emission. See [[project_asset_persistent_id_design]].

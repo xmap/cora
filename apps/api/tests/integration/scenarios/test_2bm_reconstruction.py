@@ -67,6 +67,7 @@ import asyncpg
 import pytest
 
 from cora.api._reckoner import Reckoner
+from cora.api._run_phase_conduct import conduct_phase_then_complete_run
 from cora.data.aggregates.dataset import DatasetCannotPromoteError
 from cora.data.features.promote_dataset import PromoteDataset
 from cora.data.features.promote_dataset import bind as bind_promote_dataset
@@ -88,7 +89,18 @@ from cora.equipment.features.update_family_settings_schema import (
 )
 from cora.operation.adapters._tree_hash import sha256_tree
 from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
+from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
+from cora.operation.adapters.in_memory_recipe_expander import InMemoryRecipeExpander
 from cora.operation.adapters.local_process_compute_port import LocalProcessComputePort
+from cora.operation.aggregates.procedure import PostgresActivityStore
+from cora.operation.conductor import ComputeStep, Conductor, InMemoryActionRegistry
+from cora.operation.features.abort_procedure import bind as bind_abort_procedure
+from cora.operation.features.append_activities import bind as bind_append_activities
+from cora.operation.features.complete_procedure import bind as bind_complete_procedure
+from cora.operation.features.conduct_procedure import bind as bind_conduct_procedure
+from cora.operation.features.register_procedure import RegisterProcedure
+from cora.operation.features.register_procedure import bind as bind_register_procedure
+from cora.operation.features.start_procedure import bind as bind_start_procedure
 from cora.operation.ports.compute_port import JobSpec
 from cora.recipe.aggregates.capability import ExecutorShape
 from cora.recipe.aggregates.method import (
@@ -791,3 +803,170 @@ async def test_reconstruction_conducts_from_vetted_launch_spec(
     run_events, _ = await deps.event_store.load("Run", run_id)
     assert [e.event_type for e in run_events] == ["RunStarted", "RunCompleted"]
     assert run_events[1].payload["actuation_kind"] == "Simulated"
+
+
+def _recon_conductor(deps: Any, compute_port: Any) -> Conductor:
+    """A Conductor wired with the lifecycle handlers + a ComputePort.
+
+    The merged-engine recon path needs the FSM-transition handlers
+    (start/complete/abort) so `conduct_procedure` can drive the phase
+    Procedure end to end, plus the shared `compute_port` the ComputeStep
+    submits its job to. The action registry is empty (a recon phase is
+    pure compute, no acquisition action body)."""
+    return Conductor(
+        control_port=InMemoryControlPort(),
+        append_step=bind_append_activities(deps, step_store=PostgresActivityStore(deps.pool)),
+        clock=deps.clock,
+        id_generator=deps.id_generator,
+        action_registry=InMemoryActionRegistry({}),
+        compute_port=compute_port,
+        start_procedure=bind_start_procedure(deps),
+        complete_procedure=bind_complete_procedure(deps),
+        abort_procedure=bind_abort_procedure(deps),
+    )
+
+
+@pytest.mark.integration
+async def test_reconstruction_conducts_single_stage_phase_via_merged_engine(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """End-to-end CONDUCT through the MERGED engine: a single-stage compute Run
+    whose phase is a one-element [ComputeStep reconstruct] Procedure
+    (parent_run_id -> Run). The Conductor walks the file-arm ComputeStep
+    (output_uri set -> fetch_artifact_ref), the conduct_phase_then_complete_run
+    glue completes the parent Run carrying the folded Simulated kind, and the
+    reconstructed volume Dataset registers against producing_run_id with the
+    surfaced ArtifactRef. Parity with the single-job Reckoner baseline: the Run
+    stays Running across the phase, then RunStarted -> RunCompleted, and the
+    Simulated provenance bars promotion (Simulated-blocks).
+
+    This is the floor's proof that the Reckoner class dissolved into one
+    step-walking engine: the same recon, conducted as a Procedure PHASE of the
+    Run rather than a bespoke compute runtime."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
+    fixture = await _seed_recon_recipe(deps)
+
+    # ----- the parent compute Run (subject-less, like the baseline) -----
+    run_id = await bind_start_run(deps)(
+        StartRun(
+            name="SIRT reconstruction (single-stage merged-engine phase)",
+            plan_id=fixture.plan_id,
+            subject_id=None,
+            override_parameters={"num_iter": 200, "tol": 0.0005},
+            trigger_source="compute-runtime; merged engine, single-stage compute phase",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    # INVARIANT: the Run is Running after start_run, and STAYS Running across
+    # the phase (no new Run FSM state); the glue completes it afterward.
+    run = await load_run(deps.event_store, run_id)
+    assert run is not None
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert [e.event_type for e in run_events] == ["RunStarted"]
+
+    # ----- the compute Procedure phase (parent_run_id -> Run), one ComputeStep -----
+    procedure_id = await bind_register_procedure(deps)(
+        RegisterProcedure(
+            name="SIRT reconstruct (compute phase of the recon Run)",
+            # noun-LAST (R6), subject-qualified like the operation-noun family
+            # (pixel_size_characterization, slit_centering): the volume is the
+            # subject, reconstruction the operation.
+            kind="volume_reconstruction",
+            target_asset_ids=frozenset(),
+            parent_run_id=run_id,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    recon_uri = "file:///data/2bm/2026-05/recon_sirt_merged.h5"
+    # output_uri is SET -> the file arm: fetch_artifact_ref, surface ArtifactRef.
+    reconstruct = ComputeStep(
+        command=("tomopy", "recon", "--algorithm", "sirt"),
+        input_uris=("file:///data/2bm/2026-05/proj_raw.h5",),
+        output_uri=recon_uri,
+        parameters={"num_iter": 200, "tol": 0.0005},
+    )
+
+    # ----- conduct the phase via the merged engine, then complete the parent Run -----
+    conductor = _recon_conductor(deps, InMemoryComputePort())
+    conduct = bind_conduct_procedure(
+        deps, conductor=conductor, expansion_port=InMemoryRecipeExpander()
+    )
+    result = await conduct_phase_then_complete_run(
+        run_id=run_id,
+        procedure_id=procedure_id,
+        conduct_procedure=conduct,
+        complete_run=bind_complete_run(deps),
+        abort_run=bind_abort_run(deps),
+        steps=(reconstruct,),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # ----- the conduct walked the one ComputeStep + folded the Simulated kind -----
+    assert result.succeeded is True
+    assert result.completed_count == 1
+    assert result.actuation_kind == "Simulated"
+    # The file arm surfaced the ArtifactRef out of the conducted phase.
+    assert len(result.artifacts) == 1
+    artifact = result.artifacts[0]
+    assert artifact.uri == recon_uri
+
+    # ----- the phase Procedure ran start -> ComputeStep -> complete -----
+    proc_events, _ = await deps.event_store.load("Procedure", procedure_id)
+    proc_types = [e.event_type for e in proc_events]
+    assert proc_types[0] == "ProcedureRegistered"
+    assert "ProcedureStarted" in proc_types
+    assert proc_types[-1] == "ProcedureCompleted"
+    registered = next(e for e in proc_events if e.event_type == "ProcedureRegistered")
+    assert registered.payload["parent_run_id"] == str(run_id)
+
+    # ----- INVARIANT: the parent Run gained NO new FSM state; RunStarted -> RunCompleted -----
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert [e.event_type for e in run_events] == ["RunStarted", "RunCompleted"]
+    completed = run_events[1].payload
+    assert completed["actuation_kind"] == "Simulated"
+
+    # ----- the volume Dataset registers against producing_run_id (NOT the Procedure) -----
+    recon_dataset_id = await bind_register_dataset(deps)(
+        RegisterDataset(
+            name="2BM_recon_2026-05-20_sirt_merged_engine",
+            uri=artifact.uri,
+            checksum_algorithm=artifact.checksum_algorithm,
+            checksum_value=artifact.checksum_value,
+            byte_size=96_000_000_000,
+            media_type="application/x-hdf5",
+            conforms_to=frozenset({"https://www.nexusformat.org/NXtomoproc"}),
+            producing_run_id=run_id,
+            producing_procedure_id=None,
+            subject_id=fixture.subject_id,
+            derived_from=frozenset({fixture.raw_dataset_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    recon_events, _ = await deps.event_store.load("Dataset", recon_dataset_id)
+    recon_payload = recon_events[0].payload
+    assert UUID(recon_payload["producing_run_id"]) == run_id
+    assert recon_payload["producing_procedure_id"] is None
+    # The conduct's Simulated provenance flowed Run -> Dataset (the promote gate carrier).
+    assert recon_payload["producing_actuation_kind"] == "Simulated"
+    assert recon_payload["derived_from"] == [str(fixture.raw_dataset_id)]
+
+    # ----- INVARIANT: Simulated-blocks the promotion (parity with the baseline gate) -----
+    await bind_promote_dataset(deps)(
+        PromoteDataset(dataset_id=fixture.raw_dataset_id, reason="raw projections peer-reviewed"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    with pytest.raises(DatasetCannotPromoteError) as exc_info:
+        await bind_promote_dataset(deps)(
+            PromoteDataset(
+                dataset_id=recon_dataset_id, reason="attempt to promote rehearsal recon"
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert "actuation" in str(exc_info.value)

@@ -3876,6 +3876,129 @@
         "title": "ConductRunResponse",
         "type": "object"
       },
+      "ConductUntilConvergedRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /procedures/{procedure_id}/conduct-until-converged`.",
+        "properties": {
+          "convergence_capture_name": {
+            "description": "Captures-slot name the per-pass deposit fills; the loop reads it after each successful pass and evaluates the criterion against it.",
+            "minLength": 1,
+            "title": "Convergence Capture Name",
+            "type": "string"
+          },
+          "criterion": {
+            "description": "Convergence criterion (equals or within_tolerance) evaluated against the captured value after each pass.",
+            "discriminator": {
+              "mapping": {
+                "equals": "#/components/schemas/_EqualsCriterion",
+                "within_tolerance": "#/components/schemas/_WithinToleranceCriterion"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/_EqualsCriterion"
+              },
+              {
+                "$ref": "#/components/schemas/_WithinToleranceCriterion"
+              }
+            ],
+            "title": "Criterion"
+          },
+          "max_consecutive_unconverged_iterations": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional patience cap (>= 1). When omitted the loop honors the cap the Procedure declared at register time.",
+            "title": "Max Consecutive Unconverged Iterations"
+          },
+          "steps": {
+            "description": "Per-pass step block the loop re-walks (0-500). Empty for a recipe-driven Procedure: the handler re-expands the pinned one-pass recipe each conduct.",
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "action": "#/components/schemas/_ActionStepRequest",
+                  "check": "#/components/schemas/_CheckStepRequest",
+                  "setpoint": "#/components/schemas/_SetpointStepRequest"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/_SetpointStepRequest"
+                },
+                {
+                  "$ref": "#/components/schemas/_ActionStepRequest"
+                },
+                {
+                  "$ref": "#/components/schemas/_CheckStepRequest"
+                }
+              ]
+            },
+            "maxItems": 500,
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "convergence_capture_name",
+          "criterion"
+        ],
+        "title": "ConductUntilConvergedRequest",
+        "type": "object"
+      },
+      "ConductUntilConvergedResponse": {
+        "description": "Response body for the conduct_until_converged slice.\n\n`succeeded` is True only when the loop converged and completed the\nProcedure; a cap-abort or an in-pass fault surfaces `succeeded=False`\nwith `failure` carrying the cause. `completed_count` is the final pass's\nsuccessful step count (informational).",
+        "properties": {
+          "actuation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actuation Kind"
+          },
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConductorFailureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "procedure_id": {
+            "format": "uuid",
+            "title": "Procedure Id",
+            "type": "string"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "procedure_id",
+          "completed_count",
+          "succeeded"
+        ],
+        "title": "ConductUntilConvergedResponse",
+        "type": "object"
+      },
       "ConductorFailureResponse": {
         "description": "JSON wire shape for a `ConductorFailure`.",
         "properties": {
@@ -36791,6 +36914,84 @@
           }
         },
         "summary": "Conduct a Procedure: start -> walk steps via ControlPort + actions + checks -> complete (success) or abort (failure).",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
+    "/procedures/{procedure_id}/conduct-until-converged": {
+      "post": {
+        "description": "Conduct a Procedure as a convergence loop. Failures land in the body.",
+        "operationId": "post_procedures_conduct_until_converged_procedures__procedure_id__conduct_until_converged_post",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConductUntilConvergedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConductUntilConvergedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "422": {
+            "description": "Request body failed schema validation: missing criterion, unknown step kind, batch over cap, invalid cap."
+          }
+        },
+        "summary": "Conduct a Procedure in an AUTO convergence loop: iterate measure-correct passes until the criterion is met or the patience cap trips.",
         "tags": [
           "operation"
         ]

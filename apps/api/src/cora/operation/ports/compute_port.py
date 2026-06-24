@@ -48,19 +48,26 @@ its registry from a third substrate. No registry ships now.
   the output artifacts and measurements, and the `ActuationKind` the
   adapter declares.
 
-## Two consumers, two output arms
+## Two output arms, one walker
 
-ComputePort feeds two runtimes that each lean on a different output
-arm. The Reckoner (the Run-conducting runtime in
-`cora.api._reckoner`) drives the file-artifact arm: submit -> await ->
-`fetch_artifact_ref` -> `provide_result(artifacts=...)`. The Procedure
-Conductor (`cora.operation.conductor`, slice 6a) drives the value arm:
-submit -> await -> `fetch_measurements` -> `provide_result(measurements=...)`,
-recording each `Measurement` on the Procedure's activity log so an
-align-resolution routine yields a structured value (a detector pixel
-size) that homes to a Calibration. The two arms ride one port surface
-because both are the same submit/await posture over a compute substrate;
-which arm a job populates is the consumer's choice, not a port split.
+ComputePort exposes two output arms, both now driven by the Procedure
+`Conductor`'s `ComputeStep` (`cora.operation.conductor`). A step
+selects its arm by whether it names an output file:
+
+- the file-artifact arm (a step with an `output_uri`): submit -> await
+  -> `fetch_artifact_ref` -> `provide_result(artifacts=...)`, surfacing
+  an `ArtifactRef` a Dataset registers against (a reconstruction);
+- the value arm (a step without an `output_uri`): submit -> await ->
+  `fetch_measurements` -> `provide_result(measurements=...)`, recording
+  each `Measurement` on the Procedure's activity log so an
+  align-resolution routine yields a structured value (a detector pixel
+  size) that homes to a Calibration.
+
+The two arms ride one port surface because both are the same
+submit/await posture over a compute substrate; which arm a step
+populates is the step's choice (its `output_uri`), not a port split. A
+single-job compute Run is the degenerate one-step file-arm case the
+composition root walks through this same Conductor.
 
 ## Actuation kind
 
@@ -230,8 +237,9 @@ class ComputeResult:
     replay folds the same provenance without re-running the job
     ([[project_non_determinism_principle]]).
 
-    The Reckoner (Run path) populates `artifacts`; the Procedure
-    Conductor (slice 6a) populates `measurements` from `fetch_measurements`.
+    The Conductor's file-arm ComputeStep populates `artifacts` from
+    `fetch_artifact_ref`; the value-arm ComputeStep populates
+    `measurements` from `fetch_measurements`.
 
     `is_simulated` is derived, not stored: any simulator touch
     disqualifies promotion, so `actuation_kind in {Simulated, Hybrid}`
@@ -440,11 +448,11 @@ class ComputePort(Protocol):
         for the fake) onto the captured job id, terminal status, and the
         produced outputs. The runtime threads this onto the terminal event
         for replay-deterministic provenance. The `artifacts` arm is the
-        file path the Reckoner (Run runtime) drives; the `measurements`
-        arm is the value path the Procedure Conductor drives (slice 6a),
-        each from its respective `fetch_*` call. The adapter stamps the
-        kind onto BOTH arms so a value-producing conduct carries the same
-        promotion provenance as a file-producing one.
+        file path a ComputeStep with an `output_uri` drives; the
+        `measurements` arm is the value path a ComputeStep without one
+        drives, each from its respective `fetch_*` call. The adapter
+        stamps the kind onto BOTH arms so a value-producing conduct
+        carries the same promotion provenance as a file-producing one.
         """
         ...
 

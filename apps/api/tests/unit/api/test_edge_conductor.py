@@ -1,9 +1,11 @@
-"""Unit tests for the composition-root `Reckoner`.
+"""Unit tests for the composition-root `ComputeRunDriver` (over `EdgeConductor`).
 
 Drives `conduct()` over the in-memory event store with the
 `InMemoryComputePort` fake (plus tiny purpose-built fakes for the
 submit-failure and cancellation paths). Asserts the Run FSM transition
-and the captured conduct provenance on the terminal event.
+and the captured conduct provenance on the terminal event. This is the
+compute-Run path the dissolved Reckoner once owned, now the merged
+edge-runtime shell.
 """
 
 import asyncio
@@ -12,7 +14,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.api._reckoner import Reckoner
+from cora.api._edge_conductor import ComputeRunDriver
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
@@ -52,11 +54,11 @@ async def _seed_run_started(store: InMemoryEventStore, run_id: UUID) -> None:
     await store.append(stream_type="Run", stream_id=run_id, expected_version=0, events=[new_event])
 
 
-def _runtime(store: InMemoryEventStore, compute_port: object) -> Reckoner:
+def _runtime(store: InMemoryEventStore, compute_port: object) -> ComputeRunDriver:
     from tests.unit._helpers import build_deps
 
     deps = build_deps(ids=[uuid4() for _ in range(8)], now=_NOW, event_store=store)
-    return Reckoner(
+    return ComputeRunDriver(
         compute_port=compute_port,  # type: ignore[arg-type]
         complete_run=complete_run.bind(deps),
         abort_run=abort_run.bind(deps),
@@ -199,3 +201,50 @@ async def test_cancellation_best_effort_aborts_run_then_reraises() -> None:
     events, _ = await store.load("Run", _RUN_ID)
     assert [e.event_type for e in events] == ["RunStarted", "RunAborted"]
     assert events[1].payload["reason"] == "cancelled mid-compute"
+
+
+class _CancellingFetchComputePort:
+    """Fake whose job SUCCEEDS but `fetch_artifact_ref` is cancelled mid-flight."""
+
+    async def submit(self, job_spec: JobSpec) -> JobId:
+        _ = job_spec
+        return JobId("job-fetch-cancelled")
+
+    async def await_terminal_state(self, job_id: JobId) -> ComputeStatus:
+        _ = job_id
+        return ComputeStatus.SUCCEEDED
+
+    async def fetch_artifact_ref(self, job_id: JobId) -> object:
+        _ = job_id
+        raise asyncio.CancelledError
+
+    def provide_result(self, *args: object) -> object:  # pragma: no cover
+        raise NotImplementedError
+
+    async def aclose(self) -> None:  # pragma: no cover
+        return None
+
+
+@pytest.mark.unit
+async def test_cancellation_during_fetch_aborts_succeeded_run_with_job_id() -> None:
+    """The cancel-orphan guard wraps the WHOLE inner work, so a cancel during
+    the post-success artifact fetch aborts the Run (carrying the in-flight job
+    id) rather than leaving a succeeded job's Run Running. A deliberate
+    strengthening over the dissolved Reckoner, which guarded only the await."""
+    store = InMemoryEventStore()
+    await _seed_run_started(store, _RUN_ID)
+    runtime = _runtime(store, _CancellingFetchComputePort())
+
+    with pytest.raises(asyncio.CancelledError):
+        await runtime.conduct(
+            run_id=_RUN_ID,
+            job_spec=_SPEC,
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+    events, _ = await store.load("Run", _RUN_ID)
+    assert [e.event_type for e in events] == ["RunStarted", "RunAborted"]
+    aborted = events[1].payload
+    assert aborted["reason"] == "cancelled mid-compute"
+    assert aborted["producing_job_id"] == "job-fetch-cancelled"

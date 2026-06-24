@@ -1,19 +1,25 @@
-"""Behavioural tests for the Conductor's `ComputeStep` arm (slice 6a).
+"""Behavioural tests for the Conductor's `ComputeStep` arm.
 
-Coverage for `_run_compute` (the value-arm compute step):
+Coverage for `_run_compute`, both output arms (discriminated by `output_uri`):
 
-  Happy path:
+  Value arm (output_uri None) happy path:
   - submit -> await -> fetch_measurements -> provide_result records a
     pre-effect in-flight marker + an `ok` outcome carrying job_id + status
     + each Measurement flattened (name + value + kind + units preserved)
   - the produced Measurements surface on `ConductorResult.measurements`
   - the in-memory fake's Simulated kind folds onto the result actuation_kind
 
+  File arm (output_uri set) happy path:
+  - submit -> await -> fetch_artifact_ref -> provide_result records the
+    `ok` outcome carrying the artifact ref; it surfaces on
+    `ConductorResult.artifacts` and the kind still folds (Simulated)
+
   Failure families (each -> recorded `failed` outcome + ConductorFailure halt):
   - submit rejects (ComputeSubmitRejectedError)
   - await raises (ComputeJobFailedError)
   - a non-Succeeded terminal (Failed) without an exception
   - fetch_measurements raises MeasurementNotFoundError (unseeded value)
+  - fetch_artifact_ref raises ArtifactNotFoundError (file arm)
 
   Wiring:
   - dispatching a ComputeStep with compute_port=None raises RuntimeError
@@ -21,9 +27,9 @@ Coverage for `_run_compute` (the value-arm compute step):
   Resume:
   - execute_from halts-for-operator on a ComputeStep (like an acquisition)
 
-The unit tier uses `InMemoryComputePort` (the only value-producing
-substrate) seeded via `set_next_measurements` / `set_next_result`, plus
-the same fake append-step handler the rest of the conductor tests use.
+The unit tier uses `InMemoryComputePort` seeded via
+`set_next_measurements` / `set_next_result`, plus the same fake
+append-step handler the rest of the conductor tests use.
 """
 
 from dataclasses import dataclass, field
@@ -391,3 +397,101 @@ async def test_compute_step_amid_setpoints_accumulates_only_compute_measurements
     assert result.succeeded is True
     assert result.completed_count == 2
     assert [m.name for m in result.measurements] == ["pixel_size"]
+
+
+_RECON_STEP = ComputeStep(
+    command=("tomopy", "recon", "--algorithm", "sirt"),
+    input_uris=("file:///data/proj_raw.h5",),
+    output_uri="file:///data/recon_sirt.h5",
+    parameters={"num_iter": 200},
+)
+
+
+@pytest.mark.unit
+async def test_compute_file_arm_surfaces_artifact_ref_and_records_outcome() -> None:
+    """A file-producing step (output_uri set) fetches an ArtifactRef.
+
+    Submit -> await -> fetch_artifact_ref -> provide_result records the
+    marker + ok outcome carrying the artifact, surfaces it on
+    ConductorResult.artifacts, and produces NO measurements.
+    """
+    appender = _FakeAppendStep()
+    # No measurements seeded: the file arm must NOT call fetch_measurements
+    # (which would raise MeasurementNotFoundError on this unseeded job).
+    port = InMemoryComputePort()
+    conductor = _conductor(appender, compute_port=port)
+
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(_RECON_STEP,),
+    )
+
+    assert result.succeeded is True
+    assert result.completed_count == 1
+    assert result.measurements == ()
+    assert len(result.artifacts) == 1
+    artifact = result.artifacts[0]
+    assert artifact.uri == "file:///data/recon_sirt.h5"
+    assert artifact.checksum_algorithm == "sha256"
+    # marker + ok outcome; the outcome payload carries the artifact, not measurements.
+    assert len(appender.calls) == 2
+    outcome = appender.calls[1].command.entries[0].payload
+    assert outcome["result"] == "ok"
+    assert outcome["artifacts"] == [
+        {
+            "uri": "file:///data/recon_sirt.h5",
+            "checksum_algorithm": "sha256",
+            "checksum_value": artifact.checksum_value,
+            "byte_size": artifact.byte_size,
+            "media_type": None,
+            "conforms_to": [],
+            "entry_count": None,
+        }
+    ]
+    assert "measurements" not in outcome
+
+
+@pytest.mark.unit
+async def test_compute_file_arm_folds_simulated_actuation_kind_onto_result() -> None:
+    """The file arm folds the substrate's Simulated kind exactly as the value arm."""
+    appender = _FakeAppendStep()
+    conductor = _conductor(appender, compute_port=InMemoryComputePort())
+
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(_RECON_STEP,),
+    )
+
+    assert result.actuation_kind == ActuationKind.SIMULATED
+
+
+@pytest.mark.unit
+async def test_compute_file_arm_artifact_not_found_records_failure_and_halts() -> None:
+    """A file arm whose artifact is missing (ArtifactNotFoundError) records a failure + halts."""
+    appender = _FakeAppendStep()
+
+    class _MissingArtifact(InMemoryComputePort):
+        async def fetch_artifact_ref(self, job_id: object) -> object:  # type: ignore[override]
+            from cora.operation.ports.compute_port import ArtifactNotFoundError, JobId
+
+            raise ArtifactNotFoundError(JobId(str(job_id)), "file:///data/recon_sirt.h5")
+
+    conductor = _conductor(appender, compute_port=_MissingArtifact())
+
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(_RECON_STEP,),
+    )
+
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert result.failure.source_kind == "compute"
+    assert result.failure.error_class == "ArtifactNotFoundError"
+    assert result.artifacts == ()
+    assert appender.calls[1].command.entries[0].payload["result"] == "failed"

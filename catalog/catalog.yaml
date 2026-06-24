@@ -51,6 +51,8 @@ families:
     note: "Limited-range rotational tilt-stage Family (a goniometer). Distinct from RotaryStage (it carries no PSO Following/Marking for fly-scans) and from LinearStage (the motion is rotational, not translation). 2-BM: the LaminographyPitch Kohzu goniometer, modelled in the SampleTower Assembly."
   - name: Camera
   - name: Scintillator
+  - name: EnergyDispersiveSpectrometer
+    note: "Energy-dispersive X-ray detector Family: resolves photon energy per event to give a spectrum, from which element maps or absorption edges are fit downstream. Presents_as Sensor (it produces a scalar or short-vector Reading per point, not a 2D Frame, so it is distinct from Camera and the Detector Role). One Family spans the silicon-drift and germanium variants; channel count and vendor are per-Asset settings. 2-ID: the 2-ID-D fluorescence detector (XRF mapping). 7-BM: the germanium energy-dispersive-diffraction detector. Earned in once two deployments shared it; the name deliberately avoids the reserved Detector Role noun (a detector is a Role an Asset plays, not its Family)."
   - name: Shutter
   - name: Hexapod
   - name: MotionController

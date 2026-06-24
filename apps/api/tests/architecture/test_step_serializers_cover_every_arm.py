@@ -48,8 +48,20 @@ _INSTANCES: dict[type, Step] = {
         input_uris=("file:///a.h5", "file:///b.h5"),
         output_uri="file:///center.json",
         parameters={"algorithm": "vo"},
+        capture_name="rotation_center_offset",
     ),
 }
+
+# A capture_name=None ComputeStep round-trips too (the field is additive +
+# optional, slice 6c). Kept SEPARATE from `_INSTANCES` (which holds one
+# representative per arm) so both the set + unset cases are exercised.
+_COMPUTE_STEP_NO_CAPTURE = ComputeStep(
+    command=("tomopy", "find_center"),
+    input_uris=("file:///a.h5", "file:///b.h5"),
+    output_uri="file:///center.json",
+    parameters={"algorithm": "vo"},
+    capture_name=None,
+)
 
 _CHECK_WIRE_KIND = "check"
 
@@ -116,3 +128,29 @@ def test_every_step_arm_round_trips_through_wire_serializer() -> None:
     assert len(set(all_kinds)) == len(_INSTANCES), (
         f"steps_to_wire emitted duplicate wire kinds {all_kinds}; two Step arms collide."
     )
+
+
+@pytest.mark.architecture
+def test_compute_step_capture_name_round_trips_both_serializers() -> None:
+    """A ComputeStep `capture_name` (slice 6c) survives both serializers, set OR None.
+
+    `_INSTANCES` covers the SET case (its ComputeStep carries a capture_name).
+    This pins the UNSET case so a serializer that drops the field on None
+    (folding it to a different wire shape than the set case) is caught.
+    """
+    with_capture = _INSTANCES[ComputeStep]
+    assert isinstance(with_capture, ComputeStep)
+    assert with_capture.capture_name == "rotation_center_offset"
+
+    for instance in (with_capture, _COMPUTE_STEP_NO_CAPTURE):
+        assert isinstance(instance, ComputeStep)
+        # payload serializer round-trip
+        (rebuilt,) = steps_from_payload([step_to_payload(instance)])
+        assert rebuilt == instance, (
+            f"ComputeStep(capture_name={instance.capture_name!r}) did not round-trip "
+            f"through step_to_payload/_step_from_payload."
+        )
+        # hash/wire serializer carries the field (so the determinism hash splits
+        # a capture_name-set step from a capture_name=None one)
+        (wire,) = steps_to_wire((instance,))
+        assert wire["capture_name"] == instance.capture_name
