@@ -42,6 +42,7 @@ APPROVED_OPERATION_NOUNS = frozenset(
         "characterization",
         "homing",
         "reboot",
+        "reconstruction",
         "setting",
         "change",
     }

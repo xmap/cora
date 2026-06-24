@@ -1,6 +1,7 @@
 """HTTP route for conducting a compute Run: `POST /runs/{run_id}/conduct`.
 
-The external entry point for the `Reckoner`. The caller supplies
+The external entry point for the compute-Run conduct runtime
+(`ComputeRunDriver` over the `EdgeConductor` shell). The caller supplies
 the concrete job to run (command argv + input/output URIs + optional
 parameters/resources); the runtime submits it to the wired
 `ComputePort`, awaits the terminal state, and transitions the Run
@@ -10,11 +11,11 @@ on the Run terminal event.
 ## Why this route lives at `cora.api`, not in a BC slice
 
 The route needs both a `JobSpec` (an Operation-BC type) and the
-`Reckoner` (composition-root owned). tach forbids
+`ComputeRunDriver` (composition-root owned). tach forbids
 `cora.run -> cora.operation`, and the runtime is not a BC handler, so
 the route cannot live in the Run or Operation BC. It lives here at the
 composition root, the one module that depends on both, exactly as the
-`Reckoner` itself does. It reads the runtime off `app.state`
+runtime itself does. It reads the runtime off `app.state`
 (no import coupling), mirroring how `conduct_procedure`'s route reads
 its handler off `app.state.operation`.
 
@@ -42,7 +43,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.api._reckoner import Reckoner, ReckonerResult
+from cora.api._edge_conductor import ComputeRunDriver, RunConductOutcome
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.routing import (
     ErrorResponse,
@@ -240,8 +241,8 @@ async def build_conduct_job_spec(
     return build_job_spec(body)
 
 
-def result_to_wire(result: ReckonerResult) -> ConductRunResponse:
-    """Build a `ConductRunResponse` from the runtime's result.
+def result_to_wire(result: RunConductOutcome) -> ConductRunResponse:
+    """Build a `ConductRunResponse` from the runtime's outcome.
 
     Public because `tool.py` calls it too.
     """
@@ -261,8 +262,8 @@ def result_to_wire(result: ReckonerResult) -> ConductRunResponse:
     )
 
 
-def _get_runtime(request: Request) -> Reckoner:
-    runtime: Reckoner = request.app.state.reckoner
+def _get_runtime(request: Request) -> ComputeRunDriver:
+    runtime: ComputeRunDriver = request.app.state.compute_run_driver
     return runtime
 
 
@@ -301,7 +302,7 @@ router = APIRouter(tags=["run"])
 async def post_runs_conduct(
     run_id: Annotated[UUID, Path(description="Target Run's id (must be Running).")],
     body: ConductRunRequest,
-    runtime: Annotated[Reckoner, Depends(_get_runtime)],
+    runtime: Annotated[ComputeRunDriver, Depends(_get_runtime)],
     deps: Annotated[Kernel, Depends(_get_deps)],
     cid: Annotated[UUID, Depends(get_correlation_id)],
     principal_id: Annotated[UUID, Depends(get_principal_id)],

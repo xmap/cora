@@ -157,6 +157,8 @@ from cora.operation.features.start_iteration.handler import (
 from cora.operation.features.start_procedure.command import StartProcedure
 from cora.operation.features.start_procedure.handler import Handler as StartProcedureHandler
 from cora.operation.ports.compute_port import (
+    ArtifactNotFoundError,
+    ArtifactRef,
     ComputeJobFailedError,
     ComputeNotAvailableError,
     ComputePort,
@@ -228,14 +230,17 @@ _COMPUTE_ERRORS: tuple[type[Exception], ...] = (
     ComputeTimeoutError,
     ComputeJobFailedError,
     MeasurementNotFoundError,
+    ArtifactNotFoundError,
 )
 """The closed set of `Compute*Error` classes a ComputeStep maps to a
 recorded step failure + `ConductorFailure`. Mirrors `_CONTROL_ERRORS`:
 new ComputePort exception classes must be added here explicitly (no
 `Exception` catch-all so non-port exceptions still propagate to the
-caller's task). A non-`Succeeded` terminal (Failed / Cancelled /
-TimedOut returned without an exception) is the fifth halt path,
-handled inline in `_run_compute`."""
+caller's task). `MeasurementNotFoundError` is the value arm's
+artifact-missing analogue; `ArtifactNotFoundError` the file arm's. A
+non-`Succeeded` terminal (Failed / Cancelled / TimedOut returned
+without an exception) is the further halt path, handled inline in
+`_run_compute`."""
 
 _ERROR_UNRESOLVED_CAPTURE = "UnresolvedCaptureRef"
 """error_class for a SetpointStep CaptureRef whose name was never captured
@@ -489,40 +494,44 @@ class CaptureStep:
 
 @dataclass(frozen=True)
 class ComputeStep:
-    """One compute job: submit `command` over `ComputePort`, surface a `Measurement`.
+    """One compute job: submit `command` over `ComputePort`, surface its output.
 
-    The value-arm sibling of `ActionStep` (slice 6a). Where an action runs
-    a deployment body composing ControlPort calls, a ComputeStep submits a
-    job to a compute substrate (`ComputePort.submit`), awaits its terminal
-    state, fetches the structured value it produced (`fetch_measurements`),
-    and records each `Measurement` on the activity log. It is the smallest
-    real conduct-path compute step: an align-resolution routine measures the
-    detector pixel size from two already-acquired frames and yields one
-    scalar `Measurement` that homes to a Calibration.
+    The compute sibling of `ActionStep`. Where an action runs a deployment
+    body composing ControlPort calls, a ComputeStep submits a job to a
+    compute substrate (`ComputePort.submit`), awaits its terminal state, and
+    surfaces what the job produced. It drives ONE of the port's two output
+    arms by the presence of `output_uri`:
 
-    Fields mirror the value-bearing subset of `JobSpec`: `command` is the
+    - VALUE arm (`output_uri is None`): fetch the structured value the job
+      produced (`fetch_measurements`) and record each `Measurement` on the
+      activity log. An align-resolution routine measures the detector pixel
+      size from two already-acquired frames and yields one scalar
+      `Measurement` that homes to a Calibration.
+    - FILE arm (`output_uri is not None`): fetch a reference to the file the
+      job wrote (`fetch_artifact_ref`) and surface the `ArtifactRef` on the
+      conduct's result so a Dataset can be registered against it. A
+      reconstruction writes a volume to `output_uri`.
+
+    Fields mirror the output-bearing subset of `JobSpec`: `command` is the
     argv the substrate launches; `input_uris` are AUTHORED LITERAL URIs
     pointing at the well-known paths the acquisition action bodies wrote
-    (NO runtime stage-output-to-input binding at 6a; that is deferred
-    chaining); `output_uri` and `parameters` carry the optional output
-    location + validated parameter set. `resources` / `working_dir` / `env`
-    are omitted at 6a (substrate-decides defaults). A ComputeStep is
+    (NO runtime stage-output-to-input binding yet; that is deferred
+    chaining); `output_uri` selects the file arm (and names where the job
+    writes); `parameters` carries the validated parameter set. `resources` /
+    `working_dir` / `env` are substrate-decides defaults. A ComputeStep is
     side-effecting (a job submission is non-idempotent at the substrate),
     so it records a pre-effect in-flight marker like a setpoint / action.
 
-    6a is VALUE-only: a file-producing ComputeStep is deferred (the
-    reconstruction-file path stays the Reckoner / Run runtime).
-
-    `capture_name` (slice 6c) names the captures slot the produced scalar
-    deposits into, the chaining sibling of `CaptureStep.capture_name`. When
+    `capture_name` names the captures slot the produced scalar deposits into
+    (the VALUE arm), the chaining sibling of `CaptureStep.capture_name`. When
     set, after the job succeeds the Conductor selects the named `Measurement`
     (loud-failing on absent / ambiguous / non-Good / non-finite), then writes
     its value into the per-conduct `captures` dict so a later `SetpointStep`
     `CaptureRef` (intra-pass correction) or the convergence-loop predicate
-    (`conduct_until_converged`) can read it. None (the default) keeps the
-    6a/6b behavior: measurements are recorded + surfaced but no slot is
-    filled. A compute-deposited slot lives only within one forward
-    `execute()`, never across a resume (captures start empty on replay).
+    (`conduct_until_converged`) can read it. None (the default): measurements
+    are recorded + surfaced but no slot is filled. A compute-deposited slot
+    lives only within one forward `execute()`, never across a resume (captures
+    start empty on replay).
     """
 
     command: tuple[str, ...]
@@ -671,13 +680,14 @@ class ConductorResult:
     of the failure, so a caller can distinguish a resumable `Held` outcome
     from a terminal `Aborted` one (both carry `succeeded=False` + `failure`).
 
-    `measurements` accumulates the `Measurement`s every `ComputeStep`
-    produced during the conduct (slice 6a). `execute()` collects them in
+    `measurements` accumulates the `Measurement`s every value-arm
+    `ComputeStep` produced; `artifacts` accumulates the `ArtifactRef`s
+    every file-arm `ComputeStep` produced. `execute()` collects each in
     order (mirroring `completed_count`) on BOTH the success and the
-    failure construction, so a caller reads the produced values without
-    re-parsing the activity log even when a later step halts. Empty on a
-    conduct with no ComputeStep. The `conduct` / `reconduct` `replace()`
-    paths preserve it.
+    failure construction, so a caller reads the produced outputs without
+    re-parsing the activity log even when a later step halts. Both empty
+    on a conduct with no ComputeStep. The `conduct` / `reconduct`
+    `replace()` paths preserve them.
     """
 
     procedure_id: UUID
@@ -686,6 +696,7 @@ class ConductorResult:
     actuation_kind: ActuationKind | None = None
     held: bool = False
     measurements: tuple[Measurement, ...] = ()
+    artifacts: tuple[ArtifactRef, ...] = ()
 
     @property
     def succeeded(self) -> bool:
@@ -869,6 +880,7 @@ class Conductor:
                     failure=failure,
                     actuation_kind=_fold_compute_kind(observer.actuation_kind, compute.kind),
                     measurements=tuple(compute.measurements),
+                    artifacts=tuple(compute.artifacts),
                 )
             completed += 1
         return ConductorResult(
@@ -876,6 +888,7 @@ class Conductor:
             completed_count=completed,
             actuation_kind=_fold_compute_kind(observer.actuation_kind, compute.kind),
             measurements=tuple(compute.measurements),
+            artifacts=tuple(compute.artifacts),
         )
 
     async def execute_from(
@@ -1126,6 +1139,7 @@ class Conductor:
                     procedure_id=procedure_id,
                     completed_count=result.completed_count,
                     measurements=result.measurements,
+                    artifacts=result.artifacts,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -1260,6 +1274,7 @@ class Conductor:
                     procedure_id=procedure_id,
                     completed_count=result.completed_count,
                     measurements=result.measurements,
+                    artifacts=result.artifacts,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -1298,6 +1313,7 @@ class Conductor:
                     actuation_kind=result.actuation_kind,
                     held=True,
                     measurements=result.measurements,
+                    artifacts=result.artifacts,
                 )
             return result
         # Non-recoverable step failure (action): best-effort abort, exactly
@@ -1892,6 +1908,7 @@ class Conductor:
                     procedure_id=procedure_id,
                     completed_count=result.completed_count,
                     measurements=result.measurements,
+                    artifacts=result.artifacts,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -2339,10 +2356,11 @@ class Conductor:
         # A ComputeStep is side-effecting (a job submission is non-idempotent
         # at the substrate), so it follows the setpoint / action in-flight-marker
         # contract: a pre-effect marker BEFORE submit, then the ok / failed
-        # outcome after. VALUE-only at 6a: submit -> await -> fetch_measurements
-        # -> provide_result(measurements=...) -> record each Measurement. When
-        # `capture_name` is set (slice 6c chaining) the produced scalar is then
-        # deposited into `captures` for a later CaptureRef / convergence read.
+        # outcome after. submit -> await -> then ONE output arm by `output_uri`:
+        # value arm (None) fetches measurements; file arm (set) fetches an
+        # artifact ref. Both fold the substrate's declared kind into the conduct.
+        # When `capture_name` is set (value arm only), the produced scalar is
+        # then deposited into `captures` for a later CaptureRef / convergence read.
         if self._compute_port is None:
             # A wiring bug, not a runtime outcome: a ComputeStep was dispatched
             # but no ComputePort was supplied. Loud, like conduct()'s missing
@@ -2393,6 +2411,21 @@ class Conductor:
                 body={**body_with_job, "status": status.value},
                 exc=exc,
                 target=payload_body,
+            )
+        # Discriminate the output arm by `output_uri`: a file-producing step
+        # (output_uri set) fetches an ArtifactRef; a value-producing step
+        # (output_uri None) fetches Measurements. The recon-floor step is
+        # artifact-only.
+        if step.output_uri is not None:
+            return await self._run_compute_artifact_arm(
+                port=port,
+                job_id=job_id,
+                status=status,
+                envelope=envelope,
+                index=index,
+                body_with_job=body_with_job,
+                payload_body=payload_body,
+                compute=compute,
             )
         try:
             produced = await port.fetch_measurements(job_id)
@@ -2564,6 +2597,53 @@ class Conductor:
             message=message,
         )
 
+    async def _run_compute_artifact_arm(
+        self,
+        *,
+        port: ComputePort,
+        job_id: Any,
+        status: Any,
+        envelope: "_Envelope",
+        index: int,
+        body_with_job: dict[str, Any],
+        payload_body: dict[str, Any],
+        compute: "_ComputeAccumulator",
+    ) -> ConductorFailure | None:
+        """The file output arm of a ComputeStep: fetch the artifact + record it.
+
+        Mirrors the value arm: fetch the produced output (`fetch_artifact_ref`
+        rather than `fetch_measurements`), assemble the `ComputeResult` so the
+        adapter stamps the kind, fold that kind into the conduct, and record
+        the ok outcome. The `ArtifactRef` is surfaced on
+        `ConductorResult.artifacts` so the caller can register a Dataset
+        against it.
+        """
+        try:
+            artifact = await port.fetch_artifact_ref(job_id)
+        except _COMPUTE_ERRORS as exc:
+            return await self._record_compute_failure(
+                envelope=envelope,
+                index=index,
+                body={**body_with_job, "status": status.value},
+                exc=exc,
+                target=payload_body,
+            )
+        result = port.provide_result(job_id, status, artifacts=(artifact,))
+        compute.artifacts.extend(result.artifacts)
+        compute.kind = merge_actuation_kinds(compute.kind, result.actuation_kind.value)
+        await self._record(
+            envelope=envelope,
+            index=index,
+            step_kind=_STEP_KIND_COMPUTE,
+            body={
+                **body_with_job,
+                "status": status.value,
+                "artifacts": [_compute_artifact_to_dict(a) for a in result.artifacts],
+            },
+            result=_RESULT_OK,
+        )
+        return None
+
     async def _record_compute_failure(
         self,
         *,
@@ -2660,7 +2740,8 @@ class _ComputeAccumulator:
     """Per-conduct compute output accumulator threaded through `_dispatch`.
 
     A `ComputeStep` appends its produced `Measurement`s to `measurements`
-    (surfaced on `ConductorResult.measurements`) and folds its declared
+    (the value arm) or its `ArtifactRef`s to `artifacts` (the file arm),
+    both surfaced on `ConductorResult`, and folds its declared
     `ActuationKind` into `kind` via `merge_actuation_kinds`, so a simulated
     solver taints the conduct's aggregate kind. Mutable (not frozen): the
     dispatch loop accumulates into it across steps. `kind` is the raw
@@ -2668,6 +2749,7 @@ class _ComputeAccumulator:
     """
 
     measurements: list[Measurement] = field(default_factory=list[Measurement])
+    artifacts: list[ArtifactRef] = field(default_factory=list[ArtifactRef])
     kind: str | None = None
 
 
@@ -2911,6 +2993,25 @@ def _compute_measurement_to_dict(measurement: Measurement) -> dict[str, Any]:
         "kind": measurement.kind,
         "units": measurement.units,
         "quality": measurement.quality,
+    }
+
+
+def _compute_artifact_to_dict(artifact: ArtifactRef) -> dict[str, Any]:
+    """JSON-clean projection of a file-arm ComputeStep `ArtifactRef`.
+
+    The file-arm sibling of `_compute_measurement_to_dict`. Records the
+    reference's identifying + verification fields on the step payload so
+    log inspection from the read side sees what the job wrote without
+    re-statting the file. `conforms_to` is a tuple; serialize as a list.
+    """
+    return {
+        "uri": artifact.uri,
+        "checksum_algorithm": artifact.checksum_algorithm,
+        "checksum_value": artifact.checksum_value,
+        "byte_size": artifact.byte_size,
+        "media_type": artifact.media_type,
+        "conforms_to": list(artifact.conforms_to),
+        "entry_count": artifact.entry_count,
     }
 
 

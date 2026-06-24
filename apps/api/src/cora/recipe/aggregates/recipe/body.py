@@ -158,25 +158,26 @@ class RecipeCaptureStep:
 
 @dataclass(frozen=True)
 class RecipeComputeStep:
-    """Compute step template: submit `command` over ComputePort, surface a Measurement.
+    """Compute step template: submit `command` over ComputePort, surface its result.
 
-    The recipe-template twin of the Conductor's `ComputeStep` (slice 6a).
-    Fields are LITERAL at 6a (no `BindingRef` on a compute step yet): the
-    `command` argv + `input_uris` (authored literal URIs pointing at the
-    well-known paths the acquisition action bodies wrote) + optional
-    `output_uri` + literal `parameters`. The expansion function passes the
-    fields through verbatim; binding a compute parameter is a deferred
-    widening (the first deployment that needs an operator-tunable compute
-    parameter fires it).
+    The recipe-template twin of the Conductor's `ComputeStep`. `output_uri`
+    selects the result arm, mirroring the Conductor: SET means the FILE arm
+    (the job writes an artifact; the conduct surfaces an `ArtifactRef`), None
+    means the VALUE arm (the conduct surfaces a `Measurement`). Fields are
+    LITERAL (no `BindingRef` on a compute step yet): the `command` argv +
+    `input_uris` (authored literal URIs pointing at the well-known paths the
+    acquisition action bodies wrote) + optional `output_uri` + literal
+    `parameters`. The expansion function passes the fields through verbatim;
+    binding a compute parameter is a deferred widening (the first deployment
+    that needs an operator-tunable compute parameter fires it).
 
-    `capture_name` (slice 6c) names the captures slot the produced
-    `Measurement` deposits into, so a later `CaptureRef` setpoint (or the
-    convergence-loop predicate) reads the computed value: a ComputeStep
-    becomes a captures DECLARER exactly like a `RecipeCaptureStep`. None (the
-    default) keeps the 6a/6b behavior (the step records its measurements but
-    fills no slot). `validate_capture_refs` treats a non-None `capture_name`
-    as a declared name, sharing one ordered `declared` set with the capture
-    step branch so a cross-kind duplicate or a forward reference is caught at
+    `capture_name` names the captures slot the produced `Measurement` deposits
+    into (the VALUE arm), so a later `CaptureRef` setpoint (or the
+    convergence-loop predicate) reads the computed value: a ComputeStep becomes
+    a captures DECLARER exactly like a `RecipeCaptureStep`. None (the default)
+    fills no slot. `validate_capture_refs` treats a non-None `capture_name` as a
+    declared name, sharing one ordered `declared` set with the capture step
+    branch so a cross-kind duplicate or a forward reference is caught at
     define-recipe time.
     """
 
