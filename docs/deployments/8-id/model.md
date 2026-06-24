@@ -26,9 +26,11 @@
 
 `Magnet` and `Preamplifier` do NOT graduate: they rest on a single physical beamline (4-ID), since `6idb-bits` is a 4-ID fork (see the [4-ID model page](../4-id/model.md#deliberately-not-here-yet)). They wait for a genuinely independent beamline that uses them.
 
-## Deliberately not here yet
+## The Diffractometer Assembly (landed)
 
-- **The Diffractometer Assembly.** 4-ID and 8-ID both carry diffractometers, modelled as plain devices with their circle axis maps. The 8-ID six-circle Huber (mu, eta, chi, phi, nu, delta) plus 4-ID's Eulerian and high-pressure circles confirm the reusable shape: an `Assembly(Diffractometer)` presenting the Positioner Role, mirroring the 2-BM `Microscope` Assembly, with a `sample_circles` slot bound to `RotaryStage` at cardinality `OneOrMore` (to span the four-circle and six-circle geometries), a `sample_table` slot bound to `LinearStage`, and a `reciprocal_space` slot bound to the existing `PseudoAxis` Family (its `partition_rule` resolving the hklpy2 inverse kinematics). All slot families exist, so no new Family is needed. It is deferred from the catalog until a scenario registers a Fixture (the design-phase convention defers Assemblies to Fixture registration); the circle-role confirmation is `DIFF-1`.
+The `Assembly(Diffractometer)` designed during the catalog-graduation pass is now real. It is in [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) as a flat assembly presenting the Positioner Role, with slots `sample_circles` (RotaryStage, `OneOrMore`, spanning 8-ID's six circles and 4-ID's four-circle geometries), `sample_table` (LinearStage), and `reciprocal_space` (PseudoAxis, whose partition rule resolves the hklpy2 inverse kinematics). The integration scenario [`test_8id_diffractometer_setup.py`](https://github.com/xmap/cora/blob/main/apps/api/tests/integration/scenarios/test_8id_diffractometer_setup.py) materializes it end-to-end against Postgres: it installs the eight 8-ID-E constituent Assets (mu / eta / chi / phi / nu / delta + sample table + reciprocal-space), defines the Assembly, and registers a Fixture binding the six circles to the one `sample_circles` slot. The circle-role confirmation remains `DIFF-1` and the reciprocal-space solver rule is `DIFF-2`; the 4-ID Fixture is the follow-on (the Assembly is shared, the Fixture is per-beamline).
+
+## Deliberately not here yet
 
 - **The UR5 robotic sample changer.** `RobocartUR5` is a user-brought robotic arm; CORA has no sample-changer shape (the same gap the 32-ID projection-microscope changer raised). It is not modelled (`SAMPLE-2`).
 
@@ -36,7 +38,7 @@
 
 - **The XPCS / scattering Methods.** Whether XPCS and small-angle scattering enter CORA's catalog is an owner decision; the Practices render unlinked, pending (`TECH-1`).
 
-- **Integration scenarios and vendor Models.** No `test_8id_*.py` registers 8-ID Assets, and no vendor Models are bound. Both land when the design firms and the team approves.
+- **Full asset-tree scenarios and vendor Models.** Beyond the diffractometer Assembly / Fixture scenario above, no `test_8id_*.py` registers the full 8-ID asset tree (the optics spine, the XPCS endstation), and no vendor Models are bound. Those land when the design firms and the team approves.
 
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
 

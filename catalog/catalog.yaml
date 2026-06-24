@@ -312,3 +312,19 @@ assemblies:
       - { slot_name: scintillator, required_families: [Scintillator], cardinality: Exactly1 }
     required_sub_assemblies:
       - { slot_name: optics, sub_assembly: Optics }
+  - name: Diffractometer
+    note: >-
+      Multi-circle goniometer for single-crystal diffraction: a set of sample rotation
+      circles, a sample-translation table, and a reciprocal-space pseudo-axis (hklpy2),
+      presenting the Positioner Role. sample_circles is OneOrMore because the circle count
+      is a per-deployment geometry, not a Family split: 4-ID binds a Eulerian cradle and a
+      high-pressure diffractometer, 8-ID binds a six-circle Huber (mu, eta, chi, phi, nu,
+      delta). The reciprocal_space slot is the existing PseudoAxis Family (its partition rule
+      resolves the hklpy2 inverse kinematics, the same mechanism as the 2-BM objective
+      selector). Flat (no sub-assembly), unlike Microscope. Earned in once two independent
+      beamlines (4-ID, 8-ID) shared it.
+    presents_as: [Positioner]
+    required_slots:
+      - { slot_name: sample_circles, required_families: [RotaryStage], cardinality: OneOrMore }
+      - { slot_name: sample_table, required_families: [LinearStage], cardinality: Exactly1 }
+      - { slot_name: reciprocal_space, required_families: [PseudoAxis], cardinality: Exactly1 }

@@ -16,7 +16,7 @@
 
 ## Loose-Family graduation
 
-POLAR introduced eight device classes CORA had not earned into the catalog. Graduation needs two or more independent CORA deployments to reference a Family (the rule the passive beam-path tier followed), and the 8-ID XPCS deployment, the second independent beamline, made three of them concrete: `TemperatureController`, `Transfocator`, and `BeamPositionMonitor` are now catalog Families. The other five stay loose (a single beamline so far, or, for `Diffractometer`, an Assembly target). All names were cleared by the naming-r3 review during the catalog-graduation pass.
+POLAR introduced eight device classes CORA had not earned into the catalog. Graduation needs two or more independent CORA deployments to reference a Family (the rule the passive beam-path tier followed), and the 8-ID XPCS deployment, the second independent beamline, made three of them concrete: `TemperatureController`, `Transfocator`, and `BeamPositionMonitor` are now catalog Families. The `Diffractometer` graduated as the `Assembly(Diffractometer)` blueprint (4-ID + 8-ID), with an 8-ID Fixture scenario; the remaining four (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser`) stay loose (a single beamline so far). All names were cleared by the naming-r3 review during the catalog-graduation pass.
 
 | Loose Family | Presents (when graduated) | Status |
 | --- | --- | --- |
@@ -27,13 +27,13 @@ POLAR introduced eight device classes CORA had not earned into the catalog. Grad
 | `PolarizationAnalyzer` | Positioner | loose: a second polarization beamline |
 | `Magnet` | confirm (Positioner or Sensor) | loose: needs a second magnetism beamline (8-ID has no sample magnet) |
 | `Laser` | confirm | loose: a second deployment, or the SAMPLE-1 model-versus-hazard decision |
-| `Diffractometer` | Positioner (Assembly) | loose: the `Assembly(Diffractometer)` is designed (4-ID + 8-ID), deferred to a Fixture-registering scenario |
+| `Diffractometer` | Positioner (Assembly) | GRADUATED as `Assembly(Diffractometer)` in the catalog (4-ID + 8-ID); 8-ID Fixture scenario landed, the 4-ID Fixture is the follow-on |
 
 ## Deliberately not here yet
 
 These are the parts of 4-ID this cut leaves out on purpose. Each is a CORA scope decision, not a fact the beamline team needs to supply, so it lives here rather than on [Open questions](questions.md).
 
-- **The Diffractometer Assembly.** The two Huber diffractometers are modelled as plain devices with their circle axis maps. The reusable shape is an `Assembly(Diffractometer)` presenting the Positioner Role, mirroring the 2-BM `Microscope` Assembly: omega / chi / phi circle slots bound to `RotaryStage` (and a `TiltStage` where range is limited), a `sample_table` slot bound to `LinearStage`, and a `reciprocal_space` slot bound to the existing `PseudoAxis` Family (its `partition_rule` resolving the hklpy2 inverse kinematics, the same mechanism as the 2-BM `objective_selector`). All slot families already exist, so no new Family is needed for the Assembly. It is deferred until the circle geometry confirms (`DIFF-1`) and a scenario registers a Fixture; the design-phase convention defers Assemblies until a Fixture is registered.
+- **The 4-ID Diffractometer Fixture.** The `Assembly(Diffractometer)` is now in the catalog and materialized by the 8-ID Fixture scenario (see the [8-ID model page](../8-id/model.md#the-diffractometer-assembly-landed)). 4-ID's two Huber diffractometers (the Eulerian cradle and the high-pressure diffractometer) are still modelled here as plain devices with their circle axis maps; decomposing them into per-circle `RotaryStage` Assets and binding a 4-ID Fixture is the follow-on, gated on the circle-role confirmation (`DIFF-1`). The Assembly is the shared blueprint; the Fixture is per-beamline.
 
 - **The Raman station.** `4-ID-Raman` is out of this cut because its device config did not extract (a symlink that did not resolve in the source clone). Its devices and whether it is a fifth enclosure are `TOPO-2`; it is a world-fact gap, tracked on [Open questions](questions.md), not a scope decision.
 
