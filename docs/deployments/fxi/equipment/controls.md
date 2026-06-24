@@ -15,14 +15,14 @@ This is the NSLS-II analog of 2-BM's Aerotech PSO: the gating is in hardware, of
 
 ## Motion controllers
 
-The EpicsMotors above are driven by controller boxes whose identity (model, protocol, axis count, serial, firmware, IP) lives in IOC `st.cmd` files, not the profile collection. CORA records them as families only, pending (DRIVE-1):
+The EpicsMotors above are driven by controller boxes whose identity (model, protocol, axis count, serial, firmware, IP) lives in the IOC instance config, not the profile collection. CORA records them as families only, pending (DRIVE-1):
 
 | Controller | Drives | Notes |
 | --- | --- | --- |
-| `SampleMotionController` | `XF:18IDB-OP*` sample-side motors | box identity unknown; a Delta Tau PMAC stack is bundled in `NSLS2/epics-rpm-config`, expected but unconfirmed |
+| `SampleMotionController` | `XF:18IDB-OP*` sample-side motors | box identity unknown |
 | `OpticsMotionController` | `XF:18IDA-OP*` optics motors | box identity unknown |
 
-Reading one FXI IOC `st.cmd` would settle most of (DRIVE-1) without staff; that is a planned follow-up.
+This was investigated and is not settleable from public open source: FXI publishes only two repos (`fxi-profile-collection` and `fxi-workflows`), with no IOC-config repo. NSLS-II deploys IOCs through the `NSLS2/nsls2.ioc_deploy` Ansible device-role collection plus per-beamline `<bl>-epics-containers` repos (only `cms-epics-containers`, a test beamline, is public), but FXI's per-beamline IOC inventory, which would bind a controller model and IP to each motor group, is ops-private. The generic driver modules exist in the org (`I404-ioc`, `mdrive-ioc`, `mcs-ioc`, `pi-e621-ioc`), but none binds FXI's hardware. So DRIVE-1 needs FXI staff or private inventory access, not more searching.
 
 ## The seam: CORA and the EPICS floor
 

@@ -41,7 +41,7 @@ This model is reverse-engineered from public NSLS-II open source (the bluesky pr
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| DRIVE-1 | Blocks-go-live | What are the motion-controller boxes behind the EpicsMotors (model, protocol, axis count, serial, firmware, IP), and which IOC drives each device group? These live in IOC `st.cmd` files, not the profile collection. | Families only; a Delta Tau PMAC stack is bundled in `NSLS2/epics-rpm-config`, expected but unconfirmed. | The MotionController Models and the Drive identities. |
+| DRIVE-1 | Blocks-go-live | What are the motion-controller boxes behind the EpicsMotors (model, protocol, axis count, serial, firmware, IP), and which IOC drives each device group? Confirmed not in public open source: FXI has no IOC-config repo, and its per-beamline IOC inventory (Ansible `nsls2.ioc_deploy` device roles + a `<bl>-epics-containers` repo) is ops-private. Needs FXI staff or inventory access. | Families only; box identities unknown. | The MotionController Models and the Drive identities. |
 | ZEBRA-1 | Nice-to-have | Are there two Zebra boxes? `Zebra1` is instantiated; `Zebra2` is referenced in source. What is each wired to? | One Zebra (Zebra1), reading the rotary as enc1. | The TimingController set. |
 | DATA-1 | Nice-to-have | Where is dataset integrity (checksum) recorded? Tiled resource docs give a URI but no checksum. | The Tiled URI is the Dataset source-of-record; no checksum modeled. | The Dataset lineage. |
 

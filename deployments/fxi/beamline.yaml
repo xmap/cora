@@ -280,8 +280,11 @@ controls:
   intro: >
     The trigger hardware and the drive-electronics boxes. The motion controllers
     are recorded as families only: the controller boxes (model, protocol, axis
-    count, serial, firmware, IP) live in IOC st.cmd files, not the profile
-    collection, so they are open questions (DRIVE-1).
+    count, serial, firmware, IP) are NOT in public open source. FXI has no
+    IOC-config repo (only fxi-profile-collection + fxi-workflows); NSLS-II's
+    per-beamline IOC inventory (nsls2.ioc_deploy Ansible device roles plus a
+    <bl>-epics-containers repo) is ops-private. Investigated and confirmed: these
+    need FXI staff or inventory access (DRIVE-1).
   triggering:
     - name: Zebra
       family: TimingController
@@ -300,11 +303,11 @@ controls:
     - name: SampleMotionController
       family: MotionController
       confirm: true
-      note: "Drives the 18-IDB sample-side EpicsMotors (XF:18IDB-OP*). Box model/protocol/IP unknown; in IOC st.cmd, not the profile collection (DRIVE-1). A Delta Tau PMAC stack is bundled in NSLS2/epics-rpm-config, expected but not confirmed for FXI."
+      note: "Drives the 18-IDB sample-side EpicsMotors (XF:18IDB-OP*). Box model/protocol/IP unknown; FXI's IOC inventory is ops-private, not in public open source (DRIVE-1)."
     - name: OpticsMotionController
       family: MotionController
       confirm: true
-      note: "Drives the 18-IDA optics EpicsMotors (XF:18IDA-OP*). Box identity unknown (DRIVE-1)."
+      note: "Drives the 18-IDA optics EpicsMotors (XF:18IDA-OP*). Box identity unknown; not in public open source (DRIVE-1)."
   software_iocs_not_modeled:
     # Software processes referenced by PV namespace, never registered as Assets.
     [Andor, Kinetix, Marana, Manta, Zebra, ioLogik, MCTOptics-equivalent]
