@@ -125,7 +125,11 @@ from cora.infrastructure.ports.event_store import ConcurrencyError
 from cora.infrastructure.ports.id_generator import IdGenerator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation._control_dispatch_context import with_dispatch_correlation_id
-from cora.operation.aggregates.procedure import ProcedureNotFoundError, merge_actuation_kinds
+from cora.operation.aggregates.procedure import (
+    ProcedureIterationLimitReachedError,
+    ProcedureNotFoundError,
+    merge_actuation_kinds,
+)
 from cora.operation.errors import CheckFailedError, UnauthorizedError, UnknownActionError
 from cora.operation.features.abort_procedure.command import AbortProcedure
 from cora.operation.features.abort_procedure.handler import Handler as AbortProcedureHandler
@@ -140,10 +144,16 @@ from cora.operation.features.complete_procedure.command import CompleteProcedure
 from cora.operation.features.complete_procedure.handler import (
     Handler as CompleteProcedureHandler,
 )
+from cora.operation.features.end_iteration.command import EndProcedureIteration
+from cora.operation.features.end_iteration.handler import Handler as EndProcedureIterationHandler
 from cora.operation.features.hold_procedure.command import HoldProcedure
 from cora.operation.features.hold_procedure.handler import Handler as HoldProcedureHandler
 from cora.operation.features.resume_procedure.command import ResumeProcedure
 from cora.operation.features.resume_procedure.handler import Handler as ResumeProcedureHandler
+from cora.operation.features.start_iteration.command import StartProcedureIteration
+from cora.operation.features.start_iteration.handler import (
+    Handler as StartProcedureIterationHandler,
+)
 from cora.operation.features.start_procedure.command import StartProcedure
 from cora.operation.features.start_procedure.handler import Handler as StartProcedureHandler
 from cora.operation.ports.compute_port import (
@@ -234,7 +244,41 @@ not an exception type: the failure is recorded + returned, not raised."""
 
 _ERROR_DUPLICATE_CAPTURE = "DuplicateCapture"
 """error_class for a CaptureStep re-capturing an already-filled name within
-one conduct (an authoring error the recipe validation also rejects)."""
+one conduct (an authoring error the recipe validation also rejects). Also
+used by a ComputeStep deposit (slice 6c) into an already-filled slot."""
+
+_ERROR_MEASUREMENT_NOT_FOUND = "ComputeMeasurementNotFound"
+"""error_class for a ComputeStep `capture_name` deposit (slice 6c) when no
+produced Measurement carries that name. Loud-fail label, not an exception
+type; the failure is recorded + returned, naming the wanted name + the
+available names so an authoring mismatch is diagnosable from the journal."""
+
+_ERROR_AMBIGUOUS_MEASUREMENT = "ComputeMeasurementAmbiguous"
+"""error_class for a ComputeStep `capture_name` deposit (slice 6c) when more
+than one produced Measurement carries the name. No first-wins: an ambiguous
+deposit is an authoring error (the solver emitted a duplicate-named value)."""
+
+_ERROR_ITERATION_CAP_REACHED = "ConvergenceIterationCapReached"
+"""error_class on the lifecycle `ConductorFailure` that `conduct_until_converged`
+returns when the patience cap trips before the criterion is met (slice 6c).
+Loud-fail label, not an exception type: the loop aborts the Procedure (a
+planned terminal) and surfaces this so the caller can distinguish a
+never-converged routine from a step fault."""
+
+_ABSOLUTE_MAX_ITERATIONS = 10_000
+"""Absolute ceiling on convergence-loop passes, applied EVEN WHEN the patience
+cap (`max_consecutive_unconverged_iterations`) is None. Defense-in-depth: every
+pass actuates hardware (a ComputeStep submit + SetpointStep writes), so an
+uncapped loop with a never-matching criterion would actuate without bound. The
+ceiling is generous (a real alignment converges in single-digit passes); it is
+a runaway backstop, not a tuning knob."""
+
+_ERROR_ABSOLUTE_ITERATION_CEILING = "AbsoluteIterationCeilingReached"
+"""error_class on the lifecycle `ConductorFailure` that `conduct_until_converged`
+returns when the absolute iteration ceiling (`_ABSOLUTE_MAX_ITERATIONS`) trips.
+Distinct from `ConvergenceIterationCapReached` (the operator-set patience cap):
+this is the unconditional runaway backstop that bites even when no patience cap
+was supplied."""
 
 _CAPTURE_REF_KEY = "__capture__"
 """Wire-format sentinel key for a `CaptureRef` value in the pinned conduct
@@ -468,12 +512,24 @@ class ComputeStep:
 
     6a is VALUE-only: a file-producing ComputeStep is deferred (the
     reconstruction-file path stays the Reckoner / Run runtime).
+
+    `capture_name` (slice 6c) names the captures slot the produced scalar
+    deposits into, the chaining sibling of `CaptureStep.capture_name`. When
+    set, after the job succeeds the Conductor selects the named `Measurement`
+    (loud-failing on absent / ambiguous / non-Good / non-finite), then writes
+    its value into the per-conduct `captures` dict so a later `SetpointStep`
+    `CaptureRef` (intra-pass correction) or the convergence-loop predicate
+    (`conduct_until_converged`) can read it. None (the default) keeps the
+    6a/6b behavior: measurements are recorded + surfaced but no slot is
+    filled. A compute-deposited slot lives only within one forward
+    `execute()`, never across a resume (captures start empty on replay).
     """
 
     command: tuple[str, ...]
     input_uris: tuple[str, ...] = ()
     output_uri: str | None = None
     parameters: Mapping[str, Any] = field(default_factory=dict[str, Any])
+    capture_name: str | None = None
 
 
 Step = SetpointStep | ActionStep | CheckStep | CaptureStep | ComputeStep
@@ -727,6 +783,8 @@ class Conductor:
         abort_procedure: AbortProcedureHandler | None = None,
         resume_procedure: ResumeProcedureHandler | None = None,
         hold_procedure: HoldProcedureHandler | None = None,
+        start_iteration: StartProcedureIterationHandler | None = None,
+        end_iteration: EndProcedureIterationHandler | None = None,
     ) -> None:
         self._control_port = control_port
         self._append_step = append_step
@@ -743,6 +801,8 @@ class Conductor:
         self._abort_procedure = abort_procedure
         self._resume_procedure = resume_procedure
         self._hold_procedure = hold_procedure
+        self._start_iteration = start_iteration
+        self._end_iteration = end_iteration
 
     async def execute(
         self,
@@ -753,6 +813,7 @@ class Conductor:
         steps: Sequence[Step],
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
+        captures: dict[str, Any] | None = None,
     ) -> ConductorResult:
         """Walk `steps` in order; dispatch per kind + record outcome.
 
@@ -766,6 +827,13 @@ class Conductor:
         KeyboardInterrupt, CancelledError) are NOT caught: they
         propagate to the caller so signals + cancellation behave
         normally and bugs surface.
+
+        `captures` is the per-conduct runtime-value bus a `CaptureStep` /
+        deposit-`ComputeStep` fills and a `CaptureRef` setpoint reads. None
+        (the default) creates a FRESH dict, preserving the single-pass
+        behavior. `conduct_until_converged` passes a fresh dict PER PASS and
+        reads the convergence value out of it after the pass (the dict is
+        mutated in place, so the caller's reference sees every deposit).
         """
         envelope = _Envelope(
             procedure_id=procedure_id,
@@ -775,7 +843,8 @@ class Conductor:
             surface_id=surface_id,
         )
         observer = _ActuationObserver(self._control_port)
-        captures: dict[str, Any] = {}
+        if captures is None:
+            captures = {}
         compute = _ComputeAccumulator()
         completed = 0
         for index, step in enumerate(steps):
@@ -1245,6 +1314,473 @@ class Conductor:
             )
         return result
 
+    async def conduct_until_converged(
+        self,
+        *,
+        procedure_id: UUID,
+        principal_id: UUID,
+        correlation_id: UUID,
+        steps: Sequence[Step],
+        convergence_capture_name: str,
+        criterion: CheckCriterion,
+        max_consecutive_unconverged_iterations: int | None = None,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ConductorResult:
+        """Drive an iterate-measure-correct convergence loop over one pass block.
+
+        The AUTO sibling of `conduct()` (slice 6c): where `conduct()` walks a
+        step list ONCE then completes / aborts, this re-walks `steps` (ONE
+        pass block) repeatedly until a loop-evaluated criterion over the
+        captures bus is met, OR the patience cap trips. It owns the full FSM:
+        `start_procedure` -> { `start_iteration` -> `execute(pass)` ->
+        `end_iteration` } * -> `complete_procedure` | `abort_procedure`.
+
+        `steps` is the per-pass block (NO terminal convergence CheckStep; it
+        MAY carry ordinary in-block safety CheckSteps that keep NORMAL
+        halt-on-fail). Inside one pass a deposit-`ComputeStep` writes the
+        computed offset into `captures[convergence_capture_name]` and a
+        same-pass `SetpointStep` `CaptureRef` drives the correction.
+
+        CONVERGENCE is option C, loop-evaluated: after each SUCCESSFUL pass the
+        loop reads `captures[convergence_capture_name]` and sets
+        `converged = _criterion_matches(criterion, value)` (the EXISTING
+        criterion union + matcher, reused as-is). There is NO walked
+        convergence CheckStep, so a not-converged pass is not a step failure
+        and the Procedure stays Running (NOT Held: this is a sibling of
+        conduct, not try_conduct).
+
+        CONTROL FLOW (B2/B3/B4):
+
+          0. ABSOLUTE CEILING (defense-in-depth): at the loop top, if the pass
+             count has reached `_ABSOLUTE_MAX_ITERATIONS`, STOP and abort with
+             `AbsoluteIterationCeilingReached`. This applies EVEN WHEN the
+             patience cap is None: each pass actuates hardware, so an uncapped
+             loop with a never-matching criterion is bounded by this runaway
+             backstop. No iteration is open at the loop top, so the abort is
+             direct (like the cap pre-check).
+          1. CAP PRE-CHECK (B2): when a cap is set and the consecutive
+             unconverged streak has reached it, STOP and abort WITHOUT calling
+             start_iteration (the planned terminal; avoids the deterministic
+             ProcedureIterationLimitReachedError). A defensive try/except
+             around start_iteration treats that error as a cap-trip backstop.
+          2. start_iteration(index = iteration_count + 1).
+          3. fresh per-pass captures dict; execute(pass, captures=...).
+          4. on success: read the convergence value (loud-fail if the deposit
+             nonetheless left it absent) and evaluate the criterion. On
+             failure (real fault OR a legitimately-failing in-block safety
+             CheckStep): end_iteration(converged=None) THEN abort, return the
+             failure verbatim.
+          5. end_iteration(converged) ALWAYS before any FSM transition (B3).
+          6. converged -> complete; else loop.
+
+        `current_iteration_index` is None on the converged-complete, cap-abort,
+        absolute-ceiling-abort, failed-pass-abort, and absent-name-abort
+        terminals, because every open iteration is closed via end_iteration
+        before the terminal transition. The CANCELLATION terminal is the
+        documented exception (mirroring reconduct's cancel carve-out):
+        `abort_orphan_on_cancel` fires AbortProcedure while an iteration may
+        still be open (no end_iteration on the cancel path), so
+        `current_iteration_index` may be left set. The denorm is inert (the
+        Procedure is terminal, Aborted) and `actuation_kind` is recorded None;
+        an aborted Procedure promotes no Calibration, so the open-iteration
+        denorm is benign. Threading end_iteration into the cancel lambda is too
+        invasive for the inert benefit and is intentionally not done.
+
+        Requires start_procedure + complete_procedure + abort_procedure +
+        start_iteration + end_iteration handlers at __init__; raises
+        RuntimeError (a wiring bug) otherwise.
+        """
+        if (
+            self._start_procedure is None
+            or self._complete_procedure is None
+            or self._abort_procedure is None
+            or self._start_iteration is None
+            or self._end_iteration is None
+        ):
+            raise RuntimeError(
+                "Conductor.conduct_until_converged() requires start_procedure + "
+                "complete_procedure + abort_procedure + start_iteration + end_iteration "
+                "handlers at __init__; only execute() is available without them."
+            )
+        envelope_kwargs: dict[str, Any] = {
+            "principal_id": principal_id,
+            "correlation_id": correlation_id,
+            "causation_id": causation_id,
+            "surface_id": surface_id,
+        }
+        try:
+            await self._start_procedure(
+                StartProcedure(procedure_id=procedure_id), **envelope_kwargs
+            )
+        except _LIFECYCLE_RERAISE:
+            raise
+        except Exception as exc:
+            return ConductorResult(
+                procedure_id=procedure_id,
+                completed_count=0,
+                failure=ConductorFailure(
+                    step_index=None,
+                    source_kind=_SOURCE_KIND_LIFECYCLE,
+                    target=_LIFECYCLE_TARGET_START,
+                    error_class=type(exc).__name__,
+                    message=str(exc),
+                ),
+            )
+        abort_procedure = self._abort_procedure
+        async with abort_orphan_on_cancel(
+            lambda: abort_procedure(
+                AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
+                **envelope_kwargs,
+            )
+        ):
+            return await self._run_convergence_loop(
+                procedure_id=procedure_id,
+                steps=steps,
+                convergence_capture_name=convergence_capture_name,
+                criterion=criterion,
+                max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
+                envelope_kwargs=envelope_kwargs,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                causation_id=causation_id,
+                surface_id=surface_id,
+            )
+
+    async def _run_convergence_loop(
+        self,
+        *,
+        procedure_id: UUID,
+        steps: Sequence[Step],
+        convergence_capture_name: str,
+        criterion: CheckCriterion,
+        max_consecutive_unconverged_iterations: int | None,
+        envelope_kwargs: dict[str, Any],
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None,
+        surface_id: UUID,
+    ) -> ConductorResult:
+        """The post-start convergence loop body of `conduct_until_converged`.
+
+        Extracted so the cap pre-check / start_iteration / execute /
+        end_iteration sequencing is one linear read. The Procedure is already
+        Running (start_procedure succeeded). Returns the terminal
+        ConductorResult after completing (converged) or aborting (cap-trip /
+        in-pass fault). The streak + iteration_count are tracked locally: the
+        loop owns every iteration boundary for this conduct, so it knows each
+        pass's verdict without re-loading aggregate state."""
+        assert self._complete_procedure is not None  # guarded by caller
+        assert self._abort_procedure is not None
+        assert self._start_iteration is not None
+        assert self._end_iteration is not None
+        cap = max_consecutive_unconverged_iterations
+        iteration_count = 0
+        streak = 0
+        last_result: ConductorResult | None = None
+        folded_kind: str | None = None
+        while True:
+            # ABSOLUTE CEILING (defense-in-depth): bites even when cap is None.
+            # No iteration is open at the loop top, so abort directly (like the
+            # cap pre-check). Guards a never-matching criterion with no patience
+            # cap from actuating hardware without bound.
+            if iteration_count >= _ABSOLUTE_MAX_ITERATIONS:
+                return await self._abort_absolute_ceiling(
+                    procedure_id=procedure_id,
+                    iteration_count=iteration_count,
+                    folded_kind=folded_kind,
+                    last_result=last_result,
+                    envelope_kwargs=envelope_kwargs,
+                )
+            # CAP PRE-CHECK (B2): a cap of C permits exactly C consecutive
+            # unconverged passes; stop before the (C+1)-th start_iteration
+            # rather than letting the decider 409.
+            if cap is not None and streak >= cap:
+                return await self._abort_unconverged_cap(
+                    procedure_id=procedure_id,
+                    streak=streak,
+                    cap=cap,
+                    folded_kind=folded_kind,
+                    last_result=last_result,
+                    envelope_kwargs=envelope_kwargs,
+                )
+            next_index = iteration_count + 1
+            try:
+                await self._start_iteration(
+                    StartProcedureIteration(procedure_id=procedure_id, iteration_index=next_index),
+                    **envelope_kwargs,
+                )
+            except ProcedureIterationLimitReachedError:  # pragma: no cover
+                # Defensive backstop (B2): UNREACHABLE given the local-streak /
+                # aggregate-iteration lockstep + the cap pre-check above, which
+                # stops before the (C+1)-th start_iteration. Kept as
+                # intentional defense-in-depth: if the aggregate refused the
+                # next iteration on the cap, no iteration was opened, so abort
+                # directly.
+                return await self._abort_unconverged_cap(
+                    procedure_id=procedure_id,
+                    streak=streak,
+                    cap=cap if cap is not None else streak,
+                    folded_kind=folded_kind,
+                    last_result=last_result,
+                    envelope_kwargs=envelope_kwargs,
+                )
+            iteration_count += 1
+            pass_captures: dict[str, Any] = {}
+            result = await self.execute(
+                procedure_id=procedure_id,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                steps=steps,
+                causation_id=causation_id,
+                surface_id=surface_id,
+                captures=pass_captures,
+            )
+            last_result = result
+            folded_kind = merge_actuation_kinds(
+                folded_kind,
+                result.actuation_kind.value if result.actuation_kind is not None else None,
+            )
+            if not result.succeeded:
+                # Real fault OR a legitimately-failing in-block safety check:
+                # close the open iteration (B3, converged=None = no verdict)
+                # then abort, surfacing the step failure verbatim.
+                await self._end_iteration(
+                    EndProcedureIteration(
+                        procedure_id=procedure_id,
+                        iteration_index=next_index,
+                        converged=None,
+                        reason=_derive_failure_reason(result.failure)
+                        if result.failure is not None
+                        else None,
+                    ),
+                    **envelope_kwargs,
+                )
+                await self._abort_after_failed_pass(
+                    procedure_id=procedure_id,
+                    failure=result.failure,
+                    folded_kind=folded_kind,
+                    envelope_kwargs=envelope_kwargs,
+                )
+                return replace(
+                    result,
+                    actuation_kind=(
+                        ActuationKind(folded_kind) if folded_kind is not None else None
+                    ),
+                )
+            if convergence_capture_name not in pass_captures:
+                # A successful pass GUARANTEES the deposit ran (the C1 loud-fails
+                # would otherwise have halted the pass); an absent name here is
+                # an authoring error (the pass block declares no deposit into
+                # this name). Loud-fail: close the iteration then abort.
+                msg = (
+                    f"convergence capture {convergence_capture_name!r} was not deposited "
+                    f"by the pass block (available: {sorted(pass_captures)})"
+                )
+                await self._end_iteration(
+                    EndProcedureIteration(
+                        procedure_id=procedure_id,
+                        iteration_index=next_index,
+                        converged=None,
+                        reason=msg[:REASON_MAX_LENGTH],
+                    ),
+                    **envelope_kwargs,
+                )
+                failure = ConductorFailure(
+                    step_index=None,
+                    source_kind=_STEP_KIND_COMPUTE,
+                    target=convergence_capture_name,
+                    error_class=_ERROR_MEASUREMENT_NOT_FOUND,
+                    message=msg,
+                )
+                await self._abort_after_failed_pass(
+                    procedure_id=procedure_id,
+                    failure=failure,
+                    folded_kind=folded_kind,
+                    envelope_kwargs=envelope_kwargs,
+                )
+                return ConductorResult(
+                    procedure_id=procedure_id,
+                    completed_count=result.completed_count,
+                    failure=failure,
+                    actuation_kind=(
+                        ActuationKind(folded_kind) if folded_kind is not None else None
+                    ),
+                    measurements=result.measurements,
+                )
+            converged = _criterion_matches(criterion, pass_captures[convergence_capture_name])
+            await self._end_iteration(
+                EndProcedureIteration(
+                    procedure_id=procedure_id,
+                    iteration_index=next_index,
+                    converged=converged,
+                    reason=None,
+                ),
+                **envelope_kwargs,
+            )
+            if converged:
+                return await self._complete_converged(
+                    procedure_id=procedure_id,
+                    result=result,
+                    folded_kind=folded_kind,
+                    envelope_kwargs=envelope_kwargs,
+                )
+            streak += 1
+
+    async def _complete_converged(
+        self,
+        *,
+        procedure_id: UUID,
+        result: ConductorResult,
+        folded_kind: str | None,
+        envelope_kwargs: dict[str, Any],
+    ) -> ConductorResult:
+        """Complete a converged convergence loop; mirror conduct()'s complete arm."""
+        assert self._complete_procedure is not None
+        merged = replace(
+            result,
+            actuation_kind=ActuationKind(folded_kind) if folded_kind is not None else None,
+        )
+        try:
+            await self._complete_procedure(
+                CompleteProcedure(procedure_id=procedure_id, actuation_kind=folded_kind),
+                **envelope_kwargs,
+            )
+        except _LIFECYCLE_RERAISE:
+            raise
+        except Exception as exc:
+            return ConductorResult(
+                procedure_id=procedure_id,
+                completed_count=result.completed_count,
+                measurements=result.measurements,
+                failure=ConductorFailure(
+                    step_index=None,
+                    source_kind=_SOURCE_KIND_LIFECYCLE,
+                    target=_LIFECYCLE_TARGET_COMPLETE,
+                    error_class=type(exc).__name__,
+                    message=str(exc),
+                ),
+            )
+        return merged
+
+    async def _abort_unconverged_cap(
+        self,
+        *,
+        procedure_id: UUID,
+        streak: int,
+        cap: int,
+        folded_kind: str | None,
+        last_result: ConductorResult | None,
+        envelope_kwargs: dict[str, Any],
+    ) -> ConductorResult:
+        """Abort a convergence loop that exhausted its patience cap (B2 terminal).
+
+        No iteration is open here (the pre-check stops BEFORE start_iteration,
+        and the backstop fires when start_iteration itself refused), so the
+        abort is the only FSM transition and current_iteration_index is
+        already None. The result carries a lifecycle ConductorFailure naming
+        the cap so the caller can distinguish never-converged from a fault."""
+        assert self._abort_procedure is not None
+        msg = (
+            f"convergence loop gave up after {streak} consecutive unconverged "
+            f"iterations (cap {cap})"
+        )
+        reason = msg[:REASON_MAX_LENGTH]
+        with contextlib.suppress(Exception):
+            await self._abort_procedure(
+                AbortProcedure(
+                    procedure_id=procedure_id, reason=reason, actuation_kind=folded_kind
+                ),
+                **envelope_kwargs,
+            )
+        completed_count = last_result.completed_count if last_result is not None else 0
+        measurements = last_result.measurements if last_result is not None else ()
+        return ConductorResult(
+            procedure_id=procedure_id,
+            completed_count=completed_count,
+            failure=ConductorFailure(
+                step_index=None,
+                source_kind=_SOURCE_KIND_LIFECYCLE,
+                target=_LIFECYCLE_TARGET_ABORT,
+                error_class=_ERROR_ITERATION_CAP_REACHED,
+                message=msg,
+            ),
+            actuation_kind=ActuationKind(folded_kind) if folded_kind is not None else None,
+            measurements=measurements,
+        )
+
+    async def _abort_absolute_ceiling(
+        self,
+        *,
+        procedure_id: UUID,
+        iteration_count: int,
+        folded_kind: str | None,
+        last_result: ConductorResult | None,
+        envelope_kwargs: dict[str, Any],
+    ) -> ConductorResult:
+        """Abort a convergence loop that hit the absolute iteration ceiling.
+
+        Mirrors `_abort_unconverged_cap`: the check fires at the loop top with no
+        iteration open, so the abort is the only FSM transition and
+        current_iteration_index is already None. Distinct error_class
+        (`AbsoluteIterationCeilingReached`) so the caller can tell a runaway
+        backstop from an operator-set patience cap. Applies even when no patience
+        cap was supplied (cap is None)."""
+        assert self._abort_procedure is not None
+        msg = (
+            f"convergence loop hit the absolute iteration ceiling "
+            f"({iteration_count} of {_ABSOLUTE_MAX_ITERATIONS})"
+        )
+        reason = msg[:REASON_MAX_LENGTH]
+        with contextlib.suppress(Exception):
+            await self._abort_procedure(
+                AbortProcedure(
+                    procedure_id=procedure_id, reason=reason, actuation_kind=folded_kind
+                ),
+                **envelope_kwargs,
+            )
+        completed_count = last_result.completed_count if last_result is not None else 0
+        measurements = last_result.measurements if last_result is not None else ()
+        return ConductorResult(
+            procedure_id=procedure_id,
+            completed_count=completed_count,
+            failure=ConductorFailure(
+                step_index=None,
+                source_kind=_SOURCE_KIND_LIFECYCLE,
+                target=_LIFECYCLE_TARGET_ABORT,
+                error_class=_ERROR_ABSOLUTE_ITERATION_CEILING,
+                message=msg,
+            ),
+            actuation_kind=ActuationKind(folded_kind) if folded_kind is not None else None,
+            measurements=measurements,
+        )
+
+    async def _abort_after_failed_pass(
+        self,
+        *,
+        procedure_id: UUID,
+        failure: ConductorFailure | None,
+        folded_kind: str | None,
+        envelope_kwargs: dict[str, Any],
+    ) -> None:
+        """Best-effort abort after a failed pass (the open iteration is already closed).
+
+        Mirrors conduct()'s best-effort abort: if the abort itself fails, the
+        original step failure is what surfaces to the caller."""
+        assert self._abort_procedure is not None
+        reason = (
+            _derive_failure_reason(failure)
+            if failure is not None
+            else "convergence pass failed"[:REASON_MAX_LENGTH]
+        )
+        with contextlib.suppress(Exception):
+            await self._abort_procedure(
+                AbortProcedure(
+                    procedure_id=procedure_id, reason=reason, actuation_kind=folded_kind
+                ),
+                **envelope_kwargs,
+            )
+
     async def reconduct(
         self,
         *,
@@ -1405,10 +1941,12 @@ class Conductor:
         Conductor's ControlPort; every dispatch goes through it so
         actuation provenance is captured once for the whole conduct.
         `captures` is the per-conduct slot dict: a `CaptureStep` fills it,
-        a `SetpointStep` with a `CaptureRef` value reads it. `compute` is
-        the per-conduct accumulator a `ComputeStep` appends its produced
-        `Measurement`s + folds its `ActuationKind` into (so `execute` can
-        surface the values + the honest aggregate kind on the result).
+        a `SetpointStep` with a `CaptureRef` value reads it, and a
+        `ComputeStep` with a `capture_name` deposits its produced scalar into
+        it (slice 6c chaining). `compute` is the per-conduct accumulator a
+        `ComputeStep` appends its produced `Measurement`s + folds its
+        `ActuationKind` into (so `execute` can surface the values + the
+        honest aggregate kind on the result).
         """
         if isinstance(step, SetpointStep):
             return await self._run_setpoint(
@@ -1421,7 +1959,9 @@ class Conductor:
                 step, index=index, envelope=envelope, port=port, captures=captures
             )
         if isinstance(step, ComputeStep):
-            return await self._run_compute(step, index=index, envelope=envelope, compute=compute)
+            return await self._run_compute(
+                step, index=index, envelope=envelope, compute=compute, captures=captures
+            )
         return await self._run_check(step, index=index, envelope=envelope, port=port)
 
     async def _run_setpoint(
@@ -1794,12 +2334,15 @@ class Conductor:
         index: int,
         envelope: "_Envelope",
         compute: "_ComputeAccumulator",
+        captures: dict[str, Any],
     ) -> ConductorFailure | None:
         # A ComputeStep is side-effecting (a job submission is non-idempotent
         # at the substrate), so it follows the setpoint / action in-flight-marker
         # contract: a pre-effect marker BEFORE submit, then the ok / failed
         # outcome after. VALUE-only at 6a: submit -> await -> fetch_measurements
-        # -> provide_result(measurements=...) -> record each Measurement.
+        # -> provide_result(measurements=...) -> record each Measurement. When
+        # `capture_name` is set (slice 6c chaining) the produced scalar is then
+        # deposited into `captures` for a later CaptureRef / convergence read.
         if self._compute_port is None:
             # A wiring bug, not a runtime outcome: a ComputeStep was dispatched
             # but no ComputePort was supplied. Loud, like conduct()'s missing
@@ -1868,18 +2411,158 @@ class Conductor:
         # only watches the ControlPort): a Simulated solver taints the conduct
         # exactly as a simulated control route does.
         compute.kind = merge_actuation_kinds(compute.kind, result.actuation_kind.value)
+        recorded_body = {
+            **body_with_job,
+            "status": status.value,
+            "measurements": [_compute_measurement_to_dict(m) for m in result.measurements],
+        }
         await self._record(
             envelope=envelope,
             index=index,
             step_kind=_STEP_KIND_COMPUTE,
-            body={
-                **body_with_job,
-                "status": status.value,
-                "measurements": [_compute_measurement_to_dict(m) for m in result.measurements],
-            },
+            body=recorded_body,
             result=_RESULT_OK,
         )
+        if step.capture_name is not None:
+            return await self._deposit_compute_capture(
+                step.capture_name,
+                index=index,
+                envelope=envelope,
+                produced=result.measurements,
+                base_body=recorded_body,
+                captures=captures,
+            )
         return None
+
+    async def _deposit_compute_capture(
+        self,
+        capture_name: str,
+        *,
+        index: int,
+        envelope: "_Envelope",
+        produced: tuple[Measurement, ...],
+        base_body: dict[str, Any],
+        captures: dict[str, Any],
+    ) -> ConductorFailure | None:
+        """Deposit the named produced `Measurement`'s value into `captures` (slice 6c).
+
+        Runs only when the ComputeStep carries a `capture_name` and its job
+        already succeeded (the OK outcome is recorded). SELECTs the single
+        produced `Measurement` whose `name == capture_name` with five loud
+        failures, each recording a SEPARATE failed step entry + returning a
+        HALTing `ConductorFailure` (no first-wins, no silent skip):
+
+          1. no Measurement carries the name (`_ERROR_MEASUREMENT_NOT_FOUND`,
+             naming the wanted + the available names);
+          2. more than one Measurement carries the name
+             (`_ERROR_AMBIGUOUS_MEASUREMENT`);
+          3. the selected Measurement is not Good quality (re-gated exactly
+             like `_run_capture`, via `CheckFailedError`);
+          4. the selected value is not a finite number
+             (`_require_finite_number`, mapped to `ControlValueCoercionError`);
+          5. the slot is already filled in this conduct
+             (`_ERROR_DUPLICATE_CAPTURE`, mirroring `_run_capture` ~1702).
+
+        On success writes `captures[capture_name] = value` and returns None.
+        """
+        matches = [m for m in produced if m.name == capture_name]
+        if not matches:
+            available = sorted(m.name for m in produced if m.name)
+            msg = (
+                f"compute step found no produced measurement named {capture_name!r} "
+                f"to capture (available: {available})"
+            )
+            return await self._record_compute_capture_failure(
+                capture_name,
+                index=index,
+                envelope=envelope,
+                base_body=base_body,
+                error_class=_ERROR_MEASUREMENT_NOT_FOUND,
+                message=msg,
+            )
+        if len(matches) > 1:
+            msg = (
+                f"compute step produced {len(matches)} measurements named "
+                f"{capture_name!r}; an ambiguous capture is rejected (no first-wins)"
+            )
+            return await self._record_compute_capture_failure(
+                capture_name,
+                index=index,
+                envelope=envelope,
+                base_body=base_body,
+                error_class=_ERROR_AMBIGUOUS_MEASUREMENT,
+                message=msg,
+            )
+        selected = matches[0]
+        if selected.quality != _QUALITY_GOOD:
+            quality_exc = CheckFailedError(capture_name, f"quality={selected.quality}")
+            return await self._record_compute_capture_failure(
+                capture_name,
+                index=index,
+                envelope=envelope,
+                base_body=base_body,
+                error_class=type(quality_exc).__name__,
+                message=str(quality_exc),
+            )
+        try:
+            value = _require_finite_number(selected.value, capture_name)
+        except _CONTROL_ERRORS as exc:
+            return await self._record_compute_capture_failure(
+                capture_name,
+                index=index,
+                envelope=envelope,
+                base_body=base_body,
+                error_class=type(exc).__name__,
+                message=str(exc),
+            )
+        if capture_name in captures:
+            msg = (
+                f"compute capture {capture_name!r} already captured in this conduct "
+                "(re-capture rejected)"
+            )
+            return await self._record_compute_capture_failure(
+                capture_name,
+                index=index,
+                envelope=envelope,
+                base_body=base_body,
+                error_class=_ERROR_DUPLICATE_CAPTURE,
+                message=msg,
+            )
+        captures[capture_name] = value
+        return None
+
+    async def _record_compute_capture_failure(
+        self,
+        capture_name: str,
+        *,
+        index: int,
+        envelope: "_Envelope",
+        base_body: dict[str, Any],
+        error_class: str,
+        message: str,
+    ) -> ConductorFailure:
+        """Record a failed compute-capture deposit + return the matching ConductorFailure.
+
+        The job itself already recorded its OK outcome; this records a
+        SEPARATE compute step entry for the deposit failure (so the journal
+        carries both the produced measurements and the deposit fault) and
+        HALTS the conduct."""
+        await self._record(
+            envelope=envelope,
+            index=index,
+            step_kind=_STEP_KIND_COMPUTE,
+            body={**base_body, "capture_name": capture_name},
+            result=_RESULT_FAILED,
+            error_class=error_class,
+            message=message,
+        )
+        return ConductorFailure(
+            step_index=index,
+            source_kind=_STEP_KIND_COMPUTE,
+            target=capture_name,
+            error_class=error_class,
+            message=message,
+        )
 
     async def _record_compute_failure(
         self,
@@ -2053,6 +2736,7 @@ def step_to_payload(step: Step) -> dict[str, Any]:
             "input_uris": list(step.input_uris),
             "output_uri": step.output_uri,
             "parameters": dict(step.parameters),
+            "capture_name": step.capture_name,
         }
     return {
         "kind": "check",
@@ -2102,6 +2786,7 @@ def _step_from_payload(payload: Mapping[str, Any]) -> Step:
             input_uris=tuple(payload.get("input_uris", ())),
             output_uri=payload.get("output_uri"),
             parameters=dict(payload.get("parameters", {})),
+            capture_name=payload.get("capture_name"),
         )
     if kind == "check":
         return CheckStep(

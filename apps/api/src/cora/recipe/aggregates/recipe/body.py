@@ -168,12 +168,23 @@ class RecipeComputeStep:
     fields through verbatim; binding a compute parameter is a deferred
     widening (the first deployment that needs an operator-tunable compute
     parameter fires it).
+
+    `capture_name` (slice 6c) names the captures slot the produced
+    `Measurement` deposits into, so a later `CaptureRef` setpoint (or the
+    convergence-loop predicate) reads the computed value: a ComputeStep
+    becomes a captures DECLARER exactly like a `RecipeCaptureStep`. None (the
+    default) keeps the 6a/6b behavior (the step records its measurements but
+    fills no slot). `validate_capture_refs` treats a non-None `capture_name`
+    as a declared name, sharing one ordered `declared` set with the capture
+    step branch so a cross-kind duplicate or a forward reference is caught at
+    define-recipe time.
     """
 
     command: tuple[str, ...]
     input_uris: tuple[str, ...] = ()
     output_uri: str | None = None
     parameters: Mapping[str, Any] = field(default_factory=dict[str, Any])
+    capture_name: str | None = None
 
 
 RecipeStep = (
@@ -276,6 +287,7 @@ def _step_to_wire(step: RecipeStep) -> dict[str, Any]:
             "input_uris": list(step.input_uris),
             "output_uri": step.output_uri,
             "parameters": dict(step.parameters),
+            "capture_name": step.capture_name,
         }
     return {
         "kind": "check",
@@ -312,6 +324,7 @@ def _step_from_wire(payload: dict[str, Any]) -> RecipeStep:
                 input_uris=tuple(payload.get("input_uris", ())),
                 output_uri=payload.get("output_uri"),
                 parameters=dict(payload.get("parameters", {})),
+                capture_name=payload.get("capture_name"),
             )
         if kind == "check":
             return RecipeCheckStep(
@@ -398,21 +411,40 @@ def _check_capture_ref(value: Any, declared: set[str]) -> None:
         raise UnboundRecipeCaptureError(value.capture_name)
 
 
+def _declared_capture_name(step: RecipeStep) -> str | None:
+    """The capture name a step DECLARES, or None if it declares none.
+
+    A `RecipeCaptureStep` always declares its `capture_name`; a
+    `RecipeComputeStep` declares its `capture_name` only when set (slice 6c).
+    Both share one ordered `declared` set in `validate_capture_refs`.
+    """
+    if isinstance(step, RecipeCaptureStep):
+        return step.capture_name
+    if isinstance(step, RecipeComputeStep):
+        return step.capture_name
+    return None
+
+
 def validate_capture_refs(steps: tuple[RecipeStep, ...]) -> None:
     """Every `CaptureRef` must reference a `capture_name` declared earlier.
 
     Pure structural check (no I/O), run at define-recipe time. Walks the
-    steps in order: a `RecipeCaptureStep` declares its `capture_name`
-    (duplicate declaration -> `DuplicateRecipeCaptureError`); a `CaptureRef`
-    in a later setpoint value or action param must reference an
-    already-declared name (forward / missing -> `UnboundRecipeCaptureError`).
+    steps in order. Two step kinds DECLARE a capture name into the shared
+    ordered `declared` set: a `RecipeCaptureStep` (always) and a
+    `RecipeComputeStep` whose `capture_name` is not None (slice 6c: a compute
+    step deposits its produced value into a slot). A name declared twice by
+    EITHER kind raises `DuplicateRecipeCaptureError` (cross-kind duplicates
+    included). A `CaptureRef` in a later `RecipeSetpointStep` value must
+    reference an already-declared name (forward / missing ->
+    `UnboundRecipeCaptureError`).
     """
     declared: set[str] = set()
     for step in steps:
-        if isinstance(step, RecipeCaptureStep):
-            if step.capture_name in declared:
-                raise DuplicateRecipeCaptureError(step.capture_name)
-            declared.add(step.capture_name)
+        declared_name = _declared_capture_name(step)
+        if declared_name is not None:
+            if declared_name in declared:
+                raise DuplicateRecipeCaptureError(declared_name)
+            declared.add(declared_name)
         elif isinstance(step, RecipeSetpointStep):
             _check_capture_ref(step.value, declared)
 

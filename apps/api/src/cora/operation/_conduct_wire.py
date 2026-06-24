@@ -88,6 +88,12 @@ _CriterionRequest = Annotated[
     Field(discriminator="kind"),
 ]
 
+CriterionRequest = _CriterionRequest
+"""Public alias for the criterion wire union. `conduct_until_converged`
+(slice 6c) carries a convergence criterion in its request / tool body and
+reuses `criterion_from_wire` to convert it, so the union is shared here
+rather than re-declared per slice."""
+
 
 class _CheckStepRequest(BaseModel):
     """JSON wire shape for a `CheckStep`."""

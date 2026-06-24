@@ -92,6 +92,7 @@ from cora.operation.features import (
     append_activities,
     complete_procedure,
     conduct_procedure,
+    conduct_until_converged,
     end_iteration,
     get_procedure,
     hold_procedure,
@@ -249,6 +250,7 @@ def register_operation_routes(app: FastAPI) -> None:
     app.include_router(list_procedures.router)
     app.include_router(list_procedure_iterations.router)
     app.include_router(conduct_procedure.router)
+    app.include_router(conduct_until_converged.router)
     app.include_router(try_conduct_procedure.router)
     for validation_cls in (
         InvalidProcedureNameError,
