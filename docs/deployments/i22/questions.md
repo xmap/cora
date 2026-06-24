@@ -38,7 +38,7 @@ A note on what I22 tests that the tomography pilots did not: I22 is a SAXS/WAXS 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | FLUX-1 | Blocks-go-live | How are the incident and transmitted ion chambers (I0 / It) modelled: a new `FluxMonitor` Family, or the existing Sensor Role with a deployment-local device? And is the incident-vs-transmitted distinction a placement setting? | The existing Sensor Role (whose docstring names ion chambers), carried as a loose `FluxMonitor` family; incident vs transmitted is placement, not a Family split. | The flux-monitor modelling boundary. |
-| ENV-1 | Blocks-go-live | Must CORA command the sample-environment setpoints (the Linkam temperature controller, the peristaltic pump), or only read them back? And is a settable-actuator affordance or Family earned? | A loose `TemperatureController` / `FlowController` shape with a settable setpoint, the same open settable-actuator question as the 7-BM flow controllers. | The settable-actuator decision (shared with 7-BM FLOW-1). |
+| ENV-1 | Blocks-go-live | Must CORA command the sample-environment setpoints (the Linkam temperature controller, the peristaltic pump), or only read them back? | The settable-actuator shape is now settled: the Linkam binds the graduated `TemperatureController` Family (presents `Regulator`, requires `Settable`); the pump is a loose `FlowController` that would present `Regulator` once it graduates. What is open is whether CORA commands the setpoints. | The command-vs-read decision (shared with 7-BM FLOW-1). |
 
 ## Techniques and identity
 

@@ -1,4 +1,4 @@
-"""Unit tests for the Equipment BC's 4-Role bootstrap seed."""
+"""Unit tests for the Equipment BC's 5-Role bootstrap seed."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -10,6 +10,7 @@ from cora.equipment.aggregates.role import (
     SEED_ROLE_CONTROLLER_ID,
     SEED_ROLE_DETECTOR_ID,
     SEED_ROLE_POSITIONER_ID,
+    SEED_ROLE_REGULATOR_ID,
     SEED_ROLE_SENSOR_ID,
     SEED_ROLES,
     load_role,
@@ -28,7 +29,7 @@ def _kernel() -> Kernel:
     return make_inmemory_kernel(
         settings=settings,
         clock=FakeClock(_NOW),
-        # 1 correlation_id + 4 * 1 event_id per role; +1 buffer per call repeat.
+        # 1 correlation_id + 1 event_id per seed role (5); +buffer per call repeat.
         id_generator=FixedIdGenerator(
             [UUID(f"01900000-0000-7000-8000-0000000000{i:02x}") for i in range(1, 64)]
         ),
@@ -37,7 +38,7 @@ def _kernel() -> Kernel:
 
 
 @pytest.mark.unit
-async def test_bootstrap_seeds_all_four_roles() -> None:
+async def test_bootstrap_seeds_all_seed_roles() -> None:
     kernel = _kernel()
     await bootstrap_equipment(kernel)
 
@@ -64,6 +65,7 @@ async def test_bootstrap_seeds_pinned_deterministic_ids() -> None:
         SEED_ROLE_POSITIONER_ID,
         SEED_ROLE_CONTROLLER_ID,
         SEED_ROLE_SENSOR_ID,
+        SEED_ROLE_REGULATOR_ID,
     ):
         events, version = await kernel.event_store.load("Role", pinned_id)
         assert version == 1

@@ -504,7 +504,7 @@
         "type": "object"
       },
       "Affordance": {
-        "description": "Device-level operational primitive. Closed v1 enum (29 items, 2 patterns).\n\nValues are PascalCase strings so they serialize naturally as JSON\ndiscriminators without translation.\n\nPattern A, Operational affordances (`-able` / `-ible` / `-ing`):\n    \"device supports doing X\" (action) or \"device performs X\"\n    (role/flow). Set-membership claim. 28 items.\n\nPattern C, Lifecycle affordances (noun):\n    \"device has lifecycle property X\". 1 item.",
+        "description": "Device-level operational primitive. Closed v1 enum (30 items, 2 patterns).\n\nValues are PascalCase strings so they serialize naturally as JSON\ndiscriminators without translation.\n\nPattern A, Operational affordances (`-able` / `-ible` / `-ing`):\n    \"device supports doing X\" (action) or \"device performs X\"\n    (role/flow). Set-membership claim. 29 items.\n\nPattern C, Lifecycle affordances (noun):\n    \"device has lifecycle property X\". 1 item.",
         "enum": [
           "Rotatable",
           "Translatable",
@@ -529,6 +529,7 @@
           "Recording",
           "Coolable",
           "PIDControllable",
+          "Settable",
           "Shutterable",
           "Attenuable",
           "Bendable",

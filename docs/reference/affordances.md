@@ -6,16 +6,16 @@ An **Affordance** is a claim about what a device can do. Affordances are declare
 
 ## Two patterns
 
-The v1 closed enum carries 29 items in two explicit patterns:
+The v1 closed enum carries 30 items in two explicit patterns:
 
-- **Pattern A: Operational affordances (`-able` / `-ible` / `-ing`)**: 28 items. The device is the actor.
-  - **`-able` / `-ible` form (22 items)**: "device supports doing X": `Rotatable`, `Triggerable`, `Bendable`, …
+- **Pattern A: Operational affordances (`-able` / `-ible` / `-ing`)**: 29 items. The device is the actor.
+  - **`-able` / `-ible` form (23 items)**: "device supports doing X": `Rotatable`, `Triggerable`, `Bendable`, …
   - **`-ing` gerund form (6 items)**: "device performs X" / "device is X-ing": `Marking`, `Pulsing`, `Following`, `Leading`, `Recording`, `Capturing`. Used where the device's role in a signal chain or data flow is the primitive being claimed; `-able` would invert the direction.
 - **Pattern C: Lifecycle affordances (noun)**: 1 item, `Consumable`. Passive parts whose identity is operationally tracked even though they have no command surface (scintillator screens, filters, sample holders, target foils).
 
 The convention is grounded in [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) ("Protocols that describe a _capability_ should be named using the suffixes `able`, `ible`, or `ing`"), [.NET Framework Design Guidelines](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-classes-structs-and-interfaces) ("DO name interfaces with adjective phrases"), and [W3C SOSA](https://www.w3.org/TR/vocab-ssn/) `ObservableProperty` / `ActuatableProperty`. The pre-rename v1 enum had a third Pattern B for noun-named signal flows (`EncoderInput` / `EncoderOutput` / `PulseGenerator`); those dissolved into Pattern A's `-ing` form (`Following` / `Leading` / `Pulsing`) once the role-based reframing made the device-as-actor reading natural.
 
-## Pattern A: Operational affordances (28)
+## Pattern A: Operational affordances (29)
 
 ### Motion (9)
 
@@ -58,12 +58,13 @@ The convention is grounded in [Swift API Design Guidelines](https://www.swift.or
 | `Compressible` | Device applies a lossless or lossy codec to outgoing data (JPEG, LZ4, etc.) at runtime. |
 | `Recording` | Device records acquired data to durable storage at an operator-configured path (HDF5, TIFF, ADF, etc.). |
 
-### Optics and environment (5)
+### Optics and environment (6)
 
 | Affordance | Contract |
 |---|---|
 | `Coolable` | Device exposes a setpoint for its thermal control loop (sensor cooling, hexapod thermal management, etc.). |
 | `PIDControllable` | Device's control loop exposes P/I/D gains for operator tuning. |
+| `Settable` | Device accepts a commanded continuous setpoint and drives a process variable toward it (temperature, flow, pressure); mechanism-agnostic (PID loop or otherwise). The actuator primitive behind the `Regulator` Role. |
 | `Shutterable` | Device has an open/close shutter that the operator can command. |
 | `Attenuable` | Device reduces the intensity of an incident beam by an operator-set factor (typically via discrete filters). |
 | `Bendable` | Device's optical surface (mirror) has actively-driven curvature/figure (mechanical bender, bimorph piezo array, thermal); see [NXmirror](https://manual.nexusformat.org/classes/base_classes/NXmirror.html) `bend_angle_x/y`. |

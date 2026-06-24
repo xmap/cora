@@ -41,7 +41,7 @@ A note on what 7-BM tests that 2-BM did not: 7-BM is multi-technique (high-speed
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| FLOW-1 | Blocks-build | Must CORA command the gas-flow and compressed-air setpoints (the Sierra Smart-Trak controllers and the electronic air regulator), or only read them back, and is there a third settable sample-environment actuator? | A loose `FlowController` family with a settable setpoint, pending whether a settable-actuator affordance or Family is earned. | The settable-actuator decision and the next control-port consumer. |
+| FLOW-1 | Blocks-build | Must CORA command the gas-flow and compressed-air setpoints (the Sierra Smart-Trak controllers and the electronic air regulator), or only read them back, and is there a third settable sample-environment actuator? | A loose `FlowController` family presenting the now-earned `Regulator` Role (`Settable` affordance); the settable-actuator shape is settled, so what is open is whether CORA commands the setpoints and whether `FlowController` itself graduates (loose at 7-BM + I22, short of rule-of-three). | The command-vs-read decision and FlowController graduation. |
 | ENV-1 | Blocks-go-live | Is there an installed combustion, spray, or fuel-injection device at 7-BM, or is combustion an intended use served by the air, gas, and vacuum infrastructure? | No combustion rig Asset is modelled; combustion is served by the facility Supplies and bound to the specimen Subject. | Whether a combustion-rig Asset and a fuel-vapor Caution are modelled. |
 
 ## Controls and site

@@ -1,12 +1,16 @@
-"""Seed Role registry: the four closed-core Roles available at lifespan.
+"""Seed Role registry: the closed-core Roles available at lifespan.
 
 Per [[project-role-aggregate-design]] sub-slice 3A:
-- 4 Roles ship as the closed-core registry: Detector, Positioner,
-  Controller, Sensor.
+- The closed-core registry: Detector, Positioner, Controller, Sensor,
+  and Regulator. Regulator was added when the loose TemperatureController
+  family reached the rule-of-three (the Diamond i22 / i03 / i11 continuous-
+  setpoint thermal actuators): a Role for a device that drives a process
+  variable to a commanded setpoint, requiring the Settable affordance.
 - Conditioner is DEFERRED per Q3 (2026-06-10 user pick): no Affordance
   is universally required across Attenuators / Shutters / Mirrors, so
   the required-set would be vacuous, degenerating the Role to a tag.
-  Rule-of-three trigger gates a future definition.
+  Rule-of-three trigger gates a future definition. (Regulator cleared
+  exactly this bar: Settable is required by every earning device.)
 
 These constants do NOT register events at module import. Seeding
 is performed via direct-append at scenario-fixture / lifespan-hook
@@ -83,6 +87,7 @@ SEED_ROLE_DETECTOR_ID: Final[RoleId] = role_stream_id(RoleName("Detector"))
 SEED_ROLE_POSITIONER_ID: Final[RoleId] = role_stream_id(RoleName("Positioner"))
 SEED_ROLE_CONTROLLER_ID: Final[RoleId] = role_stream_id(RoleName("Controller"))
 SEED_ROLE_SENSOR_ID: Final[RoleId] = role_stream_id(RoleName("Sensor"))
+SEED_ROLE_REGULATOR_ID: Final[RoleId] = role_stream_id(RoleName("Regulator"))
 
 
 DETECTOR: Final[Role] = Role(
@@ -162,11 +167,32 @@ SENSOR: Final[Role] = Role(
 )
 
 
+REGULATOR: Final[Role] = Role(
+    id=SEED_ROLE_REGULATOR_ID,
+    name=RoleName("Regulator"),
+    docstring=(
+        "Drives a continuous process variable to an operator-commanded setpoint "
+        "via a control loop. Satisfying Families include TemperatureController "
+        "(and, once earned, flow / pressure regulators). Distinct from Controller, "
+        "which supervises subordinate Assets without itself performing, and from "
+        "Sensor, which only reports: a Regulator performs by acting on the process "
+        "variable."
+    ),
+    required_affordances=frozenset({Affordance.SETTABLE}),
+    optional_affordances=frozenset(
+        {Affordance.PID_CONTROLLABLE, Affordance.COOLABLE, Affordance.REPORTABLE}
+    ),
+    produces=frozenset({SignalType("Reading")}),
+    consumes=frozenset({SignalType("Setpoint")}),
+)
+
+
 SEED_ROLES: Final[tuple[Role, ...]] = (
     DETECTOR,
     POSITIONER,
     CONTROLLER,
     SENSOR,
+    REGULATOR,
 )
 
 
@@ -174,10 +200,12 @@ __all__ = [
     "CONTROLLER",
     "DETECTOR",
     "POSITIONER",
+    "REGULATOR",
     "SEED_ROLES",
     "SEED_ROLE_CONTROLLER_ID",
     "SEED_ROLE_DETECTOR_ID",
     "SEED_ROLE_POSITIONER_ID",
+    "SEED_ROLE_REGULATOR_ID",
     "SEED_ROLE_SENSOR_ID",
     "SENSOR",
     "role_stream_id",

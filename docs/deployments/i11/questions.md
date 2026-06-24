@@ -12,11 +12,7 @@ I11 is modelled from Diamond's open [`dodal`](https://github.com/DiamondLightSou
 | PSS-1 | Blocks-build | What are the Diamond PSS search-and-secure permit signals for the two hutches? | Both hutches exist; permit signals to be named. | The Enclosure permit signals. |
 | ENC-1 | Blocks-build | Which hutch does each device sit in? dodal PV prefixes encode functional zones, not the access-gated hutch. | The standard optics + experiment hutch split. | The per-device Enclosure assignment. |
 
-## The thermal earn (the headline)
-
-| ID | Priority | Question | CORA assumes | Resolves |
-| --- | --- | --- | --- | --- |
-| TEMP-1 | Blocks-go-live | I11's four continuous-setpoint thermal actuators (the two Cyberstar/Eurotherm blowers + two cryostreams) make `TemperatureController` rule-of-three (after I22 + I03). Should CORA graduate the `TemperatureController` Family AND earn a new settable-continuous-setpoint actuator Role? | Yes, both are earned, but the Role is a code change (`SEED_ROLES`, drift-guarded) + core vocabulary, so it is routed to a SEPARATE gate-reviewed change; carried loose here. | The TemperatureController graduation and the settable-actuator Role, via gate-review. |
+*(TEMP-1, the thermal earn, is resolved: i11's four continuous-setpoint actuators triggered graduating the `TemperatureController` catalog Family and adding the `Regulator` Role with the `Settable` affordance, landed via a gate-reviewed change.)*
 
 ## Source, optics, diffractometer
 

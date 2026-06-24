@@ -32,15 +32,15 @@ Root Asset `I03` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `LowerGonio` | LinearStage | `BL03I-MO-GONP-01:` | lower goniometer x/y/z base |
 | `Robot` | (Positioner, deferred) | `BL03I-MO-ROBOT-01:` | sample-changing robot; one Positioner Asset + Subject + Clearance (19-BM shape), not a new Family |
 | `Backlight` | **Backlight** | `BL03I` | sample illumination; new loose family |
-| `Cryostream` | **TemperatureController** | `BL03I-EA-CSTRM-01:` | Oxford cryostream; settable actuator; loose, reused from I22 |
-| `Thawer` | **TemperatureController** | `BL03I-EA-THAW-01` | sample thawer; settable actuator; loose |
+| `Cryostream` | TemperatureController | `BL03I-EA-CSTRM-01:` | Oxford cryostream; settable actuator; loose, reused from I22 |
+| `Thawer` | TemperatureController | `BL03I-EA-THAW-01` | sample thawer; settable actuator; loose |
 | `Eiger` | Camera | `BL03I-EA-EIGER-01:` | Dectris Eiger area detector (Detector Role) |
 | `DetectorMotion` | LinearStage | `BL03I-MO-DET-01:` | detector translation; integrated shutter |
 | `FluorescenceDetector` | (Sensor, deferred) | `BL03I-EA-FLU-01:` | retractable fluorescence detector; presents Sensor; loose |
 | `Zebra` | TimingController | `BL03I-EA-ZEBRA-01:` | FPGA trigger fan-out |
 | `Panda` | TimingController | `BL03I-EA-PANDA-01:` | PandABox timing + HDF capture |
 
-Reused catalog Families (no new Family needed): `InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `Table`, `BeamStop`, `Aperture`, `Shutter`, `Camera`, `LinearStage`, `TimingController`. **One new catalog Family graduated:** `Goniometer` (the Smargon, the first canonical goniometer). Loose families: `StorageRing`, `FluxMonitor`, `TemperatureController` (from I22) and `Diagnostic` (from 2-BM, the family behind its BeamPositionMonitor device) are reused from sibling deployments; only `Backlight` is genuinely new and loose (an illumination affordance no Family carries). The robot and the fluorescence detector present existing Roles (Positioner, Sensor) and are carried with their shape deferred rather than minting a Family, mirroring how 19-BM and 32-ID handle the sample-exchange arm.
+Reused catalog Families (no new Family needed): `InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `Table`, `BeamStop`, `Aperture`, `Shutter`, `Camera`, `LinearStage`, `TimingController`. **One new catalog Family graduated:** `Goniometer` (the Smargon, the first canonical goniometer). Loose families reused from siblings: `StorageRing`, `FluxMonitor` (from I22) and `Diagnostic` (from 2-BM, the family behind its BeamPositionMonitor device). `TemperatureController` (the cryostream and thawer) was loose here too but has since graduated to a catalog Family (presenting the `Regulator` Role) on the i11 rule-of-three. Only `Backlight` is genuinely new and loose (an illumination affordance no Family carries). The robot and the fluorescence detector present existing Roles (Positioner, Sensor) and are carried with their shape deferred rather than minting a Family, mirroring how 19-BM and 32-ID handle the sample-exchange arm.
 
 ## Pending confirmations
 

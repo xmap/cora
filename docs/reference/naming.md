@@ -40,14 +40,15 @@ The grammar is the tell. `Camera`, `Scintillator`, `Hexapod`, `Housing` are thin
 - **PascalCase, singular, a thing-noun.** `Camera`, not `Cameras`, not `Detector` (an agent-noun, which names a Role).
 - **Anatomical, not vendor / substrate / deployment / content.** A `Family` names what the device IS, device-agnostic across facilities. Vendor identity lives on the bound `Model`; substrate (FPGA, VME card) lives in `settings`; deployment context never enters the name. This is why `TriggerFPGA` became `TimingController` and `OpticalHousing` became `Housing` ("Optical" named the contents, not the chassis's own nature).
 - **Noun LAST (R3).** A qualifier precedes the family noun: `RotaryStage`, `LinearStage`, `MotionController`. Single-word is preferred; a compound is justified only when the qualifier names the device's own intrinsic nature (how it moves, what signal it generates), not its contents or the assembly it serves.
-- **`<Domain>Controller`** for any separately-modelled, field-replaceable control-electronics box (`MotionController`, `TimingController`); the driven device carries a `controller_id` back-reference.
+- **`<Domain>Controller`** for any separately-modelled, field-replaceable control-electronics box (`MotionController`, `TimingController`); the driven device carries a `controller_id` back-reference. The same `<Domain>Controller` form also names a continuous-setpoint actuator that itself performs (rather than supervising a subordinate): `TemperatureController` presents the `Regulator` Role and carries the `Settable` affordance, not the `Controller` Role. The vendor-idiomatic noun ("temperature controller") wins the read-aloud test; the presented Role is the disambiguator (see the `Controller` vs `Regulator` note under Role).
 - A `Family` must have, or plausibly have, instances. A `Family` that exists only to be a binding target is a presenter Family, an anti-pattern (see Deprecations).
 
 ### Role (function)
 
-- **PascalCase, singular, an agent-noun:** `Detector`, `Positioner`, `Controller`, `Sensor`. A `Role` names the job, not the device.
+- **PascalCase, singular, an agent-noun:** `Detector`, `Positioner`, `Controller`, `Sensor`, `Regulator`. A `Role` names the job, not the device.
 - A `Role` is the functional binding contract a `Method` targets through `presents_as` and `RoleRequirement`. It carries affordances, `produces`, `consumes`, and a docstring; it has no settings, no instances, and no ports.
-- `Controller` is the bare `Role` (the function); `<Domain>Controller` is the `Family` (the box). The qualification keeps the two distinct.
+- `Controller` is the bare `Role` (the function); `<Domain>Controller` is the `Family` (the box). The qualification keeps the two distinct. The lexeme `Controller` can sit on both axes: a supervisory `<Domain>Controller` Family (`MotionController`, `TimingController`) presents the `Controller` Role, while the actuator `TemperatureController` Family presents `Regulator`; the presented Role, not the Family name, is the disambiguator.
+- `Regulator` is the bare `Role` for a device that drives a continuous process variable to a commanded setpoint (it performs, unlike the supervisory `Controller`; it actuates, unlike the read-only `Sensor`). It requires the `Settable` affordance.
 
 ### Model (vendor)
 

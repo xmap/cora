@@ -1,6 +1,6 @@
 """Unit tests for the Affordance closed StrEnum.
 
-Pins the 29-item closed v1 list, the 2-pattern split, and the
+Pins the 30-item closed v1 list, the 2-pattern split, and the
 serialization shape used by event payloads and REST/MCP bodies.
 """
 
@@ -11,15 +11,16 @@ from cora.equipment.aggregates.family import Affordance, InvalidAffordanceError
 
 @pytest.mark.unit
 def test_affordance_v1_member_count() -> None:
-    """v1 ships 29 items. Adding a value requires a CORA release;
-    this test fails if the enum grew or shrunk so the design lock
+    """v1 ships 30 items (the 29-item v1 list plus Settable, the actuator
+    primitive behind the Regulator Role). Adding a value requires a CORA
+    release; this test fails if the enum grew or shrunk so the design lock
     requires explicit acknowledgement."""
-    assert len(list(Affordance)) == 29
+    assert len(list(Affordance)) == 30
 
 
 @pytest.mark.unit
 def test_affordance_pattern_a_operational_count() -> None:
-    """Pattern A (Operational affordances, -able/-ible/-ing): 28 items.
+    """Pattern A (Operational affordances, -able/-ible/-ing): 29 items.
 
     Mixed action (`-able`/`-ible`, "device supports doing X") and
     role/flow (`-ing` gerund, "device performs X"). Consumable ends
@@ -29,7 +30,7 @@ def test_affordance_pattern_a_operational_count() -> None:
         for a in Affordance
         if a.value.endswith(("able", "ible", "ing")) and a is not Affordance.CONSUMABLE
     }
-    assert len(operational) == 28
+    assert len(operational) == 29
 
 
 @pytest.mark.unit
@@ -95,7 +96,7 @@ def test_invalid_affordance_error_carries_value() -> None:
     err = InvalidAffordanceError("Bogus")
     assert err.value == "Bogus"
     assert "Bogus" in str(err)
-    assert "29" in str(err)  # message references the closed-enum size
+    assert "30" in str(err)  # message references the closed-enum size
 
 
 @pytest.mark.unit

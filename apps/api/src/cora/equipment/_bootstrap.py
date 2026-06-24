@@ -13,10 +13,10 @@ assembler free of per-request guards: if the template is missing,
 the process never finishes booting and the route is unreachable. See
 L12 + L17 of project_asset_persistent_id_design.
 
-`bootstrap_equipment` seeds the 4 SEED_ROLES at lifespan startup.
+`bootstrap_equipment` seeds the 5 SEED_ROLES at lifespan startup.
 Without it the 3D `bind_plan_role` role_kind path and the 3E
 `update_capability_suggested_roles` handler both raise
-`RoleNotFoundError` until operators manually issue 4 `POST /roles`
+`RoleNotFoundError` until operators manually issue 5 `POST /roles`
 calls. Mirrors the `bootstrap_federation` shape
 (ConcurrencyError-as-already-seeded) and is called from
 `api/main.py` lifespan after `bootstrap_federation`.
@@ -66,7 +66,7 @@ def check_pidinst_landing_page_template(settings: Settings) -> None:
 
 
 async def bootstrap_equipment(kernel: Kernel) -> None:
-    """Seed the 4 closed-core Roles into the event store (idempotent).
+    """Seed the 5 closed-core Roles into the event store (idempotent).
 
     Iterates `SEED_ROLES` and direct-appends one `RoleDefined` event
     per Role at `stream_id = role.id` (the deterministic uuid5).

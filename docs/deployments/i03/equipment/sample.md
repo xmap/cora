@@ -26,10 +26,10 @@ This is the device that makes MX automation interesting, and the one an adversar
 | Device | Family | Control handle | Notes |
 | --- | --- | --- | --- |
 | `Backlight` | `Backlight` (loose) | `BL03I` | sample illumination for on-axis viewing |
-| `Cryostream` | `TemperatureController` (loose) | `BL03I-EA-CSTRM-01:` | Oxford cryostream cold-gas cooling; a settable actuator |
-| `Thawer` | `TemperatureController` (loose) | `BL03I-EA-THAW-01` | sample thawing; a settable actuator |
+| `Cryostream` | `TemperatureController` | `BL03I-EA-CSTRM-01:` | Oxford cryostream cold-gas cooling; a settable actuator |
+| `Thawer` | `TemperatureController` | `BL03I-EA-THAW-01` | sample thawing; a settable actuator |
 
-The cryostream and thawer reuse I22's loose `TemperatureController` family; whether CORA commands their setpoints (versus reading them back) is the same open settable-actuator question as 7-BM FLOW-1 and I22 ENV-1 (ENV-1). The backlight is the one genuinely new loose family I03 introduces: no existing Family carries an illumination affordance, so it is carried loose and earned only on a rule-of-three (DET-1).
+The cryostream and thawer bind the `TemperatureController` family, which has since graduated to the catalog (presenting the `Regulator` Role, requiring the `Settable` affordance) on the i11 rule-of-three; whether CORA commands their setpoints (versus reading them back) at this deployment is still the open question (ENV-1). The backlight is the one genuinely new loose family I03 introduces: no existing Family carries an illumination affordance, so it is carried loose and earned only on a rule-of-three (DET-1).
 
 Whether the goniometer + aperture-scatterguard + backlight + cryostream compose an MX-endstation Assembly (the analogue of 2-BM's SampleTower) is deferred: grouping is promoted only when a feature must act on the whole (ASSEMBLY-1).
 

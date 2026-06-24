@@ -10,8 +10,8 @@ from cora.api.main import create_app
 
 
 def _body(**overrides: object) -> dict[str, Any]:
-    # Default name avoids the 4 SEED_ROLES (Detector, Positioner, Controller,
-    # Sensor) that bootstrap_equipment seeds at lifespan. POSTing a seed
+    # Default name avoids the 5 SEED_ROLES (Detector, Positioner, Controller,
+    # Sensor, Regulator) that bootstrap_equipment seeds at lifespan. POSTing a seed
     # name returns 409 by design (handler derives stream_id from name);
     # see test_post_roles_with_seed_role_name_returns_409.
     base: dict[str, Any] = {
@@ -139,7 +139,7 @@ def test_post_roles_idempotency_key_with_different_body_returns_422() -> None:
 def test_post_roles_with_seed_role_name_returns_409() -> None:
     """Seed Roles are auto-defined at lifespan via uuid5-derived stream_ids.
 
-    POSTing one of {Detector, Positioner, Controller, Sensor} races the
+    POSTing one of {Detector, Positioner, Controller, Sensor, Regulator} races the
     seed for the same stream, surfacing as 409 (the event-store's
     expected_version=0 violation). Operators wanting a Role with the
     same SEMANTIC slot pick a different name; the contract content is

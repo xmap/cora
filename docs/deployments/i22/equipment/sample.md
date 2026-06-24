@@ -28,7 +28,7 @@ I22 sample-environment experiments use settable actuators, not just readbacks.
 
 | Device | Family | Control handle | Notes |
 | --- | --- | --- | --- |
-| `SampleTemperature` | `TemperatureController` (loose) | `BL22I-EA-TEMPC-05:` | Linkam temperature controller; a settable setpoint with a readback |
+| `SampleTemperature` | `TemperatureController` | `BL22I-EA-TEMPC-05:` | Linkam temperature controller; a settable setpoint with a readback (the family has since graduated to the catalog, presenting `Regulator`) |
 | `SamplePump` | `FlowController` (loose) | `BL22I-EA-PUMP-01:` | Watson-Marlow 323 peristaltic pump; a settable flow actuator |
 
 These present no clean existing Family. An adversarial review found that `GenericProbe` (read-only) would mislabel the actuation, `Positioner` is spatial, and `Controller` acts only through subordinates. The latent fix is a settable-actuator affordance or Role shared with the 7-BM flow controllers, not any current Family-by-settings. Whether CORA commands the setpoints (versus reading them back) and whether that affordance is earned is the load-bearing question, the natural rule-of-three sibling of 7-BM's FLOW-1 (ENV-1).

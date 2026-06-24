@@ -1,14 +1,15 @@
 """Closed-set fitness for the Role seed registry.
 
 Per [[project-role-aggregate-design]] Q1 + Q3 (2026-06-10 user picks):
-the 3A seed ships exactly 4 Roles (Detector, Positioner, Controller,
-Sensor); Conditioner is deferred. Every change to the seed list
-fires this test, ensuring the closed-set claim is enforceable.
+the closed-core seed ships Detector, Positioner, Controller, Sensor,
+and Regulator (the settable-actuator Role added when the loose
+TemperatureController family reached the rule-of-three across Diamond
+i22 / i03 / i11). Conditioner stays deferred. Every change to the seed
+list fires this test, ensuring the closed-set claim is enforceable.
 
 Federation portability requires deterministic UUID5 ids: every
 deployment computes the same RoleId from the same name slug. This
-test pins the four ids so an accidental namespace edit surfaces
-immediately.
+test pins the ids so an accidental namespace edit surfaces immediately.
 """
 
 from uuid import UUID
@@ -19,9 +20,11 @@ from cora.equipment.aggregates.role import (
     CONTROLLER,
     DETECTOR,
     POSITIONER,
+    REGULATOR,
     SEED_ROLE_CONTROLLER_ID,
     SEED_ROLE_DETECTOR_ID,
     SEED_ROLE_POSITIONER_ID,
+    SEED_ROLE_REGULATOR_ID,
     SEED_ROLE_SENSOR_ID,
     SEED_ROLES,
     SENSOR,
@@ -29,15 +32,15 @@ from cora.equipment.aggregates.role import (
 
 
 @pytest.mark.unit
-def test_seed_roles_closed_set_count_is_four() -> None:
-    """3A ships exactly 4 seed Roles. Conditioner deferred (Q3)."""
-    assert len(SEED_ROLES) == 4
+def test_seed_roles_closed_set_count_is_five() -> None:
+    """The closed-core seed ships exactly 5 Roles. Conditioner deferred (Q3)."""
+    assert len(SEED_ROLES) == 5
 
 
 @pytest.mark.unit
 def test_seed_role_names_are_pinned() -> None:
     names = {role.name.value for role in SEED_ROLES}
-    assert names == {"Detector", "Positioner", "Controller", "Sensor"}
+    assert names == {"Detector", "Positioner", "Controller", "Sensor", "Regulator"}
 
 
 @pytest.mark.unit
@@ -52,12 +55,21 @@ def test_seed_role_ids_are_pinned_uuid5() -> None:
     assert UUID("ed3cde7c-af58-5320-b323-c62e0af0834a") == SEED_ROLE_POSITIONER_ID
     assert UUID("8fe49028-04a4-5a23-9fb3-b2b79eb9c620") == SEED_ROLE_CONTROLLER_ID
     assert UUID("9763082c-fd15-5ac6-8855-2da74c4ed661") == SEED_ROLE_SENSOR_ID
+    assert UUID("63e1c642-76aa-5cb9-a856-d2f3f883b1fe") == SEED_ROLE_REGULATOR_ID
 
 
 @pytest.mark.unit
 def test_seed_role_ids_are_pairwise_distinct() -> None:
     ids = {role.id for role in SEED_ROLES}
-    assert len(ids) == 4
+    assert len(ids) == 5
+
+
+@pytest.mark.unit
+def test_regulator_requires_settable_affordance() -> None:
+    """Regulator's required-set is non-vacuous (Settable), the bar that
+    blocked Conditioner. It performs (drives a setpoint), unlike Controller
+    (supervises) and Sensor (reports)."""
+    assert "Settable" in {a.value for a in REGULATOR.required_affordances}
 
 
 @pytest.mark.unit

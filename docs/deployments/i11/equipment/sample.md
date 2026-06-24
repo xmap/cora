@@ -18,17 +18,17 @@ The diffractometer is modelled as **per-axis `RotaryStage` Assets under a `Diffr
 
 | Device | Family | Control handle | Notes |
 | --- | --- | --- | --- |
-| `CyberstarBlower1` | `TemperatureController` (loose) | `BL11I-EA-BLOW-01:` | Cyberstar hot-air blower; Eurotherm controller, updating PID |
-| `CyberstarBlower2` | `TemperatureController` (loose) | `BL11I-EA-BLOW-02:LOOP1:` | Cyberstar blower; autotuneable Eurotherm |
-| `Cryostream1` | `TemperatureController` (loose) | `BL11I-CG-CSTRM-01:` | Oxford Cryostream 700 plus |
-| `Cryostream2` | `TemperatureController` (loose) | `BL11I-CG-CSTRM-02:` | Oxford Cryostream 700 standard |
+| `CyberstarBlower1` | `TemperatureController` | `BL11I-EA-BLOW-01:` | Cyberstar hot-air blower; Eurotherm controller, updating PID |
+| `CyberstarBlower2` | `TemperatureController` | `BL11I-EA-BLOW-02:LOOP1:` | Cyberstar blower; autotuneable Eurotherm |
+| `Cryostream1` | `TemperatureController` | `BL11I-CG-CSTRM-01:` | Oxford Cryostream 700 plus |
+| `Cryostream2` | `TemperatureController` | `BL11I-CG-CSTRM-02:` | Oxford Cryostream 700 standard |
 
-This is what makes I11 generative. The four actuators are **continuous-setpoint** devices: the Eurotherm controllers expose `set(value)`, `setpoint`, `ramprate`, PID, and autotune. After the loose `TemperatureController` family was carried at I22 (the Linkam) and I03 (cryostream/thawer), I11 is the **rule-of-three** that genuinely earns:
+This is what makes I11 generative. The four actuators are **continuous-setpoint** devices: the Eurotherm controllers expose `set(value)`, `setpoint`, `ramprate`, PID, and autotune. After the loose `TemperatureController` family was carried at I22 (the Linkam) and I03 (cryostream/thawer), I11 was the **rule-of-three** that earned:
 
 1. graduating the `TemperatureController` catalog Family, and
-2. a **new settable-continuous-setpoint actuator Role** (CORA has none: Positioner is spatial, Controller supervises, GenericProbe is read-only).
+2. a **new settable-continuous-setpoint actuator Role**, `Regulator` (CORA had none: Positioner is spatial, Controller supervises, GenericProbe is read-only), requiring a new `Settable` affordance.
 
-Because the Role is a code change (`SEED_ROLES`, drift-guarded) and core vocabulary, the earn is routed to a **separate, gate-reviewed change**, not this scaffold; the actuators are carried loose here, as I22/I03 did, and TEMP-1 tracks it.
+Because the Role was a code change (`SEED_ROLES`, drift-guarded) and core vocabulary, the earn was routed through the gate-review panel rather than the i11 scaffold. That gate-reviewed change has now landed: `TemperatureController` is a catalog Family presenting `Regulator`.
 
 ## The sample-changing robot
 

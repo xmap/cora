@@ -26,14 +26,14 @@ Root Asset `I22` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `OAV` | Camera | `BL22I-DI-OAV-01:` | on-axis-view alignment camera (Mako G-507B) |
 | `I0` | **FluxMonitor** | `BL22I-EA-XBPM-02:` | incident-flux ion chamber; presents the Sensor Role |
 | `It` | **FluxMonitor** | `BL22I-EA-TTRM-02:` | transmitted-flux ion chamber; presents the Sensor Role |
-| `SampleTemperature` | **TemperatureController** | `BL22I-EA-TEMPC-05:` | Linkam temperature controller; settable actuator |
+| `SampleTemperature` | TemperatureController | `BL22I-EA-TEMPC-05:` | Linkam temperature controller; settable actuator (now a catalog Family, presents Regulator) |
 | `SamplePump` | **FlowController** | `BL22I-EA-PUMP-01:` | peristaltic pump; settable actuator |
 | `SaxsDetector` | Camera | `BL22I-EA-PILAT-01:` | Pilatus3 2M, 0.172 mm pixel, Si 0.45 mm (dodal) |
 | `WaxsDetector` | Camera | `BL22I-EA-PILAT-03:` | second Pilatus3 2M at short camera length |
 | `BeamStop1`..`BeamStop3` | BeamStop | `BL22I-MO-SAXSP-01:BSn:` | SAXS beamstops (positioned) |
 | `Panda1`, `Panda2` | TimingController | `BL22I-EA-PANDA-0N:` | PandABox FPGA trigger/gate generation |
 
-Reused catalog Families (no new Family needed): `InsertionDevice`, `Monochromator`, `Mirror`, `Slit`, `LinearStage`, `Camera`, `BeamStop`, `TimingController`. An adversarial new-kind review refuted all five proposed new kinds (`StorageRing`, `Transfocator`, `FluxMonitor`, `TemperatureController`, `FlowController`) as catalog Families on the strength of I22 alone, deferring each as a loose design-intent family; the flux monitors and sample-environment actuators present existing Roles (Sensor, and the open settable-actuator shape) and are earned into the catalog only when a confirmed device and a rule-of-three settle them. This mirrors how 7-BM carries `Photodiode` / `FlowController` and TomoWISE carried `HeatAbsorber` / `SlipRing`.
+Reused catalog Families (no new Family needed): `InsertionDevice`, `Monochromator`, `Mirror`, `Slit`, `LinearStage`, `Camera`, `BeamStop`, `TimingController`. An adversarial new-kind review refuted all five proposed new kinds (`StorageRing`, `Transfocator`, `FluxMonitor`, `TemperatureController`, `FlowController`) as catalog Families on the strength of I22 alone, deferring each as a loose design-intent family. One has since graduated: `TemperatureController` reached the rule-of-three at i11 and is now a catalog Family presenting the `Regulator` Role (the Linkam here binds it). The rest stay loose, earned into the catalog only when a confirmed device and a rule-of-three settle them. This mirrors how 7-BM carries `Photodiode` / `FlowController` and TomoWISE carried `HeatAbsorber` / `SlipRing`.
 
 ## Pending confirmations
 

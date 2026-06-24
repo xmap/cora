@@ -61,6 +61,7 @@ AFFORDANCES: frozenset[str] = frozenset(
         "Recording",
         "Coolable",
         "PIDControllable",
+        "Settable",
         "Shutterable",
         "Attenuable",
         "Bendable",
