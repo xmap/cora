@@ -240,8 +240,9 @@ diffractometers:
     huber_euler and huber_hp are modelled as plain multi-axis devices with their
     circle axis maps. The reusable Assembly(Diffractometer) (omega/chi/phi
     RotaryStage circles plus a reciprocal-space PseudoAxis, the Microscope-assembly
-    pattern) is designed on model.md and deferred to a Fixture-registering scenario
-    (DIFF-1). Diffractometer is a loose Family placeholder until then.
+    pattern) is in the catalog as an Assembly composing the Goniometer Family, with
+    an 8-ID Fixture scenario; the 4-ID Fixture is the follow-on (DIFF-1). Meanwhile
+    these devices bind the Goniometer Family directly.
   devices:
     - name: Diffractometer_Euler
       family: Goniometer             # catalog Family; the sample-orientation goniometer of the Diffractometer Assembly (DIFF-1)
@@ -393,7 +394,7 @@ area-detectors:
       enclosure: 4-ID-A
       note: "post-mono beam-view flag camera (Vimba)"
     - name: VortexFluorescence
-      family: BeamPositionMonitor     # loose Family; fluorescence/energy-dispersive point detector (DET-2)
+      family: BeamPositionMonitor     # loose Family, held; placeholder classification for a fluorescence point detector pending DET-2 (not the graduated EnergyDispersiveSpectrometer)
       pv: "4iddMZ0:"
       new: true
       confirm: "station is a guess: the 4iddMZ0 prefix was misread as a 4-ID-D enclosure (TOPO-3, DET-2)"
