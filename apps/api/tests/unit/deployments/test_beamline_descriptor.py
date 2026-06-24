@@ -368,7 +368,6 @@ _ALLOWED_LOOSE_FAMILIES = {
     "Wedge": "passive-deferred: passive fixed wedge (2-BM)",
     "Diagnostic": "staged: beam-position monitor, Sensor Role; fold-vs-promote open (DIAG-1)",
     "FluxMonitor": "staged: ion-chamber/XBPM flux Sensor; promote-vs-fold open (FLUX-1/DIAG-1)",
-    "EnergyDispersiveSpectrometer": "staged: MCA/EDS Sensor; Family-vs-Sensor open (DET-1)",
     "FlowController": "staged: settable flow/pump actuator; earn-vs-defer open (FLOW-1/ENV-1)",
     "TemperatureController": "staged: settable thermal actuator; abstraction open (ENV-1)",
     "Backlight": "staged: new illumination affordance; rule-of-three open (ROBOT-1/DET-1)",
@@ -393,7 +392,6 @@ _SUPPLY_LOOSE_FAMILIES = {"Beam", "Vacuum", "StorageRing"}
 _PROMOTION_REVIEWED = {
     "FluxMonitor": "hold: fold-vs-promote still open across i03/i15-1/i22 (FLUX-1)",
     "Diagnostic": "hold: Sensor fold-vs-promote still open (DIAG-1)",
-    "EnergyDispersiveSpectrometer": "hold: Family-vs-Sensor still open (DET-1)",
     "FlowController": "hold: earn-vs-defer still open (FLOW-1)",
     "TemperatureController": "hold: settable-actuator abstraction still open (ENV-1)",
 }
