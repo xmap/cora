@@ -28,7 +28,7 @@ earned its registry from a third substrate.
   via `_tree_hash.sha256_tree`. A missing output, an empty directory, or
   a directory holding a non-regular entry on a succeeded job all raise
   `ArtifactNotFoundError` (the conduct contract's artifact-side abort).
-- `provide_provenance_payload` stamps `ActuationKind.PHYSICAL`: a real
+- `provide_result` stamps `ActuationKind.PHYSICAL`: a real
   subprocess running a real solver is physical actuation, so any Dataset
   it produces is promotable (unlike the simulated in-memory fake).
 
@@ -54,7 +54,7 @@ from cora.operation.ports.compute_port import (
     ArtifactRef,
     ComputeJobFailedError,
     ComputeNotAvailableError,
-    ComputeProvenance,
+    ComputeResult,
     ComputeStatus,
     ComputeSubmitRejectedError,
     JobId,
@@ -162,17 +162,17 @@ class LocalProcessComputePort:
             entry_count=entry_count,
         )
 
-    def provide_provenance_payload(
+    def provide_result(
         self,
         job_id: JobId,
         status: ComputeStatus,
-        artifact_ref: ArtifactRef | None,
-    ) -> ComputeProvenance:
-        return ComputeProvenance(
+        artifacts: tuple[ArtifactRef, ...] = (),
+    ) -> ComputeResult:
+        return ComputeResult(
             job_id=job_id,
             status=status,
             actuation_kind=ActuationKind.PHYSICAL,
-            artifact_ref=artifact_ref,
+            artifacts=artifacts,
         )
 
     async def aclose(self) -> None:

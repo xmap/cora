@@ -42,10 +42,10 @@ its registry from a third substrate. No registry ships now.
   feed `RegisterDataset` 1:1 (uri + checksum + byte_size + media_type
   + conforms_to). The runtime captures it for provenance; a later
   `register_dataset` call records the resulting Dataset + Distribution.
-- **`ComputeProvenance`** is the captured-once bundle the runtime
+- **`ComputeResult`** is the captured-once result the runtime
   snapshots onto the Run's terminal event for replay determinism
   ([[project_non_determinism_principle]]): job id, terminal status,
-  the artifact ref, and the `ActuationKind` the adapter declares.
+  the output artifacts and values, and the `ActuationKind` the adapter declares.
 
 ## Actuation kind
 
@@ -54,8 +54,8 @@ ComputePort reuses Operation's existing `ActuationKind`
 A real subprocess running a real solver is `Physical`; the in-memory
 fake is `Simulated`. The adapter is the authority (mirroring how the
 ControlPort registry's per-route `is_simulated` flag, not the adapter
-class, decides): `provide_provenance_payload` lets the adapter stamp
-the kind onto the provenance bundle, which rides the Run terminal
+class, decides): `provide_result` lets the adapter stamp
+the kind onto the result, which rides the Run terminal
 event so simulator-origin data can never be promoted to Production.
 
 ## Out of scope (deferred)
@@ -87,6 +87,7 @@ from enum import StrEnum
 from typing import Any, NewType, Protocol, runtime_checkable
 
 from cora.operation.ports.control_port import ActuationKind
+from cora.operation.ports.measurement import Measurement
 
 JobId = NewType("JobId", str)
 """Opaque substrate job handle returned by `submit`.
@@ -199,15 +200,19 @@ class ArtifactRef:
 
 
 @dataclass(frozen=True)
-class ComputeProvenance:
-    """Captured-once provenance bundle the runtime snapshots onto the Run.
+class ComputeResult:
+    """Captured-once result a compute conduct produced: provenance + outputs.
 
-    Assembled by the adapter's `provide_provenance_payload` so the
-    adapter owns the `actuation_kind` determination (a real subprocess
-    is `Physical`, the fake is `Simulated`). The runtime captures this
-    at conduct time and threads `actuation_kind` + `job_id` +
-    (`artifact_ref.uri`) onto the Run terminal event, so a replay folds
-    the same provenance without re-running the job
+    Assembled by the adapter's `provide_result` so the adapter owns the
+    `actuation_kind` determination (a real subprocess is `Physical`, the
+    fake is `Simulated`). A conduct's outputs are a SET: zero or more file
+    `artifacts` (each an `ArtifactRef` that feeds `RegisterDataset` 1:1)
+    and zero or more structured `values` (each a `Measurement`, the value
+    arm that homes to a Calibration). A reconstruction populates
+    `artifacts`; an alignment measurement populates `values`; a
+    quality-reporting reconstruction populates both. The runtime threads
+    `actuation_kind` + `job_id` + the outputs onto the terminal event so a
+    replay folds the same provenance without re-running the job
     ([[project_non_determinism_principle]]).
 
     `is_simulated` is derived, not stored: any simulator touch
@@ -219,7 +224,8 @@ class ComputeProvenance:
     job_id: JobId
     status: ComputeStatus
     actuation_kind: ActuationKind
-    artifact_ref: ArtifactRef | None = None
+    artifacts: tuple[ArtifactRef, ...] = ()
+    values: tuple[Measurement, ...] = ()
 
     @property
     def is_simulated(self) -> bool:
@@ -374,19 +380,21 @@ class ComputePort(Protocol):
         """
         ...
 
-    def provide_provenance_payload(
+    def provide_result(
         self,
         job_id: JobId,
         status: ComputeStatus,
-        artifact_ref: ArtifactRef | None,
-    ) -> ComputeProvenance:
-        """Assemble the `ComputeProvenance` bundle for this job.
+        artifacts: tuple[ArtifactRef, ...] = (),
+    ) -> ComputeResult:
+        """Assemble the `ComputeResult` for this job's file artifacts.
 
-        Pure assembly (no IO): the adapter stamps the `ActuationKind`
-        it is the authority for (`Physical` for a real substrate,
-        `Simulated` for the fake) onto the captured job id, terminal
-        status, and artifact ref. The runtime threads this onto the Run
-        terminal event for replay-deterministic provenance.
+        Pure assembly (no IO): the adapter stamps the `ActuationKind` it
+        is the authority for (`Physical` for a real substrate, `Simulated`
+        for the fake) onto the captured job id, terminal status, and the
+        produced file `artifacts`. The runtime threads this onto the Run
+        terminal event for replay-deterministic provenance. The `values`
+        arm is populated by the value-producing compute-step path, not
+        here (this is the file-artifact path the compute-Run runtime drives).
         """
         ...
 
@@ -407,8 +415,8 @@ __all__ = [
     "ComputeJobFailedError",
     "ComputeNotAvailableError",
     "ComputePort",
-    "ComputeProvenance",
     "ComputeResources",
+    "ComputeResult",
     "ComputeStatus",
     "ComputeSubmitRejectedError",
     "ComputeTimeoutError",

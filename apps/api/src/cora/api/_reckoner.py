@@ -190,12 +190,12 @@ class Reckoner:
         except ArtifactNotFoundError as exc:
             return await self._abort_conduct(run_id, job_id, status, str(exc), envelope)
 
-        provenance = self._compute_port.provide_provenance_payload(job_id, status, artifact_ref)
+        compute_result = self._compute_port.provide_result(job_id, status, (artifact_ref,))
         try:
             await self._complete_run(
                 CompleteRun(
                     run_id=run_id,
-                    actuation_kind=provenance.actuation_kind.value,
+                    actuation_kind=compute_result.actuation_kind.value,
                     producing_job_id=str(job_id),
                     artifact_uri=artifact_ref.uri,
                 ),
@@ -207,7 +207,7 @@ class Reckoner:
                 status=status,
                 job_id=job_id,
                 artifact_ref=artifact_ref,
-                actuation_kind=provenance.actuation_kind,
+                actuation_kind=compute_result.actuation_kind,
                 failure=_bounded(f"complete_run rejected: {exc}"),
             )
         return ReckonerResult(
@@ -215,7 +215,7 @@ class Reckoner:
             status=status,
             job_id=job_id,
             artifact_ref=artifact_ref,
-            actuation_kind=provenance.actuation_kind,
+            actuation_kind=compute_result.actuation_kind,
         )
 
     async def _abort_conduct(
@@ -227,16 +227,16 @@ class Reckoner:
         envelope: dict[str, Any],
     ) -> ReckonerResult:
         """Capture provenance for a failed job and best-effort abort the Run."""
-        provenance = self._compute_port.provide_provenance_payload(job_id, status, None)
+        compute_result = self._compute_port.provide_result(job_id, status, ())
         reason = _bounded(detail)
         await self._best_effort_abort(
-            run_id, reason, provenance.actuation_kind.value, str(job_id), envelope
+            run_id, reason, compute_result.actuation_kind.value, str(job_id), envelope
         )
         return ReckonerResult(
             run_id=run_id,
             status=status,
             job_id=job_id,
-            actuation_kind=provenance.actuation_kind,
+            actuation_kind=compute_result.actuation_kind,
             failure=reason,
         )
 

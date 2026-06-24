@@ -45,7 +45,7 @@ from dataclasses import dataclass
 from cora.operation.ports.compute_port import (
     ArtifactNotFoundError,
     ArtifactRef,
-    ComputeProvenance,
+    ComputeResult,
     ComputeStatus,
     JobId,
     JobSpec,
@@ -131,17 +131,17 @@ class InMemoryComputePort:
             byte_size=0,
         )
 
-    def provide_provenance_payload(
+    def provide_result(
         self,
         job_id: JobId,
         status: ComputeStatus,
-        artifact_ref: ArtifactRef | None,
-    ) -> ComputeProvenance:
-        return ComputeProvenance(
+        artifacts: tuple[ArtifactRef, ...] = (),
+    ) -> ComputeResult:
+        return ComputeResult(
             job_id=job_id,
             status=status,
             actuation_kind=ActuationKind.SIMULATED,
-            artifact_ref=artifact_ref,
+            artifacts=artifacts,
         )
 
     async def aclose(self) -> None:

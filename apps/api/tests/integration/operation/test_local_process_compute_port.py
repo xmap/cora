@@ -62,9 +62,9 @@ async def test_provenance_declares_physical_actuation(tmp_path: Path) -> None:
     status = await port.await_terminal_state(job_id)
     artifact = await port.fetch_artifact_ref(job_id)
 
-    provenance = port.provide_provenance_payload(job_id, status, artifact)
-    assert provenance.actuation_kind is ActuationKind.PHYSICAL
-    assert provenance.is_simulated is False
+    result = port.provide_result(job_id, status, (artifact,))
+    assert result.actuation_kind is ActuationKind.PHYSICAL
+    assert result.is_simulated is False
 
 
 @pytest.mark.integration

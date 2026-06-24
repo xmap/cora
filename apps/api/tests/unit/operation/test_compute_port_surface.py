@@ -15,8 +15,8 @@ from cora.operation.ports.compute_port import (
     ComputeJobFailedError,
     ComputeNotAvailableError,
     ComputePort,
-    ComputeProvenance,
     ComputeResources,
+    ComputeResult,
     ComputeStatus,
     ComputeSubmitRejectedError,
     ComputeTimeoutError,
@@ -75,13 +75,13 @@ def test_artifact_ref_carries_register_dataset_shaped_fields() -> None:
 @pytest.mark.unit
 def test_provenance_is_simulated_is_derived_from_actuation_kind() -> None:
     job_id = JobId("job-1")
-    physical = ComputeProvenance(
+    physical = ComputeResult(
         job_id=job_id, status=ComputeStatus.SUCCEEDED, actuation_kind=ActuationKind.PHYSICAL
     )
-    simulated = ComputeProvenance(
+    simulated = ComputeResult(
         job_id=job_id, status=ComputeStatus.SUCCEEDED, actuation_kind=ActuationKind.SIMULATED
     )
-    hybrid = ComputeProvenance(
+    hybrid = ComputeResult(
         job_id=job_id, status=ComputeStatus.SUCCEEDED, actuation_kind=ActuationKind.HYBRID
     )
     assert physical.is_simulated is False
