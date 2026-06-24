@@ -15,6 +15,10 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `Rotary` | `RotaryStage` | `aerotech_abrs250mp` | `LaminographyPitch` | -360..360 deg, `max_speed=720 deg/s` (operational), `aperture=35 mm`, `encoder_resolution=0.000676 deg` | live |
 | `SampleStageDrive` | `MotionController` | `oms_vme58` | `2-BM` | `axis_count=91`, `OMS_VME` | live |
 | `FrontEndDrive` | `MotionController` | `oms_vme58` | `2-BM` | `axis_count=91`, `OMS_VME` | live |
+| `FrontEndWindow` | `Window` | (none) | `2-BM` | OFHC-housed Be window assembly; identity-only (beam-effect deferred) | live |
+| `Window_W4_20` | `Window` | (none) | `FrontEndWindow` | Be 0.25 mm, z 28718, aperture 120 x 15 mm | live |
+| `Window_W4_60` | `Window` | (none) | `FrontEndWindow` | Be 0.13 mm, z 30804, aperture 25 x 120 mm | live |
+| `Window_DS` | `Window` | (none) | `FrontEndWindow` | Be 0.25 mm, z 32417, aperture 8.8 x 145 mm (unlabelled, downstream-most) | live |
 | `Mirror` | `Mirror` | (none) | `MirrorTable` | driven by `FrontEndDrive`; 4 coating stripes (a/b/c/d), held in Mono, swept per Pink energy (MIRROR-1) | live |
 | `Mirror_StripeReachX` | `PseudoAxis` | (none) | `Mirror` | `m1_horizontal` (`2bma:m3`); Mono held at stripe a, Pink swept per energy | live |
 | `MirrorTable` | `Table` | (none) | `2-BM` | `axis_layout=virtual_pose`, `virtual_record=2bma:table1` | live |
@@ -125,6 +129,9 @@ One canonical `(system, number, revision)` triple per Asset, except `Rotary`, wh
 | `Scintillator` | `MAN-11863` rev `0521-0465-A` | `EDMS` |
 | `StationShutter` | `41050401-410003` rev `(-)` (P6-50 shutter element; assembly `41050401-500000`) | `ICMS` |
 | `Mask` | `4102020101-240000` (M3-24 front-end exit mask; RSS `02-BM-A-F-01`) | `ICMS` |
+| `Window_W4_20` | `4105090804-200000` (front-end Be window W4-20) | `ICMS` |
+| `Window_W4_60` | `4105090804-600000` (front-end Be window W4-60) | `ICMS` |
+| `Window_DS` | `4102020106-400000` (front-end Be window, unlabelled, downstream-most) | `ICMS` |
 
 Not yet cited: Kohzu `CYAT-070` datasheet (`SampleTop_*`), a FLIR Oryx datasheet (`Camera`).
 

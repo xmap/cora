@@ -97,9 +97,8 @@ front-end:
   branch: A-shared
   intro: "The fixed beam-defining mask, front-end window, and white-beam slits that shape and condition the beam before the monochromator."
   note: >
-    Mask is a shared catalog Family; BeamStop is a loose Family string (not yet
-    in the catalog), as at 2-BM. JJ X-Ray slits are a four-motor compact slit set
-    on a Beckhoff controller (manual_002).
+    Mask, Window, and BeamStop are shared catalog Families, as at 2-BM. JJ X-Ray
+    slits are a four-motor compact slit set on a Beckhoff controller (manual_002).
   devices:
     - name: FrontEndMask
       family: Mask
@@ -147,12 +146,12 @@ optics-hutch:
       family: BeamStop
       new: true
       confirm: true
-      note: "white-beam stop positioned and locked per mode change (safety_001); loose Family pending the passive beam-path tier"
+      note: "white-beam stop positioned and locked per mode change (safety_001)"
     - name: MonochromaticBeamStop
       family: BeamStop
       new: true
       confirm: true
-      note: "combined monochromatic-beam stops set per mode change (safety_001); loose Family"
+      note: "combined monochromatic-beam stops set per mode change (safety_001)"
 
 safety-shutters:
   stage: source

@@ -92,16 +92,32 @@ front-end:
       family: Window
       passive: true
       replaceable: true
-      new: true
-      window_count: 3
       be_thickness_total: 0.63 mm   # BEAM-2 (#246): W4-20 0.25 + W4-60 0.13 + unlabelled 0.25 (staff-verified)
       note: >
-        Three OFHC-housed Be windows on the 02-BM beam path; per-window child
-        Assets are deferred to the Window-Family slice. Source APS_2191941
-        (post-APS-U) rows 5/8/9: W4-20 (drawing 4105090804-200000, z 28718,
-        Be 0.25 mm), W4-60 (drawing 4105090804-600000, z 30804, Be 0.13 mm),
-        and an unlabelled Be window (drawing 4102020106-400000, z 32417,
-        Be 0.25 mm).
+        Three OFHC-housed Be windows on the 02-BM beam path, registered as
+        per-window child Assets. Source APS_2191941 (post-APS-U) rows 5/8/9.
+      constituents:
+        - name: Window_W4_20
+          family: Window
+          passive: true
+          material: beryllium, 0.25 mm
+          z_mm: 28718
+          aperture_mm: [120, 15]
+          drawing: { system: ICMS, number: 4105090804-200000 }   # APS_2191941 row 5 (W4-20)
+        - name: Window_W4_60
+          family: Window
+          passive: true
+          material: beryllium, 0.13 mm
+          z_mm: 30804
+          aperture_mm: [25, 120]
+          drawing: { system: ICMS, number: 4105090804-600000 }   # APS_2191941 row 8 (W4-60)
+        - name: Window_DS
+          family: Window
+          passive: true
+          material: beryllium, 0.25 mm
+          z_mm: 32417
+          aperture_mm: [8.8, 145]
+          drawing: { system: ICMS, number: 4102020106-400000 }   # APS_2191941 row 9 (unlabelled, downstream-most)
     - name: FrontEndShutter
       family: Shutter
       pv: "S02BM-PSS:FES"
