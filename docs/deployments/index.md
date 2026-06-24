@@ -39,10 +39,11 @@ The third Site CORA models, and a deliberate off-roadmap exercise: real, operati
 
 ## [NSLS-II](nsls2/index.md)
 
-The fourth Site CORA models. Like the Diamond exercise, FXI is reverse-engineered from public open source (here the NSLS-II bluesky profile collection), not a design report or a live connection.
+The fourth Site CORA models. Like the Diamond exercise, its beamlines are reverse-engineered from public open source (the NSLS-II bluesky profile collections), not a design report or a live connection.
 
 | Beamline | Status | What it is |
 | --- | --- | --- |
 | [FXI](fxi/index.md) | Reverse-engineered | full-field transmission X-ray microscopy and tomography, 18-ID; modelled from public beamline config |
+| [HXN](hxn/index.md) | Reverse-engineered | scanning hard X-ray nanoprobe (nano-XRF, ptychography, nano-tomography), 3-ID; modelled from public beamline config |
 
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

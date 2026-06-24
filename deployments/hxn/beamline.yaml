@@ -1,0 +1,263 @@
+# HXN beamline descriptor (NSLS-II), reverse-engineered
+#
+# HXN (Hard X-ray Nanoprobe) is the NSLS-II scanning nanoprobe at sector 3-ID:
+# nano-XRF mapping, ptychography, nano-tomography, and spectro-tomography, all by
+# rastering a focused spot (zone plate or multilayer Laue lens) across the sample
+# and reading multiple detectors per dwell point. It is bound to the NSLS-II Site
+# (deployments/nsls2/site.yaml), the second NSLS-II beamline after FXI.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/hxn-profile-collection) or inferred,
+# carried `new: true` + `confirm: true` pending HXN staff. EPICS PVs are real and
+# verified against the profile collection; vendor part numbers, serials, and
+# physical z positions are not in it and are open questions. Same descriptor mode
+# as FXI; this scaffold is descriptor + docs, scenarios deferred.
+#
+# HXN's defining new shape vs FXI (full-field TXM) is SCANNING-PROBE acquisition:
+# the position axes ARE the scan, and a fluorescence detector, a pixel detector
+# (ptychography), and flux counters are read together per point. The scanning and
+# ptychography Capabilities are deliberately NOT coined yet (the Diamond/32-ID
+# precedent: defer until a raster conduct-path consumes them); see questions.md.
+#
+# The multilayer Laue lens (MLL) is a loose family `MultilayerLaueLens` (FXI-only-
+# equivalent: HXN is its first and only sighting), distinct from ZonePlate (a 1D
+# linear-zone crossed pair, not a 2D circular Fresnel optic).
+
+beamline:
+  name: HXN
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 3"           # PV namespace XF:03ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "IVU20 in-vacuum undulator (SR:C3-ID:G1{IVU20:1}), verified in source; period/gap parameters not fully in the profile collection (SRC-1)"
+
+enclosures:
+  # Three PV zones: 3-ID-A optics, 3-ID-B intermediate (secondary-source aperture,
+  # slow shutter, PPS), 3-ID-C endstation. Modelled as optics + experiment hutches;
+  # whether 3-ID-B is a distinct enclosure is a staff question (ENC-1).
+  - name: 3-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in source; the photon shutter is XF:03IDB-PPS{PSh} (PSS-1)"}
+  - name: 3-ID-C
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the XF:03IDB intermediate zone (SSA1, slow shutter) may be a distinct enclosure (ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator, monochromator, mirrors, and beam-defining slits
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 3-ID-A
+  intro: The in-vacuum undulator source.
+  devices:
+    - name: Source
+      family: InsertionDevice
+      pv: "SR:C3-ID:G1{IVU20:1"
+      confirm: true
+      note: "IVU20 in-vacuum undulator (ophyd InsertionDevice, instance ugap); gap-driven. Period/field parameters pending (SRC-1)."
+
+optics:
+  stage: source
+  enclosure: 3-ID-A
+  intro: "Condition the beam and set its energy: the double-crystal monochromator, three mirrors, and the white-beam slits. PVs verified against startup/10-optics.py."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:03IDA-OP{Mon:1"
+      axis_channels: { Bragg: "XF:03IDA-OP{Mon:1-Ax:Bragg}Mtr" }
+      confirm: true
+      note: "Double-crystal monochromator (class HxnDCM, instance dcm). Energy is the EnergyAxis pseudo-axis below (monoe), which drives Bragg; crystal cut and range pending (DCM-1)."
+    - name: CollimatingMirror
+      family: Mirror
+      pv: "XF:03IDA-OP{HCM:1"
+      confirm: true
+      note: "Horizontal collimating mirror (class HxnMirror1, HCM:1)."
+    - name: FocusingMirror
+      family: Mirror
+      pv: "XF:03IDA-OP{HFM:1"
+      confirm: true
+      note: "Horizontal focusing mirror (class HxnMirror2, HFM:1), with a pitch-feedback axis."
+    - name: VerticalMirror
+      family: Mirror
+      pv: "XF:03IDA-OP{VMS:1"
+      axis_channels: { Y: "XF:03IDA-OP{VMS:1-Ax:Y}Mtr", P: "XF:03IDA-OP{VMS:1-Ax:P}Mtr", TX: "XF:03IDA-OP{VMS:1-Ax:TX}Mtr" }
+      confirm: true
+      note: "Vertical mirror system (class HxnVMS, VMS:1); bend/pitch/translation axes."
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: "XF:03IDA-OP{Slt:1"
+      confirm: true
+      note: "First white-beam-defining slit (class HxnSlitA1, instance s1); a second slit s2 sits at XF:03IDA-OP{Slt:2}."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The master energy pseudo-axis (class PseudoEnergyMotor, instance monoe). Driving it sets the monochromator Bragg angle; an energy change co-moves the zone-plate refocus per element (see techniques.md, ENERGY-1)."
+    - name: BeamPositionMonitor
+      family: GenericProbe
+      pv: "XF:03IDA-BI{Slt:1}"
+      confirm: true
+      note: "Beam-position / intensity diagnostics (class HxnI400, instance s1_bpm) plus bpm1..bpm5 stages; read-only."
+
+intermediate:
+  stage: source
+  enclosure: 3-ID-C
+  intro: The secondary-source aperture that defines the coherent probe, plus the photon shutter.
+  devices:
+    - name: SecondarySourceAperture
+      family: Slit
+      pv: "XF:03IDB-OP{Slt:SSA1"
+      confirm: true
+      note: "Secondary-source aperture (class HxnSSAperture, instance ssa1) defining the coherence-matched source; a second SSA2 sits at XF:03IDC-OP{Slt:SSA2}."
+    - name: PhotonShutter
+      family: Shutter
+      pv: "XF:03IDB-PPS{PSh}"
+      confirm: true
+      note: "PPS slow photon shutter (instance bshutter). The fast shutter is on the Zebra (Zeb:2). PPS permit leaf pending (PSS-1)."
+
+# ===========================================================================
+# SAMPLE STAGE: the two focusing optics (zone plate, MLL), their order-sorting
+# apertures and beamstops, and the nano-positioning sample stack.
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 3-ID-C
+  intro: "The focusing optics that form the nano-spot and the sample stack rastered through it. PVs verified against startup/13-mll.py and 15-zp.py."
+  note: >
+    HXN runs two interchangeable focusing optics: a Fresnel zone plate and a
+    crossed multilayer-Laue-lens pair. Whether both are permanently installed and
+    operator-selected or one is decommissioned is a staff question (OPTIC-1).
+  devices:
+    - name: ZonePlate
+      family: ZonePlate
+      pv: "XF:03IDC-ES"
+      confirm: true
+      note: "Fresnel zone-plate objective (class HxnZonePlate, instance zp); the lab-frame sample axes are the FineSampleLabX pseudo-axes (zplab). Outer-zone width / diameter pending (OPTIC-2)."
+    - name: ZonePlateAperture
+      family: Aperture
+      pv: "XF:03IDC-ES{ANC350:5"
+      axis_channels: { x: "XF:03IDC-ES{ANC350:5-Ax:0}Mtr", y: "XF:03IDC-ES{ANC350:5-Ax:1}Mtr", z: "XF:03IDC-ES{ANC350:5-Ax:2}Mtr" }
+      confirm: true
+      note: "Order-sorting aperture for the zone plate (class HxnZP_OSA, instance zposa)."
+    - name: ZonePlateBeamStop
+      family: BeamStop
+      pv: "XF:03IDC-ES{ANC350:8"
+      confirm: true
+      note: "Central beam stop for the zone plate (class HxnZPBeamStop, instance zpbs)."
+    - name: MLL_Vertical
+      family: MultilayerLaueLens
+      pv: "XF:03IDC-ES"
+      new: true
+      confirm: true
+      note: "Vertical multilayer Laue lens (class HxnVerticalMLL, instance vmll). Loose family: HXN is the only sighting, distinct from ZonePlate (1D linear-zone lens, run as a crossed pair) (OPTIC-3)."
+    - name: MLL_Horizontal
+      family: MultilayerLaueLens
+      pv: "XF:03IDC-ES"
+      new: true
+      confirm: true
+      note: "Horizontal multilayer Laue lens (class HxnHorizontalMLL, instance hmll); the crossed partner of MLL_Vertical for 2D focus."
+    - name: MLLAperture
+      family: Aperture
+      pv: "XF:03IDC-ES"
+      confirm: true
+      note: "Order-sorting aperture for the MLL (class HxnMLL_OSA, instance mllosa)."
+    - name: SampleStage
+      family: LinearStage
+      pv: "XF:03IDC-ES{Ppmac:1"
+      axis_channels: { ssx: "XF:03IDC-ES{Ppmac:1-ssx}Mtr", ssy: "XF:03IDC-ES{Ppmac:1-ssy}Mtr", ssz: "XF:03IDC-ES{Ppmac:1-ssz}Mtr" }
+      confirm: true
+      note: "Fine sample raster stage (class HxnMLLSample, instance smll): piezo ssx/ssy/ssz on the Power PMAC. These fine axes ARE the scan trajectory in a fly2d map. Coarse axes sit on ANC350:3/4."
+    - name: SampleRotary
+      family: RotaryStage
+      pv: "XF:03IDC-ES{ANC350:1-Ax:0}Mtr"
+      trigger_source: PSO
+      confirm: true
+      note: "Tomographic rotation (sth, theta) on an Attocube ANC350; combined with the raster for nano-tomography. Hardware/encoder pending (STAGE-1)."
+    - name: SamplePod
+      family: Hexapod
+      pv: "XF:03IDC-ES"
+      confirm: true
+      note: "SmarAct Smarpod 6-DOF parallel-kinematics sample pod (class SmarpodBase, single coordinated move); reuses the Hexapod family. Confirm Smarpod-to-Hexapod fit (STAGE-2)."
+
+# ===========================================================================
+# DETECTION STAGE: the per-point detectors read simultaneously during a scan.
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 3-ID-C
+  intro: "The detectors read per dwell point: a fluorescence spectrometer (XRF), pixel detectors (ptychography / diffraction), and flux counters. PVs verified against startup/20-detectors.py, 20-eiger.py, 21-xspress3.py."
+  note: >
+    A scanning-probe measurement reads several of these at once: the
+    EnergyDispersiveSpectrometer for element maps, a Camera pixel detector for
+    ptychography or diffraction, and the flux counters for normalization. Which
+    detectors are live vs dormant duplicates is a staff question (CAM-1).
+  devices:
+    - name: FluorescenceSpectrometer
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:03IDC-ES{Xsp:1}:"
+      confirm: true
+      note: "Xspress3 energy-dispersive fluorescence detector (4 channels C1-C4), the XRF-mapping detector; presents the Sensor Role. A second unit xspress3_mk2 is at XF:03IDC-ES{Xsp:2}. Vendor (Quantum Detectors) and element count pending (DET-1)."
+    - name: MerlinDetector
+      family: Camera
+      pv: "XF:03IDC-ES{Merlin:1}"
+      confirm: true
+      note: "Merlin pixel detector (class HxnMerlinDetector, instance merlin1) for ptychography / coherent diffraction; a second merlin2 is at {Merlin:2}. Reuses Camera (the Diamond Eiger->Camera precedent)."
+    - name: EigerDetector
+      family: Camera
+      pv: "XF:03IDC-ES{Det:Eiger1M}"
+      confirm: true
+      note: "Eiger 1M pixel detector (class HxnEigerDetector, instance eiger1) for ptychography."
+    - name: DexelaDetector
+      family: Camera
+      pv: "XF:03IDC-ES{Dexela:1}"
+      confirm: true
+      note: "Dexela flat-panel detector (class HxnDexelaDetector, instance dexela1) for wide-field diffraction."
+    - name: FluxCounter
+      family: GenericProbe
+      pv: "XF:03IDC-ES{Sclr"
+      confirm: true
+      note: "Scaler-counted ion-chamber / diode flux channels (sclr1..sclr3) for per-point normalization; read-only Sensor-side. Exact channel map pending (DIAG-1)."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    The trigger box and the motion controllers. Unlike FXI, HXN exposes its
+    controllers in the profile collection (PMAC, Attocube ANC350), so they are
+    modelled as families here; box models / serials / IP remain pending (DRIVE-1).
+  triggering:
+    - name: Zebra
+      family: TimingController
+      pv: "XF:03IDC-ES{Zeb:3}:"
+      trigger_source: PSO
+      confirm: true
+      note: "Zebra FPGA position-capture box (class SRXZebra, instance nanoZebra) gating the per-point detector triggers during a fly raster. A fast shutter sits on a second Zebra (Zeb:2). A PandABox is being introduced (67-nano-panda) and is carried deferred (ZEBRA-1)."
+    - name: SampleMotionController
+      family: MotionController
+      pv: "XF:03IDC-ES{Ppmac:1"
+      confirm: true
+      note: "Power PMAC driving the fine raster axes (class, instance Ppmac:1) plus HxnTurboPmacController boxes MC:2-MC:8. Box model/firmware pending (DRIVE-1)."
+    - name: NanoPositioningController
+      family: MotionController
+      pv: "XF:03IDC-ES{ANC350"
+      confirm: true
+      note: "Attocube ANC350 controllers (ANC350:1-8) driving the coarse nano-positioning, OSAs, and beam stops. Eight units; model confirmed Attocube, firmware/serials pending (DRIVE-1)."
+  software_iocs_not_modeled:
+    [Merlin, Eiger, Dexela, Xspress3, Zebra, PandA, MCS]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["zone plate", "MLL optics", "pixel detectors"]

@@ -372,6 +372,7 @@ _ALLOWED_LOOSE_FAMILIES = {
     "TemperatureController": "staged: settable thermal actuator; abstraction open (ENV-1)",
     "Backlight": "staged: new illumination affordance; rule-of-three open (ROBOT-1/DET-1)",
     "BetrandLens": "staged: novel TXM optic, FXI-only; rule-of-three open (OPTIC-3)",
+    "MultilayerLaueLens": "staged: novel 1D crossed-pair nano-focus optic, HXN-only (OPTIC-3)",
     "Chopper": "staged: rotary duty-cycle device; fold-vs-Family open (CHOP-1)",
     "Photodiode": "staged: PIN photodiode, Sensor Role; Family-vs-Sensor open (RAD-1)",
     "Transfocator": "staged: compound-refractive-lens optic; no catalog home yet (CRL-1)",

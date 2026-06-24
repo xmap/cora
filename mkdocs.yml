@@ -251,6 +251,19 @@ nav:
         - Experiment: deployments/fxi/experiment.md
         - Governance: deployments/fxi/governance.md
         - Model: deployments/fxi/model.md
+      - HXN:
+        - deployments/hxn/index.md
+        - Open questions: deployments/hxn/questions.md
+        - The beamline:
+          - deployments/hxn/equipment/index.md
+          - Source: deployments/hxn/beamline.md
+          - Sample: deployments/hxn/equipment/sample.md
+          - Detector: deployments/hxn/equipment/detector.md
+          - Controls: deployments/hxn/equipment/controls.md
+          - Inventory: deployments/hxn/inventory.md
+        - Techniques: deployments/hxn/techniques.md
+        - Governance: deployments/hxn/governance.md
+        - Model: deployments/hxn/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
