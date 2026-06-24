@@ -35,6 +35,7 @@ The third Site CORA models, and a deliberate off-roadmap exercise: real, operati
 | [I22](i22/index.md) | Modelling exercise | small- and wide-angle X-ray scattering (SAXS/WAXS), reverse-engineered from dodal |
 | [I03](i03/index.md) | Modelling exercise | macromolecular crystallography (MX); graduates the Goniometer Family and exercises autonomous sample handling |
 | [I15-1](i15-1/index.md) | Modelling exercise | X-ray total scattering / pair distribution function (XPDF); a reuse + reinforce deployment (no new vocabulary) |
+| [I11](i11/index.md) | Modelling exercise | high-resolution powder diffraction; the rule-of-three that earns the TemperatureController graduation + a settable-actuator Role (routed to gate-review) |
 
 ## [NSLS-II](nsls2/index.md)
 
