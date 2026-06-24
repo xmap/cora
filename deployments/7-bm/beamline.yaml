@@ -235,8 +235,9 @@ detector:
       note: >
         germanium energy-dispersive detector for energy-dispersive diffraction; records a
         per-photon energy spectrum (an MCA histogram), not a 2D frame, and presents the
-        Sensor Role. Whether this is the same physical detector as the fluorescence MCA,
-        and whether it is a new Family or a deployment-local Sensor device, are open (DET-1).
+        Sensor Role. Binds the catalog EnergyDispersiveSpectrometer Family (graduated once
+        2-ID and 7-BM shared it). Whether this is the same physical detector as the
+        fluorescence MCA is open (DET-1).
 
 # Cross-cutting timing and triggering. 7-BM's floor carries several technique-specific
 # orchestrators (tomoScan, DataGrabber, the ADQ14 Python scripts, the EPICS scan

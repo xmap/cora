@@ -16,7 +16,7 @@ I03's detection is the standard MX shape: one large area detector on a translati
 
 - **The Eiger reuses `Camera`.** A pixel-array area detector is the Camera Family presenting the Detector Role, the same shape the imaging pilots use; the photon-counting specifics (threshold energy) and the beam-center are calibration dodal does not carry (DET-1).
 - **The detector motion is a Positioner.** The translation stage reuses `LinearStage`; its integrated shutter is a Shutter affordance on the same mount. The axis ranges are calibration to confirm.
-- **The fluorescence detector presents the Sensor Role.** It reads a scalar / short-vector signal, not a 2D frame, so it is the Sensor Role, not Detector. It is carried loose with its modelling deferred (DET-1), the same loose-Sensor posture 7-BM takes for its energy-dispersive detector and I22 takes for its flux monitors. The retract mechanism is a binary Positioner state, not a separate Family.
+- **The fluorescence detector presents the Sensor Role.** It reads a scalar / short-vector signal, not a 2D frame, so it is the Sensor Role, not Detector. Its modelling is deferred (DET-1); the catalog now carries an `EnergyDispersiveSpectrometer` Family (graduated by 2-ID + 7-BM) that is the likely binding once the detector is confirmed, but i03 keeps it family-less for now, the same deferred-Sensor posture I22 takes for its flux monitors. The retract mechanism is a binary Positioner state, not a separate Family.
 
 ## Families
 

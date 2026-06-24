@@ -26,7 +26,7 @@ The one structural unknown: the Sector 2 hutch roster and where the shared optic
 | SRC-1 | Blocks-go-live | The Sector 2 insertion-device source: device type, period, gap, and whether one source feeds more than one hutch. | One `InsertionDevice` Asset (undulator); type and period unconfirmed. | The insertion-device specs. |
 | SRC-2 | Nice-to-have | The front-end and beam-defining optics between the source and the zone plate (front-end mask, window, white-beam and beam-defining slits), which EAA does not describe. | None modelled; the source stretch from front end to zone plate is carried as undescribed. | The front-end and beam-defining optics. |
 | MONO-1 | Blocks-go-live | The monochromator: is it a double-crystal Si monochromator, what is its crystal and energy range, what are its axes, and which optics hutch is it in? | One `Monochromator` Asset, double-crystal, energy range unconfirmed; located upstream. | The monochromator presence, crystal, axes, and energy model. |
-| OPTICS-1 | Blocks-go-live | The probe-forming Fresnel zone plate parameters (outermost-zone width, diameter, material) that set the spot size, and the order-sorting aperture that pairs with it. | One `ZonePlate` Asset bound to a loose Family with a `zp_z` focus axis; the order-sorting aperture is folded in, not separately modelled. | The zone-plate spec, the order-sorting aperture, and the Family. |
+| OPTICS-1 | Blocks-go-live | The probe-forming Fresnel zone plate parameters (outermost-zone width, diameter, material) that set the spot size, and the order-sorting aperture that pairs with it. | One `ZonePlate` Asset (catalog Family) with a `zp_z` focus axis; the order-sorting aperture is folded in, not separately modelled. | The zone-plate spec and the order-sorting aperture. |
 
 ## Sample-scanning endstation
 
@@ -39,7 +39,7 @@ The one structural unknown: the Sector 2 hutch roster and where the shared optic
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| DET-1 | Blocks-go-live | The energy-dispersive fluorescence detector: model, number of elements / segmentation, and energy resolution. | One fluorescence-detector Asset bound to a loose Family; model and channels unconfirmed. | The detector Model binding. |
+| DET-1 | Blocks-go-live | The energy-dispersive fluorescence detector: model, number of elements / segmentation, and energy resolution. | One fluorescence-detector Asset bound to the catalog `EnergyDispersiveSpectrometer` Family; model and channels unconfirmed. | The detector Model binding. |
 | DET-2 | Nice-to-have | The detection readout chain: the preamplifier (EAA names a `Preamp1`), the EPICS scalers, and the I0 flux monitors (ion chambers) the scan normalizes against. | A preamplifier, scalers, and flux monitors exist as the readout chain; identities unconfirmed and not separately modelled. | The readout-chain Assets and the normalization model. |
 
 ## Supplies
