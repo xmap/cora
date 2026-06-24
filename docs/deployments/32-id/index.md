@@ -29,7 +29,7 @@ This scaffold earns its abstractions. It models the part of 32-ID that is unambi
 | Part | In this scaffold | Why |
 | --- | --- | --- |
 | Optics spine (`32-ID-A`) | Yes | Canted source, Si(111) monochromator, white-beam slits, mode shutter; shared by all branches |
-| TXM endstation (`32-ID-C`) | Yes, coarse | 32-ID's tomography instrument; zone-plate optics bound to loose Families pending confirmation |
+| TXM endstation (`32-ID-C`) | Yes, coarse | 32-ID's tomography instrument; zone-plate optics now catalog Families, parameters pending confirmation |
 | HSI / HSID (`32-ID-B`) | No | White-beam imaging and diffraction; diffraction has no precedent in CORA's catalog (owner scope) |
 | AM laser rig (`32-ID-B`) | No | An actuated non-X-ray energy source; modelled as a safety hazard, not an Asset (owner scope) |
 | Projection microscope | No | Still "space holder" in the source docs; modelling it now would be invention |

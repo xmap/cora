@@ -1,0 +1,65 @@
+# CORA Site descriptor: the NSLS-II site-level surface
+#
+# NSLS-II (National Synchrotron Light Source II, Brookhaven National Laboratory)
+# is the third Site CORA models, and the home of the FXI beamline. This file is
+# the single human-readable source for the facility's site-level instances: the
+# Facility itself, the Practices it would run, and the facility principals.
+#
+# Status: reverse-engineered. FXI is an operational NSLS-II beamline, but CORA
+# has not been connected to it and no FXI staff have confirmed this model. Every
+# value below is read from public NSLS-II open source (the bluesky profile
+# collection NSLS2/fxi-profile-collection and the shared NSLS2/nslsii package) or
+# inferred, and is carried as `pending` until FXI staff confirm it. Do not invent
+# facility specifics here; carry them as questions on the FXI open-questions page.
+#
+# Source-of-truth boundary (same as the APS and MAX IV sites):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name
+#     equals code); `heading` carries the human title used on the rendered page.
+
+facility:
+  code: nsls2
+  display_name: nsls2
+  heading: "NSLS-II"
+  kind: Site
+  institution: Brookhaven National Laboratory
+  beamlines: [FXI]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
+# because they are reverse-engineered from the FXI profile collection, not yet
+# confirmed with FXI staff. Each names the cross-facility Method it would adapt.
+practices:
+  - {name: FXI_tomography_practice, method: tomography, pending: true, note: "full-field transmission tomography; reverse-engineered from the FXI bluesky plans, awaiting staff confirmation"}
+  - {name: FXI_fly_tomography_practice, method: continuous_rotation_tomography, pending: true, note: "continuous-rotation fly tomography (tomo_zfly / fly_scan), Zebra position-triggered"}
+  - {name: FXI_energy_change_practice, method: beamline_energy_change, pending: true, note: "coupled energy move (move_zp_ccd_xh) for XANES and spectro-tomography"}
+
+# Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
+# operator and review structure is confirmed; the profile collection only exposes
+# coarse queue-server groups (root / primary), not the human roster.
+actors:
+  - {name: NSLS-II beamline staff, kind: human, pending: true, note: "operator and beamline-scientist pool; structure TBD (GOV-1)"}
+  - {name: NSLS-II safety review, kind: human, pending: true, note: "facility safety review body; membership TBD"}
+
+# Agent BC Agents seeded at this deployment. None declared: the CORA system agents
+# are not yet wired for an NSLS-II deployment.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in this
+# reverse-engineered model. LiquidNitrogen is the DCM crystal cooling read in the
+# profile collection (XF:18IDA-UT Cryo:1 levels/flow; cooling valves V4/V5).
+supplies:
+  - {name: Storage-ring beam current, kind: PhotonBeam, pending: true}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true}
+  - {name: DCM liquid nitrogen, kind: LiquidNitrogen, pending: true}
+
+# Safety BC: facility-issued Clearances. NSLS-II PSS form names are not confirmed;
+# the profile collection exposes only the PPS photon-shutter status, not the
+# search-and-secure permit leaves. Carried pending with a note rather than guessed.
+clearances:
+  - {name: NSLS-II personal safety system, kind: PSS, pending: true, note: "facility safety-form and permit-leaf names TBD; confirm with NSLS-II staff (PSS-1)"}
+
+# Caution BC: operator tribal knowledge. Beamline-level cautions reverse-engineered
+# for FXI live on docs/deployments/fxi/cautions.md, not here.
+cautions: []

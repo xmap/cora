@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | Beamline descriptor | [`deployments/32-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/32-id/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; `32-ID` added to its beamline list |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | no new Family added; the spine and TXM reuse existing Families, and the new device classes are bound to loose Family strings pending registration |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | the spine reuses existing Families; the TXM optic classes (`Condenser`, `ZonePlate`, `PhaseRing`) graduated into the catalog once FXI became a second deployment sharing them |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; TXM nano-tomography reuses `tomography` |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 32-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
@@ -26,8 +26,6 @@ These are the parts of 32-ID this scaffold leaves out on purpose. Each is a CORA
 - **The additive-manufacturing laser rig (32-ID-B).** The powder-bed-fusion rig is a user-brought, actuated, non-X-ray energy source with no Family or Role precedent. The default is to model the class-4 laser as a `Clearance` hazard on an experiment, not as an Asset CORA drives. Whether CORA ever orchestrates the laser is an owner decision.
 
 - **The projection microscope (PM).** The source docs for the PM are still "space holder", and its most distinctive parts (a helium-atmosphere KB system, a robotic sample-exchange arm) are the least documented. Modelling it now would be invention. The robotic sample changer in particular would force a sample-changer shape CORA does not have; it waits until the PM is documented and a real device list exists.
-
-- **TXM optic Families.** `Condenser`, `ZonePlate`, and `PhaseRing` are bound to loose Family strings, not coined as catalog Families. A design-phase scaffold registers no Assets, so nothing earns a Family yet; whether `ZonePlate` is one Family (condenser-vs-objective as a setting) or more is a naming-review decision taken when a confirmed TXM device registers.
 
 - **Integration scenarios and vendor Models.** No `test_32id_*.py` registers 32-ID Assets, and no vendor Models are bound. Scenario code is where Assets become real, and hard-registering a design-phase, pre-APS-U-mixed beamline would commit speculative structure. Both land when the design firms and the team approves.
 

@@ -1,0 +1,328 @@
+# FXI beamline descriptor (NSLS-II), reverse-engineered
+#
+# FXI (Full-field X-ray Imaging) is the NSLS-II transmission X-ray microscopy and
+# tomography beamline at sector 18-ID. It is the structural twin of the APS 2-BM
+# pilot (continuous-rotation fly tomography, hardware position-triggering, TomoPy
+# reconstruction) and is bound to the NSLS-II Site (deployments/nsls2/site.yaml).
+#
+# STATUS: reverse-engineered, not staff-confirmed. Every value here is read from
+# public NSLS-II open source (the bluesky profile collection
+# NSLS2/fxi-profile-collection and the shared NSLS2/nslsii package) or inferred.
+# This is a THIRD descriptor mode, between 2-BM (operational, fully measured) and
+# TomoWISE (design phase, no control system yet):
+#   - EPICS PVs ARE real and verified against the profile collection (FXI is a
+#     live EPICS beamline), so `pv` fields are populated, NOT omitted.
+#   - vendor part numbers, serial / firmware, motion-controller boxes, physical
+#     z positions, and the source type are NOT in the profile collection (they
+#     live in IOC st.cmd files and with FXI staff), so NO catalog `model` is
+#     bound and those values are carried as open questions.
+# Everything is carried `confirm: true` until FXI staff verify it. Items deferred
+# are tagged inline with a (QUESTION-ID) answered on docs/deployments/fxi/questions.md.
+#
+# Three TXM diffractive optics (Condenser, ZonePlate, PhaseRing) are now catalog
+# Families: they graduated once a second deployment (FXI, after 32-ID) shared them.
+# BetrandLens stays a loose family name (FXI is its only sighting; it renders as
+# plain text), pending a second deployment (OPTIC-3).
+#
+# Fields: see deployments/2-bm/beamline.yaml for the shared shape.
+
+beamline:
+  name: FXI
+  facility: nsls2               # NSLS-II, a Site-level Facility (facility_code: nsls2)
+  sector: "Sector 18"          # organizational label; PV namespace XF:18ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "insertion-device type (undulator vs damping wiggler) and parameters are not in the public profile collection (SRC-1)"
+  # No z_span: the profile collection carries no layout / z reference (LAYOUT-1).
+
+enclosures:
+  # Two access-gated areas, partitioned by the PV branch letter: 18-IDA carries the
+  # optics (XF:18IDA-*), 18-IDB the endstation (XF:18IDB-* / XF:18ID1-ES-*). The
+  # only permit handle exposed in the profile collection is the PPS photon-shutter
+  # status; the PSS search-and-secure permit leaves are not in source (PSS-1), so
+  # the permit_signal is carried as a confirm note rather than a guessed PV.
+  - name: 18-IDA
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "only the PPS photon-shutter status XF:18IDA-PPS{PSh}Pos-Sts is in source; the PSS search-and-secure permit leaf is unknown (PSS-1)"}
+  - name: 18-IDB
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf unknown; the XF:18ID1-ES namespace may be a distinct endstation area (ENC-1)"}
+
+# ===========================================================================
+# The beam path: source -> detector
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 18-IDA
+  intro: The insertion-device source delivering the beam to the optics hutch.
+  devices:
+    - name: Source
+      family: InsertionDevice
+      new: true
+      confirm: true
+      note: "18-ID insertion device. Type (undulator vs damping wiggler), period, gap, and power are not in the public profile collection (SRC-1); recorded as a Supply (PhotonBeam) at the Site, identity-only here."
+
+optics:
+  stage: source
+  enclosure: 18-IDA
+  intro: Condition the beam and set its energy. The double-crystal monochromator, two mirrors, the white-beam slit, attenuating filters, and the flux diagnostics.
+  note: >
+    PV prefixes are verified against startup/12-optics_motor.py and
+    startup/10-area-detector.py of NSLS2/fxi-profile-collection. No vendor model is
+    bound (part numbers unknown); the mirror role labels and crystal cut are
+    carried confirm.
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:18IDA-OP{Mono:DCM"
+      axis_channels: { Th1: "XF:18IDA-OP{Mono:DCM-Ax:Th1}Mtr", Th2: "XF:18IDA-OP{Mono:DCM-Ax:Th2}Mtr", Chi2: "XF:18IDA-OP{Mono:DCM-Ax:Chi2}Mtr", Dy2: "XF:18IDA-OP{Mono:DCM-Ax:Dy2}Mtr", Energy: "XF:18IDA-OP{Mono:DCM-Ax:En}Mtr" }
+      crystal_cut: "Si (cut unknown, DCM-1)"
+      confirm: true
+      note: >
+        Double-crystal monochromator (class DCM). The Energy axis (-Ax:En) is the
+        master energy handle; it is the same EPICS record CORA exposes as the XEng
+        computed axis below. Th2 and Chi2 carry IOC-level PID fine feedback
+        (-Ax:Th2}PID.FBON, -Ax:Chi2}PID.FBON): a closed loop that stays on the
+        floor, not driven by CORA. Crystal cut and energy range pending (DCM-1).
+    - name: CollimatingMirror
+      family: Mirror
+      pv: "XF:18IDA-OP{Mir:CM"
+      confirm: true
+      note: >
+        First mirror (class mirror, instance cm). The "collimating" role label is
+        inferred from the cm name and is carried confirm: both FXI mirrors are the
+        same ophyd class with no role string in source (OPTIC-1). Has a piezo
+        bender with a load-cell (force readout); bender control stays on the floor.
+    - name: ToroidalMirror
+      family: Mirror
+      pv: "XF:18IDA-OP{Mir:TM"
+      confirm: true
+      note: "Second mirror (class mirror, instance tm). The 'toroidal' role label is inferred from the tm name, carried confirm (OPTIC-1)."
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: "XF:18IDA-OP{PBSL:1"
+      confirm: true
+      note: "White-beam-defining slit (class PBSL). Named gap/center axes; blade-axis suffixes pending (OPTIC-2)."
+    - name: SecondarySourceSlit
+      family: Slit
+      new: true
+      confirm: true
+      note: "Secondary-source-defining aperture (class TXM_SSA in startup/11-txm_motor.py); PV prefix not captured in this pass (OPTIC-2)."
+    - name: Filter
+      family: Filter
+      pv: { foil_pattern: "XF:18IDB-ES{IOLOGIK5:E1211}:DO{1..8}-Cmd" }
+      confirm: true
+      note: >
+        Eight pneumatic attenuating foils (filter1..filter8), each a digital-output
+        relay on a Moxa ioLogik E1211 (not motors). Foil materials and thicknesses
+        are not in the profile collection (FILT-1).
+    - name: XEng
+      family: PseudoAxis
+      pv: "XF:18IDA-OP{Mono:DCM-Ax:En}Mtr"
+      confirm: true
+      note: >
+        The master energy computed axis (== Monochromator Energy axis, verified
+        same record). Driving it triggers the coupled energy move move_zp_ccd_xh
+        (startup/41-scans.py), which over a 5 to 15 keV range interpolates a
+        calibration table (CALIBER / trans_calib_xh) to co-move the DCM (Chi2, Th2),
+        zone plate (X, Y), condenser (X, Y1, Y2, P), aperture (X, Y), and detector
+        (X, Y) so magnification stays constant. The lookup table is built by a
+        staff calibration procedure (see procedures.md); CORA would own this move
+        as the energy_change Conductor leg.
+    - name: WhiteFluxMonitor
+      family: GenericProbe
+      pv: "XF:18IDA-BI{WPFS:1}"
+      confirm: true
+      note: "White-beam flux/position sensor (Manta camera, read-only diagnostic)."
+    - name: PinkFluxMonitor
+      family: GenericProbe
+      pv: "XF:18IDA-BI{PMFS:1}"
+      confirm: true
+      note: "Pink-beam flux/position sensor (Manta camera, read-only diagnostic)."
+    - name: MonoFluxMonitor
+      family: GenericProbe
+      pv: "XF:18IDA-BI{MFS:1}"
+      confirm: true
+      note: "Monochromatic-beam flux/position sensor (Manta camera, read-only diagnostic)."
+
+sample:
+  stage: sample
+  enclosure: 18-IDB
+  intro: The TXM sample stage and the transmission-microscopy optics around it (condenser, aperture, zone plate, phase ring, Bertrand lens).
+  note: >
+    All bind to the XF:18IDB-OP prefix and are verified against
+    startup/11-txm_motor.py. Condenser, ZonePlate, and PhaseRing are catalog
+    Families (graduated with this deployment); BetrandLens stays a loose family
+    name (FXI-only, OPTIC-3).
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: "XF:18IDB-OP"
+      axis_channels: { sx: "XF:18IDB-OP{Env:1-Ax:Xl}Mtr", sy: "XF:18IDB-OP{Env:1-Ax:Yl}Mtr", sz: "XF:18IDB-OP{Env:1-Ax:Zl}Mtr" }
+      confirm: true
+      note: "Sample translation stack (class TXMSampleStage, sx/sy/sz). Vendor and travel pending (STAGE-1)."
+    - name: SampleRotary
+      family: RotaryStage
+      pv: "XF:18IDB-OP{TXM:2-Ax:R}Mtr"
+      trigger_source: PSO
+      confirm: true
+      note: >
+        The tomography rotation axis (pi_r). The Zebra reads it as encoder enc1 and
+        position-triggers the camera (fly tomography). Hardware (air-bearing vs
+        piezo), encoder resolution, and max speed are not in the profile collection;
+        the "PI / Physik Instrumente" reading of pi_r is a naming inference (STAGE-2).
+    - name: Condenser
+      family: Condenser
+      pv: "XF:18IDB-OP"
+      axis_channels: { x: "XF:18IDB-OP{CLens:1-Ax:X}Mtr", y1: "XF:18IDB-OP{CLens:1-Ax:Y1}Mtr", y2: "XF:18IDB-OP{CLens:1-Ax:Y2}Mtr", z1: "XF:18IDB-OP{CLens:1-Ax:Z1}Mtr", z2: "XF:18IDB-OP{CLens:1-Ax:Z2}Mtr", p: "XF:18IDB-OP{CLens:1-Ax:P}Mtr" }
+      new: true
+      confirm: true
+      note: "Condenser optic (class Condenser, instance clens). Catalog Family (graduated with this deployment)."
+    - name: Aperture
+      family: Aperture
+      pv: "XF:18IDB-OP"
+      axis_channels: { x: "XF:18IDB-OP{Aper:1-Ax:X}Mtr", y: "XF:18IDB-OP{Aper:1-Ax:Y}Mtr", z: "XF:18IDB-OP{TXM-Aper:1-Ax:Z}Mtr" }
+      confirm: true
+      note: "TXM aperture (class Aperture, instance aper)."
+    - name: ZonePlate
+      family: ZonePlate
+      pv: "XF:18IDB-OP"
+      axis_channels: { x: "XF:18IDB-OP{ZP:1-Ax:X}Mtr", y: "XF:18IDB-OP{BLens:1-Ax:Y}Mtr", z: "XF:18IDB-OP{TXM-ZP:1-Ax:Z}Mtr" }
+      manufacturer_reported: "NanoTools"
+      zone_diameter_um: 244
+      outer_zone_width_nm: 30
+      new: true
+      confirm: true
+      note: >
+        Zone plate objective (class Zoneplate, instance zp). Catalog Family
+        (graduated with this deployment). The 244 um / 30 nm and NanoTools values are
+        code constants (startup/20-global_param.py), not staff-confirmed (OPTIC-4).
+        CAUTION: zp.y is wired to the {BLens:1-Ax:Y} record while betr.y is wired to
+        {ZP:1-Ax:Y}; the two Y axes are cross-wired in source (CAUTION, see cautions.md).
+    - name: PhaseRing
+      family: PhaseRing
+      pv: "XF:18IDB-OP"
+      axis_channels: { x: "XF:18IDB-OP{PR:1-Ax:X}Mtr", y: "XF:18IDB-OP{PR:1-Ax:Y}Mtr", z: "XF:18IDB-OP{TXM-PH:1-Ax:Z}Mtr" }
+      new: true
+      confirm: true
+      note: "Zernike phase ring (class PhaseRing, instance phase_ring). Catalog Family (graduated with this deployment)."
+    - name: BetrandLens
+      family: BetrandLens
+      pv: "XF:18IDB-OP"
+      axis_channels: { x: "XF:18IDB-OP{BLens:1-Ax:X}Mtr", y: "XF:18IDB-OP{ZP:1-Ax:Y}Mtr" }
+      new: true
+      confirm: true
+      note: "Bertrand lens (class BetrandLens, instance betr; spelled BetrandLens in source). Loose family, genuinely novel optic (OPTIC-3). See the zp/betr Y cross-wiring caution."
+    - name: IonChamber
+      family: GenericProbe
+      pv: "XF:18IDB-BI{"
+      confirm: true
+      note: "Beam-intensity ion chambers ic1..ic4 (i404 quad electrometer) plus an FXIScaler; read-only. Exact channel suffixes pending (DIAG-1)."
+
+detector:
+  stage: detection
+  enclosure: 18-IDB
+  intro: "Convert the transmitted beam to light and record it: the scintillator, the detector support rails, and the imaging camera."
+  note: >
+    PV prefixes verified against startup/10-area-detector.py. Multiple camera
+    classes appear (Andor Neo2, Andor Marana, Photometrics Kinetix); the U/D pairs
+    (MaranaU/MaranaD, KinetixU/KinetixD) share identical PVs, with KinetixD marked
+    in source as a placeholder reusing KinetixU's PVs. CORA therefore models ONE
+    detector position until staff confirm which cameras are physically installed
+    and active (CAM-1).
+  devices:
+    - name: Scintillator
+      family: Scintillator
+      pv: "XF:18IDB-OP{Det:Lens"
+      axis_channels: { x: "XF:18IDB-OP{Det:Lens-Ax:X}Mtr", y: "XF:18IDB-OP{Det:Lens-Ax:Y}Mtr", z: "XF:18IDB-OP{Det:Lens-Ax:Z}Mtr" }
+      confirm: true
+      note: "Scintillator-relay lens stage (class Scint, instance scint). Material and thickness pending (DET-1)."
+    - name: DetectorSupport
+      family: LinearStage
+      confirm: true
+      note: >
+        Detector support rails (class DetSupport, instances DetU/DetD), x/y/z. The
+        DetU z position is the sample-to-detector propagation distance used in the
+        magnification calculation. PV prefix not captured in this pass (DET-2).
+    - name: Camera
+      family: Camera
+      pv: "XF:18ID1-ES{Kinetix-Det:1}"
+      readout_config_keys: [KINETIX, KINETIX22, MARANA-4BV6X, SONA-4BV6X]
+      new: true
+      confirm: true
+      note: >
+        The imaging detector, bound to the live Photometrics Kinetix (KinetixU, the
+        instance carrying RE.md). The roster of camera classes present in source is
+        Andor Neo2 (XF:18IDB-BI{Det:Neo2}), Andor Marana (XF:18IDB-ES{Det:Marana1}),
+        and Kinetix (XF:18ID1-ES{Kinetix-Det:1}); detA1 and a VLM are also Manta
+        cameras. Kinetix 22mm vs 29mm is distinguished at runtime by max_size_x
+        (2400 vs 3200). Which cameras are physically installed and active, and
+        whether a second position exists, is unresolved (CAM-1). Vendor part numbers
+        are inferred from class names, not literal in source (CAM-2).
+    - name: Magnification
+      family: PseudoAxis
+      confirm: true
+      note: >
+        The TXM magnification, computed as (DetU.z / zp.z - 1) * VLM, with the
+        visible-light-microscope factor VLM = 10 (GLOBAL_VLM_MAG, startup/20-global_param.py).
+        A virtual axis derived from two real Z positions; no PV of its own.
+  decommissioned:
+    - Oryx (XF:18IDB-ES{Det:Oryx1}, commented out in source)
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    The trigger hardware and the drive-electronics boxes. The motion controllers
+    are recorded as families only: the controller boxes (model, protocol, axis
+    count, serial, firmware, IP) are NOT in public open source. FXI has no
+    IOC-config repo (only fxi-profile-collection + fxi-workflows); NSLS-II's
+    per-beamline IOC inventory (nsls2.ioc_deploy Ansible device roles plus a
+    <bl>-epics-containers repo) is ops-private. Investigated and confirmed: these
+    need FXI staff or inventory access (DRIVE-1).
+  triggering:
+    - name: Zebra
+      family: TimingController
+      pv: "XF:18ID-ES:1{Dev:Zebra1}:"
+      trigger_source: PSO
+      confirm: true
+      note: >
+        Zebra FPGA position-capture box (class FXIZebra / ZebraPositionCapture). It
+        reads the sample rotary as encoder enc1 (enc2 = sx, enc3 = sy) and emits
+        position-compare pulses: PC_PULSE -> TTL1 -> camera, TTL2 -> fast shutter.
+        This is the NSLS-II analog of 2-BM's Aerotech PSO; the gating is hardware,
+        armed and configured by CORA over the ControlPort. A second box (Zebra2) is
+        referenced in source but only Zebra1 is instantiated (ZEBRA-1). The
+        register-overflow constant ZEBRA_OVERFLOW is a known wrap hazard (see cautions.md).
+  motion_controllers:
+    - name: SampleMotionController
+      family: MotionController
+      confirm: true
+      note: "Drives the 18-IDB sample-side EpicsMotors (XF:18IDB-OP*). Box model/protocol/IP unknown; FXI's IOC inventory is ops-private, not in public open source (DRIVE-1)."
+    - name: OpticsMotionController
+      family: MotionController
+      confirm: true
+      note: "Drives the 18-IDA optics EpicsMotors (XF:18IDA-OP*). Box identity unknown; not in public open source (DRIVE-1)."
+  software_iocs_not_modeled:
+    # Software processes referenced by PV namespace, never registered as Assets.
+    [Andor, Kinetix, Marana, Manta, Zebra, ioLogik, MCTOptics-equivalent]
+
+resources:
+  intro: >
+    Continuously-available resources (the Supply BC) and the field-swappable parts.
+    Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum                # XF:18IDB-UT{V...} gate/cryo valves observed in source
+    - kind: LiquidNitrogen        # DCM crystal cooling (XF:18IDA-UT Cryo:1; valves V4/V5)
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["cameras", "zone plates", "scintillator", "objectives"]
+    passive: ["filter foils"]
