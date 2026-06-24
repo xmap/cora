@@ -86,7 +86,9 @@ families:
     note: "Discrete absorber-foil changer Family; at 2-BM the C / Al foil paddles that attenuate and condition the white beam (the upstream paddle 2bma:m17 is the operational selector; the downstream 2bma:m18 is currently Faulted)."
   - name: InsertionDevice
     note: "Source-defining insertion-device Family (the storage-ring straight-section source). One Family spans the cryo-undulator and the wiggler; the device type and its gap / field parameters are a per-Asset settings difference, not a Family split (the Table precedent). TomoWISE: the CPMU14 cryogenic permanent-magnet undulator and the 3T3PW three-pole wiggler, switchable per operation mode. A bending-magnet source (2-BM) is not an insertion device; it stays modelled loosely as the beam source, not through this Family."
-  # Pending in code (documented, not yet defined): Goniometer;
+  - name: Goniometer
+    note: "Multi-axis sample-orientation goniometer Family: omega / chi / phi rotation plus the x / y / z sample-centring translations, with centre-of-rotation control. The MX micro-goniometer. Distinct from RotaryStage (a single tomographic rotation axis that carries PSO fly-scan Following / Marking, which the goniometer does not) and from TiltStage (a limited-range tilt with no primary rotation axis); the discriminator is the multi-axis crystal-orientation role. Graduated from pending on i03 (the Smargon), CORA's first canonical-goniometer deployment; chi-vs-kappa and axis-count are a per-Asset settings or bound-Model difference, not a Family split (the InsertionDevice / Table precedent)."
+  # Pending in code (documented, not yet defined): none.
   # future: OpticalRelay.
 
 capabilities:
