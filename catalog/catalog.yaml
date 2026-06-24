@@ -322,17 +322,19 @@ assemblies:
       - { slot_name: optics, sub_assembly: Optics }
   - name: Diffractometer
     note: >-
-      Multi-circle goniometer for single-crystal diffraction: a set of sample rotation
-      circles, a sample-translation table, and a reciprocal-space pseudo-axis (hklpy2),
-      presenting the Positioner Role. sample_circles is OneOrMore because the circle count
-      is a per-deployment geometry, not a Family split: 4-ID binds a Eulerian cradle and a
-      high-pressure diffractometer, 8-ID binds a six-circle Huber (mu, eta, chi, phi, nu,
-      delta). The reciprocal_space slot is the existing PseudoAxis Family (its partition rule
-      resolves the hklpy2 inverse kinematics, the same mechanism as the 2-BM objective
-      selector). Flat (no sub-assembly), unlike Microscope. Earned in once two independent
-      beamlines (4-ID, 8-ID) shared it.
+      Composed multi-circle scattering diffractometer, presenting the Positioner Role. It
+      COMPOSES a Goniometer (the sample-orientation circles plus x/y/z centring, one Asset),
+      zero or more RotaryStage detector-arm circles, and a reciprocal-space PseudoAxis whose
+      partition rule resolves the hklpy2 inverse kinematics. This is the distinction from the
+      Goniometer Family: the Goniometer is the integrated single-device sample orienter (the
+      I03 Smargon); the Diffractometer is the larger composed scattering instrument that USES
+      a Goniometer and adds the detector arm and reciprocal-space layer. detector_arm is
+      ZeroOrMore because the count is a per-deployment geometry: 8-ID's six-circle Huber binds
+      four sample circles as the Goniometer and nu / delta as the detector arm, while a
+      Eulerian cradle may have none. Flat (no sub-assembly), unlike Microscope. Earned in once
+      two independent beamlines (4-ID, 8-ID) shared it.
     presents_as: [Positioner]
     required_slots:
-      - { slot_name: sample_circles, required_families: [RotaryStage], cardinality: OneOrMore }
-      - { slot_name: sample_table, required_families: [LinearStage], cardinality: Exactly1 }
+      - { slot_name: goniometer, required_families: [Goniometer], cardinality: Exactly1 }
+      - { slot_name: detector_arm, required_families: [RotaryStage], cardinality: ZeroOrMore }
       - { slot_name: reciprocal_space, required_families: [PseudoAxis], cardinality: Exactly1 }

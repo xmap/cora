@@ -1,4 +1,4 @@
-"""Six-circle diffractometer deployment at APS 8-ID (Assembly + Fixture).
+"""Six-circle diffractometer deployment at APS 8-ID (Assembly composes Goniometer).
 
 cluster: Commissioning
 archetype: setup
@@ -8,23 +8,22 @@ bc_touches: Equipment
 Materializes the 8-ID-E six-circle Huber diffractometer as a Diffractometer
 Assembly and one Fixture, end-to-end against Postgres. This is the first spine
 exercise of the reverse-engineered APS deployments (4-ID POLAR and 8-ID): it
-proves the Assembly(Diffractometer) blueprint the catalog-graduation pass
-designed.
+proves the Assembly(Diffractometer) blueprint, which COMPOSES the Goniometer
+Family graduated for I03 MX (#340) rather than re-modelling the sample circles.
 
-  - six rotation-circle Assets (mu, eta, chi, phi, nu, delta), each Family
-    RotaryStage, that bind one OneOrMore `sample_circles` slot,
-  - one sample-translation Asset (SampleTable, Family LinearStage) on the
-    Exactly1 `sample_table` slot,
-  - one reciprocal-space Asset (ReciprocalSpace, Family PseudoAxis) on the
-    Exactly1 `reciprocal_space` slot; its hklpy2 solver partition rule is
-    DIFF-2, left unset here,
-  - a flat Diffractometer Assembly (no sub-assembly, unlike Microscope)
-    presenting the Positioner Role via presents_as,
-  - one Fixture binding the eight Assets across the three slots.
+  - one Goniometer Asset (Family Goniometer) for the sample-orientation circles
+    (mu / eta / chi / phi) plus x/y/z centring, bound to the Exactly1 `goniometer`
+    slot. The Goniometer is the integrated sample orienter; the Diffractometer is
+    the larger composed instrument that uses it.
+  - two detector-arm circle Assets (Nu, Delta), each Family RotaryStage, bound to
+    the ZeroOrMore `detector_arm` slot,
+  - one reciprocal-space Asset (ReciprocalSpace, Family PseudoAxis) on the Exactly1
+    `reciprocal_space` slot; its hklpy2 solver partition rule is DIFF-2, left unset,
+  - a flat Diffractometer Assembly presenting the Positioner Role,
+  - one Fixture binding the four Assets across the three slots.
 
-The OneOrMore `sample_circles` slot is what lets one blueprint span 8-ID's
-six circles and 4-ID's four-circle Eulerian / high-pressure geometries: the
-circle count is a per-deployment geometry, not a Family split.
+detector_arm is ZeroOrMore so one blueprint spans 8-ID's nu / delta detector arm
+and 4-ID's detector-arm-less Eulerian / high-pressure geometries.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -67,33 +66,30 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000008d00bb")
 _8ID_UNIT_ID = UUID("01900000-0000-7000-8000-0000008d0a01")
 
 # Family ids (deterministic uuid5 from the name).
+_CAP_GONIOMETER_ID = family_stream_id(FamilyName("Goniometer"))
 _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
-_CAP_LINEAR_STAGE_ID = family_stream_id(FamilyName("LinearStage"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 
-# The eight diffractometer constituent Assets (scenario-supplied ids).
-_ASSET_MU_ID = UUID("01900000-0000-7000-8000-0000008d0a11")
-_ASSET_ETA_ID = UUID("01900000-0000-7000-8000-0000008d0a21")
-_ASSET_CHI_ID = UUID("01900000-0000-7000-8000-0000008d0a31")
-_ASSET_PHI_ID = UUID("01900000-0000-7000-8000-0000008d0a41")
-_ASSET_NU_ID = UUID("01900000-0000-7000-8000-0000008d0a51")
-_ASSET_DELTA_ID = UUID("01900000-0000-7000-8000-0000008d0a61")
-_ASSET_SAMPLE_TABLE_ID = UUID("01900000-0000-7000-8000-0000008d0a71")
-_ASSET_RECIPROCAL_SPACE_ID = UUID("01900000-0000-7000-8000-0000008d0a81")
+# The four diffractometer constituent Assets (scenario-supplied ids): one
+# Goniometer (the mu/eta/chi/phi sample orienter), two detector-arm circles, the
+# reciprocal-space pseudo-axis.
+_ASSET_GONIOMETER_ID = UUID("01900000-0000-7000-8000-0000008d0a11")
+_ASSET_NU_ID = UUID("01900000-0000-7000-8000-0000008d0a21")
+_ASSET_DELTA_ID = UUID("01900000-0000-7000-8000-0000008d0a31")
+_ASSET_RECIPROCAL_SPACE_ID = UUID("01900000-0000-7000-8000-0000008d0a41")
 
-# The six circles share one OneOrMore slot; the table and pseudo-axis are Exactly1.
-_CIRCLES: tuple[tuple[str, UUID], ...] = (
-    ("Mu", _ASSET_MU_ID),
-    ("Eta", _ASSET_ETA_ID),
-    ("Chi", _ASSET_CHI_ID),
-    ("Phi", _ASSET_PHI_ID),
+# The two detector-arm circles share the ZeroOrMore detector_arm slot.
+_DETECTOR_CIRCLES: tuple[tuple[str, UUID], ...] = (
     ("Nu", _ASSET_NU_ID),
     ("Delta", _ASSET_DELTA_ID),
 )
 
 _DEVICES = (
-    *(DeviceSpec(name, aid, "RotaryStage", _CAP_ROTARY_STAGE_ID) for name, aid in _CIRCLES),
-    DeviceSpec("SampleTable", _ASSET_SAMPLE_TABLE_ID, "LinearStage", _CAP_LINEAR_STAGE_ID),
+    DeviceSpec("SampleGoniometer", _ASSET_GONIOMETER_ID, "Goniometer", _CAP_GONIOMETER_ID),
+    *(
+        DeviceSpec(name, aid, "RotaryStage", _CAP_ROTARY_STAGE_ID)
+        for name, aid in _DETECTOR_CIRCLES
+    ),
     DeviceSpec("ReciprocalSpace", _ASSET_RECIPROCAL_SPACE_ID, "PseudoAxis", _CAP_PSEUDO_AXIS_ID),
 )
 
@@ -106,18 +102,17 @@ def _id_queue() -> list[UUID]:
 
 
 @pytest.mark.integration
-async def test_diffractometer_deployment_plays_out_end_to_end(db_pool: asyncpg.Pool) -> None:
-    """Compose the 8-ID six-circle diffractometer as a Diffractometer Assembly +
-    Fixture end-to-end: facility install of the eight constituent Assets, the flat
-    Assembly (sample_circles OneOrMore + sample_table + reciprocal_space, presenting
-    Positioner), per-constituent Mount install, the Fixture binding the eight Assets,
-    and the eight attaches. Assert the Assembly and Fixture event streams, the
-    OneOrMore circle binding count, and the fixture back-references."""
+async def test_diffractometer_composes_goniometer_end_to_end(db_pool: asyncpg.Pool) -> None:
+    """Compose the 8-ID six-circle diffractometer as a Diffractometer Assembly that
+    binds a Goniometer for its sample circles, detector-arm RotaryStages, and a
+    reciprocal-space PseudoAxis, then materialize a Fixture. Assert the Assembly and
+    Fixture event streams, the ZeroOrMore detector-arm binding count, and the
+    fixture back-references."""
     role_lookup = InMemoryRoleLookup()
     role_lookup.register(SEED_ROLE_POSITIONER_ID, "Positioner")
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue(), role_lookup=role_lookup)
 
-    # ----- Facility install (8-ID Unit + the eight diffractometer Assets) -----
+    # ----- Facility install (8-ID Unit + Goniometer + detector circles + pseudo) -----
     await install_aps_unit(
         deps,
         profile_store=make_pg_profile_store(db_pool),
@@ -127,7 +122,7 @@ async def test_diffractometer_deployment_plays_out_end_to_end(db_pool: asyncpg.P
         unit_name="8-ID",
     )
 
-    # ----- Diffractometer Assembly (flat: three leaf slots, presents Positioner) -----
+    # ----- Diffractometer Assembly (flat: composes a Goniometer + detector arm) -----
     def _slot(
         name: str, fam_id: UUID, cardinality: SlotCardinality = SlotCardinality.EXACTLY_1
     ) -> TemplateSlot:
@@ -143,8 +138,8 @@ async def test_diffractometer_deployment_plays_out_end_to_end(db_pool: asyncpg.P
             presents_as=frozenset({SEED_ROLE_POSITIONER_ID}),
             required_slots=frozenset(
                 {
-                    _slot("sample_circles", _CAP_ROTARY_STAGE_ID, SlotCardinality.ONE_OR_MORE),
-                    _slot("sample_table", _CAP_LINEAR_STAGE_ID),
+                    _slot("goniometer", _CAP_GONIOMETER_ID),
+                    _slot("detector_arm", _CAP_ROTARY_STAGE_ID, SlotCardinality.ZERO_OR_MORE),
                     _slot("reciprocal_space", _CAP_PSEUDO_AXIS_ID),
                 }
             ),
@@ -156,8 +151,8 @@ async def test_diffractometer_deployment_plays_out_end_to_end(db_pool: asyncpg.P
     # ----- Install each bound Asset in a lightweight Mount (register_fixture
     #       install precondition); the helper runs on its own id pool. -----
     bound: list[tuple[str, UUID]] = [
-        *(("sample_circles", aid) for _, aid in _CIRCLES),
-        ("sample_table", _ASSET_SAMPLE_TABLE_ID),
+        ("goniometer", _ASSET_GONIOMETER_ID),
+        *(("detector_arm", aid) for _, aid in _DETECTOR_CIRCLES),
         ("reciprocal_space", _ASSET_RECIPROCAL_SPACE_ID),
     ]
     for i, (slot_name, asset_id) in enumerate(bound):
@@ -165,7 +160,7 @@ async def test_diffractometer_deployment_plays_out_end_to_end(db_pool: asyncpg.P
             db_pool, now=_NOW, asset_id=asset_id, slot_code=f"diffractometer_{slot_name}_{i}"
         )
 
-    # ----- Register the Fixture (binds the eight Assets across three slots) -----
+    # ----- Register the Fixture (binds the four Assets across three slots) -----
     fixture_id = await bind_register_fixture(deps)(
         RegisterFixture(
             assembly_id=assembly_id,
@@ -196,15 +191,15 @@ async def test_diffractometer_deployment_plays_out_end_to_end(db_pool: asyncpg.P
     assert len(payload["required_slots"]) == 3
     assert payload["required_sub_assemblies"] == []
 
-    # Fixture stream: FixtureRegistered binding eight Assets, six under sample_circles.
+    # Fixture stream: FixtureRegistered binding four Assets, two under detector_arm.
     fixture_events, _ = await deps.event_store.load("Fixture", fixture_id)
     assert [e.event_type for e in fixture_events] == ["FixtureRegistered"]
     bindings = fixture_events[0].payload["slot_asset_bindings"]
-    assert len(bindings) == 8
-    assert sum(1 for b in bindings if b["slot_name"] == "sample_circles") == 6
+    assert len(bindings) == 4
+    assert sum(1 for b in bindings if b["slot_name"] == "detector_arm") == 2
     assert {b["slot_name"] for b in bindings} == {
-        "sample_circles",
-        "sample_table",
+        "goniometer",
+        "detector_arm",
         "reciprocal_space",
     }
     assert fixture_events[0].payload["assembly_id"] == str(assembly_id)
