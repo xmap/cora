@@ -45,7 +45,22 @@ its registry from a third substrate. No registry ships now.
 - **`ComputeResult`** is the captured-once result the runtime
   snapshots onto the Run's terminal event for replay determinism
   ([[project_non_determinism_principle]]): job id, terminal status,
-  the output artifacts and values, and the `ActuationKind` the adapter declares.
+  the output artifacts and measurements, and the `ActuationKind` the
+  adapter declares.
+
+## Two consumers, two output arms
+
+ComputePort feeds two runtimes that each lean on a different output
+arm. The Reckoner (the Run-conducting runtime in
+`cora.api._reckoner`) drives the file-artifact arm: submit -> await ->
+`fetch_artifact_ref` -> `provide_result(artifacts=...)`. The Procedure
+Conductor (`cora.operation.conductor`, slice 6a) drives the value arm:
+submit -> await -> `fetch_measurements` -> `provide_result(measurements=...)`,
+recording each `Measurement` on the Procedure's activity log so an
+align-resolution routine yields a structured value (a detector pixel
+size) that homes to a Calibration. The two arms ride one port surface
+because both are the same submit/await posture over a compute substrate;
+which arm a job populates is the consumer's choice, not a port split.
 
 ## Actuation kind
 
@@ -207,13 +222,16 @@ class ComputeResult:
     `actuation_kind` determination (a real subprocess is `Physical`, the
     fake is `Simulated`). A conduct's outputs are a SET: zero or more file
     `artifacts` (each an `ArtifactRef` that feeds `RegisterDataset` 1:1)
-    and zero or more structured `values` (each a `Measurement`, the value
-    arm that homes to a Calibration). A reconstruction populates
-    `artifacts`; an alignment measurement populates `values`; a
+    and zero or more structured `measurements` (each a `Measurement`, the
+    value arm that homes to a Calibration). A reconstruction populates
+    `artifacts`; an alignment measurement populates `measurements`; a
     quality-reporting reconstruction populates both. The runtime threads
     `actuation_kind` + `job_id` + the outputs onto the terminal event so a
     replay folds the same provenance without re-running the job
     ([[project_non_determinism_principle]]).
+
+    The Reckoner (Run path) populates `artifacts`; the Procedure
+    Conductor (slice 6a) populates `measurements` from `fetch_measurements`.
 
     `is_simulated` is derived, not stored: any simulator touch
     disqualifies promotion, so `actuation_kind in {Simulated, Hybrid}`
@@ -225,7 +243,7 @@ class ComputeResult:
     status: ComputeStatus
     actuation_kind: ActuationKind
     artifacts: tuple[ArtifactRef, ...] = ()
-    values: tuple[Measurement, ...] = ()
+    measurements: tuple[Measurement, ...] = ()
 
     @property
     def is_simulated(self) -> bool:
@@ -312,6 +330,22 @@ class ArtifactNotFoundError(Exception):
         self.uri = uri
 
 
+class MeasurementNotFoundError(Exception):
+    """A succeeded job surfaced no structured measurement to fetch.
+
+    The value-arm sibling of `ArtifactNotFoundError`. Triggered when
+    `fetch_measurements` cannot produce the `Measurement`s the conduct
+    expected: the in-memory substrate has none seeded, or a real
+    substrate that does not (yet) read structured values is asked for
+    them. The Procedure Conductor maps this to a recorded step failure
+    so no Calibration is written off a phantom measurement.
+    """
+
+    def __init__(self, job_id: JobId) -> None:
+        super().__init__(f"Compute job {job_id!r} produced no measurements")
+        self.job_id = job_id
+
+
 class NonRegularTreeEntryError(Exception):
     """A directory artifact contains a non-regular, non-symlink entry.
 
@@ -380,21 +414,37 @@ class ComputePort(Protocol):
         """
         ...
 
+    async def fetch_measurements(self, job_id: JobId) -> tuple[Measurement, ...]:
+        """Return the structured `Measurement`s a succeeded `job_id` produced.
+
+        The value-arm sibling of `fetch_artifact_ref`, consumed by the
+        Procedure Conductor's ComputeStep (slice 6a). Only valid after
+        `await_terminal_state` returned `Succeeded`. Raises
+        `MeasurementNotFoundError` when the job surfaced no structured
+        value (the in-memory fake has none seeded; a real substrate that
+        does not read structured values raises rather than returning empty).
+        """
+        ...
+
     def provide_result(
         self,
         job_id: JobId,
         status: ComputeStatus,
         artifacts: tuple[ArtifactRef, ...] = (),
+        measurements: tuple[Measurement, ...] = (),
     ) -> ComputeResult:
-        """Assemble the `ComputeResult` for this job's file artifacts.
+        """Assemble the `ComputeResult` for this job's outputs.
 
         Pure assembly (no IO): the adapter stamps the `ActuationKind` it
         is the authority for (`Physical` for a real substrate, `Simulated`
         for the fake) onto the captured job id, terminal status, and the
-        produced file `artifacts`. The runtime threads this onto the Run
-        terminal event for replay-deterministic provenance. The `values`
-        arm is populated by the value-producing compute-step path, not
-        here (this is the file-artifact path the compute-Run runtime drives).
+        produced outputs. The runtime threads this onto the terminal event
+        for replay-deterministic provenance. The `artifacts` arm is the
+        file path the Reckoner (Run runtime) drives; the `measurements`
+        arm is the value path the Procedure Conductor drives (slice 6a),
+        each from its respective `fetch_*` call. The adapter stamps the
+        kind onto BOTH arms so a value-producing conduct carries the same
+        promotion provenance as a file-producing one.
         """
         ...
 
@@ -422,5 +472,6 @@ __all__ = [
     "ComputeTimeoutError",
     "JobId",
     "JobSpec",
+    "MeasurementNotFoundError",
     "NonRegularTreeEntryError",
 ]

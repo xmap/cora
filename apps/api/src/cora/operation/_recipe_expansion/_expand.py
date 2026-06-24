@@ -2,9 +2,10 @@
 
 Cross-BC bridge: the Recipe BC's `RecipeStep` union + `BindingRef`
 sentinel describe parameterized scan recipes; the Operation BC's `Step`
-union (`SetpointStep | ActionStep | CheckStep`) is what the Conductor
-walks. The direction Operation -> Recipe is the allowed dependency
-edge (tach-enforced), so this expansion bridge lives here.
+union (the arms are pinned against the Procedure aggregate's
+`STEP_KIND_VALUES`) is what the Conductor walks. The direction
+Operation -> Recipe is the allowed dependency edge (tach-enforced), so
+this expansion bridge lives here.
 
 Per [[project-recipe-aggregate-design]] the expansion contract is
 pure: no clock, no port I/O, no randomness, no module-global state.
@@ -21,6 +22,7 @@ from cora.operation.conductor import (
     ActionStep,
     CaptureStep,
     CheckStep,
+    ComputeStep,
     EqualsCriterion,
     SetpointStep,
     Step,
@@ -29,6 +31,7 @@ from cora.operation.conductor import (
 from cora.recipe.aggregates.recipe import (
     RecipeActionStep,
     RecipeCaptureStep,
+    RecipeComputeStep,
     RecipeSetpointStep,
     RecipeStep,
 )
@@ -82,6 +85,16 @@ def _expand_step(step: RecipeStep, bindings: Mapping[str, Any]) -> Step:
         )
     if isinstance(step, RecipeCaptureStep):
         return CaptureStep(address=step.address, capture_name=step.capture_name)
+    if isinstance(step, RecipeComputeStep):
+        # All fields are LITERAL at 6a (no BindingRef on a compute step yet),
+        # so they pass through verbatim with no resolve_value pass. Binding a
+        # compute parameter is the deferred widening.
+        return ComputeStep(
+            command=step.command,
+            input_uris=step.input_uris,
+            output_uri=step.output_uri,
+            parameters=dict(step.parameters),
+        )
     # RecipeCheckStep: criterion is a wire-format dict (kept dict-shaped
     # in Recipe BC to avoid an Operation -> Recipe import).
     return CheckStep(
@@ -142,6 +155,14 @@ def _step_to_wire(step: Step) -> dict[str, Any]:
             "kind": "capture",
             "address": step.address,
             "capture_name": step.capture_name,
+        }
+    if isinstance(step, ComputeStep):
+        return {
+            "kind": "compute",
+            "command": list(step.command),
+            "input_uris": list(step.input_uris),
+            "output_uri": step.output_uri,
+            "parameters": dict(step.parameters),
         }
     return {
         "kind": "check",

@@ -36,8 +36,9 @@ def test_recipe_step_union_arity_matches_conductor_step_union() -> None:
     """Both unions have the same number of arms.
 
     A new RecipeStep variant or Conductor Step variant added without
-    a matching arm on the other side lands here. Currently both unions
-    carry 3 arms (Setpoint / Action / Check).
+    a matching arm on the other side lands here. The two unions stay
+    one-to-one (Setpoint / Action / Check / Capture / Compute today);
+    the count is asserted by parity, not hard-coded.
     """
     recipe_arms = get_args(_recipe_body.RecipeStep)
     conductor_arms = get_args(_conductor_module.Step)

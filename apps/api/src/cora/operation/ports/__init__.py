@@ -31,6 +31,7 @@ from cora.operation.ports.compute_port import (
     ComputeTimeoutError,
     JobId,
     JobSpec,
+    MeasurementNotFoundError,
 )
 from cora.operation.ports.control_port import (
     ControlAccessDeniedError,
@@ -74,6 +75,7 @@ __all__ = [
     "JobSpec",
     "Measurement",
     "MeasurementKind",
+    "MeasurementNotFoundError",
     "NoAdapterForAddressError",
     "ProcedureActivityLookup",
     "ProcedureActivityRecency",
