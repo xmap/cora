@@ -21,19 +21,38 @@ so that commit carries no naming risk.
 
 ## Decisions
 
-| Candidate | `*-bits` evidence | CORA status today | Decision | naming-r3 |
+Distinct physical beamlines, after the fork correction below: 4-ID (`polar-bits`,
+`6idb-bits`), 8-ID, 9-ID, 2-BM.
+
+| Candidate | independent beamlines | CORA status today | Decision | naming-r3 |
 | --- | --- | --- | --- | --- |
-| Diffractometer | 8-ID, POLAR, 6-ID-B | none | model as Assembly (design in step 3) | `Diffractometer` passes (Assembly) |
-| Chopper | POLAR, 6-ID-B | loose at 7-BM (CHOP-1 pending) | resolve CHOP-1 toward graduating; staff owns the boundary | `Chopper` passes |
-| BeamPositionMonitor | 8-ID, POLAR, 6-ID-B | loose at 2-BM (Sensor) | graduate when a 2nd CORA deployment references it (closest to ready) | spelled-out form passes; not `XBPM` |
-| TemperatureController | 8-ID, POLAR, 6-ID-B | none | graduate with first deployment using it | passes (`<Domain>Controller`) |
-| Magnet | POLAR, 6-ID-B | none | graduate with first deployment using it | passes (bare thing-noun) |
-| Transfocator | 8-ID, 9-ID, 6-ID-B | none | graduate with first deployment using it | passes (prefer over `CompoundRefractiveLens`) |
-| Preamplifier | POLAR, 6-ID-B | none | graduate with first deployment; confirm device-is (preamp vs electrometer) | passes (or `Electrometer`) |
+| Diffractometer | 4-ID, 8-ID | none | model as Assembly (design in step 3) | `Diffractometer` passes (Assembly) |
+| Chopper | 4-ID | loose at 7-BM (CHOP-1 pending) | resolve CHOP-1 toward graduating; staff owns the boundary | `Chopper` passes |
+| BeamPositionMonitor | 4-ID, 8-ID, 2-BM | loose at 2-BM (Sensor) | graduate when a 2nd CORA deployment references it (closest to ready) | spelled-out form passes; not `XBPM` |
+| TemperatureController | 4-ID, 8-ID | none | graduate with first deployment using it | passes (`<Domain>Controller`) |
+| Magnet | 4-ID only | none | hold: single physical beamline (see correction); needs a genuine 2nd magnet beamline | passes (bare thing-noun) |
+| Transfocator | 4-ID, 8-ID, 9-ID | none | graduate with first deployment using it | passes (prefer over `CompoundRefractiveLens`) |
+| Preamplifier | 4-ID | none | hold: single physical beamline; confirm device-is (preamp vs electrometer) | passes (or `Electrometer`) |
 
 Excluded as non-hardware (not Families): `DM_WorkflowConnector` is the APS Data Management
 handoff, which maps to the Reckoner / Porter seam, not a catalog Family; `mb_creator` and
 `ad_creator` are ophyd construction factories, not device types.
+
+## Correction: 6idb-bits is a 4-ID fork (recurrence double-counts)
+
+The `recurrence.md` report counts repos, not physical beamlines. `BCDA-APS/6idb-bits` is a
+fork of `polar-bits`: its devices are almost entirely the same `4id*` PVs (the extractor
+auto-labels it "4-ID"), with a grafted 6-ID-B endstation (a `psic` six-circle diffractometer
+at `6idb1:`, a CRL at `6idbSoft:TRANS:`). So `polar-bits` and `6idb-bits` are ONE physical
+beamline (4-ID). The "independent beamlines" column above is the de-duplicated count.
+
+Consequence: `Magnet` and `Preamplifier` rest on a single physical beamline (4-ID), so they do
+NOT meet the two-deployment graduation trigger yet; they are held until a genuinely independent
+beamline references them (for `Magnet`, a different magnetism beamline; 8-ID XPCS has no sample
+magnet). `Diffractometer`, `TemperatureController`, `Transfocator`, and `BeamPositionMonitor`
+retain two or more independent beamlines (via 8-ID / 9-ID / 2-BM) and remain graduation
+candidates once a second deployment is curated. `6idb-bits` itself was used only to enrich the
+4-ID POLAR descriptor, not to build a duplicate deployment.
 
 ## Detail
 

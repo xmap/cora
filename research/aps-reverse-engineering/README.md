@@ -39,6 +39,12 @@ over eleven BCDA-APS `*-bits` repos; the labels and ophyd-class frequency tables
 `recurrence.md` carry the cleanest graduation signal, since the family table mixes confident
 suggestions with class-name fallbacks.
 
+Caveat: the recurrence counts repos, not physical beamlines, so a fork inflates the count.
+`6idb-bits` is a fork of `polar-bits` (both the 4-ID instrument), so families that look like
+they recur across "POLAR and 6-ID-B" actually rest on a single beamline. De-duplicate by
+physical beamline before treating a count as a graduation trigger; see
+`catalog-graduation-decisions.md`.
+
 This is step 1 of the roadmap in the approved plan
 (`~/.claude/plans/iridescent-gathering-elephant.md`): extraction, then catalog graduation,
 then per-beamline curation. Candidates are inputs to that human-gated modeling, not outputs.

@@ -10,7 +10,10 @@
 # scaffolds, this descriptor binds the real EPICS control handles (`pv`), because
 # POLAR is operational and its handles were read from the beamline's own Bluesky
 # instrument repo (BCDA-APS/polar-bits). Provenance and the extraction are in
-# research/aps-reverse-engineering/extracted/polar-bits/. Every value is still
+# research/aps-reverse-engineering/extracted/polar-bits/. A second snapshot of the
+# same instrument (BCDA-APS/6idb-bits, a 4-ID fork carrying a grafted 6-ID-B psic
+# endstation) was cross-checked to fill a few gaps (the emag magnet axes, the Euler
+# diffractometer chi/phi circles); see docs/deployments/4-id/model.md. Every value is still
 # carried `confirm: true` until 4-ID staff verify it: a PV read from the operator's
 # config is strong evidence, not a CORA-owned fact (the docs-drift rule). Devices
 # carry `new: true` (not yet registered in CORA). No vendor `model` is bound (parts
@@ -242,10 +245,10 @@ diffractometers:
   devices:
     - name: Diffractometer_Euler
       family: Diffractometer         # loose Family; becomes Assembly(Diffractometer) (DIFF-1)
-      pv: { x: "4idgSoft:m40", y: "4idgSoft:m41", z: "4idgSoft:m42" }
+      pv: { chi: "4idgSoft:m37", phi: "4idgSoft:m38", x: "4idgSoft:m40", y: "4idgSoft:m41", z: "4idgSoft:m42" }
       new: true
       confirm: true
-      note: "Huber Eulerian-cradle diffractometer (CradleDiffractometer); circle decomposition is DIFF-1"
+      note: "Huber Eulerian-cradle diffractometer (CradleDiffractometer); chi and phi circles added from the 6idb-bits snapshot, the full circle set is DIFF-1"
     - name: Diffractometer_HighPressure
       family: Diffractometer         # loose Family; becomes Assembly(Diffractometer) (DIFF-1)
       pv: { chi: "4idgSoft:m5", phi: "4idgSoft:m6", sample_tilt: "4idgSoft:m11", x: "4idgSoft:m12", y: "4idgSoft:m14", z: "4idgSoft:m13" }
@@ -279,10 +282,10 @@ sample-environment:
       note: "2 T sample magnet at 4-ID-B (MAG-1)"
     - name: Magnet_2T_E
       family: Magnet                 # loose Family (MAG-1)
-      pv: {confirm: "Magnet2T (emag); control PV not in the extracted config (MAG-1)"}
+      pv: { mrot: "4idb:m20", mx: "4idb:m22", my: "4idb:m21", srot: "4idb:m19", sx: "4idb:m18", sy: "4idb:m17" }
       new: true
       confirm: true
-      note: "second 2 T sample magnet at 4-ID-B (MAG-1)"
+      note: "second 2 T sample magnet at 4-ID-B (emag), with magnet rotate/translate and sample rotate/translate axes from the 6idb-bits snapshot; the field-control PV is still pending (MAG-1)"
     - name: Magnet_9T_H
       family: Magnet                 # loose Family (MAG-1)
       pv: "4idhSoft:"
