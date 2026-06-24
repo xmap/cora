@@ -16,18 +16,18 @@
 
 ## Loose-Family graduation
 
-POLAR introduces eight device classes CORA has not earned into the catalog. They are bound to loose Family strings here, not graduated, because graduation needs two or more CORA deployments to reference a Family (the rule the passive beam-path tier followed). POLAR is the first deployment to reference most of them; each graduates in the commit that a second deployment (or, for `BeamPositionMonitor`, the existing 2-BM loose use) makes concrete. The names below were cleared by the naming-r3 review during the catalog-graduation pass, so the graduating commit carries no naming risk.
+POLAR introduced eight device classes CORA had not earned into the catalog. Graduation needs two or more independent CORA deployments to reference a Family (the rule the passive beam-path tier followed), and the 8-ID XPCS deployment, the second independent beamline, made three of them concrete: `TemperatureController`, `Transfocator`, and `BeamPositionMonitor` are now catalog Families. The other five stay loose (a single beamline so far, or, for `Diffractometer`, an Assembly target). All names were cleared by the naming-r3 review during the catalog-graduation pass.
 
-| Loose Family | Presents (when graduated) | Graduation trigger |
+| Loose Family | Presents (when graduated) | Status |
 | --- | --- | --- |
-| `BeamPositionMonitor` | Sensor | already loose at 2-BM; POLAR is the second reference, so this is the closest to graduating |
-| `PhaseRetarder` | Positioner | a second polarization beamline, or POLAR registration |
-| `PolarizationAnalyzer` | Positioner | a second polarization beamline |
-| `Magnet` | confirm (Positioner or Sensor) | a second magnetism beamline |
-| `TemperatureController` | Controller | a second deployment with a sample temperature controller |
-| `Transfocator` | Positioner | a second deployment with a CRL transfocator |
-| `Preamplifier` | Sensor | deferred (not modelled in this cut; SAMPLE-2) |
-| `Laser` | confirm | a second deployment, or the SAMPLE-1 model-versus-hazard decision |
+| `TemperatureController` | Controller | GRADUATED: 8-ID is the second beamline (LakeShore + QNW) |
+| `Transfocator` | Positioner | GRADUATED: 8-ID is the second beamline (two CRL transfocators) |
+| `BeamPositionMonitor` | Sensor | GRADUATED: 8-ID is the second beamline (Sydor + TetrAMM) |
+| `PhaseRetarder` | Positioner | loose: a second polarization beamline, or POLAR registration |
+| `PolarizationAnalyzer` | Positioner | loose: a second polarization beamline |
+| `Magnet` | confirm (Positioner or Sensor) | loose: needs a second magnetism beamline (8-ID has no sample magnet) |
+| `Laser` | confirm | loose: a second deployment, or the SAMPLE-1 model-versus-hazard decision |
+| `Diffractometer` | Positioner (Assembly) | loose: the `Assembly(Diffractometer)` is designed (4-ID + 8-ID), deferred to a Fixture-registering scenario |
 
 ## Deliberately not here yet
 

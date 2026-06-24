@@ -38,7 +38,7 @@ Root Asset `4-ID POLAR` (`tier = Unit`, `facility_code = aps`); sub-systems nest
 | `XBPM_G/H`, `Sydor_G/H`, `TetrAMM_B` | `Device` | BeamPositionMonitor (loose) | 4-ID-B/G/H | beam-position / intensity monitors (BPM-1) |
 | `Scaler_1/2` | `Device` | GenericProbe | 4-ID-B | CTR8 scaler channels |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Slit`, `Window`, `Mirror`, `Filter`, `Table`, `Camera`, `GenericProbe`. Bound to loose Family strings (not yet in the catalog): `PhaseRetarder`, `PolarizationAnalyzer`, `Diffractometer`, `Magnet`, `TemperatureController`, `Transfocator`, `Laser`, `BeamPositionMonitor`. These are earned into the catalog only when a confirmed device registers and a naming review accepts the name; the graduation plan is on [Model](model.md#loose-family-graduation).
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Slit`, `Window`, `Mirror`, `Filter`, `Table`, `Camera`, `GenericProbe`, and (graduated once 8-ID became the second beamline to use them) `TemperatureController`, `Transfocator`, `BeamPositionMonitor`. Still bound to loose Family strings (single beamline, or an Assembly target): `PhaseRetarder`, `PolarizationAnalyzer`, `Diffractometer`, `Magnet`, `Laser`. These are earned into the catalog only when a confirmed device registers and a naming review accepts the name; the graduation plan is on [Model](model.md#loose-family-graduation).
 
 ## Pending confirmations
 
