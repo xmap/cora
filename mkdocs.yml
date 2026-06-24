@@ -203,6 +203,19 @@ nav:
         - Techniques: deployments/i03/techniques.md
         - Governance: deployments/i03/governance.md
         - Model: deployments/i03/model.md
+      - I15-1:
+        - deployments/i15-1/index.md
+        - Open questions: deployments/i15-1/questions.md
+        - The beamline:
+          - deployments/i15-1/equipment/index.md
+          - Source: deployments/i15-1/beamline.md
+          - Sample: deployments/i15-1/equipment/sample.md
+          - Detector: deployments/i15-1/equipment/detector.md
+          - Controls: deployments/i15-1/equipment/controls.md
+          - Inventory: deployments/i15-1/inventory.md
+        - Techniques: deployments/i15-1/techniques.md
+        - Governance: deployments/i15-1/governance.md
+        - Model: deployments/i15-1/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

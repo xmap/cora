@@ -1,0 +1,295 @@
+# CORA Beamline descriptor: I15-1 (Diamond Light Source), design-phase scaffold
+#
+# I15-1 (XPDF) is an operating X-ray pair-distribution-function / total-scattering
+# beamline at Diamond Light Source, the third Diamond beamline after I22 and I03.
+# Bound to the Diamond Site (deployments/diamond/site.yaml).
+#
+# STATUS: design-phase modelling exercise, NOT a CORA pilot. Reverse-engineered
+# from Diamond's open dodal controls library (src/dodal/beamlines/i15_1.py + its
+# device classes), treated as a dry, correct DATA source and modelled
+# intentionally. Spine + core total-scattering path; carries the real BL15I PVs.
+#
+# WHAT I15-1 EARNS: nothing new. Like I22, it earns zero new catalog families and
+# zero new affordances; every device maps to an existing Family or a reused loose
+# one. Its value is consolidation + three intentional-modelling decisions that an
+# adversarial eval settled (resisting three mirror-the-controls traps):
+#   1. SafeOrBeamPositioner (the blower / cobra / cryostream sample-environment
+#      devices) is a Movable driving a motor to two NAMED positions (SAFE / BEAM).
+#      That is the existing Positioner Role with Indexable named positions, NOT a
+#      new settable-actuator affordance, and NOT a TemperatureController (the dodal
+#      classes are NAMED for temperature controllers but model only the in/out-of-
+#      beam position move; modelling them as TemperatureController would mirror the
+#      class name, not the behaviour). Carried as LinearStage + Positioner/Indexable
+#      (SAFEBEAM-1).
+#   2. The rail (the shared support on which cobra/cryostream are interchanged) is
+#      the existing Table Family (the TomoWISE DetectorGantry precedent), not a new
+#      Rail Family (RAIL-1).
+#   3. The PSS / gonio interlocks are NOT equipment devices: they are the data
+#      behind the Enclosure permit_signal (the shipped Enclosure aggregate), so
+#      they are carried on the enclosures below, not as a device walk (INTERLOCK-1).
+# It also reuses I22's loose FluxMonitor (the JBPM TetrAMM i0), pushing it toward
+# rule-of-three graduation, and adds a third robot-as-Positioner instance.
+#
+# Every device carries new: true + confirm: true. Families-only (no Model bindings).
+# DEFERRED out of scope: the bent-Laue energy as a goto-command (dodal exposes it
+# read-only, ENERGY-1); puck_detect (a CV web service, not a device); the hutch
+# webcams; sam + slits_1 + clean (skip-flagged in dodal).
+
+beamline:
+  name: I15-1
+  facility: diamond
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "source type not pinned in dodal (i15-1 is a branch line); carried confirm (SRC-1)"
+
+# Two access-gated hutches. Unlike I22/I03, dodal records real interlock PVs here,
+# carried as the permit_signal candidates (confirm: these are interlock readbacks,
+# not confirmed search-and-secure permits) (PSS-1, ENC-1).
+enclosures:
+  - name: i15-1-optics
+    role: optics-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "Diamond PSS optics-hutch permit TBD; dodal hutch interlock readback BL15I-PS-IOC-02:M11:LOP (PSS-1)"}
+  - name: i15-1-experiment
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "Diamond PSS experiment-hutch permit TBD; dodal gonio interlock readback BL15I-VA-OMRON-01:INT3:ILK (PSS-1)"}
+
+# --- SOURCE STAGE ---
+
+source:
+  stage: source
+  enclosure: i15-1-optics
+  intro: "The storage-ring source state the beamline draws on."
+  devices:
+    - name: StorageRing
+      family: StorageRing
+      new: true
+      confirm: true
+      note: "machine-level, observe-only ring state; loose family reused from I22 (MACHINE-1)"
+
+conditioning-optics:
+  stage: source
+  enclosure: i15-1-optics
+  intro: "The bent-Laue monochromator, the multilayer mirror, and the attenuators."
+  note: >
+    The bent-Laue mono selects a fixed energy: dodal exposes energy_kev as a
+    read-only signal derived from the crystal y position via a lookup table, NOT a
+    scanned or commanded axis. Energy is an epistemic readback (a Calibration), so
+    the pending energy_scan Capability is NOT earnable here (ENERGY-1).
+  devices:
+    - name: LaueMono
+      family: Monochromator
+      pv: "BL15I-OP-LAUE-01:"
+      new: true
+      confirm: true
+      axes: bend / bragg / roll / yaw / y (energy-selecting crystal translation)
+      note: "bent-Laue monochromator; energy_kev is a read-only y-to-energy lookup readback, not a commanded axis (ENERGY-1); crystal LUT to confirm (OPT-1)"
+    - name: M1
+      family: Mirror
+      pv: "BL15I-OP-MIRR-01:"
+      new: true
+      confirm: true
+      note: "multilayer mirror; coating to confirm (OPT-1)"
+    - name: Attenuator
+      family: Filter
+      pv: "BL15I-OP-ATTN-02:"
+      new: true
+      confirm: true
+      note: "foil attenuator selecting one of 7 named transmission levels (100% down to 0.001%); the existing Filter Family via the Positioner Role's Indexable named positions, not a new kind (ATTN-1)"
+    - name: AttenuatorSticks
+      family: LinearStage
+      pv: "BL15I-OP-ATTN-01:"
+      new: true
+      confirm: true
+      axes: STICK1 / STICK2 / STICK3
+      note: "three-stick attenuator positioning stage (ATTN-01); whether it is the same unit as the ATTN-02 selector is open (ATTN-1)"
+    - name: AttenuatorY
+      family: LinearStage
+      pv: "BL15I-OP-ATTN-02:Y"
+      new: true
+      confirm: true
+      note: "attenuator vertical positioning"
+
+beam-defining-safety:
+  stage: source
+  enclosure: i15-1-optics
+  intro: "The beam-defining slits, the beamstop, and the safety and fast shutters. The PSS / gonio interlocks are carried on the enclosures (the Enclosure permit_signal), not as devices (INTERLOCK-1)."
+  devices:
+    - name: Slit2
+      family: Slit
+      pv: "BL15I-AL-SLITS-02:"
+      new: true
+      confirm: true
+    - name: Slit3
+      family: Slit
+      pv: "BL15I-AL-SLITS-03:"
+      new: true
+      confirm: true
+    - name: Slit4
+      family: Slit
+      pv: "BL15I-AL-SLITS-04:"
+      new: true
+      confirm: true
+    - name: Slit5
+      family: Slit
+      pv: "BL15I-AL-SLITS-05:"
+      new: true
+      confirm: true
+    - name: BeamStop
+      family: BeamStop
+      pv: "BL15I-MO-SMAR-02:"
+      new: true
+      confirm: true
+      note: "positioned beamstop"
+    - name: HutchShutter
+      family: Shutter
+      pv: "BL15I (interlocked, -PS-SHTR-01:ILKSTA)"
+      new: true
+      confirm: true
+      note: "PSS-interlocked hutch safety shutter"
+    - name: FastShutter
+      family: Shutter
+      pv: "BL15I-EA-ZEBRA-01:SOFT_IN:B3"
+      new: true
+      confirm: true
+      note: "Zebra-driven fast shutter; gates exposure"
+
+# --- SAMPLE STAGE ---
+
+sample-environment:
+  stage: sample
+  enclosure: i15-1-experiment
+  intro: "The sample positioning, the two-theta detector arm, and the interchangeable sample-environment devices on a shared rail."
+  note: >
+    The blower / cobra / cryostream are SafeOrBeamPositioner devices: each drives a
+    motor to a named SAFE or BEAM position. They are modelled as LinearStage Assets
+    presenting Positioner with two Indexable named positions, NOT TemperatureController
+    (dodal models the in/out-of-beam move, not the temperature setpoint). cobra and
+    cryostream share the rail X motor (ENV:X) because they are physically interchanged
+    on the rail; whether that exchange is a Fixture-style swap or an Assembly is open
+    (SAFEBEAM-1, RAIL-1).
+  devices:
+    - name: Rail
+      family: Table
+      pv: "BL15I-MO-RAIL-01:"
+      new: true
+      confirm: true
+      axes: pitch / y / y1 / y2
+      note: "the shared support rail the sample-environment devices ride; existing Table Family (the TomoWISE DetectorGantry precedent), not a new Rail kind (RAIL-1)"
+    - name: EnvX
+      family: LinearStage
+      pv: "BL15I-MO-TABLE-01:ENV:X"
+      new: true
+      confirm: true
+      note: "the shared rail X position the cobra / cryostream are interchanged on (SAFEBEAM-1)"
+    - name: Blower
+      family: LinearStage
+      pv: "BL15I-EA-BLOWR-01:TLATE"
+      new: true
+      confirm: true
+      note: "gas-blower sample environment; SafeOrBeamPositioner = Positioner with SAFE / BEAM Indexable named positions, NOT a TemperatureController (SAFEBEAM-1)"
+    - name: Cobra
+      family: LinearStage
+      pv: "BL15I-MO-TABLE-01:ENV:X"
+      new: true
+      confirm: true
+      note: "Oxford Cobra sample environment; SafeOrBeamPositioner (SAFE / BEAM Indexable); interchangeable with the cryostream on the rail (SAFEBEAM-1)"
+    - name: Cryostream
+      family: LinearStage
+      pv: "BL15I-MO-TABLE-01:ENV:X"
+      new: true
+      confirm: true
+      note: "Oxford Cryostream sample environment; SafeOrBeamPositioner (SAFE / BEAM Indexable); interchangeable with the cobra (SAFEBEAM-1)"
+    - name: SampleTrans
+      family: LinearStage
+      pv: "BL15I-MO-TABLE-01:TRANS:"
+      new: true
+      confirm: true
+      axes: x / y / phi
+      note: "sample translation + rotation"
+    - name: Hexapod
+      family: Hexapod
+      pv: "BL15I-MO-HEX-01:"
+      new: true
+      confirm: true
+      note: "six-axis sample hexapod (linear x/y/z + rotation RX/RY/RZ as virtual axes)"
+    - name: BaseY
+      family: LinearStage
+      pv: "BL15I-MO-TABLE-01:Y"
+      new: true
+      confirm: true
+      note: "sample table base height"
+    - name: TwoTheta
+      family: RotaryStage
+      pv: "BL15I-MO-TABLE-01:TTH"
+      new: true
+      confirm: true
+      note: "the two-theta detector arm angle"
+
+sample-loading:
+  stage: sample
+  enclosure: i15-1-experiment
+  intro: "The automated sample-changing robot for powder / capillary pucks."
+  devices:
+    - name: Robot
+      pv: "BL15I-MO-ROBOT-01: (+ BL15I-EA-LOC-01: current sample)"
+      new: true
+      confirm: true
+      note: "powder/capillary sample-changing robot. Per the I03 / 19-BM precedent: one Positioner-presenting Asset loading / unloading a Subject, gated by a Clearance, vendor in a bound Model; NOT a new Family. The puck custody lifecycle is deferred (ROBOT-1). puck_detect (a CV web service, not a device) is not modelled."
+
+# --- DETECTION STAGE ---
+
+detector:
+  stage: detection
+  enclosure: i15-1-experiment
+  intro: "The Eiger area detector on the two-theta arm, a second detector translation, and the incident-flux monitor."
+  devices:
+    - name: Eiger
+      family: Camera
+      pv: "BL15I-EA-EIGER-01:"
+      new: true
+      confirm: true
+      detector: Dectris Eiger
+      note: "the area detector capturing wide-Q total-scattering frames; threshold energy + beam-center to confirm (DET-1)"
+    - name: Detector2
+      family: LinearStage
+      pv: "BL15I-EA-DET-02:"
+      new: true
+      confirm: true
+      note: "second detector translation (y / z)"
+    - name: I0
+      family: FluxMonitor
+      pv: "BL15I-EA-JBPM-03:"
+      new: true
+      confirm: true
+      note: "incident-flux monitor (TetrAMM JBPM); presents the Sensor Role; loose family reused from I22, now at a 2nd Diamond deployment (rule-of-three building) (FLUX-1)"
+
+# Cross-cutting timing.
+controls:
+  intro: >
+    I15-1 runs the Diamond EPICS control stack (driven by GDA and bluesky). dodal
+    records the device PV prefixes carried above; a Zebra FPGA box generates the
+    triggers and gates.
+  triggering:
+    - name: Zebra
+      family: TimingController
+      pv: "BL15I-EA-ZEBRA-01:"
+      new: true
+      confirm: true
+      note: "FPGA trigger/gate generation; drives the fast shutter"
+  software_iocs_not_modeled:
+    - GDA (Generic Data Acquisition; Diamond's acquisition software)
+    - bluesky / blueapi (the bluesky-as-a-service layer dodal feeds)
+    - puck_detect (an image-processing web service for puck/lid detection)
+
+# Continuously-available resources a run draws on (design phase).
+resources:
+  intro: >
+    The continuously-available facility resources a run needs present before it
+    can start. All pending confirmation in the design phase.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
