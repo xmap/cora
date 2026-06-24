@@ -1,0 +1,216 @@
+# CORA Beamline descriptor: I11 (Diamond Light Source), design-phase scaffold
+#
+# I11 is an operating high-resolution powder-diffraction beamline at Diamond Light
+# Source, the fourth Diamond beamline after I22, I03, and I15-1. Bound to the
+# Diamond Site (deployments/diamond/site.yaml).
+#
+# STATUS: design-phase modelling exercise, NOT a CORA pilot. Reverse-engineered
+# from Diamond's open dodal controls library (src/dodal/beamlines/i11.py + its
+# device classes), treated as a dry, correct DATA source and modelled
+# intentionally. Spine + core powder-diffraction path; carries the real BL11I PVs.
+#
+# WHAT I11 EARNS (and how it is handled here): i11 is the rule-of-three for the
+# loose TemperatureController family. It carries FOUR continuous-setpoint thermal
+# actuators (csb1 / csb2 = Cyberstar blowers wrapping a Eurotherm controller with
+# set(value) / setpoint / ramprate / PID / autotune; ocs1 / ocs2 = Oxford
+# cryostreams), after TemperatureController was carried loose at i22 and i03. That
+# genuinely earns BOTH (a) graduating the TemperatureController catalog Family and
+# (b) a NEW settable-continuous-setpoint actuator Role (CORA has none today:
+# Positioner is spatial, Controller supervises, GenericProbe is read-only).
+# BUT a new Role is a code change to cora.equipment.aggregates.role.SEED_ROLES
+# (drift-guarded by an exact-match test) and is core cross-facility vocabulary, so
+# it belongs in a SEPARATE gate-reviewed change, NOT in this families-only scaffold.
+# So this descriptor carries the four actuators as loose TemperatureController (as
+# i22 / i03 did) and TEMP-1 tracks the earn. No catalog change in this PR.
+#
+# OTHER intentional decisions the eval settled:
+# - The diffractometer (theta / two_theta / delta) is per-axis RotaryStage under a
+#   DiffractometerStage Assembly, NOT the i03-graduated Goniometer: two_theta /
+#   delta are detector-arm angles and theta is a single sample rotation, not an MX
+#   sample-orientation cradle (GONIO-1).
+# - The sample robot is one Positioner-presenting Asset + Clearance + Subject (the
+#   locked 19-BM / i03 posture), NOT a new SampleChanger Family (ROBOT-1).
+# - The Mythen3 is a 1D position-sensitive strip detector; it reuses Camera
+#   (Detector Role), with the strip-vs-2D nuance noted (it is skip-flagged in dodal
+#   per issue I11-916) (MYTHEN-1).
+#
+# Every device carries new: true + confirm: true. Families-only (no Model bindings).
+
+beamline:
+  name: I11
+  facility: diamond
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "source type not pinned in dodal (the Synchrotron device is facility-wide, observe-only); carried confirm (SRC-1)"
+
+enclosures:
+  - name: i11-optics
+    role: optics-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "Diamond PSS optics-hutch permit TBD (PSS-1)"}
+  - name: i11-experiment
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "Diamond PSS experiment-hutch permit TBD (PSS-1)"}
+
+# --- SOURCE STAGE ---
+
+source:
+  stage: source
+  enclosure: i11-optics
+  intro: "The storage-ring source state the beamline draws on."
+  devices:
+    - name: StorageRing
+      family: StorageRing
+      new: true
+      confirm: true
+      note: "machine-level, observe-only ring state; loose family reused from I22 (MACHINE-1)"
+
+conditioning-optics:
+  stage: source
+  enclosure: i11-optics
+  intro: "The double-crystal monochromator and the beam-defining slits."
+  devices:
+    - name: DCM
+      family: Monochromator
+      pv: "BL11I-MO-DCM-01:"
+      new: true
+      confirm: true
+      crystal: Si (default reflection 1 1 1)
+      temperature_pv: "BL11I-DI-DCM-01:"
+      axes: energy / wavelength (virtual) over bragg / offset / perp + crystal-1 pitch / roll
+      note: "double-crystal monochromator; crystal d-spacing + thermal reads to confirm (OPT-1)"
+    - name: Slit1
+      family: Slit
+      pv: "BL11I-AL-SLITS-01:"
+      new: true
+      confirm: true
+    - name: Slit2
+      family: Slit
+      pv: "BL11I-AL-SLITS-02:"
+      new: true
+      confirm: true
+    - name: Slit3
+      family: Slit
+      pv: "BL11I-AL-SLITS-03:"
+      new: true
+      confirm: true
+    - name: Slit4
+      family: Slit
+      pv: "BL11I-AL-SLITS-04:"
+      new: true
+      confirm: true
+    - name: Slit5
+      family: Slit
+      pv: "BL11I-AL-SLITS-05:"
+      new: true
+      confirm: true
+
+# --- SAMPLE STAGE ---
+
+diffractometer:
+  stage: sample
+  enclosure: i11-experiment
+  intro: "The powder diffractometer (sample rotation + detector-arm angles) and the capillary spinner."
+  note: >
+    The diffractometer is per-axis RotaryStage under a DiffractometerStage Assembly,
+    NOT the Goniometer Family: theta is a single sample rotation and two_theta /
+    delta are detector-arm angles, not an MX sample-orientation cradle (GONIO-1).
+    Axis PVs to confirm (the dodal class was not read axis-by-axis) (DIFF-1).
+  devices:
+    - name: Diffractometer
+      family: RotaryStage
+      pv: "BL11I-MO-DIFF-01:"
+      new: true
+      confirm: true
+      axes: theta (sample) / two_theta / delta (detector arm) / spos
+      note: "per-axis RotaryStage under a DiffractometerStage Assembly; not a Goniometer (GONIO-1, DIFF-1)"
+    - name: DiffractometerBase
+      family: LinearStage
+      pv: "BL11I-MO-DIFF-01:BASE:"
+      new: true
+      confirm: true
+      note: "diffractometer base translation"
+    - name: Spinner
+      family: RotaryStage
+      pv: "BL11I-EA-ENV-01:"
+      new: true
+      confirm: true
+      note: "capillary sample spinner for powder averaging (enable + speed); a rotation device, RotaryStage (SPIN-1)"
+
+sample-environment:
+  stage: sample
+  enclosure: i11-experiment
+  intro: "The thermal sample environment and the sample-changing robot."
+  note: >
+    The four thermal actuators carry the loose TemperatureController family. i11 is
+    the rule-of-three (after i22 and i03), which genuinely earns graduating the
+    Family AND a new settable-continuous-setpoint actuator Role. That Role is a code
+    change (SEED_ROLES, drift-guarded) and core vocabulary, so it is routed to a
+    SEPARATE gate-reviewed change, not this scaffold; carried loose here (TEMP-1).
+  devices:
+    - name: CyberstarBlower1
+      family: TemperatureController
+      pv: "BL11I-EA-BLOW-01:"
+      new: true
+      confirm: true
+      note: "Cyberstar hot-air blower; Eurotherm controller with updating PID; a continuous-setpoint actuator (set/setpoint/ramprate). Loose family; the earn is TEMP-1"
+    - name: CyberstarBlower2
+      family: TemperatureController
+      pv: "BL11I-EA-BLOW-02:LOOP1:"
+      new: true
+      confirm: true
+      note: "Cyberstar hot-air blower with autotuneable Eurotherm controller; continuous-setpoint actuator (TEMP-1)"
+    - name: Cryostream1
+      family: TemperatureController
+      pv: "BL11I-CG-CSTRM-01:"
+      new: true
+      confirm: true
+      note: "Oxford Cryostream 700 plus; continuous-setpoint cooling actuator (TEMP-1)"
+    - name: Cryostream2
+      family: TemperatureController
+      pv: "BL11I-CG-CSTRM-02:"
+      new: true
+      confirm: true
+      note: "Oxford Cryostream 700 standard; continuous-setpoint cooling actuator (TEMP-1)"
+    - name: Robot
+      pv: "BL11I-EA-ROBOT-01:"
+      new: true
+      confirm: true
+      note: "sample arm + carousel that loads / unloads samples on the spinner (NX100Robot). Per the 19-BM / I03 precedent: one Positioner-presenting Asset loading / unloading a Subject, gated by a Clearance, vendor in a bound Model; NOT a new SampleChanger Family (ROBOT-1)"
+
+# --- DETECTION STAGE ---
+
+detector:
+  stage: detection
+  enclosure: i11-experiment
+  intro: "The Mythen3 position-sensitive strip detector."
+  devices:
+    - name: Mythen3
+      family: Camera
+      pv: "BL11I-EA-DET-07:"
+      new: true
+      confirm: true
+      detector: Dectris Mythen3 (PSI design)
+      note: "a 1D position-sensitive strip detector; reuses Camera (Detector Role), with the strip-vs-2D-frame Role nuance noted; skip-flagged in dodal (issue I11-916); threshold / deadtime to confirm (MYTHEN-1)"
+
+# Cross-cutting controls.
+controls:
+  intro: >
+    I11 runs the Diamond EPICS control stack (driven by GDA and bluesky). dodal
+    records the device PV prefixes carried above. No FPGA timing box is exposed in
+    the dodal i11 module; triggering is not modelled in this scaffold.
+  software_iocs_not_modeled:
+    - GDA (Generic Data Acquisition; Diamond's acquisition software)
+    - bluesky / blueapi (the bluesky-as-a-service layer dodal feeds)
+
+# Continuously-available resources a run draws on (design phase).
+resources:
+  intro: >
+    The continuously-available facility resources a run needs present before it
+    can start. All pending confirmation in the design phase.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

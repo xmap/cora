@@ -56,6 +56,7 @@ def _load(name: str) -> ModuleType:
 bd = _load("beamline_descriptor")
 bp = _load("beamline_pages")
 cd = _load("catalog_descriptor")
+sd = _load("site_descriptor")
 
 
 def _render_with_catalog() -> str:
@@ -334,6 +335,247 @@ def test_no_unexpected_orphan_catalog_models() -> None:
     assert not stale_allowlist, (
         f"bound or removed; drop from _ALLOWED_ORPHAN_MODELS: {sorted(stale_allowlist)}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Family integrity and federation-alignment guards.
+#
+# A device family with NO bound model is otherwise checked against nothing
+# (test_device_family_is_declared_by_its_bound_model fires only when a model is
+# bound), so a typo'd or synonym family would pass silently. These guards make
+# every loose family (a family string not in the catalog) a deliberate, reasoned
+# registry entry, surface promotion candidates as the fleet grows, and keep the
+# beamline -> site facility pointer resolvable. They mirror the two-sided
+# orphan-model guard above (assert no unexpected AND no stale allowlist entry).
+# ---------------------------------------------------------------------------
+
+PROMOTION_THRESHOLD = 2
+
+# Loose families: a device family string that is not (yet) a catalog Family.
+# Each is either a Supply observation that never becomes an Asset Family, a
+# passive beam-path element deferred under that tier, or a real candidate staged
+# behind an open question (the bucket leads each reason). A NEW loose family must
+# land here with a reason: that forces a synonym or typo to surface in review
+# without forcing premature promotion into the catalog.
+_ALLOWED_LOOSE_FAMILIES = {
+    "Beam": "supply: Supply(PhotonBeam) source observation; never an Asset Family",
+    "Vacuum": "supply: Supply(Vacuum) observation; never an Asset Family",
+    "StorageRing": "supply: machine-level observe-only ring state (MACHINE-1); not an Asset Family",
+    "HeatAbsorber": "passive-deferred: passive beam-path tier (TomoWISE front-end absorber)",
+    "SafetyStack": "passive-deferred: passive safety composite (2-BM P6-50)",
+    "Shielding": "passive-deferred: passive PSS-grade shielding (19-BM guillotines, ENC-1)",
+    "SlipRing": "passive-deferred: passive rotation feedthrough (TomoWISE)",
+    "Wedge": "passive-deferred: passive fixed wedge (2-BM)",
+    "Diagnostic": "staged: beam-position monitor, Sensor Role; fold-vs-promote open (DIAG-1)",
+    "FluxMonitor": "staged: ion-chamber/XBPM flux Sensor; promote-vs-fold open (FLUX-1/DIAG-1)",
+    "EnergyDispersiveSpectrometer": "staged: MCA/EDS Sensor; Family-vs-Sensor open (DET-1)",
+    "FlowController": "staged: settable flow/pump actuator; earn-vs-defer open (FLOW-1/ENV-1)",
+    "TemperatureController": "staged: settable thermal actuator; abstraction open (ENV-1)",
+    "Backlight": "staged: new illumination affordance; rule-of-three open (ROBOT-1/DET-1)",
+    "BetrandLens": "staged: novel TXM optic, FXI-only; rule-of-three open (OPTIC-3)",
+    "Chopper": "staged: rotary duty-cycle device; fold-vs-Family open (CHOP-1)",
+    "Photodiode": "staged: PIN photodiode, Sensor Role; Family-vs-Sensor open (RAD-1)",
+    "Transfocator": "staged: compound-refractive-lens optic; no catalog home yet (CRL-1)",
+    "Baffle": "staged: passive baffle inside the 2-BM SafetyStack; review name/role",
+    "Screen": "staged: motorized phosphor diagnostic flag (2-BM, FLAG-1); review name-vs-behavior",
+}
+
+# The subset of loose families that is conceptually a Supply observation (a
+# facility resource or machine state), not an Asset, so it never counts toward
+# catalog promotion.
+_SUPPLY_LOOSE_FAMILIES = {"Beam", "Vacuum", "StorageRing"}
+
+# Loose families that have reached the promotion threshold and whose
+# promote-or-hold decision has been recorded. A non-supply loose family that
+# crosses PROMOTION_THRESHOLD deployments fails the build until it is either
+# graduated into the catalog or recorded here with a one-line decision: the
+# signal is mechanical, the decision stays human.
+_PROMOTION_REVIEWED = {
+    "FluxMonitor": "hold: fold-vs-promote still open across i03/i15-1/i22 (FLUX-1)",
+    "Diagnostic": "hold: Sensor fold-vs-promote still open (DIAG-1)",
+    "EnergyDispersiveSpectrometer": "hold: Family-vs-Sensor still open (DET-1)",
+    "FlowController": "hold: earn-vs-defer still open (FLOW-1)",
+    "TemperatureController": "hold: settable-actuator abstraction still open (ENV-1)",
+}
+
+# Catalog families bound by no deployment device. Symmetric to the orphan-model
+# guard: an un-earned family contradicts "the model only contains what a real
+# deployment forced." Empty today (GenericProbe is bound by FXI flux monitors).
+_ALLOWED_ORPHAN_FAMILIES: dict[str, str] = {}
+
+
+def _classify(observed: set[str], allowed: set[str]) -> tuple[list[str], list[str]]:
+    # (unexpected, stale): observed-not-allowed, allowed-not-observed. The shared
+    # core of the two-sided allowlist guards, unit-tested on synthetic input below
+    # so a future refactor cannot quietly weaken them.
+    return sorted(observed - allowed), sorted(allowed - observed)
+
+
+def _catalog_family_names() -> set[str]:
+    return {f.name for f in cd.load(_CATALOG).families}
+
+
+def _used_families() -> set[str]:
+    return {
+        device.family
+        for path in _beamline_descriptors()
+        for device in _walk_devices(bd.load(path))
+        if device.family
+    }
+
+
+def _loose_family_deployments() -> dict[str, set[str]]:
+    # family (not in the catalog) -> the deployments that bind it.
+    catalog_families = _catalog_family_names()
+    spread: dict[str, set[str]] = {}
+    for path in _beamline_descriptors():
+        deployment = path.parent.name
+        for device in _walk_devices(bd.load(path)):
+            family = device.family
+            if family and family not in catalog_families:
+                spread.setdefault(family, set()).add(deployment)
+    return spread
+
+
+def _site_descriptors() -> list[Path]:
+    return sorted(_DEPLOYMENTS.glob("*/site.yaml"))
+
+
+def _site_facility_codes() -> set[str]:
+    return {sd.load(path).facility.code for path in _site_descriptors()}
+
+
+def test_no_unexpected_loose_families() -> None:
+    loose = _used_families() - _catalog_family_names()
+    unexpected, stale = _classify(loose, set(_ALLOWED_LOOSE_FAMILIES))
+    assert not unexpected, (
+        "device families not in the catalog and not allowlisted (a typo, a synonym, or a "
+        "genuinely new device class); add to catalog.families or to _ALLOWED_LOOSE_FAMILIES "
+        f"with a reason: {unexpected}"
+    )
+    assert not stale, (
+        f"promoted into the catalog or no longer used; drop from _ALLOWED_LOOSE_FAMILIES: {stale}"
+    )
+
+
+def test_loose_families_past_promotion_threshold_are_reviewed() -> None:
+    spread = _loose_family_deployments()
+    candidates = {
+        family
+        for family, deployments in spread.items()
+        if len(deployments) >= PROMOTION_THRESHOLD and family not in _SUPPLY_LOOSE_FAMILIES
+    }
+    unreviewed = sorted(
+        f"{family} {sorted(spread[family])}"
+        for family in candidates
+        if family not in _PROMOTION_REVIEWED
+    )
+    assert not unreviewed, (
+        f"loose families at >= {PROMOTION_THRESHOLD} deployments with no recorded decision; "
+        "graduate them into catalog.families or record a promote-or-hold note in "
+        f"_PROMOTION_REVIEWED: {unreviewed}"
+    )
+    stale = sorted(set(_PROMOTION_REVIEWED) - candidates)
+    assert not stale, (
+        "no longer a sub-threshold candidate (promoted, removed, or now a Supply family); "
+        f"drop from _PROMOTION_REVIEWED: {stale}"
+    )
+
+
+def test_no_unexpected_orphan_catalog_families() -> None:
+    orphans = _catalog_family_names() - _used_families()
+    unexpected, stale = _classify(orphans, set(_ALLOWED_ORPHAN_FAMILIES))
+    assert not unexpected, (
+        "catalog families bound by no deployment device (un-earned abstractions); "
+        f"bind, remove, or allowlist with a reason: {unexpected}"
+    )
+    assert not stale, f"now bound or removed; drop from _ALLOWED_ORPHAN_FAMILIES: {stale}"
+
+
+def test_site_facility_codes_cover_known_sites() -> None:
+    # Anchor so the resolution check below cannot pass vacuously on an empty set.
+    assert {"aps", "diamond", "maxiv", "nsls2"} <= _site_facility_codes()
+
+
+@pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
+def test_beamline_and_enclosure_facility_codes_resolve(descriptor_path: Path) -> None:
+    descriptor = bd.load(descriptor_path)
+    codes = _site_facility_codes()
+    deployment = descriptor_path.parent.name
+    unresolved: list[str] = []
+    facility = descriptor.beamline.facility
+    if facility is not None and facility not in codes:
+        unresolved.append(f"beamline.facility={facility!r}")
+    for enclosure in descriptor.enclosures:
+        code = enclosure.facility_code
+        if code is not None and code not in codes:
+            unresolved.append(f"enclosure {enclosure.name}.facility_code={code!r}")
+    assert not unresolved, (
+        f"{deployment}: facility pointer(s) do not resolve to a site.yaml facility.code "
+        f"{sorted(codes)}: {unresolved}"
+    )
+
+
+def test_allowlist_guard_logic_detects_unexpected_and_stale() -> None:
+    # The two-sided guards reduce to _classify; prove it on synthetic input.
+    # "Scintilator" is the canonical typo of the catalog family Scintillator.
+    unexpected, stale = _classify({"Scintilator", "Beam"}, {"Beam"})
+    assert unexpected == ["Scintilator"]
+    assert stale == []
+    unexpected, stale = _classify(set(), {"GoneFamily"})
+    assert unexpected == []
+    assert stale == ["GoneFamily"]
+
+
+# ---------------------------------------------------------------------------
+# Descriptor <-> deployment-docs drift guard.
+#
+# Each deployment's docs/deployments/<id>/ pages carry a hand-authored, curated
+# inventory (editorial columns, live condition, and, for the operational pilot,
+# derived PseudoAxis Assets that exist only in scenario setup), so they are NOT
+# generated from the descriptor. This guard keeps only the factual subset honest:
+# every device the descriptor MODELS (not marked new:, i.e. a real CORA Asset or
+# a live verified device) must be mentioned by name somewhere in its deployment
+# docs, so renaming or removing a device in the descriptor cannot leave a stale
+# doc, and a documented Asset cannot quietly lose its descriptor source. Devices
+# marked new: are not yet modelled and are legitimately absent, so a pure
+# design-phase scaffold (all-new) is not pinned until its devices materialize.
+# ---------------------------------------------------------------------------
+
+_DOCS_DEPLOYMENTS = _REPO_ROOT / "docs" / "deployments"
+
+
+def _deployment_doc_text(deployment: str) -> str:
+    base = _DOCS_DEPLOYMENTS / deployment
+    if not base.is_dir():
+        return ""
+    return "\n".join(path.read_text(encoding="utf-8") for path in sorted(base.rglob("*.md")))
+
+
+@pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
+def test_modeled_devices_are_documented(descriptor_path: Path) -> None:
+    deployment = descriptor_path.parent.name
+    doc_text = _deployment_doc_text(deployment)
+    assert doc_text, f"{deployment}: no docs/deployments/{deployment}/*.md found"
+    descriptor = bd.load(descriptor_path)
+    missing = sorted(
+        device.name
+        for device in _walk_devices(descriptor)
+        if device.name and not device.new and f"`{device.name}`" not in doc_text
+    )
+    assert not missing, (
+        f"{deployment}: modelled devices (no new: marker) absent from "
+        f"docs/deployments/{deployment}/ as a `name` mention; document them or mark new: in "
+        f"the descriptor: {missing}"
+    )
+
+
+def test_modeled_device_documentation_is_not_vacuous() -> None:
+    # The operational pilot models many devices; pin a floor so the per-deployment
+    # check above cannot quietly go vacuous (every device flipped to new:, or the
+    # doc glob breaking) and pass without checking anything.
+    modeled = [d for d in _walk_devices(bd.load(_DESCRIPTOR)) if d.name and not d.new]
+    assert len(modeled) >= 30, f"expected the 2-BM pilot to model many devices, got {len(modeled)}"
 
 
 @pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
