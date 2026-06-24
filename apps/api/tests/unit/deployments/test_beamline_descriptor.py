@@ -527,6 +527,57 @@ def test_allowlist_guard_logic_detects_unexpected_and_stale() -> None:
     assert stale == ["GoneFamily"]
 
 
+# ---------------------------------------------------------------------------
+# Descriptor <-> deployment-docs drift guard.
+#
+# Each deployment's docs/deployments/<id>/ pages carry a hand-authored, curated
+# inventory (editorial columns, live condition, and, for the operational pilot,
+# derived PseudoAxis Assets that exist only in scenario setup), so they are NOT
+# generated from the descriptor. This guard keeps only the factual subset honest:
+# every device the descriptor MODELS (not marked new:, i.e. a real CORA Asset or
+# a live verified device) must be mentioned by name somewhere in its deployment
+# docs, so renaming or removing a device in the descriptor cannot leave a stale
+# doc, and a documented Asset cannot quietly lose its descriptor source. Devices
+# marked new: are not yet modelled and are legitimately absent, so a pure
+# design-phase scaffold (all-new) is not pinned until its devices materialize.
+# ---------------------------------------------------------------------------
+
+_DOCS_DEPLOYMENTS = _REPO_ROOT / "docs" / "deployments"
+
+
+def _deployment_doc_text(deployment: str) -> str:
+    base = _DOCS_DEPLOYMENTS / deployment
+    if not base.is_dir():
+        return ""
+    return "\n".join(path.read_text(encoding="utf-8") for path in sorted(base.rglob("*.md")))
+
+
+@pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
+def test_modeled_devices_are_documented(descriptor_path: Path) -> None:
+    deployment = descriptor_path.parent.name
+    doc_text = _deployment_doc_text(deployment)
+    assert doc_text, f"{deployment}: no docs/deployments/{deployment}/*.md found"
+    descriptor = bd.load(descriptor_path)
+    missing = sorted(
+        device.name
+        for device in _walk_devices(descriptor)
+        if device.name and not device.new and f"`{device.name}`" not in doc_text
+    )
+    assert not missing, (
+        f"{deployment}: modelled devices (no new: marker) absent from "
+        f"docs/deployments/{deployment}/ as a `name` mention; document them or mark new: in "
+        f"the descriptor: {missing}"
+    )
+
+
+def test_modeled_device_documentation_is_not_vacuous() -> None:
+    # The operational pilot models many devices; pin a floor so the per-deployment
+    # check above cannot quietly go vacuous (every device flipped to new:, or the
+    # doc glob breaking) and pass without checking anything.
+    modeled = [d for d in _walk_devices(bd.load(_DESCRIPTOR)) if d.name and not d.new]
+    assert len(modeled) >= 30, f"expected the 2-BM pilot to model many devices, got {len(modeled)}"
+
+
 @pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
 def test_no_model_or_family_binding_escapes_the_walk(descriptor_path: Path) -> None:
     raw = yaml.safe_load(descriptor_path.read_text(encoding="utf-8"))
