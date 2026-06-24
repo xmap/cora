@@ -178,10 +178,9 @@ txm-endstation:
   note: >
     The published TXM overview mixes pre-APS-U and current hardware (TXM-1), so
     every device is carried confirm. The TXM-specific optics (condenser, objective
-    zone plate, phase ring) are bound to loose Family strings: they are genuinely
-    new device classes not yet in the catalog and are NOT coined as catalog
-    Families here (no Asset is registered yet to earn them). Their optical details
-    are OPTICS-1..3.
+    zone plate, phase ring) bind to the Condenser, ZonePlate, and PhaseRing catalog
+    Families, which graduated once FXI became a second deployment sharing them.
+    Their optical details are OPTICS-1..3.
   devices:
     - name: TXMGranite
       family: Table
@@ -203,17 +202,17 @@ txm-endstation:
       family: Condenser
       new: true
       confirm: true
-      note: "beam-condensing optic upstream of the sample (capillary or condenser zone plate); type unconfirmed (OPTICS-1). Loose Family"
+      note: "beam-condensing optic upstream of the sample (capillary or condenser zone plate); type unconfirmed (OPTICS-1). Catalog Family (graduated once FXI shared it)"
     - name: ZonePlate
       family: ZonePlate
       new: true
       confirm: true
-      note: "objective Fresnel zone plate forming the magnified image; outermost-zone width and diameter unconfirmed (OPTICS-2). Loose Family"
+      note: "objective Fresnel zone plate forming the magnified image; outermost-zone width and diameter unconfirmed (OPTICS-2). Catalog Family (graduated once FXI shared it)"
     - name: PhaseRing
       family: PhaseRing
       new: true
       confirm: true
-      note: "Zernike phase ring for phase contrast, inserted or retracted (txm img phase_ring_out); details unconfirmed (OPTICS-3). Loose Family"
+      note: "Zernike phase ring for phase contrast, inserted or retracted (txm img phase_ring_out); details unconfirmed (OPTICS-3). Catalog Family (graduated once FXI shared it)"
 
 # ===========================================================================
 # DETECTION STAGE: the TXM detector chain in 32-ID-C

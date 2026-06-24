@@ -19,7 +19,7 @@ The sample stack (`class TXMSampleStage`, instance `zps`) is the positioning cor
 
 ## The transmission-microscopy optics
 
-These shape and analyze the beam through the sample. Four of them (`Condenser`, `ZonePlate`, `PhaseRing`, `BetrandLens`) bind to loose family names that render as text; they are not yet catalog Families (OPTIC-3).
+These shape and analyze the beam through the sample. `Condenser`, `ZonePlate`, and `PhaseRing` are catalog Families (graduated with this deployment); `BetrandLens` stays a loose family name that renders as text, FXI-only (OPTIC-3).
 
 | Optic | Family | PV axes | What it does |
 | --- | --- | --- | --- |

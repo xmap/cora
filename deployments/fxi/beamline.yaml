@@ -19,10 +19,10 @@
 # Everything is carried `confirm: true` until FXI staff verify it. Items deferred
 # are tagged inline with a (QUESTION-ID) answered on docs/deployments/fxi/questions.md.
 #
-# The four TXM diffractive optics (Condenser, ZonePlate, PhaseRing, BetrandLens)
-# bind to LOOSE family names (they render as plain text); they are not yet catalog
-# Families. Graduating them is a separate Federation-scoped naming act (32-ID
-# already carries them loose), deferred to a future rule-of-three trigger.
+# Three TXM diffractive optics (Condenser, ZonePlate, PhaseRing) are now catalog
+# Families: they graduated once a second deployment (FXI, after 32-ID) shared them.
+# BetrandLens stays a loose family name (FXI is its only sighting; it renders as
+# plain text), pending a second deployment (OPTIC-3).
 #
 # Fields: see deployments/2-bm/beamline.yaml for the shared shape.
 
@@ -155,8 +155,9 @@ sample:
   intro: The TXM sample stage and the transmission-microscopy optics around it (condenser, aperture, zone plate, phase ring, Bertrand lens).
   note: >
     All bind to the XF:18IDB-OP prefix and are verified against
-    startup/11-txm_motor.py. The four diffractive optics use loose family names
-    (Condenser, ZonePlate, PhaseRing, BetrandLens), not yet catalog Families.
+    startup/11-txm_motor.py. Condenser, ZonePlate, and PhaseRing are catalog
+    Families (graduated with this deployment); BetrandLens stays a loose family
+    name (FXI-only, OPTIC-3).
   devices:
     - name: SampleStage
       family: LinearStage
@@ -180,7 +181,7 @@ sample:
       axis_channels: { x: "XF:18IDB-OP{CLens:1-Ax:X}Mtr", y1: "XF:18IDB-OP{CLens:1-Ax:Y1}Mtr", y2: "XF:18IDB-OP{CLens:1-Ax:Y2}Mtr", z1: "XF:18IDB-OP{CLens:1-Ax:Z1}Mtr", z2: "XF:18IDB-OP{CLens:1-Ax:Z2}Mtr", p: "XF:18IDB-OP{CLens:1-Ax:P}Mtr" }
       new: true
       confirm: true
-      note: "Condenser optic (class Condenser, instance clens). Loose family pending catalog graduation (OPTIC-3)."
+      note: "Condenser optic (class Condenser, instance clens). Catalog Family (graduated with this deployment)."
     - name: Aperture
       family: Aperture
       pv: "XF:18IDB-OP"
@@ -197,8 +198,8 @@ sample:
       new: true
       confirm: true
       note: >
-        Zone plate objective (class Zoneplate, instance zp). Loose family pending
-        catalog graduation (OPTIC-3). The 244 um / 30 nm and NanoTools values are
+        Zone plate objective (class Zoneplate, instance zp). Catalog Family
+        (graduated with this deployment). The 244 um / 30 nm and NanoTools values are
         code constants (startup/20-global_param.py), not staff-confirmed (OPTIC-4).
         CAUTION: zp.y is wired to the {BLens:1-Ax:Y} record while betr.y is wired to
         {ZP:1-Ax:Y}; the two Y axes are cross-wired in source (CAUTION, see cautions.md).
@@ -208,7 +209,7 @@ sample:
       axis_channels: { x: "XF:18IDB-OP{PR:1-Ax:X}Mtr", y: "XF:18IDB-OP{PR:1-Ax:Y}Mtr", z: "XF:18IDB-OP{TXM-PH:1-Ax:Z}Mtr" }
       new: true
       confirm: true
-      note: "Zernike phase ring (class PhaseRing, instance phase_ring). Loose family pending catalog graduation (OPTIC-3)."
+      note: "Zernike phase ring (class PhaseRing, instance phase_ring). Catalog Family (graduated with this deployment)."
     - name: BetrandLens
       family: BetrandLens
       pv: "XF:18IDB-OP"

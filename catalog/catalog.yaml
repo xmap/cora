@@ -82,6 +82,12 @@ families:
     note: "Beam-steering grazing-incidence mirror optic Family. 2-BM: the Y3-30 mirror (distinct from its MirrorTable support, which is Family Table)."
   - name: Monochromator
     note: "Energy-selecting optic Family; at 2-BM the double-multilayer monochromator (DMM). The energy-change IOC drives its Bragg arms + M2 vertical offset per energy; inserting it picks the beam energy, pink-beam operation bypasses it."
+  - name: Condenser
+    note: "Beam-condensing optic Family for full-field transmission X-ray microscopy: shapes the monochromatic beam onto the sample (a capillary or a condenser zone plate). Distinct from the ZonePlate (the imaging objective downstream of the sample) and from a Mirror (grazing-incidence steering); the discriminator is its role, conditioning the illumination onto the sample. 32-ID: the Condenser (capillary or condenser zone plate, type unconfirmed). FXI: the clens condenser. Earned in once two deployments shared it; per-Asset optical parameters live at the Asset layer."
+  - name: ZonePlate
+    note: "Diffractive Fresnel zone-plate objective Family for full-field transmission X-ray microscopy: magnifies the transmitted image onto the detector, set by its diameter and outermost-zone width. Distinct from the Condenser (which conditions the illumination onto the sample) and from a refractive Objective (the visible-light objective in a scintillator-relay detector); the ZonePlate is the X-ray imaging objective. 32-ID: the ZonePlate. FXI: the zp zone plate (NanoTools, about 244 um diameter, about 30 nm outermost zone, carried confirm). Earned in once two deployments shared it; per-Asset zone parameters live at the Asset layer."
+  - name: PhaseRing
+    note: "Zernike phase-ring optic Family for full-field transmission X-ray microscopy: a phase plate in the back focal plane that renders phase contrast as amplitude contrast, inserted or retracted per imaging mode. Distinct from the ZonePlate (the imaging objective) and the Condenser (the illumination optic); the discriminator is its phase-contrast role. 32-ID: the PhaseRing. FXI: the phase_ring. Earned in once two deployments shared it; the inserted/retracted state is a per-Asset setting."
   - name: Filter
     note: "Discrete absorber-foil changer Family; at 2-BM the C / Al foil paddles that attenuate and condition the white beam (the upstream paddle 2bma:m17 is the operational selector; the downstream 2bma:m18 is currently Faulted)."
   - name: InsertionDevice

@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/fxi/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/fxi-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection, so they are carried as open questions, not bindings. The four TXM diffractive optics use loose family names (`Condenser`, `ZonePlate`, `PhaseRing`, `BetrandLens`) that render as text; they are not yet catalog Families.
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/fxi-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection, so they are carried as open questions, not bindings. Three TXM diffractive optics (`Condenser`, `ZonePlate`, `PhaseRing`) are catalog Families (graduated with this deployment); `BetrandLens` stays a loose family name that renders as text (FXI is its only sighting).
 
 ## The Asset tree
 
@@ -24,10 +24,10 @@ Root Asset `FXI` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `WhiteFluxMonitor` / `PinkFluxMonitor` / `MonoFluxMonitor` | `Device` | GenericProbe | `XF:18IDA-BI{WPFS:1}` / `{PMFS:1}` / `{MFS:1}` | Manta flux/position diagnostics |
 | `SampleStage` | `Device` | LinearStage | `XF:18IDB-OP{Env:1-Ax:Xl/Yl/Zl}` | sample translation (sx/sy/sz) |
 | `SampleRotary` | `Device` | RotaryStage | `XF:18IDB-OP{TXM:2-Ax:R}Mtr` | tomography theta (`pi_r`), PSO-triggered |
-| `Condenser` | `Device` | Condenser | `XF:18IDB-OP{CLens:1-Ax:*}` | condenser optic (`clens`), loose family |
+| `Condenser` | `Device` | Condenser | `XF:18IDB-OP{CLens:1-Ax:*}` | condenser optic (`clens`) |
 | `Aperture` | `Device` | Aperture | `XF:18IDB-OP{Aper:1-Ax:*}` | TXM aperture (`aper`) |
-| `ZonePlate` | `Device` | ZonePlate | `XF:18IDB-OP{ZP:1-Ax:*}` | zone-plate objective (`zp`), loose family |
-| `PhaseRing` | `Device` | PhaseRing | `XF:18IDB-OP{PR:1-Ax:*}` | Zernike phase ring, loose family |
+| `ZonePlate` | `Device` | ZonePlate | `XF:18IDB-OP{ZP:1-Ax:*}` | zone-plate objective (`zp`) |
+| `PhaseRing` | `Device` | PhaseRing | `XF:18IDB-OP{PR:1-Ax:*}` | Zernike phase ring |
 | `BetrandLens` | `Device` | BetrandLens | `XF:18IDB-OP{BLens:1-Ax:*}` | Bertrand lens (`betr`), loose family |
 | `IonChamber` | `Device` | GenericProbe | `XF:18IDB-BI{` | ion chambers ic1..ic4 (i404) |
 | `Scintillator` | `Device` | Scintillator | `XF:18IDB-OP{Det:Lens` | scintillator-relay lens stage |
@@ -36,7 +36,7 @@ Root Asset `FXI` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `Magnification` | `Device` | PseudoAxis | (computed) | `(DetU.z / zp.z - 1) * 10` |
 | `Zebra` | `Device` | TimingController | `XF:18ID-ES:1{Dev:Zebra1}:` | position-capture trigger box |
 
-The four diffractive optics (`Condenser`, `ZonePlate`, `PhaseRing`, `BetrandLens`) bind to loose family names not yet in the catalog; graduating them is tracked as (OPTIC-3). All other families reuse the catalog.
+`Condenser`, `ZonePlate`, and `PhaseRing` graduated into the catalog with this deployment (a second deployment after 32-ID); `BetrandLens` stays loose, FXI-only, tracked as (OPTIC-3). All other families reuse the catalog.
 
 ## Computed axes
 
