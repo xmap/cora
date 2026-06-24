@@ -4,7 +4,7 @@
 
 A deployment is a beamline pilot: one instrument where the recipe ladder, BCs, and trust boundaries meet real users. Vertical before horizontal. CORA's domain model only contains what at least one real deployment forced into it; until a beamline demands a shape, the shape stays out.
 
-A beamline is never standalone: it sits inside a Site, a Federation `Facility` that owns the clearances, principals, practices, and facility-scope supplies the beamline inherits but does not own. The deployments below are grouped by that Site; each beamline page links up to its Site rather than restating it. CORA's operational pilot is 2-BM; the rest are in the design phase, modelled from a design report ahead of construction or recommissioning, so their pages describe an intended shape, not a running instrument.
+A beamline is never standalone: it sits inside a Site, a Federation `Facility` that owns the clearances, principals, practices, and facility-scope supplies the beamline inherits but does not own. The deployments below are grouped by that Site; each beamline page links up to its Site rather than restating it. CORA's operational pilot is 2-BM. Most of the rest are in the design phase, modelled from a design report ahead of construction or recommissioning. FXI is a third kind: an operating beamline reverse-engineered from public configuration, so its pages carry real EPICS PVs but every value stays `confirm` until the beamline team verifies it.
 
 ## [APS](aps/index.md)
 
@@ -24,5 +24,13 @@ The second Site CORA models; thin while its beamline is in design.
 | Beamline | Status | What it is |
 | --- | --- | --- |
 | [TomoWise](tomowise/index.md) | In design | micro- and nano-tomography, Technical Design Report phase |
+
+## [NSLS-II](nsls2/index.md)
+
+The third Site CORA models, and its first reverse-engineered one: FXI is modelled from public NSLS-II open source (the bluesky profile collection), not a design report or a live connection.
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [FXI](fxi/index.md) | Reverse-engineered | full-field transmission X-ray microscopy and tomography, 18-ID; modelled from public beamline config |
 
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

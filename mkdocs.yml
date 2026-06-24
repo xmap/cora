@@ -162,6 +162,28 @@ nav:
         - Techniques: deployments/tomowise/techniques.md
         - Governance: deployments/tomowise/governance.md
         - Model: deployments/tomowise/model.md
+    - NSLS-II:
+      - deployments/nsls2/index.md
+      - FXI:
+        - deployments/fxi/index.md
+        - Open questions: deployments/fxi/questions.md
+        - The beamline:
+          - deployments/fxi/equipment/index.md
+          - Source: deployments/fxi/beamline.md
+          - Sample: deployments/fxi/equipment/sample.md
+          - Detector: deployments/fxi/equipment/detector.md
+          - Controls: deployments/fxi/equipment/controls.md
+          - Inventory: deployments/fxi/inventory.md
+        - Techniques: deployments/fxi/techniques.md
+        - Operations:
+          - deployments/fxi/operations.md
+          - Procedures: deployments/fxi/procedures.md
+          - Recipes: deployments/fxi/recipes.md
+          - Enclosures: deployments/fxi/enclosures.md
+          - Cautions: deployments/fxi/cautions.md
+        - Experiment: deployments/fxi/experiment.md
+        - Governance: deployments/fxi/governance.md
+        - Model: deployments/fxi/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
