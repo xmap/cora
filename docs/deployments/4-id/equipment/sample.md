@@ -4,7 +4,7 @@
 
 The sample stage at POLAR is not a single endstation but a set of per-station systems: the Huber diffractometers at 4-ID-G that orient a crystal and scan reciprocal space, the polarization analyzer at 4-ID-B, and the sample environment (superconducting magnets, temperature controllers, positioning tables, a pump-probe laser) spread across the experiment stations. They are modelled as sample-stage groups in the [descriptor](../inventory.md).
 
-Unlike a composed `Microscope` Assembly, the diffractometers are modelled here as plain devices with their circle axis maps: the reusable `Assembly(Diffractometer)` is designed but deferred until the circle geometry confirms and a scenario registers a Fixture (see [Model](../model.md#deliberately-not-here-yet)). The polarization, magnet, temperature, and laser device classes are bound to loose Family strings, not catalog Families, pending graduation.
+The diffractometer devices bind the catalog `Goniometer` Family for their sample circles; the composed `Assembly(Diffractometer)` is in the catalog (materialized by the 8-ID Fixture scenario), and a 4-ID Fixture is the follow-on (see [Model](../model.md#deliberately-not-here-yet)). The polarization, magnet, temperature, and laser device classes are bound to loose Family strings, not catalog Families, pending graduation.
 
 ## The diffractometers (4-ID-G)
 
@@ -12,8 +12,8 @@ POLAR's diffraction core: a Huber Eulerian-cradle diffractometer and a high-pres
 
 | Device | Family | Design spec / note |
 | --- | --- | --- |
-| `Diffractometer_Euler` | `Diffractometer` (loose) | Huber Eulerian cradle; sample x/y/z mapped, circle roles partial (`DIFF-1`) |
-| `Diffractometer_HighPressure` | `Diffractometer` (loose) | high-pressure diffractometer; chi/phi/sample-tilt + x/y/z mapped (`DIFF-1`) |
+| `Diffractometer_Euler` | `Goniometer` | Huber Eulerian cradle; sample x/y/z mapped, circle roles partial (`DIFF-1`) |
+| `Diffractometer_HighPressure` | `Goniometer` | high-pressure diffractometer; chi/phi/sample-tilt + x/y/z mapped (`DIFF-1`) |
 | `PolarizationAnalyzer` | `PolarizationAnalyzer` (loose) | analyzer crystal stage (th/y) at 4-ID-B; resolves scattered polarization (`POL-2`) |
 
 The circle geometry (4-circle Eulerian versus 6-circle, and which motor is which circle) is `DIFF-1`; it decides the `Assembly(Diffractometer)` slot shape. The reciprocal-space pseudo-axis is `DIFF-2`.

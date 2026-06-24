@@ -20,7 +20,7 @@
 
 - **Coherence and speed.** XPCS measures intensity fluctuations of a coherent beam over time, so the detectors are fast area detectors (Eiger 4M, Lambda 2M, Rigaku 3M) gated by a softGlue FPGA timing fabric, downstream of an evacuated flight path.
 - **A second diffractometer.** 8-ID-E carries a six-circle Huber diffractometer (mu, eta, chi, phi, nu, delta). Together with 4-ID's diffractometers this confirms the `Assembly(Diffractometer)` shape.
-- **Independent reuse of 4-ID's device classes.** 8-ID has its own transfocators, LakeShore temperature controllers, and Sydor / TetrAMM beam-position monitors. Because these now appear at two independent beamlines (4-ID and 8-ID), they graduate from loose strings into catalog Families (see [Model](model.md#catalog-graduation)).
+- **Independent reuse of 4-ID's device classes.** 8-ID has its own transfocators, LakeShore temperature controllers, and Sydor / TetrAMM beam-position monitors. Because these now appear at two independent beamlines (4-ID and 8-ID), they are held loose pending a cross-facility gate-review, recorded in the promotion register (see [Model](model.md#loose-families-held-for-gate-review)).
 
 It runs across four stations: `8-ID-A` (optics), `8-ID-D` (focusing), `8-ID-E` (diffractometer endstation), `8-ID-I` (XPCS endstation).
 
@@ -29,7 +29,7 @@ It runs across four stations: `8-ID-A` (optics), `8-ID-D` (focusing), `8-ID-E` (
 | Part | In this cut | Why |
 | --- | --- | --- |
 | Optics + focusing (`8-ID-A/D`) | Yes | Undulators, monochromator, FMBO mirrors, slits, the CRL transfocators |
-| Diffractometer endstation (`8-ID-E`) | Yes, as plain devices | Six-circle Huber + temperature + beam-position monitor; the Assembly is designed, deferred (`DIFF-1`) |
+| Diffractometer endstation (`8-ID-E`) | Yes | Six-circle Huber (binds the `Goniometer` Family) + temperature + beam-position monitor; the `Assembly(Diffractometer)` is in the catalog (`DIFF-1`) |
 | XPCS endstation (`8-ID-I`) | Yes | Aerotech sample stages, the coherent area detectors, the flight path |
 | UR5 robotic sample changer | No | A sample-changer shape CORA does not model yet (`SAMPLE-2`) |
 | softGlue timing graph | Coarsely | One `TimingController`; the full FPGA signal graph is `XPCS-3` |

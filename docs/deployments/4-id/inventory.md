@@ -4,7 +4,7 @@
 
 This cut models the 4-ID-A optics spine and the per-station optics, diffractometers, sample environment, and detectors of 4-ID-B / G / H; the Raman station and the peripheral electronics are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages. The shape is generated-honest: it is authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/4-id/beamline.yaml) descriptor that the Source page renders from.
 
-Devices bind to a catalog [Family](../../catalog/families.md) where one fits. POLAR's new device classes (`PhaseRetarder`, `PolarizationAnalyzer`, `Diffractometer`, `Magnet`, `TemperatureController`, `Transfocator`, `Laser`, `BeamPositionMonitor`) bind to loose Family strings, rendered as plain text: they are not yet earned into the catalog, and no Asset is registered yet to earn them (the graduation plan is on [Model](model.md#loose-family-graduation)). Unlike the design-phase scaffolds, the control handles are filled from the beamline config; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) where one fits. POLAR's new device classes (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `TemperatureController`, `Transfocator`, `Laser`, `BeamPositionMonitor`) bind to loose Family strings held for gate-review (the diffractometer devices bind the catalog `Goniometer` Family; the graduation register is on [Model](model.md#loose-family-graduation)). Unlike the design-phase scaffolds, the control handles are filled from the beamline config; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -22,8 +22,8 @@ Root Asset `4-ID POLAR` (`tier = Unit`, `facility_code = aps`); sub-systems nest
 | `Transfocator` | `Device` | Transfocator (loose) | 4-ID-G | CRL transfocator (OPT-2) |
 | `KBMirror_B/G/H` | `Device` | Mirror | 4-ID-B/G/H | per-station KB focusing mirrors (OPT-3) |
 | `Filter_B/G/H` | `Device` | Filter | 4-ID-B/G/H | per-station attenuator banks |
-| `Diffractometer_Euler` | `Device` | Diffractometer (loose) | 4-ID-G | Huber Eulerian cradle (DIFF-1) |
-| `Diffractometer_HighPressure` | `Device` | Diffractometer (loose) | 4-ID-G | high-pressure diffractometer (DIFF-1) |
+| `Diffractometer_Euler` | `Device` | Goniometer | 4-ID-G | Huber Eulerian cradle; goniometer of the Diffractometer Assembly (DIFF-1) |
+| `Diffractometer_HighPressure` | `Device` | Goniometer | 4-ID-G | high-pressure diffractometer; goniometer of the Diffractometer Assembly (DIFF-1) |
 | `PolarizationAnalyzer` | `Device` | PolarizationAnalyzer (loose) | 4-ID-B | analyzer crystal stage (POL-2) |
 | `Magnet_2T_B` / `Magnet_2T_E` | `Device` | Magnet (loose) | 4-ID-B | 2 T sample magnets (MAG-1) |
 | `Magnet_9T_H` | `Device` | Magnet (loose) | 4-ID-H | high-field magnet (MAG-1) |
@@ -38,7 +38,7 @@ Root Asset `4-ID POLAR` (`tier = Unit`, `facility_code = aps`); sub-systems nest
 | `XBPM_G/H`, `Sydor_G/H`, `TetrAMM_B` | `Device` | BeamPositionMonitor (loose) | 4-ID-B/G/H | beam-position / intensity monitors (BPM-1) |
 | `Scaler_1/2` | `Device` | GenericProbe | 4-ID-B | CTR8 scaler channels |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Slit`, `Window`, `Mirror`, `Filter`, `Table`, `Camera`, `GenericProbe`, and (graduated once 8-ID became the second beamline to use them) `TemperatureController`, `Transfocator`, `BeamPositionMonitor`. Still bound to loose Family strings (single beamline, or an Assembly target): `PhaseRetarder`, `PolarizationAnalyzer`, `Diffractometer`, `Magnet`, `Laser`. These are earned into the catalog only when a confirmed device registers and a naming review accepts the name; the graduation plan is on [Model](model.md#loose-family-graduation).
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Slit`, `Window`, `Mirror`, `Filter`, `Table`, `Camera`, `GenericProbe`, and `Goniometer` (the diffractometer sample circles). Bound to loose Family strings, held for gate-review: `TemperatureController`, `Transfocator`, `BeamPositionMonitor` (recur across beamlines but the abstraction is open), `PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser` (single beamline). These are earned into the catalog only when a confirmed device registers and a naming review accepts the name; the graduation plan is on [Model](model.md#loose-family-graduation).
 
 ## Pending confirmations
 

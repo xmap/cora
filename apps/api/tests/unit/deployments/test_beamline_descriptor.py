@@ -378,6 +378,13 @@ _ALLOWED_LOOSE_FAMILIES = {
     "Transfocator": "staged: compound-refractive-lens optic; no catalog home yet (CRL-1)",
     "Baffle": "staged: passive baffle inside the 2-BM SafetyStack; review name/role",
     "Screen": "staged: motorized phosphor diagnostic flag (2-BM, FLAG-1); review name-vs-behavior",
+    "BeamPositionMonitor": "staged: position/intensity Sensor; fold-vs-promote open (DIAG-1)",
+    "PhaseRetarder": "staged: polarization phase-retarder (4-ID); rule-of-three open (POL-1)",
+    "PolarizationAnalyzer": "staged: polarization analyzer (4-ID); rule-of-three open (POL-2)",
+    "Magnet": "staged: sample-environment magnet (4-ID POLAR); rule-of-three open (MAG-1)",
+    "Laser": "staged: pump-probe laser (4-ID POLAR); model-vs-hazard open (SAMPLE-1)",
+    "Rheometer": "staged: rheometer shear-cell (8-ID); rule-of-three open (SAMPLE-1)",
+    "FlightPath": "staged: evacuated XPCS flight path (8-ID); rule-of-three open (XPCS-2)",
 }
 
 # The subset of loose families that is conceptually a Supply observation (a
@@ -396,6 +403,8 @@ _PROMOTION_REVIEWED = {
     "EnergyDispersiveSpectrometer": "hold: Family-vs-Sensor still open (DET-1)",
     "FlowController": "hold: earn-vs-defer still open (FLOW-1)",
     "TemperatureController": "hold: settable-actuator abstraction still open (ENV-1)",
+    "Transfocator": "hold: CRL optic abstraction still open across i22 / 4-id / 8-id (CRL-1)",
+    "BeamPositionMonitor": "hold: Sensor fold-vs-promote open across 4-id/8-id (DIAG-1/FLUX-1)",
 }
 
 # Catalog families bound by no deployment device. Symmetric to the orphan-model

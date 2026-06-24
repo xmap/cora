@@ -175,7 +175,7 @@ beam-conditioning:
     the Mirror Family; their internal axis maps are OPT-3.
   devices:
     - name: Transfocator
-      family: Transfocator           # catalog Family (OPT-2)
+      family: Transfocator           # loose Family (held; CRL-1, OPT-2)
       pv: "4idPyCRL:CRL4ID:"
       new: true
       confirm: true
@@ -244,13 +244,13 @@ diffractometers:
     (DIFF-1). Diffractometer is a loose Family placeholder until then.
   devices:
     - name: Diffractometer_Euler
-      family: Diffractometer         # loose Family; becomes Assembly(Diffractometer) (DIFF-1)
+      family: Goniometer             # catalog Family; the sample-orientation goniometer of the Diffractometer Assembly (DIFF-1)
       pv: { chi: "4idgSoft:m37", phi: "4idgSoft:m38", x: "4idgSoft:m40", y: "4idgSoft:m41", z: "4idgSoft:m42" }
       new: true
       confirm: true
       note: "Huber Eulerian-cradle diffractometer (CradleDiffractometer); chi and phi circles added from the 6idb-bits snapshot, the full circle set is DIFF-1"
     - name: Diffractometer_HighPressure
-      family: Diffractometer         # loose Family; becomes Assembly(Diffractometer) (DIFF-1)
+      family: Goniometer             # catalog Family; the sample-orientation goniometer of the Diffractometer Assembly (DIFF-1)
       pv: { chi: "4idgSoft:m5", phi: "4idgSoft:m6", sample_tilt: "4idgSoft:m11", x: "4idgSoft:m12", y: "4idgSoft:m14", z: "4idgSoft:m13" }
       new: true
       confirm: true
@@ -301,14 +301,14 @@ sample-environment:
       enclosure: 4-ID-G
       note: "Kepco-driven electromagnet (gmag); station and field unconfirmed (TOPO-3, MAG-1)"
     - name: TemperatureController_336
-      family: TemperatureController   # catalog Family (TEMP-1)
+      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
       pv: "4idgSoft:LS336:TC1:"
       new: true
       confirm: true
       enclosure: 4-ID-G
       note: "LakeShore 336 sample temperature controller (TEMP-1)"
     - name: TemperatureController_340
-      family: TemperatureController   # catalog Family (TEMP-1)
+      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
       pv: "4idgSoftX:LS340:TC1:"
       new: true
       confirm: true
@@ -409,33 +409,33 @@ beam-position-monitors:
     Sensor Role when graduated.
   devices:
     - name: XBPM_G
-      family: BeamPositionMonitor     # catalog Family (BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
       pv: { x: "4idgSoft:m48", y: "4idgSoft:m47" }
       new: true
       confirm: true
       note: "4-ID-G X-ray beam-position monitor"
     - name: XBPM_H
-      family: BeamPositionMonitor     # catalog Family (BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
       pv: { x: "4idhSoft:m6", y: "4idhSoft:m5" }
       new: true
       confirm: true
       enclosure: 4-ID-H
       note: "4-ID-H X-ray beam-position monitor"
     - name: Sydor_G
-      family: BeamPositionMonitor     # catalog Family (BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
       pv: "4idgSydor:T4U_BPM:"
       new: true
       confirm: true
       note: "4-ID-G Sydor electrometer beam-position monitor"
     - name: Sydor_H
-      family: BeamPositionMonitor     # catalog Family (BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
       pv: "4idhSydor:T4U_BPM:"
       new: true
       confirm: true
       enclosure: 4-ID-H
       note: "4-ID-H Sydor electrometer beam-position monitor"
     - name: TetrAMM_B
-      family: BeamPositionMonitor     # catalog Family (BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
       pv: "4idbSoft:TetrAMM:"
       new: true
       confirm: true

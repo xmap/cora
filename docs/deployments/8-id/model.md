@@ -9,22 +9,22 @@
 | Beamline descriptor | [`deployments/8-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/8-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `8-ID` added to its beamline list, with XPCS Practices |
 | Extraction provenance | [`research/aps-reverse-engineering/extracted/8id-bits/`](https://github.com/xmap/cora/tree/main/research/aps-reverse-engineering) | the facts report and candidate the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | three Families graduate with this deployment (below); the rest of 8-ID's new classes stay loose |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | the three families 8-ID shares with 4-ID are held loose for gate-review (below); 8-ID's other new classes stay loose too |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; XPCS / scattering Methods are not yet coined (TECH-1) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 8-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
-## Catalog graduation
+## Loose families held for gate-review
 
-8-ID is the second independent APS beamline (after 4-ID POLAR) to use three device classes 4-ID introduced as loose Families. Two independent beamlines is the graduation trigger, so they are earned into `catalog/catalog.yaml` with this deployment. Their names were cleared by the naming-r3 review during the [catalog-graduation pass](https://github.com/xmap/cora/blob/main/research/aps-reverse-engineering/catalog-graduation-decisions.md).
+8-ID adds a second independent APS beamline (after 4-ID POLAR) to three device classes that recur widely: `TemperatureController`, `Transfocator`, and `BeamPositionMonitor`. The count crosses the promotion threshold, but `main` deliberately holds them loose pending cross-facility abstraction reviews that the parallel Diamond deployments opened: the settable-actuator abstraction (`ENV-1`), the CRL optic's catalog home (`CRL-1`), and the beam-position sensor's fold-vs-promote question against the held `Diagnostic` / `FluxMonitor` families (`DIAG-1` / `FLUX-1`). So they stay loose here too, allowlisted and recorded in the promotion-review register; their naming-r3 review (during the [catalog-graduation pass](https://github.com/xmap/cora/blob/main/research/aps-reverse-engineering/catalog-graduation-decisions.md)) is done, but the abstraction decision is gate-review's, not this PR's.
 
-| Family | Presents | At 4-ID | At 8-ID |
+| Loose family | Presents (when graduated) | At 4-ID | At 8-ID |
 | --- | --- | --- | --- |
 | `TemperatureController` | Controller | LakeShore 336 / 340 | LakeShore 336 (8-ID-E) + Quantum Northwest holders (8-ID-I) |
 | `Transfocator` | Positioner | CRL transfocator | two CRL transfocators (8-ID-D) |
-| `BeamPositionMonitor` | Sensor | XBPM / Sydor / TetrAMM (and loose at 2-BM) | Sydor (8-ID-E) + TetrAMM (8-ID-I) |
+| `BeamPositionMonitor` | Sensor | XBPM / Sydor / TetrAMM | Sydor (8-ID-E) + TetrAMM (8-ID-I) |
 
-`Magnet` and `Preamplifier` do NOT graduate: they rest on a single physical beamline (4-ID), since `6idb-bits` is a 4-ID fork (see the [4-ID model page](../4-id/model.md#deliberately-not-here-yet)). They wait for a genuinely independent beamline that uses them.
+`Magnet` and `Preamplifier` are also loose on a single physical beamline (4-ID; `6idb-bits` is a 4-ID fork, see the [4-ID model page](../4-id/model.md#deliberately-not-here-yet)).
 
 ## The Diffractometer Assembly (landed)
 

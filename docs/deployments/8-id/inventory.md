@@ -4,7 +4,7 @@
 
 This cut models the 8-ID-A/D optics and focusing, the 8-ID-E six-circle diffractometer endstation, and the 8-ID-I XPCS endstation; the robotic sample changer and the full softGlue timing graph are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/8-id/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) where one fits. Three device classes 8-ID shares with 4-ID (`Transfocator`, `TemperatureController`, `BeamPositionMonitor`) **graduate into the catalog with this deployment**, because 8-ID is the second independent beamline to use them (see [Model](model.md#catalog-graduation)). The rest of 8-ID's new classes (`Diffractometer`, `Rheometer`, `FlightPath`) stay loose. Control handles are filled from the beamline config; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) where one fits. Three device classes 8-ID shares with 4-ID (`Transfocator`, `TemperatureController`, `BeamPositionMonitor`) are held loose pending a cross-facility gate-review, even though 8-ID is the second independent beamline to use them (see [Model](model.md#loose-families-held-for-gate-review)). The rest of 8-ID's new classes (`Diffractometer`, `Rheometer`, `FlightPath`) stay loose. Control handles are filled from the beamline config; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -19,7 +19,7 @@ Root Asset `8-ID` (`tier = Unit`, `facility_code = aps`); sub-systems nest below
 | `WhiteBeamSlit` / `MonoSlit` | `Device` | Slit | 8-ID-A | optics slits |
 | `Transfocator_1/2` | `Device` | Transfocator | 8-ID-D | CRL transfocators, ten lenses each (OPT-3) |
 | `Slit_8idd` | `Device` | Slit | 8-ID-D | focusing-station slit |
-| `Diffractometer_SixCircle` | `Device` | Diffractometer (loose) | 8-ID-E | six-circle Huber (mu/eta/chi/phi/nu/delta) (DIFF-1) |
+| `Diffractometer_SixCircle` | `Device` | Goniometer | 8-ID-E | six-circle Huber; goniometer of the Diffractometer Assembly (DIFF-1) |
 | `ReciprocalSpace` | `Device` | PseudoAxis | 8-ID-E | hklpy2 reciprocal-space layer (DIFF-2) |
 | `TemperatureController_1/2` | `Device` | TemperatureController | 8-ID-E | LakeShore 336 controllers (TEMP-1) |
 | `BeamPositionMonitor_E` | `Device` | BeamPositionMonitor | 8-ID-E | Sydor TetrAMM monitor (BPM-1) |
@@ -35,7 +35,7 @@ Root Asset `8-ID` (`tier = Unit`, `facility_code = aps`); sub-systems nest below
 | `TetrAMM_QUAD1` | `Device` | BeamPositionMonitor | 8-ID-I | TetrAMM channels (BPM-1) |
 | `Timing` | `Device` | TimingController | - | softGlue timing fabric (XPCS-3) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Slit`, `PseudoAxis`, `Shutter`, `LinearStage`, `Camera`, `BeamStop`, `TimingController`. Graduating into the catalog with this deployment (second independent beamline after 4-ID): `Transfocator`, `TemperatureController`, `BeamPositionMonitor`. Staying loose (single beamline, or an Assembly target): `Diffractometer` (the reusable `Assembly(Diffractometer)` is designed on [Model](model.md#deliberately-not-here-yet)), `Rheometer`, `FlightPath`.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Slit`, `PseudoAxis`, `Shutter`, `LinearStage`, `Camera`, `BeamStop`, `TimingController`. Held loose pending gate-review (the second independent beamline, but the abstraction is open): `Transfocator`, `TemperatureController`, `BeamPositionMonitor`. Also loose (single beamline): `Rheometer`, `FlightPath`. The diffractometer is not a loose family: its sample circles bind the catalog `Goniometer` Family, and the composed `Assembly(Diffractometer)` is in the catalog (see [Model](model.md#the-diffractometer-assembly-landed)).
 
 ## Pending confirmations
 

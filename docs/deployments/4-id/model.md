@@ -16,18 +16,18 @@
 
 ## Loose-Family graduation
 
-POLAR introduced eight device classes CORA had not earned into the catalog. Graduation needs two or more independent CORA deployments to reference a Family (the rule the passive beam-path tier followed), and the 8-ID XPCS deployment, the second independent beamline, made three of them concrete: `TemperatureController`, `Transfocator`, and `BeamPositionMonitor` are now catalog Families. The `Diffractometer` graduated as the `Assembly(Diffractometer)` blueprint (4-ID + 8-ID), with an 8-ID Fixture scenario; the remaining four (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser`) stay loose (a single beamline so far). All names were cleared by the naming-r3 review during the catalog-graduation pass.
+POLAR introduced eight device classes CORA had not earned into the catalog. Graduation needs two or more independent CORA deployments AND a settled abstraction. The 8-ID XPCS deployment adds the second independent beamline for `TemperatureController`, `Transfocator`, and `BeamPositionMonitor`, but `main` deliberately holds all three loose pending cross-facility abstraction reviews opened by the parallel Diamond deployments (settable-actuator `ENV-1`; CRL catalog home `CRL-1`; sensor fold-vs-promote `DIAG-1` / `FLUX-1`), so they stay loose here too, allowlisted and recorded in the promotion register. The `Diffractometer` is the one that landed: as the `Assembly(Diffractometer)` blueprint (4-ID + 8-ID), which composes the catalog `Goniometer` Family, with an 8-ID Fixture scenario. The remaining four (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser`) are single-beamline loose. All names were cleared by the naming-r3 review during the catalog-graduation pass.
 
 | Loose Family | Presents (when graduated) | Status |
 | --- | --- | --- |
-| `TemperatureController` | Controller | GRADUATED: 8-ID is the second beamline (LakeShore + QNW) |
-| `Transfocator` | Positioner | GRADUATED: 8-ID is the second beamline (two CRL transfocators) |
-| `BeamPositionMonitor` | Sensor | GRADUATED: 8-ID is the second beamline (Sydor + TetrAMM) |
+| `TemperatureController` | Controller | HELD loose: 2nd beamline (LakeShore + QNW) but abstraction open (ENV-1) |
+| `Transfocator` | Positioner | HELD loose: 2nd beamline (two CRL transfocators) but no catalog home yet (CRL-1) |
+| `BeamPositionMonitor` | Sensor | HELD loose: 2nd beamline (Sydor + TetrAMM) but fold-vs-promote open (DIAG-1/FLUX-1) |
 | `PhaseRetarder` | Positioner | loose: a second polarization beamline, or POLAR registration |
 | `PolarizationAnalyzer` | Positioner | loose: a second polarization beamline |
 | `Magnet` | confirm (Positioner or Sensor) | loose: needs a second magnetism beamline (8-ID has no sample magnet) |
 | `Laser` | confirm | loose: a second deployment, or the SAMPLE-1 model-versus-hazard decision |
-| `Diffractometer` | Positioner (Assembly) | GRADUATED as `Assembly(Diffractometer)` in the catalog (4-ID + 8-ID); 8-ID Fixture scenario landed, the 4-ID Fixture is the follow-on |
+| `Diffractometer` | Positioner (Assembly) | LANDED as `Assembly(Diffractometer)` in the catalog, composing `Goniometer` (4-ID + 8-ID); 8-ID Fixture scenario landed, the 4-ID Fixture is the follow-on |
 
 ## Deliberately not here yet
 

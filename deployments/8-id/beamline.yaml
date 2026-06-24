@@ -124,18 +124,18 @@ focusing:
   intro: "The compound refractive lens transfocators that focus the coherent beam for XPCS, and the 8-ID-D slits."
   note: >
     rl1 and rl2 are CRL transfocator lens stacks (ten lenses each on 8iddSoft:TRANS),
-    bound to a loose Transfocator Family that 4-ID also uses; this is the second
-    deployment to reference it (OPT-3, see model.md graduation plan).
+    bound to a loose Transfocator Family that 4-ID also uses; held for gate-review
+    (OPT-3, CRL-1; see model.md).
   devices:
     - name: Transfocator_1
-      family: Transfocator           # catalog Family (OPT-3)
+      family: Transfocator           # loose Family (held; CRL-1, OPT-3)
       pv: { x: "8iddSoft:TRANS:m2", y: "8iddSoft:TRANS:m1", pitch: "8iddSoft:TRANS:m4", yaw: "8iddSoft:TRANS:m3" }
       new: true
       confirm: true
       lens_count: 10
       note: "first CRL transfocator (rl1); ten lens actuators 8iddSoft:TRANS:m5-m14, summarized (OPT-3)"
     - name: Transfocator_2
-      family: Transfocator           # catalog Family (OPT-3)
+      family: Transfocator           # loose Family (held; CRL-1, OPT-3)
       pv: { x: "8iddSoft:TRANS:m26", y: "8iddSoft:TRANS:m25", pitch: "8iddSoft:TRANS:m28", yaw: "8iddSoft:TRANS:m27" }
       new: true
       confirm: true
@@ -161,11 +161,11 @@ diffractometer:
     sample translation, modelled as a plain device with its circle axis map; the
     reusable Assembly(Diffractometer) is designed on model.md (DIFF-1). psic is the
     reciprocal-space pseudo-axis layer (hklpy2). The LakeShore controllers and the
-    Sydor beam-position monitor bind loose Families that 4-ID also uses, graduating
-    with this deployment (see model.md).
+    Sydor beam-position monitor bind loose Families that 4-ID also uses, held for
+    gate-review (see model.md).
   devices:
     - name: Diffractometer_SixCircle
-      family: Diffractometer         # loose Family; becomes Assembly(Diffractometer) (DIFF-1)
+      family: Goniometer             # catalog Family; the sample-orientation goniometer of the Diffractometer Assembly (DIFF-1)
       pv: { mu: "8ideSoft:CR8-E1:m6", eta: "8ideSoft:CR8-E1:m7", chi: "8ideSoft:CR8-E1:m8", phi: "8ideSoft:CR8-E1:m9", nu: "8ideSoft:CR8-E1:m4", delta: "8ideSoft:CR8-E1:m5", x: "8ideSoft:CR8-E1:m15", y: "8ideSoft:CR8-E1:m10", z: "8ideSoft:CR8-E1:m11" }
       new: true
       confirm: true
@@ -177,19 +177,19 @@ diffractometer:
       confirm: true
       note: "hklpy2 reciprocal-space pseudo-axis over the six-circle geometry (psic); the partition rule is DIFF-2"
     - name: TemperatureController_1
-      family: TemperatureController   # catalog Family
+      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
       pv: "8ideSoft:LS336:1:"
       new: true
       confirm: true
       note: "LakeShore 336 sample temperature controller (TEMP-1)"
     - name: TemperatureController_2
-      family: TemperatureController   # catalog Family
+      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
       pv: "8ideSoft:LS336:2:"
       new: true
       confirm: true
       note: "second LakeShore 336 controller (TEMP-1)"
     - name: BeamPositionMonitor_E
-      family: BeamPositionMonitor     # catalog Family
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
       pv: "8ideBPM:T4U_BPM:"
       new: true
       confirm: true
@@ -223,7 +223,7 @@ xpcs-sample:
       confirm: true
       note: "six-axis rheometer shear-cell sample environment (SAMPLE-1)"
     - name: SampleHolder_QNW
-      family: TemperatureController   # catalog Family
+      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
       pv: "8idiSoft:QNWenv_1:"
       new: true
       confirm: true
@@ -285,7 +285,7 @@ xpcs-detectors:
       confirm: true
       note: "flight-tube beam stop"
     - name: TetrAMM_QUAD1
-      family: BeamPositionMonitor     # catalog Family
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
       pv: "8idTetra:QUAD1:"
       new: true
       confirm: true
