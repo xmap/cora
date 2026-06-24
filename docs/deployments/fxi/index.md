@@ -8,11 +8,11 @@
 | Facility | [NSLS-II](../nsls2/index.md) (bound via `facility_code = "nsls2"`, `FacilityKind = Site`) |
 | Sector | `Sector 18` (organizational grouping; PV namespace `XF:18ID*`) |
 | Institution | Brookhaven National Laboratory (context; not modeled as an Asset or Facility) |
-| Status | Reverse-engineered from public config (operational beamline; CORA not connected) |
-| Control stack | EPICS, via the bluesky profile collection `NSLS2/fxi-profile-collection` |
+| Status | Design projection from public config (operational beamline; CORA not connected) |
+| Floor control system | EPICS (the beamline's; CORA actuates through it) |
 
-!!! note "Reverse-engineered from public configuration"
-    FXI is an operational NSLS-II beamline, but CORA has not been connected to it and no FXI staff have confirmed this model. Every value on these pages is read from public NSLS-II open source (the bluesky profile collection [`NSLS2/fxi-profile-collection`](https://github.com/NSLS2/fxi-profile-collection) and the shared `NSLS2/nslsii` package) or inferred, and is carried as `confirm` until FXI staff verify it. EPICS PVs are real and verified against the profile collection; vendor part numbers, controller boxes, and physical positions are not in it. The things CORA still needs the team to confirm are collected on [Open questions](questions.md); they are long on purpose.
+!!! note "How CORA would land on FXI"
+    These pages describe how CORA would model, govern, conduct, and record FXI if it were deployed there. They are not a survey of the beamline's current software. The hardware facts (devices, EPICS PVs, axes, enclosures, quirks) are read from public NSLS-II open source (the [`NSLS2/fxi-profile-collection`](https://github.com/NSLS2/fxi-profile-collection) profile collection) and verified against it; vendor part numbers, controller boxes, and physical positions are not in it, so they, and every read value, are carried `confirm` until FXI staff verify them ([Open questions](questions.md)). What CORA would bring (its Conductor, its data of record, its governance) is CORA's own design landing on the beamline's hardware, not the beamline's existing stack restated.
 
 ## The beamline
 
@@ -41,11 +41,11 @@ The cross-cutting reference view is the [Inventory](inventory.md): the flat Asse
 
 ## Experiment
 
-[Experiment](experiment.md): the live per-experiment view, the subjects, runs, campaigns, datasets, and decisions of a beamtime. Described here as the shape CORA would record from the beamline's run metadata; CORA is not connected to FXI, so there are no live instances.
+[Experiment](experiment.md): the per-experiment view CORA's model would record, the subjects, runs, campaigns, datasets, and decisions of a beamtime. Described here as shape; CORA is not running FXI, so there are no live instances.
 
 ## Governance
 
-[Governance](governance.md): who may act at FXI and the trust shape that gates their commands. People and agents are facility principals at the [NSLS-II Site](../nsls2/index.md#who-acts-here). The profile collection exposes only coarse queue-server groups, not the human roster.
+[Governance](governance.md): who may act at FXI and the trust shape CORA applies to their commands. People and agents are facility principals at the [NSLS-II Site](../nsls2/index.md#who-acts-here); CORA brings its own per-Actor authority. The human roster is not yet known.
 
 ## Model
 

@@ -1,17 +1,17 @@
 # Operations
 
-*The runbook for getting ready and measuring at FXI, and the supplies a run draws on. Reverse-engineered from the profile collection.*
+*How CORA would get ready and measure at FXI, and the supplies a run draws on. This is CORA's runbook design, not a transcription of the beamline's current operating procedure.*
 
-Operations ties together the procedures, recipes, enclosures, and cautions into the act of running a measurement.
+Operations ties together the procedures, recipes, enclosures, and cautions into the act of running a measurement under CORA.
 
 ## The runbook
 
 - [Procedures](procedures.md): staff-run sequences (energy-lookup calibration, rotation-center finding, focus alignment) that produce the Calibrations a scan needs.
-- [Recipes](recipes.md): deployment-bound step sequences (energy_setting, dark/flat capture, element-edge XANES) that expand into Procedures.
+- [Recipes](recipes.md): deployment-bound step sequences (energy setting, dark/flat capture, element-edge XANES) that expand into Procedures.
 - [Enclosures](enclosures.md): the two hutch permits, optics hutch `18-IDA` and experiment hutch `18-IDB`.
-- [Cautions](cautions.md): the quirks to know (cross-wired ZP/Bertrand Y axes, flaky shutter, Zebra overflow, camera staging timeout).
+- [Cautions](cautions.md): the quirks to know (cross-wired zone-plate / Bertrand-lens Y axes, flaky shutter, Zebra overflow, camera staging timeout).
 
-A typical fly-tomography run: confirm the hutch permit and the energy-lookup Calibration; set energy via the `energy_setting` recipe; capture dark and flat references; arm the Zebra against the rotary; run the continuous-rotation fly scan; reconstruct (Reckoner / TomoPy). The staging ceremony is the Conductor's, over the `ControlPort`; see [Controls](equipment/controls.md#the-seam-cora-and-the-epics-floor).
+A typical fly-tomography run, as CORA would conduct it: confirm the hutch permit and the energy-lookup Calibration; set the energy (the [energy-setting recipe](recipes.md)); capture dark and flat references; arm the position-trigger against the rotary; run the continuous-rotation fly scan; reconstruct. The staging is CORA's Conductor, acting over the EPICS floor through the ControlPort; see [Controls](equipment/controls.md#the-seam-cora-and-the-floor).
 
 ## Supplies
 
@@ -25,4 +25,4 @@ Continuously-available resources a run draws on. Facility-scope supplies are own
 | Liquid nitrogen | LiquidNitrogen | DCM crystal cooling (`XF:18IDA-UT` Cryo:1 levels/flow; valves V4/V5) |
 | Power | Power | beamline power |
 
-Datasets land in Tiled (`tiled.nsls2.bnl.gov`, catalog `fxi`) under `/nsls2/data/fxi-new/...`; CORA references the Tiled resource as the Dataset source-of-record but does not own the archive. Dataset checksum/integrity is not in the resource docs (DATA-1).
+The data a run produces is recorded as a CORA Dataset (CORA's own data of record); the raw frames land on the facility filestore and are moved into that Dataset by the Porter. See [Experiment > Datasets](experiment.md#datasets).

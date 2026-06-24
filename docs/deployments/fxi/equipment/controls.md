@@ -24,23 +24,23 @@ The EpicsMotors above are driven by controller boxes whose identity (model, prot
 
 This was investigated and is not settleable from public open source: FXI publishes only two repos (`fxi-profile-collection` and `fxi-workflows`), with no IOC-config repo. NSLS-II deploys IOCs through the `NSLS2/nsls2.ioc_deploy` Ansible device-role collection plus per-beamline `<bl>-epics-containers` repos (only `cms-epics-containers`, a test beamline, is public), but FXI's per-beamline IOC inventory, which would bind a controller model and IP to each motor group, is ops-private. The generic driver modules exist in the org (`I404-ioc`, `mdrive-ioc`, `mcs-ioc`, `pi-e621-ioc`), but none binds FXI's hardware. So DRIVE-1 needs FXI staff or private inventory access, not more searching.
 
-## The seam: CORA and the EPICS floor
+## The seam: CORA and the floor
 
-FXI's seam has the same shape as 2-BM's, with NSLS-II names.
+This is where CORA's design meets the FXI floor. The seam has the same shape as 2-BM's, with NSLS-II hardware on the floor side.
 
-CORA **replaces** (moves into the Conductor over `ControlPort`):
+CORA **owns** (its Conductor, over the `ControlPort`):
 
-- the bluesky scan plans (`fly_scan`, `tomo_zfly`, `radiography_scan`, `xanes_scan`); the fly-scan staging ceremony (arm Zebra, rotate, poll, collect, take flat/dark, move back) is Conductor scope;
-- the energy-change choreography `move_zp_ccd_xh`;
-- the queue-server orchestration authority (CORA decides what to run; the RunEngine stays the floor executor).
+- the scan orchestration: arming the position-trigger, rotating the sample, collecting projections, taking flat and dark references, and moving back. CORA's Conductor runs this directly; it replaces the beamline's current scan orchestration rather than calling into it.
+- the energy change: the coupled move that holds magnification constant (see [Recipes](../recipes.md)) is a Conductor leg.
+- the decision of what to run, gated by the [trust boundary](../governance.md#the-trust-boundary).
 
-CORA **drives through** (stays on the floor):
+CORA **drives through** (the floor it actuates and observes, and does not replace):
 
-- ophyd `Device.read()/set()/trigger()` over the EPICS IOCs (the bluesky `Msg` vocabulary is the `ControlPort` contract);
-- the Zebra FPGA position-compare gating;
-- the DCM PID feedback (`-Ax:Th2}PID.FBON`, `-Ax:Chi2}PID.FBON`), the PSS/PPS interlock, the AreaDetector camera IOCs, and the motion-controller IOCs;
-- the Tiled write path and the `/nsls2/data/...` filestore (the Porter reads it, does not own it).
+- the EPICS IOCs, via the ophyd hardware abstraction (`Device.read()/set()/trigger()`): this is the `ControlPort` boundary, the handles CORA commands the hardware with;
+- the Zebra FPGA position-compare gating (the trigger pulses are generated in hardware off the rotary encoder);
+- the DCM PID feedback (`-Ax:Th2}PID.FBON`, `-Ax:Chi2}PID.FBON`), the PSS/PPS interlock, the camera IOCs, and the motion-controller IOCs;
+- the facility filestore where the detector's raw frames physically land. CORA's Porter (the TransferPort edge runtime) moves frames from there into CORA's own Dataset of record; CORA records the Dataset, it does not adopt the facility's data catalog (see [Experiment > Datasets](../experiment.md#datasets)).
 
-The three edge runtimes map onto FXI's bluesky stack one-to-one: Conductor = RunEngine / queue-server, Reckoner = TomoPy reconstruction, Porter = the Prefect end-of-run workflow exporting to Tiled.
+So CORA brings three edge runtimes to FXI: the Conductor (scan orchestration over the ControlPort), the Reckoner (reconstruction over the ComputePort), and the Porter (data egress into the CORA Dataset). Each does work the beamline's software stack does today; CORA does it as its own design, against the same floor.
 
 The software IOCs (`Andor`, `Kinetix`, `Marana`, `Manta`, `Zebra`, `ioLogik`) are referenced by PV namespace only, never registered as Assets.

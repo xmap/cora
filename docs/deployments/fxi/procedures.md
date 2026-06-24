@@ -1,30 +1,29 @@
 # Procedures
 
-*Staff-run procedures, reverse-engineered from the FXI scan plans and reconstruction code. Each is derived from a public plan, not from operating the beamline, so it is carried `confirm` until FXI staff verify it.*
+*The staff-run procedures CORA would carry for FXI. This is CORA's procedure design; the beamline's existing routines are the evidence that each procedure is needed, not the specification CORA copies.*
 
-A Procedure is a staff-run sequence with preconditions and an outcome (often a Calibration). These are read from `startup/41-scans.py`, `startup/94-tomo_recon.py`, and the calibration helpers; the exact step parameters and decision points need staff confirmation.
+A CORA Procedure is a staff-run sequence with preconditions and an outcome, often a Calibration. Each is carried `confirm` until FXI staff verify the step detail.
 
 ## Energy-lookup calibration
 
-Builds the table that the energy-change move interpolates.
+Builds the table the energy-change recipe interpolates.
 
-- Source: `record_calib_pos_new_xh`, `trans_calib_xh` (`startup/41-scans.py`).
-- What it does: at a set of reference energies, record the coordinated positions of the DCM (Chi2, Th2), zone plate (X, Y), condenser, aperture, and detector that keep the image in focus and the magnification constant. The points become the `CALIBER` / `trans_calib_xh` lookup.
-- Outcome: a Calibration that the [`energy_setting` recipe](recipes.md) reads. Without it, the coupled energy move cannot interpolate.
+- What CORA does: at a set of reference energies, record the coordinated positions of the monochromator, zone plate, condenser, aperture, and detector that keep the image focused and the magnification constant.
+- Outcome: a Calibration the [energy-setting recipe](recipes.md) reads. Without it, the coupled energy move has nothing to interpolate.
+- Evidence it is needed: the beamline maintains exactly such a lookup today; CORA owns building and storing it as a Calibration.
 
 ## Rotation-center finding
 
 Locates the tomographic rotation axis on the detector before or during reconstruction.
 
-- Source: `find_rot`, `rotcen_test` (`startup/94-tomo_recon.py`).
-- What it does: reconstruct trial slices across a range of candidate center offsets and pick the sharpest, or derive the center from a 0/180-degree projection pair.
-- Outcome: the rotation-center value used by the reconstruction (Reckoner) leg.
+- What CORA does: reconstruct trial slices across candidate center offsets and select the sharpest, or derive the center from a 0/180-degree projection pair.
+- Outcome: the rotation-center value the reconstruction (Reckoner) leg consumes.
 
 ## Focus and field alignment
 
-- Knife-edge / scintillator-focus and secondary-source-slit (`ssa`) alignment scans appear in the supporting plans. They set the scintillator Z and the illumination, producing focus and field Calibrations.
-- These are named in source but their step detail is not fully captured this pass; they are carried `confirm` pending staff confirmation.
+- What CORA does: set the scintillator focus and the secondary-source/illumination field, producing focus and field Calibrations.
+- These routines exist on the floor today; their exact step detail is carried `confirm` pending staff confirmation.
 
 ## Recovery
 
-The profile collection does not expose a documented recovery runbook (FXI's equivalent of 2-BM's hexapod-reboot script was not found in this pass). Recovery procedures will be added when the controller boxes are identified (DRIVE-1) and a real runbook is confirmed; a runbook invented from absence would not be record.
+No documented recovery runbook is available from public sources, and the controller identities are not public (DRIVE-1), so CORA does not yet carry an FXI recovery Procedure. Inventing one from absence would not be record; it joins these pages once the controllers are identified and a real recovery routine is confirmed.

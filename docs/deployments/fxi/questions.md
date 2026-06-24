@@ -42,11 +42,10 @@ This model is reverse-engineered from public NSLS-II open source (the bluesky pr
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DRIVE-1 | Blocks-go-live | What are the motion-controller boxes behind the EpicsMotors (model, protocol, axis count, serial, firmware, IP), and which IOC drives each device group? Confirmed not in public open source: FXI has no IOC-config repo, and its per-beamline IOC inventory (Ansible `nsls2.ioc_deploy` device roles + a `<bl>-epics-containers` repo) is ops-private. Needs FXI staff or inventory access. | Families only; box identities unknown. | The MotionController Models and the Drive identities. |
-| ZEBRA-1 | Nice-to-have | Are there two Zebra boxes? `Zebra1` is instantiated; `Zebra2` is referenced in source. What is each wired to? | One Zebra (Zebra1), reading the rotary as enc1. | The TimingController set. |
-| DATA-1 | Nice-to-have | Where is dataset integrity (checksum) recorded? Tiled resource docs give a URI but no checksum. | The Tiled URI is the Dataset source-of-record; no checksum modeled. | The Dataset lineage. |
+| ZEBRA-1 | Nice-to-have | Are there two position-trigger boxes? One is instantiated; a second is referenced in the public config. What is each wired to? | One trigger box, reading the rotary as the master encoder. | The TimingController set. |
 
 ## Governance
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| GOV-1 | Blocks-go-live | Who is the FXI operator and beamline-scientist pool, and the role assignments? The profile collection exposes only coarse queue-server groups (`root` / `primary`), not the human roster. | A pending facility actor pool; CORA owns finer per-Actor authority. | The Access Actors and Trust policies. |
+| GOV-1 | Blocks-go-live | Who is the FXI operator and beamline-scientist pool, and the role assignments? The public config exposes only a coarse group-level controls authority, not the human roster CORA's Access model needs. | A pending facility actor pool; CORA applies its own per-Actor authority. | The Access Actors and Trust policies. |

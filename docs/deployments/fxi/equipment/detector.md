@@ -18,7 +18,7 @@ Source instantiates several camera classes; CORA models **one** detector positio
 
 | Instance | Class | PV | Status |
 | --- | --- | --- | --- |
-| `KinetixU` | Photometrics Kinetix | `XF:18ID1-ES{Kinetix-Det:1}` | live (carries `RE.md`); the modeled camera |
+| `KinetixU` | Photometrics Kinetix | `XF:18ID1-ES{Kinetix-Det:1}` | the active instance; the modeled camera |
 | `KinetixD` | Photometrics Kinetix | `XF:18ID1-ES{Kinetix-Det:1}` | placeholder, same PVs as `KinetixU` (source comment) |
 | `MaranaU` / `MaranaD` | Andor Marana | `XF:18IDB-ES{Det:Marana1}` | both share one PV (placeholder pair) |
 | `Andor` | Andor Neo2 | `XF:18IDB-BI{Det:Neo2}` | present in source |
