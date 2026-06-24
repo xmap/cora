@@ -9,7 +9,7 @@ to end.
 `EpicsCaControlPort` (aioca) is the parallel production CA client;
 together they cover the EPICS substrate. PVA adds what CA cannot
 carry: NTNDArray (structured 2-D image streams) which surface as the
-`Image` ReadingKind. The existing `epicscorelibs.ioc` softIOC auto-
+`Image` MeasurementKind. The existing `epicscorelibs.ioc` softIOC auto-
 loads qsrv + pvAccessIOC, so both the CA adapter (aioca via CA) and
 this PVA adapter (p4p via PVA) integration-test against the same
 subprocess fixture.
@@ -31,22 +31,22 @@ separate not-found exception). The same `wait_for` wrapping also
 handles the precondition check that aioca's `cainfo` provides
 implicitly.
 
-## ACL translation (p4p Value / NT subclass -> Reading)
+## ACL translation (p4p Value / NT subclass -> Measurement)
 
 `Context.get(name)` returns an augmented NT Python object that carries
 flattened `.timestamp` (float seconds UTC), `.severity` (int 0-3),
 `.status` (int), and `.raw` (the underlying `p4p.Value`). The adapter
 unpacks per NT type:
 
-  - `NTScalar` -> `Reading(kind="Scalar")`, `value = `int / float / str
+  - `NTScalar` -> `Measurement(kind="Scalar")`, `value = `int / float / str
     via the augmented subclass (e.g., `int(ntint)`)
-  - `NTScalarArray` -> `Reading(kind="Array")`, `value = tuple(...)`
-  - `NTNDArray` -> `Reading(kind="Image")`, `value = ((...,)*n)` tuple
+  - `NTScalarArray` -> `Measurement(kind="Array")`, `value = tuple(...)`
+  - `NTNDArray` -> `Measurement(kind="Image")`, `value = ((...,)*n)` tuple
     of tuples (the augmented `ntndarray` is already shape-correct;
     dimension reshape is applied by the NT unwrap)
-  - `NTEnum` -> `Reading(kind="Categorical")`, `value = ` label string
+  - `NTEnum` -> `Measurement(kind="Categorical")`, `value = ` label string
     resolved via `raw['value.choices'][int(...)]`
-  - `NTTable` -> `Reading(kind="Tabular")`, `value = ` dict of
+  - `NTTable` -> `Measurement(kind="Tabular")`, `value = ` dict of
     column-name -> tuple (rare in practice; reserved for future use)
 
 `quality` from `severity` via the same 0->Good, 1->Uncertain, 2/3->Bad
@@ -116,9 +116,9 @@ from cora.operation.ports.control_port import (
     ControlTimeoutError,
     ControlValueCoercionError,
     ControlWriteRejectedError,
+    Measurement,
+    MeasurementKind,
     Quality,
-    Reading,
-    ReadingKind,
 )
 
 if TYPE_CHECKING:
@@ -156,7 +156,7 @@ def _quality_for(severity: int) -> Quality:
 
 
 def _quality_detail_for(severity: int, status: int) -> str:
-    """Forensic-breadcrumb string for `Reading.quality_detail`.
+    """Forensic-breadcrumb string for `Measurement.quality_detail`.
 
     p4p exposes `.status` as an integer alarm-status code (same shape
     as aioca's). Empty when severity is NO_ALARM (matches the
@@ -167,8 +167,8 @@ def _quality_detail_for(severity: int, status: int) -> str:
     return f"alarm_status={int(status)}"
 
 
-def _classify_kind(value: Any) -> ReadingKind:
-    """Decide ReadingKind from the NT type ID embedded in the raw Value.
+def _classify_kind(value: Any) -> MeasurementKind:
+    """Decide MeasurementKind from the NT type ID embedded in the raw Value.
 
     p4p's augmented Python subclasses expose the underlying `Value`
     via `.raw`. The Value's `.getID()` returns the structure ID like
@@ -192,13 +192,13 @@ def _classify_kind(value: Any) -> ReadingKind:
     return "Scalar"
 
 
-def _unpack_value(value: Any, kind: ReadingKind) -> Any:
+def _unpack_value(value: Any, kind: MeasurementKind) -> Any:
     """Extract a Python-native value from p4p's augmented NT object."""
     if kind == "Image":
         # The augmented ntndarray subclass is a numpy array shaped per
         # the NTNDArray dimensions (Fortran-order reshape applied by
         # the NT unwrap layer). Convert to tuple-of-tuples for the
-        # Reading dataclass; Python-native + hashable.
+        # Measurement dataclass; Python-native + hashable.
         if hasattr(value, "tolist"):
             return tuple(tuple(row) for row in value.tolist())
         return tuple(value)
@@ -216,7 +216,7 @@ def _unpack_value(value: Any, kind: ReadingKind) -> Any:
         return str(index)
     if kind == "Tabular":
         # NTTable iterates as OrderedDicts per row when unwrapped;
-        # for the Reading dataclass we materialise to a column-oriented
+        # for the Measurement dataclass we materialise to a column-oriented
         # dict of tuples so the value stays hashable + comparable.
         rows = list(value)
         if not rows:
@@ -239,19 +239,19 @@ def _unpack_value(value: Any, kind: ReadingKind) -> Any:
     return raw_value
 
 
-def _to_reading(value: Any) -> Reading:
-    """Translate a p4p NT-augmented value to `Reading`."""
+def _to_reading(value: Any) -> Measurement:
+    """Translate a p4p NT-augmented value to `Measurement`."""
     kind = _classify_kind(value)
     payload = _unpack_value(value, kind)
     severity = int(getattr(value, "severity", 0))
     status = int(getattr(value, "status", 0))
     timestamp = float(getattr(value, "timestamp", 0.0))
-    sampled_at = datetime.fromtimestamp(timestamp, tz=UTC)
-    return Reading(
+    produced_at = datetime.fromtimestamp(timestamp, tz=UTC)
+    return Measurement(
         value=payload,
         kind=kind,
         quality=_quality_for(severity),
-        sampled_at=sampled_at,
+        produced_at=produced_at,
         quality_detail=_quality_detail_for(severity, status),
     )
 
@@ -272,7 +272,7 @@ class EpicsPvaControlPort:
             self._context = Context(provider="pva")
         return self._context
 
-    async def read(self, address: str) -> Reading:
+    async def read(self, address: str) -> Measurement:
         ctx = self._ensure_context()
         try:
             value = await asyncio.wait_for(
@@ -357,7 +357,7 @@ class EpicsPvaControlPort:
             status="completed",
         )
 
-    def subscribe(self, address: str) -> AsyncGenerator[Reading]:
+    def subscribe(self, address: str) -> AsyncGenerator[Measurement]:
         """Return type narrows the Protocol's `AsyncIterator` to `AsyncGenerator`.
 
         Covariant return lets tests close subscriptions via the
@@ -367,7 +367,7 @@ class EpicsPvaControlPort:
         """
         return self._drain(address)
 
-    async def _drain(self, address: str) -> AsyncGenerator[Reading]:
+    async def _drain(self, address: str) -> AsyncGenerator[Measurement]:
         ctx = self._ensure_context()
         queue: asyncio.Queue[Any] = asyncio.Queue()
 

@@ -1,4 +1,4 @@
-"""Port-surface tests for `ControlPort`: Reading immutability + exception attrs.
+"""Port-surface tests for `ControlPort`: Measurement immutability + exception attrs.
 
 Locks the surface promises the production adapters (CaprotoControlPort,
 EpicsCaControlPort, EpicsPvaControlPort, future TangoControlPort /
@@ -17,18 +17,18 @@ from cora.operation.ports.control_port import (
     ControlTimeoutError,
     ControlValueCoercionError,
     ControlWriteRejectedError,
+    Measurement,
     NoAdapterForAddressError,
-    Reading,
 )
 
 
 @pytest.mark.unit
 def test_reading_is_frozen_dataclass() -> None:
-    r = Reading(
+    r = Measurement(
         value=1.5,
         kind="Scalar",
         quality="Good",
-        sampled_at=datetime(2026, 5, 27, tzinfo=UTC),
+        produced_at=datetime(2026, 5, 27, tzinfo=UTC),
     )
     with pytest.raises(FrozenInstanceError):
         r.value = 2.0  # type: ignore[misc]
@@ -36,11 +36,11 @@ def test_reading_is_frozen_dataclass() -> None:
 
 @pytest.mark.unit
 def test_reading_defaults_quality_detail_to_empty_string() -> None:
-    r = Reading(
+    r = Measurement(
         value=1.5,
         kind="Scalar",
         quality="Good",
-        sampled_at=datetime(2026, 5, 27, tzinfo=UTC),
+        produced_at=datetime(2026, 5, 27, tzinfo=UTC),
     )
     assert r.quality_detail == ""
 
@@ -48,8 +48,8 @@ def test_reading_defaults_quality_detail_to_empty_string() -> None:
 @pytest.mark.unit
 def test_reading_equality_by_field_tuple() -> None:
     ts = datetime(2026, 5, 27, tzinfo=UTC)
-    a = Reading(value=1.5, kind="Scalar", quality="Good", sampled_at=ts)
-    b = Reading(value=1.5, kind="Scalar", quality="Good", sampled_at=ts)
+    a = Measurement(value=1.5, kind="Scalar", quality="Good", produced_at=ts)
+    b = Measurement(value=1.5, kind="Scalar", quality="Good", produced_at=ts)
     assert a == b
     assert hash(a) == hash(b)
 

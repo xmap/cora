@@ -52,7 +52,7 @@ from cora.operation.conductor import (
 )
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
-    Reading,
+    Measurement,
 )
 
 if TYPE_CHECKING:
@@ -79,11 +79,11 @@ def _seed_detector(port: InMemoryControlPort, *, acquire_rbv: Any = 0) -> None:
     port.simulate_connect(f"{_DETECTOR}:Acquire")
     port.set_reading(
         f"{_DETECTOR}:Acquire_RBV",
-        Reading(value=acquire_rbv, kind="Scalar", quality="Good", sampled_at=_FIXED_NOW),
+        Measurement(value=acquire_rbv, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
     )
     port.set_reading(
         f"{_DETECTOR}:DetectorState_RBV",
-        Reading(value="Idle", kind="Categorical", quality="Good", sampled_at=_FIXED_NOW),
+        Measurement(value="Idle", kind="Categorical", quality="Good", produced_at=_FIXED_NOW),
     )
 
 
@@ -354,22 +354,24 @@ async def test_collect_poll_loop_iterates_while_acquire_rbv_busy() -> None:
             _ = (wait, timeout_s)
             self.writes.append((address, value))
 
-        async def read(self, address: str) -> Reading:
+        async def read(self, address: str) -> Measurement:
             if address == f"{_DETECTOR}:Acquire_RBV":
                 idx = min(self.rbv_calls, len(self.rbv_sequence) - 1)
                 value = self.rbv_sequence[idx]
                 self.rbv_calls += 1
-                return Reading(value=value, kind="Scalar", quality="Good", sampled_at=_FIXED_NOW)
+                return Measurement(
+                    value=value, kind="Scalar", quality="Good", produced_at=_FIXED_NOW
+                )
             if address == f"{_DETECTOR}:DetectorState_RBV":
-                return Reading(
+                return Measurement(
                     value="Idle",
                     kind="Categorical",
                     quality="Good",
-                    sampled_at=_FIXED_NOW,
+                    produced_at=_FIXED_NOW,
                 )
             raise AssertionError(f"unexpected read of {address!r}")
 
-        def subscribe(self, address: str) -> AsyncIterator[Reading]:
+        def subscribe(self, address: str) -> AsyncIterator[Measurement]:
             raise AssertionError("subscribe should not be called by collect at v1")
 
     port = _IteratingPort(rbv_sequence=[1, 1, 1, 0])

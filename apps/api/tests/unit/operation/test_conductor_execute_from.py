@@ -37,7 +37,7 @@ from cora.operation.conductor import (
     steps_from_payload,
 )
 from cora.operation.features.append_activities.command import AppendProcedureActivities
-from cora.operation.ports.control_port import ControlNotConnectedError, Reading
+from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
 from cora.recipe.aggregates.recipe.body import CaptureRef
 
 _FIXED_NOW = datetime(2026, 6, 21, 9, 0, 0, tzinfo=UTC)
@@ -67,9 +67,9 @@ class _RecordingControlPort:
     """Captures writes in order (for byte-for-byte assertions); reads from a seed."""
 
     writes: list[tuple[str, Any]] = field(default_factory=list[tuple[str, Any]])
-    readings: dict[str, Reading] = field(default_factory=dict[str, Reading])
+    readings: dict[str, Measurement] = field(default_factory=dict[str, Measurement])
 
-    async def read(self, address: str) -> Reading:
+    async def read(self, address: str) -> Measurement:
         if address not in self.readings:
             raise ControlNotConnectedError(address)
         return self.readings[address]
@@ -85,7 +85,7 @@ class _RecordingControlPort:
         _ = (wait, timeout_s)
         self.writes.append((address, value))
 
-    def subscribe(self, address: str) -> AsyncIterator[Reading]:  # pragma: no cover - unused
+    def subscribe(self, address: str) -> AsyncIterator[Measurement]:  # pragma: no cover - unused
         raise NotImplementedError
 
 
@@ -98,8 +98,8 @@ def _conductor(port: _RecordingControlPort, appender: _FakeAppendStep) -> Conduc
     )
 
 
-def _good_reading(value: Any) -> Reading:
-    return Reading(value=value, kind="Scalar", quality="Good", sampled_at=_FIXED_NOW)
+def _good_reading(value: Any) -> Measurement:
+    return Measurement(value=value, kind="Scalar", quality="Good", produced_at=_FIXED_NOW)
 
 
 def _pin_and_parse(steps: tuple[Step, ...]) -> tuple[Step, ...]:

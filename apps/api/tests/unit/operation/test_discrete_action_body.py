@@ -48,7 +48,7 @@ from cora.operation.conductor import (
 )
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
-    Reading,
+    Measurement,
 )
 
 if TYPE_CHECKING:
@@ -72,11 +72,11 @@ def _seed_detector_and_axis(port: InMemoryControlPort) -> None:
     port.simulate_connect(_AXIS)
     port.set_reading(
         f"{_DETECTOR}:Acquire_RBV",
-        Reading(value=0, kind="Scalar", quality="Good", sampled_at=_FIXED_NOW),
+        Measurement(value=0, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
     )
     port.set_reading(
         f"{_DETECTOR}:DetectorState_RBV",
-        Reading(value="Idle", kind="Categorical", quality="Good", sampled_at=_FIXED_NOW),
+        Measurement(value="Idle", kind="Categorical", quality="Good", produced_at=_FIXED_NOW),
     )
 
 
@@ -249,10 +249,10 @@ async def test_discrete_records_per_point_axis_writes_in_order() -> None:
             self.writes.append((address, value))
             await self.delegate.write(address, value, wait=wait, timeout_s=timeout_s)
 
-        async def read(self, address: str) -> Reading:
+        async def read(self, address: str) -> Measurement:
             return await self.delegate.read(address)
 
-        def subscribe(self, address: str) -> AsyncIterator[Reading]:
+        def subscribe(self, address: str) -> AsyncIterator[Measurement]:
             return self.delegate.subscribe(address)
 
     inner = InMemoryControlPort()

@@ -64,7 +64,7 @@ when a conduct halted, even if the halt was a crash or cancellation
 
 A `CheckStep` carries an address + an acceptance criterion. The
 Conductor reads from the address via `ControlPort.read`, requires
-`Reading.quality == "Good"` (Uncertain or Bad fails the check), and
+`Measurement.quality == "Good"` (Uncertain or Bad fails the check), and
 evaluates the criterion against the observed value. The closed
 criterion union (`EqualsCriterion | WithinToleranceCriterion`) keeps the wire shape
 JSON-clean while leaving room for future variants (`OneOf`,
@@ -153,8 +153,8 @@ from cora.operation.ports.control_port import (
     ControlTimeoutError,
     ControlValueCoercionError,
     ControlWriteRejectedError,
+    Measurement,
     NoAdapterForAddressError,
-    Reading,
 )
 from cora.recipe.aggregates.recipe.body import CaptureRef
 from cora.shared.text_bounds import REASON_MAX_LENGTH
@@ -382,8 +382,8 @@ class CheckStep:
     """One post-condition verification: read `address`, evaluate `criterion`.
 
     The Conductor reads the address via `ControlPort.read`, requires
-    `Reading.quality == "Good"`, then evaluates `criterion` against
-    `Reading.value`. Any of (read raised `Control*Error`, quality
+    `Measurement.quality == "Good"`, then evaluates `criterion` against
+    `Measurement.value`. Any of (read raised `Control*Error`, quality
     not Good, criterion did not match) halts execution with a
     recorded failure entry. The recorded payload carries the
     observed reading so post-hoc inspection has the evidence.
@@ -429,7 +429,7 @@ def _require_finite_number(value: Any, address: str) -> float:
     """Return `value` as a finite number or raise a Conductor-recordable failure.
 
     A captured axis read feeds a later restore setpoint, so it must be a
-    finite number. `Reading.value` is typed `Any`; a non-numeric read (a
+    finite number. `Measurement.value` is typed `Any`; a non-numeric read (a
     categorical / mis-addressed leaf) or a non-finite float (NaN / +-inf,
     e.g. an EPICS UDF) would otherwise propagate silently. Mapping it to
     `ControlValueCoercionError` (a member of `_CONTROL_ERRORS`) lets the
@@ -601,7 +601,7 @@ class _ActuationObserver:
         with contextlib.suppress(NoAdapterForAddressError):
             self._simulated_flags.add(bool(self._route_is_simulated(address)))
 
-    async def read(self, address: str) -> Reading:
+    async def read(self, address: str) -> Measurement:
         self._observe(address)
         return await self._inner.read(address)
 
@@ -616,7 +616,7 @@ class _ActuationObserver:
         self._observe(address)
         await self._inner.write(address, value, wait=wait, timeout_s=timeout_s)
 
-    def subscribe(self, address: str) -> AsyncIterator[Reading]:
+    def subscribe(self, address: str) -> AsyncIterator[Measurement]:
         self._observe(address)
         return self._inner.subscribe(address)
 
@@ -1413,7 +1413,7 @@ class Conductor:
                     "message": str(exc),
                 }
             }
-        return {"post_reading": _reading_to_dict(reading)}
+        return {"post_reading": _measurement_to_dict(reading)}
 
     async def _run_action(
         self,
@@ -1520,7 +1520,7 @@ class Conductor:
                 error_class=type(exc).__name__,
                 message=str(exc),
             )
-        body_with_reading = {**payload_body, "reading": _reading_to_dict(reading)}
+        body_with_reading = {**payload_body, "reading": _measurement_to_dict(reading)}
         if reading.quality != _QUALITY_GOOD:
             exc = CheckFailedError(step.address, f"quality={reading.quality}")
             await self._record(
@@ -1624,7 +1624,7 @@ class Conductor:
                 error_class=type(exc).__name__,
                 message=str(exc),
             )
-        body_with_reading = {**payload_body, "reading": _reading_to_dict(reading)}
+        body_with_reading = {**payload_body, "reading": _measurement_to_dict(reading)}
         if reading.quality != _QUALITY_GOOD:
             quality_exc = CheckFailedError(step.address, f"quality={reading.quality}")
             await self._record(
@@ -1906,11 +1906,11 @@ def _derive_failure_reason(failure: ConductorFailure) -> str:
     return reason[:REASON_MAX_LENGTH]
 
 
-def _reading_to_dict(reading: Reading) -> dict[str, Any]:
-    """JSON-clean projection of `Reading` for the step payload.
+def _measurement_to_dict(reading: Measurement) -> dict[str, Any]:
+    """JSON-clean projection of `Measurement` for the step payload.
 
     Includes the substrate metadata fields a post-hoc inspector needs
-    (quality + quality_detail + ISO-8601 sampled_at) so a check entry
+    (quality + quality_detail + ISO-8601 produced_at) so a check entry
     is self-contained without joining back to a separate stream.
     """
     return {
@@ -1918,7 +1918,7 @@ def _reading_to_dict(reading: Reading) -> dict[str, Any]:
         "kind": reading.kind,
         "quality": reading.quality,
         "quality_detail": reading.quality_detail,
-        "sampled_at": reading.sampled_at.isoformat(),
+        "sampled_at": reading.produced_at.isoformat(),
     }
 
 

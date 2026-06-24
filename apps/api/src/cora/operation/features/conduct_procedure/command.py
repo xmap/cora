@@ -13,7 +13,7 @@ response shape covers every outcome the operator needs to triage.
 `steps` is the caller-supplied sequence the Conductor walks.
 Substrate-agnostic: setpoint addresses parse inside the routed
 `ControlPort` adapter, action names look up in the `ActionRegistry`,
-check criteria evaluate against the read `Reading.value`.
+check criteria evaluate against the read `Measurement.value`.
 """
 
 from collections.abc import Sequence

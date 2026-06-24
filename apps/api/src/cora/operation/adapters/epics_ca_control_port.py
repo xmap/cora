@@ -39,7 +39,7 @@ as the connection-state precondition at read / write / subscribe entry
 so disconnect surfaces cleanly as `ControlNotConnectedError` before
 incurring an aioca exception.
 
-## ACL translation (aioca AugmentedValue -> Reading)
+## ACL translation (aioca AugmentedValue -> Measurement)
 
 `caget(pv, format=FORMAT_TIME)` returns an `AugmentedValue` carrying
 the value (numpy-typed for scalars + arrays; `ca_str` for DBR_STRING;
@@ -54,7 +54,7 @@ integer index for DBR_ENUM), `.datatype` (CA DBR type code),
   - `quality`: severity 0 -> Good, 1 -> Uncertain, 2/3 -> Bad
   - `quality_detail`: integer status code surfaced as a breadcrumb
     string when severity != NO_ALARM
-  - `sampled_at`: `datetime.fromtimestamp(.timestamp, tz=UTC)`
+  - `produced_at`: `datetime.fromtimestamp(.timestamp, tz=UTC)`
 
 For DBR_ENUM specifically, FORMAT_TIME carries only the integer
 index; the adapter widens to FORMAT_CTRL on first encounter to grab
@@ -80,7 +80,7 @@ discriminated by ECA code:
     payload captures it per [[project_non_determinism_principle]]
 
 `ControlValueCoercionError` isn't triggered against the softIOC test
-fixture (the closed ReadingKind set covers every type the .db
+fixture (the closed MeasurementKind set covers every type the .db
 exposes). Retained in the exception family for parity with the port
 + EpicsPva, where p4p's client-side type coercion can raise it.
 
@@ -127,9 +127,9 @@ from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlTimeoutError,
     ControlWriteRejectedError,
+    Measurement,
+    MeasurementKind,
     Quality,
-    Reading,
-    ReadingKind,
 )
 
 if TYPE_CHECKING:
@@ -172,8 +172,8 @@ def _quality_for(severity: int) -> Quality:
     return _SEVERITY_TO_QUALITY.get(int(severity), "Bad")
 
 
-def _kind_for(datatype: int, element_count: int) -> ReadingKind:
-    """Map aioca `(datatype, element_count)` to `ReadingKind`.
+def _kind_for(datatype: int, element_count: int) -> MeasurementKind:
+    """Map aioca `(datatype, element_count)` to `MeasurementKind`.
 
     aioca normalises FORMAT_TIME / FORMAT_CTRL responses back to the
     base DBR type code, so a single `DBR_ENUM` (= 3) check covers
@@ -187,7 +187,9 @@ def _kind_for(datatype: int, element_count: int) -> ReadingKind:
     return "Scalar"
 
 
-def _unpack_value(augmented: Any, kind: ReadingKind, enum_labels: tuple[str, ...] | None) -> Any:
+def _unpack_value(
+    augmented: Any, kind: MeasurementKind, enum_labels: tuple[str, ...] | None
+) -> Any:
     """Extract a Python-native value from aioca's AugmentedValue.
 
     aioca returns numpy-typed scalars + arrays for numeric DBR types;
@@ -214,7 +216,7 @@ def _unpack_value(augmented: Any, kind: ReadingKind, enum_labels: tuple[str, ...
 
 
 def _quality_detail_for(severity: int, status: int) -> str:
-    """Forensic-breadcrumb string for `Reading.quality_detail`.
+    """Forensic-breadcrumb string for `Measurement.quality_detail`.
 
     aioca exposes `.status` as an integer alarm-status code from
     EPICS's `alarmStatusString` table. For non-NO_ALARM severities
@@ -227,19 +229,19 @@ def _quality_detail_for(severity: int, status: int) -> str:
     return f"alarm_status={int(status)}"
 
 
-def _to_reading(augmented: Any, enum_labels: tuple[str, ...] | None) -> Reading:
-    """Translate an aioca `AugmentedValue` (FORMAT_TIME) to `Reading`."""
+def _to_reading(augmented: Any, enum_labels: tuple[str, ...] | None) -> Measurement:
+    """Translate an aioca `AugmentedValue` (FORMAT_TIME) to `Measurement`."""
     kind = _kind_for(augmented.datatype, augmented.element_count)
     value = _unpack_value(augmented, kind, enum_labels)
     severity = int(getattr(augmented, "severity", 0))
     status = int(getattr(augmented, "status", 0))
     timestamp = float(getattr(augmented, "timestamp", 0.0))
-    sampled_at = datetime.fromtimestamp(timestamp, tz=UTC)
-    return Reading(
+    produced_at = datetime.fromtimestamp(timestamp, tz=UTC)
+    return Measurement(
         value=value,
         kind=kind,
         quality=_quality_for(severity),
-        sampled_at=sampled_at,
+        produced_at=produced_at,
         quality_detail=_quality_detail_for(severity, status),
     )
 
@@ -289,7 +291,7 @@ class EpicsCaControlPort:
         if int(info.state) != cadef.cs_conn:
             raise ControlNotConnectedError(address)
 
-    async def read(self, address: str) -> Reading:
+    async def read(self, address: str) -> Measurement:
         await self._assert_connected(address)
         try:
             augmented = await caget(
@@ -352,7 +354,7 @@ class EpicsCaControlPort:
             status="completed",
         )
 
-    def subscribe(self, address: str) -> AsyncGenerator[Reading]:
+    def subscribe(self, address: str) -> AsyncGenerator[Measurement]:
         """Return type narrows the Protocol's `AsyncIterator` to `AsyncGenerator`.
 
         Covariant return lets tests close subscriptions via the
@@ -362,7 +364,7 @@ class EpicsCaControlPort:
         """
         return self._drain(address)
 
-    async def _drain(self, address: str) -> AsyncGenerator[Reading]:
+    async def _drain(self, address: str) -> AsyncGenerator[Measurement]:
         await self._assert_connected(address)
         queue: asyncio.Queue[Any] = asyncio.Queue()
         sub = camonitor(

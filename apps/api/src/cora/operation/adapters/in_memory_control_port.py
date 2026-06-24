@@ -26,14 +26,14 @@ raises `ControlNotConnectedError` mid-stream.
 
 `write` accepts the same primitive value set as the production
 adapters (`int | float | bool | str | tuple[Any, ...]`) and
-constructs a `Reading` for the store: tuples become
+constructs a `Measurement` for the store: tuples become
 `kind="Array"`, other primitives become `kind="Scalar"`.
-`sampled_at` is read from the injectable `now` callable (defaults
+`produced_at` is read from the injectable `now` callable (defaults
 to `lambda: datetime.now(tz=UTC)`); `quality` stays `"Good"`,
 `quality_detail` stays `""`. Tests that need a specific kind
 (`Image` / `Categorical` / `Tabular`), non-`Good` quality, or a
 populated `quality_detail` use `set_reading` to push an explicit
-`Reading`.
+`Measurement`.
 
 `wait` and `timeout_s` are accepted to satisfy the Protocol but
 ignored: in-memory has no substrate round-trip, so write-confirm /
@@ -75,8 +75,8 @@ from cora.infrastructure.logging import get_logger
 from cora.operation._control_dispatch_context import get_dispatch_correlation_id
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
-    Reading,
-    ReadingKind,
+    Measurement,
+    MeasurementKind,
 )
 
 if TYPE_CHECKING:
@@ -94,7 +94,7 @@ class _DisconnectSentinel:
 
     Kept as a private class (not a singleton instance) so
     `isinstance` checks in the drain loop stay unambiguous and the
-    sentinel cannot collide with any legitimate `Reading` a consumer
+    sentinel cannot collide with any legitimate `Measurement` a consumer
     might push through a future extension.
     """
 
@@ -113,13 +113,13 @@ class InMemoryControlPort:
     """
 
     def __init__(self, *, now: Callable[[], datetime] | None = None) -> None:
-        self._values: dict[str, Reading] = {}
+        self._values: dict[str, Measurement] = {}
         self._connected: set[str] = set()
-        self._subscribers: dict[str, list[asyncio.Queue[Reading | _DisconnectSentinel]]] = {}
+        self._subscribers: dict[str, list[asyncio.Queue[Measurement | _DisconnectSentinel]]] = {}
         self._now: Callable[[], datetime] = now or (lambda: datetime.now(tz=UTC))
         self._closed = False
 
-    def set_reading(self, address: str, reading: Reading) -> None:
+    def set_reading(self, address: str, reading: Measurement) -> None:
         """Install `reading` as the current value of `address` and fan out.
 
         Marks the address as connected if it was not already. Test
@@ -135,7 +135,7 @@ class InMemoryControlPort:
         """Mark `address` as connected without installing a value.
 
         Useful for tests that want `write` to succeed (and the
-        resulting `Reading` to be observable via `read`) without
+        resulting `Measurement` to be observable via `read`) without
         pre-seeding a `set_reading` call.
         """
         self._connected.add(address)
@@ -155,7 +155,7 @@ class InMemoryControlPort:
         for queue in self._subscribers.get(address, []):
             queue.put_nowait(_DISCONNECT)
 
-    async def read(self, address: str) -> Reading:
+    async def read(self, address: str) -> Measurement:
         if address not in self._connected:
             raise ControlNotConnectedError(address)
         cached = self._values.get(address)
@@ -190,8 +190,8 @@ class InMemoryControlPort:
                 error_class=ControlNotConnectedError.__name__,
             )
             raise ControlNotConnectedError(address)
-        kind: ReadingKind = "Array" if isinstance(value, tuple) else "Scalar"
-        reading = Reading(value=value, kind=kind, quality="Good", sampled_at=self._now())
+        kind: MeasurementKind = "Array" if isinstance(value, tuple) else "Scalar"
+        reading = Measurement(value=value, kind=kind, quality="Good", produced_at=self._now())
         self._values[address] = reading
         for queue in self._subscribers.get(address, []):
             queue.put_nowait(reading)
@@ -203,7 +203,7 @@ class InMemoryControlPort:
             status="completed",
         )
 
-    def subscribe(self, address: str) -> AsyncGenerator[Reading]:
+    def subscribe(self, address: str) -> AsyncGenerator[Measurement]:
         """Return type narrows the Protocol's `AsyncIterator` to `AsyncGenerator`.
 
         Covariant return type lets tests close subscriptions via the
@@ -216,15 +216,15 @@ class InMemoryControlPort:
         check fires on the iterator's first iteration via `_drain`,
         matching the Protocol's lazy-setup contract.
         """
-        queue: asyncio.Queue[Reading | _DisconnectSentinel] = asyncio.Queue()
+        queue: asyncio.Queue[Measurement | _DisconnectSentinel] = asyncio.Queue()
         self._subscribers.setdefault(address, []).append(queue)
         return self._drain(address, queue)
 
     async def _drain(
         self,
         address: str,
-        queue: asyncio.Queue[Reading | _DisconnectSentinel],
-    ) -> AsyncGenerator[Reading]:
+        queue: asyncio.Queue[Measurement | _DisconnectSentinel],
+    ) -> AsyncGenerator[Measurement]:
         try:
             if address not in self._connected:
                 raise ControlNotConnectedError(address)
