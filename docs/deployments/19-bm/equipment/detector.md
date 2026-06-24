@@ -41,6 +41,6 @@ At the downstream wall of 19-BM-D, the white beam is absorbed and the station is
 
 ## Families
 
-The active detector families are reused, none new: `Table` (the detector stage), `Housing` (the microscope chassis), `Scintillator`, and `Camera`, composed through the cross-facility `Microscope` Assembly. The beam stops and guillotines bind the loose passive families `BeamStop` and `Shielding`, which render as plain text (they are not yet in the catalog).
+The active detector families are reused, none new: `Table` (the detector stage), `Housing` (the microscope chassis), `Scintillator`, and `Camera`, composed through the cross-facility `Microscope` Assembly. The beam stops reuse the catalog `BeamStop` Family (graduated under the passive beam-path tier); the guillotines bind the loose `Shielding` family, which renders as plain text (not yet in the catalog).
 
 The detector hardware selections and the trigger path are the main detector-side [open questions](../questions.md). See [Inventory](../inventory.md) for the Asset tree.

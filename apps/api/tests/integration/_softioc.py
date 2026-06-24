@@ -21,12 +21,12 @@ state without trying to call the unsafe `ca_context_destroy`.
 
 ## PV menu (same names as the prior in-process CoraTestIOC)
 
-  - `double_value` (DBR_DOUBLE, `ao` record) -> `Reading(kind="Scalar")`
-  - `long_value`   (DBR_LONG,   `longout`)   -> `Reading(kind="Scalar")`
-  - `string_value` (DBR_STRING, `stringout`) -> `Reading(kind="Scalar")`
-  - `waveform`     (DBR_DOUBLE x 4, `waveform`) -> `Reading(kind="Array")`
-  - `enum_value`   (DBR_ENUM,   `mbbo` with 3 strings) -> `Reading(kind="Categorical")`
-  - `bad_quality_value` (`ao` with HIHI threshold tripped) -> `Reading(quality="Bad")`
+  - `double_value` (DBR_DOUBLE, `ao` record) -> `Measurement(kind="Scalar")`
+  - `long_value`   (DBR_LONG,   `longout`)   -> `Measurement(kind="Scalar")`
+  - `string_value` (DBR_STRING, `stringout`) -> `Measurement(kind="Scalar")`
+  - `waveform`     (DBR_DOUBLE x 4, `waveform`) -> `Measurement(kind="Array")`
+  - `enum_value`   (DBR_ENUM,   `mbbo` with 3 strings) -> `Measurement(kind="Categorical")`
+  - `bad_quality_value` (`ao` with HIHI threshold tripped) -> `Measurement(quality="Bad")`
 
 ## areaDetector ADCore-shaped PVs for the acquisition action bodies
 

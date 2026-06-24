@@ -35,7 +35,7 @@ Root Asset `19-BM` (`tier = Unit`, `facility_code = aps`); sub-systems nest belo
 | `DownstreamGuillotines` | `Device` | Shielding | two movable Pb guillotines (>= 12 mm), APS TB-44 |
 | `Triggering` | (controls) | TimingController | high-throughput trigger / sync scheme |
 
-The passive beam-path families (`Beam`, `Window`, `Mask`, `Collimator`, `BeamStop`, `Shielding`, `Vacuum`) render as plain text: they are bound by intent and are not yet in the catalog. 19-BM pushes `Window` (two more Be windows) and `Collimator` (two more Pb collimators) past the rule-of-three threshold; whether either is promoted to a catalog Family is a separate decision, not blocking for first light. The indirect detector reuses the cross-facility `Microscope` Assembly (a `Housing` anchoring scintillator + optics + camera, presenting the Detector Role), the same blueprint 2-BM uses.
+`Window`, `Mask`, `Collimator`, and `BeamStop` are catalog Families, graduated under the passive beam-path tier (19-BM's two more Be windows and two more Pb collimators are what pushed `Window` and `Collimator` past the rule-of-three threshold). The remaining passive families (`Beam`, `Shielding`, `Vacuum`) render as plain text: they are bound by intent and not yet in the catalog. The indirect detector reuses the cross-facility `Microscope` Assembly (a `Housing` anchoring scintillator + optics + camera, presenting the Detector Role), the same blueprint 2-BM uses.
 
 ## Pending confirmations
 

@@ -17,18 +17,10 @@ per adapter-first discipline.
 
 ## Domain vocabulary (substrate-neutral)
 
-- **`Reading`** is the typed value-plus-metadata the executor sees.
-  Fields are domain-owned: `value`, `kind: ReadingKind`,
-  `quality: Quality`, `sampled_at: datetime`, `quality_detail: str`.
-- **`ReadingKind`** is a closed 5-value enum (`Scalar | Array | Image
-  | Categorical | Tabular`). Maps to EPICS V4 NT kinds + Tango
-  `AttrDataFormat` + OPC UA Variant types via adapter-side ACL.
-- **`Quality`** is the closed 3-value enum (`Good | Uncertain | Bad`)
-  matching OPC UA's spec-defined high-level severity grouping and
-  the NAMUR / ISA-95 vocabulary. Adapters translate substrate-native
-  quality enums INTO this domain enum; substrate sub-codes (EPICS
-  `alarm_status`, Tango string detail, OPC UA's ~240 named sub-codes)
-  land in `Reading.quality_detail` as opaque forensic breadcrumbs.
+The shared value types `Measurement`, `MeasurementKind`, and `Quality`
+live in `cora.operation.ports.measurement` (they serve every edge-runtime
+port, not just control). A `read` returns a `Measurement`; subscribe
+yields `Measurement` values. See that module for field-by-field detail.
 
 ## Address space
 
@@ -61,7 +53,7 @@ event-payload metadata per [[project_non_determinism_principle]].
 
 ## Subscribe shape
 
-`subscribe` is a plain `def` returning `AsyncIterator[Reading]` directly
+`subscribe` is a plain `def` returning `AsyncIterator[Measurement]` directly
 (no surrounding coroutine). Caller iterates with
 `async for reading in port.subscribe(address):`. Connect setup may
 happen lazily on the first `__anext__`; the adapter still raises
@@ -73,47 +65,10 @@ through the iterator so silent stream pause is impossible.
 """
 
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
-from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
-ReadingKind = Literal["Scalar", "Array", "Image", "Categorical", "Tabular"]
-"""Closed 5-value discriminator for `Reading.value` shape.
-
-- `Scalar`: a single typed value (int / float / bool / str).
-- `Array`: a 1-D sequence of scalars (tuple at the port boundary).
-- `Image`: a 2-D pixel grid (NTNDArray / Tango IMAGE / OPC UA image
-  variants); shape and dtype carried inside `value`.
-- `Categorical`: a string label from a closed substrate-defined set
-  (EPICS NTEnum / Tango DevEnum or DevState / OPC UA enum).
-- `Tabular`: column-oriented record (NTTable / OPC UA table / Tango
-  multi-attribute bundle).
-
-Adapter ACLs translate substrate-specific type taxonomies INTO this
-enum. Extensible by tag addition when a future substrate justifies a
-new shape (e.g., OPC UA `LocalizedText` may justify a new tag).
-"""
-
-
-Quality = Literal["Good", "Uncertain", "Bad"]
-"""Closed 3-value quality enum matching OPC UA's spec-defined severity
-grouping and the NAMUR / ISA-95 vocabulary.
-
-Per the OPC UA sanity check in
-[[project_control_port_generalization_research]], `StatusCode`'s top
-2 bits are exactly this trichotomy:
-`Good = 0b00 | Uncertain = 0b01 | Bad = 0b10`. EPICS CA's 4-value
-severity collapses (`NONE -> Good`, `MINOR | MAJOR | INVALID -> Bad`).
-Tango's 5-value `AttrQuality` collapses (`VALID -> Good`,
-`WARNING | CHANGING -> Uncertain`, `ALARM | INVALID -> Bad`).
-
-Substrate-specific forensic detail (EPICS `alarm_status`, Tango
-string detail, OPC UA's ~240 named sub-codes such as
-`BadCommunicationError` / `UncertainDataSubNormal`) lands in
-`Reading.quality_detail` as an opaque string; the closed enum stays
-tight.
-"""
+from cora.operation.ports.measurement import Measurement, MeasurementKind, Quality
 
 
 class ActuationKind(StrEnum):
@@ -136,44 +91,6 @@ class ActuationKind(StrEnum):
     PHYSICAL = "Physical"
     SIMULATED = "Simulated"
     HYBRID = "Hybrid"
-
-
-@dataclass(frozen=True)
-class Reading:
-    """Domain-shaped value-plus-metadata at the executor boundary.
-
-    Domain owns every field. Adapter ACLs translate substrate-native
-    value types (EPICS V4 NT structures, Tango `DeviceAttribute`,
-    OPC UA `DataValue`) into this shape; substrate vocabulary
-    (NTNDArray fields, DevState labels, OPC UA Variant types) stays
-    caged in the adapter.
-
-    `value` is `Any` because the runtime shape varies with `kind`:
-    `Scalar` is `int | float | bool | str`, `Array` is a tuple,
-    `Image` is a 2-D structure (typically `numpy.ndarray` at the
-    adapter, normalised to a tuple-of-tuples or wrapped array at the
-    port boundary), `Categorical` is a string label, `Tabular` is a
-    dict of column names to tuples. Callers narrow per kind at the
-    use site.
-
-    Substrate-specific presentation hints (NT `valueAlarm`,
-    `displayLimit`, `controlLimit` structures; Tango display formats;
-    OPC UA `DisplayName`) are intentionally NOT surfaced here. They
-    are operator-UI metadata, not control-plane data; adapters drop
-    them at unpacking time.
-
-    `sampled_at` is the time the substrate observed the value
-    (EPICS source timestamp, Tango `time`, OPC UA `SourceTimestamp`).
-    `quality_detail` is adapter-specific and opaque at the port
-    layer; treat it as a forensic breadcrumb, not a value to branch
-    on.
-    """
-
-    value: Any
-    kind: ReadingKind
-    quality: Quality
-    sampled_at: datetime
-    quality_detail: str = ""
 
 
 class ControlNotConnectedError(Exception):
@@ -227,17 +144,17 @@ class ControlValueCoercionError(Exception):
     """A control value cannot be coerced to the kind a consumer requires.
 
     `target_kind` names the kind the value could not satisfy; it is a
-    free-form label, not constrained to `ReadingKind`. Three live cases,
+    free-form label, not constrained to `MeasurementKind`. Three live cases,
     all carrying the raw type label so the failure is debuggable rather
     than a silently dropped value:
 
       - Adapter read-unpack: an adapter sees a structured type or a
-        substrate primitive that does not fit the closed `ReadingKind`
-        set; `target_kind` is the `ReadingKind` it was unpacking toward.
+        substrate primitive that does not fit the closed `MeasurementKind`
+        set; `target_kind` is the `MeasurementKind` it was unpacking toward.
       - Adapter write-coercion: a write value cannot be encoded for the
         substrate; `target_kind` is an operation label (e.g. the PVA
-        adapter's `"pva put"`), not a `ReadingKind`.
-      - Consumer-side: a `Reading` unpacked cleanly but its `value` is
+        adapter's `"pva put"`), not a `MeasurementKind`.
+      - Consumer-side: a `Measurement` unpacked cleanly but its `value` is
         the wrong type for a downstream consumer (e.g., an action body
         needs a numeric axis position but read a categorical leaf). Here
         `target_kind` is a LOGICAL kind the consumer names (e.g.
@@ -317,8 +234,8 @@ class ControlPort(Protocol):
     trigger per adapter-first discipline.
     """
 
-    async def read(self, address: str) -> Reading:
-        """Read the current `Reading` at `address`.
+    async def read(self, address: str) -> Measurement:
+        """Read the current `Measurement` at `address`.
 
         Raises `ControlNotConnectedError` if there is no active
         channel or `ControlTimeoutError` if the read exceeds the
@@ -348,11 +265,11 @@ class ControlPort(Protocol):
         """
         ...
 
-    def subscribe(self, address: str) -> AsyncIterator[Reading]:
+    def subscribe(self, address: str) -> AsyncIterator[Measurement]:
         """Subscribe to value changes on `address`. Caller iterates the result.
 
         Plain `def`, no surrounding coroutine: caller pattern is
-        `async for reading in port.subscribe(address):`. Adapters may
+        `async for measurement in port.subscribe(address):`. Adapters may
         defer connect-and-register-as-subscriber to the first
         `__anext__`; a `ControlNotConnectedError` raised through the
         iterator (rather than from `subscribe()` itself) is the
@@ -381,8 +298,8 @@ __all__ = [
     "ControlTimeoutError",
     "ControlValueCoercionError",
     "ControlWriteRejectedError",
+    "Measurement",
+    "MeasurementKind",
     "NoAdapterForAddressError",
     "Quality",
-    "Reading",
-    "ReadingKind",
 ]

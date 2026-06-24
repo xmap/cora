@@ -21,7 +21,7 @@ nonexistent-PV paths don't mutate state and stay order-independent.
 ## Coverage
 
   - Protocol conformance via `isinstance` (no IOC)
-  - Every `ReadingKind` branch (Scalar / Array / Categorical)
+  - Every `MeasurementKind` branch (Scalar / Array / Categorical)
   - `Quality=Bad` via `bad_quality_value` (HIHI threshold tripped)
   - caput-callback round-trip on scalar + long
   - subscribe initial-value + post-write fan-out
@@ -34,7 +34,7 @@ Out of scope:
   - `ControlTimeoutError` on the read path : no softIOC-native slow-
     getter equivalent; covered at unit tier with mocked client per
     [[project_control_port_test_isolation_research]] watch item 4.
-  - `Image` / `Tabular` `ReadingKind` : CA does not natively carry
+  - `Image` / `Tabular` `MeasurementKind` : CA does not natively carry
     NTNDArray; lands with `EpicsPvaControlPort`.
   - `Uncertain` quality : defer to the PVA adapter (no convenient
     MINOR trigger on this PV menu without a calc record).
@@ -50,7 +50,7 @@ from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlPort,
-    Reading,
+    Measurement,
 )
 
 
@@ -64,23 +64,23 @@ def test_epics_ca_control_port_satisfies_control_port_protocol() -> None:
 async def test_read_double_scalar_returns_reading_with_good_quality(
     softioc: str,
 ) -> None:
-    """DBR_DOUBLE scalar lands as Reading(kind='Scalar', quality='Good', value=float)."""
+    """DBR_DOUBLE scalar lands as Measurement(kind='Scalar', quality='Good', value=float)."""
     port = EpicsCaControlPort()
     try:
         await port.write(f"{softioc}double_value", 0.0, wait=True)
         reading = await port.read(f"{softioc}double_value")
-        assert isinstance(reading, Reading)
+        assert isinstance(reading, Measurement)
         assert reading.kind == "Scalar"
         assert reading.quality == "Good"
         assert reading.value == 0.0
-        assert reading.sampled_at.tzinfo is not None
+        assert reading.produced_at.tzinfo is not None
     finally:
         await port.aclose()
 
 
 @pytest.mark.integration
 async def test_read_long_scalar_returns_int_value(softioc: str) -> None:
-    """DBR_LONG scalar lands as Reading(kind='Scalar', value=int)."""
+    """DBR_LONG scalar lands as Measurement(kind='Scalar', value=int)."""
     port = EpicsCaControlPort()
     try:
         await port.write(f"{softioc}long_value", 0, wait=True)
@@ -107,7 +107,7 @@ async def test_read_string_scalar_returns_decoded_utf8(softioc: str) -> None:
 
 @pytest.mark.integration
 async def test_read_waveform_returns_array_as_tuple(softioc: str) -> None:
-    """DBR_DOUBLE count > 1 lands as Reading(kind='Array', value=tuple)."""
+    """DBR_DOUBLE count > 1 lands as Measurement(kind='Array', value=tuple)."""
     port = EpicsCaControlPort()
     try:
         await port.write(f"{softioc}waveform", (1.0, 2.0, 3.0, 4.0), wait=True)
@@ -121,7 +121,7 @@ async def test_read_waveform_returns_array_as_tuple(softioc: str) -> None:
 
 @pytest.mark.integration
 async def test_read_enum_returns_categorical_with_label(softioc: str) -> None:
-    """DBR_ENUM lands as Reading(kind='Categorical', value=<label str>).
+    """DBR_ENUM lands as Measurement(kind='Categorical', value=<label str>).
 
     aioca exposes only the integer index in FORMAT_TIME; the adapter
     pays a one-shot FORMAT_CTRL read on first access to resolve the
@@ -141,9 +141,9 @@ async def test_read_enum_returns_categorical_with_label(softioc: str) -> None:
 async def test_read_major_alarm_pv_returns_bad_quality(softioc: str) -> None:
     """MAJOR_ALARM severity (HIHI threshold tripped) translates to Quality='Bad'.
 
-    Pins the full Reading shape for a non-Good reading: value + kind +
+    Pins the full Measurement shape for a non-Good reading: value + kind +
     quality + `alarm_status=<int>` quality_detail format + tz-aware
-    UTC sampled_at. Mirrors the same assertions on Caproto + EpicsPva.
+    UTC produced_at. Mirrors the same assertions on Caproto + EpicsPva.
     """
     port = EpicsCaControlPort()
     try:
@@ -152,7 +152,7 @@ async def test_read_major_alarm_pv_returns_bad_quality(softioc: str) -> None:
         assert reading.value == 99.9
         assert reading.quality == "Bad"
         assert reading.quality_detail.startswith("alarm_status=")
-        assert reading.sampled_at.tzinfo is not None
+        assert reading.produced_at.tzinfo is not None
     finally:
         await port.aclose()
 

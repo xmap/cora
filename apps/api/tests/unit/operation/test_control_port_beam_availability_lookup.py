@@ -16,7 +16,7 @@ from cora.operation.adapters.control_port_beam_availability_lookup import (
     build_beam_availability_lookup,
 )
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
-from cora.operation.ports.control_port import Reading
+from cora.operation.ports.control_port import Measurement
 
 FES_PV = "FE:2BM:BeamBlockingM"
 SBS_PV = "S02BM:SBS:BeamBlockingM"
@@ -25,17 +25,17 @@ PERMIT_PV = "SR-ACIS:2BM:FesPermitM"
 ALL_PVS = {"fes": FES_PV, "sbs": SBS_PV, "fes_permit": PERMIT_PV}
 
 
-def _scalar(value: object, *, quality: str = "Good") -> Reading:
-    return Reading(
+def _scalar(value: object, *, quality: str = "Good") -> Measurement:
+    return Measurement(
         value=value,
         kind="Scalar",
         quality=quality,  # type: ignore[arg-type]
-        sampled_at=datetime(2026, 6, 17, tzinfo=UTC),
+        produced_at=datetime(2026, 6, 17, tzinfo=UTC),
         quality_detail="",
     )
 
 
-def _port_with(readings: dict[str, Reading]) -> InMemoryControlPort:
+def _port_with(readings: dict[str, Measurement]) -> InMemoryControlPort:
     port = InMemoryControlPort()
     for address, reading in readings.items():
         port.set_reading(address, reading)

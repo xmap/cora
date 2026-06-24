@@ -36,7 +36,7 @@ from cora.operation.conductor import (
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlValueCoercionError,
-    Reading,
+    Measurement,
 )
 from cora.recipe.aggregates.recipe.body import CaptureRef
 
@@ -112,7 +112,7 @@ def _seed_axis(port: InMemoryControlPort, value: object) -> None:
     port.simulate_connect(_AXIS)
     port.set_reading(
         _AXIS,
-        Reading(value=value, kind="Scalar", quality="Good", sampled_at=_FIXED_NOW),
+        Measurement(value=value, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
     )
 
 
@@ -242,7 +242,7 @@ async def test_non_good_quality_capture_value_fails() -> None:
     port.simulate_connect(_AXIS)
     port.set_reading(
         _AXIS,
-        Reading(value=12.5, kind="Scalar", quality="Bad", sampled_at=_FIXED_NOW),
+        Measurement(value=12.5, kind="Scalar", quality="Bad", produced_at=_FIXED_NOW),
     )
     appender = _FakeAppendStep()
     result = await _execute(

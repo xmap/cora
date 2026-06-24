@@ -13,19 +13,19 @@ from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.ports.control_port import (
     ActuationKind,
     ControlPort,
+    Measurement,
     NoAdapterForAddressError,
-    Reading,
 )
 
 
-def _reading(value: float, kind: str = "Scalar") -> Reading:
+def _reading(value: float, kind: str = "Scalar") -> Measurement:
     from datetime import UTC, datetime
 
-    return Reading(
+    return Measurement(
         value=value,
         kind=kind,  # type: ignore[arg-type]
         quality="Good",
-        sampled_at=datetime(2026, 5, 29, tzinfo=UTC),
+        produced_at=datetime(2026, 5, 29, tzinfo=UTC),
     )
 
 
@@ -137,7 +137,7 @@ async def test_aclose_continues_when_one_adapter_raises() -> None:
     """A flaky adapter cannot strand its siblings: registry suppresses errors."""
 
     class _Boom:
-        async def read(self, _address: str) -> Reading:  # pragma: no cover
+        async def read(self, _address: str) -> Measurement:  # pragma: no cover
             raise NotImplementedError
 
         async def write(

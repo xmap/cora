@@ -4,15 +4,16 @@
 
 A deployment is a beamline pilot: one instrument where the recipe ladder, BCs, and trust boundaries meet real users. Vertical before horizontal. CORA's domain model only contains what at least one real deployment forced into it; until a beamline demands a shape, the shape stays out.
 
-A beamline is never standalone: it sits inside a Site, a Federation `Facility` that owns the clearances, principals, practices, and facility-scope supplies the beamline inherits but does not own. The deployments below are grouped by that Site; each beamline page links up to its Site rather than restating it. CORA's operational pilot is 2-BM; the rest are in the design phase, modelled from a design report ahead of construction or recommissioning, so their pages describe an intended shape, not a running instrument.
+A beamline is never standalone: it sits inside a Site, a Federation `Facility` that owns the clearances, principals, practices, and facility-scope supplies the beamline inherits but does not own. The deployments below are grouped by that Site; each beamline page links up to its Site rather than restating it. CORA's operational pilot is 2-BM. Most of the rest are in the design phase, modelled from a design report ahead of construction or recommissioning. The Diamond beamlines and FXI are a third kind: operating beamlines reverse-engineered from public controls configuration, so their pages carry real control facts but every value stays `confirm` until the beamline team verifies it.
 
 ## [APS](aps/index.md)
 
-CORA's first multi-beamline Site: four beamlines share one APS envelope, which is reused rather than re-created per beamline.
+CORA's first multi-beamline Site: five beamlines share one APS envelope, which is reused rather than re-created per beamline.
 
 | Beamline | Status | What it is |
 | --- | --- | --- |
 | [2-BM](2-bm/index.md) | Pilot | bending-magnet micro-CT, the operational pilot |
+| [2-ID](2-id/index.md) | In design | scanning fluorescence microprobe (2-ID-D hutch), mined from the EAA toolkit |
 | [7-BM](7-bm/index.md) | In design | multi-technique flow and combustion imaging, recommissioned for APS-U |
 | [19-BM](19-bm/index.md) | In design | bending-magnet autonomous high-throughput tomography |
 | [32-ID](32-id/index.md) | In design (partial) | canted multi-instrument: optics spine and transmission X-ray microscope |
@@ -24,5 +25,23 @@ The second Site CORA models; thin while its beamline is in design.
 | Beamline | Status | What it is |
 | --- | --- | --- |
 | [TomoWise](tomowise/index.md) | In design | micro- and nano-tomography, Technical Design Report phase |
+
+## [Diamond Light Source](diamond/index.md)
+
+The third Site CORA models, and a deliberate off-roadmap exercise: real, operating beamlines modelled from Diamond's open `dodal` controls library to test that the dry-fact seed feeds CORA's intentional model, and that the model generalizes beyond tomography (SCOPE-1).
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [I22](i22/index.md) | Modelling exercise | small- and wide-angle X-ray scattering (SAXS/WAXS), reverse-engineered from dodal |
+| [I03](i03/index.md) | Modelling exercise | macromolecular crystallography (MX); graduates the Goniometer Family and exercises autonomous sample handling |
+| [I15-1](i15-1/index.md) | Modelling exercise | X-ray total scattering / pair distribution function (XPDF); a reuse + reinforce deployment (no new vocabulary) |
+
+## [NSLS-II](nsls2/index.md)
+
+The fourth Site CORA models. Like the Diamond exercise, FXI is reverse-engineered from public open source (here the NSLS-II bluesky profile collection), not a design report or a live connection.
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [FXI](fxi/index.md) | Reverse-engineered | full-field transmission X-ray microscopy and tomography, 18-ID; modelled from public beamline config |
 
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

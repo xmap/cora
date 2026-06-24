@@ -45,12 +45,12 @@ def test_conductor_step_kind_constants_match_procedure_step_kind_values() -> Non
 
 @pytest.mark.architecture
 def test_conductor_step_union_arms_match_procedure_step_kind_values() -> None:
-    """The `Step = SetpointStep | ActionStep | CheckStep` union has one arm per kind.
+    """The `Step` union has exactly one arm per `STEP_KIND_VALUES` member.
 
     Reads the `Step` type alias via `typing.get_args` and asserts the
-    arm count equals `len(STEP_KIND_VALUES)`. New step types added
-    to the union without a matching `STEP_KIND_VALUES` entry land
-    here.
+    arm count equals `len(STEP_KIND_VALUES)` (the count is derived, not
+    hard-coded). A new step type added to the union without a matching
+    `STEP_KIND_VALUES` entry (or vice versa) lands here.
     """
     from typing import get_args
 

@@ -43,15 +43,14 @@ expand -> Conductor -> ControlPort -> soft IOC.
      Procedure (`parent_run_id`) drives the steps; the Dataset is attributed to
      the Run (`producing_run_id`), per the Run vs Procedure boundary rule.
      The soft IOC is a declared simulator, so the conduct observes `Simulated`.
-     NOTE: the Conductor autonomously stamps that kind on the *Procedure*
-     terminal, not the Run, so here the scenario threads `result.actuation_kind`
-     into `complete_run` BY HAND, standing in for the deferred AcquisitionRuntime
-     (the conduct-to-Run-completion kind bridge) that production will need. What
-     this proves is the Run-fallback derivation in `register_dataset` (Run kind
-     -> `producing_actuation_kind` -> the promote gate), not an autonomous
-     production guarantee. Until that bridge exists a CORA-conducted capture Run
-     completes with `actuation_kind=None`; see the deferred item in the boundary
-     memo. 2-BM's live captures are TomoScan record-path, so this is exploratory.
+     The Conductor stamps that kind on the *Procedure* terminal; the
+     `conduct_phase_then_complete_run` glue then completes the parent Run
+     carrying it, so the kind reaches `RunCompleted` autonomously (no
+     hand-threading). This exercises the production bridge end to end: conduct
+     kind -> Run terminal -> the Run-fallback derivation in `register_dataset`
+     (Run kind -> `producing_actuation_kind` -> the promote gate). 2-BM's live
+     captures are still TomoScan record-path, so a CORA-conducted capture is
+     exploratory, but the kind no longer depends on a hand-threaded test step.
 
 ## Domain shape
 
@@ -101,13 +100,13 @@ per-campaign values are operator-bound.
   - **Capture reads the OBSERVED value.** The restore returns the axis to where
     it actually was (the readback), not a commanded number; the restore setpoint
     uses `verify=True` so its landed value is recorded.
-  - **Conducted provenance flows to the artifact (via a test-orchestrated
-    bridge).** The Dataset carries `producing_actuation_kind="Simulated"`, the
-    fact that gates `promote_dataset` later. The conduct stamps that kind on the
-    Procedure terminal autonomously; the scenario then threads it onto the Run's
-    `complete_run` by hand (the deferred AcquisitionRuntime's job), so this
-    exercises the `register_dataset` Run-fallback, not an autonomous deployment
-    path. A live conduct would carry `Physical` and clear the gate.
+  - **Conducted provenance flows to the artifact autonomously.** The Dataset
+    carries `producing_actuation_kind="Simulated"`, the fact that gates
+    `promote_dataset` later. The conduct stamps that kind on the Procedure
+    terminal, and the `conduct_phase_then_complete_run` glue completes the parent
+    Run carrying it, so the kind reaches the Run terminal without hand-threading
+    and `register_dataset` derives it from the Run. A live conduct would carry
+    `Physical` and clear the gate.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -119,6 +118,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
+from cora.api._run_phase_conduct import conduct_phase_then_complete_run
 from cora.data.features.register_dataset import RegisterDataset
 from cora.data.features.register_dataset import bind as bind_register_dataset
 from cora.equipment.aggregates.asset import AssetTier
@@ -138,7 +138,6 @@ from cora.operation.conductor import Conductor, InMemoryActionRegistry
 from cora.operation.features.abort_procedure import bind as bind_abort
 from cora.operation.features.append_activities import bind as bind_append
 from cora.operation.features.complete_procedure import bind as bind_complete
-from cora.operation.features.conduct_procedure import ConductProcedure
 from cora.operation.features.conduct_procedure import bind as bind_conduct
 from cora.operation.features.register_procedure_from_recipe import RegisterProcedureFromRecipe
 from cora.operation.features.register_procedure_from_recipe import bind as bind_register_from_recipe
@@ -160,7 +159,7 @@ from cora.recipe.features.define_practice import DefinePractice
 from cora.recipe.features.define_practice import bind as bind_define_practice
 from cora.recipe.features.define_recipe import DefineRecipe
 from cora.recipe.features.define_recipe import bind as bind_define_recipe
-from cora.run.features.complete_run import CompleteRun
+from cora.run.features.abort_run import bind as bind_abort_run
 from cora.run.features.complete_run import bind as bind_complete_run
 from cora.run.features.start_run import StartRun
 from cora.run.features.start_run import bind as bind_start_run
@@ -343,10 +342,16 @@ async def test_flat_field_recipe_conducts_flats_against_softioc(
     try:
         # The aligned home the CaptureStep observes + the restore returns to.
         await port.write(axis, _SAMPLE_HOME_MM, wait=True)
-        # Recipe-driven: caller steps are empty; the handler re-expands the
-        # pinned template (non-empty caller steps are forbidden here).
-        result = await conduct(
-            ConductProcedure(procedure_id=procedure_id, steps=()),
+        # The conduct->complete-Run glue conducts the phase Procedure (recipe-
+        # driven: empty caller steps re-expand the pinned template) THEN completes
+        # the parent Run carrying the conduct's observed kind. This is the
+        # production bridge; the scenario no longer threads the kind by hand.
+        result = await conduct_phase_then_complete_run(
+            run_id=run_id,
+            procedure_id=procedure_id,
+            conduct_procedure=conduct,
+            complete_run=bind_complete_run(deps),
+            abort_run=bind_abort_run(deps),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -375,8 +380,8 @@ async def test_flat_field_recipe_conducts_flats_against_softioc(
 
     # ----- Run FSM stream: the subject-less acquisition Run that wraps the phase -----
     #
-    # The Run is started subject-less here; it reaches RunCompleted only after
-    # the conduct, asserted below once complete_run runs.
+    # The Run was started subject-less; the glue above already drove it to
+    # RunCompleted carrying the kind (the full terminal stream is asserted below).
     run_events, _ = await deps.event_store.load("Run", run_id)
     assert run_events[0].event_type == "RunStarted"
     assert run_events[0].payload["subject_id"] is None
@@ -426,22 +431,12 @@ async def test_flat_field_recipe_conducts_flats_against_softioc(
     finally:
         await readback_port.aclose()
 
-    # ----- Complete the subject-less Run, carrying the conduct's actuation kind -----
+    # ----- The Run reached its terminal via the conduct->complete-Run glue -----
     #
     # The phase Procedure conducted the steps; the Run is the producing batch.
-    # TEST-ORCHESTRATED: the Conductor stamps the observed kind on the Procedure
-    # terminal, not the Run, so we thread `result.actuation_kind` into complete_run
-    # by hand here, standing in for the deferred AcquisitionRuntime (the
-    # conduct-to-Run-completion bridge). This exercises the register_dataset
-    # Run-fallback; production needs that bridge before a conducted capture Run
-    # carries the kind autonomously. See the boundary memo's deferred item.
-    await bind_complete_run(deps)(
-        CompleteRun(run_id=run_id, actuation_kind=result.actuation_kind),
-        principal_id=_PRINCIPAL_ID,
-        correlation_id=_CORRELATION_ID,
-    )
-
-    # The Run now reaches its terminal: RunStarted -> RunCompleted.
+    # The glue (above) completed the Run carrying the conduct's observed kind, so
+    # the kind reaches RunCompleted autonomously, no hand-threading. This is the
+    # bridge the boundary memo formerly tracked as deferred.
     run_events, _ = await deps.event_store.load("Run", run_id)
     assert [e.event_type for e in run_events] == ["RunStarted", "RunCompleted"]
 

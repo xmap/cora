@@ -4,7 +4,7 @@
 
 The sample stage modelled here is the transmission X-ray microscope (TXM) endstation in `32-ID-C`: a granite-supported stack carrying the tomographic rotation axis and the zone-plate optics that form the magnified image. It is modelled as one sample-stage group in the [descriptor](../inventory.md). The published TXM component list mixes pre-APS-U and current hardware, so every device is carried confirm (`TXM-1`).
 
-Unlike a composed `Microscope` Assembly, the TXM optics are modelled here as a plain device group: the condenser, zone plate, and phase ring are bound to loose Family strings, not catalog Families, because they are device classes CORA has not earned yet and no Asset is registered to earn them (see [Model](../model.md#deliberately-not-here-yet)).
+Unlike a composed `Microscope` Assembly, the TXM optics are modelled here as a plain device group: the condenser, zone plate, and phase ring bind to the `Condenser`, `ZonePlate`, and `PhaseRing` catalog Families, which graduated once FXI became a second deployment sharing them.
 
 ## The model in one picture
 
@@ -13,11 +13,11 @@ The stack, base to sample (containment, `Asset.parent_id`). The precise sub-orde
 ```
 32-ID  (Unit, Asset)
 └── TXMGranite  (Component, Family Table; granite sample-and-optic support, 32-ID-C)
-    ├── Condenser  (Device, loose Family Condenser; conditions the beam onto the sample)
+    ├── Condenser  (Device, Family Condenser; conditions the beam onto the sample)
     ├── TXMRotary  (Device, RotaryStage; tomographic rotation)
     │   └── TXMSamplePositioning  (Device, LinearStage; sample centring, co-rotates)
-    ├── ZonePlate  (Device, loose Family ZonePlate; objective, forms the magnified image)
-    └── PhaseRing  (Device, loose Family PhaseRing; inserted for Zernike phase contrast)
+    ├── ZonePlate  (Device, Family ZonePlate; objective, forms the magnified image)
+    └── PhaseRing  (Device, Family PhaseRing; inserted for Zernike phase contrast)
 ```
 
 ## TXM endstation (32-ID-C)
@@ -29,9 +29,9 @@ The in-house nano-tomography instrument: a Fresnel zone plate magnifies the tran
 | `TXMGranite` | `Table` | granite stage support carrying the TXM sample system and optics |
 | `TXMRotary` | `RotaryStage` | tomographic rotation axis; model and encoder unconfirmed (`TXM-1`) |
 | `TXMSamplePositioning` | `LinearStage` | sample centring and alignment stack; axes and travel unconfirmed (`TXM-1`) |
-| `Condenser` | `Condenser` (loose) | beam-condensing optic; capillary or condenser zone plate, unconfirmed (`OPTICS-1`) |
-| `ZonePlate` | `ZonePlate` (loose) | objective Fresnel zone plate; outermost-zone width and diameter unconfirmed (`OPTICS-2`) |
-| `PhaseRing` | `PhaseRing` (loose) | Zernike phase ring; inserted or retracted, details unconfirmed (`OPTICS-3`) |
+| `Condenser` | `Condenser` | beam-condensing optic; capillary or condenser zone plate, unconfirmed (`OPTICS-1`) |
+| `ZonePlate` | `ZonePlate` | objective Fresnel zone plate; outermost-zone width and diameter unconfirmed (`OPTICS-2`) |
+| `PhaseRing` | `PhaseRing` | Zernike phase ring; inserted or retracted, details unconfirmed (`OPTICS-3`) |
 
 In-situ environments the published docs anticipate (a furnace, a nano-indenter) are not modelled yet; they join as confirmed equipment, as Fixtures or sample environments once the design firms.
 

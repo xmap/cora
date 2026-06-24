@@ -286,7 +286,7 @@ class StageResult:
 
     `outcome` is closed: pass | fail | skip. `detail` is opaque
     forensics; never parsed by callers (mirrors
-    `Reading.quality_detail` in ControlPort).
+    `Measurement.quality_detail` in ControlPort).
     """
 
     stage: StageName

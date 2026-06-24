@@ -678,21 +678,16 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             )
             app.state.supply = wire_supply(deps)
             app.state.enclosure = wire_enclosure(deps)
-            app.state.operation = wire_operation(deps, control_port=shared_control_port)
-            app.state.safety = wire_safety(deps)
-            app.state.caution = wire_caution(deps)
-            app.state.calibration = wire_calibration(deps)
-            app.state.campaign = wire_campaign(deps)
-            app.state.agent = wire_agent(deps)
 
-            # Compute CONDUCT runtime: the L2 edge runtime that drives a
-            # compute Run via ComputePort. Lives at the composition root
-            # (not a BC) because it needs both the ComputePort and the
-            # Run FSM handlers, and tach forbids cora.run -> cora.operation.
-            # `in_memory` substrate (default) keeps every job Simulated;
-            # `local_process` runs real subprocesses. Stashed for the
-            # conduct-run-compute route + MCP tool to read; aclose'd in
-            # the teardown below (mirrors the shared ControlPort).
+            # Compute CONDUCT substrate: ONE ComputePort shared by the Reckoner
+            # (the L2 Run-compute runtime) AND the Procedure Conductor (via
+            # wire_operation, slice 6a's ComputeStep). Built BEFORE
+            # wire_operation so the Conductor closes over the SAME instance the
+            # Reckoner holds. `in_memory` substrate (default) keeps every job
+            # Simulated; `local_process` runs real subprocesses. The single
+            # `aclose` lives on app.state.compute_port in the teardown below
+            # (mirrors the shared ControlPort); the Conductor + Reckoner hold
+            # BORROWED references and must NOT aclose it.
             compute_port = build_compute_port(
                 ComputePortConfig(
                     substrate=settings.compute_substrate,
@@ -700,6 +695,16 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 )
             )
             app.state.compute_port = compute_port
+
+            app.state.operation = wire_operation(
+                deps, control_port=shared_control_port, compute_port=compute_port
+            )
+            app.state.safety = wire_safety(deps)
+            app.state.caution = wire_caution(deps)
+            app.state.calibration = wire_calibration(deps)
+            app.state.campaign = wire_campaign(deps)
+            app.state.agent = wire_agent(deps)
+
             app.state.reckoner = Reckoner(
                 compute_port=compute_port,
                 complete_run=app.state.run.complete_run,

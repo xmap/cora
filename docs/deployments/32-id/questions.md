@@ -35,9 +35,9 @@ The one structural unknown: how the canted source and its branches map onto CORA
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | TXM-1 | Blocks-go-live | Is the published TXM component list current post-APS-U, or does it carry pre-APS-U hardware? Specifically the granite stages, the rotation stage (Aerotech assumed), and the sample-positioning stack (Kohzu assumed). | The published overview is taken as current; stage models and axes carried confirm. | The TXM stage Assets and models. |
-| OPTICS-1 | Blocks-go-live | What is the beam-condensing optic upstream of the sample: a capillary condenser, a condenser zone plate, or KB optics? | One `Condenser` Asset bound to a loose Family; optical type unconfirmed. | The condenser optic identity and Family. |
-| OPTICS-2 | Blocks-go-live | The objective Fresnel zone plate parameters (outermost-zone width, diameter, material) that set the TXM resolution. | One `ZonePlate` Asset bound to a loose Family; parameters unconfirmed. | The zone-plate spec and Family. |
-| OPTICS-3 | Nice-to-have | The Zernike phase ring used for phase contrast: its parameters and whether it is inserted or retracted per scan. | One `PhaseRing` Asset bound to a loose Family; inserted/retracted state not modelled. | The phase-ring spec and state model. |
+| OPTICS-1 | Blocks-go-live | What is the beam-condensing optic upstream of the sample: a capillary condenser, a condenser zone plate, or KB optics? | One `Condenser` Asset bound to the catalog Family; optical type unconfirmed. | The condenser optic identity. |
+| OPTICS-2 | Blocks-go-live | The objective Fresnel zone plate parameters (outermost-zone width, diameter, material) that set the TXM resolution. | One `ZonePlate` Asset bound to the catalog Family; parameters unconfirmed. | The zone-plate spec. |
+| OPTICS-3 | Nice-to-have | The Zernike phase ring used for phase contrast: its parameters and whether it is inserted or retracted per scan. | One `PhaseRing` Asset bound to the catalog Family; inserted/retracted state not modelled. | The phase-ring spec and state model. |
 
 ## Detector
 

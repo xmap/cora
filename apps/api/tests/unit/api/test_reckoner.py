@@ -130,7 +130,7 @@ class _RejectingComputePort:
     async def fetch_artifact_ref(self, job_id: JobId) -> object:  # pragma: no cover
         raise NotImplementedError
 
-    def provide_provenance_payload(self, *args: object) -> object:  # pragma: no cover
+    def provide_result(self, *args: object) -> object:  # pragma: no cover
         raise NotImplementedError
 
     async def aclose(self) -> None:  # pragma: no cover
@@ -175,7 +175,7 @@ class _CancellingComputePort:
     async def fetch_artifact_ref(self, job_id: JobId) -> object:  # pragma: no cover
         raise NotImplementedError
 
-    def provide_provenance_payload(self, *args: object) -> object:  # pragma: no cover
+    def provide_result(self, *args: object) -> object:  # pragma: no cover
         raise NotImplementedError
 
     async def aclose(self) -> None:  # pragma: no cover

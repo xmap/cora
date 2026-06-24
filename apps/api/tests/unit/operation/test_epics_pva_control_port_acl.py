@@ -166,7 +166,7 @@ class _FakeValue(float):
     Subclassing `float` mimics p4p's `NTScalar(float)` augmented type;
     the `raw` attribute returns None so `_classify_kind` lands on
     `"Scalar"` and `_unpack_value` returns the float verbatim. Enough
-    surface for `_to_reading` to produce a valid Reading without a
+    surface for `_to_reading` to produce a valid Measurement without a
     live PVA channel.
     """
 

@@ -82,6 +82,12 @@ families:
     note: "Beam-steering grazing-incidence mirror optic Family. 2-BM: the Y3-30 mirror (distinct from its MirrorTable support, which is Family Table)."
   - name: Monochromator
     note: "Energy-selecting optic Family; at 2-BM the double-multilayer monochromator (DMM). The energy-change IOC drives its Bragg arms + M2 vertical offset per energy; inserting it picks the beam energy, pink-beam operation bypasses it."
+  - name: Condenser
+    note: "Beam-condensing optic Family for full-field transmission X-ray microscopy: shapes the monochromatic beam onto the sample (a capillary or a condenser zone plate). Distinct from the ZonePlate (the imaging objective downstream of the sample) and from a Mirror (grazing-incidence steering); the discriminator is its role, conditioning the illumination onto the sample. 32-ID: the Condenser (capillary or condenser zone plate, type unconfirmed). FXI: the clens condenser. Earned in once two deployments shared it; per-Asset optical parameters live at the Asset layer."
+  - name: ZonePlate
+    note: "Diffractive Fresnel zone-plate objective Family for full-field transmission X-ray microscopy: magnifies the transmitted image onto the detector, set by its diameter and outermost-zone width. Distinct from the Condenser (which conditions the illumination onto the sample) and from a refractive Objective (the visible-light objective in a scintillator-relay detector); the ZonePlate is the X-ray imaging objective. 32-ID: the ZonePlate. FXI: the zp zone plate (NanoTools, about 244 um diameter, about 30 nm outermost zone, carried confirm). Earned in once two deployments shared it; per-Asset zone parameters live at the Asset layer."
+  - name: PhaseRing
+    note: "Zernike phase-ring optic Family for full-field transmission X-ray microscopy: a phase plate in the back focal plane that renders phase contrast as amplitude contrast, inserted or retracted per imaging mode. Distinct from the ZonePlate (the imaging objective) and the Condenser (the illumination optic); the discriminator is its phase-contrast role. 32-ID: the PhaseRing. FXI: the phase_ring. Earned in once two deployments shared it; the inserted/retracted state is a per-Asset setting."
   - name: Filter
     note: "Discrete absorber-foil changer Family; at 2-BM the C / Al foil paddles that attenuate and condition the white beam (the upstream paddle 2bma:m17 is the operational selector; the downstream 2bma:m18 is currently Faulted)."
   - name: InsertionDevice
@@ -92,7 +98,9 @@ families:
     note: "Compound-refractive-lens transfocator Family; presents_as Positioner (it inserts and aligns a tunable CRL lens stack to focus the beam). The lens material and per-lens actuator count are a per-Asset settings difference. 4-ID: the CRL transfocator. 8-ID: the two CRL transfocators (ten lenses each). Earned in once two independent beamlines shared it. 'Transfocator' is the established single-word device noun, preferred over the multi-word CompoundRefractiveLens."
   - name: BeamPositionMonitor
     note: "X-ray beam-position monitor Family; presents_as Sensor (it reports a beam-position / intensity Reading). One Family spans the XBPM blade monitors, the Sydor electrometers, and the TetrAMM picoammeters; whether an instance is a position monitor or an intensity (I0) normalizer is a per-Asset setting. 4-ID: the XBPMs, Sydor, and TetrAMM monitors. 8-ID: the Sydor and TetrAMM monitors (also used loosely as a 2-BM diagnostic). Earned in once two independent beamlines shared it; the name is spelled out, not the XBPM abbreviation, per the InsertionDevice precedent."
-  # Pending in code (documented, not yet defined): Goniometer;
+  - name: Goniometer
+    note: "Multi-axis sample-orientation goniometer Family: omega / chi / phi rotation plus the x / y / z sample-centring translations, with centre-of-rotation control. The MX micro-goniometer. Distinct from RotaryStage (a single tomographic rotation axis that carries PSO fly-scan Following / Marking, which the goniometer does not) and from TiltStage (a limited-range tilt with no primary rotation axis); the discriminator is the multi-axis crystal-orientation role. Graduated from pending on i03 (the Smargon), CORA's first canonical-goniometer deployment; chi-vs-kappa and axis-count are a per-Asset settings or bound-Model difference, not a Family split (the InsertionDevice / Table precedent). The composed multi-stage scattering diffractometer (4-ID / 8-ID, the Diffractometer Assembly) binds one Goniometer Asset for its sample-orientation circles."
+  # Pending in code (documented, not yet defined): none.
   # future: OpticalRelay.
 
 capabilities:

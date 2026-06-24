@@ -18,7 +18,7 @@
 
 - **Integration scenarios.** No `test_19bm_*.py` registers 19-BM Assets into the event store. Scenario code is where Assets become real, and hard-registering a design-phase, moving-target beamline would commit speculative structure. It lands when the design firms and the team approves.
 - **Vendor Models.** No catalog Model is bound: the sample stages, the detector hardware, and the robotic changer are all procured after the FDR and are carried as [open questions](questions.md), not bindings.
-- **New catalog Families.** 19-BM needs none for first light. It does push two loose passive families past the rule-of-three threshold (`Window`, with two more Be windows; `Collimator`, with two more Pb collimators); whether either is promoted to a catalog Family is a separate decision tracked with the passive beam-path tier, not part of this scaffold.
+- **New catalog Families.** 19-BM coins none of its own. The two passive families it pushed past the rule-of-three threshold (`Window`, with two more Be windows; `Collimator`, with two more Pb collimators) have since been promoted to catalog Families under the passive beam-path tier; 19-BM's windows and collimators now bind them.
 - **The autonomy build.** The `RunSupervisor` enablement and the missing run-start capability that 19-BM's autonomous operation needs are real CORA work, not documentation; see [Governance](governance.md). They land as their own slices.
 - **The robotic sample changer.** Deferred behind its separate safety review (ROBOT-1).
 - **Operations and experiment views.** A runbook and live experiment view for an unbuilt beamline would be invention; see the note on the [index](index.md#not-yet-documented).
