@@ -8,11 +8,12 @@ A beamline is never standalone: it sits inside a Site, a Federation `Facility` t
 
 ## [APS](aps/index.md)
 
-CORA's first multi-beamline Site: four beamlines share one APS envelope, which is reused rather than re-created per beamline.
+CORA's first multi-beamline Site: five beamlines share one APS envelope, which is reused rather than re-created per beamline.
 
 | Beamline | Status | What it is |
 | --- | --- | --- |
 | [2-BM](2-bm/index.md) | Pilot | bending-magnet micro-CT, the operational pilot |
+| [2-ID](2-id/index.md) | In design | scanning fluorescence microprobe (2-ID-D hutch), mined from the EAA toolkit |
 | [7-BM](7-bm/index.md) | In design | multi-technique flow and combustion imaging, recommissioned for APS-U |
 | [19-BM](19-bm/index.md) | In design | bending-magnet autonomous high-throughput tomography |
 | [32-ID](32-id/index.md) | In design (partial) | canted multi-instrument: optics spine and transmission X-ray microscope |
