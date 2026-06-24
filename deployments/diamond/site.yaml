@@ -1,0 +1,63 @@
+# CORA Site descriptor: the Diamond Light Source site-level surface
+#
+# Diamond Light Source (Didcot, UK) is the third Site CORA models, and the home
+# of the I22 beamline scaffold. This file is the single human-readable source for
+# the facility's site-level instances: the Facility itself, the Practices it
+# would run, and the facility principals.
+#
+# Status: Diamond / I22 is a design-phase modelling exercise. I22 is a real,
+# operating SAXS/WAXS beamline, but it is NOT on the CORA pilot roadmap
+# (APS -> MAX IV); it is modelled here to test that the dodal-derived dry-fact
+# seed feeds CORA's intentional model, and to stress the generalize-beyond-
+# tomography axis. Almost everything below is design-phase intent carried as
+# `pending`, not an operating fact. Concrete facility details (safety forms,
+# supply names, the operator pool) are deferred to the I22 open questions until
+# Diamond staff confirm them. Do not invent facility specifics here; carry them
+# as questions.
+#
+# Source-of-truth boundary (same as the APS and MAX IV sites):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name
+#     equals code); `heading` carries the human title used on the rendered page.
+
+facility:
+  code: diamond
+  display_name: diamond
+  heading: "Diamond Light Source"
+  kind: Site
+  institution: Diamond Light Source Ltd, Harwell Campus, Didcot, UK
+  beamlines: [I22]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All
+# pending in the design phase. I22 is a scattering beamline, so its practices
+# adapt scattering Methods that are not yet in the cross-facility catalog (they
+# render unlinked); confirm with Diamond staff before any becomes active (TECH-1).
+practices:
+  - {name: I22_small_angle_scattering_practice, method: small_angle_scattering, pending: true, note: "SAXS via the Pilatus3 2M at long camera length"}
+  - {name: I22_wide_angle_scattering_practice, method: wide_angle_scattering, pending: true, note: "WAXS via the second Pilatus3 2M at short camera length"}
+  - {name: I22_simultaneous_saxs_waxs_practice, method: small_angle_scattering, pending: true, note: "simultaneous SAXS+WAXS, the routine I22 mode; the combined-technique shape is an open question (TECH-1)"}
+
+# Access BC Actors conceptually facility-wide at Diamond. Pending until the
+# Diamond operator and review structure is confirmed.
+actors:
+  - {name: Diamond beamline staff, kind: human, pending: true, note: "I22 operator and beamline-scientist pool; structure TBD"}
+  - {name: Diamond safety review, kind: human, pending: true, note: "facility safety review body; membership TBD"}
+
+# Agent BC Agents seeded at this deployment. None declared: the CORA system
+# agents are not yet wired for a Diamond deployment, and I22 is a scaffold.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in design.
+supplies:
+  - {name: Storage-ring beam current, kind: PhotonBeam, pending: true}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true}
+
+# Safety BC: facility-issued Clearances. Diamond PSS form names are not yet
+# confirmed; carried pending with a note rather than guessed (PSS-1).
+clearances:
+  - {name: Diamond personnel safety system, kind: PSS, pending: true, note: "facility safety-form names TBD; confirm with Diamond staff (PSS-1)"}
+
+# Caution BC: operator tribal knowledge. None yet for a scaffold deployment.
+cautions: []

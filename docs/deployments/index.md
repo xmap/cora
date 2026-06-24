@@ -25,4 +25,12 @@ The second Site CORA models; thin while its beamline is in design.
 | --- | --- | --- |
 | [TomoWise](tomowise/index.md) | In design | micro- and nano-tomography, Technical Design Report phase |
 
+## [Diamond Light Source](diamond/index.md)
+
+The third Site CORA models, and a deliberate off-roadmap exercise: a real, operating beamline modelled from Diamond's open `dodal` controls library to test that the dry-fact seed feeds CORA's intentional model, and that the model generalizes beyond tomography (SCOPE-1).
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [I22](i22/index.md) | Modelling exercise | small- and wide-angle X-ray scattering (SAXS/WAXS), reverse-engineered from dodal |
+
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

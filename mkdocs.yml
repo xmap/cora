@@ -162,6 +162,21 @@ nav:
         - Techniques: deployments/tomowise/techniques.md
         - Governance: deployments/tomowise/governance.md
         - Model: deployments/tomowise/model.md
+    - Diamond:
+      - deployments/diamond/index.md
+      - I22:
+        - deployments/i22/index.md
+        - Open questions: deployments/i22/questions.md
+        - The beamline:
+          - deployments/i22/equipment/index.md
+          - Source: deployments/i22/beamline.md
+          - Sample: deployments/i22/equipment/sample.md
+          - Detector: deployments/i22/equipment/detector.md
+          - Controls: deployments/i22/equipment/controls.md
+          - Inventory: deployments/i22/inventory.md
+        - Techniques: deployments/i22/techniques.md
+        - Governance: deployments/i22/governance.md
+        - Model: deployments/i22/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
