@@ -89,11 +89,11 @@ async def test_provenance_payload_declares_simulated_actuation() -> None:
     status = await port.await_terminal_state(job_id)
     artifact = await port.fetch_artifact_ref(job_id)
 
-    provenance = port.provide_provenance_payload(job_id, status, artifact)
-    assert provenance.actuation_kind is ActuationKind.SIMULATED
-    assert provenance.is_simulated is True
-    assert provenance.job_id == job_id
-    assert provenance.artifact_ref == artifact
+    result = port.provide_result(job_id, status, (artifact,))
+    assert result.actuation_kind is ActuationKind.SIMULATED
+    assert result.is_simulated is True
+    assert result.job_id == job_id
+    assert result.artifacts == (artifact,)
 
 
 @pytest.mark.unit

@@ -156,7 +156,29 @@ class RecipeCaptureStep:
     capture_name: str
 
 
-RecipeStep = RecipeSetpointStep | RecipeActionStep | RecipeCheckStep | RecipeCaptureStep
+@dataclass(frozen=True)
+class RecipeComputeStep:
+    """Compute step template: submit `command` over ComputePort, surface a Measurement.
+
+    The recipe-template twin of the Conductor's `ComputeStep` (slice 6a).
+    Fields are LITERAL at 6a (no `BindingRef` on a compute step yet): the
+    `command` argv + `input_uris` (authored literal URIs pointing at the
+    well-known paths the acquisition action bodies wrote) + optional
+    `output_uri` + literal `parameters`. The expansion function passes the
+    fields through verbatim; binding a compute parameter is a deferred
+    widening (the first deployment that needs an operator-tunable compute
+    parameter fires it).
+    """
+
+    command: tuple[str, ...]
+    input_uris: tuple[str, ...] = ()
+    output_uri: str | None = None
+    parameters: Mapping[str, Any] = field(default_factory=dict[str, Any])
+
+
+RecipeStep = (
+    RecipeSetpointStep | RecipeActionStep | RecipeCheckStep | RecipeCaptureStep | RecipeComputeStep
+)
 """Closed discriminated union of templated step shapes; parallels `Step` arm-for-arm."""
 
 
@@ -247,6 +269,14 @@ def _step_to_wire(step: RecipeStep) -> dict[str, Any]:
             "address": step.address,
             "capture_name": step.capture_name,
         }
+    if isinstance(step, RecipeComputeStep):
+        return {
+            "kind": "compute",
+            "command": list(step.command),
+            "input_uris": list(step.input_uris),
+            "output_uri": step.output_uri,
+            "parameters": dict(step.parameters),
+        }
     return {
         "kind": "check",
         "address": step.address,
@@ -275,6 +305,13 @@ def _step_from_wire(payload: dict[str, Any]) -> RecipeStep:
             return RecipeCaptureStep(
                 address=payload["address"],
                 capture_name=payload["capture_name"],
+            )
+        if kind == "compute":
+            return RecipeComputeStep(
+                command=tuple(payload["command"]),
+                input_uris=tuple(payload.get("input_uris", ())),
+                output_uri=payload.get("output_uri"),
+                parameters=dict(payload.get("parameters", {})),
             )
         if kind == "check":
             return RecipeCheckStep(
@@ -388,6 +425,7 @@ __all__ = [
     "RecipeActionStep",
     "RecipeCaptureStep",
     "RecipeCheckStep",
+    "RecipeComputeStep",
     "RecipeSetpointStep",
     "RecipeStep",
     "UnboundRecipeBindingError",

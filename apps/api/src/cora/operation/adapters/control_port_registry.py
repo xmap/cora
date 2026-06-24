@@ -47,8 +47,8 @@ from typing import TYPE_CHECKING, Any
 
 from cora.operation.ports.control_port import (
     ControlPort,
+    Measurement,
     NoAdapterForAddressError,
-    Reading,
 )
 
 if TYPE_CHECKING:
@@ -106,7 +106,7 @@ class ControlPortRegistry:
                 return is_simulated
         raise NoAdapterForAddressError(address)
 
-    async def read(self, address: str) -> Reading:
+    async def read(self, address: str) -> Measurement:
         return await self.route(address).read(address)
 
     async def write(
@@ -119,7 +119,7 @@ class ControlPortRegistry:
     ) -> None:
         await self.route(address).write(address, value, wait=wait, timeout_s=timeout_s)
 
-    def subscribe(self, address: str) -> AsyncIterator[Reading]:
+    def subscribe(self, address: str) -> AsyncIterator[Measurement]:
         return self.route(address).subscribe(address)
 
     async def aclose(self) -> None:

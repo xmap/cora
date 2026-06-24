@@ -35,7 +35,7 @@ Coverage spans both step kinds shipped to date (setpoint + action):
   - WithinToleranceCriterion numeric inside tolerance -> success
   - WithinToleranceCriterion numeric outside tolerance -> CheckFailedError halt
   - WithinToleranceCriterion on non-numeric value -> clean mismatch (no exception escape)
-  - Reading.quality != Good -> CheckFailedError halt with "quality=" reason
+  - Measurement.quality != Good -> CheckFailedError halt with "quality=" reason
   - read raises Control*Error -> failure halt with the substrate error_class
   - recorded payload carries the observed reading (value + quality + sampled_at)
   - mixed setpoint + action + check walked in order
@@ -94,7 +94,7 @@ from cora.operation.ports.control_port import (
     ActuationKind,
     ControlPort,
     ControlTimeoutError,
-    Reading,
+    Measurement,
 )
 
 _FIXED_NOW = datetime(2026, 5, 30, 9, 0, 0, tzinfo=UTC)
@@ -420,13 +420,15 @@ async def test_execute_does_not_catch_non_port_exceptions_on_setpoint() -> None:
     """
 
     class _CancellingPort:
-        async def read(self, _address: str) -> Reading:  # pragma: no cover  # unused
+        async def read(self, _address: str) -> Measurement:  # pragma: no cover  # unused
             raise NotImplementedError
 
         async def write(self, *_args: Any, **_kwargs: Any) -> None:
             raise asyncio.CancelledError
 
-        def subscribe(self, _address: str) -> AsyncIterator[Reading]:  # pragma: no cover  # unused
+        def subscribe(
+            self, _address: str
+        ) -> AsyncIterator[Measurement]:  # pragma: no cover  # unused
             raise NotImplementedError
 
     appender = _FakeAppendStep()
@@ -664,12 +666,12 @@ async def test_execute_action_default_registry_is_empty_when_omitted() -> None:
 # --- check coverage -----------------------------------------------------
 
 
-def _good_reading(value: Any, kind: str = "Scalar") -> Reading:
-    return Reading(
+def _good_reading(value: Any, kind: str = "Scalar") -> Measurement:
+    return Measurement(
         value=value,
         kind=kind,  # type: ignore[arg-type]
         quality="Good",
-        sampled_at=_FIXED_NOW,
+        produced_at=_FIXED_NOW,
     )
 
 
@@ -794,11 +796,11 @@ async def test_execute_check_non_good_quality_halts() -> None:
     port = InMemoryControlPort()
     port.set_reading(
         "2bma:rot:rbv",
-        Reading(
+        Measurement(
             value=45.0,
             kind="Scalar",
             quality="Bad",
-            sampled_at=_FIXED_NOW,
+            produced_at=_FIXED_NOW,
             quality_detail="alarm_status=3",
         ),
     )
@@ -829,11 +831,11 @@ async def test_execute_check_uncertain_quality_halts_with_quality_reason() -> No
     port = InMemoryControlPort()
     port.set_reading(
         "2bma:rot:rbv",
-        Reading(
+        Measurement(
             value=45.0,
             kind="Scalar",
             quality="Uncertain",
-            sampled_at=_FIXED_NOW,
+            produced_at=_FIXED_NOW,
             quality_detail="alarm_status=1",
         ),
     )
@@ -1201,7 +1203,7 @@ async def test_setpoint_verify_records_bad_quality_reading_without_halting() -> 
     appender = _FakeAppendStep()
     conductor = _conductor(port, appender, ids=[uuid4()])
     procedure_id = uuid4()
-    # Wire the write to land + then overwrite the cached Reading with Bad quality.
+    # Wire the write to land + then overwrite the cached Measurement with Bad quality.
     # InMemoryControlPort's write hard-codes Good, so use set_reading post-write
     # via a small fake. Simpler: subclass-shaped override is heavy; instead pre-seed
     # a Bad-quality reading that the write will overwrite, then immediately re-seed
@@ -1211,19 +1213,19 @@ async def test_setpoint_verify_records_bad_quality_reading_without_halting() -> 
     # Workaround: build a minimal stub port instead.
 
     class _StubPort:
-        async def read(self, _address: str) -> Reading:
-            return Reading(
+        async def read(self, _address: str) -> Measurement:
+            return Measurement(
                 value=4.2,
                 kind="Scalar",
                 quality="Bad",
-                sampled_at=_FIXED_NOW,
+                produced_at=_FIXED_NOW,
                 quality_detail="alarm_status=3",
             )
 
         async def write(self, *_args: Any, **_kwargs: Any) -> None:
             return None
 
-        def subscribe(self, _address: str) -> AsyncIterator[Reading]:  # pragma: no cover
+        def subscribe(self, _address: str) -> AsyncIterator[Measurement]:  # pragma: no cover
             raise NotImplementedError
 
     conductor = Conductor(
@@ -1252,7 +1254,7 @@ async def test_setpoint_verify_records_read_failure_as_post_read_error() -> None
     """post-read raising Control*Error -> post_read_error in payload, setpoint still succeeded."""
 
     class _WriteOnlyPort:
-        async def read(self, address: str) -> Reading:
+        async def read(self, address: str) -> Measurement:
             from cora.operation.ports.control_port import ControlNotConnectedError
 
             raise ControlNotConnectedError(address)
@@ -1260,7 +1262,7 @@ async def test_setpoint_verify_records_read_failure_as_post_read_error() -> None
         async def write(self, *_args: Any, **_kwargs: Any) -> None:
             return None
 
-        def subscribe(self, _address: str) -> AsyncIterator[Reading]:  # pragma: no cover
+        def subscribe(self, _address: str) -> AsyncIterator[Measurement]:  # pragma: no cover
             raise NotImplementedError
 
     appender = _FakeAppendStep()
@@ -1313,13 +1315,13 @@ async def test_conduct_cancellation_mid_execute_attempts_abort_then_reraises() -
     """CancelledError mid-execute triggers best-effort abort + re-raises."""
 
     class _CancellingPort:
-        async def read(self, _address: str) -> Reading:  # pragma: no cover  # unused
+        async def read(self, _address: str) -> Measurement:  # pragma: no cover  # unused
             raise NotImplementedError
 
         async def write(self, *_args: Any, **_kwargs: Any) -> None:
             raise asyncio.CancelledError
 
-        def subscribe(self, _address: str) -> AsyncIterator[Reading]:  # pragma: no cover
+        def subscribe(self, _address: str) -> AsyncIterator[Measurement]:  # pragma: no cover
             raise NotImplementedError
 
     appender = _FakeAppendStep()
@@ -1356,13 +1358,13 @@ async def test_conduct_cancellation_reraises_even_when_abort_itself_fails() -> N
     """If abort_procedure raises during cancellation cleanup, CancelledError still surfaces."""
 
     class _CancellingPort:
-        async def read(self, _address: str) -> Reading:  # pragma: no cover
+        async def read(self, _address: str) -> Measurement:  # pragma: no cover
             raise NotImplementedError
 
         async def write(self, *_args: Any, **_kwargs: Any) -> None:
             raise asyncio.CancelledError
 
-        def subscribe(self, _address: str) -> AsyncIterator[Reading]:  # pragma: no cover
+        def subscribe(self, _address: str) -> AsyncIterator[Measurement]:  # pragma: no cover
             raise NotImplementedError
 
     appender = _FakeAppendStep()
@@ -1431,7 +1433,7 @@ async def test_conduct_check_failure_after_setpoint_triggers_abort_with_check_ta
     port.simulate_connect("2bma:rot:val")
     port.set_reading(
         "2bma:rot:rbv",
-        Reading(value=12.5, kind="Scalar", quality="Good", sampled_at=_FIXED_NOW),
+        Measurement(value=12.5, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
     )
     appender = _FakeAppendStep()
     start = _FakeLifecycleHandler()

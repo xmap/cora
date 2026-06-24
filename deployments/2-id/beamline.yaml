@@ -1,0 +1,179 @@
+# CORA Beamline descriptor: 2-ID (APS), design phase
+#
+# 2-ID is the APS hard X-ray microprobe beamline in Sector 2 (Argonne): one
+# insertion-device source feeding more than one experiment hutch. This scaffold
+# models its 2-ID-D hutch, the scanning fluorescence microprobe, the same way the
+# 32-ID scaffold modelled only the 32-ID-C TXM hutch and deferred the rest. 2-ID
+# is bound to the APS Site (deployments/aps/site.yaml), the same Site as 2-BM.
+#
+# STATUS: design phase. This scaffold is mined from the APS-microprobe integration
+# in the Experiment Automation Agents (EAA) project (github.com/AdvancedPhotonSource/EAA,
+# packages/eaa-imaging .../tool/imaging/aps_mic) and its 2-ID-D launcher
+# (github.com/AdvancedPhotonSource/eaa_driver_scripts_aps_2idd). EAA is mined as
+# DATA to learn the beamline FROM, not mirrored as a spec: CORA's Conductor
+# replaces EAA's scan and autofocus orchestration over EPICS, and EAA registers as
+# an external Agent (see docs/deployments/2-id/model.md). The launcher is a pure
+# simulation, so it yields no real PV handles, detector identities, or motor
+# bindings; none are invented here.
+#
+# The verified function (the 2-ID-D hutch) is a sample-scanning XRF microprobe: a
+# Fresnel zone plate focuses the monochromatic beam to a spot, the sample is
+# rastered through it (fly 2D / step 1D), and an energy-dispersive detector records
+# the fluorescence spectrum per point. The source-side optics (undulator,
+# monochromator) sit upstream, shared across the sector's hutches, and are NOT
+# described by EAA, so they are carried thin and confirm; the focusing zone plate
+# and the sample and detection chain in 2-ID-D are the parts EAA evidences.
+#
+# Every device carries new: true (not yet modelled in CORA) and confirm: true
+# (value to be verified with 2-ID staff). Control handles (pv) and vendor models
+# are omitted on purpose. New device classes bind to loose Family strings (rendered
+# as plain text), not coined catalog Families.
+#
+# DELIBERATELY OUT OF THIS SCAFFOLD (recorded on docs/deployments/2-id/model.md,
+# not modelled here): the sister experiment hutch (a 2-ID-E-class station) and the
+# rest of the sector's hutch roster; micro-XANES and ptychography (named by
+# world-facts, not in EAA's aps_mic code path); scanning fluorescence tomography (a
+# Plan setpoint over the scanning-XRF Method, not a new Method, and needs a
+# rotation axis not evidenced here); and the coining of a scanning-fluorescence-
+# microscopy Method and a fluorescence-detector Family (naming-review decisions,
+# not made in a design-phase scaffold).
+#
+# THE TOPOLOGY QUESTION (TOPO-1): Sector 2's hutch roster, which hutch the source
+# optics serve, the optics-hutch identity, and the post-APS-U sector layout are
+# unconfirmed. This scaffold models one root Unit Asset 2-ID with one modelled
+# experiment hutch (2-ID-D) and flags the multiplicity and the optics location as
+# TOPO-1, rather than committing to a hutch roster or an optics-hutch name the
+# corpus does not give.
+#
+# Items the corpus leaves open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/2-id/questions.md.
+
+beamline:
+  name: 2-ID
+  facility: aps                 # APS, the Site-level Facility (facility_code: aps)
+  sector: "Sector 2"            # organizational label, not a registered asset
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "Sector 2 undulator; exact device type, period, and the post-APS-U source configuration unconfirmed (SRC-1, TOPO-1)"
+
+# The one experiment hutch this scaffold models: 2-ID-D, the scanning fluorescence
+# microprobe. The sister station(s) and a shared upstream optics hutch are flagged
+# as TOPO-1, not declared, because the corpus does not name them. The source
+# groups (undulator, monochromator) sit upstream of 2-ID-D and leave their
+# enclosure unset rather than assert they live in the experiment hutch; the
+# focusing optics, sample stage, and detector are in 2-ID-D. The PSS permit signal
+# is an APS facility signal, not yet on file (PSS-1).
+enclosures:
+  - name: 2-ID-D
+    role: experiment-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the upstream source and beam-conditioning optics
+# (shared across the sector; EAA-undescribed, carried thin)
+# ===========================================================================
+
+insertion-device:
+  stage: source
+  intro: "The Sector 2 insertion-device source, upstream of the hutches. EAA does not describe the source, so it is carried thin and confirm as a single undulator pending the source table and the post-APS-U configuration."
+  note: "Modelled as one InsertionDevice Asset. Device type, period, and gap, and whether the front end feeds more than one hutch, are unconfirmed (SRC-1, TOPO-1)."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      new: true
+      confirm: true
+      note: "Sector 2 undulator source; type and period unconfirmed (SRC-1)"
+
+monochromator:
+  stage: source
+  intro: "The monochromator that selects the scanning energy, in the upstream optics area. A hard X-ray microprobe runs monochromatic; the device is carried as a double-crystal monochromator pending confirmation, since EAA does not describe the optics."
+  note: "Presence assumed from the technique (a monochromatic scanning microprobe); crystal, energy range, axes, and the optics-hutch it sits in unconfirmed (MONO-1, TOPO-1)."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      new: true
+      confirm: true
+      note: "double-crystal monochromator assumed; crystal and energy range unconfirmed (MONO-1)"
+
+focusing-optics:
+  stage: source
+  enclosure: 2-ID-D
+  intro: "The probe-forming optic in the 2-ID-D hutch: a Fresnel zone plate focuses the monochromatic beam to the scanning spot just upstream of the sample. This is the defining optic of the microprobe and the one EAA's autofocus loop drives (the zp_z focus axis)."
+  note: >
+    The zone plate is bound to a loose Family string (ZonePlate): it is a device
+    class not yet in the catalog, and no Asset is registered to earn it (the 32-ID
+    TXM precedent). Its focus axis (zp_z in EAA) is the actuator CORA's Conductor
+    would drive during autofocus; the order-sorting aperture standard to a
+    zone-plate microprobe is not evidenced and is folded into OPTICS-1, not invented.
+  devices:
+    - name: ZonePlate
+      family: ZonePlate
+      new: true
+      confirm: true
+      note: "probe-forming Fresnel zone plate with a zp_z focus axis (EAA aps_mic autofocus); outermost-zone width, diameter, and the order-sorting aperture unconfirmed (OPTICS-1). Loose Family"
+
+# ===========================================================================
+# SAMPLE STAGE: the sample-scanning stack in the 2-ID-D hutch (the raster axes)
+# ===========================================================================
+
+sample-stage:
+  stage: sample
+  enclosure: 2-ID-D
+  intro: "The sample-scanning stack in 2-ID-D: the sample is rastered through the focused spot (fly 2D / step 1D) while the fluorescence detector reads each point. This is the moving part of the microprobe and the one EAA's scan_control drives."
+  note: >
+    Modelled coarsely as one sample-positioning stack pending the confirmed axis
+    complement. EAA evidences a vertical raster axis (samy) and a standoff axis
+    (samz); the horizontal scan axis is inferred, and the coarse-versus-fine
+    (piezo) split a real microprobe carries is unconfirmed (AXIS-1). No rotation
+    axis is evidenced, so scanning fluorescence tomography is deferred (see model.md).
+  devices:
+    - name: SamplePositioning
+      family: LinearStage
+      new: true
+      confirm: true
+      note: "sample-scanning stack; vertical raster (samy) and standoff (samz) evidenced, horizontal scan axis and coarse/fine piezo split unconfirmed (AXIS-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the energy-dispersive fluorescence detector in 2-ID-D
+# ===========================================================================
+
+fluorescence-detector:
+  stage: detection
+  enclosure: 2-ID-D
+  intro: "The energy-dispersive detector in 2-ID-D that records the X-ray fluorescence spectrum at each scan point; element maps are fit from the spectra downstream (EAA's XRF-Maps lineage)."
+  note: >
+    Bound to a loose Family string (EnergyDispersiveSpectrometer): a fluorescence
+    energy-dispersive detector is a new device class, and the eventual catalog
+    Family name is a naming-review decision that must avoid the reserved Detector
+    Role noun (see model.md). The readout chain EAA names (a preamplifier and EPICS
+    scalers, plus the I0 flux monitors a microprobe normalizes against) is the
+    detection electronics, identities unconfirmed (DET-2).
+  devices:
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      new: true
+      confirm: true
+      note: "energy-dispersive fluorescence detector; element channels, model, and segmentation unconfirmed (DET-1). Loose Family"
+
+# Cross-cutting control. 2-ID runs EPICS (the floor) with a Bluesky RunEngine over
+# the EPICS scanRecord for the raster. CORA observes and, where it replaces EAA's
+# scan and autofocus orchestration, conducts over it. Control handles are not in
+# the corpus (the launcher is a simulation), so none are bound (CTRL-1).
+controls:
+  intro: >
+    2-ID runs on EPICS, like 2-BM, with a Bluesky RunEngine submitting the fly-2D
+    and step-1D rasters over the EPICS scanRecord (EAA aps_mic). The drive crates,
+    IOC hosts, and PV handles are not in the EAA corpus (its 2-ID-D launcher is a
+    simulation) and are left unbound (CTRL-1).
+
+# Continuously-available resources a run draws on (design phase).
+resources:
+  intro: >
+    The continuously-available facility resources a 2-ID-D run needs, carried
+    pending in the design phase. The endstation supplies (cooling, any
+    sample-environment gases) are unconfirmed (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater

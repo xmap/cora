@@ -21,6 +21,7 @@ from cora.operation.ports.compute_port import (
     ComputeNotAvailableError,
     ComputeStatus,
     JobSpec,
+    MeasurementNotFoundError,
 )
 from cora.operation.ports.control_port import ActuationKind
 
@@ -62,9 +63,9 @@ async def test_provenance_declares_physical_actuation(tmp_path: Path) -> None:
     status = await port.await_terminal_state(job_id)
     artifact = await port.fetch_artifact_ref(job_id)
 
-    provenance = port.provide_provenance_payload(job_id, status, artifact)
-    assert provenance.actuation_kind is ActuationKind.PHYSICAL
-    assert provenance.is_simulated is False
+    result = port.provide_result(job_id, status, (artifact,))
+    assert result.actuation_kind is ActuationKind.PHYSICAL
+    assert result.is_simulated is False
 
 
 @pytest.mark.integration
@@ -98,6 +99,19 @@ async def test_succeeded_but_missing_output_raises_artifact_not_found(tmp_path: 
     assert await port.await_terminal_state(job_id) is ComputeStatus.SUCCEEDED
     with pytest.raises(ArtifactNotFoundError):
         await port.fetch_artifact_ref(job_id)
+
+
+@pytest.mark.integration
+async def test_fetch_measurements_raises_for_the_unimplemented_value_arm() -> None:
+    """The value arm is unimplemented for the subprocess substrate at 6a, so
+    fetch_measurements RAISES rather than returning empty. Returning () would let
+    a misrouted value conduct complete as a Physical terminal with zero
+    measurements, silently writing an empty Calibration."""
+    port = LocalProcessComputePort()
+    job_id = await port.submit(JobSpec(command=(sys.executable, "-c", "pass")))
+    assert await port.await_terminal_state(job_id) is ComputeStatus.SUCCEEDED
+    with pytest.raises(MeasurementNotFoundError):
+        await port.fetch_measurements(job_id)
 
 
 def _write_tiff_stack_spec(out_dir: Path, slices: int) -> JobSpec:

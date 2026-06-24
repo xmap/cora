@@ -21,14 +21,14 @@ from cora.enclosure.ports.enclosure_observer import (
     EnclosureObserverScope,
 )
 from cora.infrastructure.ports.clock import FakeClock
-from cora.operation.ports.control_port import ControlNotConnectedError, Reading
+from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
 
 _T = datetime(2026, 6, 17, 12, 0, 0, tzinfo=UTC)
 _T_UNKNOWN = datetime(2026, 6, 17, 13, 0, 0, tzinfo=UTC)
 
 
-def _reading(value: object, quality: str = "Good") -> Reading:
-    return Reading(value=value, kind="Scalar", quality=quality, sampled_at=_T)  # type: ignore[arg-type]
+def _reading(value: object, quality: str = "Good") -> Measurement:
+    return Measurement(value=value, kind="Scalar", quality=quality, produced_at=_T)  # type: ignore[arg-type]
 
 
 @pytest.mark.unit
@@ -69,16 +69,16 @@ class _ScriptedControlPort:
     def __init__(
         self,
         *,
-        readings: dict[str, list[Reading]],
+        readings: dict[str, list[Measurement]],
         disconnect: frozenset[str] = frozenset(),
     ) -> None:
         self._readings = readings
         self._disconnect = disconnect
 
-    def subscribe(self, address: str) -> AsyncIterator[Reading]:
+    def subscribe(self, address: str) -> AsyncIterator[Measurement]:
         return self._stream(address)
 
-    async def _stream(self, address: str) -> AsyncGenerator[Reading]:
+    async def _stream(self, address: str) -> AsyncGenerator[Measurement]:
         for reading in self._readings.get(address, []):
             yield reading
         if address in self._disconnect:

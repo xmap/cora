@@ -2,11 +2,12 @@
 
 The Conductor is the Operation BC's Layer-2 runtime per
 [[project_edge_runtime_design]]. It receives a sequence of `Step`
-operations (a discriminated union over `SetpointStep | ActionStep |
-CheckStep`), dispatches each through the right primitive
-(`ControlPort.write` for setpoints, an action body looked up in the
-`ActionRegistry` for actions, `ControlPort.read` followed by
-criterion evaluation for checks), and records every outcome as a
+operations (a discriminated union; the arms are pinned against the
+Procedure aggregate's `STEP_KIND_VALUES`), dispatches each through the
+right primitive (`ControlPort.write` for setpoints, an action body
+looked up in the `ActionRegistry` for actions, `ControlPort.read`
+followed by criterion evaluation for checks + captures, and
+`ComputePort.submit` for a compute step), and records every outcome as a
 step entry in the Procedure's steps logbook via the existing
 `append_activities` handler.
 
@@ -64,7 +65,7 @@ when a conduct halted, even if the halt was a crash or cancellation
 
 A `CheckStep` carries an address + an acceptance criterion. The
 Conductor reads from the address via `ControlPort.read`, requires
-`Reading.quality == "Good"` (Uncertain or Bad fails the check), and
+`Measurement.quality == "Good"` (Uncertain or Bad fails the check), and
 evaluates the criterion against the observed value. The closed
 criterion union (`EqualsCriterion | WithinToleranceCriterion`) keeps the wire shape
 JSON-clean while leaving room for future variants (`OneOf`,
@@ -110,7 +111,6 @@ handler's `Handler` Protocol, not a concrete binding, so tests inject
 a fake without standing up the full handler machinery.
 """
 
-import asyncio
 import contextlib
 import math
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
@@ -119,6 +119,7 @@ from enum import StrEnum
 from typing import Any, Protocol, cast
 from uuid import UUID
 
+from cora.infrastructure.edge_runtime import abort_orphan_on_cancel
 from cora.infrastructure.ports.clock import Clock
 from cora.infrastructure.ports.event_store import ConcurrencyError
 from cora.infrastructure.ports.id_generator import IdGenerator
@@ -145,6 +146,15 @@ from cora.operation.features.resume_procedure.command import ResumeProcedure
 from cora.operation.features.resume_procedure.handler import Handler as ResumeProcedureHandler
 from cora.operation.features.start_procedure.command import StartProcedure
 from cora.operation.features.start_procedure.handler import Handler as StartProcedureHandler
+from cora.operation.ports.compute_port import (
+    ComputeJobFailedError,
+    ComputeNotAvailableError,
+    ComputePort,
+    ComputeSubmitRejectedError,
+    ComputeTimeoutError,
+    JobSpec,
+    MeasurementNotFoundError,
+)
 from cora.operation.ports.control_port import (
     ActuationKind,
     ControlAccessDeniedError,
@@ -153,8 +163,8 @@ from cora.operation.ports.control_port import (
     ControlTimeoutError,
     ControlValueCoercionError,
     ControlWriteRejectedError,
+    Measurement,
     NoAdapterForAddressError,
-    Reading,
 )
 from cora.recipe.aggregates.recipe.body import CaptureRef
 from cora.shared.text_bounds import REASON_MAX_LENGTH
@@ -200,6 +210,22 @@ _STEP_KIND_SETPOINT = "setpoint"
 _STEP_KIND_ACTION = "action"
 _STEP_KIND_CHECK = "check"
 _STEP_KIND_CAPTURE = "capture"
+_STEP_KIND_COMPUTE = "compute"
+
+_COMPUTE_ERRORS: tuple[type[Exception], ...] = (
+    ComputeSubmitRejectedError,
+    ComputeNotAvailableError,
+    ComputeTimeoutError,
+    ComputeJobFailedError,
+    MeasurementNotFoundError,
+)
+"""The closed set of `Compute*Error` classes a ComputeStep maps to a
+recorded step failure + `ConductorFailure`. Mirrors `_CONTROL_ERRORS`:
+new ComputePort exception classes must be added here explicitly (no
+`Exception` catch-all so non-port exceptions still propagate to the
+caller's task). A non-`Succeeded` terminal (Failed / Cancelled /
+TimedOut returned without an exception) is the fifth halt path,
+handled inline in `_run_compute`."""
 
 _ERROR_UNRESOLVED_CAPTURE = "UnresolvedCaptureRef"
 """error_class for a SetpointStep CaptureRef whose name was never captured
@@ -216,11 +242,12 @@ step payload (mirrors the Recipe BC's `__capture__` form). A `SetpointStep`
 whose value is a `CaptureRef` serializes to `{"__capture__": name}` so it
 rides `ResolvedStepsRecorded` + the determinism hash as an opaque sentinel
 and round-trips at resume; the Conductor resolves it at execute time."""
-"""Closed-set discriminator from [[project_operation_design]]
-(`setpoint | action | check`). Source of truth for these values is
-`STEP_KIND_VALUES` on the Procedure aggregate (re-imported above);
-the architecture fitness `test_conductor_step_kinds_match_procedure`
-pins that the union arms here stay in sync with the aggregate set.
+"""Closed-set step-kind discriminators from [[project_operation_design]].
+The source of truth for the value set is `STEP_KIND_VALUES` on the
+Procedure aggregate (re-imported above); the architecture fitness
+`test_conductor_step_kinds_match_procedure` pins that the `_STEP_KIND_*`
+constants + `Step` union arms here stay in sync with that set, so the
+count is derived, never hard-coded.
 
 `_SOURCE_KIND_LIFECYCLE` below is a Conductor-local pseudo-kind used
 only on `ConductorFailure` (lifecycle failures do not record a step
@@ -382,8 +409,8 @@ class CheckStep:
     """One post-condition verification: read `address`, evaluate `criterion`.
 
     The Conductor reads the address via `ControlPort.read`, requires
-    `Reading.quality == "Good"`, then evaluates `criterion` against
-    `Reading.value`. Any of (read raised `Control*Error`, quality
+    `Measurement.quality == "Good"`, then evaluates `criterion` against
+    `Measurement.value`. Any of (read raised `Control*Error`, quality
     not Good, criterion did not match) halts execution with a
     recorded failure entry. The recorded payload carries the
     observed reading so post-hoc inspection has the evidence.
@@ -416,20 +443,53 @@ class CaptureStep:
     capture_name: str
 
 
-Step = SetpointStep | ActionStep | CheckStep | CaptureStep
+@dataclass(frozen=True)
+class ComputeStep:
+    """One compute job: submit `command` over `ComputePort`, surface a `Measurement`.
+
+    The value-arm sibling of `ActionStep` (slice 6a). Where an action runs
+    a deployment body composing ControlPort calls, a ComputeStep submits a
+    job to a compute substrate (`ComputePort.submit`), awaits its terminal
+    state, fetches the structured value it produced (`fetch_measurements`),
+    and records each `Measurement` on the activity log. It is the smallest
+    real conduct-path compute step: an align-resolution routine measures the
+    detector pixel size from two already-acquired frames and yields one
+    scalar `Measurement` that homes to a Calibration.
+
+    Fields mirror the value-bearing subset of `JobSpec`: `command` is the
+    argv the substrate launches; `input_uris` are AUTHORED LITERAL URIs
+    pointing at the well-known paths the acquisition action bodies wrote
+    (NO runtime stage-output-to-input binding at 6a; that is deferred
+    chaining); `output_uri` and `parameters` carry the optional output
+    location + validated parameter set. `resources` / `working_dir` / `env`
+    are omitted at 6a (substrate-decides defaults). A ComputeStep is
+    side-effecting (a job submission is non-idempotent at the substrate),
+    so it records a pre-effect in-flight marker like a setpoint / action.
+
+    6a is VALUE-only: a file-producing ComputeStep is deferred (the
+    reconstruction-file path stays the Reckoner / Run runtime).
+    """
+
+    command: tuple[str, ...]
+    input_uris: tuple[str, ...] = ()
+    output_uri: str | None = None
+    parameters: Mapping[str, Any] = field(default_factory=dict[str, Any])
+
+
+Step = SetpointStep | ActionStep | CheckStep | CaptureStep | ComputeStep
 """The closed discriminated union of step kinds the Conductor walks.
 
-Mirrors the open `StepKind` Literal in the Procedure aggregate
-(`"setpoint" | "action" | "check" | "capture"`); the Conductor enforces
-tighter typing via this union so a malformed step is a type error, not a
-runtime branch."""
+Mirrors the open `StepKind` Literal in the Procedure aggregate; the
+Conductor enforces tighter typing via this union so a malformed step is a
+type error, not a runtime branch. The arm count is pinned against
+`STEP_KIND_VALUES` by `test_conductor_step_kinds_match_procedure`."""
 
 
 def _require_finite_number(value: Any, address: str) -> float:
     """Return `value` as a finite number or raise a Conductor-recordable failure.
 
     A captured axis read feeds a later restore setpoint, so it must be a
-    finite number. `Reading.value` is typed `Any`; a non-numeric read (a
+    finite number. `Measurement.value` is typed `Any`; a non-numeric read (a
     categorical / mis-addressed leaf) or a non-finite float (NaN / +-inf,
     e.g. an EPICS UDF) would otherwise propagate silently. Mapping it to
     `ControlValueCoercionError` (a member of `_CONTROL_ERRORS`) lets the
@@ -554,6 +614,14 @@ class ConductorResult:
     False. It reflects the ACTUAL transition, not the mere recoverability
     of the failure, so a caller can distinguish a resumable `Held` outcome
     from a terminal `Aborted` one (both carry `succeeded=False` + `failure`).
+
+    `measurements` accumulates the `Measurement`s every `ComputeStep`
+    produced during the conduct (slice 6a). `execute()` collects them in
+    order (mirroring `completed_count`) on BOTH the success and the
+    failure construction, so a caller reads the produced values without
+    re-parsing the activity log even when a later step halts. Empty on a
+    conduct with no ComputeStep. The `conduct` / `reconduct` `replace()`
+    paths preserve it.
     """
 
     procedure_id: UUID
@@ -561,6 +629,7 @@ class ConductorResult:
     failure: ConductorFailure | None = None
     actuation_kind: ActuationKind | None = None
     held: bool = False
+    measurements: tuple[Measurement, ...] = ()
 
     @property
     def succeeded(self) -> bool:
@@ -601,7 +670,7 @@ class _ActuationObserver:
         with contextlib.suppress(NoAdapterForAddressError):
             self._simulated_flags.add(bool(self._route_is_simulated(address)))
 
-    async def read(self, address: str) -> Reading:
+    async def read(self, address: str) -> Measurement:
         self._observe(address)
         return await self._inner.read(address)
 
@@ -616,7 +685,7 @@ class _ActuationObserver:
         self._observe(address)
         await self._inner.write(address, value, wait=wait, timeout_s=timeout_s)
 
-    def subscribe(self, address: str) -> AsyncIterator[Reading]:
+    def subscribe(self, address: str) -> AsyncIterator[Measurement]:
         self._observe(address)
         return self._inner.subscribe(address)
 
@@ -652,6 +721,7 @@ class Conductor:
         clock: Clock,
         id_generator: IdGenerator,
         action_registry: ActionRegistry | None = None,
+        compute_port: ComputePort | None = None,
         start_procedure: StartProcedureHandler | None = None,
         complete_procedure: CompleteProcedureHandler | None = None,
         abort_procedure: AbortProcedureHandler | None = None,
@@ -663,6 +733,11 @@ class Conductor:
         self._clock = clock
         self._id_generator = id_generator
         self._action_registry: ActionRegistry = action_registry or InMemoryActionRegistry({})
+        # BORROWED reference: the composition root owns the single ComputePort
+        # instance (shared with the Reckoner) and owns its `aclose`. The
+        # Conductor never closes it. None when no compute substrate is wired;
+        # dispatching a ComputeStep then raises RuntimeError (a wiring bug).
+        self._compute_port = compute_port
         self._start_procedure = start_procedure
         self._complete_procedure = complete_procedure
         self._abort_procedure = abort_procedure
@@ -701,6 +776,7 @@ class Conductor:
         )
         observer = _ActuationObserver(self._control_port)
         captures: dict[str, Any] = {}
+        compute = _ComputeAccumulator()
         completed = 0
         for index, step in enumerate(steps):
             # Bind correlation_id to the ContextVar scoped per dispatch so
@@ -710,20 +786,27 @@ class Conductor:
             # and reset cleanly on exception.
             with with_dispatch_correlation_id(correlation_id):
                 failure = await self._dispatch(
-                    step, index=index, envelope=envelope, port=observer, captures=captures
+                    step,
+                    index=index,
+                    envelope=envelope,
+                    port=observer,
+                    captures=captures,
+                    compute=compute,
                 )
             if failure is not None:
                 return ConductorResult(
                     procedure_id=procedure_id,
                     completed_count=completed,
                     failure=failure,
-                    actuation_kind=observer.actuation_kind,
+                    actuation_kind=_fold_compute_kind(observer.actuation_kind, compute.kind),
+                    measurements=tuple(compute.measurements),
                 )
             completed += 1
         return ConductorResult(
             procedure_id=procedure_id,
             completed_count=completed,
-            actuation_kind=observer.actuation_kind,
+            actuation_kind=_fold_compute_kind(observer.actuation_kind, compute.kind),
+            measurements=tuple(compute.measurements),
         )
 
     async def execute_from(
@@ -801,6 +884,28 @@ class Conductor:
                         message=(
                             f"resume halted at step {index} (action {step.name!r}): an "
                             "interrupted acquisition needs an operator decision "
+                            "(redo-fresh vs reseed); not auto-rerun, not auto-skipped"
+                        ),
+                    ),
+                    actuation_kind=observer.actuation_kind,
+                )
+            if isinstance(step, ComputeStep):
+                # Halt-for-operator, same posture as an acquisition: a compute
+                # submit is side-effecting / non-idempotent at the substrate
+                # (re-submitting on resume could double-run a solver), so a
+                # ComputeStep reached during replay hands the decision back
+                # rather than auto-re-submitting. NOT executed, nothing recorded.
+                return ConductorResult(
+                    procedure_id=procedure_id,
+                    completed_count=completed,
+                    failure=ConductorFailure(
+                        step_index=index,
+                        source_kind=_STEP_KIND_COMPUTE,
+                        target=" ".join(step.command),
+                        error_class=_RESUME_HALT_ERROR_CLASS,
+                        message=(
+                            f"resume halted at step {index} (compute {step.command!r}): a "
+                            "compute submit is non-idempotent and needs an operator decision "
                             "(redo-fresh vs reseed); not auto-rerun, not auto-skipped"
                         ),
                     ),
@@ -905,7 +1010,21 @@ class Conductor:
                     message=str(exc),
                 ),
             )
-        try:
+        # Bind the abort handler locally (the guard above proved it non-None)
+        # for the cancel-orphan cleanup. If execute() is cancelled mid-flight
+        # the Procedure is left non-terminal in `Running` with partial step
+        # history; abort_orphan_on_cancel best-effort transitions it to Aborted
+        # then re-raises so the caller's task still sees the cancellation. No
+        # ConductorResult exists on cancellation, so the observed kind is
+        # unrecoverable and the abort records None (a Dataset off a cancelled
+        # conduct carries no proven kind).
+        abort_procedure = self._abort_procedure
+        async with abort_orphan_on_cancel(
+            lambda: abort_procedure(
+                AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
+                **envelope_kwargs,
+            )
+        ):
             result = await self.execute(
                 procedure_id=procedure_id,
                 principal_id=principal_id,
@@ -914,26 +1033,6 @@ class Conductor:
                 causation_id=causation_id,
                 surface_id=surface_id,
             )
-        except asyncio.CancelledError:
-            # The execute() call was cancelled mid-flight (caller cancelled
-            # the conducting task or the loop is shutting down). The
-            # Procedure is now in `Running` with partial step history; if
-            # we let the cancellation propagate untouched, the FSM would
-            # be orphaned. Best-effort transition to Aborted so operator
-            # state reflects what happened. Re-raise so the caller's task
-            # still sees the cancellation - this keeps signals + shutdown
-            # behaving normally.
-            with contextlib.suppress(Exception):
-                # No ConductorResult is available on cancellation (execute()
-                # raised before returning), so the observed actuation kind is
-                # unrecoverable here: abort records None. Conservative residual
-                # documented in the activation design; a Dataset off a
-                # cancelled conduct carries no proven kind.
-                await self._abort_procedure(
-                    AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
-                    **envelope_kwargs,
-                )
-            raise
         if result.succeeded:
             try:
                 await self._complete_procedure(
@@ -957,6 +1056,7 @@ class Conductor:
                 return ConductorResult(
                     procedure_id=procedure_id,
                     completed_count=result.completed_count,
+                    measurements=result.measurements,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -1059,7 +1159,16 @@ class Conductor:
                     message=str(exc),
                 ),
             )
-        try:
+        # Mirror conduct(): a mid-execute cancellation best-effort aborts so the
+        # FSM is not orphaned in Running, then re-raises. A cancellation is not a
+        # recoverable step failure, so it aborts rather than pausing to Held.
+        abort_procedure = self._abort_procedure
+        async with abort_orphan_on_cancel(
+            lambda: abort_procedure(
+                AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
+                **envelope_kwargs,
+            )
+        ):
             result = await self.execute(
                 procedure_id=procedure_id,
                 principal_id=principal_id,
@@ -1068,16 +1177,6 @@ class Conductor:
                 causation_id=causation_id,
                 surface_id=surface_id,
             )
-        except asyncio.CancelledError:
-            # Mirror conduct(): best-effort abort so the FSM is not orphaned in
-            # Running, then re-raise. A cancellation is not a recoverable step
-            # failure, so it aborts rather than pausing to Held.
-            with contextlib.suppress(Exception):
-                await self._abort_procedure(
-                    AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
-                    **envelope_kwargs,
-                )
-            raise
         actuation_kind = result.actuation_kind.value if result.actuation_kind is not None else None
         if result.succeeded:
             try:
@@ -1091,6 +1190,7 @@ class Conductor:
                 return ConductorResult(
                     procedure_id=procedure_id,
                     completed_count=result.completed_count,
+                    measurements=result.measurements,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -1128,6 +1228,7 @@ class Conductor:
                     failure=failure,
                     actuation_kind=result.actuation_kind,
                     held=True,
+                    measurements=result.measurements,
                 )
             return result
         # Non-recoverable step failure (action): best-effort abort, exactly
@@ -1254,6 +1355,7 @@ class Conductor:
                 return ConductorResult(
                     procedure_id=procedure_id,
                     completed_count=result.completed_count,
+                    measurements=result.measurements,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -1295,6 +1397,7 @@ class Conductor:
         envelope: "_Envelope",
         port: ControlPort,
         captures: dict[str, Any],
+        compute: "_ComputeAccumulator",
     ) -> ConductorFailure | None:
         """Run one step + record outcome; return ConductorFailure on halt-condition.
 
@@ -1302,7 +1405,10 @@ class Conductor:
         Conductor's ControlPort; every dispatch goes through it so
         actuation provenance is captured once for the whole conduct.
         `captures` is the per-conduct slot dict: a `CaptureStep` fills it,
-        a `SetpointStep` with a `CaptureRef` value reads it.
+        a `SetpointStep` with a `CaptureRef` value reads it. `compute` is
+        the per-conduct accumulator a `ComputeStep` appends its produced
+        `Measurement`s + folds its `ActuationKind` into (so `execute` can
+        surface the values + the honest aggregate kind on the result).
         """
         if isinstance(step, SetpointStep):
             return await self._run_setpoint(
@@ -1314,6 +1420,8 @@ class Conductor:
             return await self._run_capture(
                 step, index=index, envelope=envelope, port=port, captures=captures
             )
+        if isinstance(step, ComputeStep):
+            return await self._run_compute(step, index=index, envelope=envelope, compute=compute)
         return await self._run_check(step, index=index, envelope=envelope, port=port)
 
     async def _run_setpoint(
@@ -1420,7 +1528,7 @@ class Conductor:
                     "message": str(exc),
                 }
             }
-        return {"post_reading": _reading_to_dict(reading)}
+        return {"post_reading": _measurement_to_dict(reading)}
 
     async def _run_action(
         self,
@@ -1527,7 +1635,7 @@ class Conductor:
                 error_class=type(exc).__name__,
                 message=str(exc),
             )
-        body_with_reading = {**payload_body, "reading": _reading_to_dict(reading)}
+        body_with_reading = {**payload_body, "reading": _measurement_to_dict(reading)}
         if reading.quality != _QUALITY_GOOD:
             exc = CheckFailedError(step.address, f"quality={reading.quality}")
             await self._record(
@@ -1631,7 +1739,7 @@ class Conductor:
                 error_class=type(exc).__name__,
                 message=str(exc),
             )
-        body_with_reading = {**payload_body, "reading": _reading_to_dict(reading)}
+        body_with_reading = {**payload_body, "reading": _measurement_to_dict(reading)}
         if reading.quality != _QUALITY_GOOD:
             quality_exc = CheckFailedError(step.address, f"quality={reading.quality}")
             await self._record(
@@ -1678,6 +1786,131 @@ class Conductor:
             result=_RESULT_OK,
         )
         return None
+
+    async def _run_compute(
+        self,
+        step: ComputeStep,
+        *,
+        index: int,
+        envelope: "_Envelope",
+        compute: "_ComputeAccumulator",
+    ) -> ConductorFailure | None:
+        # A ComputeStep is side-effecting (a job submission is non-idempotent
+        # at the substrate), so it follows the setpoint / action in-flight-marker
+        # contract: a pre-effect marker BEFORE submit, then the ok / failed
+        # outcome after. VALUE-only at 6a: submit -> await -> fetch_measurements
+        # -> provide_result(measurements=...) -> record each Measurement.
+        if self._compute_port is None:
+            # A wiring bug, not a runtime outcome: a ComputeStep was dispatched
+            # but no ComputePort was supplied. Loud, like conduct()'s missing
+            # lifecycle-handler guard; do not record a step failure.
+            msg = (
+                "Conductor._run_compute requires a compute_port at __init__; a ComputeStep "
+                "was dispatched but none was wired. Pass compute_port to wire_operation."
+            )
+            raise RuntimeError(msg)
+        port = self._compute_port
+        job_spec = JobSpec(
+            command=step.command,
+            input_uris=step.input_uris,
+            output_uri=step.output_uri,
+            parameters=step.parameters,
+        )
+        payload_body: dict[str, Any] = {
+            "command": list(step.command),
+            "input_uris": list(step.input_uris),
+            "output_uri": step.output_uri,
+            "parameters": dict(step.parameters),
+        }
+        await self._record(
+            envelope=envelope,
+            index=index,
+            step_kind=_STEP_KIND_COMPUTE,
+            body=payload_body,
+            result=_RESULT_IN_FLIGHT,
+        )
+        try:
+            job_id = await port.submit(job_spec)
+        except _COMPUTE_ERRORS as exc:
+            return await self._record_compute_failure(
+                envelope=envelope, index=index, body=payload_body, exc=exc, target=payload_body
+            )
+        body_with_job = {**payload_body, "job_id": str(job_id)}
+        try:
+            status = await port.await_terminal_state(job_id)
+        except _COMPUTE_ERRORS as exc:
+            return await self._record_compute_failure(
+                envelope=envelope, index=index, body=body_with_job, exc=exc, target=payload_body
+            )
+        if not status.is_success:
+            exc = ComputeJobFailedError(job_id, f"terminal status {status.value}")
+            return await self._record_compute_failure(
+                envelope=envelope,
+                index=index,
+                body={**body_with_job, "status": status.value},
+                exc=exc,
+                target=payload_body,
+            )
+        try:
+            produced = await port.fetch_measurements(job_id)
+        except _COMPUTE_ERRORS as exc:
+            return await self._record_compute_failure(
+                envelope=envelope,
+                index=index,
+                body={**body_with_job, "status": status.value},
+                exc=exc,
+                target=payload_body,
+            )
+        result = port.provide_result(job_id, status, measurements=produced)
+        compute.measurements.extend(result.measurements)
+        # Fold the compute substrate's declared kind into the conduct's aggregate
+        # kind via merge_actuation_kinds (NOT through _ActuationObserver, which
+        # only watches the ControlPort): a Simulated solver taints the conduct
+        # exactly as a simulated control route does.
+        compute.kind = merge_actuation_kinds(compute.kind, result.actuation_kind.value)
+        await self._record(
+            envelope=envelope,
+            index=index,
+            step_kind=_STEP_KIND_COMPUTE,
+            body={
+                **body_with_job,
+                "status": status.value,
+                "measurements": [_compute_measurement_to_dict(m) for m in result.measurements],
+            },
+            result=_RESULT_OK,
+        )
+        return None
+
+    async def _record_compute_failure(
+        self,
+        *,
+        envelope: "_Envelope",
+        index: int,
+        body: dict[str, Any],
+        exc: Exception,
+        target: dict[str, Any],
+    ) -> ConductorFailure:
+        """Record a failed ComputeStep outcome + return the matching ConductorFailure.
+
+        `target` carries the command summary so the failure's `target` reads
+        the same whichever leg (submit / await / non-terminal / fetch) failed.
+        """
+        await self._record(
+            envelope=envelope,
+            index=index,
+            step_kind=_STEP_KIND_COMPUTE,
+            body=body,
+            result=_RESULT_FAILED,
+            error_class=type(exc).__name__,
+            message=str(exc),
+        )
+        return ConductorFailure(
+            step_index=index,
+            source_kind=_STEP_KIND_COMPUTE,
+            target=" ".join(target["command"]),
+            error_class=type(exc).__name__,
+            message=str(exc),
+        )
 
     async def _record(
         self,
@@ -1739,6 +1972,38 @@ class _Envelope:
     surface_id: UUID
 
 
+@dataclass
+class _ComputeAccumulator:
+    """Per-conduct compute output accumulator threaded through `_dispatch`.
+
+    A `ComputeStep` appends its produced `Measurement`s to `measurements`
+    (surfaced on `ConductorResult.measurements`) and folds its declared
+    `ActuationKind` into `kind` via `merge_actuation_kinds`, so a simulated
+    solver taints the conduct's aggregate kind. Mutable (not frozen): the
+    dispatch loop accumulates into it across steps. `kind` is the raw
+    `ActuationKind` string value or None (no ComputeStep ran).
+    """
+
+    measurements: list[Measurement] = field(default_factory=list[Measurement])
+    kind: str | None = None
+
+
+def _fold_compute_kind(
+    observed: ActuationKind | None, compute_kind: str | None
+) -> ActuationKind | None:
+    """Merge the ControlPort-observed kind with the ComputeStep-folded kind.
+
+    The control-side kind comes from `_ActuationObserver`; the compute-side
+    kind is folded separately (the observer never watches ComputePort). When
+    no ComputeStep ran, `compute_kind` is None and the observed kind passes
+    through unchanged. Returns the honest aggregate `ActuationKind` (or None
+    when neither side observed anything)."""
+    if compute_kind is None:
+        return observed
+    merged = merge_actuation_kinds(observed.value if observed is not None else None, compute_kind)
+    return ActuationKind(merged) if merged is not None else None
+
+
 def _criterion_to_dict(criterion: CheckCriterion) -> dict[str, Any]:
     """Serialize a criterion into a JSON-clean dict for the step payload."""
     if isinstance(criterion, EqualsCriterion):
@@ -1780,6 +2045,14 @@ def step_to_payload(step: Step) -> dict[str, Any]:
             "kind": "capture",
             "address": step.address,
             "capture_name": step.capture_name,
+        }
+    if isinstance(step, ComputeStep):
+        return {
+            "kind": "compute",
+            "command": list(step.command),
+            "input_uris": list(step.input_uris),
+            "output_uri": step.output_uri,
+            "parameters": dict(step.parameters),
         }
     return {
         "kind": "check",
@@ -1823,6 +2096,13 @@ def _step_from_payload(payload: Mapping[str, Any]) -> Step:
         return ActionStep(name=payload["name"], params=dict(payload.get("params", {})))
     if kind == "capture":
         return CaptureStep(address=payload["address"], capture_name=payload["capture_name"])
+    if kind == "compute":
+        return ComputeStep(
+            command=tuple(payload["command"]),
+            input_uris=tuple(payload.get("input_uris", ())),
+            output_uri=payload.get("output_uri"),
+            parameters=dict(payload.get("parameters", {})),
+        )
     if kind == "check":
         return CheckStep(
             address=payload["address"], criterion=_criterion_from_dict(payload["criterion"])
@@ -1913,11 +2193,11 @@ def _derive_failure_reason(failure: ConductorFailure) -> str:
     return reason[:REASON_MAX_LENGTH]
 
 
-def _reading_to_dict(reading: Reading) -> dict[str, Any]:
-    """JSON-clean projection of `Reading` for the step payload.
+def _measurement_to_dict(reading: Measurement) -> dict[str, Any]:
+    """JSON-clean projection of `Measurement` for the step payload.
 
     Includes the substrate metadata fields a post-hoc inspector needs
-    (quality + quality_detail + ISO-8601 sampled_at) so a check entry
+    (quality + quality_detail + ISO-8601 produced_at) so a check entry
     is self-contained without joining back to a separate stream.
     """
     return {
@@ -1925,7 +2205,27 @@ def _reading_to_dict(reading: Reading) -> dict[str, Any]:
         "kind": reading.kind,
         "quality": reading.quality,
         "quality_detail": reading.quality_detail,
-        "sampled_at": reading.sampled_at.isoformat(),
+        "sampled_at": reading.produced_at.isoformat(),
+    }
+
+
+def _compute_measurement_to_dict(measurement: Measurement) -> dict[str, Any]:
+    """JSON-clean projection of a ComputeStep `Measurement` for the step payload.
+
+    SEPARATE from `_measurement_to_dict` (the control / check / capture
+    flattener) on purpose: that one's key set is pinned by the
+    projection-metadata frozenset tests and must NOT widen. A compute
+    Measurement names a quantity (`name`) and carries `units`, both
+    load-bearing for the Calibration write the scenario does off the
+    surfaced value, so this flattener keeps them while the control one
+    drops them (a control reading is identified by address, not name).
+    """
+    return {
+        "name": measurement.name,
+        "value": measurement.value,
+        "kind": measurement.kind,
+        "units": measurement.units,
+        "quality": measurement.quality,
     }
 
 
@@ -1937,6 +2237,7 @@ __all__ = [
     "CaptureStep",
     "CheckCriterion",
     "CheckStep",
+    "ComputeStep",
     "Conductor",
     "ConductorFailure",
     "ConductorResult",

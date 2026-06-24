@@ -26,7 +26,7 @@ from cora.enclosure.ports.enclosure_observer import (
     EnclosureObservation,
     EnclosureObserverScope,
 )
-from cora.operation.ports.control_port import ControlNotConnectedError, Reading
+from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
@@ -41,8 +41,8 @@ _NOT_PERMITTED = "NotPermitted"
 _UNKNOWN = "Unknown"
 
 
-def permit_status_from_reading(reading: Reading) -> str:
-    """Map a SecureM `Reading` to an Enclosure permit-status string.
+def permit_status_from_reading(reading: Measurement) -> str:
+    """Map a SecureM `Measurement` to an Enclosure permit-status string.
 
     SecureM polarity: `1` = searched / secured -> `Permitted`; `0` ->
     `NotPermitted`. Non-Good quality, or any value that is not 0 / 1,
@@ -120,7 +120,7 @@ class ControlPortEnclosureObserver:
             async for reading in self._control_port.subscribe(pv):
                 queue.put_nowait(
                     self._observation(
-                        code, pv, permit_status_from_reading(reading), reading.sampled_at
+                        code, pv, permit_status_from_reading(reading), reading.produced_at
                     )
                 )
             # Clean stream end: permit becomes Unknown until re-subscribed.

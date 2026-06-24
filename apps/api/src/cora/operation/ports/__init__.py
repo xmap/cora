@@ -5,7 +5,7 @@
 earlier `PvDriver` lock from [[project_control_port_design]]).
 Domain-shaped value-IO; substrate adapters serve as ACLs translating
 EPICS / Tango / OPC UA wire vocabularies into the CORA-owned
-`Reading` + `ReadingKind` + `Quality` value types.
+`Measurement` + `MeasurementKind` + `Quality` value types.
 
 BC-tier port location per [[project_adapter_naming_design]]: stays
 here until rule-of-three promotes to `cora.infrastructure.ports`.
@@ -24,13 +24,14 @@ from cora.operation.ports.compute_port import (
     ComputeJobFailedError,
     ComputeNotAvailableError,
     ComputePort,
-    ComputeProvenance,
     ComputeResources,
+    ComputeResult,
     ComputeStatus,
     ComputeSubmitRejectedError,
     ComputeTimeoutError,
     JobId,
     JobSpec,
+    MeasurementNotFoundError,
 )
 from cora.operation.ports.control_port import (
     ControlAccessDeniedError,
@@ -40,9 +41,11 @@ from cora.operation.ports.control_port import (
     ControlValueCoercionError,
     ControlWriteRejectedError,
     NoAdapterForAddressError,
+)
+from cora.operation.ports.measurement import (
+    Measurement,
+    MeasurementKind,
     Quality,
-    Reading,
-    ReadingKind,
 )
 from cora.operation.ports.procedure_activity_lookup import (
     InMemoryProcedureActivityLookup,
@@ -56,8 +59,8 @@ __all__ = [
     "ComputeJobFailedError",
     "ComputeNotAvailableError",
     "ComputePort",
-    "ComputeProvenance",
     "ComputeResources",
+    "ComputeResult",
     "ComputeStatus",
     "ComputeSubmitRejectedError",
     "ComputeTimeoutError",
@@ -70,10 +73,11 @@ __all__ = [
     "InMemoryProcedureActivityLookup",
     "JobId",
     "JobSpec",
+    "Measurement",
+    "MeasurementKind",
+    "MeasurementNotFoundError",
     "NoAdapterForAddressError",
     "ProcedureActivityLookup",
     "ProcedureActivityRecency",
     "Quality",
-    "Reading",
-    "ReadingKind",
 ]

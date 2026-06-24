@@ -1,0 +1,316 @@
+# CORA Beamline descriptor: I03 (Diamond Light Source), design-phase scaffold
+#
+# I03 is an operating macromolecular-crystallography (MX) beamline at Diamond
+# Light Source. It is bound to the Diamond Site (deployments/diamond/site.yaml),
+# the second Diamond beamline after I22.
+#
+# STATUS: design-phase modelling exercise, NOT a CORA pilot. The device shape and
+# the EPICS control handles are reverse-engineered from Diamond's open `dodal`
+# controls library (src/dodal/beamlines/i03.py and its device classes), treated
+# as a dry, correct DATA source and modelled intentionally, not mirrored. Scope
+# is the MX spine + core collection path (the 32-ID earn-the-abstraction
+# precedent); peripheral/floor devices are deferred (see below).
+#
+# WHAT I03 ADDS over I22:
+# - It GRADUATES the Goniometer catalog Family (previously pending/documented):
+#   the Smargon is CORA's first canonical six-axis MX goniometer. See catalog.yaml.
+# - It exercises autonomous sample handling. Per the 19-BM ROBOT-1 precedent, the
+#   robot is NOT a new Family: it is one Positioner-presenting Asset loading and
+#   unloading a Subject, gated by a Clearance, vendor in a bound Model. An
+#   adversarial new-kind review refuted a SampleChanger Family (covered by the
+#   existing Positioner Role).
+#
+# Reuses I22's loose design-intent families (StorageRing, FluxMonitor,
+# TemperatureController) and 2-BM's loose Diagnostic family, rather than coining
+# synonyms. Only one genuinely-new loose family: Backlight (an illumination
+# affordance no existing Family carries; carried loose pending rule-of-three).
+# Attenuator folds into the existing Filter Family; the aperture-scatterguard
+# folds into the existing Aperture Family (both adversarially verified).
+#
+# Every device carries `new: true` (not yet a registered Asset) and `confirm: true`
+# (values + snapshot PVs to be verified by Diamond staff). Calibrated numbers, the
+# hutch/PSS safety structure, the passive beam-path tier, and the Capability/Method
+# binding are absent from dodal and are NOT invented; each gap carries a
+# (QUESTION-ID) answered on docs/deployments/i03/questions.md.
+#
+# DEFERRED (out of spine+core scope, noted not modelled): the undulator-DCM
+# energy coupling (dodal's UndulatorDCM, itself being retired upstream; CORA models
+# it as an energy_change Method binding the undulator gap + DCM energy, ENERGY-1);
+# the fast grid scan (a Method/Plan, not hardware, TRIG-1); zocalo (compute/floor);
+# the GDA baton (a governance token); pin-tip detection (CV/software); the cryojet
+# and cryostream-gantry variants; the hutch webcam.
+
+beamline:
+  name: I03
+  facility: diamond
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "undulator source (dodal UndulatorInKeV on SR03I, harmonic ~3); period / gap range / energy range not in dodal (SRC-1)"
+
+# Two access-gated hutches (standard Diamond MX optics + experiment layout). dodal
+# PV prefixes encode functional zones (OP, MO, EA, DI), not the hutch or its PSS
+# meaning, so the split is carried confirm (ENC-1). Diamond PSS permit signals TBD (PSS-1).
+enclosures:
+  - name: i03-optics
+    role: optics-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "Diamond PSS permit signal TBD (PSS-1)"}
+  - name: i03-experiment
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "Diamond PSS permit signal TBD (PSS-1)"}
+
+# --- SOURCE STAGE: beam delivery, conditioning, and beam diagnostics ---
+
+source:
+  stage: source
+  enclosure: i03-optics
+  intro: "The undulator source and the machine-level storage-ring state it draws on."
+  note: >
+    The undulator energy is set in keV via a gap lookup table. dodal couples it to
+    the DCM (the UndulatorDCM composite, which owns no motors and is being retired
+    upstream); CORA models that coupling as an energy_change Method binding the
+    undulator gap and the DCM energy, not as a device (ENERGY-1).
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: "SR03I-MO-SERVC-01:"
+      new: true
+      confirm: true
+      mechanism: gap-to-energy via lookup table; harmonic order ~3
+      note: "the MX source; energy range and gap curve to confirm (SRC-1)"
+    - name: StorageRing
+      family: StorageRing
+      new: true
+      confirm: true
+      note: "machine-level, beamline-shared, observe-only ring state; loose family reused from I22 (MACHINE-1)"
+
+conditioning-optics:
+  stage: source
+  enclosure: i03-optics
+  intro: "The monochromator, focusing mirror, filters, and collimation table that select energy and condition the beam."
+  note: >
+    The DCM energy/wavelength are virtual axes (a PseudoAxis over bragg + perp +
+    offset); its 7 temperature readbacks present the Sensor Role. The mirror bend
+    is shaped by a 22-channel bimorph (a PseudoAxis facet of the mirror, not a
+    separate Asset). Coatings, d-spacing, and bimorph calibration are settings (OPT-1).
+  devices:
+    - name: DCM
+      family: Monochromator
+      pv: "BL03I-MO-DCM-01:"
+      new: true
+      confirm: true
+      crystal: Si (default reflection 1 1 1)
+      axes: energy / wavelength (virtual) over bragg / offset / perp + crystal-1 pitch / roll
+      note: "double-crystal monochromator; crystal cut, d-spacing, and 7 thermal reads to confirm (OPT-1)"
+    - name: VFM
+      family: Mirror
+      pv: "BL03I-OP-VFM-01:"
+      new: true
+      confirm: true
+      axes: yaw / pitch (incident_angle) / roll / x / y / jacks (Y1-3) / translations (X1-2)
+      coating: selectable stripe Bare / Rhodium / Platinum (energy-driven setting)
+      bimorph: "22-channel bend, BL03I-MO-PSU-01: (a PseudoAxis facet, not a separate Asset)"
+      note: "vertical focusing mirror; coatings + bimorph calibration to confirm (OPT-1)"
+    - name: DiamondFilter
+      family: Filter
+      pv: "BL03I-MO-FLTR-01:Y"
+      new: true
+      confirm: true
+      note: "CVD diamond filter paddle"
+    - name: Attenuator
+      family: Filter
+      pv: "BL03I-EA-ATTN-01:"
+      new: true
+      confirm: true
+      note: "binary absorber-foil attenuator (transmission setting); the existing Filter Family covers it, not a new Attenuator kind (adversarial-verified)"
+    - name: CollimationTable
+      family: Table
+      pv: "BL03I-MO-TABLE-01"
+      new: true
+      confirm: true
+      note: "collimation support table"
+
+beam-defining-safety:
+  stage: source
+  enclosure: i03-optics
+  intro: "The beamstop, the coordinated aperture-scatterguard, and the safety and fast shutters."
+  note: >
+    The aperture-scatterguard is a coordinated pair moved as a unit; it folds into
+    the existing Aperture Family (the scatterguard is the companion, a setting or a
+    small Assembly), not a new kind (adversarial-verified).
+  devices:
+    - name: BeamStop
+      family: BeamStop
+      pv: "BL03I-MO-BS-01:"
+      new: true
+      confirm: true
+      note: "on-axis beamstop (positioned)"
+    - name: ApertureScatterguard
+      family: Aperture
+      pv: "BL03I-MO-MAPT-01: (aperture) + BL03I-MO-SCAT-01: (scatterguard)"
+      new: true
+      confirm: true
+      note: "coordinated aperture + scatterguard moved as a unit; existing Aperture Family, scatterguard is the companion"
+    - name: HutchShutter
+      family: Shutter
+      pv: "BL03I (PSS-interlocked)"
+      new: true
+      confirm: true
+      note: "PSS-interlocked hutch safety shutter; permit signal to confirm (PSS-1)"
+    - name: SampleShutter
+      family: Shutter
+      pv: "BL03I-EA-SHTR-01:"
+      new: true
+      confirm: true
+      note: "fast sample shutter (Zebra-driven); gates exposure"
+
+diagnostics:
+  stage: source
+  enclosure: i03-optics
+  intro: "The beam-position and flux monitors. All present the Sensor Role (scalar Readings)."
+  note: >
+    These reuse loose Sensor-presenting families rather than coining synonyms:
+    Diagnostic from 2-BM (its BeamPositionMonitor device), FluxMonitor from I22. The XBPM feedback loop is
+    carried with its modelling deferred (FEEDBACK-1).
+  devices:
+    - name: QBPM
+      family: Diagnostic
+      pv: "BL03I-DI-QBPM-01:"
+      new: true
+      confirm: true
+      note: "quadrant beam-position monitor; presents the Sensor Role; loose family reused from 2-BM (DIAG-1)"
+    - name: Flux
+      family: FluxMonitor
+      pv: "BL03I-MO-FLUX-01:"
+      new: true
+      confirm: true
+      note: "flux readout (ion-chamber-derived); presents the Sensor Role; loose family reused from I22 (DIAG-1)"
+    - name: IPin
+      family: FluxMonitor
+      pv: "BL03I-EA-PIN-01:"
+      new: true
+      confirm: true
+      note: "ion-chamber pin-diode current; presents the Sensor Role; loose family (DIAG-1)"
+    - name: XBPMFeedback
+      pv: "BL03I-EA-FDBK-01:"
+      new: true
+      confirm: true
+      note: "closed-loop beam-position feedback; whether it is a modelled construct or floor is deferred (FEEDBACK-1)"
+
+# --- SAMPLE STAGE: the MX endstation ---
+
+sample:
+  stage: sample
+  enclosure: i03-experiment
+  intro: "The goniometer, the sample-centring base, the automated sample-changing robot, and the sample environment (illumination, cryo-cooling, thawing)."
+  note: >
+    The goniometer + aperture-scatterguard + backlight + cryostream could compose
+    an MX-endstation Assembly (the analogue of 2-BM's SampleTower), but grouping is
+    promoted only when a feature must act on the whole, so it is carried flat here
+    and deferred (ASSEMBLY-1).
+  devices:
+    - name: Goniometer
+      family: Goniometer
+      pv: "BL03I-MO-SGON-01:"
+      new: true
+      confirm: true
+      axes: omega / chi / phi rotation + x / y / z sample-centring; centre-of-rotation control; wrapped (unrestricted) omega
+      note: "the Smargon MX micro-goniometer, the canonical instance that graduated the Goniometer Family; per-axis decomposition + centre-of-rotation calibration to confirm (GONIO-1)"
+    - name: LowerGonio
+      family: LinearStage
+      pv: "BL03I-MO-GONP-01:"
+      new: true
+      confirm: true
+      note: "lower goniometer x / y / z base"
+    - name: Robot
+      pv: "BL03I-MO-ROBOT-01:"
+      new: true
+      confirm: true
+      note: "automated sample-changing robot (BartRobot). Per the 19-BM precedent: one Positioner-presenting Asset loading / unloading a Subject, gated by a Clearance, vendor in a bound Model; NOT a new SampleChanger Family (adversarial-verified). The exchange workflow + Subject custody lifecycle are deferred (ROBOT-1)"
+    - name: Backlight
+      family: Backlight
+      pv: "BL03I"
+      new: true
+      confirm: true
+      note: "sample illumination for on-axis viewing; a new loose family (no existing Family carries an illumination affordance), earned only on rule-of-three (ROBOT-1 / DET-1)"
+    - name: Cryostream
+      family: TemperatureController
+      pv: "BL03I-EA-CSTRM-01:"
+      new: true
+      confirm: true
+      note: "Oxford cryostream cold-gas sample cooling; a settable actuator; loose family reused from I22 (ENV-1)"
+    - name: Thawer
+      family: TemperatureController
+      pv: "BL03I-EA-THAW-01"
+      new: true
+      confirm: true
+      note: "sample thawing actuator; a settable actuator; loose family (ENV-1)"
+
+# --- DETECTION STAGE: the Eiger and the fluorescence detector ---
+
+detector:
+  stage: detection
+  enclosure: i03-experiment
+  intro: "The Eiger area detector on its translation, and a retractable fluorescence detector."
+  note: >
+    The Eiger reuses the Camera Family (Detector Role). The fluorescence detector
+    presents the Sensor Role and is carried loose with its modelling deferred (DET-1).
+  devices:
+    - name: Eiger
+      family: Camera
+      pv: "BL03I-EA-EIGER-01:"
+      new: true
+      confirm: true
+      detector: Dectris Eiger
+      note: "the MX science detector; threshold energy + beam-center to confirm (DET-1)"
+    - name: DetectorMotion
+      family: LinearStage
+      pv: "BL03I-MO-DET-01:"
+      new: true
+      confirm: true
+      axes: z + upstream / downstream x (+ derived yaw)
+      note: "detector translation stage; carries an integrated shutter"
+    - name: FluorescenceDetector
+      pv: "BL03I-EA-FLU-01:"
+      new: true
+      confirm: true
+      note: "retractable fluorescence / XRF detector; presents the Sensor Role; carried loose, modelling deferred (DET-1)"
+
+# Cross-cutting timing. dodal records two FPGA timing boxes; the MX motion
+# controllers are not exposed as dodal devices, so none is modelled here.
+controls:
+  intro: >
+    I03 runs the Diamond EPICS control stack (driven by GDA and the bluesky-based
+    hyperion / mx-bluesky plan suite). dodal records the device PV prefixes carried
+    above; the Zebra and PandABox FPGA boxes generate the triggers and gates.
+  triggering:
+    - name: Zebra
+      family: TimingController
+      pv: "BL03I-EA-ZEBRA-01:"
+      new: true
+      confirm: true
+      note: "FPGA trigger fan-out (the MX trigger box); drives the fast sample shutter"
+    - name: Panda
+      family: TimingController
+      pv: "BL03I-EA-PANDA-01:"
+      new: true
+      confirm: true
+      note: "PandABox FPGA timing + HDF capture; drives the fast grid scan (TRIG-1)"
+  software_iocs_not_modeled:
+    - GDA (Generic Data Acquisition; Diamond's acquisition software)
+    - hyperion / mx-bluesky (the bluesky plan suite that drives MX data collection)
+    - Zocalo (the data-processing / results system)
+    - the GDA baton (a beamline-control coordination token, not a device)
+
+# Continuously-available resources a run draws on (design phase).
+resources:
+  intro: >
+    The continuously-available facility resources a run needs present before it
+    can start. All pending confirmation in the design phase.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen

@@ -57,6 +57,7 @@ from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
 from cora.operation.acquisitions import collect, continuous, discrete
+from cora.operation.adapters.compute_port_config import build_compute_port
 from cora.operation.adapters.control_port_config import build_control_port
 from cora.operation.adapters.in_memory_recipe_expander import (
     InMemoryRecipeExpander,
@@ -86,6 +87,7 @@ from cora.operation.features import (
     truncate_procedure,
     try_conduct_procedure,
 )
+from cora.operation.ports.compute_port import ComputePort
 from cora.operation.ports.control_port import ControlPort
 
 _BC = "operation"
@@ -126,7 +128,12 @@ class OperationHandlers:
     released on hot-reload + test-process restart."""
 
 
-def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> OperationHandlers:
+def wire_operation(
+    deps: Kernel,
+    *,
+    control_port: ControlPort | None = None,
+    compute_port: ComputePort | None = None,
+) -> OperationHandlers:
     """Build the Operation BC handlers from shared dependencies.
 
     `control_port` lets the composition root inject ONE shared
@@ -137,6 +144,15 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
     caller that doesn't share) the port is materialised from
     `deps.settings.control_port_routes` via `build_control_port` as
     before.
+
+    `compute_port` likewise lets the composition root inject ONE shared
+    `ComputePort` (the same instance the Reckoner holds, with a single
+    `aclose` on `app.state.compute_port`). The Conductor holds it as a
+    BORROWED reference and never closes it. When omitted (test
+    convenience) it falls back to `build_compute_port()` (the in-memory
+    Simulated fake); a conduct with a ComputeStep then runs against the
+    fake, and a missing compute_port surfaces only if a ComputeStep is
+    dispatched without one (a loud RuntimeError in the Conductor).
 
     Note on the conduct_procedure / Conductor wire-up: the Conductor needs
     the FINAL (post-tracing) versions of start / complete / abort /
@@ -213,6 +229,10 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
         if control_port is not None
         else build_control_port(deps.settings.control_port_routes)
     )
+    # Borrowed shared instance from the composition root (one aclose lives on
+    # app.state.compute_port); fall back to the in-memory Simulated fake when
+    # no caller shares (test convenience). The Conductor never aclose's it.
+    compute_port = compute_port if compute_port is not None else build_compute_port(None)
     action_registry = InMemoryActionRegistry(
         {"collect": collect, "discrete": discrete, "continuous": continuous}
     )
@@ -222,6 +242,7 @@ def wire_operation(deps: Kernel, *, control_port: ControlPort | None = None) -> 
         clock=deps.clock,
         id_generator=deps.id_generator,
         action_registry=action_registry,
+        compute_port=compute_port,
         start_procedure=start_handler,
         complete_procedure=complete_handler,
         abort_procedure=abort_handler,

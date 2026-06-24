@@ -18,9 +18,9 @@ from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlPort,
+    Measurement,
+    MeasurementKind,
     Quality,
-    Reading,
-    ReadingKind,
 )
 
 _FIXED_NOW = datetime(2026, 5, 27, 12, 0, 0, tzinfo=UTC)
@@ -30,8 +30,8 @@ def _port() -> InMemoryControlPort:
     return InMemoryControlPort(now=lambda: _FIXED_NOW)
 
 
-def _reading(value: Any, kind: ReadingKind = "Scalar") -> Reading:
-    return Reading(value=value, kind=kind, quality="Good", sampled_at=_FIXED_NOW)
+def _reading(value: Any, kind: MeasurementKind = "Scalar") -> Measurement:
+    return Measurement(value=value, kind=kind, quality="Good", produced_at=_FIXED_NOW)
 
 
 @pytest.mark.unit
@@ -88,7 +88,7 @@ async def test_write_then_read_round_trips_scalar() -> None:
     assert got.kind == "Scalar"
     assert got.value == 4.2
     assert got.quality == "Good"
-    assert got.sampled_at == _FIXED_NOW
+    assert got.produced_at == _FIXED_NOW
 
 
 @pytest.mark.unit
@@ -234,23 +234,23 @@ async def test_simulate_disconnect_drops_cached_value() -> None:
 
 
 @pytest.mark.unit
-async def test_write_default_now_yields_utc_aware_sampled_at() -> None:
+async def test_write_default_now_yields_utc_aware_produced_at() -> None:
     """Default `now=None` path produces a tz-aware UTC datetime.
 
-    Pins the contract production adapters inherit; tz-naive `sampled_at`
+    Pins the contract production adapters inherit; tz-naive `produced_at`
     would silently break downstream PROV-O time fields.
     """
     port = InMemoryControlPort()
     port.simulate_connect("2bm:rot:val")
     await port.write("2bm:rot:val", 1.0)
     got = await port.read("2bm:rot:val")
-    assert got.sampled_at.tzinfo is UTC
+    assert got.produced_at.tzinfo is UTC
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("kind", get_args(ReadingKind))
+@pytest.mark.parametrize("kind", get_args(MeasurementKind))
 def test_reading_accepts_every_reading_kind_literal(kind: str) -> None:
-    """Pins the closed `ReadingKind` set; an accidental narrowing fails fast."""
+    """Pins the closed `MeasurementKind` set; an accidental narrowing fails fast."""
     if kind == "Array":
         value: Any = (1, 2)
     elif kind == "Categorical":
@@ -261,11 +261,11 @@ def test_reading_accepts_every_reading_kind_literal(kind: str) -> None:
         value = ((1, 2), (3, 4))
     else:
         value = 0
-    reading = Reading(
+    reading = Measurement(
         value=value,
         kind=kind,  # type: ignore[arg-type]
         quality="Good",
-        sampled_at=_FIXED_NOW,
+        produced_at=_FIXED_NOW,
     )
     assert reading.kind == kind
 
@@ -276,11 +276,11 @@ def test_reading_accepts_every_quality_literal(quality: str) -> None:
     """Pins the closed `Quality` set (`Good | Uncertain | Bad`) against
     accidental narrowing; matches OPC UA spec verbatim + NAMUR alignment.
     """
-    reading = Reading(
+    reading = Measurement(
         value=1.0,
         kind="Scalar",
         quality=quality,  # type: ignore[arg-type]
-        sampled_at=_FIXED_NOW,
+        produced_at=_FIXED_NOW,
     )
     assert reading.quality == quality
 
@@ -289,7 +289,7 @@ def test_reading_accepts_every_quality_literal(quality: str) -> None:
 async def test_image_reading_round_trips_through_port() -> None:
     """`Image` kind survives set_reading + read + subscribe end-to-end.
 
-    The headline supersession item (new ReadingKind) gets behavioural
+    The headline supersession item (new MeasurementKind) gets behavioural
     coverage, not just dataclass-literal acceptance. Production
     adapters (especially EpicsPvaControlPort for NTNDArray and a
     future TangoControlPort for IMAGE attributes) must preserve this
@@ -299,11 +299,11 @@ async def test_image_reading_round_trips_through_port() -> None:
     image = ((1, 2, 3), (4, 5, 6))
     port.set_reading(
         "2bm:cam:image",
-        Reading(
+        Measurement(
             value=image,
             kind="Image",
             quality="Good",
-            sampled_at=_FIXED_NOW,
+            produced_at=_FIXED_NOW,
         ),
     )
     iterator = port.subscribe("2bm:cam:image")
@@ -313,11 +313,11 @@ async def test_image_reading_round_trips_through_port() -> None:
     next_frame = ((7, 8, 9), (10, 11, 12))
     port.set_reading(
         "2bm:cam:image",
-        Reading(
+        Measurement(
             value=next_frame,
             kind="Image",
             quality="Good",
-            sampled_at=_FIXED_NOW,
+            produced_at=_FIXED_NOW,
         ),
     )
     streamed = await anext(iterator)
@@ -333,17 +333,17 @@ async def test_non_good_quality_round_trips_through_port() -> None:
     `write` hard-codes `quality="Good"`, so only `set_reading` can
     exercise the non-Good branches. Production adapters MUST surface
     substrate-reported Uncertain / Bad qualities through the same
-    Reading shape (EPICS MINOR/MAJOR severity, Tango WARNING/CHANGING/
+    Measurement shape (EPICS MINOR/MAJOR severity, Tango WARNING/CHANGING/
     ALARM, OPC UA Uncertain*/Bad* StatusCode top-bits).
     """
     port = _port()
     port.set_reading(
         "2bm:rot:rbv",
-        Reading(
+        Measurement(
             value=0.0,
             kind="Scalar",
             quality="Bad",
-            sampled_at=_FIXED_NOW,
+            produced_at=_FIXED_NOW,
             quality_detail="BadCommunicationError",
         ),
     )
@@ -353,11 +353,11 @@ async def test_non_good_quality_round_trips_through_port() -> None:
 
     port.set_reading(
         "2bm:rot:rbv",
-        Reading(
+        Measurement(
             value=0.5,
             kind="Scalar",
             quality="Uncertain",
-            sampled_at=_FIXED_NOW,
+            produced_at=_FIXED_NOW,
             quality_detail="UncertainSensorCalibration",
         ),
     )
@@ -375,11 +375,11 @@ def test_reading_carries_adapter_specific_quality_detail() -> None:
     string detail all land here without expanding the closed `Quality`
     enum.
     """
-    reading = Reading(
+    reading = Measurement(
         value=0.0,
         kind="Scalar",
         quality="Bad",
-        sampled_at=_FIXED_NOW,
+        produced_at=_FIXED_NOW,
         quality_detail="BadCommunicationError",
     )
     assert reading.quality_detail == "BadCommunicationError"

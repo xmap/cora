@@ -13,7 +13,7 @@ response shape covers every outcome the operator needs to triage.
 `steps` is the caller-supplied sequence the Conductor walks.
 Substrate-agnostic: setpoint addresses parse inside the routed
 `ControlPort` adapter, action names look up in the `ActionRegistry`,
-check criteria evaluate against the read `Reading.value`.
+check criteria evaluate against the read `Measurement.value`.
 """
 
 from collections.abc import Sequence
@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from cora.operation.conductor import ConductorFailure, Step
+from cora.operation.ports.measurement import Measurement
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,12 @@ class ConductProcedureResult:
     no control-port write). Surfaced for operator visibility; the same
     value is the one the Conductor records on the Procedure terminal
     event, where the Data BC reads it back to gate promotion.
+
+    `measurements` carries the `Measurement`s every `ComputeStep` in the
+    conduct produced (slice 6a), threaded from `ConductorResult.measurements`,
+    so the caller reads the produced measurements (a detector pixel size that
+    homes to a Calibration) without re-parsing the activity log. Empty on
+    a conduct with no ComputeStep.
     """
 
     procedure_id: UUID
@@ -53,3 +60,4 @@ class ConductProcedureResult:
     succeeded: bool
     failure: ConductorFailure | None = None
     actuation_kind: str | None = None
+    measurements: tuple[Measurement, ...] = ()

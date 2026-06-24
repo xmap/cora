@@ -25,7 +25,7 @@ once via `Context.get_pvs` and cached per-address; reconnect is
 caproto's responsibility (its background broadcaster reissues
 searches on disconnect).
 
-## ACL translation (caproto -> Reading)
+## ACL translation (caproto -> Measurement)
 
 `pv.read(data_type="time", ...)` returns a `ReadNotifyResponse`
 carrying `data` (numpy array, shape `(count,)` even for scalars),
@@ -48,7 +48,7 @@ carrying `data` (numpy array, shape `(count,)` even for scalars),
     is non-NO_ALARM (forensic breadcrumb; matches EpicsCa + EpicsPva
     format so consumers can parse one shape across CA / PVA / future
     substrates without per-adapter casing)
-  - `sampled_at` from `metadata.stamp.as_datetime()`, UTC-coerced
+  - `produced_at` from `metadata.stamp.as_datetime()`, UTC-coerced
 
 ## Error mapping
 
@@ -61,7 +61,7 @@ carrying `data` (numpy array, shape `(count,)` even for scalars),
 `ControlAccessDeniedError` and `ControlValueCoercionError` are
 declared in the port but not yet triggered by this adapter: CA
 Access Security isn't configured on the test IOC, and the closed
-ReadingKind set covers every type our test IOC exposes. Both stay
+MeasurementKind set covers every type our test IOC exposes. Both stay
 in the exception family for parity with production adapters where
 they DO fire (`EpicsCaControlPort` / `EpicsPvaControlPort`).
 
@@ -101,9 +101,9 @@ from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlTimeoutError,
     ControlWriteRejectedError,
+    Measurement,
+    MeasurementKind,
     Quality,
-    Reading,
-    ReadingKind,
 )
 
 if TYPE_CHECKING:
@@ -138,8 +138,8 @@ def _quality_for(severity: AlarmSeverity | int) -> Quality:
         return "Bad"
 
 
-def _kind_for(data_type: int, data_count: int) -> ReadingKind:
-    """Map caproto `(data_type, data_count)` to `ReadingKind`.
+def _kind_for(data_type: int, data_count: int) -> MeasurementKind:
+    """Map caproto `(data_type, data_count)` to `MeasurementKind`.
 
     Enum types collapse to `Categorical` regardless of count (CA
     enum waveforms are rare and would still represent discrete labels).
@@ -153,7 +153,7 @@ def _kind_for(data_type: int, data_count: int) -> ReadingKind:
     return "Scalar"
 
 
-def _unpack_value(data: Any, kind: ReadingKind) -> Any:
+def _unpack_value(data: Any, kind: MeasurementKind) -> Any:
     """Extract a Python-native value from caproto's numpy-array data.
 
     Scalars come back as length-1 arrays; arrays as length-N; strings
@@ -173,8 +173,8 @@ def _unpack_value(data: Any, kind: ReadingKind) -> Any:
     return scalar
 
 
-def _to_reading(response: Any) -> Reading:
-    """Translate a caproto `ReadNotifyResponse` (or subscription update) to `Reading`."""
+def _to_reading(response: Any) -> Measurement:
+    """Translate a caproto `ReadNotifyResponse` (or subscription update) to `Measurement`."""
     kind = _kind_for(response.data_type, response.data_count)
     value = _unpack_value(response.data, kind)
 
@@ -190,17 +190,17 @@ def _to_reading(response: Any) -> Reading:
 
     stamp = getattr(metadata, "stamp", None)
     if stamp is not None and hasattr(stamp, "as_datetime"):
-        sampled_at = stamp.as_datetime()
-        if sampled_at.tzinfo is None:
-            sampled_at = sampled_at.replace(tzinfo=UTC)
+        produced_at = stamp.as_datetime()
+        if produced_at.tzinfo is None:
+            produced_at = produced_at.replace(tzinfo=UTC)
     else:
-        sampled_at = datetime.now(tz=UTC)
+        produced_at = datetime.now(tz=UTC)
 
-    return Reading(
+    return Measurement(
         value=value,
         kind=kind,
         quality=quality,
-        sampled_at=sampled_at,
+        produced_at=produced_at,
         quality_detail=quality_detail,
     )
 
@@ -239,7 +239,7 @@ class CaprotoControlPort:
             raise ControlNotConnectedError(address) from exc
         return pv
 
-    async def read(self, address: str) -> Reading:
+    async def read(self, address: str) -> Measurement:
         pv = await self._connected_pv(address)
         try:
             response = await pv.read(data_type="time", timeout=self._default_timeout_s)
@@ -304,7 +304,7 @@ class CaprotoControlPort:
             status="completed",
         )
 
-    def subscribe(self, address: str) -> AsyncGenerator[Reading]:
+    def subscribe(self, address: str) -> AsyncGenerator[Measurement]:
         """Return type narrows the Protocol's `AsyncIterator` to `AsyncGenerator`.
 
         Covariant return lets tests close subscriptions via the
@@ -316,7 +316,7 @@ class CaprotoControlPort:
         """
         return self._drain(address)
 
-    async def _drain(self, address: str) -> AsyncGenerator[Reading]:
+    async def _drain(self, address: str) -> AsyncGenerator[Measurement]:
         pv = await self._connected_pv(address)
         sub = pv.subscribe(data_type="time")
         try:

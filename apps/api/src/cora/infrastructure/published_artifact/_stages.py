@@ -14,7 +14,7 @@ Closed-set semantics on every helper:
     is deferred to a future iteration
 
 `detail` carries forensics for operator logs; never parsed by
-callers per the ControlPort `Reading.quality_detail` precedent.
+callers per the ControlPort `Measurement.quality_detail` precedent.
 """
 
 from datetime import datetime

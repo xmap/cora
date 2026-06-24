@@ -8,11 +8,13 @@ seam lives here, outside `features/`, exactly like the resolved-steps replay
 helper (`_recipe_expansion/_resolved_steps_replay`) and preparation pipeline
 (`_conduct_preparation`).
 
-The Conductor's `Step = SetpointStep | ActionStep | CheckStep` and
-`CheckCriterion = EqualsCriterion | WithinToleranceCriterion` discriminated
-unions land on the wire as JSON discriminated unions with a `kind` field.
-Pydantic's `Field(discriminator="kind")` validates the union at parse time so
-a malformed step kind fails the request with a 422 before the handler runs.
+The conduct HTTP / MCP body accepts the setpoint / action / check SUBSET of
+the Conductor's `Step` union (CaptureStep + ComputeStep are recipe /
+in-process only; see `StepRequest`). The `CheckCriterion = EqualsCriterion |
+WithinToleranceCriterion` discriminated union lands on the wire as a JSON
+discriminated union with a `kind` field. Pydantic's
+`Field(discriminator="kind")` validates the union at parse time so a malformed
+step kind fails the request with a 422 before the handler runs.
 
 Per-step `value` and `criterion.expected` are typed broadly
 (`int | float | bool | str | list[Any]`) to match the ControlPort's value
@@ -101,7 +103,15 @@ StepRequest = Annotated[
     _SetpointStepRequest | _ActionStepRequest | _CheckStepRequest,
     Field(discriminator="kind"),
 ]
-"""The wire-side step union a conduct request body carries (`list[StepRequest]`)."""
+"""The wire-side step union a conduct request body carries (`list[StepRequest]`).
+
+CaptureStep AND ComputeStep are INTENTIONALLY ABSENT from the HTTP / MCP
+conduct body: both are recipe / in-process only. A capture is authored in
+a Recipe (it pairs with a CaptureRef setpoint inside the same template); a
+compute step (slice 6a) likewise rides the recipe-driven conduct path, not
+a hand-built HTTP step list. Keep this union at its setpoint / action /
+check arm count; widen it only when a deployment needs to POST a capture
+or compute step directly (no current consumer)."""
 
 
 class ConductorFailureResponse(BaseModel):

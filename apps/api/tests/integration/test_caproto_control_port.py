@@ -24,7 +24,7 @@ stay order-independent.
 ## Coverage
 
   - Protocol conformance via `isinstance`
-  - Every `ReadingKind` branch (Scalar / Array / Categorical)
+  - Every `MeasurementKind` branch (Scalar / Array / Categorical)
   - `Quality=Bad` ACL path via `bad_quality_value`
     (`ao` with HIHI threshold tripped on the EPICS .db)
   - caput-callback round-trip on scalar + long
@@ -38,7 +38,7 @@ Out of scope here:
   - `ControlTimeoutError` on the read path : no softIOC-native slow-
     getter equivalent; covered at unit tier with mocked client per
     [[project_control_port_test_isolation_research]] watch item 4.
-  - `Image` / `Tabular` `ReadingKind` : CA does not natively carry
+  - `Image` / `Tabular` `MeasurementKind` : CA does not natively carry
     NTNDArray; lands with `EpicsPvaControlPort`.
   - `Uncertain` quality : no convenient MINOR-alarm trigger on this
     softIOC PV menu without a calc record; defer to the PVA adapter.
@@ -54,7 +54,7 @@ from cora.operation.adapters.caproto_control_port import CaprotoControlPort
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlPort,
-    Reading,
+    Measurement,
 )
 
 
@@ -68,23 +68,23 @@ def test_caproto_control_port_satisfies_control_port_protocol() -> None:
 async def test_read_double_scalar_returns_reading_with_good_quality(
     softioc: str,
 ) -> None:
-    """DBR_DOUBLE scalar lands as Reading(kind='Scalar', quality='Good', value=float)."""
+    """DBR_DOUBLE scalar lands as Measurement(kind='Scalar', quality='Good', value=float)."""
     port = CaprotoControlPort()
     try:
         await port.write(f"{softioc}double_value", 0.0, wait=True)
         reading = await port.read(f"{softioc}double_value")
-        assert isinstance(reading, Reading)
+        assert isinstance(reading, Measurement)
         assert reading.kind == "Scalar"
         assert reading.quality == "Good"
         assert reading.value == 0.0
-        assert reading.sampled_at.tzinfo is not None
+        assert reading.produced_at.tzinfo is not None
     finally:
         await port.aclose()
 
 
 @pytest.mark.integration
 async def test_read_long_scalar_returns_int_value(softioc: str) -> None:
-    """DBR_LONG scalar lands as Reading(kind='Scalar', value=int)."""
+    """DBR_LONG scalar lands as Measurement(kind='Scalar', value=int)."""
     port = CaprotoControlPort()
     try:
         await port.write(f"{softioc}long_value", 0, wait=True)
@@ -111,7 +111,7 @@ async def test_read_string_scalar_returns_decoded_utf8(softioc: str) -> None:
 
 @pytest.mark.integration
 async def test_read_waveform_returns_array_as_tuple(softioc: str) -> None:
-    """DBR_DOUBLE count > 1 lands as Reading(kind='Array', value=tuple)."""
+    """DBR_DOUBLE count > 1 lands as Measurement(kind='Array', value=tuple)."""
     port = CaprotoControlPort()
     try:
         await port.write(f"{softioc}waveform", (1.0, 2.0, 3.0, 4.0), wait=True)
@@ -125,7 +125,7 @@ async def test_read_waveform_returns_array_as_tuple(softioc: str) -> None:
 
 @pytest.mark.integration
 async def test_read_enum_returns_categorical_kind(softioc: str) -> None:
-    """DBR_ENUM lands as Reading(kind='Categorical').
+    """DBR_ENUM lands as Measurement(kind='Categorical').
 
     Parity carve-out vs `EpicsCaControlPort`: aioca's `caput` accepts
     the string label and translates internally; caproto's `caput`
@@ -145,11 +145,11 @@ async def test_read_enum_returns_categorical_kind(softioc: str) -> None:
 async def test_read_major_alarm_pv_returns_bad_quality(softioc: str) -> None:
     """MAJOR_ALARM severity (HIHI threshold tripped) translates to Quality='Bad'.
 
-    Pins the full Reading shape for a non-Good reading: value + kind +
+    Pins the full Measurement shape for a non-Good reading: value + kind +
     quality + the cross-adapter `alarm_status=<int>` quality_detail
-    format + tz-aware UTC sampled_at. Mirrors the same set of
+    format + tz-aware UTC produced_at. Mirrors the same set of
     assertions on EpicsCa + EpicsPva so the three adapters present
-    the same Reading shape end-to-end for the same softIOC PV.
+    the same Measurement shape end-to-end for the same softIOC PV.
     """
     port = CaprotoControlPort()
     try:
@@ -158,7 +158,7 @@ async def test_read_major_alarm_pv_returns_bad_quality(softioc: str) -> None:
         assert reading.value == 99.9
         assert reading.quality == "Bad"
         assert reading.quality_detail.startswith("alarm_status=")
-        assert reading.sampled_at.tzinfo is not None
+        assert reading.produced_at.tzinfo is not None
     finally:
         await port.aclose()
 
@@ -189,7 +189,7 @@ async def test_write_long_then_read_observes_new_value(softioc: str) -> None:
 
 @pytest.mark.integration
 async def test_subscribe_yields_initial_value_then_writes(softioc: str) -> None:
-    """Subscribe gets the current value first, then each write fans out as a Reading."""
+    """Subscribe gets the current value first, then each write fans out as a Measurement."""
     port = CaprotoControlPort()
     try:
         await port.write(f"{softioc}double_value", 0.0, wait=True)

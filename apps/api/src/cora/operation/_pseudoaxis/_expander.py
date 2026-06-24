@@ -237,11 +237,11 @@ async def expand_pseudoaxis_steps(
                     )
                 )
         else:
-            # ActionStep / CheckStep / CaptureStep / non-PseudoAxis
-            # SetpointStep pass through. Step is a closed union
-            # (SetpointStep | ActionStep | CheckStep | CaptureStep), so a
-            # future variant would land here as a type-check error at the
-            # Conductor boundary.
+            # ActionStep / CheckStep / CaptureStep / ComputeStep /
+            # non-PseudoAxis SetpointStep pass through. Step is a closed
+            # union whose arms are pinned against the Procedure aggregate's
+            # STEP_KIND_VALUES, so a future variant would land here as a
+            # type-check error at the Conductor boundary.
             rewritten.append(step)
     return tuple(rewritten)
 

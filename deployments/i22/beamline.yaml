@@ -1,0 +1,317 @@
+# CORA Beamline descriptor: I22 (Diamond Light Source), design-phase scaffold
+#
+# I22 is an operating small- and wide-angle X-ray scattering (SAXS/WAXS) beamline
+# at Diamond Light Source. It is bound to the Diamond Site
+# (deployments/diamond/site.yaml).
+#
+# STATUS: design-phase modelling exercise, NOT a CORA pilot. The device shape and
+# the EPICS control handles below are reverse-engineered from Diamond's open
+# `dodal` controls library (github.com/DiamondLightSource/dodal, src/dodal/
+# beamlines/i22.py and its device classes), treated as a dry, correct DATA source
+# and modelled here intentionally, not mirrored.
+#
+# What is DIFFERENT from the TomoWISE scaffold: I22 runs EPICS, and dodal records
+# the real PV prefixes, so `pv` IS carried here (dodal is the source). Every
+# device still carries `new: true` (not yet modelled in CORA as an Asset) and
+# `confirm: true` (the values, and the snapshot PVs, are to be verified by Diamond
+# staff). No vendor `model` is bound: families-only, so no part is procured into
+# the catalog (this also keeps the descriptor clear of the catalog cross-checks).
+#
+# What dodal CANNOT supply, and so is NOT invented here: calibrated numbers
+# (energy range, beam size, motor limits, beam-center, threshold energy, camera
+# lengths as a range, z-positions), the hutch/PSS safety structure, the passive
+# beam-path tier, and the technique/Capability binding. Each gap is tagged inline
+# with a (QUESTION-ID) answered on docs/deployments/i22/questions.md.
+#
+# Loose families (StorageRing, Transfocator, FluxMonitor, TemperatureController,
+# FlowController) are design-intent names not in the catalog; they render as plain
+# text. An adversarial new-kind review refuted all five as catalog Families on the
+# strength of I22 alone (rule-of-three), so each is carried loose and deferred.
+
+beamline:
+  name: I22
+  facility: diamond
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "undulator source (dodal UndulatorInKeV on SR22I); period / gap range / energy range not in dodal (SRC-1)"
+
+# Two access-gated hutches. dodal PV prefixes encode functional zones (OP optics,
+# MO motion, EA end-station, DI diagnostics) but NOT the hutch each device sits in
+# or its PSS meaning; the hutch split below is the standard Diamond optics +
+# experiment layout, carried confirm (ENC-1). Diamond PSS permit signals TBD (PSS-1).
+enclosures:
+  - name: i22-optics
+    role: optics-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "Diamond PSS permit signal TBD (PSS-1)"}
+  - name: i22-experiment
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "Diamond PSS permit signal TBD (PSS-1)"}
+
+# --- SOURCE STAGE: beam delivery and conditioning ---
+
+source:
+  stage: source
+  enclosure: i22-optics
+  intro: "The undulator source and the machine-level storage-ring state it draws on."
+  note: >
+    The undulator parameters dodal carries (80 poles, 2.0 m) are dry facts; the
+    energy range and gap-to-energy curve are calibration the deployment must
+    supply (SRC-1). The storage-ring device is machine-shared and observe-only;
+    its modelling boundary is open (MACHINE-1).
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: "SR22I-MO-SERVC-01:"
+      new: true
+      confirm: true
+      poles: 80
+      length: 2.0 m
+      mechanism: gap-to-energy via lookup table (BeamLine_Undulator_toGap.txt)
+      note: "the SAXS/WAXS source; energy range and gap curve to confirm (SRC-1)"
+    - name: StorageRing
+      family: StorageRing
+      new: true
+      confirm: true
+      note: "machine-level, beamline-shared, observe-only source state (ring current, energy, fill mode, top-up countdown); loose family, interim observe-only binding (MACHINE-1)"
+
+conditioning-optics:
+  stage: source
+  enclosure: i22-optics
+  intro: "The mirrors, monochromator, and transfocator that focus, monochromate, and condition the beam."
+  note: >
+    Mirror internal axes (yaw/pitch/roll, jacks), the DCM crystal d-spacing and
+    thermal reads, and the bimorph voltage channels are device internals carried
+    as notes/settings, not separate Families (OPT-1). The transfocator has no
+    clean catalog home and is loose (CRL-1).
+  devices:
+    - name: DCM
+      family: Monochromator
+      pv: "BL22I-MO-DCM-01:"
+      new: true
+      confirm: true
+      crystal: Si(111)
+      temperature_pv: "BL22I-DI-DCM-01:"
+      note: "double-crystal monochromator; crystal d-spacing + thermal model are settings to confirm (OPT-1)"
+    - name: VFM
+      family: Mirror
+      pv: "BL22I-OP-KBM-01:VFM:"
+      new: true
+      confirm: true
+      axes: yaw / pitch / roll / x / y / jacks (Y1-3) / translations (X1-2)
+      note: "vertical focusing mirror (KB pair)"
+    - name: HFM
+      family: Mirror
+      pv: "BL22I-OP-KBM-01:HFM:"
+      new: true
+      confirm: true
+      axes: yaw / pitch / roll / x / y / jacks (Y1-3) / translations (X1-2)
+      note: "horizontal focusing mirror (KB pair)"
+    - name: BimorphHFM
+      family: Mirror
+      pv: "BL22I-OP-KBM-01:G0:"
+      new: true
+      confirm: true
+      channels: 12
+      note: "adaptive bimorph wavefront correction on the HFM; the voltage channels are settings, not a new Family (OPT-1)"
+    - name: BimorphVFM
+      family: Mirror
+      pv: "BL22I-OP-KBM-01:G1:"
+      new: true
+      confirm: true
+      channels: 32
+      note: "adaptive bimorph wavefront correction on the VFM"
+    - name: Transfocator
+      family: Transfocator
+      pv: "BL22I-MO-FSWT-01:"
+      new: true
+      confirm: true
+      lens_material: Beryllium
+      lens_geometry: paraboloid (cylindrical)
+      note: "compound-refractive-lens transfocator; loose family, no clean catalog home yet (CRL-1)"
+
+beam-defining:
+  stage: source
+  enclosure: i22-optics
+  intro: "The beam-defining slits along the conditioning path."
+  note: >
+    Five of the six are four-independent-blade slits (the catalog Slit shape
+    exactly: x/y plus/minus blades forming a variable opening); slit 4 exposes
+    gap+centre only, a fewer-DOF setting within the same Family.
+  devices:
+    - name: Slit1
+      family: Slit
+      pv: "BL22I-AL-SLITS-01:"
+      new: true
+      confirm: true
+      blades: four independent (x_plus/x_minus/y_plus/y_minus)
+    - name: Slit2
+      family: Slit
+      pv: "BL22I-AL-SLITS-02:"
+      new: true
+      confirm: true
+      blades: four independent
+    - name: Slit3
+      family: Slit
+      pv: "BL22I-AL-SLITS-03:"
+      new: true
+      confirm: true
+      blades: four independent
+    - name: Slit4
+      family: Slit
+      pv: "BL22I-AL-SLITS-04:"
+      new: true
+      confirm: true
+      blades: gap + centre only (fewer-DOF setting)
+    - name: Slit5
+      family: Slit
+      pv: "BL22I-AL-SLITS-05:"
+      new: true
+      confirm: true
+      blades: four independent
+    - name: Slit6
+      family: Slit
+      pv: "BL22I-AL-SLITS-06:"
+      new: true
+      confirm: true
+      blades: four independent
+
+# --- SAMPLE STAGE: the experiment hutch ---
+
+sample-environment:
+  stage: sample
+  enclosure: i22-experiment
+  intro: "The sample base, the on-axis-view alignment camera, the incident and transmitted flux monitors, and the sample-environment actuators."
+  note: >
+    The flux monitors present the existing Sensor Role (the Role docstring names
+    ion chambers); they are carried as a loose FluxMonitor family (FLUX-1). The
+    Linkam and pump are settable actuators with no clean catalog home, the same
+    open settable-actuator shape as the 7-BM flow controllers (ENV-1).
+  devices:
+    - name: SampleBase
+      family: LinearStage
+      pv: "BL22I-MO-STABL-01:"
+      new: true
+      confirm: true
+      axes: X / Y / PITCH
+      note: "sample base table; the PITCH axis is a TiltStage axis in a per-axis split"
+    - name: OAV
+      family: Camera
+      pv: "BL22I-DI-OAV-01:"
+      new: true
+      confirm: true
+      note: "on-axis-view alignment camera (AVT Mako G-507B); working distance + effective pixel size are placeholders in the controls source, to be supplied (OAV-1)"
+    - name: I0
+      family: FluxMonitor
+      pv: "BL22I-EA-XBPM-02:"
+      new: true
+      confirm: true
+      note: "incident-flux ion chamber / XBPM (Tetramm, 4-channel current); presents the Sensor Role; loose family (FLUX-1)"
+    - name: It
+      family: FluxMonitor
+      pv: "BL22I-EA-TTRM-02:"
+      new: true
+      confirm: true
+      note: "transmitted-flux ion chamber (Tetramm); presents the Sensor Role; loose family (FLUX-1)"
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "BL22I-EA-TEMPC-05:"
+      new: true
+      confirm: true
+      note: "sample-environment temperature controller (Linkam); a settable actuator, the FlowController sibling (ENV-1)"
+    - name: SamplePump
+      family: FlowController
+      pv: "BL22I-EA-PUMP-01:"
+      new: true
+      confirm: true
+      note: "sample-environment peristaltic pump (Watson-Marlow 323); a settable actuator; pump type is a setting (ENV-1)"
+
+# --- DETECTION STAGE: the SAXS and WAXS detectors and their beamstops ---
+
+detector:
+  stage: detection
+  enclosure: i22-experiment
+  intro: "The two Pilatus area detectors that record SAXS and WAXS frames simultaneously, and the beamstops that protect them."
+  note: >
+    SAXS and WAXS are the same detector model at different camera lengths: one
+    Camera Family, two Asset instances separated by mount distance and technique
+    role, not a Family split. The camera lengths dodal carries are a single
+    calibration snapshot; whether the detector distance is a fixed mount or a
+    settable axis is open (DET-1). Threshold energy and beam-center are not in
+    dodal (DET-2).
+  devices:
+    - name: SaxsDetector
+      family: Camera
+      pv: "BL22I-EA-PILAT-01:"
+      new: true
+      confirm: true
+      detector: Dectris Pilatus3 2M
+      detector_type: photon-counting hybrid pixel
+      pixel_size: 0.172 mm
+      sensor: silicon, 0.45 mm thick
+      note: "small-angle detector (long camera length); camera length to confirm (DET-1), threshold energy + beam-center to confirm (DET-2)"
+    - name: WaxsDetector
+      family: Camera
+      pv: "BL22I-EA-PILAT-03:"
+      new: true
+      confirm: true
+      detector: Dectris Pilatus3 2M
+      detector_type: photon-counting hybrid pixel
+      pixel_size: 0.172 mm
+      sensor: silicon, 0.45 mm thick
+      note: "wide-angle detector (short camera length); camera length to confirm (DET-1)"
+    - name: BeamStop1
+      family: BeamStop
+      pv: "BL22I-MO-SAXSP-01:BS1:"
+      new: true
+      confirm: true
+      note: "SAXS beamstop (positioned X/Y)"
+    - name: BeamStop2
+      family: BeamStop
+      pv: "BL22I-MO-SAXSP-01:BS2:"
+      new: true
+      confirm: true
+      note: "SAXS beamstop (positioned X/Y)"
+    - name: BeamStop3
+      family: BeamStop
+      pv: "BL22I-MO-SAXSP-01:BS3:"
+      new: true
+      confirm: true
+      note: "SAXS beamstop (positioned X/Y + roll)"
+
+# Cross-cutting drive electronics and triggering. dodal records the PandA FPGA
+# trigger boxes; the motion controllers are not exposed as dodal devices, so
+# none is modelled here.
+controls:
+  intro: >
+    I22 runs the Diamond EPICS control stack (driven by GDA and bluesky/blueapi
+    on the floor). dodal records the device PV prefixes carried above; the
+    PandABox FPGA timing boxes generate the triggers and gates.
+  triggering:
+    - name: Panda1
+      family: TimingController
+      pv: "BL22I-EA-PANDA-01:"
+      new: true
+      confirm: true
+      note: "Zynq-FPGA trigger/gate generation + HDF capture; binding to the detectors + flux monitors is open (TRIG-1)"
+    - name: Panda2
+      family: TimingController
+      pv: "BL22I-EA-PANDA-02:"
+      new: true
+      confirm: true
+      note: "second PandABox; two more (Panda3/4) exist in dodal but are skip-flagged"
+  software_iocs_not_modeled:
+    - GDA (Generic Data Acquisition; Diamond's acquisition software)
+    - bluesky / blueapi (the bluesky-as-a-service layer dodal feeds)
+
+# Continuously-available resources a run draws on (design phase).
+resources:
+  intro: >
+    The continuously-available facility resources a run needs present before it
+    can start. All pending confirmation in the design phase.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

@@ -9686,7 +9686,8 @@
               "setpoint",
               "action",
               "check",
-              "capture"
+              "capture",
+              "compute"
             ],
             "title": "Step Kind",
             "type": "string"

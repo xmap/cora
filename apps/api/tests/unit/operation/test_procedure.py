@@ -230,8 +230,9 @@ def test_step_kind_values_locked() -> None:
     """Pin the step kinds; future additions must be a deliberate test edit.
     setpoint/action/check rename ISA-106's Command/Perform/Verify triplet;
     capture (read a value into the conduct `captures` slot) was added for
-    runtime value capture."""
-    assert frozenset({"setpoint", "action", "check", "capture"}) == STEP_KIND_VALUES
+    runtime value capture; compute (submit a compute job via ComputePort)
+    was added for the value-arm ComputeStep (slice 6a)."""
+    assert frozenset({"setpoint", "action", "check", "capture", "compute"}) == STEP_KIND_VALUES
 
 
 @pytest.mark.unit

@@ -121,15 +121,17 @@ state fields, not as additional values for the same kind. Mirrors
 LOGBOOK_KIND_OBSERVATION from Run BC."""
 
 # Closed enum for the `step_kind` discriminator on per-step rows.
-# The three values are CORA's rename of ISA-106's canonical
-# Command/Perform/Verify triplet (renamed to avoid CQRS Command
-# collision per [[project_operation_design]]). Future-additive
+# The setpoint / action / check core is CORA's rename of ISA-106's
+# canonical Command/Perform/Verify triplet (renamed to avoid CQRS
+# Command collision per [[project_operation_design]]); "capture" (a
+# runtime value read) and "compute" (a compute-job submission via
+# ComputePort) extend it for the conduct-path runtimes. Future-additive
 # operational vocabulary (for example "wait", "rollback") lands as
 # code edits, not migrations (table column is plain TEXT, not a
 # CHECK-constrained enum, mirroring Run BC's sampling_procedure
 # precedent).
-StepKind = Literal["setpoint", "action", "check", "capture"]
-STEP_KIND_VALUES: frozenset[str] = frozenset({"setpoint", "action", "check", "capture"})
+StepKind = Literal["setpoint", "action", "check", "capture", "compute"]
+STEP_KIND_VALUES: frozenset[str] = frozenset({"setpoint", "action", "check", "capture", "compute"})
 
 # Schema declaration for the steps logbook. Documentation-grade per
 # [[project_logbook_entry_storage]]: declares the entry-row column
@@ -145,8 +147,10 @@ STEPS_LOGBOOK_SCHEMA = LogbookSchema(
                 "Discriminator for the polymorphic step body. One of: "
                 "'setpoint' (control-point change applied), 'action' "
                 "(discrete operation performed), 'check' (verification "
-                "recorded). CORA's rename of ISA-106's canonical "
-                "Command/Perform/Verify triplet. The kind-specific "
+                "recorded), 'capture' (runtime value read), 'compute' "
+                "(compute-job submission via ComputePort). The "
+                "setpoint/action/check core is CORA's rename of ISA-106's "
+                "canonical Command/Perform/Verify triplet. The kind-specific "
                 "JSON `payload` column is NOT declared here because "
                 "LogbookFieldType is closed over primitives; per-kind "
                 "body shape lives at the API layer (Pydantic per-kind "
@@ -171,10 +175,11 @@ STEPS_LOGBOOK_SCHEMA = LogbookSchema(
     },
     description=(
         "Per-Procedure step entries, polymorphic by step_kind "
-        "(setpoint | action | check | future). One row per step; "
-        "rows write directly to entries_operation_procedure_activities "
-        "via the ActivityStore port (no per-row event on the Procedure "
-        "stream). See [[project_operation_design]]."
+        "(setpoint | action | check | capture | compute | future). One "
+        "row per step; rows write directly to "
+        "entries_operation_procedure_activities via the ActivityStore "
+        "port (no per-row event on the Procedure stream). See "
+        "[[project_operation_design]]."
     ),
 )
 
