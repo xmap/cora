@@ -1364,7 +1364,7 @@
 | src/cora/operation/\_\_init\_\_.py                                                       |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/\_bootstrap.py                                                        |        2 |        2 |        0 |        0 |      0.0% |     11-13 |
 | src/cora/operation/\_conduct\_preparation.py                                             |       21 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/operation/\_conduct\_wire.py                                                    |       37 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/operation/\_conduct\_wire.py                                                    |       39 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/operation/\_control\_dispatch\_context.py                                       |       19 |        2 |        0 |        0 |     89.5% |    74, 79 |
 | src/cora/operation/\_partition\_rule\_eval.py                                            |       47 |        2 |       16 |        3 |     92.1% |73, 241-\>240, 246 |
 | src/cora/operation/\_procedure\_update\_handler.py                                       |        7 |        0 |        0 |        0 |    100.0% |           |
@@ -1373,7 +1373,7 @@
 | src/cora/operation/\_pseudoaxis/\_evaluator.py                                           |       20 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/\_pseudoaxis/\_expander.py                                            |       26 |        3 |        2 |        1 |     85.7% |120, 123-124 |
 | src/cora/operation/\_recipe\_expansion/\_\_init\_\_.py                                   |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/\_recipe\_expansion/\_expand.py                                       |       42 |        5 |       22 |        2 |     85.9% |65-70, 127 |
+| src/cora/operation/\_recipe\_expansion/\_expand.py                                       |       42 |        5 |       22 |        2 |     85.9% |65-70, 129 |
 | src/cora/operation/\_recipe\_expansion/\_replay.py                                       |       29 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/operation/\_recipe\_expansion/\_resolved\_steps\_replay.py                      |        7 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/operation/acquisitions.py                                                       |       81 |        2 |       16 |        2 |     95.9% |  238, 336 |
@@ -1398,7 +1398,7 @@
 | src/cora/operation/aggregates/procedure/evolver.py                                       |       47 |        0 |       24 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/procedure/read.py                                          |       14 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/procedure/state.py                                         |      283 |        3 |       16 |        2 |     98.3% |1453-1454, 1460 |
-| src/cora/operation/conductor.py                                                          |      491 |        9 |      118 |        1 |     98.4% |689-690, 1149, 1188, 1352-1355, 2189 |
+| src/cora/operation/conductor.py                                                          |      599 |       16 |      134 |        0 |     97.8% |745-746, 1218, 1257, 1416-1419, 1649-1652, 1888-1891 |
 | src/cora/operation/errors.py                                                             |       58 |       14 |        0 |        0 |     75.9% |73-74, 122-127, 193-201, 221-227 |
 | src/cora/operation/features/\_\_init\_\_.py                                              |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/abort\_procedure/\_\_init\_\_.py                             |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -1423,6 +1423,11 @@
 | src/cora/operation/features/conduct\_procedure/handler.py                                |       30 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/operation/features/conduct\_procedure/route.py                                  |       25 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/conduct\_procedure/tool.py                                   |       23 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_until\_converged/\_\_init\_\_.py                    |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_until\_converged/command.py                         |       13 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_until\_converged/handler.py                         |       31 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_until\_converged/route.py                           |       26 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_until\_converged/tool.py                            |       23 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/end\_iteration/\_\_init\_\_.py                               |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/end\_iteration/command.py                                    |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/end\_iteration/decider.py                                    |       12 |        0 |        4 |        0 |    100.0% |           |
@@ -1506,9 +1511,9 @@
 | src/cora/operation/projections/\_\_init\_\_.py                                           |        3 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/projections/procedure.py                                              |       54 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/operation/projections/procedure\_iterations.py                                  |       18 |        0 |        4 |        0 |    100.0% |           |
-| src/cora/operation/routes.py                                                             |       63 |        4 |       12 |        0 |     94.7% |152-153, 227-228 |
-| src/cora/operation/tools.py                                                              |       38 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/wire.py                                                               |       34 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/routes.py                                                             |       64 |        4 |       12 |        0 |     94.7% |153-154, 228-229 |
+| src/cora/operation/tools.py                                                              |       40 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/wire.py                                                               |       36 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/recipe/\_\_init\_\_.py                                                          |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/recipe/\_bootstrap.py                                                           |        2 |        2 |        0 |        0 |      0.0% |     14-16 |
 | src/cora/recipe/\_method\_update\_handler.py                                             |        7 |        0 |        0 |        0 |    100.0% |           |
@@ -1549,7 +1554,7 @@
 | src/cora/recipe/aggregates/practice/read.py                                              |       22 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/practice/state.py                                             |       43 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/recipe/\_\_init\_\_.py                                        |        9 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/recipe/aggregates/recipe/body.py                                                |       96 |        0 |       34 |        1 |     99.2% | 247-\>249 |
+| src/cora/recipe/aggregates/recipe/body.py                                                |      103 |        0 |       38 |        1 |     99.3% | 258-\>260 |
 | src/cora/recipe/aggregates/recipe/events.py                                              |       43 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/recipe/evolver.py                                             |       21 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/recipe/read.py                                                |       33 |        5 |       10 |        0 |     83.7% |   126-130 |
@@ -2343,7 +2348,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **48501** |  **972** | **6898** |  **296** | **97.5%** |           |
+| **TOTAL**                                                                                | **48721** |  **979** | **6922** |  **295** | **97.5%** |           |
 
 
 ## Setup coverage badge
