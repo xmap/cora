@@ -1,6 +1,6 @@
 # Scrubbing the Run (VAxAutoSci 2026 pilot)
 
-Replay-native provenance visualization for closed-loop beamline experiments.
+Replay-native provenance visualization for agent-supervised beamline experiments.
 The fold an event-sourced system of record already uses to reconstruct state
 becomes a draggable time cursor an auditor scrubs through a recorded run, with a
 content-addressed fidelity badge that proves the replayed state matches the

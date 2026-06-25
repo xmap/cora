@@ -27,10 +27,14 @@ events. Our central idea is to expose that fold as an interaction. The result is
 a \emph{replay scrubber}: a draggable time cursor that an auditor moves through a
 recorded run, with the system folding the event stream to the chosen instant and
 rendering the state as it was then, who or what caused it, and whether the
-reconstruction is faithful. Because the same fold that makes the backend correct
-is the one driving the view, replay is faithful by construction, and a
-content-addressed check of the recorded expansion lets the scrubber verify,
-rather than merely assert, that the state shown at the cursor matches the record.
+reconstruction is faithful. Because the view is driven by the same deterministic
+fold used by the backend read path, the displayed state is reconstructed from
+the recorded event prefix rather than re-created by a separate
+visualization-specific replay; and a content-addressed check of the recorded
+expansion lets the scrubber verify, rather than merely assert, that the state
+shown at the cursor matches the record (under the system's append-only storage
+and deterministic-fold assumptions, not against an adversary with database write
+access).
 
 We ground the design in a real run from an operating instrument: a lights-out,
 agent-supervised run at the APS 2-BM micro-CT beamline, in which CORA conducts a
@@ -41,6 +45,11 @@ supervises and recovers a \emph{conducted} run, recording each hold and resume
 as a decision; the fully agent-closed perceive-decide-act loop, in which a model
 selects the science itself, is out of scope, and the prototype is a research
 visualization over exported run data rather than a deployed interface.
+
+The novelty is not a timeline or time travel as such, but their conjunction in
+this setting: deterministic event-stream replay, provenance visualization, a
+per-cursor content-addressed fidelity check, and a task abstraction for auditing
+autonomous runs.
 
 \medskip\noindent This paper makes four contributions:
 \begin{itemize}

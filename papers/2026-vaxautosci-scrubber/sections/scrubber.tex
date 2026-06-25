@@ -45,12 +45,13 @@ and \emph{who or what} was driving it.
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/f2_fidelity}
-  \caption{The fidelity check the badge runs at the cursor: the
-  content-addressed hash recorded in the run-start payload is compared against
-  the hash recomputed from the state reconstructed by folding to the cursor; a
-  match reads verified, a mismatch would read altered. The append-only store
-  means the recorded side cannot have changed after the run. The digest shown is
-  an illustrative content hash of the run data.}
+  \caption{The fidelity check the badge runs at the cursor. The content-addressed
+  hashes recorded at run start, over the recipe expansion (the resolved steps and
+  the parameter bindings), are recomputed from the state reconstructed by folding
+  to the cursor and compared; a match reads verified, a mismatch would read
+  altered. Under the system's append-only storage assumptions, the recorded side
+  is not editable through the normal application path. The digest shown is an
+  illustrative content hash of the run data.}
   \label{fig:fidelity}
 \end{figure}
 

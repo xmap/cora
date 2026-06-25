@@ -12,7 +12,7 @@ drafts reach camera-ready.
 
 <div class="grid cards papers-list" markdown>
 
--   __Scrubbing the Run: Replay-Native Provenance Visualization for Closed-Loop Beamline Experiments__
+-   __Scrubbing the Run: Replay-Native Provenance Visualization for Agent-Supervised Beamline Experiments__
 
     *VAxAutoSci · IEEE VIS 2026 · Boston · Doğa Gürsoy*
 

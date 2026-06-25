@@ -8,15 +8,20 @@ recorded? Conventional post-hoc provenance graphs flatten the temporal and
 causal texture those questions depend on. We observe that event-sourced systems
 of record already answer such questions internally, because they reconstruct any
 past state by folding an immutable, ordered event stream. We turn that fold into
-an interaction. This paper contributes (1) a task abstraction for auditing
-closed-loop runs, and (2) a \emph{replay scrubber}: a draggable time cursor that
-replays a run to any recorded instant, showing a run-lifecycle lane of who or
-what drove each transition, nested convergence brackets colored by verdict,
-open-interval markers for unfinished steps, and a content-addressed fidelity
-badge that lets the view verify the replayed state matches the record. We ground
-the prototype in a real lights-out, agent-supervised run on the APS 2-BM micro-CT
-beamline, in which CORA conducts a rotation-axis centering alignment, a
-RunSupervisor agent holds the run on beam loss and auto-resumes it, and the
-scrubber localizes the interrupted projection by folding to the beam-loss
-instant. We discuss how event-sourced records reshape provenance visualization
-for autonomous science.
+an interaction. Our contribution is the conjunction of deterministic
+event-stream replay, provenance visualization, a per-cursor content-addressed
+fidelity check, and a set of audit tasks for autonomous runs, realized as a
+\emph{replay scrubber}: a draggable time cursor that replays a run to any
+recorded instant, showing a run-lifecycle lane of who or what drove each
+transition, nested convergence brackets colored by verdict, open-interval
+markers for unfinished steps, and a fidelity badge that lets the view verify the
+replayed state matches the record. We ground the prototype in a real overnight
+run on the APS 2-BM micro-CT beamline, in which CORA conducts a rotation-axis
+centering alignment, a RunSupervisor agent holds the run on beam loss and
+auto-resumes it, and the scrubber localizes the interrupted projection by folding
+to the beam-loss instant. We are deliberate about scope: the run is
+\emph{agent-supervised}, not agent-closed (the agent recovers a conducted run,
+it does not select the science), the prototype is a research visualization over
+exported run data, and we report a case-based walkthrough rather than a user
+study. We discuss how event-sourced records reshape provenance visualization for
+autonomous science.

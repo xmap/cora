@@ -1,5 +1,7 @@
-Our evaluation is a structured walkthrough of the four auditor tasks on one
-recorded run, not a controlled study. We report a single run, on a single
+Our evaluation is a case-based demonstration: a structured walkthrough of the
+four auditor tasks on one recorded run. It shows feasibility and explanatory
+power, but it is not an empirical validation, and it does not establish that the
+scrubber improves audit speed or accuracy. We report a single run, on a single
 instrument, and we have not yet run a user or expert study; whether the scrubber
 speeds real audits, and which encodings practitioners prefer, are open empirical
 questions. The interface is a research prototype over exported run data rather
@@ -26,7 +28,12 @@ snapshotting for long campaigns is future work. Three further extensions are
 natural and named, not built: a live now-edge that subscribes to the event tail
 so the same timeline monitors a run in progress; run-to-run diffing so two
 campaigns can be compared on one axis; and a deployed read interface, of which
-the first read-only slice is on the roadmap. We also expect the design to
+the first read-only slice is on the roadmap. The closest extension is an
+agent-closed steered loop, an optimizer that decides the next action rather than
+a supervisor that recovers a conducted one; because it records its choices
+through the same decision substrate, the run-lifecycle lane and the decision
+records would carry the optimizer's next-action choices and be audited exactly as
+the supervisor's holds and resumes are here. We also expect the design to
 generalize beyond this run to other conducted procedures and other facilities,
 since nothing in the scrubber is specific to it beyond the lifecycle, iteration,
 and activity vocabulary it reads from the event log.

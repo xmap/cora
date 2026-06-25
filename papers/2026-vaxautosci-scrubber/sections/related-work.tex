@@ -28,8 +28,9 @@ Omniscient debuggers such as Pernosco and rr~\cite{rr2017}, the
 Whyline~\cite{whyline2008}, and reducer-based state containers share our
 record-once, replay-later posture and give instant access to any past instant.
 In all of them, deterministic replay is held as an internal guarantee and is
-never rendered to the user. We differ in that we surface a per-cursor,
-content-addressed fidelity badge that makes the faithfulness of the replay a
+never rendered to the user. In short, these systems replay computation, whereas
+we replay recorded run state with provenance semantics and a per-cursor,
+content-addressed integrity check that makes the faithfulness of the replay a
 visible, checkable affordance.
 
 \paragraph{Tamper-evident and verifiable provenance.}

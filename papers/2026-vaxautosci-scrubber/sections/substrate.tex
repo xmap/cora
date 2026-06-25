@@ -10,8 +10,8 @@
   reconstructs the state shown. Three records carry what the tasks need: each
   event's envelope (who or what caused it, and its position), the run-start
   payload (the recipe expansion and its content hash, feeding the fidelity
-  badge), and the iteration-boundary events (the converged verdict). Substrate,
-  not contribution.}
+  badge), and the iteration-boundary events (the converged verdict).
+  Event-record substrate used by the scrubber.}
   \label{fig:substrate}
 \end{figure*}
 
@@ -33,12 +33,19 @@ carry the verdict that colors each bracket (T3). The swim-lane activities,
 the setpoint, check, and capture rows, are themselves events appended as the
 conductor acts, with the intent recorded before the effect so that an
 interruption leaves a detectable open record rather than a silent truncation.
+Concretely, the example run is a four-event run-lifecycle stream (started, held,
+resumed, completed) alongside a twelve-event procedure stream with roughly
+fifteen activity rows; folding a prefix returns the reconstructed run and
+procedure state (status, the current iteration and its verdict, and whether each
+activity is open or closed), and the recorded hashes cover the recipe expansion,
+the resolved steps and parameter bindings, written at run start.
 
-Two properties make the visualization trustworthy by construction rather than
-by convention. Folding is deterministic: the same prefix of the stream always
+Two properties underwrite the badge, under stated assumptions rather than by
+convention. Folding is deterministic: the same prefix of the stream always
 reconstructs the same state, so the cursor's reconstruction is reproducible and
-not a re-execution that might diverge. And the store is append-only at the
-database level, so the record the badge checks against cannot have been edited
-after the fact. We state this once, in support of the badge, rather than as a
-separate systems contribution; the visual claim, that the timeline you are
-scrubbing is faithful to an unaltered record, is what the paper is about.
+not a re-execution that might diverge. And the store is append-only, so the
+record the badge checks against is not editable through the normal application
+path. We state this once, in support of the badge, rather than as a separate
+systems contribution; the visual claim, that the timeline you are scrubbing is
+faithful to an unaltered record under those assumptions, is what the paper is
+about.
