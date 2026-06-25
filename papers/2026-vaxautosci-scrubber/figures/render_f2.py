@@ -7,7 +7,7 @@ hash recomputed from the state reconstructed by folding to the cursor; a match
 yields "verified", a mismatch would read "altered". The append-only store means
 the recorded side cannot have changed after the run.
 
-The short digest is a real content hash of data/focus_run.json (illustrative,
+The short digest is a real content hash of data/lights_out_run.json (illustrative,
 not the production verify-hash, which lives on the conduct path).
 
 Run: uv run --no-project --with matplotlib python figures/render_f2.py
@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch  # noqa: E402
 
 HERE = Path(__file__).parent
-RUN = json.loads((HERE.parent / "data" / "focus_run.json").read_text())
+RUN = json.loads((HERE.parent / "data" / "lights_out_run.json").read_text())
 
 C_REC = "#3B6EA5"
 C_REPLAY = "#6B7280"
