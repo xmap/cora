@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/bmm/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/bmm-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection. BMM introduces **no new family**: it reuses existing catalog Families and loose families already carried by sibling deployments (the ion chambers reuse the loose `FluxMonitor`, the fluorescence detector the catalog `EnergyDispersiveSpectrometer`, the diagnostic screens the loose `Screen`).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/bmm-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection. BMM introduces **no new family**: it reuses existing catalog Families (the ion chambers reuse `FluxMonitor`, graduated in #353; the fluorescence detector the catalog `EnergyDispersiveSpectrometer`) and one loose family already carried by a sibling deployment (the diagnostic screens reuse the loose `Screen` from 2-BM).
 
 ## The Asset tree
 
@@ -28,12 +28,12 @@ Root Asset `BMM` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `SampleStage` | LinearStage | `XF:06BM-ES{MC:09}` | XAFS sample positioning table (x/y/pitch/roll) |
 | `SampleWheel` | RotaryStage | `XF:06BMA-BI{XAFS-Ax:RotB}` | rotating sample wheel (batch XAS) |
 | `ReferenceHolder` | LinearStage | `XF:06BMA-BI{XAFS-Ax:RefX}` | reference-foil holder (energy calibration, Ir channel) |
-| `IonChambers` | FluxMonitor (loose) | `XF:06BM-BI{EM:1}EM180:` | quad electrometer (I0 / It / Ir), transmission-XAS signal |
+| `IonChambers` | FluxMonitor | `XF:06BM-BI{EM:1}EM180:` | quad electrometer (I0 / It / Ir), transmission-XAS signal |
 | `FluorescenceSpectrometer` | EnergyDispersiveSpectrometer | `XF:06BM-ES` | Xspress3 fluorescence detector (Sensor Role) |
 | `ScalerCounter` | GenericProbe | `XF:06BM-ES:1{Sclr:1}` | scaler / point counter for alignment |
 | `EndstationMotionController` | MotionController | `XF:06BM-ES{MC:09}` | endstation motion controller |
 
-Every family is in the catalog except the loose `FluxMonitor` (the ion chambers, shared with i03/i15-1/i22; held pending FLUX-1) and `Screen` (the diagnostic screens, shared with 2-BM; held pending FLAG-1). The fluorescence detector reuses `EnergyDispersiveSpectrometer`, graduated when 2-ID and 7-BM shared it; BMM is a further sighting.
+Every family is in the catalog except the loose `Screen` (the diagnostic screens, shared with 2-BM; held pending FLAG-1). The ion chambers reuse `FluxMonitor`, graduated in #353 from the i03/i15-1/i22 ion chambers; the fluorescence detector reuses `EnergyDispersiveSpectrometer`, graduated when 2-ID and 7-BM shared it.
 
 ## Pending confirmations
 

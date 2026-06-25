@@ -25,7 +25,7 @@ Priorities: `Blocks-build` (changes the model structure), `Blocks-go-live` (need
 | --- | --- | --- | --- | --- |
 | WHEEL-1 | Blocks-go-live | The sample wheel: how many sample positions, and is batch sample-changing a CORA-modelled automation or operator-driven? Should a dedicated sample-changer Family be earned across BMM and the Diamond robots, or does the wheel stay a `RotaryStage`? | A `RotaryStage` indexing samples; sample-changer behaviour is a Method/automation concern, not a new Family. | The sample-wheel model and the sample-changer abstraction. |
 | DET-1 | Blocks-go-live | The fluorescence detector configuration: which Xspress3 element count (1, 4, or 7) is the installed/default, and the vendor (Quantum Detectors?). Source carries all three configurations. | One `EnergyDispersiveSpectrometer` Asset presenting the Sensor Role; element count blank. | The detector Model and element count. |
-| DIAG-1 | Blocks-go-live | The ion chambers (`I0`/`It`/`Ir`) gas fill and whether they are the same device kind CORA should catalog as `FluxMonitor`, or earn a dedicated ion-chamber Family. They are the primary XAS signal here, not auxiliary flux monitors. | The quad electrometer reuses the loose `FluxMonitor` family (shared with i03/i15-1/i22); ion-chamber-Family question open (FLUX-1). | The ion-chamber Family and the I0/It/Ir bindings. |
+| DIAG-1 | Blocks-go-live | The ion chambers (`I0`/`It`/`Ir`) gas fill and the per-channel PV bindings. | The quad electrometer binds the catalog `FluxMonitor` Family (graduated in #353); gas fill and per-channel detail unconfirmed. | The I0/It/Ir bindings and gas fill. |
 
 ## Controls and techniques
 

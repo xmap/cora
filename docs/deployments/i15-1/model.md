@@ -8,7 +8,7 @@ I15-1 is a documentation-and-descriptor scaffold: it exists as the descriptor an
 | --- | --- | --- |
 | Beamline descriptor | [`deployments/i15-1/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i15-1/beamline.yaml) | the device walk, with the dodal-derived EPICS PV handles; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; I15-1 added to its beamlines, with a total-scattering practice carried pending |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **no change.** I15-1 reuses existing Families and the loose `StorageRing` / `FluxMonitor` (from I22); it coins no new family |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **no new family coined by I15-1.** It reuses existing Families and the loose `StorageRing` (from I22); its incident-flux monitor reuses `FluxMonitor`, since graduated to a catalog Family (presenting the Sensor Role) on the i22/i03/i15-1 rule-of-three |
 | Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the total-scattering Capability is deferred until the technique enters scope (TECH-1) |
 | Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape |
@@ -22,7 +22,7 @@ I15-1 was picked partly expecting it to graduate the open settable-actuator affo
 - **The `rail` folds into Table** (the TomoWISE DetectorGantry precedent), not a new `Rail` Family (RAIL-1).
 - **The interlocks fold into the Enclosure permit**, not an equipment Family (INTERLOCK-1).
 
-So I15-1 is a reuse + reinforce deployment: it pushes the loose `FluxMonitor` family to a second Diamond deployment (rule-of-three building) and adds a third robot-as-Positioner instance, while earning no new vocabulary. That is a result, not a gap: the value is confirming the existing model absorbs a new technique cleanly.
+So I15-1 is a reuse + reinforce deployment: it provides the third `FluxMonitor` deployment that completed its rule-of-three graduation into the catalog, and adds a third robot-as-Positioner instance, while coining no new vocabulary of its own. That is a result, not a gap: the value is confirming the existing model absorbs a new technique cleanly.
 
 ## What is deliberately not here yet
 

@@ -22,7 +22,7 @@ I15-1 was chosen partly on the expectation that it would graduate the open setta
 - **The rail is a `Table`, not a new `Rail` Family.** The shared support on which the cobra and cryostream are interchanged is the existing `Table` Family (the TomoWISE DetectorGantry precedent), not a coined kind (RAIL-1).
 - **The interlocks are not devices.** The PSS and goniometer interlocks dodal exposes are the data behind the **Enclosure `permit_signal`** (the shipped Enclosure aggregate), so they are carried on the enclosures, not as equipment Assets (INTERLOCK-1).
 
-It also reuses I22's loose `FluxMonitor` for the incident-flux monitor (the JBPM TetrAMM `i0`), which puts that family at a second Diamond deployment, building toward its rule-of-three graduation, and adds a third robot-as-Positioner instance (after I03 and 19-BM).
+It also reuses `FluxMonitor` for the incident-flux monitor (the JBPM TetrAMM `i0`), the deployment that completed its rule-of-three graduation into the catalog, and adds a third robot-as-Positioner instance (after I03 and 19-BM).
 
 ## The beamline
 
