@@ -20,7 +20,7 @@ The tender branch tunes the Si double-crystal monochromator and measures the kin
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| X-ray photoelectron spectroscopy (HAXPES) | `xray_photoelectron_spectroscopy` | tender photoemission on the [Scienta SES analyzer](equipment/detector.md); a new pending Method, distinct from ESM's angle-resolved variant |
+| X-ray photoelectron spectroscopy (HAXPES) | `x_ray_photoelectron_spectroscopy` | tender photoemission on the [Scienta SES analyzer](equipment/detector.md); a new pending Method, distinct from ESM's angle-resolved variant |
 
 It needs the [tender DCM](beamline.md), the [HAXPES manipulator and slit](equipment/sample.md), and the [SES analyzer](equipment/detector.md).
 

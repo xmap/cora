@@ -139,7 +139,7 @@ tender-optics:
   devices:
     - name: Monochromator_Tender
       family: Monochromator
-      pv: { bragg: "XF:07ID6-OP{Mono:DCM1-Ax:Bragg}Mtr", crystal_x: "XF:07ID6-OP{Mono:DCM1-Ax:X}Mtr", x2_perp: "XF:07ID6-OP{Mono:DCM1-Ax:Per2}Mtr", x2_pitch: "XF:07ID6-OP{Mono:DCM1-Ax:P2}Mtr" }
+      pv: { bragg: "XF:07ID6-OP{Mono:DCM1-Ax:Bragg}Mtr", goni_lateral: "XF:07ID6-OP{Mono:DCM1-Ax:X}Mtr", x2_perp: "XF:07ID6-OP{Mono:DCM1-Ax:Per2}Mtr", x2_pitch: "XF:07ID6-OP{Mono:DCM1-Ax:P2}Mtr" }
       new: true
       confirm: true
       note: "Si double-crystal mono (DCM1); crystal-select :XTAL_SEL, energy :ENERGY_SP; crystal set + range are MONO-1"

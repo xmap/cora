@@ -69,7 +69,7 @@ practices:
   # Method) and HAXPES on the tender branch (a new pending photoemission Method,
   # distinct from ESM's angle-resolved variant). Both pending until scope (TECH-1).
   - {name: SST_rsoxs_practice, method: resonant_scattering, pending: true, note: "resonant soft X-ray scattering on the SST-1 RSoXS endstation; reuses the 4-ID resonant_scattering Method (TECH-1)"}
-  - {name: SST_haxpes_practice, method: xray_photoelectron_spectroscopy, pending: true, note: "hard / tender X-ray photoelectron spectroscopy on the SST-2 HAXPES Scienta SES analyzer; Method not yet in catalog (TECH-1)"}
+  - {name: SST_haxpes_practice, method: x_ray_photoelectron_spectroscopy, pending: true, note: "hard / tender X-ray photoelectron spectroscopy on the SST-2 HAXPES Scienta SES analyzer; Method not yet in catalog (TECH-1)"}
   # SMI's defining techniques (SAXS / WAXS / GISAXS) sit on the deferred scattering
   # Capabilities that Diamond i22 left pending (TECH-1); simultaneous SAXS+WAXS is
   # coordinated Runs not a new technique. No SMI Practice is recorded until those
