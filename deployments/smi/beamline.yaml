@@ -1,0 +1,249 @@
+# SMI beamline descriptor (NSLS-II), reverse-engineered
+#
+# SMI (Soft Matter Interfaces) is the NSLS-II scattering beamline at sector 12-ID.
+# Its defining techniques are small- and wide-angle X-ray scattering (SAXS / WAXS),
+# run simultaneously, and grazing-incidence scattering (GISAXS / GIWAXS) off films
+# and interfaces, with a strong in-situ soft-matter sample environment. It is bound
+# to the NSLS-II Site (deployments/nsls2/site.yaml), the tenth NSLS-II beamline after
+# FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, and ESM.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/smi-profile-collection) or inferred,
+# carried `confirm: true` pending SMI staff. EPICS PVs are real and verified against
+# the smibase/ device modules; vendor part numbers, serials, and physical positions
+# are not in it and are open questions. Same descriptor mode as the other NSLS-II
+# beamlines; this scaffold is descriptor + docs, scenarios deferred.
+#
+# SMI is the SCATTERING reinforcement: the NSLS-II twin of the Diamond i22 (SAXS /
+# WAXS) beamline, the second facility for that science axis, and it adds the
+# grazing-incidence geometry (GISAXS / GIWAXS) and the in-situ soft-matter cells that
+# are SMI's specialty. It introduces NO new catalog family: the Pilatus area
+# detectors reuse Camera, the TetrAMM flux monitor FluxMonitor (#353), the Linkam /
+# LakeShore stages TemperatureController (#350), the Amptek fluorescence MCA
+# EnergyDispersiveSpectrometer (#345), the beamstops BeamStop, the mirrors Mirror,
+# the DCM Monochromator. Two loose families are bound, both shared and held: the
+# compound-refractive-lens Transfocator (4-ID / 8-ID / 9-ID / i22 / CHX, now a sixth
+# sighting; CRL-1) and the BeamPositionMonitor (4-ID / 8-ID / 9-ID; DIAG-1). Per the
+# i22 precedent the SAXS / WAXS / GISAXS Capabilities are NOT coined here; they are
+# the deferred owner-scope cohort (TECH-1), simultaneous SAXS+WAXS is coordinated
+# Runs not a new technique, and the in-situ cells are deferred (INSITU-1).
+
+beamline:
+  name: SMI
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 12"          # PV namespace XF:12ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "in-vacuum undulator (SR:C12-ID:G1{IVU:1}), verified in source (the energy pseudopositioner drives its gap); period and range not fully in the profile collection (SRC-1)"
+
+enclosures:
+  # PV zones: 12IDA first-optics hutch (FOE: mirrors, white-beam slit, FOE mono
+  # slits), 12IDB / 12IDB1 secondary-source and diagnostics, 12IDC the experiment
+  # hutch (CRL + sample optics XF:12IDC-OP, end-station XF:12IDC-ES, vacuum -VA).
+  # Modelled as the optics hutch + the experiment hutch.
+  - name: 12-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in source; the front-end photon shutter is XF:12IDA-PPS:2{PSh} (PSS-1)"}
+  - name: 12-ID-C
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; 12-ID-C is the experiment hutch carrying the sample, the in-vacuum flight path, and the SAXS / WAXS detectors (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and front-end photon shutter
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 12-ID-A
+  intro: The in-vacuum undulator source and the front-end photon shutter.
+  devices:
+    - name: Source
+      family: InsertionDevice
+      pv: "SR:C12-ID:G1{IVU:1}"
+      confirm: true
+      note: "In-vacuum undulator (the ivugap motor SR:C12-ID:G1{IVU:1-Ax:Gap}-Mtr, with brake and gap-speed controls). Driven together with the monochromator by the coupled energy pseudopositioner. Period and range pending (SRC-1)."
+    - name: PhotonShutter
+      family: Shutter
+      pv: "XF:12IDA-PPS:2{PSh}"
+      confirm: true
+      note: "Front-end photon shutter (ph_shutter, TwoButtonShutter)."
+
+# ===========================================================================
+# OPTICS STAGE: the monochromator, focusing mirrors, CRL, slits, attenuators
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: 12-ID-A
+  intro: "Condition the beam and set its energy: the double-crystal monochromator, the horizontal and vertical focusing mirrors, the compound-refractive-lens transfocator, the white-beam and secondary-source slits, and the attenuator banks. PVs verified against smibase/energy.py, mirrors.py, crls.py, slits.py, attenuators.py."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:12ID:m65"
+      confirm: true
+      note: "Double-crystal monochromator (Bragg = m65, gap = m66, with theta m65 / height m66 / pitch m67 / roll m68 on the bare XF:12ID: motor records). The energy math uses a Si(111) crystal (D_Si111 = 3.1293 in source). Driven by the coupled energy pseudopositioner together with the undulator gap; the EnergyAxis below is the master energy. Full energy range pending (DCM-1)."
+    - name: HorizontalFocusingMirror
+      family: Mirror
+      pv: "XF:12IDA-OP:2{Mir:HF-Ax:"
+      confirm: true
+      note: "Horizontal focusing mirror (hfm, with a bimorph voltage controller); reuses the Mirror family. A vertical-deflecting mirror (vdm, Mir:VD) sits alongside the focusing pair."
+    - name: VerticalFocusingMirror
+      family: Mirror
+      pv: "XF:12IDA-OP:2{Mir:VF-Ax:"
+      confirm: true
+      note: "Vertical focusing mirror (vfm, with a bimorph voltage controller); reuses the Mirror family."
+    - name: Transfocator
+      family: Transfocator           # loose Family (held; CRL-1)
+      pv: "XF:12IDC-OP:2{Lens:CRL-Ax:"
+      confirm: true
+      note: "Compound-refractive-lens transfocator (crl, twelve individually-insertable lens elements L1-L12 plus x / y / z / pitch / theta alignment) for micro-focusing versus low-divergence modes; a DSA aperture shares its controller. Loose family with no clean catalog home yet, ALREADY loose at 4-ID / 8-ID / 9-ID / i22 / CHX and held for gate-review; the open question is the abstraction, not the count (CRL-1). Lens material and count pending (CRL-1)."
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: "XF:12IDA-OP:2{Slt:WB-Ax:"
+      confirm: true
+      note: "White-beam-defining slit (wbs); FOE mono slits (hfmslit Slt:H, vfmslit Slt:V) shape the beam onto the mirrors."
+    - name: SecondarySourceAperture
+      family: Slit
+      pv: "XF:12IDB1-OP:2{Slt:SSA-Ax:"
+      confirm: true
+      note: "Secondary-source aperture (ssa) defining the coherence-matched source; its slit current is read for diagnostics."
+    - name: Attenuators
+      family: Filter
+      pv: "XF:12IDC-OP:2{Fltr:1-"
+      confirm: true
+      note: "Two attenuator banks of twelve insertable foils each (att1_1-12 at Fltr:1, att2_1-12 at Fltr:2) trimming flux; foil materials (Cu / Sn / Mo / Al, in 1x-8x thicknesses) are catalogued in beam.py. Reuses the Filter family."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The master energy axis: a coupled pseudopositioner moving the undulator gap, the DCM Bragg angle, and the DCM gap together (with a built-in energy-to-gap polynomial and DCM pitch / roll feedback toggled around shutter moves). Working gap range about 6200-15100. Whether energy is scanned as a measurement is ENERGY-1."
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      pv: "XF:12IDA-BI:2{EM:BPM1}"
+      confirm: true
+      note: "Beam-position monitors (xbpm1 / xbpm2 in the FOE, xbpm3 at the secondary source XF:12IDB-BI:2{EM:BPM3}, the latter feeding the DCM pitch / roll feedback). Binds the loose BeamPositionMonitor family that 4-ID / 8-ID / 9-ID also use (held; DIAG-1), matching the catalog note that position monitors stay loose."
+
+# ===========================================================================
+# SAMPLE STAGE: the grazing-incidence sample stack and the in-situ environment
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 12-ID-C
+  intro: "The sample stack with grazing-incidence axes for GISAXS, and the sample-environment thermal control. PVs verified against smibase/manipulators.py and linkam.py."
+  note: >
+    SMI positions a film or interface in the beam at a grazing angle for GISAXS /
+    GIWAXS, or a bulk sample in transmission for SAXS / WAXS. The experiment-hutch
+    beam-defining slits condition the beam onto the sample just upstream of it. The
+    HUB sample stack carries the theta / phi / chi grazing-incidence axes alongside
+    x / y / z; a SmarAct piezo (XF:12ID2C-ES{MCS:2}) gives fine motion. The Linkam
+    thermal stage reuses the TemperatureController family. The in-situ soft-matter
+    cells (a humidity cell and a blade coater) are SMI specialties, deferred (INSITU-1).
+  devices:
+    - name: BeamDefiningSlit
+      family: Slit
+      pv: "XF:12IDC-OP:2{Slt:C-Ax:"
+      confirm: true
+      note: "Experiment-hutch beam-defining slit (cslit, the C-hutch slit) trimming the beam onto the sample; reuses the Slit family."
+    - name: GuardSlit
+      family: Slit
+      pv: "XF:12IDC-OP:2{Slt:E-Ax:"
+      confirm: true
+      note: "Experiment-hutch guard slit (eslit, the E slit) cleaning up parasitic scatter ahead of the sample; reuses the Slit family."
+    - name: SampleStage
+      family: LinearStage
+      pv: "XF:12IDC-OP:2{HUB:Stg-Ax:"
+      confirm: true
+      note: "HUB sample stack (stage; x / y / z plus theta / phi / chi for grazing incidence), with a SmarAct piezo for fine motion (XF:12ID2C-ES{MCS:2-Ax:}). Bound to LinearStage as a design-phase placeholder; whether the grazing-incidence orientation axes are modelled as a Goniometer plus an Assembly is folded into STAGE-1."
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "XF:12ID-ES{LINKAM}:"
+      confirm: true
+      note: "Linkam thermal stage (LThermal) with a tensile variant (LTensile); a LakeShore four-output controller (XF:12ID-ES{Env:01}) also serves. Reuses the TemperatureController family (graduated #350). Which units are live is TEMP-1."
+
+# ===========================================================================
+# DETECTION STAGE: the SAXS and WAXS area detectors, beamstops, flux, fluorescence
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 12-ID-C
+  intro: "The simultaneous SAXS and WAXS Pilatus area detectors, the SAXS camera-length stage and beamstops, the flux monitor, the fluorescence detector, and the beam-viewing cameras. PVs verified against smibase/pilatus.py, beamstop.py, electrometers.py, amptek.py, prosilica.py."
+  note: >
+    SMI's measurement is the scattering pattern on two Pilatus detectors read at
+    once: the SAXS 2M down the in-vacuum flight path and the WAXS 900KW on a swing
+    arc. For GISAXS the WAXS arc is swung out; the detector stage sets the SAXS camera
+    length (the accessible Q). All reuse existing families. Which detectors are live
+    versus the retired set (a 1M, a 300KW) is a staff question (DET-1).
+  devices:
+    - name: SAXSDetector
+      family: Camera
+      pv: "XF:12ID2-ES{Pilatus:Det-2M}"
+      confirm: true
+      note: "Pilatus 2M SAXS area detector (pil2M) down the in-vacuum flight path; reuses Camera. Note the odd XF:12ID2-ES IOC namespace."
+    - name: WAXSDetector
+      family: Camera
+      pv: "XF:12IDC-ES:2{Det:900KW}"
+      confirm: true
+      note: "Pilatus 900KW WAXS area detector (pil900KW) on a swing arc (XF:12IDC-ES:2{WAXS:1-Ax:Arc}), read simultaneously with the SAXS detector; swung out for GISAXS, to zero for GIWAXS. Reuses Camera."
+    - name: SAXSDetectorStage
+      family: LinearStage
+      pv: "XF:12IDC-ES:2{Det:1M-Ax:"
+      confirm: true
+      note: "SAXS detector translation (x / y / z; the Z sets the sample-to-detector camera length and hence the accessible Q). Reuses the legacy Det:1M motor namespace from the retired 1M detector. Reuses LinearStage."
+    - name: SAXSBeamStop
+      family: BeamStop
+      pv: "XF:12IDC-ES:2{BS:SAXS-Ax:"
+      confirm: true
+      note: "SAXS beamstop assembly (saxs_bs; rod and pin-diode beamstops IBB / IBM / OBB / OBM) blocking the direct beam. The WAXS detector has its own beamstop motor (XF:12ID2C-ES{MCS:2-Ax:1}Mtr). Reuses BeamStop."
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: "XF:12ID:2{EM:Tetr1}"
+      confirm: true
+      note: "TetrAMM pin-diode flux monitor (pin_diode, QuadEM) reading incident intensity for normalization; reuses FluxMonitor (graduated #353). Channel map pending (DIAG-1)."
+    - name: FluorescenceSpectrometer
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:12IDC-ES:2{Det-Amptek:1}"
+      confirm: true
+      note: "Amptek energy-dispersive fluorescence MCA (amptek) for element-sensitive work; reuses EnergyDispersiveSpectrometer (graduated #345)."
+    - name: BeamViewingCamera
+      family: Camera
+      pv: "XF:12IDC-BI{Cam:SAM}"
+      confirm: true
+      note: "On-axis sample-viewing camera (OAV, a Prosilica; a HEX top camera XF:12IDC-BI{Cam:HEX} and FOE diagnostic cameras FS / WBStop / VFM serve alignment). Reuses Camera. Live set pending (CAM-1)."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    SMI acquisition is gated by the endstation fast shutter; the Pilatus detectors
+    run in software-triggered modes, with no separate hardware timing box in the
+    profile collection. Controller box models / firmware are not fully in the profile
+    collection (DRIVE-1).
+  triggering:
+    - name: FastShutter
+      family: Shutter
+      pv: "XF:12IDC-ES:2{PSh:ES}"
+      confirm: true
+      note: "Endstation fast shutter (fs, SMIFastShutter; a piezo open / close with a Y motor XF:12IDC:2{Sh:E-Ax:Y}) gating the detector exposure for a scattering measurement."
+    - name: EndstationMotionController
+      family: MotionController
+      confirm: true
+      note: "Endstation motion controllers driving the sample, detector, and beamstop axes (SmarAct MCS, MDrive, Thorlabs among them); box model / protocol / IP not fully in the profile collection (DRIVE-1)."
+  software_iocs_not_modeled:
+    [Pilatus, Amptek, TetrAMM, Prosilica, Linkam, LakeShore, SmarAct, BladeCoater]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum                # SAXS / WAXS in-vacuum flight path and chamber
+    - kind: LiquidNitrogen        # DCM cooling
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["Pilatus detectors", "CRL lenses", "attenuator foils", "in-situ sample cells"]
