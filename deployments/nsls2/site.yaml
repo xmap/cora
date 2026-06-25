@@ -1,7 +1,7 @@
 # CORA Site descriptor: the NSLS-II site-level surface
 #
 # NSLS-II (National Synchrotron Light Source II, Brookhaven National Laboratory)
-# is a Site CORA models, the home of the FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, and SMI beamlines. This file is
+# is a Site CORA models, the home of the FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS, and SST beamlines. This file is
 # the single human-readable source for the facility's site-level instances: the
 # Facility itself, the Practices it would run, and the facility principals.
 #
@@ -24,7 +24,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS]
+  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS, SST]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -69,6 +69,10 @@ practices:
   # Capabilities that Diamond i22 left pending (TECH-1); simultaneous SAXS+WAXS is
   # coordinated Runs not a new technique. No SMI Practice is recorded until those
   # Capabilities land. SMI is bound via beamlines.
+  # SST's three technique families (soft-scattering RSoXS, NEXAFS absorption, HAXPES
+  # photoemission) each sit on a deferred / pending Capability (TECH-1, ENERGY-1, the
+  # ESM angle_resolved_photoemission); no SST Practice is recorded until they land.
+  # SST is bound via beamlines.
 
 # Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
 # operator and review structure is confirmed; the profile collection only exposes

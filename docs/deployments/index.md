@@ -53,6 +53,8 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 | [XPD](xpd/index.md) | Reverse-engineered | high-energy powder diffraction and total scattering / PDF, 28-ID; the NSLS-II twin of Diamond i11 and i15-1, modelled from public beamline config |
 | [ESM](esm/index.md) | Reverse-engineered | electron spectro-microscopy (ARPES), 21-ID; CORA's first photoemission beamline, graduates the Manipulator Family, modelled from public beamline config |
 | [SMI](smi/index.md) | Reverse-engineered | small- and wide-angle scattering (SAXS/WAXS) with grazing incidence (GISAXS/GIWAXS), 12-ID; the NSLS-II twin of Diamond i22, modelled from public beamline config |
+| [IXS](ixs/index.md) | Reverse-engineered | momentum-resolved hard inelastic X-ray scattering, 10-ID; modelled from public beamline config |
+| [SST](sst/index.md) | Reverse-engineered | soft-and-tender dual-branch, multi-endstation (RSoXS scattering, NEXAFS absorption, HAXPES photoemission), 7-ID; modelled from public beamline config |
 
 ## [SLAC](slac/index.md)
 

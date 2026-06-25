@@ -1,0 +1,259 @@
+# SST beamline descriptor (NSLS-II), reverse-engineered
+#
+# SST (Spectroscopy Soft and Tender) is the NSLS-II soft-and-tender X-ray beamline at
+# sector 7-ID. It is a DUAL-BRANCH, MULTI-ENDSTATION beamline: a soft branch (SST-1,
+# an EPU60 undulator + plane-grating monochromator) feeding resonant soft X-ray
+# scattering (RSoXS) and NEXAFS absorption endstations, and a tender branch (SST-2, a
+# U42 undulator + double-crystal monochromator) feeding the HAXPES photoemission
+# endstation. It is bound to the NSLS-II Site (deployments/nsls2/site.yaml), the
+# twelfth NSLS-II beamline after FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the NSLS2/sst-*-profile-collection endstation repos and the shared
+# NSLS-II-SST/sst-base package) or inferred, carried `confirm: true` pending SST
+# staff. EPICS PVs are real and verified against the TOML device manifests and the
+# sst-base device classes; vendor part numbers, serials, and physical positions are
+# not in it and are open questions. Same descriptor mode as the other NSLS-II
+# beamlines; this scaffold is descriptor + docs, scenarios deferred.
+#
+# SST is the SOFT-AND-TENDER BREADTH deployment: one beamline carrying two source +
+# monochromator branches and several endstations spanning three technique families
+# (soft X-ray scattering, absorption spectroscopy, photoemission). It introduces NO
+# new catalog family: the soft PGM reuses GratingMonochromator (graduated, a fourth
+# sighting after SIX / CSX / ESM), the tender DCM Monochromator, the area detector
+# Camera, the sample manipulators the graduated Manipulator family (ESM), the flux
+# channels FluxMonitor, the thermal stage TemperatureController, the NEXAFS
+# microcalorimeter EnergyDispersiveSpectrometer. Two loose families are bound, both
+# held: the hemispherical ElectronAnalyzer (the HAXPES Scienta SES, a SECOND sighting
+# after ESM, so a graduation candidate recorded in the promotion register but held
+# pending gate-review, ARPES-1) and the BeamPositionMonitor (DIAG-1). Per the multi-
+# technique discipline no Capability or Method is coined; the soft-scattering,
+# absorption, and photoemission techniques sit on deferred / pending Methods and SST
+# records no Practice. The non-spectroscopy in-situ accessories (flood gun, source-
+# measure unit, ADR cryostat, syringe pump) are deferred (INSITU-1).
+
+beamline:
+  name: SST
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 7"           # PV namespace XF:07ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "two insertion-device sources, one per branch: the soft branch EPU60 (SR:C07-ID:G1A{SST1:1}) and the tender branch U42 (SR:C07-ID:G1A{SST2:1}), read from the shared sst-base energy classes. Periods and ranges not fully in the profile collection (SRC-1)"
+
+enclosures:
+  # The two branches are named SST-1 (soft) and SST-2 (tender) after their undulator
+  # branch labels (SST1:1 EPU60, SST2:1 U42), which is grounded in source. The
+  # endstation PV zones do NOT map one-to-one to a branch number: the soft RSoXS / NEXAFS
+  # endstations sit under XF:07ID1 / 07ID2, the tender HAXPES under XF:07ID6 (DCM) and
+  # XF:07ID1-BI (its manipulator). The physical hutch names / numbering and the exact
+  # endstation-to-hutch layout are not in source (ENC-1). Modelled as the optics hutch
+  # plus a soft-branch and a tender-branch experiment enclosure.
+  - name: 7-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in source; the front-end shutter is XF:07ID-PPS{Sh:FE} and the photon shutters are XF:07IDA-PPS{PSh:n} (PSS-1)"}
+  - name: SST-1
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; SST-1 is the soft branch (EPU60 source, PGM) carrying the RSoXS and NEXAFS endstations. Hutch name / numbering not in source (PSS-1, ENC-1)"}
+  - name: SST-2
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; SST-2 is the tender branch (U42 source, DCM) carrying the HAXPES endstation. Hutch name / numbering not in source (PSS-1, ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the two insertion-device sources and the front-end shutter
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 7-ID-A
+  intro: The two branch undulators (soft EPU60, tender U42) and the front-end shutter.
+  devices:
+    - name: SoftUndulator
+      family: InsertionDevice
+      pv: "SR:C07-ID:G1A{SST1:1}"
+      confirm: true
+      note: "EPU60 elliptically-polarizing undulator feeding the soft branch (SST-1; gap SR:C07-ID:G1A{SST1:1-Ax:Gap}-Mtr, phase and polarization mode controls). Soft energy range about 71-2250 eV. From the sst-base energy/soft.py classes (SRC-1)."
+    - name: TenderUndulator
+      family: InsertionDevice
+      pv: "SR:C07-ID:G1A{SST2:1}"
+      confirm: true
+      note: "U42 undulator feeding the tender branch (SST-2; gap SR:C07-ID:G1A{SST2:1-Ax:Gap}-Mtr). From the sst-base energy/tender.py classes (SRC-1)."
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "XF:07ID-PPS{Sh:FE}"
+      confirm: true
+      note: "Front-end photon shutter; downstream photon shutters gate the branches at XF:07IDA-PPS{PSh:n}."
+
+# ===========================================================================
+# OPTICS STAGE: the soft PGM, the tender DCM, the mirrors, the slits
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: 7-ID-A
+  intro: "Condition each branch and set its energy: the soft plane-grating monochromator, the tender double-crystal monochromator, the first and per-branch mirrors, and the white-beam and exit slits. PVs verified against the sst-base energy classes and the endstation TOML device manifests."
+  devices:
+    - name: SoftMonochromator
+      family: GratingMonochromator
+      pv: "XF:07ID1-OP{Mono:PGM1-Ax:"
+      confirm: true
+      note: "Soft-branch plane-grating monochromator (PGM1; grating, mirror-2, grating-X, CFF and VLS controls, energy XF:07ID1-OP{Mono:PGM1-Ax::ENERGY_SP). Reuses GratingMonochromator (graduated across SIX / CSX / ESM); a fourth sighting. Grating set pending (DCM-1)."
+    - name: TenderMonochromator
+      family: Monochromator
+      pv: "XF:07ID6-OP{Mono:DCM1-Ax:"
+      confirm: true
+      note: "Tender-branch double-crystal monochromator (DCM1; Bragg, crystal-select, energy XF:07ID6-OP{Mono:DCM1-Ax::ENERGY_SP). Reuses the Monochromator (crystal Bragg) family. Crystal cut and range pending (DCM-1)."
+    - name: FirstMirror
+      family: Mirror
+      pv: "XF:07IDA-OP{Mir:M1"
+      confirm: true
+      note: "First mirror (M1, a hexapod-mounted plane mirror) in the front optics; reuses the Mirror family."
+    - name: SoftMirror
+      family: Mirror
+      pv: "XF:07ID1-OP{Mir:M3ABC"
+      confirm: true
+      note: "Soft-branch focusing / steering mirror (M3ABC; M4 / M5 mirrors sit downstream per endstation). Reuses the Mirror family."
+    - name: TenderMirror
+      family: Mirror
+      pv: "XF:07IDA-OP{Mir:L1"
+      confirm: true
+      note: "Tender-branch mirror (L1; an L2AB mirror with a wedge sits downstream). Reuses the Mirror family."
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: "XF:07IDA-OP{Slt:01-Ax:"
+      confirm: true
+      note: "Front-end / FOE beam-defining slit."
+    - name: ExitSlit
+      family: Slit
+      pv: "XF:07ID2-BI{Slt:11-Ax:"
+      confirm: true
+      note: "Monochromator exit slit (slitsc) setting the soft-branch resolution."
+    - name: HAXPESSlit
+      family: Slit
+      pv: "XF:07ID2-OP{Slt:12-Ax:"
+      confirm: true
+      note: "Beam-defining slit for the tender HAXPES endstation (haxslt / eslit). Reuses the Slit family."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The master energy axis: a coupled pseudopositioner per branch. The soft branch co-moves the EPU60 gap / phase with the PGM (range about 71-2250 eV); the tender branch co-moves the U42 gap with the DCM. The active branch is selected by the endstation in control. Whether energy is scanned as the measurement is the NEXAFS / spectroscopy question (ENERGY-1)."
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      pv: "XF:07ID-BI{BPM:4}"
+      confirm: true
+      note: "Beam-position monitors and fluorescent-screen / diode diagnostics along the branches (BPM:4 centroid, plus FS / SlitC screen cameras). Binds the loose BeamPositionMonitor family that 4-ID / 8-ID / 9-ID also use (held; DIAG-1)."
+
+# ===========================================================================
+# SAMPLE STAGE: the soft (RSoXS) and tender (HAXPES) sample manipulators
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: SST-1
+  intro: "The sample manipulators for the soft (RSoXS, SST-1) and tender (HAXPES, SST-2) endstations, and the sample-environment thermal control. This stage spans both branches; the enclosure tag is the soft branch, and each device note states its branch. PVs verified against the RSoXS and HAXPES TOML device manifests."
+  note: >
+    SST holds samples in UHV manipulators in each endstation: a four-axis solid-sample
+    stage for RSoXS soft-scattering, and a multi-axis manipulator for HAXPES
+    photoemission. Both reuse the Manipulator family (graduated by ESM). The Linkam /
+    Lakeshore thermal control reuses TemperatureController. A NEXAFS manipulator and
+    the in-situ accessories (a flood gun, a source-measure unit, a syringe pump, an
+    ADR cryostat) are deferred (INSITU-1).
+  devices:
+    - name: RSoXSManipulator
+      family: Manipulator
+      pv: "XF:07ID2-ES1{Stg-Ax:"
+      confirm: true
+      note: "RSoXS soft-scattering solid-sample manipulator (X / Y / Z / Yaw, the primary sample holder). Reuses the Manipulator family (graduated by ESM)."
+    - name: HAXPESManipulator
+      family: Manipulator
+      pv: "XF:07ID1-BI{HAX-Ax:"
+      confirm: true
+      note: "HAXPES photoemission sample manipulator (X / Y / Z / R) in the SST-2 tender branch (its PV sits under the XF:07ID1-BI zone label, a source naming quirk, not the tender DCM's 07ID6 zone). Reuses the Manipulator family (graduated by ESM). The NEXAFS endstation has its own manipulator (XF:07ID1-BI{NXFS-Ax:), deferred."
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "XF:07ID2-ES1{TCtrl:1}LS336:"
+      confirm: true
+      note: "Sample-environment thermal control (a Lakeshore 336). Reuses the TemperatureController family (graduated #350). Which units are live per endstation is TEMP-1."
+
+# ===========================================================================
+# DETECTION STAGE: the soft scattering CCD, the electron analyzer, the calorimeter
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: SST-1
+  intro: "The detectors that make SST multi-technique: the soft-scattering CCD (RSoXS, SST-1), the hemispherical electron analyzer (HAXPES photoemission, SST-2), the microcalorimeter (NEXAFS fluorescence), the flux monitors, and the beamstop. This stage spans both branches; each device note states its branch. PVs verified against the RSoXS, HAXPES, and NEXAFS TOML manifests."
+  note: >
+    Which detector is read decides the technique: the Greateyes CCD for soft X-ray
+    scattering, the Scienta electron analyzer for photoemission, the transition-edge
+    microcalorimeter for energy-resolved fluorescence, or the drain-current / diode
+    channels for absorption. All reuse existing families. The retired or commented
+    detectors (the second RSoXS Greateyes SAXS arm) are not modelled (DET-1).
+  devices:
+    - name: ScatteringDetector
+      family: Camera
+      pv: "XF:07ID1-ES:1{GE:2}"
+      confirm: true
+      note: "Greateyes 4k x 4k CCD area detector (the RSoXS WAXS detector); reuses Camera. A second Greateyes SAXS arm is commented out in source (DET-1)."
+    - name: ElectronAnalyzer
+      family: ElectronAnalyzer     # loose Family (held; ARPES-1)
+      pv: "XF:07ID-ES-SES"
+      confirm: true
+      note: "Scienta SES hemispherical electron analyzer (the HAXPES photoemission detector in the SST-2 tender branch; pass energy, lens mode, kinetic / excitation energy, acquisition mode, from the NSLS-II-SST/haxpes ses.py SES class). A photon-in / electron-out device that fits no photon-detector family. Binds the loose ElectronAnalyzer family ESM introduced; SST-HAXPES is a SECOND sighting (n=2, the same Scienta SES type), so it is recorded as a graduation candidate in the promotion register but held loose pending gate-review (ARPES-1)."
+    - name: CalorimeterSpectrometer
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:07ID-ES{UCAL}:"
+      confirm: true
+      note: "Transition-edge-sensor (TES) microcalorimeter for energy-resolved fluorescence (NEXAFS); it resolves photon energy per event to give a spectrum, so it reuses EnergyDispersiveSpectrometer. Whether a cryogenic microcalorimeter is a per-Asset settings variant of that family (alongside the silicon-drift and germanium variants) or warrants its own Family is a question; carried as reuse for now. Its ADR cryostat (XF:07ID-ES{UCAL:ADR}) is deferred (INSITU-1)."
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: "XF:07ID-ES1{DMR:I400-1}"
+      confirm: true
+      note: "The bound PV is the RSoXS I0 photodiode (I400 electrometer). Other incident-flux channels live under separate prefixes: an Au-mesh I0 on a second I400, and the HAXPES / NEXAFS drain-current and ion-chamber channels on SR570 amplifiers into ADC buffers. Reuses FluxMonitor (graduated #353). The full channel map is pending (DIAG-1)."
+    - name: BeamStop
+      family: BeamStop
+      pv: "XF:07ID2-ES1{BS-Ax:1}Mtr"
+      confirm: true
+      note: "RSoXS motorized beamstop (BeamStopW) blocking the direct beam ahead of the CCD; a separate beamstop-diode current channel reads its intensity. Reuses BeamStop."
+    - name: SampleCamera
+      family: Camera
+      pv: "XF:07ID1-ES:1{Scr:4}"
+      confirm: true
+      note: "On-axis sample-viewing optical camera (RSoXS; side and imager cameras serve alignment). Reuses Camera."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    SST acquisition is gated by the endstation fast shutter; the detectors run in
+    software-triggered modes, with no separate hardware timing box in the profile
+    collection. The endstation in control selects the active branch. Controller box
+    models / firmware are not fully in the profile collection (DRIVE-1).
+  triggering:
+    - name: FastShutter
+      family: Shutter
+      pv: "XF:07ID2-ES1{FSh-Ax:1}Mtr"
+      confirm: true
+      note: "RSoXS fast piezo shutter (a translate axis plus a diode-control line XF:07IDB-CT{DIODE-Local:1}) gating the detector exposure."
+    - name: EndstationMotionController
+      family: MotionController
+      confirm: true
+      note: "Endstation and optics motion controllers driving the manipulators, mirrors, and detector stages across the branches; box model / protocol / IP not fully in the profile collection (DRIVE-1)."
+  software_iocs_not_modeled:
+    [Greateyes, SES, TES, Lakeshore, SR570, I400, ADCBuffer, FloodGun, Keithley, SyringePump]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum                # UHV soft / tender beam path and endstations
+    - kind: LiquidNitrogen        # DCM cooling
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["Greateyes CCD", "analyzer slits", "TES detector", "in-situ sample cells"]

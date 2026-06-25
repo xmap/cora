@@ -407,6 +407,7 @@ _PROMOTION_REVIEWED = {
     "BeamPositionMonitor": "hold: Sensor fold-vs-promote across 4-id/8-id/9-id (DIAG-1/FLUX-1)",
     "Laser": "hold: pump-probe laser model-vs-hazard open (4-id + lcls-mfx; SAMPLE-1)",
     "Backlight": "hold: sample-illumination affordance fold-vs-promote open (i03 + i24; DET-1)",
+    "ElectronAnalyzer": "hold: e- analyzer at n=2 (esm + sst); graduation candidate (ARPES-1)",
 }
 
 # Catalog families bound by no deployment device. Symmetric to the orphan-model

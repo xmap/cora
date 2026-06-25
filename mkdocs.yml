@@ -433,6 +433,19 @@ nav:
         - Techniques: deployments/ixs/techniques.md
         - Governance: deployments/ixs/governance.md
         - Model: deployments/ixs/model.md
+      - SST:
+        - deployments/sst/index.md
+        - Open questions: deployments/sst/questions.md
+        - The beamline:
+          - deployments/sst/equipment/index.md
+          - Source: deployments/sst/beamline.md
+          - Sample: deployments/sst/equipment/sample.md
+          - Detector: deployments/sst/equipment/detector.md
+          - Controls: deployments/sst/equipment/controls.md
+          - Inventory: deployments/sst/inventory.md
+        - Techniques: deployments/sst/techniques.md
+        - Governance: deployments/sst/governance.md
+        - Model: deployments/sst/model.md
     - SLAC:
       - deployments/slac/index.md
       - LCLS-MFX:
