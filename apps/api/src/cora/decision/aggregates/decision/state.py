@@ -120,10 +120,11 @@ from typing import Any, Final, Literal
 from uuid import UUID
 
 from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.decision_signals import REASONING_MAX_LENGTH, DecisionConfidenceSource
 from cora.shared.identity import ActorId
 
 DECISION_CHOICE_MAX_LENGTH = 500
-DECISION_REASONING_MAX_LENGTH = 5000
+DECISION_REASONING_MAX_LENGTH = REASONING_MAX_LENGTH
 DECISION_CONTEXT_MAX_LENGTH = 100
 DECISION_RULE_MAX_LENGTH = 500
 DECISION_ALTERNATIVES_MAX_ENTRIES = 32
@@ -533,34 +534,6 @@ class DecisionRating(StrEnum):
 
 
 DECISION_RATING_COMMENT_MAX_LENGTH = 2000
-
-
-class DecisionConfidenceSource(StrEnum):
-    """How the `confidence` value was computed.
-
-    ISO 42001 audit asks 'how was this confidence derived?'; this
-    enum is the answer. Stored alongside the float so consumers can
-    distinguish calibrated probabilistic estimates from
-    self-reported model claims.
-
-    Values:
-      - `self_reported`: AI decider's own confidence claim, as a
-        learned linguistic pattern. NOT a posterior probability.
-        Lowest audit weight.
-      - `logprob`: derived from token log-probabilities. Closer to
-        a calibrated estimate but still model-internal.
-      - `ensemble`: aggregated over multiple deciders / runs /
-        models. Higher audit weight; carries the implicit promise
-        of uncertainty quantification.
-      - `human`: subjective human confidence rating. Audit-weight
-        is operator-dependent; treat as direction-of-confidence,
-        not a probability.
-    """
-
-    SELF_REPORTED = "self_reported"
-    LOGPROB = "logprob"
-    ENSEMBLE = "ensemble"
-    HUMAN = "human"
 
 
 class ConfidenceBand(StrEnum):
