@@ -253,7 +253,6 @@ _PENDING_METHODS = {
     "magnetic_scattering": "4-ID POLAR magnetic scattering; not yet in pilot scope (TECH-1)",
     "resonant_scattering": "4-ID POLAR resonant scattering; not yet in pilot scope (TECH-1)",
     "xmcd": "4-ID POLAR magnetic circular dichroism; not yet in pilot scope (TECH-1)",
-    "xpcs": "8-ID + 9-ID photon correlation spectroscopy; not yet in pilot scope (TECH-1)",
     "coherent_surface_scattering": "9-ID CSSI surface scattering; not yet in pilot scope (TECH-1)",
     "grazing_incidence_scattering": "9-ID GISAXS / GIWAXS; not yet in pilot scope (TECH-1)",
     "resonant_inelastic_scattering": "SIX RIXS; soft X-ray, not yet in pilot scope (TECH-1)",

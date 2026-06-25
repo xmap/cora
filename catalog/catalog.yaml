@@ -134,6 +134,10 @@ capabilities:
     name: Energy Change
     description: "Set the beam energy as one coordinated move of the energy-driven optic axes (the DMM Bragg arms + M2 offset, and the beam-tracking sample-slit vertical pair) to their per-energy positions. Takes a free energy value (keV) that interpolates the per-axis energy curves; distinct from a future energy_scan sweep. Realized as a Method (the parameterized recipe) and executed as a Procedure (the coordinated move)."
     executor_shapes: [Method, Procedure]
+  - code: cora.capability.xpcs
+    name: X-ray Photon Correlation Spectroscopy
+    description: "Coherent-scattering intensity time series probing sample dynamics: a long, fast frame stream on a coherent area detector under gated exposure, correlated downstream into g2. A science technique above the bare acquisition primitive, parallel to tomography."
+    executor_shapes: [Method]
   # Pending in code: cora.capability.energy_scan, cora.capability.steering.
 
 methods:
@@ -197,6 +201,10 @@ methods:
     capability: cora.capability.tomography
     purpose: "Tiled lateral-translation tomography for samples larger than the field of view, stitched in post."
     needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+  - name: xpcs
+    capability: cora.capability.xpcs
+    purpose: "Coherent-scattering time-series acquisition: a high-rate frame stream on a coherent area detector, gated by the softGlue timing, correlated downstream into g2. The frame stream is DAQ-owned, distinct from a poll-to-Done capture (the event-stream acquisition axis)."
+    needed_families: [Camera, Shutter, TimingController]
   - name: beamline_energy_change
     capability: cora.capability.energy_change
     purpose: "Set the beam energy by driving the energy-tracking optic axes (the DMM Bragg arms + M2 offset, and the sample-slit vertical pair) to their per-energy positions as one coordinated move."

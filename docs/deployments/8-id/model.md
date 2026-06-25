@@ -10,7 +10,7 @@
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `8-ID` added to its beamline list, with XPCS Practices |
 | Extraction provenance | [`research/aps-reverse-engineering/extracted/8id-bits/`](https://github.com/xmap/cora/tree/main/research/aps-reverse-engineering) | the facts report and candidate the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | of the families 8-ID shares with 4-ID, `Transfocator` and `BeamPositionMonitor` are held loose for gate-review (below) while `TemperatureController` has since graduated (#350); 8-ID's other new classes stay loose too |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; XPCS / scattering Methods are not yet coined (TECH-1) |
+| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **`xpcs` added** (capability `cora.capability.xpcs`), the second beamline after LCLS-MFX to need the event-stream acquisition axis; small-angle-scattering and diffraction Methods stay deferred (TECH-1) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 8-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
@@ -37,7 +37,9 @@ The `Assembly(Diffractometer)` designed during the catalog-graduation pass is no
 
 - **The softGlue timing graph.** The XPCS exposure timing runs on a softGlueZynq FPGA fabric (`8idMZ1:`); it is modelled coarsely as one `TimingController`, not as its full signal graph (`XPCS-3`).
 
-- **The XPCS / scattering Methods.** Whether XPCS and small-angle scattering enter CORA's catalog is an owner decision; the Practices render unlinked, pending (`TECH-1`).
+- **The event-stream acquisition axis (the XPCS execution).** The `xpcs` Method is now in the catalog, but the acquisition primitive that runs it is not: an XPCS Run is a DAQ-owned high-rate frame stream (begin/end a per-frame burst correlated downstream into g2), which CORA's poll-to-Done acquisition bodies (`collect` / `discrete` / `continuous`) cannot execute. 8-ID is the second beamline after LCLS-MFX to hit this, which promoted the event-stream axis to Stage 1 (design-locked, gate-review next; recorded in CORA's design memory). No spine code lands in this pass.
+
+- **The remaining scattering Methods.** Whether small-angle scattering and six-circle diffraction enter CORA's catalog is an owner decision; their Practices render unlinked, pending (`TECH-1`).
 
 - **Full asset-tree scenarios and vendor Models.** Beyond the diffractometer Assembly / Fixture scenario above, no `test_8id_*.py` registers the full 8-ID asset tree (the optics spine, the XPCS endstation), and no vendor Models are bound. Those land when the design firms and the team approves.
 
