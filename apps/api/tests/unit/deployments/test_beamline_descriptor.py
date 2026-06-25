@@ -386,6 +386,7 @@ _ALLOWED_LOOSE_FAMILIES = {
     "GratingMonochromator": "staged: soft X-ray PGM (SIX); not a crystal DCM (MONO-1)",
     "SpectrometerArm": "staged: energy-dispersive RIXS arm (SIX); no point-Sensor fit (RIXS-1)",
     "Manipulator": "staged: UHV cryostat manipulator (SIX); no motion Family fits (SAMPLE-1)",
+    "EnergyAnalyzer": "staged: IXS diced crystal energy analyzer; n=1 (ANALYZER-1)",
 }
 
 # The subset of loose families that is conceptually a Supply observation (a

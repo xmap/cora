@@ -257,6 +257,7 @@ _PENDING_METHODS = {
     "coherent_surface_scattering": "9-ID CSSI surface scattering; not yet in pilot scope (TECH-1)",
     "grazing_incidence_scattering": "9-ID GISAXS / GIWAXS; not yet in pilot scope (TECH-1)",
     "resonant_inelastic_scattering": "SIX RIXS; soft X-ray, not yet in pilot scope (TECH-1)",
+    "inelastic_x_ray_scattering": "IXS hard X-ray inelastic scattering; not in scope (TECH-1)",
     "grid_scan": "i03 MX fast grid scan; portable Method not yet earned",
     "mx_data_collection": "i03 MX rotation data collection; Method not yet earned",
     "sample_exchange": "i03 autonomous robotic sample exchange; Method not yet earned",

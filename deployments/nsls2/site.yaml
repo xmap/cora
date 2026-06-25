@@ -24,7 +24,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX]
+  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, IXS]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -47,6 +47,7 @@ practices:
   # X-ray scattering Method not in the imaging-heritage catalog; rendered pending
   # until a technique enters scope (TECH-1).
   - {name: SIX_rixs_practice, method: resonant_inelastic_scattering, pending: true, note: "resonant inelastic X-ray scattering on the soft X-ray spectrometer arm; Method not yet in catalog (TECH-1)"}
+  - {name: IXS_inelastic_scattering_practice, method: inelastic_x_ray_scattering, pending: true, note: "momentum-resolved hard X-ray inelastic scattering: set Q on the six-circle arm, scan incident energy against the fixed crystal analyzer, point-detect I(Q, energy-loss); Method not yet in catalog (TECH-1)"}
   # CHX's defining techniques (XPCS, small-angle scattering) sit on the deferred
   # xpcs / small_angle_scattering Methods that APS 8-ID left pending (TECH-1); no
   # CHX Practice is recorded until those Methods exist. CHX is bound via beamlines.

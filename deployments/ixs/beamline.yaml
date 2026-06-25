@@ -1,0 +1,411 @@
+# IXS beamline descriptor (NSLS-II), reverse-engineered
+#
+# IXS (Inelastic X-ray Scattering) is the NSLS-II momentum-resolved hard X-ray
+# inelastic-scattering beamline at sector 10-ID. It is bound to the NSLS-II Site
+# (deployments/nsls2/site.yaml), the seventh NSLS-II beamline after FXI, HXN, BMM,
+# SRX, SIX, and CHX, and CORA's FIRST hard inelastic-scattering deployment.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/ixs-profile-collection) or inferred,
+# carried `new: true` + `confirm: true` pending IXS staff. EPICS PVs are real and
+# verified against the profile collection startup files; vendor part numbers,
+# serials, and physical positions are not in it and are open questions. Same
+# descriptor mode as FXI / HXN / BMM / SRX / SIX / CHX; this scaffold is descriptor
+# + docs, scenarios deferred.
+#
+# WHAT IS NEW: IXS is CORA's first photon-in / photon-out energy-LOSS technique.
+# The fleet has elastic scattering (SAXS/WAXS, XPDF, powder, XPCS, MX), XRF
+# microprobe, hard XAS absorption (BMM), and soft RIXS (SIX), but no hard inelastic
+# scattering. The acquisition shape is momentum-resolved energy transfer: set the
+# momentum transfer Q with a six-circle reciprocal-space pseudo-axis, then SCAN the
+# incident energy (the DCM + the high-resolution monochromator) against a FIXED
+# crystal analyzer, point-detecting the energy-analyzed scattered beam to build
+# I(Q, energy-loss). meV resolution comes from the high-resolution mono plus a
+# temperature-stabilized diced crystal analyzer.
+#
+# MODELLING: every device reuses an existing catalog or loose Family EXCEPT the
+# signature instrument, the crystal energy analyzer, which is coined as ONE loose
+# Family `EnergyAnalyzer` at n=1 (naming-r3: the <Quantity>Analyzer sibling of
+# 4-ID's loose PolarizationAnalyzer). It is NOT graduated; a second hard
+# crystal-analyzer beamline must independently earn it, and whether EnergyAnalyzer
+# and PolarizationAnalyzer merge into one Analyzer Family is the open ANALYZER-1
+# (see model.md). The six-circle scattering arm binds the catalog Goniometer (the
+# 8-ID / 4-ID diffractometer anatomy), not SIX's energy-dispersive SpectrometerArm.
+# No catalog change; the IXS Capability is deferred as a question (TECH-1).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/ixs/questions.md.
+
+beamline:
+  name: IXS
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 10"          # PV namespace XF:10ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "10-ID in-vacuum undulator IVU22 on SR:C10-ID:G1{IVU22:1}; gap axis. The undulator period/type and whether the 10-ID straight is canted with a sibling beamline are SRC-1 / TOPO-1"
+
+# PV zones along the beamline: FE:C10A (front end), XF:10IDA (DCM + first
+# diagnostics), XF:10IDB (the high-resolution monochromator + secondary source),
+# XF:10IDC (transport optics + table), XF:10IDD (the endstation: KB mirrors,
+# sample, six-circle spectrometer, crystal analyzer, detectors). Whether these are
+# four separate shielded hutches or beam zones within fewer hutches, and the PSS
+# permit leaves, are open (ENC-1, PSS-1).
+enclosures:
+  - name: 10-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf not in source; the front-end and photon shutters and interlock tier are absent from the profile collection and are PSS-1"}
+  - name: 10-ID-B
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the high-resolution-mono hutch; whether A/B/C are one optics hutch or several is ENC-1 (PSS-1)"}
+  - name: 10-ID-C
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; transport optics zone (ENC-1, PSS-1)"}
+  - name: 10-ID-D
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the IXS endstation hutch (ENC-1, PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator, the front end, the DCM, and the high-resolution mono
+# ===========================================================================
+
+insertion-devices:
+  stage: source
+  enclosure: 10-ID-A
+  intro: "The in-vacuum undulator source on the SR:C10-ID straight."
+  note: "One InsertionDevice Asset; in-vacuum is a per-Asset setting (hxn / chx / srx precedent), not a Family split. Period and type are SRC-1."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: "SR:C10-ID:G1{IVU22:1-Ax:Gap}-Mtr"
+      new: true
+      confirm: true
+      note: "IVU22 in-vacuum undulator (gap); the incident-energy pseudo-axis tracks its gap against the DCM Bragg angle (SRC-1)"
+
+machine:
+  stage: source
+  enclosure: 10-ID-A
+  intro: "The machine-level source state and the source-orbit feedback, observed not driven."
+  note: "Observe-only machine state, the loose StorageRing pattern reused from i22 / i03 / i15-1 (MACHINE-1). The undulator-orbit feedback has no clean motion Family and is carried family-less, modelling deferred (FEEDBACK-1, the i03 XBPMFeedback precedent)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only ring state; MACHINE-1)
+      pv: "SR:OPS-BI{DCCT:1}I:Real-I"
+      new: true
+      confirm: true
+      note: "storage-ring current (DCCT); observe-only machine state, not photon-path flux (MACHINE-1)"
+    - name: OrbitFeedback
+      pv: {confirm: "SR:UOFB{...} undulator-orbit feedback (id bump / nudge); modelling deferred, no Family coined at n=1 (FEEDBACK-1)"}
+      new: true
+      confirm: true
+      note: "source-orbit feedback construct; carried family-less pending a modelling decision (FEEDBACK-1)"
+
+front-end:
+  stage: source
+  enclosure: 10-ID-A
+  intro: "The front-end beam-defining slit and the compound-refractive-lens transfocator."
+  note: "The CRL transfocator reuses the loose Transfocator family (4-id / 8-id / 9-id / chx / i22), still held at gate-review (CRL-1); its x/y/th are Asset-layer settings."
+  devices:
+    - name: FrontEndSlit
+      family: Slit
+      pv: "FE:C10A-OP{Slt:"
+      new: true
+      confirm: true
+      note: "front-end beam-defining slit (blades + virtual centre/gap); axis roles are OPT-2"
+    - name: Transfocator
+      family: Transfocator             # loose Family (CRL optic, held; CRL-1)
+      pv: { x: "FE:C10A-OP{CRL:1-Ax:X}Mtr", y: "FE:C10A-OP{CRL:1-Ax:Y}Mtr", th: "FE:C10A-OP{CRL:1-Ax:P}Mtr" }
+      new: true
+      confirm: true
+      note: "front-end compound-refractive-lens transfocator; lens-stack composition is a setting, catalog home is CRL-1"
+
+monochromator:
+  stage: source
+  enclosure: 10-ID-A
+  intro: "The double-crystal monochromator that selects the incident energy, its downstream slit and beam-position monitor, and the incident-energy pseudo-axes."
+  note: >
+    dcm is the Si(111) double-crystal Bragg monochromator: a crystal DCM binds the
+    catalog Monochromator (unlike SIX's plane-grating PGM, which has no Bragg
+    crystal and coined GratingMonochromator). The incident energy is a PseudoAxis:
+    blE couples the DCM Bragg angle to the undulator gap, dcmE drives the DCM alone
+    (MONO-1).
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: { theta: "XF:10IDA-OP{Mono:DCM-Ax:P}Mtr", y: "XF:10IDA-OP{Mono:DCM-Ax:Y}Mtr", z2: "XF:10IDA-OP{Mono:DCM-Ax:Z2}Mtr" }
+      new: true
+      confirm: true
+      note: "Si(111) double-crystal monochromator; crystal cut / d-spacing / energy range are MONO-1; the second-crystal offset z2 is a setting"
+    - name: IncidentEnergy
+      family: PseudoAxis
+      pv: {confirm: "blE / dcmE virtual energy axes, 7.835-17.7 keV; blE = DCM Bragg + IVU22 gap tracking, dcmE = DCM only; the partition rule (arcsin(hc/2dE) + gap lookup) is MONO-1"}
+      new: true
+      confirm: true
+      note: "incident-energy pseudo-axis over the DCM and undulator (the 2-BM beamline_energy_change pattern); MONO-1"
+    - name: MonoSlit
+      family: Slit
+      pv: "XF:10IDA-OP{Slt:1"
+      new: true
+      confirm: true
+      note: "post-DCM beam-defining slit (OPT-2)"
+    - name: BeamPositionMonitor_A
+      family: BeamPositionMonitor      # loose Family (Sensor; fold-vs-promote open, DIAG-1/BPM-1)
+      pv: "XF:10IDA-OP{BPM:1"
+      new: true
+      confirm: true
+      note: "10-ID-A beam-position monitor (x/y + diagnostic foil); NSLS-II-sibling choice (hxn), but the fleet is split with Diagnostic / GenericProbe (DIAG-1/BPM-1); the foil is a setting"
+
+high-resolution-mono:
+  stage: source
+  enclosure: 10-ID-B
+  intro: "The high-resolution monochromator that sets the meV incident-energy resolution, its secondary source aperture, and the high-resolution energy pseudo-axis."
+  note: >
+    hrm2 is the high-resolution monochromator: anatomically still a crystal Bragg
+    mono (up / down crystals), so it binds the catalog Monochromator as a second
+    Asset. Resolution is a tunable setting, not a Family discriminator. The in-line
+    beamstop is a candidate child BeamStop Asset (HRM-1). hrmE is the linear
+    translation-to-energy pseudo-axis (MONO-1).
+  devices:
+    - name: HighResolutionMonochromator
+      family: Monochromator
+      pv: { up_offset: "XF:10IDB-OP{Mono:HRM2-Ax:UTO}Mtr", down_offset: "XF:10IDB-OP{Mono:HRM2-Ax:DTO}Mtr" }
+      new: true
+      confirm: true
+      note: "high-resolution crystal monochromator (HRM2, up / down crystals + picomotors); meV resolution is a setting; the in-line beamstop is HRM-1"
+    - name: HighResolutionEnergy
+      family: PseudoAxis
+      pv: {confirm: "hrmE virtual energy axis; linear crystal-translation-to-energy mapping (constants from the legacy SPEC file); MONO-1"}
+      new: true
+      confirm: true
+      note: "high-resolution incident-energy pseudo-axis over HRM2; the meV energy-transfer scan axis (MONO-1)"
+    - name: SecondarySourceAperture
+      family: Slit
+      pv: "XF:10IDB-OP{SSA:1"
+      new: true
+      confirm: true
+      note: "secondary source aperture; two driven blades = a Slit despite the aperture label (fxi / hxn / srx precedent); OPT-2"
+
+# ===========================================================================
+# TRANSPORT STAGE: the transport optics, table, and second beam-position monitor
+# ===========================================================================
+
+transport:
+  stage: source
+  enclosure: 10-ID-C
+  intro: "The transport slit, the support table, and the second beam-position monitor."
+  devices:
+    - name: TransportSlit
+      family: Slit
+      pv: "XF:10IDC-OP{Slt:4"
+      new: true
+      confirm: true
+      note: "transport beam-defining slit (OPT-2)"
+    - name: Table
+      family: Table
+      pv: "XF:10IDC-OP{Tbl:1"
+      new: true
+      confirm: true
+      note: "support / positioning table; axis set is an Asset-layer setting"
+    - name: BeamPositionMonitor_C
+      family: BeamPositionMonitor      # loose Family (Sensor; fold-vs-promote open, DIAG-1/BPM-1)
+      pv: "XF:10IDC-OP{BPM:2"
+      new: true
+      confirm: true
+      note: "10-ID-C beam-position monitor (x/y + diagnostic foil); DIAG-1/BPM-1"
+
+# ===========================================================================
+# ENDSTATION OPTICS: the KB mirrors, endstation slit, pinhole, and manipulator
+# ===========================================================================
+
+endstation-optics:
+  stage: source
+  enclosure: 10-ID-D
+  intro: "The KB refocusing mirrors, the endstation slit, the focusing pinhole, the absorber wheel, and the multi-axis optics manipulator."
+  note: "vfm / hfm are the vertical / horizontal KB focusing mirrors; orientation is a setting (the SIX Mirror precedent covers even hexapod-mounted mirrors). mcm is a six-DOF coupled manipulator = catalog Hexapod (MCM-1)."
+  devices:
+    - name: VerticalFocusingMirror
+      family: Mirror
+      pv: "XF:10IDD-OP{VFM:1"
+      new: true
+      confirm: true
+      note: "vertical KB focusing mirror; coatings / bend are OPT-1"
+    - name: HorizontalFocusingMirror
+      family: Mirror
+      pv: "XF:10IDD-OP{HFM:1"
+      new: true
+      confirm: true
+      note: "horizontal KB focusing mirror; coatings / bend are OPT-1"
+    - name: EndstationSlit
+      family: Slit
+      pv: "XF:10IDD-OP{Slt:5"
+      new: true
+      confirm: true
+      note: "endstation beam-defining slit (OPT-2)"
+    - name: Pinhole
+      family: Aperture
+      pv: { ux: "XF:10IDD-OP{Pinh:1-Ax:UX}Mtr", uy: "XF:10IDD-OP{Pinh:1-Ax:UY}Mtr", dx: "XF:10IDD-OP{Pinh:1-Ax:DX}Mtr", dy: "XF:10IDD-OP{Pinh:1-Ax:DY}Mtr" }
+      new: true
+      confirm: true
+      note: "positioned focusing pinhole; Aperture (fxi / 9-id round-opening precedent) vs catalog Mask (plain fixed opening) is PH-1"
+    - name: AbsorberWheel
+      family: Filter
+      pv: "XF:10IDD-OP{Abs:1-Ax:Wheel}Mtr"
+      new: true
+      confirm: true
+      note: "discrete absorber-foil wheel; the catalog Filter covers attenuators (i03 / i15-1 precedent), wheel-vs-paddle is a setting"
+    - name: OpticsManipulator
+      family: Hexapod
+      pv: { x: "XF:10IDD-OP{MCM:1-Ax:X}Mtr", y: "XF:10IDD-OP{MCM:1-Ax:Y}Mtr", z: "XF:10IDD-OP{MCM:1-Ax:Z}Mtr", rx: "XF:10IDD-OP{MCM:1-Ax:Rx}Mtr", ry: "XF:10IDD-OP{MCM:1-Ax:Ry}Mtr", rz: "XF:10IDD-OP{MCM:1-Ax:Rz}Mtr" }
+      new: true
+      confirm: true
+      note: "six-DOF coupled optics manipulator (MCM); a parallel-kinematics Hexapod (hxn / i15-1 / 9-id precedent). If the axes are independent serial rotations the read weakens (MCM-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the sample table and the sample-environment translations
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 10-ID-D
+  intro: "The sample positioning table and the sample-environment translations."
+  note: "Pure-translation stacks bind the catalog LinearStage (fxi / hxn SampleStage precedent). Whether the table and the environment translations are one fused Asset or two siblings on their separate PV roots is SAMPLE-1. Not a UHV cryostat Manipulator (SIX): IXS is a hard X-ray ambient endstation, so reusing Manipulator would mirror context not anatomy."
+  devices:
+    - name: SampleTable
+      family: LinearStage
+      pv: { x: "XF:10IDD-OP{Spec:1-Ax:X}Mtr", y: "XF:10IDD-OP{Spec:1-Ax:Y}Mtr", z: "XF:10IDD-OP{Spec:1-Ax:Z}Mtr" }
+      new: true
+      confirm: true
+      note: "sample positioning table (SAMPLE-1)"
+    - name: SampleEnvironment
+      family: LinearStage
+      pv: { x: "XF:10IDD-OP{Env:1-Ax:X}Mtr", y: "XF:10IDD-OP{Env:1-Ax:Y}Mtr", z: "XF:10IDD-OP{Env:1-Ax:Z}Mtr" }
+      new: true
+      confirm: true
+      note: "sample-environment translation stack on its own Env PV root (SAMPLE-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the six-circle spectrometer arm, the crystal energy analyzer,
+# the analyzer thermal stabilization, and the counting detectors
+# ===========================================================================
+
+spectrometer:
+  stage: detection
+  enclosure: 10-ID-D
+  intro: "The six-circle scattering spectrometer arm and its reciprocal-space pseudo-axis, which set the momentum transfer Q."
+  note: >
+    The spectrometer arm (tth / th / chi / phi) is a six-circle scattering geometry
+    driven by the HKL reciprocal-space pseudo-axis, the 8-ID / 4-ID diffractometer
+    anatomy, so it binds the catalog Goniometer (NOT SIX's energy-dispersive
+    SpectrometerArm, which is a different, dispersive instrument). Whether the arm
+    plus the crystal analyzer compose an Assembly(Diffractometer)-style Fixture is
+    ANALYZER-1; like 8-ID / 4-ID in descriptor mode, the Assembly is named as a
+    follow-on, not materialized here.
+  devices:
+    - name: Spectrometer
+      family: Goniometer
+      pv: { two_theta: "XF:10IDD-OP{Spec:1-Ax:2Th}Mtr", theta: "XF:10IDD-OP{Spec:1-Ax:Th}Mtr", chi: "XF:10IDD-OP{Spec:1-Ax:ChiA}Mtr", phi: "XF:10IDD-OP{Spec:1-Ax:PhiA}Mtr" }
+      new: true
+      confirm: true
+      note: "six-circle scattering arm; the scattering angle two_theta sets |Q|, driven by the reciprocal-space pseudo-axis (ANALYZER-1 for the Assembly question)"
+    - name: ReciprocalSpace
+      family: PseudoAxis
+      pv: {confirm: "HKLPseudoV2 (H, K, L) over the six-circle tth / th / chi / phi via the SixCircle kinematics; SamplePrime sample-frame rotation; the geometry constants are from the legacy SPEC file"}
+      new: true
+      confirm: true
+      note: "six-circle reciprocal-space pseudo-axis (the Diffractometer reciprocal_space PseudoAxis pattern); the read-only derived angles present a Sensor read-back facet (ENERGY-1)"
+
+analyzer:
+  stage: detection
+  enclosure: 10-ID-D
+  intro: "The crystal energy analyzer (a diced multi-crystal Bragg analyzer), its slit, and the per-crystal thermal stabilization."
+  note: >
+    The energy analyzer is the signature IXS instrument: a diced multi-crystal Bragg
+    analyzer (six diced crystals d1-d6, each with theta + phi orientation and PID
+    temperature stabilization) that Bragg-reflects the scattered beam to select a
+    fixed final energy, focusing energy-selected photons onto the counting
+    detectors. No catalog or loose Family fits this anatomy (it is not the catalog
+    EnergyDispersiveSpectrometer, a per-event point Sensor, nor a Monochromator, an
+    upstream incident optic, nor SIX's dispersive SpectrometerArm), so it is coined
+    as ONE loose Family `EnergyAnalyzer` at n=1, the <Quantity>Analyzer sibling of
+    4-ID's loose PolarizationAnalyzer (naming-r3-cleared). It is NOT graduated; a
+    second hard crystal-analyzer beamline must independently earn it, and whether
+    EnergyAnalyzer and PolarizationAnalyzer merge into one Analyzer Family is
+    ANALYZER-1. The six diced crystals are carried as settings on the one Asset; the
+    convention for promoting each identity-bearing crystal (own theta / phi + own
+    temperature) to a child Asset is at a rule-of-three gate (XTAL-1).
+  devices:
+    - name: EnergyAnalyzer
+      family: EnergyAnalyzer           # loose Family (n=1; diced crystal Bragg energy analyzer; ANALYZER-1)
+      pv: { coarse_theta: "XF:10IDD-ES{Ez4:1-Ax:1}Mtr", coarse_chi: "XF:10IDD-ES{Ez4:1-Ax:2}Mtr", wide_theta: "XF:10IDD-ES{Ez4:1-Ax:3}Mtr", wide_chi: "XF:10IDD-ES{Ez4:1-Ax:4}Mtr", up_y: "XF:10IDD-OP{Analy:1-Ax:UY}Mtr", down_y: "XF:10IDD-OP{Analy:1-Ax:DY}Mtr" }
+      new: true
+      confirm: true
+      note: "diced crystal Bragg energy analyzer; six diced crystals d1-d6 (each theta + phi, XF:10IDD-ES{Ez4:2/3/4}) carried as settings; child-Asset-per-crystal is XTAL-1; presents Positioner with Sensor-vs-Positioner a confirm (the SIX SpectrometerArm precedent); the merge with PolarizationAnalyzer is ANALYZER-1"
+    - name: AnalyzerSlit
+      family: Slit
+      pv: "XF:10IDD-ES{Ez4:5"
+      new: true
+      confirm: true
+      note: "analyzer-chamber beam-defining slit (top / bottom / inboard / outboard); OPT-2"
+    - name: AnalyzerThermalControl
+      family: TemperatureController
+      pv: {confirm: "six PID loops XF:10IDD-CT{EPid:01-06}PID.VAL stabilizing the diced crystal temperatures (DxtalTemp)"}
+      new: true
+      confirm: true
+      note: "per-crystal thermal stabilization for energy stability; presents the Regulator Role (graduated Family reused). Six PID channels modelled as one Asset; six-vs-one Assets and the parent (analyzer vs per-crystal child) are TEMP-1 / XTAL-1"
+
+detection:
+  stage: detection
+  enclosure: 10-ID-D
+  intro: "The counting detectors: the quad electrometers reading the energy-analyzed signal and the incident-flux scaler."
+  note: >
+    IXS detection is point / current-integrating, not imaging: the diced analyzer
+    focuses energy-selected photons onto photodiodes read by quad electrometers,
+    the science detector (the BMM QuadEM-as-primary precedent). These bind the
+    catalog FluxMonitor (Sensor). The scaler I0 channel is the incident-flux
+    monitor, also FluxMonitor. Whether the analyzer-focus photodiode is a separate
+    Photodiode Asset or just an electrometer channel is DET-1 (default: a channel,
+    not a standalone Asset).
+  devices:
+    - name: AnalyzerElectrometers
+      family: FluxMonitor
+      pv: {confirm: "NSLS_EM quad electrometers XF10ID-BI:AH171-175 and XF:10ID-BI:TM176/178 reading the analyzed-beam / drain-current channels; the science point detector (DET-1)"}
+      new: true
+      confirm: true
+      note: "quad electrometers reading the energy-analyzed scattered signal as a scalar current (the BMM primary-detector precedent); DET-1"
+    - name: IncidentScaler
+      family: FluxMonitor
+      pv: "XF:10IDD-ES{Sclr:1}"
+      new: true
+      confirm: true
+      note: "counting scaler; chan21 = the I0 incident-flux monitor for normalization (DET-1)"
+
+# Cross-cutting control. IXS runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were
+# read from the ixs-profile-collection startup files and carried confirm (CTRL-1).
+controls:
+  intro: >
+    IXS runs on the NSLS-II EPICS / ophyd control stack, the same floor as FXI,
+    HXN, BMM, SRX, SIX, and CHX. The device handles above are bound from the
+    beamline's bluesky profile collection (NSLS2/ixs-profile-collection), carried
+    confirm pending staff verification (CTRL-1). The IXS acquisition (the incident-
+    energy scan, the six-circle Q moves, the analyzer alignment, the counting) runs
+    through bluesky plans and the queue server (the startup 97-99 plans, the
+    98-alignment scans, the SPEC-derived macros); that orchestration is the seam
+    CORA's edge replaces, driving through ophyd / EPICS, while the file-writing to
+    the NSLS-II filestore is plumbing CORA observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an IXS run needs. The optics and
+    the spectrometer run under vacuum; the diced crystal analyzer draws on the PID
+    thermal-stabilization loops (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics and the spectrometer beam path are under vacuum (SUP-1)"
