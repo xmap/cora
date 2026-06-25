@@ -1,0 +1,270 @@
+# SST beamline descriptor (NSLS-II), reverse-engineered
+#
+# SST (Spectroscopy Soft and Tender) is the NSLS-II soft + tender X-ray spectroscopy
+# beamline at sector 7-ID. It has two branches off a shared front end: SST-1 (soft,
+# a plane-grating monochromator) and SST-2 (tender, a Si double-crystal mono). It is
+# bound to the NSLS-II Site (deployments/nsls2/site.yaml), the tenth NSLS-II beamline
+# and CORA's fourth soft X-ray deployment.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source and carried `new: true` + `confirm: true` pending SST staff. SST is the
+# config-driven extraction mode: device instances live in the
+# NSLS2/<endstation>-profile-collection/startup/devices.toml files and the per-axis
+# PV grammar in the NSLS-II-SST/sst-base + NSLS-II-SST/haxpes pip libraries; the PVs
+# below are the toml prefix combined with the class Cpt suffixes, each verified
+# against a source line. No vendor Models bound.
+#
+# SCOPE: the shared front end + the SST-1 soft PGM + the RSoXS endstation, and the
+# SST-2 tender DCM + the HAXPES endstation. CONSOLIDATION: SST is the 4th soft X-ray
+# PGM (reuses the catalog GratingMonochromator) and the 3rd UHV manipulator (reuses
+# Manipulator); its tender DCM reuses Monochromator. It GRADUATES the ElectronAnalyzer
+# Family: the HAXPES Scienta SES is the 2nd hemispherical electron analyzer after ESM,
+# earning it into the catalog (ESM's references are swept loose -> graduated this PR).
+#
+# DELIBERATELY OUT OF THIS CUT (recorded on docs/deployments/sst/model.md): the UCAL /
+# NEXAFS TES microcalorimeter endstation; the VPPEM photoemission microscope; the
+# secondary flux diagnostics and screen cameras. The I400 ion chamber is modelled as
+# its single instantiated channel only (the multi-channel device is not in the profile).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/sst/questions.md.
+
+beamline:
+  name: SST
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 7"           # PV namespace XF:07ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "two EPUs on the SR:C07-ID straight: EPU60 feeds SST-1 soft (SR:C07-ID:G1A{SST1:1), a U42 feeds SST-2 tender (SR:C07-ID:G1A{SST2:1); periods + polarization are SRC-1"
+
+# PV zones: XF:07IDA (shared front-end optics), XF:07ID1 / XF:07ID2 (the SST-1 soft
+# branch + RSoXS endstation + shared diagnostics), XF:07ID6 / XF:07ID-ES (the SST-2
+# tender branch + HAXPES endstation). Whether each is a separate shielded hutch, and
+# the PSS permit leaves, are open (ENC-1, PSS-1).
+enclosures:
+  - name: 7-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf not in source; front-end shutter XF:07ID-PPS{Sh:FE}, photon shutters XF:07IDA-PPS{PSh:4/7/10} (PSS-1)"}
+  - name: SST-1
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the soft branch + RSoXS endstation (XF:07ID1 / XF:07ID2); hutch grouping is ENC-1"}
+  - name: SST-2
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the tender branch + HAXPES endstation (XF:07ID6 / XF:07ID-ES); hutch grouping is ENC-1"}
+
+# ===========================================================================
+# SOURCE STAGE: the EPUs, the shared front-end optics, and the two monochromators
+# ===========================================================================
+
+insertion-devices:
+  stage: source
+  enclosure: 7-ID-A
+  intro: "The two elliptically-polarizing undulators feeding the soft and tender branches."
+  note: "Two InsertionDevice Assets; each adds a polarization (phase) axis beyond gap, carried as a setting. The EPU PVs are hardcoded in the sst-base EnergySoft/EnergyTender classes, not the devices.toml (SRC-1)."
+  devices:
+    - name: Undulator_Soft
+      family: InsertionDevice
+      pv: "SR:C07-ID:G1A{SST1:1"
+      new: true
+      confirm: true
+      note: "EPU60 feeding the SST-1 soft branch (gap + phase); period and polarization model are SRC-1"
+    - name: Undulator_Tender
+      family: InsertionDevice
+      pv: "SR:C07-ID:G1A{SST2:1"
+      new: true
+      confirm: true
+      note: "U42 undulator feeding the SST-2 tender branch (gap); coupled to the DCM energy (SRC-1)"
+
+front-end-optics:
+  stage: source
+  enclosure: 7-ID-A
+  intro: "The shared front-end mirror, the quad slit, and the front-end / photon shutters."
+  note: "M1 is the front-end FMB hexapod mirror; the FOE quad slits define the shared beam (OPT-1, OPT-2)."
+  devices:
+    - name: Mirror_1
+      family: Mirror
+      pv: "XF:07IDA-OP{Mir:M1"
+      new: true
+      confirm: true
+      note: "shared front-end FMB hexapod mirror M1 (x/y/z/pitch/yaw/roll axes -Ax:*}Mtr_MON; OPT-1)"
+    - name: FrontEndSlit
+      family: Slit
+      pv: "XF:07IDA-OP{Slt:01-Ax:"
+      new: true
+      confirm: true
+      note: "FOE FMBO quad slit (top/bottom/inboard/outboard blades; OPT-2)"
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "XF:07ID-PPS{Sh:FE}"
+      new: true
+      confirm: true
+      note: "front-end safety shutter, PPS-gated"
+    - name: PhotonShutter
+      family: Shutter
+      pv: "XF:07IDA-PPS{PSh:7}"
+      new: true
+      confirm: true
+      note: "default photon shutter (psh7); psh4 / psh10 also present (PSS-1)"
+
+soft-optics:
+  stage: source
+  enclosure: SST-1
+  intro: "The SST-1 plane-grating monochromator that selects the soft X-ray energy."
+  note: >
+    The soft PGM reuses the catalog GratingMonochromator Family (SST is the 4th soft
+    X-ray PGM after SIX, CSX, ESM). Its instance prefix is empty in the devices.toml
+    (a config-driven factory); the real base XF:07ID1-OP{Mono:PGM1 is hardcoded in the
+    sst-base EnergySoft class. Energy range 71-2250 eV; the pseudo energy + polarization
+    axes live on the EnergySoft layer (MONO-1).
+  devices:
+    - name: Monochromator_Soft
+      family: GratingMonochromator     # catalog Family (4th soft X-ray PGM after SIX/CSX/ESM)
+      pv: { grating_pitch: "XF:07ID1-OP{Mono:PGM1-Ax:GrtP}Mtr", premirror_pitch: "XF:07ID1-OP{Mono:PGM1-Ax:MirP}Mtr", grating_x: "XF:07ID1-OP{Mono:PGM1-Ax:GrtX}Mtr", premirror_x: "XF:07ID1-OP{Mono:PGM1-Ax:MirX}Mtr" }
+      new: true
+      confirm: true
+      note: "plane-grating monochromator (PGM1); CFF :CFF_SP + VLS :VLS_B2.A + energy :ENERGY_SP set the energy; grating set is MONO-1"
+
+tender-optics:
+  stage: source
+  enclosure: SST-2
+  intro: "The SST-2 Si double-crystal monochromator and the tender refocusing mirrors."
+  note: >
+    The tender DCM reuses the catalog Monochromator Family. Its control PVs hardcode
+    XF:07ID6-OP{Mono:DCM1 (not the undulator prefix). L1 and L2AB are the tender FMB
+    hexapod mirrors (OPT-1, MONO-1).
+  devices:
+    - name: Monochromator_Tender
+      family: Monochromator
+      pv: { bragg: "XF:07ID6-OP{Mono:DCM1-Ax:Bragg}Mtr", crystal_x: "XF:07ID6-OP{Mono:DCM1-Ax:X}Mtr", x2_perp: "XF:07ID6-OP{Mono:DCM1-Ax:Per2}Mtr", x2_pitch: "XF:07ID6-OP{Mono:DCM1-Ax:P2}Mtr" }
+      new: true
+      confirm: true
+      note: "Si double-crystal mono (DCM1); crystal-select :XTAL_SEL, energy :ENERGY_SP; crystal set + range are MONO-1"
+    - name: Mirror_L1
+      family: Mirror
+      pv: "XF:07IDA-OP{Mir:L1"
+      new: true
+      confirm: true
+      note: "tender FMB hexapod mirror L1 (OPT-1)"
+    - name: Mirror_L2AB
+      family: Mirror
+      pv: "XF:07IDA6-OP{Mir:L2AB"
+      new: true
+      confirm: true
+      note: "tender FMB hexapod mirror L2AB; separate wedge axis (OPT-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the RSoXS (soft) and HAXPES (tender) sample manipulators
+# ===========================================================================
+
+rsoxs-sample:
+  stage: sample
+  enclosure: SST-1
+  intro: "The RSoXS UHV sample manipulator (SST-1 soft endstation)."
+  note: "The RSoXS sample manipulator reuses the catalog Manipulator Family (SST is the 3rd UHV manipulator after SIX + ESM)."
+  devices:
+    - name: RSoXSManipulator
+      family: Manipulator
+      pv: { x: "XF:07ID2-ES1{Stg-Ax:X}Mtr", y: "XF:07ID2-ES1{Stg-Ax:Y}Mtr", z: "XF:07ID2-ES1{Stg-Ax:Z}Mtr", r: "XF:07ID2-ES1{Stg-Ax:Yaw}Mtr" }
+      new: true
+      confirm: true
+      note: "RSoXS four-axis UHV sample manipulator (x/y/z + yaw); pseudo sample-frame axes on the Manipulator layer (SAMPLE-1)"
+
+haxpes-sample:
+  stage: sample
+  enclosure: SST-2
+  intro: "The HAXPES UHV sample manipulator and slit (SST-2 tender endstation)."
+  note: "The HAXPES sample manipulator reuses the catalog Manipulator Family; the HAXPES quad slit defines the analyzed spot."
+  devices:
+    - name: HAXPESManipulator
+      family: Manipulator
+      pv: { x: "XF:07ID1-BI{HAX-Ax:SampX}Mtr", y: "XF:07ID1-BI{HAX-Ax:SampY}Mtr", z: "XF:07ID1-BI{HAX-Ax:SampZ}Mtr", r: "XF:07ID1-BI{HAX-Ax:SampTh}Mtr" }
+      new: true
+      confirm: true
+      note: "HAXPES four-axis UHV sample manipulator (x/y/z + theta) (SAMPLE-1)"
+    - name: HAXPESSlit
+      family: Slit
+      pv: "XF:07ID2-OP{Slt:12-Ax:"
+      new: true
+      confirm: true
+      note: "HAXPES quad slit (top/bottom/inboard/outboard); the exit / analyzed-spot slit (OPT-2)"
+
+# ===========================================================================
+# DETECTION STAGE: the RSoXS WAXS camera + flux, and the HAXPES electron analyzer
+# ===========================================================================
+
+rsoxs-detectors:
+  stage: detection
+  enclosure: SST-1
+  intro: "The RSoXS WAXS area detector and the incident-flux monitors."
+  note: "The Greateyes WAXS CCD reuses the catalog Camera Family; the Au-mesh and photodiode I0 monitors reuse FluxMonitor (DET-1)."
+  devices:
+    - name: WAXSDetector
+      family: Camera
+      pv: "XF:07ID1-ES:1{GE:2}"
+      new: true
+      confirm: true
+      note: "Greateyes GE 4k4k WAXS scattering CCD (areaDetector); the SAXS twin is not instantiated (DET-1)"
+    - name: AuMeshMonitor
+      family: FluxMonitor
+      pv: "XF:07ID-BI[ADC:3-Ch:2]"
+      new: true
+      confirm: true
+      note: "Au-mesh I0 monitor (1500 lpi mesh, ~55% transmission), single ADC channel (DET-1)"
+    - name: IzeroPhotodiode
+      family: FluxMonitor
+      pv: "XF:07ID-ES1{DMR:I400-1}:IC3_MON"
+      new: true
+      confirm: true
+      note: "Izero photodiode on the DMR I400 electrometer, channel IC3 (DET-1)"
+
+haxpes-detectors:
+  stage: detection
+  enclosure: SST-2
+  intro: "The HAXPES hemispherical electron analyzer and ion chamber."
+  note: >
+    The Scienta SES is the HAXPES detector and the device that GRADUATES the
+    ElectronAnalyzer Family (the 2nd hemispherical electron analyzer after ESM). The
+    I400 ion chamber is modelled as its one instantiated channel only (DET-1).
+  devices:
+    - name: ElectronAnalyzer
+      family: ElectronAnalyzer         # catalog Family (graduated this PR: ESM + SST, 2nd Scienta SES)
+      pv: "XF:07ID-ES-SES"
+      new: true
+      confirm: true
+      note: "Scienta SES hemispherical electron energy analyzer; pass-energy (:pass_en_SP) / lens-mode (:lens_mode_SP) / kinetic-energy-window controls; the HAXPES detector (PES-1, DET-1)"
+    - name: IonChamber
+      family: FluxMonitor
+      pv: "XF:07ID-BI{DM7:I400-1}:IC1_MON"
+      new: true
+      confirm: "only the single IC1_MON channel is instantiated in the profile; the full multi-channel I400 (IC1-IC4) is not, so the channel set is unconfirmed (DET-1)"
+      note: "I400 electrometer ion-chamber channel (DM7); incident-flux monitor (DET-1)"
+
+# Cross-cutting control. SST runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were read
+# from the SST profile collections (config-driven: devices.toml + sst-base) (CTRL-1).
+controls:
+  intro: >
+    SST runs on the NSLS-II EPICS / ophyd control stack, the same floor as the other
+    NSLS-II beamlines, but its instrument config is config-driven: device instances are
+    declared in NSLS2/sst-rsoxs-profile-collection and NSLS2/sst-haxpes-profile-collection
+    startup/devices.toml, and the per-axis PV grammar lives in the NSLS-II-SST/sst-base
+    + haxpes libraries (the nbs-bl / sst-base framework). The handles above combine the
+    toml prefix with the class suffixes, carried confirm (CTRL-1). The soft-energy and
+    tender-energy moves, the RSoXS scans, and the HAXPES analyzer sweeps run through
+    bluesky plans + the queue server; that orchestration is the seam CORA's edge
+    replaces, driving through ophyd / EPICS (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an SST run needs. The optics and both
+    endstations are under vacuum (UHV at the photoemission endstation) (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics and the soft / tender endstations are UHV (SUP-1)"
