@@ -3,12 +3,12 @@
 We derive four recurring tasks from what a beamline scientist needs when
 returning to a conducted run, and make each concrete as a query over the
 event log paired with a visual encoding (Table~\ref{tab:tasks}). The tasks are
-not hypothetical: each is a question we ask of the 2-BM alignment run in
-Section~\ref{sec:scrubber}, and each is answerable only because the record is
+not hypothetical: each is a question we ask of the lights-out, agent-supervised
+run in Section~\ref{sec:scrubber}, and each is answerable only because the record is
 an ordered, immutable event stream rather than a final-state snapshot.
 
 \paragraph{T1, recover the interrupted state.}
-\emph{What was in flight when this run stopped?} The conductor records intent
+\emph{What was in flight when the beam dropped?} The conductor records intent
 before effect, so an unfinished step appears in the log as an activity that
 was opened but never closed. The query finds the activity with no matching
 outcome; the encoding draws it as an open interval, a visible gap rather than
@@ -33,8 +33,8 @@ the encoding is an inline fidelity badge that turns ``trust me'' into ``the
 view checked it.''
 
 These four tasks order the rest of the paper: T2 and T3 drive the scrubber
-itself (Section~\ref{sec:scrubber}), T1 drives the crash-recovery walkthrough
-(Section~\ref{sec:crash}), and T4 rests on the immutable substrate
+itself (Section~\ref{sec:scrubber}), T1 drives the interruption-recovery
+walkthrough (Section~\ref{sec:crash}), and T4 rests on the immutable substrate
 (Section~\ref{sec:substrate}).
 
 \begin{table}[t]

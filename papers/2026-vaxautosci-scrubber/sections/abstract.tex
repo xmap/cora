@@ -1,17 +1,22 @@
 Autonomous and closed-loop scientific instruments, from self-driving labs to
-conducted synchrotron experiments, generate provenance at machine speed: dense
-in decisions, multi-pass, and largely invisible to the humans who must later
-audit it. A scientist returning to a finished run asks plain questions: why did
-it stop here, which pass converged, can I prove what it actually did?
-Conventional post-hoc provenance graphs flatten the temporal and causal texture
-those questions depend on. We observe that event-sourced systems of record
-already answer such questions internally, because they reconstruct any past
-state by folding an immutable, ordered event stream. We turn that fold into an
-interaction. This paper contributes (1) a task abstraction for auditing
-closed-loop runs, and (2) a \emph{replay scrubber}: a draggable time cursor
-that replays a run to any recorded instant, showing per-step activity
-swim-lanes, nested convergence brackets colored by verdict, and a
-content-addressed fidelity badge that lets the view verify the replayed state
-matches the record. We ground the prototype in a real closed-loop autofocus
-alignment on the APS 2-BM micro-CT beamline, and discuss how event-sourced
-records reshape provenance visualization for autonomous science.
+agent-supervised synchrotron runs, generate provenance at machine speed: dense
+in decisions, multi-pass, and shared between people and agents, yet largely
+invisible to the humans who must later audit it. A scientist returning to an
+unattended overnight run asks plain questions: did the alignment converge, what
+was in flight when the beam dropped, who decided to resume, can I prove what was
+recorded? Conventional post-hoc provenance graphs flatten the temporal and
+causal texture those questions depend on. We observe that event-sourced systems
+of record already answer such questions internally, because they reconstruct any
+past state by folding an immutable, ordered event stream. We turn that fold into
+an interaction. This paper contributes (1) a task abstraction for auditing
+closed-loop runs, and (2) a \emph{replay scrubber}: a draggable time cursor that
+replays a run to any recorded instant, showing a run-lifecycle lane of who or
+what drove each transition, nested convergence brackets colored by verdict,
+open-interval markers for unfinished steps, and a content-addressed fidelity
+badge that lets the view verify the replayed state matches the record. We ground
+the prototype in a real lights-out, agent-supervised run on the APS 2-BM micro-CT
+beamline, in which CORA conducts a rotation-axis centering alignment, a
+RunSupervisor agent holds the run on beam loss and auto-resumes it, and the
+scrubber localizes the interrupted projection by folding to the beam-loss
+instant. We discuss how event-sourced records reshape provenance visualization
+for autonomous science.

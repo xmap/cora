@@ -1,62 +1,64 @@
 % Introduction body. The section heading is issued by the driver file
 % (main.tex uses \firstsection, preview.tex uses \section).
 
-A modern beamline increasingly runs itself. Alignment, focusing, and in some
-settings the choice of what to measure next are handed to software that
-decides and acts at machine speed, whether in a self-driving materials
-laboratory or in a synchrotron procedure conducted on the scientist's behalf.
-When such a run ends, or stops unexpectedly, a human still has to answer for
-it. The first questions are plain: why did it stop here, which pass finally
-converged, and can I prove what the instrument actually did?
+A beamline increasingly runs itself overnight. An operator queues a sample,
+hands the instrument to an automated routine, and goes home; software aligns the
+sample, starts acquiring, and a supervising agent watches the beam and holds or
+resumes the run as conditions change. When the scientist returns in the morning,
+they still have to answer for what happened while no one was watching. The first
+questions are plain: did the alignment converge, what was in flight when the
+beam dropped at 2am, who or what decided to resume, and can I prove the data was
+taken under the conditions I think it was?
 
 These are provenance questions, but the provenance of an autonomous run is
 unlike the human-authored record most tools were built for. It arrives at
-machine speed, it is dense in decisions, and it is multi-pass: a single
-alignment may bracket a peak over several iterations, each with its own
-verdict. Post-hoc provenance graphs and flat logs flatten exactly the
-temporal and causal texture these questions depend on. When a run is
-interrupted the log simply stops, leaving the auditor to guess what was in
-flight and whether it took effect, and a static record offers no way to show
-that it has not been altered after the fact.
+machine speed, it is dense in decisions, it is multi-pass, and control passes
+back and forth between people and agents. Post-hoc provenance graphs and flat
+logs flatten exactly the temporal and causal texture these questions depend on.
+When the beam drops, the log simply stops, leaving the auditor to guess what was
+in flight and whether it took effect; a static record offers no way to show that
+it has not been altered after the fact; and nothing says who was driving at each
+moment.
 
-We observe that one class of system already answers such questions
-internally. An event-sourced system of record never stores current state
-directly; it reconstructs any past state on demand by folding an immutable,
-ordered stream of events. Our central idea is to expose that fold as an
-interaction. The result is a \emph{replay scrubber}: a draggable time cursor
-that an auditor moves through a recorded run, with the system folding the
-event stream to the chosen instant and rendering the state as it was then.
-Because the same fold that makes the backend correct is the one driving the
-view, replay is faithful by construction, and a content-addressed check of
-the recorded expansion lets the scrubber verify, rather than merely assert,
-that the state shown at the cursor matches the record.
+We observe that one class of system already answers such questions internally.
+An event-sourced system of record never stores current state directly; it
+reconstructs any past state on demand by folding an immutable, ordered stream of
+events. Our central idea is to expose that fold as an interaction. The result is
+a \emph{replay scrubber}: a draggable time cursor that an auditor moves through a
+recorded run, with the system folding the event stream to the chosen instant and
+rendering the state as it was then, who or what caused it, and whether the
+reconstruction is faithful. Because the same fold that makes the backend correct
+is the one driving the view, replay is faithful by construction, and a
+content-addressed check of the recorded expansion lets the scrubber verify,
+rather than merely assert, that the state shown at the cursor matches the record.
 
-We ground the design in a real run from an operating instrument: a
-CORA-conducted autofocus alignment on the APS 2-BM micro-CT beamline, a
-four-iteration peak-bracket search with per-step activities and a converged
-verdict on the final pass. We are deliberate about scope. This is a
-\emph{conducted}, closed-loop procedure; the fully agent-closed
-perceive-decide-act loop, in which an AI selects each next action, is out of
-scope, and the prototype is a research visualization over exported run data
-rather than a deployed interface.
+We ground the design in a real run from an operating instrument: a lights-out,
+agent-supervised run at the APS 2-BM micro-CT beamline, in which CORA conducts a
+rotation-axis centering alignment that converges, a first projection is in flight
+when the beam drops, and a deterministic RunSupervisor agent holds the run and
+auto-resumes it when the beam returns. We are deliberate about scope. The agent
+supervises and recovers a \emph{conducted} run, recording each hold and resume
+as a decision; the fully agent-closed perceive-decide-act loop, in which a model
+selects the science itself, is out of scope, and the prototype is a research
+visualization over exported run data rather than a deployed interface.
 
 \medskip\noindent This paper makes four contributions:
 \begin{itemize}
   \item \textbf{Replay-native provenance (insight).} We reframe the
         fold-on-read mechanism of an event-sourced system of record as an
         interaction primitive for provenance: the fold the backend uses to
-        reconstruct state becomes a control the auditor drags through
-        recorded time, rather than a static post-hoc graph to read.
+        reconstruct state becomes a control the auditor drags through recorded
+        time, rather than a static post-hoc graph to read.
   \item \textbf{A task abstraction for auditing closed-loop runs.} We
-        characterize four recurring audit tasks and map each to an
-        event-log query and a visual encoding.
-  \item \textbf{The replay scrubber (technique).} We design a single
-        timeline that unifies per-step activity swim-lanes, nested
-        convergence brackets colored by verdict, open-interval markers for
-        unfinished steps, a draggable fold-to-version cursor, and a
-        content-addressed fidelity badge.
+        characterize four recurring audit tasks and map each to an event-log
+        query and a visual encoding.
+  \item \textbf{The replay scrubber (technique).} We design a single timeline
+        that unifies a run-lifecycle lane showing who or what drove each
+        transition, nested convergence brackets colored by verdict,
+        open-interval markers for unfinished steps, a draggable fold-to-version
+        cursor, and a content-addressed fidelity badge.
   \item \textbf{A grounded case study.} We demonstrate the tasks on a real
-        closed-loop autofocus alignment on the APS 2-BM micro-CT beamline,
-        including an interrupted-run scenario in which the scrubber localizes
-        the exact unfinished step.
+        lights-out, agent-supervised run on the APS 2-BM micro-CT beamline,
+        including the beam-loss instant at which the scrubber localizes the
+        interrupted projection and the agent that held the run.
 \end{itemize}

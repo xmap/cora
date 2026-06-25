@@ -1,44 +1,46 @@
 \label{sec:scrubber}
-% Design + walkthrough. Numbers come from data/focus_run.json (mirrors the
-% test_2bm_alignment_focus.py run). Figure 1 is rendered from that data by
-% figures/render_f1.py; the fidelity-badge inset (Figure 2) is still pending.
-% Wall-clock spacing on the axis is synthetic (see data/README.md).
+% Design + walkthrough over the lights-out run. Numbers come from
+% data/lights_out_run.json (mirrors test_2bm_lights_out_supervised_alignment.py).
+% Figure 1 is rendered by figures/render_f1.py; wall-clock spacing on the axis
+% is synthetic and compressed (the hold can last tens of minutes).
 
 \begin{figure*}[t]
   \centering
   \includegraphics[width=\textwidth]{figures/f1_scrubber}
-  \caption{The replay scrubber on a CORA-conducted APS 2-BM autofocus
-  alignment. Swim-lanes hold the per-step setpoint, acquire, and check
-  activities; the band above carries one convergence bracket per pass, colored
-  by verdict (amber open, green converged), tracking the peak-bracket search as
-  it narrows to $[0.500, 1.000]$\,mm and bisects to $0.750$\,mm. The
-  fold-to-version cursor is set to pass~3, and the read-out shows the state
-  reconstructed by folding the event stream to that instant, with the fidelity
-  check passed. This clean, completed run has no in-flight steps, so no open
-  intervals appear (those are the subject of Figure~\ref{fig:crash}). Time spacing is
-  synthetic.}
+  \caption{The replay scrubber over one lights-out, agent-supervised run at APS
+  2-BM. The top lane is the run lifecycle, colored by who drove each transition:
+  the operator started and the run completes, while the RunSupervisor agent held
+  the run when the beam dropped and resumed it when the beam returned (the gray
+  band is the hold). Below it, one convergence bracket per pass of the conducted
+  rotation-axis centering search, colored by verdict (amber open, green
+  converged); then the per-step setpoint, acquire, and check swim-lanes. The
+  fold-to-version cursor is parked at the beam-loss instant: folding the event
+  stream to there reconstructs the state shown in the read-out, including the
+  first projection as an open interval (its in-flight marker is recorded but its
+  outcome is not yet). Time spacing is synthetic.}
   \label{fig:scrubber}
 \end{figure*}
 
 The scrubber presents one recorded run on a single horizontal time axis
-(Figure~\ref{fig:scrubber}). Each row is a swim-lane for one kind of activity the procedure
-performs, a position setpoint, a sharpness check, and an image capture, and
-every activity is drawn at its recorded time within its lane. The iterative
-structure sits above the lanes as nested brackets, one per pass of the search,
-and each bracket is colored by that pass's recorded verdict, so a reader sees
-at a glance how many passes ran and which one converged. An activity that was
-opened but never closed, the conductor's record of intent before effect, is
-drawn as an open interval rather than a filled mark, so an unfinished step
-reads as a visible gap instead of disappearing.
+(Figure~\ref{fig:scrubber}). Each row is a swim-lane for one kind of activity the
+run performs, a position setpoint, an acquisition, and a check, and every
+activity is drawn at its recorded time within its lane. Above the lanes, a
+dedicated run-lifecycle lane records the autonomous arc: who or what caused each
+transition, so an auditor sees at a glance where control passed between the
+operator and the supervising agent. The iterative structure of the conducted
+alignment sits in a band of nested brackets, one per pass, each colored by that
+pass's recorded verdict. An activity that was opened but never closed, the
+record of intent before effect, is drawn as an open interval rather than a
+filled mark, so an unfinished step reads as a visible gap.
 
 The interaction is a single draggable cursor. Setting the cursor to a position
 $t$ folds the event stream up to $t$ and renders the reconstructed state of the
 run beside the timeline, so dragging the cursor replays the run to any recorded
 instant (T2). The fold is the system's own read path, not a separate
 reconstruction built for the figure, which is what lets every recorded instant
-be reached exactly rather than approximately. Where most timelines let a user
-read \emph{when} something happened, the scrubber lets them recover \emph{what
-the run knew} at that moment.
+be reached exactly. Where most timelines let a user read \emph{when} something
+happened, the scrubber lets them recover \emph{what the run knew} at that moment,
+and \emph{who or what} was driving it.
 
 \begin{figure}[t]
   \centering
@@ -52,25 +54,27 @@ the run knew} at that moment.
   \label{fig:fidelity}
 \end{figure}
 
-A small badge travels with the cursor (Figure~\ref{fig:fidelity}). At each position it
-recomputes the content-addressed expansion hashes recorded with the run and
-compares them against the reconstructed state, reporting whether the two match
-(T4). The badge turns the integrity property of the underlying store, that the
-record is append-only and the expansion is content-addressed, into something a
-reader can see at the exact instant they are inspecting, rather than a claim
-they must take on faith.
+A small badge travels with the cursor (Figure~\ref{fig:fidelity}). At each
+position it recomputes the content-addressed expansion hashes recorded with the
+run and compares them against the reconstructed state, reporting whether the two
+match (T4). The badge
+turns the integrity property of the underlying store, that the record is
+append-only and the expansion is content-addressed, into something a reader can
+see at the exact instant they are inspecting, rather than a claim they must take
+on faith.
 
-We walk through a CORA-conducted autofocus alignment on APS 2-BM that tunes the
-sample-stage focus axis, \texttt{SampleTop\_Z}, with a four-iteration
-peak-bracket search; the recorded run holds twelve procedure events, thirteen
-activities, and four iteration verdicts. The first pass measures image sharpness
-$0.50$ at the start position $0.000$\,mm; stepping to $0.500$\,mm raises sharpness
-to $0.70$, and stepping again to $1.000$\,mm drops it to $0.65$, which brackets
-the peak in $[0.500, 1.000]$\,mm; the fourth pass bisects to $0.750$\,mm,
-measures $0.74$, and converges, after which a final setpoint locks the stage at
-$0.750$\,mm. Read left to right, Figure~\ref{fig:scrubber} shows each pass's setpoint,
-acquisition, and sharpness-check activities under its bracket; read by color, the
-brackets show the verdict sequence not-converged, not-converged, not-converged,
-converged (T3). Dragging the cursor back to the third pass reconstructs the run
-as it stood with the peak just bracketed but not yet bisected, and the fidelity
-badge confirms that reconstructed state is faithful to the record (T4).
+We walk through a lights-out, agent-supervised run on APS 2-BM. An operator
+starts the run and leaves; CORA conducts the pre-scan rotation-axis centering
+alignment, a four-iteration peak-bracket search over the sample stage
+\texttt{SampleTop\_X} that minimizes the center-of-rotation residual. The
+residual falls from $2.00$ to $1.05$\,px, rises to $1.40$\,px at $0.080$\,mm
+(bracketing the minimum in $[0.040, 0.080]$\,mm), and the fourth pass bisects to
+$0.060$\,mm at $0.30$\,px and converges; read by color, the brackets show the
+verdict sequence open, open, open, converged (T3). The first projection then
+begins, recorded as an in-flight marker, and the beam drops. The RunSupervisor
+agent holds the run; the beam returns and the supervisor resumes it, each
+transition recorded as the agent's decision in the lifecycle lane. With the
+cursor at the beam-loss instant (Figure~\ref{fig:scrubber}), the fold shows the
+alignment already converged, the first projection still open, and the run held
+by the agent, and the fidelity badge confirms that reconstructed state is
+faithful to the record (T4).

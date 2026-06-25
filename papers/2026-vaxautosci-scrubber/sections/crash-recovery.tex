@@ -1,40 +1,38 @@
 \label{sec:crash}
-% Conductor-path case. Data: data/crash_run.json (conductor-path shapes and
-% values from test_conductor_against_softioc_postgres.py; the crash is a
-% truncation). Figure 3 rendered by figures/render_f3.py.
+% Interruption recovery over the lights-out run. Figure 3 rendered by
+% figures/render_f3.py from data/lights_out_run.json.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/f3_crash}
-  \caption{An interrupted conducted run. Each side-effecting setpoint records a
-  pre-effect in-flight marker (diamond) before its outcome (circle), and a
-  completed step joins the two with a solid bar. Truncating after the final
-  marker leaves that step an open interval with no outcome: the interrupted step
-  the scrubber localizes by step index. Conductor-path shapes and values are
-  from the softIOC integration test; only the truncation is constructed.}
+  \caption{The same recorded run folded to two cursor positions. At the
+  beam-loss instant (top) the first projection is an open interval, an in-flight
+  marker with no outcome, and the run is held by the supervisor; folded to the
+  end (bottom) the outcome is recorded and the run is completed. The open
+  interval is a function of where the cursor is, not a permanent dangling
+  record: it is the replay-native answer to what was in flight when the beam
+  dropped (T1).}
   \label{fig:crash}
 \end{figure}
 
-The most operationally pressing question an auditor asks is also the one
-conventional records answer worst: when a run stops unexpectedly, what was in
-flight, and did it take effect? CORA's conductor makes this answerable by
-construction. Because a setpoint and an action are side-effecting, the conductor
-records a separate in-flight marker for each before the effect runs and the
-outcome only after; a pure check, always safe to re-run, records a single
-outcome. An interruption, whether a crash or a cancellation, therefore leaves a
-characteristic trace: one in-flight marker with no matching outcome, at the step
-that was executing when the conduct halted, because the marker is written before
-the effect.
+The most operationally pressing question on an unattended run is also the one
+conventional records answer worst: when the beam drops overnight, what was in
+flight, and did it take effect? The conductor records intent before effect, so a
+side-effecting acquisition is written as an in-flight marker before the exposure
+and an outcome after. When the supervisor holds the run mid-acquisition, the
+marker is on the record but the outcome is not yet, so folding the stream to the
+beam-loss instant reconstructs a state in which exactly that step is open, and
+the scrubber draws it as an open interval (Figure~\ref{fig:crash}, top). The
+auditor sees precisely which step was mid-flight, not a timeline that simply
+ends.
 
-We reproduce that situation on a conducted run by simulating a crash after a
-marker is written but before its outcome, and replay the truncated stream
-through the scrubber (Figure~\ref{fig:crash}). The fold reconstructs a state in which exactly
-one activity is open, and the scrubber draws it as an open interval at its lane
-and time, with the surrounding convergence bracket left unclosed. Rather than a
-timeline that simply ends, the auditor sees precisely which step was mid-flight
-and where (T1); dragging the cursor to the instant just before the gap shows the
-last state known to be complete, the state a recovery would resume from. This is
-the case post-hoc provenance graphs handle least gracefully: a graph assembled
-after the fact has no node for an action that never reported a result, whereas
-the intent-before-effect record, read by replay, makes the missing result itself
-legible.
+What makes this replay-native rather than a stored flag is that the same step
+reads as completed once the cursor moves past the resume: after the beam returns
+and the supervisor resumes, the outcome is appended, and folding to the end
+reconstructs the projection as closed and the run as completed
+(Figure~\ref{fig:crash}, bottom). The open interval is not a permanent record of
+failure; it is what the fold yields at an instant when the outcome had not yet
+happened. This is the case post-hoc provenance graphs handle least gracefully: a
+graph assembled after the fact has no node for an action that has not reported a
+result, whereas the intent-before-effect record, read by replay, makes the
+missing result legible at exactly the instants where it is missing.

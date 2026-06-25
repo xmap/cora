@@ -36,39 +36,39 @@ that the replayed state is faithful.
 ## Section map
 
 1. Introduction and contributions (no figure).
-2. The Auditor's Tasks: Figure 4 (task abstraction, the VIS spine).
-3. The Replay Scrubber: Figure 1 (centerpiece, real data) + Figure 2 inset
-   (fidelity badge).
-4. Crash Recovery: Figure 3 (in-flight gap).
+2. The Auditor's Tasks: Table 1 (task abstraction, the VIS spine).
+3. The Replay Scrubber: Figure 1 (centerpiece) + Figure 2 (fidelity badge).
+4. Interruption Recovery: Figure 3 (fold to two cursor positions).
 5. Substrate: Figure 5 (the one capped architecture figure).
-6. Related Work (drafted).
+6. Related Work.
 7. Limitations and Future Work.
 
 ## Figure inventory
 
-Five figures, four of which visualize real exported data, one architecture
-figure. See `figures/README.md`. That four-to-one ratio is the structural
-defense against the "this is a backend paper, not a VA paper" reject.
+Four data exhibits (F1, F2, F3, Table 1) and one architecture figure (F5). See
+`figures/README.md`. That four-to-one ratio is the structural defense against
+the "this is a backend paper, not a VA paper" reject.
 
 ## Framing risk and how this paper neutralizes it
 
 The risk: at an IEEE VIS workshop, a paper about event sourcing and an
 append-only store reads as "great infrastructure, wrong venue." Neutralizers:
-lead with the human task (Figure 4 before any architecture); keep four of five
-figures as data visualizations and cap architecture at one; say "conducted"
-(closed-loop, semi-autonomous), not "self-driving," and do not claim an
-agent-closed perceive-decide-act loop; render immutability as a one-sentence
-visual fidelity claim, not a systems section; get every repo-checkable fact
-exactly right.
+lead with the human task (Table 1 before any architecture); keep the data
+exhibits dominant and cap architecture at one figure; say "conducted" and
+"agent-supervised," not "self-driving," and do not claim an agent-closed
+perceive-decide-act loop (the supervisor is a deterministic agent); render
+immutability as a one-sentence visual fidelity claim, not a systems section; get
+every repo-checkable fact exactly right.
 
 ## Data grounding
 
-The centerpiece data comes from the passing integration scenario
-`apps/api/tests/integration/scenarios/test_2bm_alignment_focus.py` (a
-four-iteration peak-bracket autofocus search on APS 2-BM: setpoint and check
-activities, `in_flight` markers, per-iteration `converged` verdicts). The
-interrupted-run figure removes one activity outcome to leave a dangling
-`in_flight` marker.
+All figures come from one passing integration scenario,
+`apps/api/tests/integration/scenarios/test_2bm_lights_out_supervised_alignment.py`:
+an operator starts a lights-out calibration run; CORA conducts a rotation-axis
+centering alignment (four-iteration peak-bracket on `SampleTop_X`, converges); the
+first projection is in flight when the beam drops; the RunSupervisor agent holds
+the run and auto-resumes it (RunResumed carries a Resume Decision); the run
+completes. Figure values mirror the scenario (`data/lights_out_run.json`).
 
 ## Layout
 

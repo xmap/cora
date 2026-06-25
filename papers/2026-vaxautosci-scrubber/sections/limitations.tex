@@ -1,32 +1,32 @@
 Our evaluation is a structured walkthrough of the four auditor tasks on one
-recorded run, not a controlled study. We report a single procedure, an
-autofocus alignment, on a single instrument, and we have not yet run a user or
-expert study; whether the scrubber speeds real audits, and which encodings
-practitioners prefer, are open empirical questions. The interface is a research
-prototype over exported run data rather than a deployed beamline tool, so we
-make no claims about throughput, scale, or integration cost.
+recorded run, not a controlled study. We report a single run, on a single
+instrument, and we have not yet run a user or expert study; whether the scrubber
+speeds real audits, and which encodings practitioners prefer, are open empirical
+questions. The interface is a research prototype over exported run data rather
+than a deployed beamline tool, so we make no claims about throughput, scale, or
+integration cost.
 
-Two scope boundaries matter for how the contribution should be read. First,
-this is a \emph{conducted}, closed-loop procedure: the system orchestrates the
-bracketing search and records every step, but it does not choose the
-experiment. The fully agent-closed perceive-decide-act loop, in which a model
-selects each next action, is future work, and we are careful not to claim it.
-Second, the fidelity badge attests \emph{faithfulness}, that the replayed state
-matches the recorded expansion, by recomputing content-addressed hashes against
-an append-only store. It is an integrity check, not a defense against a
-determined adversary with write access to the store; authenticity guarantees
-would need a separate trust anchor.
+Two scope boundaries matter for how the contribution should be read. First, the
+run is \emph{conducted} and \emph{agent-supervised}, not agent-closed: CORA
+orchestrates the alignment and records every step, and a RunSupervisor agent
+holds and resumes the run on beam conditions, but neither chooses the science.
+That supervisor is a deterministic, rule-based agent making recorded decisions;
+the figures show a genuine human-agent handoff, not a model selecting
+experiments, and we are careful not to claim the latter. Second, the fidelity
+badge attests \emph{faithfulness}, that the replayed state matches the recorded
+expansion, by recomputing content-addressed hashes against an append-only store.
+It is an integrity check, not a defense against an adversary with write access;
+authenticity guarantees would need a separate trust anchor.
 
 The fold-to-version helper that drives the cursor was written for this
 visualization on top of the system's existing fold-on-read path. Because that
-path keeps no snapshots, the cost of reconstructing a distant instant grows
-with the length of the stream; for the short procedures shown here this is
-imperceptible, but snapshotting for long campaigns is future work. Three
-further extensions are natural and named, not built: a live now-edge that
-subscribes to the event tail so the same timeline monitors a run in progress;
-run-to-run diffing so two campaigns can be compared on one axis; and a deployed
-read interface, of which the first read-only slice is on the roadmap. We also
-expect the design to generalize beyond autofocus to other conducted procedures
-and other facilities, since nothing in the scrubber is specific to the
-alignment loop beyond the iteration and activity vocabulary it reads from the
-event log.
+path keeps no snapshots, the cost of reconstructing a distant instant grows with
+the length of the stream; for the short run shown here this is imperceptible, but
+snapshotting for long campaigns is future work. Three further extensions are
+natural and named, not built: a live now-edge that subscribes to the event tail
+so the same timeline monitors a run in progress; run-to-run diffing so two
+campaigns can be compared on one axis; and a deployed read interface, of which
+the first read-only slice is on the roadmap. We also expect the design to
+generalize beyond this run to other conducted procedures and other facilities,
+since nothing in the scrubber is specific to it beyond the lifecycle, iteration,
+and activity vocabulary it reads from the event log.
