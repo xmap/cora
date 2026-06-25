@@ -40,7 +40,19 @@ be reached exactly rather than approximately. Where most timelines let a user
 read \emph{when} something happened, the scrubber lets them recover \emph{what
 the run knew} at that moment.
 
-A small badge travels with the cursor (Figure~2, inset). At each position it
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/f2_fidelity}
+  \caption{The fidelity check the badge runs at the cursor: the
+  content-addressed hash recorded in the run-start payload is compared against
+  the hash recomputed from the state reconstructed by folding to the cursor; a
+  match reads verified, a mismatch would read altered. The append-only store
+  means the recorded side cannot have changed after the run. The digest shown is
+  an illustrative content hash of the run data.}
+  \label{fig:fidelity}
+\end{figure}
+
+A small badge travels with the cursor (Figure~\ref{fig:fidelity}). At each position it
 recomputes the content-addressed expansion hashes recorded with the run and
 compares them against the reconstructed state, reporting whether the two match
 (T4). The badge turns the integrity property of the underlying store, that the

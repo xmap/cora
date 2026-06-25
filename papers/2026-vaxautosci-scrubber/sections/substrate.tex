@@ -1,11 +1,24 @@
 \label{sec:substrate}
-% Largely data-independent: describes the event-record structure behind the
-% scrubber. Figure 5 (the single architecture figure) is still pending.
+% Describes the event-record structure behind the scrubber. Figure 5 (the
+% single architecture figure) is rendered by figures/render_f5.py.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{figures/f5_substrate}
+  \caption{The event-record substrate behind the scrubber. A run is an
+  append-only, totally ordered event stream; folding the prefix up to the cursor
+  reconstructs the state shown. Three records carry what the tasks need: each
+  event's envelope (who or what caused it, and its position), the run-start
+  payload (the recipe expansion and its content hash, feeding the fidelity
+  badge), and the iteration-boundary events (the converged verdict). Substrate,
+  not contribution.}
+  \label{fig:substrate}
+\end{figure*}
 
 The scrubber needs nothing from the backend beyond what an event-sourced
 system of record already keeps, which is why the design transfers to any system
 of that shape. We summarize the substrate here, and stress that it is the
-enabling condition, not the contribution (Figure~5).
+enabling condition, not the contribution (Figure~\ref{fig:substrate}).
 
 A run is not stored as current state. It is an append-only, totally ordered
 stream of events, and any state the scrubber shows is produced by folding that
