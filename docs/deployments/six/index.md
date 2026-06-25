@@ -20,7 +20,7 @@ SIX is **CORA's first soft X-ray beamline**. The hard X-ray deployments before i
 
 - **A grating monochromator, not a crystal DCM.** The PGM disperses with an interchangeable grating (500 / 1200 / 1800 l/mm) and a premirror at a fixed-focus c-value; the exit slit sets the energy resolution. There is no Bragg crystal, so it binds the `GratingMonochromator` Family (graduated across SIX + CSX), not the catalog `Monochromator`.
 - **A RIXS spectrometer arm.** The signature instrument is a meters-long energy-dispersive arm (a bridge truss, an in-arm optics chamber that disperses, and a detector chamber) that swings to a scattering angle and spreads the emitted soft X-rays onto a photon-counting camera. No catalog Family fits a multi-chamber dispersive arm, so it binds a loose `SpectrometerArm` Family.
-- **A UHV cryostat manipulator.** The sample sits on an x/y/z/theta manipulator under ultra-high vacuum and cryogenic cooling, a sample-environment role no catalog motion Family captures, so it binds a loose `Manipulator` Family.
+- **A UHV cryostat manipulator.** The sample sits on an x/y/z/theta manipulator under ultra-high vacuum and cryogenic cooling, a sample-environment role no hard X-ray motion Family captured; it binds the `Manipulator` Family (graduated across SIX + ESM).
 
 Everything else (the EPU, the mirrors, the slits, the shutters, the camera, the counters, the temperature controller) reuses an existing catalog Family.
 
@@ -30,7 +30,7 @@ Everything else (the EPU, the mirrors, the slits, the shutters, the camera, the 
 | --- | --- | --- |
 | Optics (`XF:02IDA/B/C`) | Yes | EPU, M1, PGM, M3/M4 refocusing, the slits, the exit slit |
 | RIXS endstation (`XF:02IDD-ES`) | Yes | The UHV cryostat manipulator, the spectrometer arm, the RIXS camera |
-| New device classes | Mixed | `GratingMonochromator` graduated (earned by CSX); `SpectrometerArm`, `Manipulator` stay loose at n=1 (see [Model](model.md#new-loose-families)) |
+| New device classes | Mixed | `GratingMonochromator` (earned by CSX) and `Manipulator` (earned by ESM) graduated; `SpectrometerArm` stays loose at n=1 (see [Model](model.md#new-loose-families)) |
 | Legacy end-station PGM (`Mono:2` / `espgm`) | No | A legacy / discarded instance in the profile collection; the live `Mono:1` PGM is modelled |
 | Integration scenarios + vendor Models | No | Design-phase; the descriptor and docs come first |
 

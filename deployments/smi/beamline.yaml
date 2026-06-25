@@ -4,8 +4,8 @@
 # Its defining techniques are small- and wide-angle X-ray scattering (SAXS / WAXS),
 # run simultaneously, and grazing-incidence scattering (GISAXS / GIWAXS) off films
 # and interfaces, with a strong in-situ soft-matter sample environment. It is bound
-# to the NSLS-II Site (deployments/nsls2/site.yaml), the ninth NSLS-II beamline after
-# FXI, HXN, BMM, SRX, SIX, CHX, CSX, and XPD.
+# to the NSLS-II Site (deployments/nsls2/site.yaml), the tenth NSLS-II beamline after
+# FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, and ESM.
 #
 # STATUS: reverse-engineered, design-phase. Every value is read from public open
 # source (the bluesky profile collection NSLS2/smi-profile-collection) or inferred,

@@ -1,0 +1,332 @@
+# CORA Beamline descriptor: LCLS-MFX (SLAC), modelling exercise
+#
+# MFX (Macromolecular Femtosecond Crystallography) is an operating hard-X-ray
+# instrument of the LCLS X-ray free-electron laser at SLAC. It is bound to the
+# SLAC Site (deployments/slac/site.yaml), CORA's fifth Site and its FIRST XFEL.
+#
+# STATUS: off-roadmap modelling exercise, NOT a CORA pilot. The device shape and
+# the EPICS control handles are reverse-engineered from SLAC's open `pcdshub`
+# stack (the happi device database device_config/db.json, the worked hutch config
+# mfx/beamline.py, the lightpath beam-walk engine, and pcdsdevices), treated as a
+# dry, correct DATA source and modelled intentionally, not mirrored. Scope is the
+# MFX beam-path spine + core endstation; peripheral/floor devices are deferred.
+#
+# WHY MFX (what it tests): every prior modelling exercise (Diamond i22/i03/i11/
+# i15-1, NSLS-II FXI) is a STORAGE-RING beamline: frame-on-trigger detectors and
+# sub-Hz scalar monitoring. MFX is an XFEL: per-shot, pulse-ID-tagged event DAQ
+# (120 Hz; LCLS-II reaches ~1 MHz), beam-synchronous event-code timing, fs optical
+# pump-probe, and one linac feeding many co-equal instruments. It is the test of
+# whether CORA generalizes beyond the storage-ring acquisition paradigm.
+#
+# THE HEADLINE FINDING: MFX's DEVICE FAMILIES FOLD. Of the full device set, exactly
+# one type has no CORA Family (the von Hamos emission spectrometer, carried loose).
+# Everything else reuses a catalog Family or an existing loose family. The genuine
+# gaps MFX exposes are ARCHITECTURAL, not taxonomic, and are recorded as deliberate
+# deferrals on docs/deployments/lcls-mfx/model.md (not invented here):
+#   - per-shot pulse-ID event DAQ (DAQ-1; see the event-stream-axis design memo)
+#   - beam-synchronous event-code timing (TIMING-1)
+#   - femtosecond pump-probe laser/X-ray synchronization (LASER-1)
+#   - one switched FEL source feeding co-equal instruments (TOPO-1)
+#   - attenuator transmission solver (ATT-1)
+#   - computed device-state -> path-transmission lightpath (LIGHTPATH-1)
+#
+# Family folds (each adversarially reviewed, i03 precedent): OffsetMirror -> Mirror;
+# solid-Si Attenuator -> Filter; Slits(JAWS) -> Slit; PulsePicker -> Shutter (fast
+# pulse gate; Shutter-vs-Chopper open, PULSE-1); PIM -> Scintillator + Camera; IPM
+# -> FluxMonitor + Diagnostic (loose, reused from i22/2-BM); DCCM -> Monochromator;
+# Transfocator/XFLS -> Transfocator (loose, reused, CRL-1); EventSequencer ->
+# TimingController; the area detector -> Camera. The gas detector (a BeamStats PV,
+# not a happi device) -> FluxMonitor. Vacuum gate valves and the DAQ are floor and
+# not modelled (as at i03). Only NEW loose family: EmissionSpectrometer (SPEC-1).
+#
+# Every device carries `new: true` (not a registered Asset) and `confirm: true`
+# (PVs + values to be verified by LCLS staff). Calibrated numbers, the PPS safety
+# structure, undulator specifics, and the Capability/Method binding are NOT
+# invented; each gap carries a (QUESTION-ID) answered on the open-questions page.
+#
+# DEFERRED (out of spine+core scope, noted not modelled): the LCLS DAQ data plane
+# (psana/psdaq; CORA references a Dataset, does not own per-shot data, DAQ-1); the
+# pump-probe optical-laser delay stages + lxt/txt fs timing chain (the laser is
+# carried as a loose Laser family device, the 4-ID POLAR precedent, model-vs-hazard
+# open; its fs X-ray/laser synchronization has no CORA model, LASER-1); the
+# liquid-jet / fixed-target sample delivery (SAMPLE-1); the sibling instruments
+# (CXI/XPP/XCS/MEC/TMO/RIX) that share the linac (TOPO-1).
+
+beamline:
+  name: LCLS-MFX
+  facility: slac
+  tier: Unit
+  parent: null
+  source: free-electron-laser
+  source_confirm: >
+    SASE hard-X-ray FEL on the shared LCLS linac + HXR undulator line; photon energy
+    is set per-shot (vernier / undulator), not as a standing setpoint, and the same
+    source feeds many co-equal instruments one at a time (SRC-1 / TOPO-1).
+
+# Two access-gated zones. The shared front end + X-ray transport (FEE/XRT) feeds
+# every hard-X-ray instrument, not just MFX; CORA models it here as one enclosure
+# but its sharing across instruments is the headline topology question (TOPO-1).
+# LCLS PPS permit + the pump-probe BTPS laser interlock are carried confirm (PSS-1).
+enclosures:
+  - name: LCLS-FEE
+    role: optics-hutch
+    facility_code: slac
+    permit_signal: {confirm: "LCLS PPS search-and-secure signal TBD; shared front-end / transport (TOPO-1, PSS-1)"}
+  - name: LCLS-MFX
+    role: experiment-hutch
+    facility_code: slac
+    permit_signal: {confirm: "LCLS PPS + pump-probe BTPS laser interlock TBD (PSS-1, LASER-1)"}
+
+# --- SOURCE STAGE: the FEL source, shared front end, and X-ray transport ---
+
+undulator-source:
+  stage: source
+  enclosure: LCLS-FEE
+  intro: "The free-electron-laser source and its per-shot pulse-energy monitor."
+  note: >
+    LCLS is a linac-driven FEL, not a storage ring, so the loose StorageRing family
+    used by the synchrotron exercises does not fit; machine beam is carried as a
+    PhotonBeam Supply (MACHINE-1). The undulator photon energy is set per shot
+    (vernier / undulator gap); CORA has no per-shot energy setpoint, and the
+    undulator-as-driven-source with energy->gap control is deferred (SRC-1).
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {confirm: "LCLS HXR undulator line (USEG / vernier energy request); per-segment handles TBD (SRC-1)"}
+      new: true
+      confirm: true
+      device_type: SASE free-electron-laser undulator
+      note: "the FEL source; SASE / self-seeded mode and per-shot photon energy are a DAQ-plane datum, not a standing setpoint (SRC-1, DAQ-1)"
+    - name: GasDetector
+      family: FluxMonitor
+      pv: {confirm: "GDET:FEE1:241:ENRC (read via BeamStats, not a happi device)"}
+      new: true
+      confirm: true
+      note: "FEL pulse-energy gas detector; presents the Sensor Role; loose family reused from i22 (DIAG-1). Per-shot pulse energy is correlated in the DAQ by pulse-ID (DAQ-1)"
+
+front-end-transport:
+  stage: source
+  enclosure: LCLS-FEE
+  intro: "The shared solid attenuators, offset mirrors, X-ray transport mirrors, PPS stopper, and transport diagnostics that condition and steer the beam toward MFX."
+  note: >
+    The X-ray transport mirrors (XRT) are where the single FEL source is steered down
+    one branch to one instrument at a time; CORA has no switched-shared-source model,
+    so the routing is carried here but the topology is deferred (TOPO-1). Vacuum gate
+    valves are floor (not modelled), as at i03.
+  devices:
+    - name: FrontEndAttenuator
+      family: Filter
+      pv: "SATT:FEE1:320"
+      new: true
+      confirm: true
+      note: "solid-Si front-end attenuator; the existing Filter Family covers it (adversarial-verified). Target-transmission solving (foil combination for a requested transmission, energy-dependent) is the deferred Attenuable leg (ATT-1)"
+    - name: FrontEndMirror1
+      family: Mirror
+      pv: "FEE1:M1H"
+      new: true
+      confirm: true
+      note: "first horizontal offset mirror; OffsetMirror folds into the Mirror Family"
+    - name: FrontEndMirror2
+      family: Mirror
+      pv: "FEE1:M2H"
+      new: true
+      confirm: true
+      note: "second horizontal offset mirror"
+    - name: TransportMirror2
+      family: Mirror
+      pv: "XRT:M2H"
+      new: true
+      confirm: true
+      note: "X-ray-transport steering mirror"
+    - name: TransportMirror3
+      family: Mirror
+      pv: "XRT:M3H"
+      new: true
+      confirm: true
+      note: "X-ray-transport steering mirror that routes the beam to the experiment branch; the switched-source seam (one source, many instruments) lives here (TOPO-1)"
+    - name: TransportStopper
+      family: Shutter
+      pv: "HFX:DG2:STP:01"
+      new: true
+      confirm: true
+      note: "PPS-interlocked beam stopper on the transport line; permit signal to confirm (PSS-1)"
+    - name: TransportSlits
+      family: Slit
+      pv: "HFX:DG2:JAWS"
+      new: true
+      confirm: true
+      note: "transport-line 4-blade slits (gap/center virtual axes)"
+    - name: TransportIPM
+      family: FluxMonitor
+      pv: "HFX:DG2:IPM"
+      new: true
+      confirm: true
+      note: "intensity-position monitor; presents the Sensor Role for both flux (FluxMonitor) and beam position (Diagnostic); loose families reused (DIAG-1). Per-shot intensity normalization is a DAQ-plane concern (DAQ-1)"
+    - name: TransportImager
+      family: Scintillator
+      pv: "HFX:DG2:PIM"
+      new: true
+      confirm: true
+      note: "profile-imager (YAG screen + camera); the screen presents Scintillator, the camera presents Camera (Detector Role)"
+
+# --- SAMPLE STAGE: the MFX endstation conditioning and sample interaction ---
+
+mfx-conditioning:
+  stage: sample
+  enclosure: LCLS-MFX
+  intro: "The pulse picker, attenuator, channel-cut mono, focusing lenses, slits, and per-shot diagnostics that condition the beam inside the MFX hutch."
+  note: >
+    The compound-refractive-lens transfocator + prefocus reuse the loose Transfocator
+    family (CRL-1). The pulse picker is a fast single-pulse gate folded into the
+    Shutter Family; whether a fast pulse-picking chopper deserves its own Family is
+    open (PULSE-1). The diamond channel-cut mono (DCCM) is used for some modes;
+    pink-vs-mono operation is carried confirm (MONO-1).
+  devices:
+    - name: PulsePicker
+      family: Shutter
+      pv: "MFX:DIA:MMS:07"
+      new: true
+      confirm: true
+      note: "fast single-pulse selector; folded into the Shutter Family (a fast beam gate). Whether a rotary pulse-picking chopper is a distinct Family is open (PULSE-1)"
+    - name: Attenuator
+      family: Filter
+      pv: "MFX:ATT"
+      new: true
+      confirm: true
+      note: "solid-Si binary attenuator; the existing Filter Family covers the discrete foil selection. Requesting a target transmission (the AttBase set_transmission solver, energy-dependent) is the deferred Attenuable leg; LCLS is the rule-of-three trigger for it (ATT-1)"
+    - name: DCCM
+      family: Monochromator
+      pv: {confirm: "MFX diamond double-channel-cut mono; handles TBD (MONO-1)"}
+      new: true
+      confirm: true
+      note: "diamond double-channel-cut monochromator for monochromatic / spectroscopy modes; MFX also runs pink/SASE beam mono-out (MONO-1)"
+    - name: Transfocator
+      family: Transfocator
+      pv: "MFX:LENS"
+      new: true
+      confirm: true
+      note: "compound-refractive-lens (Be) transfocator stack; loose family reused (CRL-1). Selecting a lens set for a target focal length is a transmission/focus solver, like the attenuator (ATT-1)"
+    - name: Prefocus
+      family: Transfocator
+      pv: "MFX:DIA:XFLS"
+      new: true
+      confirm: true
+      note: "upstream X-ray focusing lens set (prefocus CRL); loose family reused (CRL-1)"
+    - name: MFXSlits
+      family: Slit
+      pv: "MFX:DG1:JAWS"
+      new: true
+      confirm: true
+      note: "DG1 4-blade slits"
+    - name: MFXSlitsDownstream
+      family: Slit
+      pv: "MFX:DG2:JAWS:US"
+      new: true
+      confirm: true
+      note: "DG2 slit set (upstream/midstream/downstream blades)"
+    - name: MFXIntensityMonitor
+      family: FluxMonitor
+      pv: "MFX:DG1:IPM"
+      new: true
+      confirm: true
+      note: "intensity-position monitor (DG1); flux + position Sensor; loose families reused (DIAG-1)"
+    - name: MFXImager
+      family: Scintillator
+      pv: "MFX:DG1:PIM"
+      new: true
+      confirm: true
+      note: "DG1 profile imager (YAG + camera)"
+    - name: TimeTool
+      family: Diagnostic
+      pv: "MFX:ATM"
+      new: true
+      confirm: true
+      note: "arrival-time monitor (X-ray/optical-laser timing jitter); presents the Sensor Role; loose family reused (DIAG-1). It exists to drift-correct the fs pump-probe delay, which CORA has no model for (LASER-1, DAQ-1)"
+    - name: Wave8
+      family: FluxMonitor
+      pv: "MFX:DG1:MMS:08"
+      new: true
+      confirm: true
+      note: "fast per-shot intensity / wavefront diagnostic; presents the Sensor Role; loose family reused (DIAG-1)"
+
+mfx-endstation:
+  stage: sample
+  enclosure: LCLS-MFX
+  intro: "The sample-interaction point: sample delivery and the X-ray emission spectrometer."
+  note: >
+    Sample delivery at MFX is a liquid jet / fixed target (serial femtosecond
+    crystallography), with no storage-ring analog; it is deferred (SAMPLE-1). The von
+    Hamos spectrometer is the one device with no CORA Family: a crystal-analyzer
+    X-ray emission spectrometer (it composes analyzer crystals + a 2D detector along
+    a dispersive geometry). It is carried as the single new loose family (SPEC-1),
+    routed to naming-r3; the same gap appeared at MAX IV Balder (SCANIA-2D).
+  devices:
+    - name: PumpProbeLaser
+      family: Laser
+      pv: {confirm: "LAS:FS45 (laser timing) + MFX:LAS:MMN:* (delay / waveplate motors)"}
+      new: true
+      confirm: true
+      note: "femtosecond optical pump-probe laser; loose family reused from 4-ID POLAR (model-vs-hazard open, SAMPLE-1). The delay stage is a LinearStage, but the laser/X-ray fs synchronization (the lxt_ttc SyncAxis, ~50 fs deadband) is a cross-timing-domain relationship CORA cannot express (LASER-1)"
+    - name: LiquidJet
+      pv: "MFX:LJH"
+      new: true
+      confirm: true
+      note: "Beckhoff-controlled liquid-jet sample delivery (serial crystallography); also a fixed-target option. Sample-delivery is endstation-specific and deferred (SAMPLE-1); no Family is coined yet"
+    - name: EmissionSpectrometer
+      family: EmissionSpectrometer
+      pv: "MFX:SPEC"
+      new: true
+      confirm: true
+      note: "von Hamos 6-crystal X-ray emission spectrometer (XES / HERFD). No catalog Family fits: it is a crystal-analyzer dispersive spectrometer composing analyzer crystals + a 2D detector, distinct from a Monochromator. The single new loose family; routed to naming-r3 (SPEC-1)"
+
+# --- DETECTION STAGE: the per-shot area detector ---
+
+detector:
+  stage: detection
+  enclosure: LCLS-MFX
+  intro: "The MFX area detector. It reuses the Camera Family, but its acquisition mode is the headline gap."
+  note: >
+    The detector reuses the Camera Family (Detector Role). What does NOT fold is how
+    it is read: the LCLS DAQ records a free-running stream of per-shot frames tagged
+    by pulse-ID at beam rate, correlated downstream by fiducial, not a poll-Acquire-
+    to-Done frame loop. CORA's acquisition bodies do not represent this; the per-shot
+    event DAQ is the deepest gap and is sketched in the event-stream-axis design memo
+    (DAQ-1). The detector model (Rayonix / ePix10k / Jungfrau) is to confirm (DET-1).
+  devices:
+    - name: Detector
+      family: Camera
+      pv: {confirm: "MFX area detector (Rayonix MX340-XFEL / ePix10k / Jungfrau); DAQ-managed, not polled (DET-1)"}
+      new: true
+      confirm: true
+      note: "the science detector; per-shot frames flow through the DAQ data plane, which CORA references as a Dataset rather than owns (DAQ-1)"
+
+# Cross-cutting timing + the software systems CORA does not model.
+controls:
+  intro: >
+    MFX runs the pcdshub EPICS stack plus a separate event-driven DAQ. The
+    EventSequencer programs the beam-synchronous trigger pattern; the DAQ, analysis,
+    and scan suites are software/floor.
+  triggering:
+    - name: EventSequencer
+      family: TimingController
+      pv: "ECS:SYS0:7"
+      new: true
+      confirm: true
+      note: "plays a beam-synchronous event-code sequence (each line [beam_code, delta_beam, delta_fiducial, burst_count]) that gates acquisition at beam rate. TimingController carries the device, but 'acquire on event-code N at rate R, burst B' has no typed parameter home (TIMING-1). Spare on ECS:SYS0:12"
+  software_iocs_not_modeled:
+    - LCLS DAQ (psdaq / pcdsdaq; the per-shot, pulse-ID-tagged event acquisition, DAQ-1)
+    - psana (the per-shot data-analysis plane; CORA references a Dataset, does not own per-shot data)
+    - hutch-python / nabs (the bluesky-based scan + DAQ-run suite)
+    - AMI (online per-shot monitoring)
+    - BTPS (Beam Transport Protection System; the pump-probe optical-laser safety interlock, LASER-1)
+
+# Continuously-available resources a run draws on (modelling exercise).
+resources:
+  intro: >
+    The continuously-available facility resources a run needs present before it can
+    start. All pending confirmation. The FEL beam is a shared, switched resource
+    (TOPO-1); its per-shot character is an acquisition concern, not a supply one.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
