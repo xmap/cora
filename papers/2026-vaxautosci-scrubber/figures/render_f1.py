@@ -19,7 +19,7 @@ import json
 
 import _style as s
 from matplotlib.lines import Line2D
-from matplotlib.patches import FancyBboxPatch
+from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, VPacker
 
 DATA = json.loads((s.HERE.parent / "data" / "lights_out_run.json").read_text())
 
@@ -109,13 +109,13 @@ def main() -> None:
             if a["payload"].get("action_name") == "acquire_first_projection"}
     y = LANE_Y["action"]
     begin = proj["in_flight"]
-    ax.plot([begin, cursor], [y, y], color=s.WARN, lw=4.5, ls=(0, (4, 2.6)),
+    ax.plot([begin, cursor], [y, y], color=s.ALARM, lw=4.5, ls=(0, (4, 2.6)),
             alpha=0.9, zorder=2)
-    ax.scatter([begin], [y], marker="D", s=42, color=s.WARN, edgecolors="white",
+    ax.scatter([begin], [y], marker="D", s=42, color=s.ALARM, edgecolors="white",
                linewidths=0.6, zorder=3)
     ax.annotate("first projection:\nin flight", ((begin + cursor) / 2, y),
                 textcoords="offset points", xytext=(0, 8), ha="center",
-                fontsize=s.SIZE["small"], color=s.WARN, fontweight="bold",
+                fontsize=s.SIZE["small"], color=s.ALARM, fontweight="bold",
                 linespacing=1.0)
     ax.scatter([proj["ok"]], [y], marker="^", s=42, color=s.SUBINK, alpha=0.35,
                edgecolors="white", linewidths=0.5, zorder=3)
@@ -128,21 +128,25 @@ def main() -> None:
     ax.text(cursor, Y_RUN + 0.7, "cursor: beam loss", color=s.ALARM,
             fontsize=s.SIZE["anno"], ha="center", va="bottom", fontweight="bold")
 
-    # Folded-state readout, parked in the empty part of the held band.
-    rx, ry, rw, rh = beam_loss + 6, 0.05, beam_back - beam_loss - 12, 2.5
-    ax.add_patch(
-        FancyBboxPatch(
-            (rx, ry), rw, rh, boxstyle="round,pad=0.02,rounding_size=0.12",
-            linewidth=1.0, edgecolor=s.RULE, facecolor="white", zorder=6,
-        )
-    )
-    ax.text(rx + 2, ry + rh - 0.28, "folded state at cursor", fontsize=s.SIZE["small"],
-            color=s.ALARM, fontweight="bold", va="center", zorder=7)
-    ax.text(rx + 2, ry + rh / 2 - 0.18,
-            "alignment: converged (0.30 px)\nfirst projection: in flight\n"
-            "run: held by RunSupervisor\nfidelity: verified",
-            fontsize=s.SIZE["small"], color=s.SUBINK, va="center", zorder=7,
-            linespacing=1.35)
+    # Folded-state readout: an evenly padded info card parked in the held band.
+    def _row(text, color, weight="normal", size=s.SIZE["small"]):
+        return TextArea(text, textprops={"color": color, "fontweight": weight,
+                                         "fontsize": size})
+
+    readout = VPacker(pad=0, sep=4.5, align="left", children=[
+        _row("Folded state at cursor", s.ALARM, "bold", s.SIZE["anno"]),
+        _row("alignment: converged (0.30 px)", s.INK),
+        _row("first projection: in flight", s.INK),
+        _row("run: held by RunSupervisor", s.INK),
+        _row("fidelity: verified", s.INK),
+    ])
+    card = AnchoredOffsetbox(loc="center", child=readout, pad=0.6, borderpad=0,
+                             frameon=True, bbox_to_anchor=(0.57, 0.46),
+                             bbox_transform=ax.transAxes)
+    card.patch.set(boxstyle="round,pad=0,rounding_size=0.5", facecolor="white",
+                   edgecolor=s.RULE, linewidth=1.0)
+    card.set_zorder(6)
+    ax.add_artist(card)
 
     ax.set_yticks(list(LANE_LABEL))
     ax.set_yticklabels([LANE_LABEL[k] for k in LANE_LABEL], fontsize=s.SIZE["label"])
@@ -161,7 +165,7 @@ def main() -> None:
                markersize=6.5, label="RunSupervisor"),
         Line2D([0], [0], color=s.WARN, lw=4, label="bracket: open"),
         Line2D([0], [0], color=s.GOOD, lw=4, label="bracket: converged"),
-        Line2D([0], [0], color=s.WARN, lw=3, ls=(0, (4, 2.6)), label="in-flight (open)"),
+        Line2D([0], [0], color=s.ALARM, lw=3, ls=(0, (4, 2.6)), label="in-flight (open)"),
     ]
     ax.legend(handles=legend, loc="lower left", ncol=5, fontsize=s.SIZE["legend"],
               frameon=False, bbox_to_anchor=(0.0, -0.235), handletextpad=0.5,
