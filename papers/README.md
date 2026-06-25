@@ -48,9 +48,9 @@ working template.
 
 Sources only: `main.tex`, `refs.bib`, `README.md`, `notes/`, and `figures/`
 (source figures). Prose may be split into `sections/*.tex` fragments, with
-`main.tex` (the submission) and an optional `preview.tex` (a generic-class
-local read, no venue class needed) reading the same fragments so the text does
-not drift. LaTeX build artifacts (`*.aux`, `*.log`, `*.bbl`, `*.pdf`, and
+`main.tex` (the submission) and an optional `preview.tex` (a two-column proxy
+build, e.g. under `IEEEtran`, that needs no venue class) reading the same
+fragments so the text does not drift. LaTeX build artifacts (`*.aux`, `*.log`, `*.bbl`, `*.pdf`, and
 friends) are gitignored at the repo root. The venue's class and style files
 (`*.cls`, `*.bst`, `*.sty`) are added per paper by the author and are not
 vendored here.

@@ -13,9 +13,10 @@ record.
 - **Format:** short paper, 4-6 pages excluding references, two-column VGTC
   conference style, published to IEEE Xplore.
 - **Deadline:** July 8 2026 (23:59 AoE).
-- **Status:** Drafting. Abstract, contributions, and Related Work are written;
-  task abstraction, scrubber, crash-recovery, substrate, and limitations are
-  stubs. No figures yet. No compiled PDF yet.
+- **Status:** Full draft. All sections written; all figures rendered (F1, F2,
+  F3, Table 1, F5) from real run data. Length on the IEEEtran two-column proxy
+  is about 4.5 pages of body excluding references, inside the 4-6 limit. Not yet
+  built on the official VGTC class (see Build).
 
 ## Topic landing (PCS)
 
@@ -75,24 +76,28 @@ The prose lives in `sections/*.tex` (abstract, intro, tasks, scrubber,
 crash-recovery, substrate, related-work, limitations). Two drivers read the
 same fragments so the text never drifts:
 
-- `main.tex`: the submission, in the venue's VGTC class.
-- `preview.tex`: a local reading build in a generic two-column class, for
-  reading the draft without the VGTC class. Not the submission; layout differs.
+- `main.tex`: the submission, in the venue's official VGTC class.
+- `preview.tex`: a two-column build under `IEEEtran` (conference). The venue
+  publishes to IEEE Xplore, so this is a close proxy for the VGTC layout and
+  page count, and it builds today without the VGTC class. Not the submission;
+  exact spacing differs (VGTC 9pt is a touch denser than IEEEtran 10pt).
 
 Edit a fragment once; both builds pick it up.
 
 ## Build
 
-The submission (`main.tex`) does not vendor the venue's LaTeX class:
+The submission (`main.tex`) does not vendor the venue's LaTeX class (it is not
+on CTAN; it ships in the VIS author kit):
 
 1. Download the VIS 2026 author kit and place `vgtc.cls`, `abbrv-doi.bst`, and
    supporting `.sty` files in this folder.
 2. Reconcile the front-matter macros in `main.tex` with that kit.
-3. `latexmk -pdf main.tex`.
+3. `latexmk -pdf main.tex`, and confirm the exact page count there.
 
-Quick local read (works today, no author kit needed): `latexmk -pdf
-preview.tex`, then open `preview.pdf`. Build artifacts (including both PDFs)
-are gitignored.
+Proxy build (works today, no author kit needed): `latexmk -pdf preview.tex`,
+then open `preview.pdf`. On this proxy the body is about 4.5 pages excluding
+references (references begin on page 5 of 6), inside the 4-6 page limit. Build
+artifacts (including both PDFs) are gitignored.
 
 ## Camera-ready checklist (deferred)
 

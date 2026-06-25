@@ -1,30 +1,25 @@
-% LOCAL READING PREVIEW, not the submission.
-% Renders the shared sections/*.tex under a generic two-column article
-% class so the draft is readable without the venue's VGTC class. The real
-% submission is main.tex (VGTC). Layout, fonts, and spacing here are NOT
-% the final VGTC look. Build: latexmk -pdf preview.tex (artifacts are
-% gitignored).
-\documentclass[10pt,twocolumn]{article}
-\usepackage[margin=1.5cm]{geometry}
-\usepackage{times}
-\usepackage{microtype}
-\usepackage{booktabs}
+% LOCAL READING + LAYOUT/LENGTH PROXY, not the submission.
+% Renders the shared sections/*.tex under IEEEtran (conference, two-column), a
+% close proxy for the VGTC submission's layout and page count. The real
+% submission is main.tex (the official VGTC class). VGTC's 9pt is slightly
+% denser than IEEEtran's 10pt, so the page count here is a mild overestimate.
+% Build: latexmk -pdf preview.tex  (artifacts are gitignored).
+\documentclass[conference]{IEEEtran}
 \usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
 \usepackage[hidelinks]{hyperref}
 \usepackage{url}
 
-\title{\vspace{-2.2em}Scrubbing the Run: Replay-Native Provenance
-Visualization for Closed-Loop Beamline Experiments\\[0.35em]
-{\normalsize\normalfont\itshape Local content preview, not the final VGTC
-two-column layout}}
-\author{\normalsize CORA -- VAxAutoSci (IEEE VIS 2026) draft}
-\date{}
+\title{Scrubbing the Run: Replay-Native Provenance Visualization for
+Closed-Loop Beamline Experiments}
+\author{\IEEEauthorblockN{CORA / VAxAutoSci (IEEE VIS 2026) working draft}}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-\noindent\input{sections/abstract}
+\input{sections/abstract}
 \end{abstract}
 
 \section{Introduction}
@@ -51,7 +46,7 @@ two-column layout}}
 \section{Limitations and Future Work}
 \input{sections/limitations}
 
-\bibliographystyle{plain}
+\bibliographystyle{IEEEtran}
 \bibliography{refs}
 
 \end{document}
